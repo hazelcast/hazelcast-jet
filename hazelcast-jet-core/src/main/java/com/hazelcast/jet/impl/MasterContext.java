@@ -1153,7 +1153,7 @@ public class MasterContext {
         // We only compare the number of our participating members and current members.
         // If there is any member in our participants that is not among current data members,
         // this job will be restarted anyway. If it's the other way, then the sizes won't match.
-        if (executionPlanMap == null || executionPlanMap.size() == currentDataMembers.size()) {
+        if (executionPlanMap == null || executionPlanMap.size() >= currentDataMembers.size()) {
             LoggingUtil.logFine(logger, "Not scaling %s up: not running or already running on all members",
                     jobIdString());
             return true;
