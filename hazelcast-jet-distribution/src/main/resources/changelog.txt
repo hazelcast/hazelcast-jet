@@ -1,3 +1,9 @@
+** Hazelcast Jet 0.7.1 **
+
+* Full support for running Hazelcast Jet on Kubernetes
+* Hazelcast Jet Helm Charts are released
+* TopN and BottomN aggregate operations are added
+
 ** Hazelcast Jet 0.7 **
 
 * Several new additions to pipeline API including:

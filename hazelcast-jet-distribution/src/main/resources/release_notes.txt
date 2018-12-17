@@ -5,6 +5,26 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
+** Hazelcast Jet 0.7.1 **
+
+1. New Features
+
+[kubernetes] Full support for running Hazelcast Jet on Kubernetes
+[kubernetes] Hazelcast Jet Helm Charts are released
+
+2. Enhancements
+
+[pipeline-api] TopN and BottomN aggregate operations are added [#1140]
+
+3. Fixes
+
+[pipeline-api] All of ClientConfig must be serialized when connecting to remote IMDG sources and sinks [#1147]
+[core] Add scaleUpDelay config option to XML config [#1148]
+[core] Extract lambdas to avoid allocating new lambdas during processing [#1106]
+[core] Fix for a race during snapshot creation which could result in snapshot not completing [#1101]
+[core] Don't materialize distinct keys in SessionWindowP [#1121]
+[core] Do not add Watermarks to a stream if there are no windowing stages [#1144]
+
 ** Hazelcast Jet 0.7 **
 
 1. New Features
