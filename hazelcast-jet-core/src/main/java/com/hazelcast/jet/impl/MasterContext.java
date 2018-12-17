@@ -32,8 +32,8 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
 import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
@@ -525,7 +525,6 @@ public class MasterContext {
             return false;
         }
 
-        assert jobStatus == NOT_RUNNING : "cannot start job " + idToString(jobId) + " with status: " + jobStatus;
         jobStatus = STARTING;
         executionStartTime = System.nanoTime();
         if (jobExecutionRecord.isSuspended()) {
@@ -877,7 +876,7 @@ public class MasterContext {
 
         Throwable finalError;
         if (status == STARTING || status == RUNNING) {
-            logger.fine("Completing " + jobIdString());
+            logger.fine("Sending CompleteExecutionOperation for " + jobIdString());
             finalError = error;
         } else {
             logCannotComplete(error);
@@ -1039,7 +1038,7 @@ public class MasterContext {
             // We don't bubble up the exceptions, if we can't write the record out, the universe is
             // probably crumbling apart anyway. And we don't depend on it, we only write out for
             // others to know or for the case should the master we fail.
-            logger.warning("Failed to update JobRecord", e);
+            logger.warning("Failed to update JobExecutionRecord", e);
         }
     }
 
