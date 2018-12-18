@@ -51,11 +51,11 @@ import static java.util.stream.Collectors.toList;
 public class Planner {
 
     /**
-     * Minimum frequency of watermarks. This is not technically necessary, but
-     * improves debugging by avoiding too large gaps between WMs and the user
-     * can better observe if input to WM coalescing is lagging.
+     * Maximum gap between two consecutive watermarks. This is not technically
+     * necessary, but improves debugging by avoiding too large gaps between WMs
+     * and the user can better observe if input to WM coalescing is lagging.
      */
-    private static final int MINIMUM_WATERMARK_RATE = 1_000;
+    private static final int MAXIMUM_WATERMARK_GAP = 1_000;
 
     public final DAG dag = new DAG();
     public final Map<Transform, PlannerVertex> xform2vertex = new HashMap<>();
@@ -81,7 +81,7 @@ public class Planner {
         // Update watermark emission policy on all wm gen params
         // with the GCD frame length
         WatermarkEmissionPolicy emitPolicy = frameSizeGcd > 0
-                ? emitByFrame(tumblingWinPolicy(frameSizeGcd), MINIMUM_WATERMARK_RATE)
+                ? emitByFrame(tumblingWinPolicy(frameSizeGcd), MAXIMUM_WATERMARK_GAP)
                 : noWatermarks();
         for (Transform transform : adjacencyMap.keySet()) {
             if (transform instanceof StreamSourceTransform) {
