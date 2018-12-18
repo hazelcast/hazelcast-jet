@@ -244,4 +244,9 @@ public class WatermarkCoalescerTest {
     }
 
     // TODO [viliam] check that single input is really handled the same way as with StandardImpl
+    @Test
+    public void test() {
+        wc = new WatermarkCoalescer.StandardImpl(1);
+        System.out.println(wc.observeWm(0, IDLE_MESSAGE.timestamp()));
+    }
 }

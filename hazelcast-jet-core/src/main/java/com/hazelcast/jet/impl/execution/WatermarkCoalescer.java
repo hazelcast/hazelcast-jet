@@ -195,7 +195,7 @@ public abstract class WatermarkCoalescer {
     /**
      * Standard implementation for 1..n inputs.
      */
-    private static final class StandardImpl extends WatermarkCoalescer {
+    static final class StandardImpl extends WatermarkCoalescer {
 
         private final long[] queueWms;
         private final boolean[] isIdle;
