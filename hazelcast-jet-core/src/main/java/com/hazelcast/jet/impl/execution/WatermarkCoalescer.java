@@ -40,9 +40,9 @@ import static com.hazelcast.util.Preconditions.checkNotNegative;
  */
 public abstract class WatermarkCoalescer {
 
-    public static final long NO_NEW_WM = Long.MIN_VALUE;
-
     public static final Watermark IDLE_MESSAGE = new Watermark(Long.MAX_VALUE);
+
+    static final long NO_NEW_WM = Long.MIN_VALUE;
 
     private WatermarkCoalescer() { }
 
@@ -151,7 +151,6 @@ public abstract class WatermarkCoalescer {
     private static final class SingleInputImpl extends WatermarkCoalescer {
 
         private AtomicLong queueWm = new AtomicLong(Long.MIN_VALUE);
-        private boolean isIdle;
 
         @Override
         public long queueDone(int queueIndex) {
@@ -162,7 +161,6 @@ public abstract class WatermarkCoalescer {
 
         @Override
         public void observeEvent(int queueIndex) {
-            isIdle = false;
         }
 
         @Override
