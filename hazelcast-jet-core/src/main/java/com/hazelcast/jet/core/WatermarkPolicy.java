@@ -18,7 +18,7 @@ package com.hazelcast.jet.core;
 
 /**
  * This object runs inside a Jet processor, inspects the event timestamps
- * as they occur in the input and and decides on the current value of the
+ * as they occur in the input and decides on the current value of the
  * watermark. It controls how much disorder Jet will allow in a data stream
  * and which events will be marked as "too late" and dropped. It also
  * decides what to do with the watermark when there are no events for a

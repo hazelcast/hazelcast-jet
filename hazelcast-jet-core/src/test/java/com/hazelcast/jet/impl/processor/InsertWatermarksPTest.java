@@ -47,7 +47,6 @@ import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
-import static com.hazelcast.jet.impl.util.WatermarkPolicyUtil.limitingTimestampAndWallClockLag;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -82,14 +81,6 @@ public class InsertWatermarksPTest {
     public void setUp() {
         outbox = new TestOutbox(outboxCapacity);
         context = new TestProcessorContext();
-    }
-
-    @Test
-    public void when_firstEventLate_then_notDropped() throws Exception {
-        wmPolicy = () -> limitingTimestampAndWallClockLag(0, 0, clock::now);
-        doTest(
-                singletonList(item(clock.now - 1)),
-                asList(wm(clock.now), item(clock.now - 1)));
     }
 
     @Test
@@ -422,10 +413,6 @@ public class InsertWatermarksPTest {
 
         MockClock(long now) {
             this.now = now;
-        }
-
-        long now() {
-            return now;
         }
 
         void set(long newNow) {
