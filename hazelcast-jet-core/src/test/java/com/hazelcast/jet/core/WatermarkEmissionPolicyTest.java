@@ -45,19 +45,6 @@ public class WatermarkEmissionPolicyTest {
     }
 
     @Test
-    public void test_throttleByFrame_noMaxStep() {
-        p = emitByFrame(tumblingWinPolicy(3));
-        assertWm(2, 0);
-        assertWm(3, 3);
-        assertWm(4, 3);
-        assertWm(5, 3);
-        assertWm(6, 6);
-        assertWm(13, 12);
-        assertWm(14, 12);
-        assertWm(15, 15);
-    }
-
-    @Test
     public void test_throttleByFrame_maxStepCloseToMax() {
         // this tests the possible overflow when calculating with maxStep
         p = emitByFrame(tumblingWinPolicy(3));
