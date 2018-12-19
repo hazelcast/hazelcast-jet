@@ -5,6 +5,12 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
+** Hazelcast Jet 0.7.2 **
+
+1. Fixes
+
+[core] Fix for missing config schema file in previous release
+
 ** Hazelcast Jet 0.7.1 **
 
 1. New Features
