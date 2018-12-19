@@ -313,7 +313,7 @@ public class InsertWatermarksPTest {
     }
 
     private void createProcessor(long idleTimeoutMillis) throws Exception {
-        p = new InsertWatermarksP<>(eventTimePolicy(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis));
+        p = new InsertWatermarksP<>(eventTimePolicy(Item::getTimestamp, wmPolicy, idleTimeoutMillis));
         p.init(outbox, context);
     }
 

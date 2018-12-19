@@ -106,7 +106,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
         DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLateness);
         EventTimePolicy<T> eventTimePolicy = eventTimePolicy(
-                timestampFn, JetEvent::jetEvent, wmPolicy, NULL_EMIT_POLICY, DEFAULT_IDLE_TIMEOUT
+                timestampFn, JetEvent::jetEvent, wmPolicy, DEFAULT_IDLE_TIMEOUT
         );
 
         if (tryAddToSource && transform instanceof StreamSourceTransform) {

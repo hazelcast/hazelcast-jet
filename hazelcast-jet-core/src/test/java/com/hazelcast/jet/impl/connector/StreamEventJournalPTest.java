@@ -93,7 +93,7 @@ public class StreamEventJournalPTest extends JetTestSupport {
 
         supplier = () -> new StreamEventJournalP<>(map, allPartitions, e -> true,
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, false,
-                eventTimePolicy(Integer::intValue, limitingLag(0), suppressAll(), -1));
+                eventTimePolicy(Integer::intValue, limitingLag(0), -1));
 
         key0 = generateKeyForPartition(instance.getHazelcastInstance(), 0);
         key1 = generateKeyForPartition(instance.getHazelcastInstance(), 1);

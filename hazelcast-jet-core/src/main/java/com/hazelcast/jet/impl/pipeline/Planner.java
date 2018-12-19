@@ -87,11 +87,11 @@ public class Planner {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
                 if (t.getEventTimePolicy() != null) {
-                    t.setEventTimePolicy(t.getEventTimePolicy().withEmitPolicy(emitPolicy));
+                    t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(emitPolicy));
                 }
             } else if (transform instanceof TimestampTransform) {
                 TimestampTransform t = (TimestampTransform) transform;
-                t.setEventTimePolicy(t.getEventTimePolicy().withEmitPolicy(emitPolicy));
+                t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(emitPolicy));
             }
         }
 
