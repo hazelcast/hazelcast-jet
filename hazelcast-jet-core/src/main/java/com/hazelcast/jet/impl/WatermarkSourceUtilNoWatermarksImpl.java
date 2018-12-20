@@ -23,6 +23,10 @@ import com.hazelcast.jet.core.WatermarkSourceUtil;
 
 import javax.annotation.Nonnull;
 
+/**
+ * Specialized impl of {@link WatermarkSourceUtil} that doesn't emit any
+ * watermarks.
+ */
 public class WatermarkSourceUtilNoWatermarksImpl<T> implements WatermarkSourceUtil<T> {
 
     private final ResettableSingletonTraverser<Object> traverser = new ResettableSingletonTraverser<>();

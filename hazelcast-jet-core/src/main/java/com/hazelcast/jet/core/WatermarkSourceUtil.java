@@ -114,8 +114,8 @@ public interface WatermarkSourceUtil<T> {
      * Creates a new instance of the utility, see {@linkplain
      * WatermarkSourceUtil class javadoc} for more information.
      * <p>
-     * The partition count is initially set to 0, call {@link
-     * #increasePartitionCount} to set it.
+     * The partition count is initially set to 0, call
+     * {@link #increasePartitionCount} to set it.
      *
      * @param eventTimePolicy event time policy as passed in {@link
      *                        Sources#streamFromProcessorWithWatermarks}

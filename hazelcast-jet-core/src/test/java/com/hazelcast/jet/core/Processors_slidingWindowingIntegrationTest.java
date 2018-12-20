@@ -166,7 +166,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
             this.traverser = traverseIterable(list);
             this.complete = complete;
             if (!complete) {
-                // append a flushing wm for streaming case
+                // append a flushing wm for the streaming case
                 traverser = traverser.append(new Watermark(100_000));
             }
         }

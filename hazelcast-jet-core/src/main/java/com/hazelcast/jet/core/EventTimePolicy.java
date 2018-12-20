@@ -245,7 +245,8 @@ public final class EventTimePolicy<T> implements Serializable {
     }
 
     /**
-     * Returns new instance with emit policy replaced with the given argument.
+     * Private API. Returns new instance with emit policy replaced with the
+     * given argument.
      */
     @Nonnull
     @PrivateApi
