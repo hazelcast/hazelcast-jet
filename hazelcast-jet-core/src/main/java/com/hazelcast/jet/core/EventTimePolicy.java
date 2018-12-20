@@ -195,7 +195,12 @@ public final class EventTimePolicy<T> implements Serializable {
 
     /**
      * This value together with {@link #watermarkThrottlingFrameOffset()}
-     * specify the frame size the watermarks are throttled to.
+     * specify the frame size the watermarks are throttled to. Generally it
+     * should match the window slide step used downstream. If there are
+     * multiple sliding windows downstream, use the greatest common denominator
+     * of them.
+     * <p>
+     * If this parameter is equal to 0, all watermarks will be suppressed.
      * <p>
      * Technically, a watermark should be emitted after every increase in event
      * time. Because watermarks are broadcast from each processor to all

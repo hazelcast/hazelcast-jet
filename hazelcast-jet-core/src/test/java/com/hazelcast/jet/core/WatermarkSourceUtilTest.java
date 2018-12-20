@@ -148,6 +148,17 @@ public class WatermarkSourceUtilTest {
         assertTraverser(wsu.handleEvent(ns(1), 11L, 0, 12L), wm(12L - LAG), 11L);
     }
 
+    @Test
+    public void when_throttlingToMaxFrame_then_noWatermarksOutput() {
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 0, 0, 5)
+        );
+        wsu.increasePartitionCount(0L, 1);
+
+        assertTraverser(wsu.handleEvent(ns(1), -10L, 0, 11L), -10L);
+        assertTraverser(wsu.handleEvent(ns(1), 10L, 0, 12L), 10L);
+    }
+
     private <T> void assertTraverser(Traverser<T> actual, T ... expected) {
         for (T element : expected) {
             assertEquals(element, actual.next());

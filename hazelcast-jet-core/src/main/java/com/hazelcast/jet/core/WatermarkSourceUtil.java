@@ -126,7 +126,8 @@ public class WatermarkSourceUtil<T> {
     private final ToLongFunction<? super T> timestampFn;
     private final Supplier<? extends WatermarkPolicy> newWmPolicyFn;
     private final ObjLongBiFunction<? super T, ?> wrapFn;
-    private final SlidingWindowPolicy watermarkThrottlingSlidingWindow;
+    @Nullable
+    private final SlidingWindowPolicy watermarkThrottlingFrame;
     private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
 
     private WatermarkPolicy[] wmPolicies = EMPTY_WATERMARK_POLICIES;
@@ -148,8 +149,12 @@ public class WatermarkSourceUtil<T> {
         this.timestampFn = eventTimePolicy.timestampFn();
         this.wrapFn = eventTimePolicy.wrapFn();
         this.newWmPolicyFn = eventTimePolicy.newWmPolicyFn();
-        this.watermarkThrottlingSlidingWindow = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrameSize())
-                .withOffset(eventTimePolicy.watermarkThrottlingFrameOffset());
+        if (eventTimePolicy.watermarkThrottlingFrameSize() != 0) {
+            this.watermarkThrottlingFrame = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrameSize())
+                    .withOffset(eventTimePolicy.watermarkThrottlingFrameOffset());
+        } else {
+            this.watermarkThrottlingFrame = null;
+        }
     }
 
     /**
@@ -228,7 +233,7 @@ public class WatermarkSourceUtil<T> {
         }
 
         if (min > lastEmittedWm) {
-            long newWm = watermarkThrottlingSlidingWindow.floorFrameTs(min);
+            long newWm = watermarkThrottlingFrame != null ? watermarkThrottlingFrame.floorFrameTs(min) : Long.MIN_VALUE;
             if (newWm > lastEmittedWm) {
                 traverser.append(new Watermark(newWm));
                 lastEmittedWm = newWm;
