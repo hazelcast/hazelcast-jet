@@ -43,7 +43,7 @@ public class InsertWatermarksP<T> extends AbstractProcessor {
     private long minRestoredWm = Long.MAX_VALUE;
 
     public InsertWatermarksP(EventTimePolicy<? super T> eventTimePolicy) {
-        wsu = WatermarkSourceUtil.create(eventTimePolicy);
+        wsu = new WatermarkSourceUtil<>(eventTimePolicy);
         wsu.increasePartitionCount(1);
     }
 

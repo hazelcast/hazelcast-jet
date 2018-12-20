@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WatermarkSourceUtil;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -31,7 +29,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class WatermarkSourceUtilImplTest {
+public class WatermarkSourceUtilTest {
 
     private static final long LAG = 3;
 
@@ -40,7 +38,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void smokeTest() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 5)
         );
         wsu.increasePartitionCount(0L, 2);
@@ -60,7 +58,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void smokeTest_disabledIdleTimeout() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, -1)
         );
         wsu.increasePartitionCount(2);
@@ -81,7 +79,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void test_zeroPartitions() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, -1)
         );
 
@@ -97,7 +95,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void when_idle_event_idle_then_twoIdleMessagesSent() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10)
         );
         wsu.increasePartitionCount(1);
@@ -114,7 +112,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void when_eventInOneOfTwoPartitions_then_wmAndIdleMessageForwardedAfterTimeout() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10)
         );
         wsu.increasePartitionCount(ns(0), 2);
@@ -130,7 +128,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void when_noTimestampFnAndNoNativeTime_then_throw() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(null, limitingLag(LAG), 1, 0, 10)
         );
         wsu.increasePartitionCount(ns(0), 1);
@@ -141,7 +139,7 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void when_noTimestampFn_then_useNativeTime() {
-        WatermarkSourceUtilImpl<Long> wsu = new WatermarkSourceUtilImpl<>(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(null, limitingLag(LAG), 1, 0, 5)
         );
         wsu.increasePartitionCount(0L, 1);
@@ -152,13 +150,13 @@ public class WatermarkSourceUtilImplTest {
 
     @Test
     public void when_throttlingToMaxFrame_then_noWatermarksOutput() {
-        WatermarkSourceUtil<Long> wsu = WatermarkSourceUtil.create(
+        WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
                 eventTimePolicy(Long::longValue, limitingLag(LAG), 0, 0, 5)
         );
-        wsu.increasePartitionCount(1);
+        wsu.increasePartitionCount(0L, 1);
 
-        assertTraverser(wsu.handleEvent(-10L, 0, 11L), -10L);
-        assertTraverser(wsu.handleEvent(10L, 0, 12L), 10L);
+        assertTraverser(wsu.handleEvent(ns(1), -10L, 0, 11L), -10L);
+        assertTraverser(wsu.handleEvent(ns(1), 10L, 0, 12L), 10L);
     }
 
     private <T> void assertTraverser(Traverser<T> actual, T ... expected) {

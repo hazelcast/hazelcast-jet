@@ -135,7 +135,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         emitOffsets = new long[partitionIds.length];
         readOffsets = new long[partitionIds.length];
 
-        watermarkSourceUtil = WatermarkSourceUtil.create(eventTimePolicy);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(eventTimePolicy);
 
         // Do not coalesce partition WMs because the number of partitions is far
         // larger than the number of consumers by default and it is not
