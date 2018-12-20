@@ -55,7 +55,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
     private final BiConsumer<? super S, ? super SourceBufferConsumerSide<?>> fillBufferFn;
     private final Consumer<? super S> destroyFn;
     private final SourceBufferConsumerSide<?> buffer;
-    private final WatermarkSourceUtil<T> wsu;
+    private final WatermarkSourceUtil<? super T> wsu;
 
     private boolean initialized;
     private S src;
@@ -73,7 +73,7 @@ public class ConvenientSourceP<S, T> extends AbstractProcessor {
         this.destroyFn = destroyFn;
         this.buffer = buffer;
         if (eventTimePolicy != null) {
-            this.wsu = new WatermarkSourceUtil<>(eventTimePolicy);
+            this.wsu = WatermarkSourceUtil.create(eventTimePolicy);
             wsu.increasePartitionCount(1);
         } else {
             this.wsu = null;

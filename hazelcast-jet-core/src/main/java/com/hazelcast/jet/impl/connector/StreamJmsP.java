@@ -76,7 +76,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         this.flushFn = flushFn;
         this.projectionFn = projectionFn;
 
-        wsu = new WatermarkSourceUtil<>(eventTimePolicy);
+        wsu = WatermarkSourceUtil.create(eventTimePolicy);
         wsu.increasePartitionCount(1);
     }
 

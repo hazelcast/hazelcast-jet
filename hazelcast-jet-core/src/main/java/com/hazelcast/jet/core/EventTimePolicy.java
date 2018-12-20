@@ -24,6 +24,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 
+import static com.hazelcast.util.Preconditions.checkNotNegative;
+import static com.hazelcast.util.Preconditions.checkTrue;
+
 /**
  * A holder of functions and parameters Jet needs to handle event time and the
  * associated watermarks. These are the components:
@@ -91,6 +94,10 @@ public final class EventTimePolicy<T> implements Serializable {
             long watermarkThrottlingFrameOffset,
             long idleTimeoutMillis
     ) {
+        checkNotNegative(watermarkThrottlingFrameSize, "watermarkThrottlingFrameSize must be >= 0");
+        checkNotNegative(watermarkThrottlingFrameOffset, "watermarkThrottlingFrameOffset must be >= 0");
+        checkTrue(watermarkThrottlingFrameOffset < watermarkThrottlingFrameSize || watermarkThrottlingFrameSize == 0,
+                "offset must be smaller than frame size");
         this.timestampFn = timestampFn;
         this.newWmPolicyFn = newWmPolicyFn;
         this.wrapFn = wrapFn;
@@ -160,7 +167,7 @@ public final class EventTimePolicy<T> implements Serializable {
      * your job will keep accumulating the data without producing any output.
      */
     public static <T> EventTimePolicy<T> noEventTime() {
-        return eventTimePolicy(i -> Long.MIN_VALUE, noWrapping(), NO_WATERMARKS, 1, 0, -1);
+        return eventTimePolicy(i -> Long.MIN_VALUE, noWrapping(), NO_WATERMARKS, 0, 0, -1);
     }
 
     @SuppressWarnings("unchecked")

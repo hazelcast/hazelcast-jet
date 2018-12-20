@@ -16,20 +16,12 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.function.ObjLongBiFunction;
+import com.hazelcast.jet.impl.WatermarkSourceUtilImpl;
+import com.hazelcast.jet.impl.WatermarkSourceUtilNoWatermarksImpl;
 import com.hazelcast.jet.pipeline.Sources;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.function.Supplier;
-import java.util.function.ToLongFunction;
-
-import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
-import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * A utility to help emitting {@link Watermark}s from a source which reads
@@ -109,51 +101,30 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *
  * @param <T> event type
  */
-public class WatermarkSourceUtil<T> {
+public interface WatermarkSourceUtil<T> {
 
     /**
      * Value to use as the {@code nativeEventTime} argument when calling
-     * {@link #handleEvent(Object, int, long)} whene there's no native event
+     * {@link #handleEvent(Object, int, long)} where there's no native event
      * time to supply.
      */
-    public static final long NO_NATIVE_TIME = Long.MIN_VALUE;
-
-    private static final WatermarkPolicy[] EMPTY_WATERMARK_POLICIES = {};
-    private static final long[] EMPTY_LONGS = {};
-
-    private final long idleTimeoutNanos;
-    @Nullable
-    private final ToLongFunction<? super T> timestampFn;
-    private final Supplier<? extends WatermarkPolicy> newWmPolicyFn;
-    private final ObjLongBiFunction<? super T, ?> wrapFn;
-    @Nullable
-    private final SlidingWindowPolicy watermarkThrottlingFrame;
-    private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
-
-    private WatermarkPolicy[] wmPolicies = EMPTY_WATERMARK_POLICIES;
-    private long[] watermarks = EMPTY_LONGS;
-    private long[] markIdleAt = EMPTY_LONGS;
-    private long lastEmittedWm = Long.MIN_VALUE;
-    private long topObservedWm = Long.MIN_VALUE;
-    private boolean allAreIdle;
+    long NO_NATIVE_TIME = Long.MIN_VALUE;
 
     /**
-     * The partition count is initially set to 0, call
-     * {@link #increasePartitionCount} to set it.
+     * Creates a new instance of the utility, see {@linkplain
+     * WatermarkSourceUtil class javadoc} for more information.
+     * <p>
+     * The partition count is initially set to 0, call {@link
+     * #increasePartitionCount} to set it.
      *
      * @param eventTimePolicy event time policy as passed in {@link
      *                        Sources#streamFromProcessorWithWatermarks}
-     **/
-    public WatermarkSourceUtil(EventTimePolicy<? super T> eventTimePolicy) {
-        this.idleTimeoutNanos = MILLISECONDS.toNanos(eventTimePolicy.idleTimeoutMillis());
-        this.timestampFn = eventTimePolicy.timestampFn();
-        this.wrapFn = eventTimePolicy.wrapFn();
-        this.newWmPolicyFn = eventTimePolicy.newWmPolicyFn();
-        if (eventTimePolicy.watermarkThrottlingFrameSize() != 0) {
-            this.watermarkThrottlingFrame = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrameSize())
-                    .withOffset(eventTimePolicy.watermarkThrottlingFrameOffset());
+     */
+    static <T> WatermarkSourceUtil<T> create(EventTimePolicy<T> eventTimePolicy) {
+        if (eventTimePolicy.watermarkThrottlingFrameSize() == 0) {
+            return new WatermarkSourceUtilNoWatermarksImpl<>();
         } else {
-            this.watermarkThrottlingFrame = null;
+            return new WatermarkSourceUtilImpl<>(eventTimePolicy);
         }
     }
 
@@ -172,9 +143,7 @@ public class WatermarkSourceUtil<T> {
      *                        {@link #NO_NATIVE_TIME} if the event has no native timestamp
      */
     @Nonnull
-    public Traverser<Object> handleEvent(T event, int partitionIndex, long nativeEventTime) {
-        return handleEvent(System.nanoTime(), event, partitionIndex, nativeEventTime);
-    }
+    Traverser<Object> handleEvent(T event, int partitionIndex, long nativeEventTime);
 
     /**
      * Call this method when there is no event coming. It returns a traverser
@@ -182,67 +151,7 @@ public class WatermarkSourceUtil<T> {
      * {@code next()} on the result.
      */
     @Nonnull
-    public Traverser<Object> handleNoEvent() {
-        return handleEvent(System.nanoTime(), null, -1, NO_NATIVE_TIME);
-    }
-
-    // package-visible for tests
-    Traverser<Object> handleEvent(long now, @Nullable T event, int partitionIndex, long nativeEventTime) {
-        assert traverser.isEmpty() : "the traverser returned previously not yet drained: remove all " +
-                "items from the traverser before you call this method again.";
-        if (event != null) {
-            if (timestampFn == null && nativeEventTime == NO_NATIVE_TIME) {
-                throw new JetException("Neither timestampFn nor nativeEventTime specified");
-            }
-            long eventTime = timestampFn == null ? nativeEventTime : timestampFn.applyAsLong(event);
-            handleEventInt(now, partitionIndex, eventTime);
-            traverser.append(wrapFn.apply(event, eventTime));
-        } else {
-            handleNoEventInt(now);
-        }
-        return traverser;
-    }
-
-    private void handleEventInt(long now, int partitionIndex, long eventTime) {
-        wmPolicies[partitionIndex].reportEvent(eventTime);
-        markIdleAt[partitionIndex] = now + idleTimeoutNanos;
-        allAreIdle = false;
-        handleNoEventInt(now);
-    }
-
-    private void handleNoEventInt(long now) {
-        long min = Long.MAX_VALUE;
-        for (int i = 0; i < watermarks.length; i++) {
-            if (idleTimeoutNanos > 0 && markIdleAt[i] <= now) {
-                continue;
-            }
-            watermarks[i] = wmPolicies[i].getCurrentWatermark();
-            topObservedWm = Math.max(topObservedWm, watermarks[i]);
-            min = Math.min(min, watermarks[i]);
-        }
-
-        if (min == Long.MAX_VALUE) {
-            if (allAreIdle) {
-                return;
-            }
-            // we've just became fully idle. Forward the top WM now, if needed
-            min = topObservedWm;
-            allAreIdle = true;
-        } else {
-            allAreIdle = false;
-        }
-
-        if (min > lastEmittedWm) {
-            long newWm = watermarkThrottlingFrame != null ? watermarkThrottlingFrame.floorFrameTs(min) : Long.MIN_VALUE;
-            if (newWm > lastEmittedWm) {
-                traverser.append(new Watermark(newWm));
-                lastEmittedWm = newWm;
-            }
-        }
-        if (allAreIdle) {
-            traverser.append(IDLE_MESSAGE);
-        }
-    }
+    Traverser<Object> handleNoEvent();
 
     /**
      * Changes the partition count. The new partition count must be higher or
@@ -254,28 +163,7 @@ public class WatermarkSourceUtil<T> {
      * @param newPartitionCount partition count, must be higher than the
      *                          current count
      */
-    public void increasePartitionCount(int newPartitionCount) {
-        increasePartitionCount(System.nanoTime(), newPartitionCount);
-    }
-
-    // package-visible for tests
-    void increasePartitionCount(long now, int newPartitionCount) {
-        int oldPartitionCount = wmPolicies.length;
-        if (newPartitionCount < oldPartitionCount) {
-            throw new IllegalArgumentException("partition count must increase. Old count=" + oldPartitionCount
-                    + ", new count=" + newPartitionCount);
-        }
-
-        wmPolicies = Arrays.copyOf(wmPolicies, newPartitionCount);
-        watermarks = Arrays.copyOf(watermarks, newPartitionCount);
-        markIdleAt = Arrays.copyOf(markIdleAt, newPartitionCount);
-
-        for (int i = oldPartitionCount; i < newPartitionCount; i++) {
-            wmPolicies[i] = newWmPolicyFn.get();
-            watermarks[i] = Long.MIN_VALUE;
-            markIdleAt[i] = now + idleTimeoutNanos;
-        }
-    }
+    void increasePartitionCount(int newPartitionCount);
 
     /**
      * Watermark value to be saved to state snapshot for the given source
@@ -288,9 +176,7 @@ public class WatermarkSourceUtil<T> {
      * @param partitionIndex 0-based source partition index.
      * @return A value to save to state snapshot
      */
-    public long getWatermark(int partitionIndex) {
-        return watermarks[partitionIndex];
-    }
+    long getWatermark(int partitionIndex);
 
     /**
      * Restore watermark value from state snapshot.
@@ -303,7 +189,6 @@ public class WatermarkSourceUtil<T> {
      * @param partitionIndex 0-based source partition index.
      * @param wm Watermark value to restore
      */
-    public void restoreWatermark(int partitionIndex, long wm) {
-        watermarks[partitionIndex] = wm;
-    }
+    void restoreWatermark(int partitionIndex, long wm);
 }
+
