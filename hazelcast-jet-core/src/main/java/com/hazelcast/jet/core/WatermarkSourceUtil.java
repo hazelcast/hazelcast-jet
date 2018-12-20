@@ -148,8 +148,8 @@ public class WatermarkSourceUtil<T> {
         this.timestampFn = eventTimePolicy.timestampFn();
         this.wrapFn = eventTimePolicy.wrapFn();
         this.newWmPolicyFn = eventTimePolicy.newWmPolicyFn();
-        this.watermarkThrottlingSlidingWindow = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrame())
-                .withOffset(eventTimePolicy.watermarkThrottlingOffset());
+        this.watermarkThrottlingSlidingWindow = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrameSize())
+                .withOffset(eventTimePolicy.watermarkThrottlingFrameOffset());
     }
 
     /**

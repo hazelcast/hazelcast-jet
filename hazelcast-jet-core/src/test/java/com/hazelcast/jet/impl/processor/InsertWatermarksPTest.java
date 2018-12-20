@@ -65,7 +65,7 @@ public class InsertWatermarksPTest {
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
     private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(LAG);
-    private long watermarkThrottlingFrame = 1;
+    private long watermarkThrottlingFrameSize = 1;
 
     @Parameters(name = "outboxCapacity={0}")
     public static Collection<Object> parameters() {
@@ -162,7 +162,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsIncrease_then_wmIncreases() throws Exception {
-        watermarkThrottlingFrame = 2;
+        watermarkThrottlingFrameSize = 2;
         doTest(
                 asList(
                         item(10),
@@ -184,7 +184,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsIncreaseAndStartAtVergeOfFrame_then_wmIncreases() throws Exception {
-        watermarkThrottlingFrame = 2;
+        watermarkThrottlingFrameSize = 2;
         doTest(
                 asList(
                         item(11),
@@ -205,7 +205,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsNotAtTheVergeOfFrame_then_wmEmittedCorrectly() throws Exception {
-        watermarkThrottlingFrame = 10;
+        watermarkThrottlingFrameSize = 10;
         doTest(
                 asList(
                         item(14),
@@ -224,7 +224,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_gapBetweenEvents_then_gapInWms() throws Exception {
-        watermarkThrottlingFrame = 2;
+        watermarkThrottlingFrameSize = 2;
         doTest(
                 asList(
                         item(11),
@@ -269,7 +269,7 @@ public class InsertWatermarksPTest {
     }
 
     private void createProcessor(long idleTimeoutMillis) throws Exception {
-        p = new InsertWatermarksP<>(eventTimePolicy(Item::getTimestamp, wmPolicy, watermarkThrottlingFrame, 0,
+        p = new InsertWatermarksP<>(eventTimePolicy(Item::getTimestamp, wmPolicy, watermarkThrottlingFrameSize, 0,
                 idleTimeoutMillis));
         p.init(outbox, context);
     }
