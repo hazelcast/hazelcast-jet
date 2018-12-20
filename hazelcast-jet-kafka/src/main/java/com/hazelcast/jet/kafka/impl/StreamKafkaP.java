@@ -93,7 +93,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
-        watermarkSourceUtil = WatermarkSourceUtil.create(eventTimePolicy);
+        watermarkSourceUtil = new WatermarkSourceUtil<>(eventTimePolicy);
         partitionCounts = new int[topics.size()];
     }
 
