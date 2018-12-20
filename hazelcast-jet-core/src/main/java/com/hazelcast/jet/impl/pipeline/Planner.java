@@ -22,7 +22,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
@@ -44,9 +43,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.core.Edge.from;
-import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noWatermarks;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static java.util.stream.Collectors.toList;
 
@@ -87,20 +83,16 @@ public class Planner {
             frameSizeGcd = Util.gcd(frameSizeGcd, MAXIMUM_WATERMARK_GAP);
         }
         LoggingUtil.logFine(LOGGER, "Watermarks in the pipeline will be throttled to %d", frameSizeGcd);
-        // Update watermark emission policy on all wm gen params
-        // with the GCD frame length
-        WatermarkEmissionPolicy emitPolicy = frameSizeGcd > 0
-                ? emitByFrame(tumblingWinPolicy(frameSizeGcd))
-                : noWatermarks();
+        // Update watermark throttling frame length on all transforms with the determined length
         for (Transform transform : adjacencyMap.keySet()) {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
                 if (t.getEventTimePolicy() != null) {
-                    t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(emitPolicy));
+                    t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(frameSizeGcd, 0));
                 }
             } else if (transform instanceof TimestampTransform) {
                 TimestampTransform t = (TimestampTransform) transform;
-                t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(emitPolicy));
+                t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(frameSizeGcd, 0));
             }
         }
 

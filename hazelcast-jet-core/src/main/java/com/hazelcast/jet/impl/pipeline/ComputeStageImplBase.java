@@ -55,7 +55,6 @@ import javax.annotation.Nullable;
 
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.NULL_EMIT_POLICY;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.filterUsingPartitionedContextTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingPartitionedContextTransform;
@@ -106,7 +105,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
         DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(allowedLateness);
         EventTimePolicy<T> eventTimePolicy = eventTimePolicy(
-                timestampFn, JetEvent::jetEvent, wmPolicy, DEFAULT_IDLE_TIMEOUT
+                timestampFn, JetEvent::jetEvent, wmPolicy, 0, 0, DEFAULT_IDLE_TIMEOUT
         );
 
         if (tryAddToSource && transform instanceof StreamSourceTransform) {

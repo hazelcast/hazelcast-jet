@@ -21,7 +21,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.WatermarkSourceUtil.NO_NATIVE_TIME;
@@ -40,7 +39,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void smokeTest() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), noThrottling(), 5)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 5)
         );
         wsu.increasePartitionCount(0L, 2);
 
@@ -60,7 +59,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void smokeTest_disabledIdleTimeout() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), noThrottling(), -1)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, -1)
         );
         wsu.increasePartitionCount(2);
 
@@ -81,7 +80,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void test_zeroPartitions() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), noThrottling(), -1)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, -1)
         );
 
         // it should immediately emit the idle message, even though the idle timeout is -1
@@ -97,7 +96,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void when_idle_event_idle_then_twoIdleMessagesSent() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), noThrottling(), 10)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10)
         );
         wsu.increasePartitionCount(1);
         assertTraverser(wsu.handleEvent(ns(0), 10L, 0, NO_NATIVE_TIME), wm(10 - LAG), 10L);
@@ -114,7 +113,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void when_eventInOneOfTwoPartitions_then_wmAndIdleMessageForwardedAfterTimeout() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), noThrottling(), 10)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10)
         );
         wsu.increasePartitionCount(ns(0), 2);
 
@@ -130,7 +129,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void when_noTimestampFnAndNoNativeTime_then_throw() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(null, limitingLag(LAG), noThrottling(), 10)
+                eventTimePolicy(null, limitingLag(LAG), 1, 0, 10)
         );
         wsu.increasePartitionCount(ns(0), 1);
 
@@ -141,7 +140,7 @@ public class WatermarkSourceUtilTest {
     @Test
     public void when_noTimestampFn_then_useNativeTime() {
         WatermarkSourceUtil<Long> wsu = new WatermarkSourceUtil<>(
-                eventTimePolicy(null, limitingLag(LAG), noThrottling(), 5)
+                eventTimePolicy(null, limitingLag(LAG), 1, 0, 5)
         );
         wsu.increasePartitionCount(0L, 1);
 

@@ -48,7 +48,6 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
@@ -93,7 +92,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
         List<MyEvent> inputData = singletonList(new MyEvent(10, "a", 1L));
         Vertex source = dag.newVertex("source", () -> new EmitListP(inputData, isBatchLocal)).localParallelism(1);
         Vertex insertPP = dag.newVertex("insertWmP", insertWatermarksP(eventTimePolicy(
-                timestampFn, limitingLag(0), emitByFrame(wDef), -1
+                timestampFn, limitingLag(0), wDef.frameSize(), wDef.frameOffset(), -1
         ))).localParallelism(1);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
 

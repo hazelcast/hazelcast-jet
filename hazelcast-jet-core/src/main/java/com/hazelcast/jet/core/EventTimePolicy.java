@@ -24,8 +24,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 
-import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-
 /**
  * A holder of functions and parameters Jet needs to handle event time and the
  * associated watermarks. These are the components:
@@ -80,8 +78,8 @@ public final class EventTimePolicy<T> implements Serializable {
     private final DistributedToLongFunction<? super T> timestampFn;
     private final DistributedObjLongBiFunction<? super T, ?> wrapFn;
     private final DistributedSupplier<? extends WatermarkPolicy> newWmPolicyFn;
-    private final SlidingWindowPolicy watermarkThrottlingAlignment;
-    private final int watermarkThrottlingMaxStep;
+    private final long watermarkThrottlingFrame;
+    private final long watermarkThrottlingOffset;
 
     private final long idleTimeoutMillis;
 
@@ -89,16 +87,16 @@ public final class EventTimePolicy<T> implements Serializable {
             @Nullable DistributedToLongFunction<? super T> timestampFn,
             @Nonnull DistributedObjLongBiFunction<? super T, ?> wrapFn,
             @Nonnull DistributedSupplier<? extends WatermarkPolicy> newWmPolicyFn,
-            SlidingWindowPolicy watermarkThrottlingAlignment,
-            int watermarkThrottlingMaxStep,
+            long watermarkThrottlingFrame,
+            long watermarkThrottlingOffset,
             long idleTimeoutMillis
     ) {
         this.timestampFn = timestampFn;
         this.newWmPolicyFn = newWmPolicyFn;
         this.wrapFn = wrapFn;
         this.idleTimeoutMillis = idleTimeoutMillis;
-        this.watermarkThrottlingAlignment = watermarkThrottlingAlignment;
-        this.watermarkThrottlingMaxStep = watermarkThrottlingMaxStep;
+        this.watermarkThrottlingFrame = watermarkThrottlingFrame;
+        this.watermarkThrottlingOffset = watermarkThrottlingOffset;
     }
 
     /**
@@ -115,12 +113,12 @@ public final class EventTimePolicy<T> implements Serializable {
             @Nullable DistributedToLongFunction<? super T> timestampFn,
             @Nonnull DistributedObjLongBiFunction<? super T, ?> wrapFn,
             @Nonnull DistributedSupplier<? extends WatermarkPolicy> newWmPolicyFn,
-            SlidingWindowPolicy watermarkThrottlingAlignment,
-            int watermarkThrottlingMaxStep,
+            long watermarkThrottlingFrame,
+            long watermarkThrottlingOffset,
             long idleTimeoutMillis
     ) {
-        return new EventTimePolicy<>(timestampFn, wrapFn, newWmPolicyFn, watermarkThrottlingAlignment,
-                watermarkThrottlingMaxStep, idleTimeoutMillis);
+        return new EventTimePolicy<>(timestampFn, wrapFn, newWmPolicyFn, watermarkThrottlingFrame,
+                watermarkThrottlingOffset, idleTimeoutMillis);
     }
 
     /**
@@ -135,13 +133,12 @@ public final class EventTimePolicy<T> implements Serializable {
     public static <T> EventTimePolicy<T> eventTimePolicy(
             @Nullable DistributedToLongFunction<? super T> timestampFn,
             @Nonnull DistributedSupplier<? extends WatermarkPolicy> newWmPolicyFn,
-            long watermarkThrottlingFrameSize,
-            long watermarkThrottlingFrameOffset,
-            long watermarkThrottlingMaxStep,
+            long watermarkThrottlingFrame,
+            long watermarkThrottlingOffset,
             long idleTimeoutMillis
     ) {
-        return eventTimePolicy(timestampFn, noWrapping(), newWmPolicyFn, watermarkThrottlingAlignment,
-                watermarkThrottlingMaxStep, idleTimeoutMillis);
+        return eventTimePolicy(timestampFn, noWrapping(), newWmPolicyFn, watermarkThrottlingFrame,
+                watermarkThrottlingOffset, idleTimeoutMillis);
     }
 
     /**
@@ -151,7 +148,7 @@ public final class EventTimePolicy<T> implements Serializable {
      * your job will keep accumulating the data without producing any output.
      */
     public static <T> EventTimePolicy<T> noEventTime() {
-        return eventTimePolicy(i -> Long.MIN_VALUE, noWrapping(), NO_WATERMARKS, slidingWinPolicy(1, 1), 1, -1);
+        return eventTimePolicy(i -> Long.MIN_VALUE, noWrapping(), NO_WATERMARKS, 1, 0, -1);
     }
 
     @SuppressWarnings("unchecked")
@@ -184,13 +181,12 @@ public final class EventTimePolicy<T> implements Serializable {
         return newWmPolicyFn;
     }
 
-    @Nonnull
-    public SlidingWindowPolicy watermarkThrottlingAlignment() {
-        return watermarkThrottlingAlignment;
+    public long watermarkThrottlingFrame() {
+        return watermarkThrottlingFrame;
     }
 
-    public int watermarkThrottlingMaxStep() {
-        return watermarkThrottlingMaxStep;
+    public long watermarkThrottlingOffset() {
+        return watermarkThrottlingOffset;
     }
 
     /**
@@ -213,10 +209,10 @@ public final class EventTimePolicy<T> implements Serializable {
      */
     @Nonnull
     public EventTimePolicy<T> withThrottling(
-            SlidingWindowPolicy watermarkThrottlingAlignment,
-            int watermarkThrottlingMaxStep
+            long watermarkThrottlingFrame,
+            long watermarkThrottlingOffset
     ) {
-        return eventTimePolicy(timestampFn, wrapFn, newWmPolicyFn, watermarkThrottlingAlignment,
-                watermarkThrottlingMaxStep, idleTimeoutMillis);
+        return eventTimePolicy(timestampFn, wrapFn, newWmPolicyFn, watermarkThrottlingFrame, watermarkThrottlingOffset,
+                idleTimeoutMillis);
     }
 }

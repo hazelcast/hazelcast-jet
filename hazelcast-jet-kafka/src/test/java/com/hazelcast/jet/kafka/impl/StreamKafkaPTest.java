@@ -61,7 +61,6 @@ import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.Arrays.asList;
@@ -319,7 +318,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
                         :
                         System.currentTimeMillis();
         EventTimePolicy<T> eventTimePolicy = eventTimePolicy(
-                timestampFn, limitingLag(LAG), noThrottling(), idleTimeoutMillis);
+                timestampFn, limitingLag(LAG), 1, 0, idleTimeoutMillis);
         List<String> topics = numTopics == 1 ?
                 singletonList(topic1Name)
                 :
@@ -393,7 +392,7 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         EventTimePolicy<String> eventTimePolicy = eventTimePolicy(
                 Long::parseLong,
                 limitingLag(0),
-                noThrottling(),
+                1, 0,
                 0
         );
         StreamKafkaP processor = new StreamKafkaP<Integer, String, String>(

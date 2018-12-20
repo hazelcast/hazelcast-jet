@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
+import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -125,7 +126,7 @@ public class WatermarkSourceUtil<T> {
     private final ToLongFunction<? super T> timestampFn;
     private final Supplier<? extends WatermarkPolicy> newWmPolicyFn;
     private final ObjLongBiFunction<? super T, ?> wrapFn;
-    private final WatermarkEmissionPolicy wmEmitPolicy;
+    private final SlidingWindowPolicy watermarkThrottlingSlidingWindow;
     private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
 
     private WatermarkPolicy[] wmPolicies = EMPTY_WATERMARK_POLICIES;
@@ -147,7 +148,8 @@ public class WatermarkSourceUtil<T> {
         this.timestampFn = eventTimePolicy.timestampFn();
         this.wrapFn = eventTimePolicy.wrapFn();
         this.newWmPolicyFn = eventTimePolicy.newWmPolicyFn();
-        this.wmEmitPolicy = eventTimePolicy.wmEmitPolicy();
+        this.watermarkThrottlingSlidingWindow = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrame())
+                .withOffset(eventTimePolicy.watermarkThrottlingOffset());
     }
 
     /**
@@ -226,7 +228,7 @@ public class WatermarkSourceUtil<T> {
         }
 
         if (min > lastEmittedWm) {
-            long newWm = wmEmitPolicy.throttleWm(min, lastEmittedWm);
+            long newWm = watermarkThrottlingSlidingWindow.floorFrameTs(min);
             if (newWm > lastEmittedWm) {
                 traverser.append(new Watermark(newWm));
                 lastEmittedWm = newWm;
