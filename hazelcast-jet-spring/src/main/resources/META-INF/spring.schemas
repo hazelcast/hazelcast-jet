@@ -1,4 +1,6 @@
 http\://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.xsd=hazelcast-jet-spring-0.7.xsd
 http\://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.2.xsd=hazelcast-jet-spring-0.7.2.xsd
+http\://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.3.xsd=hazelcast-jet-spring-0.7.3.xsd
 https\://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.xsd=hazelcast-jet-spring-0-7.xsd
 https\://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.2.xsd=hazelcast-jet-spring-0-7.2.xsd
+https\://www.hazelcast.com/schema/jet-spring/hazelcast-jet-spring-0.7.3.xsd=hazelcast-jet-spring-0-7.3.xsd
