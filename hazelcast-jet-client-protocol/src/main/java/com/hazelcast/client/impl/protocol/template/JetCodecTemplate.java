@@ -62,4 +62,7 @@ public interface JetCodecTemplate {
 
     @Request(id = 13, retryable = true, response = ResponseMessageConst.BOOLEAN)
     Object existsDistributedObject(String serviceName, String objectName);
+
+    @Request(id = 14, retryable = true, response = ResponseMessageConst.DATA)
+    Object getClusterMetadata();
 }

@@ -20,6 +20,7 @@ import com.hazelcast.client.impl.clientside.ClientMessageDecoder;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetExistsDistributedObjectCodec;
+import com.hazelcast.client.impl.protocol.codec.JetGetClusterMetadataCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSummaryListCodec;
@@ -139,8 +140,22 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         ClientInvocation invocation = new ClientInvocation(client, request, null, masterAddress(client.getCluster()));
 
         return uncheckCall(() -> {
+                ClientMessage response = invocation.invoke().get();
+                return serializationService.toObject(JetGetJobSummaryListCodec.decodeResponse(response).response);
+        });
+    }
+
+    /**
+     * Returns summary of cluster details.
+     */
+    @Nonnull
+    public ClusterMetadata getClusterMetadata() {
+        ClientMessage request = JetGetClusterMetadataCodec.encodeRequest();
+        ClientInvocation invocation = new ClientInvocation(client, request, null, masterAddress(client.getCluster()));
+
+        return uncheckCall(() -> {
             ClientMessage response = invocation.invoke().get();
-            return serializationService.toObject(JetGetJobSummaryListCodec.decodeResponse(response).response);
+            return serializationService.toObject(JetGetClusterMetadataCodec.decodeResponse(response).response);
         });
     }
 
