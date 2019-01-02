@@ -16,6 +16,13 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.function.DistributedSupplier;
+
+import javax.annotation.Nonnull;
+
+import static com.hazelcast.util.Preconditions.checkNotNegative;
+import static java.lang.Math.max;
+
 /**
  * This object runs inside a Jet processor, inspects the event timestamps
  * as they occur in the input and decides on the current value of the
@@ -58,4 +65,36 @@ public interface WatermarkPolicy {
      */
     long getCurrentWatermark();
 
+
+    /**
+     * Maintains a watermark that lags behind the top observed timestamp by the
+     * given amount. In the case of a stream lull the watermark does not
+     * advance towards the top observed timestamp and remains behind it
+     * indefinitely.
+     *
+     * @param lag the desired difference between the top observed timestamp
+     *            and the watermark
+     */
+    @Nonnull
+    static DistributedSupplier<WatermarkPolicy> limitingLag(long lag) {
+        checkNotNegative(lag, "lag must not be negative");
+
+        return () -> new WatermarkPolicy() {
+            private long wm = Long.MIN_VALUE;
+
+            @Override
+            public long reportEvent(long timestamp) {
+                // avoid overflow
+                if (timestamp < Long.MIN_VALUE + lag) {
+                    return Long.MIN_VALUE;
+                }
+                return wm = max(wm, timestamp - lag);
+            }
+
+            @Override
+            public long getCurrentWatermark() {
+                return wm;
+            }
+        };
+    }
 }
