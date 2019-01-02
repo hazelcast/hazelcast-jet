@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
-import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ContextFactory;
@@ -49,25 +48,25 @@ import static java.util.stream.Collectors.toList;
 public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcessor {
 
     // package-visible for test
-    C contextObject;
+    private C contextObject;
 
     private final ContextFactory<C> contextFactory;
-    private final DistributedBiFunction<? super C, ? super T,
-                    CompletableFuture<? extends Traverser<? extends R>>> callAsyncFn;
+    private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
+            CompletableFuture<Traverser<? extends R>>> callAsyncFn;
     private final AtomicInteger asyncOpsCounter;
     private final int maxAsyncOps;
 
     private Traverser<? extends R> outputTraverser;
     private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
-    private final ManyToOneConcurrentArrayQueue<? extends Traverser<? extends R>> resultQueue;
+    private final ManyToOneConcurrentArrayQueue<Traverser<? extends R>> resultQueue;
 
     /**
      * Constructs a processor with the given mapping function.
      */
     private AsyncTransformUsingContextP2(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
-                    callAsyncFn,
+            @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
+                    CompletableFuture<Traverser<? extends R>>> callAsyncFn,
             @Nullable C contextObject,
             @Nonnull AtomicInteger asyncOpsCounter,
             int maxAsyncOps
@@ -90,6 +89,8 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
+        Traverser<Traverser<? extends R>> outerTraverser = resultQueue::poll;
+        outputTraverser = outerTraverser.flatMap(t -> t);
     }
 
     @Override
@@ -106,7 +107,8 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
             return false;
         }
 
-        CompletableFuture<? extends Traverser<? extends R>> future = callAsyncFn.apply(contextObject, (T) item);
+        CompletableFuture<Traverser<? extends R>> future =
+                callAsyncFn.apply(singletonTraverser, contextObject, (T) item);
         if (future == null) {
             return true;
         }
@@ -115,18 +117,18 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
             assert result : "Offer failed, resultQueue doesn't have sufficient capacity";
             asyncOpsCounter.decrementAndGet();
         });
-        if (outputTraverser == null) {
-            outputTraverser = callAsyncFn.apply(singletonTraverser, contextObject, (T) item);
-        }
-        if (emitFromTraverser(outputTraverser)) {
-            outputTraverser = null;
-            return true;
-        }
-        return false;
+        emitFromTraverser(outputTraverser);
+        return true;
     }
 
     @Override
-    public void close(@Nullable Throwable error) {
+    public boolean tryProcess() {
+        emitFromTraverser(outputTraverser);
+        return true;
+    }
+
+    @Override
+    public void close() {
         // close() might be called even if init() was not called.
         // Only destroy the context if is not shared (i.e. it is our own).
         if (contextObject != null && !contextFactory.isSharedLocally()) {
@@ -141,16 +143,20 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
 
         private final ContextFactory<C> contextFactory;
         private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                ? extends Traverser<? extends R>> flatMapFn;
+                Traverser<? extends R>> callAsyncFn;
+        private final int maxAsyncOps;
         private transient C contextObject;
+        private transient AtomicInteger asyncOpsCounter = new AtomicInteger();
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
                 @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                        ? extends Traverser<? extends R>> flatMapFn
+                        Traverser<? extends R>> callAsyncFn,
+                int maxAsyncOps
         ) {
             this.contextFactory = contextFactory;
-            this.flatMapFn = flatMapFn;
+            this.callAsyncFn = callAsyncFn;
+            this.maxAsyncOps = maxAsyncOps;
         }
 
         @Override
@@ -162,7 +168,8 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
 
         @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new TransformUsingContextP<>(contextFactory, flatMapFn, contextObject))
+            return Stream.generate(() -> new AsyncTransformUsingContextP2(contextFactory, callAsyncFn, contextObject,
+                                    asyncOpsCounter, maxAsyncOps))
                          .limit(count)
                          .collect(toList());
         }
@@ -182,8 +189,10 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
     public static <C, T, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                    ? extends Traverser<? extends R>> flatMapFn
+                    Traverser<? extends R>> callAsyncFn,
+            int maxAsyncOps
     ) {
-        return new Supplier<>(contextFactory, flatMapFn);
+        // TODO [viliam] make maxAsyncOps global value, not per member
+        return new Supplier<>(contextFactory, callAsyncFn, maxAsyncOps);
     }
 }

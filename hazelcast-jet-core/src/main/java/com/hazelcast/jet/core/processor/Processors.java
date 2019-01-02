@@ -21,12 +21,14 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.EventTimePolicy;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedBiPredicate;
@@ -840,9 +842,9 @@ public final class Processors {
     }
 
     /**
-     * Returns a supplier of processor that swallows all its input (if any),
-     * does nothing with it, produces no output and completes immediately. It
-     * also swallows any restored snapshot data.
+     * Returns a supplier of a processor that swallows all its normal input (if
+     * any), does nothing with it, forwards the watermarks, produces no output
+     * and completes immediately. It also swallows any restored snapshot data.
      */
     @Nonnull
     public static DistributedSupplier<Processor> noopP() {
@@ -851,9 +853,21 @@ public final class Processors {
 
     /** A no-operation processor. See {@link #noopP()} */
     private static class NoopP implements Processor {
+        private Outbox outbox;
+
+        @Override
+        public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
+            this.outbox = outbox;
+        }
+
         @Override
         public void process(int ordinal, @Nonnull Inbox inbox) {
             inbox.drain(DistributedConsumer.noop());
+        }
+
+        @Override
+        public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+            return outbox.offer(watermark);
         }
 
         @Override

@@ -95,7 +95,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn;
     @Nonnull
-    private final FlatMapper<Watermark, OUT> closedWindowFlatmapper;
+    private final FlatMapper<Watermark, Object> closedWindowFlatmapper;
     private ProcessingGuarantee processingGuarantee;
 
     @Probe
@@ -170,15 +170,16 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         return closedWindowFlatmapper.tryProcess(COMPLETING_WM);
     }
 
-    private Traverser<OUT> traverseClosedWindows(Watermark wm) {
+    private Traverser<Object> traverseClosedWindows(Watermark wm) {
         SortedMap<Long, Set<K>> windowsToClose = deadlineToKeys.headMap(wm.timestamp());
 
-        Stream<OUT> closedWindows = windowsToClose
+        Stream<Object> closedWindows = windowsToClose
                 .values().stream()
                 .flatMap(Set::stream)
                 .map(key -> closeWindows(keyToWindows.get(key), key, wm.timestamp()))
                 .flatMap(List::stream);
         return traverseStream(closedWindows)
+                .append(wm)
                 .onFirstNull(() -> {
                     lazyAdd(totalWindows, -windowsToClose.values().stream().mapToInt(Set::size).sum());
                     windowsToClose.clear();

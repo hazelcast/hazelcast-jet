@@ -100,12 +100,14 @@ public interface Processor {
      * called again before proceeding to call any other methods. There is at
      * least one item in the inbox when this method is called.
      * <p>
-     * The default implementation does nothing.
+     * The default implementation throws an exception. It's suitable for source
+     * processors.
      *
      * @param ordinal ordinal of the inbound edge
      * @param inbox   the inbox containing the pending items
      */
     default void process(int ordinal, @Nonnull Inbox inbox) {
+        throw new UnsupportedOperationException("Missing implementation");
     }
 
     /**
@@ -117,11 +119,9 @@ public interface Processor {
      * <p>
      * The implementation may choose to process only partially and return
      * {@code false}, in which case it will be called again later with the same
-     * {@code timestamp} before any other processing method is called. When the
-     * method returns {@code true}, the watermark is forwarded to the
+     * {@code timestamp} before any other processing method is called. Before
+     * the method returns {@code true}, it should emit the watermark to the
      * downstream processors.
-     * <p>
-     * The default implementation just returns {@code true}.
      *
      * <h3>Caution for Jobs With the At-Least-Once Guarantee</h3>
      * Jet propagates the value of the watermark by sending <em>watermark
@@ -137,7 +137,7 @@ public interface Processor {
      *         {@code false} otherwise.
      */
     default boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-        return true;
+        throw new UnsupportedOperationException("Missing implementation");
     }
 
     /**

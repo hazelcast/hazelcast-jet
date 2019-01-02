@@ -270,6 +270,14 @@ public abstract class AbstractProcessor implements Processor {
         throw new UnsupportedOperationException("Missing implementation");
     }
 
+    /**
+     * This basic implementation only forwards the passed watermark.
+     */
+    @Override
+    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        return tryEmit(watermark);
+    }
+
 
     //                  Convenience methods for subclasses, non-overridable
 

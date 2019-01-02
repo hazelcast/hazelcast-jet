@@ -103,8 +103,7 @@ import static java.util.stream.Collectors.toMap;
  *
  * <h3>Watermark handling</h3>
  * The input can contain {@link Watermark}s. They will be passed to the
- * {@link Processor#tryProcessWatermark} method and can be asserted in the
- * output.
+ * {@link Processor#tryProcessWatermark} method.
  *
  * <h3>Progress assertion</h3>
  * For each call to any processing method the progress is asserted ({@link
@@ -306,13 +305,12 @@ public final class TestSupport {
     }
 
     /**
-     * Sets the expected outputs and runs the test.
+     * Specifies the expected outputs and runs the test.
      * <p>
-     * The {@code expectedOutput} can contain {@link
-     * com.hazelcast.jet.core.Watermark}s. Each Watermark in the input will be
-     * found in the output, as well as other watermarks the processor emits.
+     * The {@code expectedOutput} can contain {@link Watermark}s to assert the
+     * watermarks emitted by the processor.
      *
-     * @param expectedOutputs one list for each out output ordinal
+     * @param expectedOutputs one list for each output ordinal
      * @throws AssertionError if some assertion does not hold
      */
     public void expectOutputs(@Nonnull List<List<?>> expectedOutputs) {
@@ -506,9 +504,8 @@ public final class TestSupport {
         // call the process() method
         List<ObjectWithOrdinal> input = mixInputs(inputs, priorities);
         int inputPosition = 0;
-        Watermark[] wmToProcess = {null};
-        while (inputPosition < input.size() || !inbox.isEmpty() || wmToProcess[0] != null) {
-            if (inbox.isEmpty() && wmToProcess[0] == null && inputPosition < input.size()) {
+        while (inputPosition < input.size() || !inbox.isEmpty()) {
+            if (inbox.isEmpty() && inputPosition < input.size()) {
                 inboxOrdinal = input.get(inputPosition).ordinal;
                 for (int added = 0;
                         inputPosition < input.size()
@@ -527,14 +524,7 @@ public final class TestSupport {
             }
             int lastInboxSize = inbox.size();
             String methodName;
-            if (wmToProcess[0] != null) {
-                methodName = "offer";
-                if (outbox[0].offer(wmToProcess[0])) {
-                    wmToProcess[0] = null;
-                }
-            } else {
-                methodName = processInbox(inbox, inboxOrdinal, isCooperative, processor, wmToProcess);
-            }
+            methodName = processInbox(inbox, inboxOrdinal, isCooperative, processor);
             boolean madeProgress = inbox.size() < lastInboxSize || !outbox[0].queue(0).isEmpty();
             assertTrue(methodName + "() call without progress", !assertProgress || madeProgress);
             idleCount = idle(idler, idleCount, madeProgress);
@@ -543,10 +533,10 @@ public final class TestSupport {
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
                 outbox[0].reset();
-                processInbox(inbox, inboxOrdinal, isCooperative, processor, wmToProcess);
+                processInbox(inbox, inboxOrdinal, isCooperative, processor);
             }
             outbox[0].drainQueuesAndReset(actualOutputs, logInputOutput);
-            if (inbox.isEmpty() && wmToProcess[0] == null) {
+            if (inbox.isEmpty()) {
                 snapshotAndRestore(processor, outbox, actualOutputs, doSnapshots, doRestoreEvery, restoreCount);
             }
         }
@@ -630,14 +620,12 @@ public final class TestSupport {
         return new TestOutbox(IntStream.generate(() -> 1).limit(expectedOutputs.size()).toArray(), 1);
     }
 
-    private String processInbox(TestInbox inbox, int inboxOrdinal, boolean isCooperative, Processor[] processor,
-                                Watermark[] wmToEmit) {
+    private String processInbox(TestInbox inbox, int inboxOrdinal, boolean isCooperative, Processor[] processor) {
         if (inbox.peek() instanceof Watermark) {
             Watermark wm = ((Watermark) inbox.peek());
             checkTime("tryProcessWatermark", isCooperative, () -> {
                 if (processor[0].tryProcessWatermark(wm)) {
                     inbox.remove();
-                    wmToEmit[0] = wm;
                 }
             });
             return "tryProcessWatermark";
@@ -822,14 +810,14 @@ public final class TestSupport {
 
     /**
      * Converts a list to a string putting {@code toString()} of each element
-     * on separate line. It is useful to transform list inputs to {@code
+     * on a separate line. It is useful to transform list inputs to {@code
      * assertEquals()}: the exception will show the entire collections instead
      * of just non-equal sizes or the first non-equal element.
      *
      * @param list Input list
      * @return Output string
      */
-    public static String listToString(List<?> list) {
+    private static String listToString(List<?> list) {
         return list.stream()
                    .map(String::valueOf)
                    .collect(Collectors.joining("\n"));

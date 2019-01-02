@@ -132,13 +132,13 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         outstreams.add(outstream1);
         ProcessorTasklet tasklet = createTasklet(-1);
-        processor.processWatermarkCallCountdown = 3;
+        processor.processWatermarkCallCountdown = 2;
 
         // When
         callUntil(400, tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList("wm(100)-3", "wm(100)-2", "wm(100)-1", wm(100)), outstream1.getBuffer());
+        assertEquals(asList("wm(100)-2", "wm(100)-1", "wm(100)-0", wm(100)), outstream1.getBuffer());
     }
 
     @Test
@@ -334,13 +334,15 @@ public class ProcessorTaskletTest_Watermarks {
 
         @Override
         public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-            if (outbox.offer("wm(" + watermark.timestamp() + ")-" + processWatermarkCallCountdown)) {
+            if (processWatermarkCallCountdown >= 0) {
+                assertTrue(outbox.offer("wm(" + watermark.timestamp() + ")-" + processWatermarkCallCountdown));
                 if (processWatermarkCallCountdown > 0) {
                     processWatermarkCallCountdown--;
+                    return false;
                 }
-                return processWatermarkCallCountdown <= 0;
             }
-            return false;
+            assertTrue(outbox.offer(watermark));
+            return true;
         }
 
         @Override

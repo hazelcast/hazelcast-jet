@@ -50,8 +50,7 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
     C contextObject;
 
     private final ContextFactory<C> contextFactory;
-    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
-            callAsyncFn;
+    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>> callAsyncFn;
     private final int maxAsyncOpsPerMember;
 
     private ArrayDeque<CompletableFuture<? extends Traverser<? extends R>>> futures;
@@ -66,12 +65,12 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
                     callAsyncFn,
             @Nullable C contextObject,
-            int maxAsyncOps
+            int maxAsyncOpsPerMember
     ) {
         this.contextFactory = contextFactory;
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
-        this.maxAsyncOpsPerMember = maxAsyncOps;
+        this.maxAsyncOpsPerMember = maxAsyncOpsPerMember;
 
         assert contextObject == null ^ contextFactory.isSharedLocally()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -109,7 +108,8 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
         while (emitFromTraverser(traverser)) {
             // we check the futures in submission order. While this might increase latency if some
             // later-submitted item will get the result earlier, on the other hand we don't have to
-            // do many volatile reads to check the futures in each call.
+            // do many volatile reads to check all the futures in each call, nor a many-to-one
+            // concurrent queue.
             for (CompletableFuture<? extends Traverser<? extends R>> f; (f = futures.peek()) != null; ) {
                 if (!f.isDone()) {
                     return true;
@@ -135,7 +135,7 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
     }
 
     @Override
-    public void close(@Nullable Throwable error) {
+    public void close() {
         // close() might be called even if init() was not called.
         // Only destroy the context if is not shared (i.e. it is our own).
         if (contextObject != null && !contextFactory.isSharedLocally()) {

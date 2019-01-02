@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
@@ -36,6 +37,8 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -84,6 +87,12 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
     ) {
         return attachMapUsingContext(contextFactory, mapFn);
+    }
+
+    @Nonnull @Override
+    public <C, R> GeneralStage<R> mapUsingContextAsync(@Nonnull ContextFactory<C> contextFactory, @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends R>> mapFn) {
+        // TODO [viliam]
+        throw new UnsupportedOperationException("todo");
     }
 
     @Nonnull @Override

@@ -19,11 +19,11 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.TestProcessors.ListSource;
+import com.hazelcast.jet.core.TestProcessors.MapWatermarksToString;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
@@ -31,8 +31,6 @@ import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
@@ -60,7 +58,7 @@ public class WatermarkMaxRetention_IntegrationTest extends JetTestSupport {
                 new ListSource(singletonList(new Watermark(1))),
                 new NoOutputSourceP()
         )).localParallelism(2);
-        Vertex map = dag.newVertex("map", MapWmToStringP::new).localParallelism(1);
+        Vertex map = dag.newVertex("map", MapWatermarksToString::new).localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeListP(SINK_NAME));
 
         dag.edge(between(source, map))
@@ -76,7 +74,7 @@ public class WatermarkMaxRetention_IntegrationTest extends JetTestSupport {
                 () -> new ListSource(singletonList(new Watermark(1)))).localParallelism(1);
         Vertex source1 = dag.newVertex("source1", () -> new NoOutputSourceP());
         // a vertex with two inputs, one will emit a wm and the other won't
-        Vertex map = dag.newVertex("map", MapWmToStringP::new).localParallelism(1);
+        Vertex map = dag.newVertex("map", MapWatermarksToString::new).localParallelism(1);
         Vertex sink = dag.newVertex("sink", writeListP(SINK_NAME));
 
         dag.edge(from(source0).to(map, 0))
@@ -97,12 +95,5 @@ public class WatermarkMaxRetention_IntegrationTest extends JetTestSupport {
             assertEquals(1, list.size());
             assertEquals("wm(1)", list.get(0));
         }, 4);
-    }
-
-    private static final class MapWmToStringP extends AbstractProcessor {
-        @Override
-        public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-            return tryEmit("wm(" + watermark.timestamp() + ')');
-        }
     }
 }
