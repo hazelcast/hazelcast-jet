@@ -180,7 +180,7 @@ public class MasterContext {
      * The tuple contains:<ul>
      *     <li>{@code snapshotMapName}: user-specified name of the snapshot or
      *         null, if no name is specified
-     *     <li>{@code isTerminal}: if true, job will be terminated after the
+     *     <li>{@code isTerminal}: if true, execution will be terminated after the
      *         snapshot
      *     <li>{@code future}: future, that will be completed when the snapshot
      *         is validated.
@@ -259,7 +259,7 @@ public class MasterContext {
      * </ol>
      */
     @Nonnull
-    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode) {
+    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode, boolean allowExportingSnapshot) {
         JobStatus localStatus;
         assertLockNotHeld();
         Tuple2<CompletableFuture<Void>, String> result;
@@ -283,7 +283,7 @@ public class MasterContext {
             }
             requestedTerminationMode = mode;
             // handle cancellation of a suspended job
-            if (localStatus == SUSPENDED) {
+            if (localStatus == SUSPENDED || allowExportingSnapshot && localStatus == EXPORTING_SNAPSHOT) {
                 this.jobStatus = FAILED;
                 setFinalResult(new CancellationException());
             }
@@ -332,17 +332,18 @@ public class MasterContext {
             JetInstance jetInstance = coordinationService.getJetService().getJetInstance();
             return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, EXPORTED_SNAPSHOTS_PREFIX + name)
                     .whenComplete(withTryCatch(logger, (r, t) -> {
-                        jobStatus = SUSPENDED;
                         SnapshotValidationRecord validationRecord =
                                 (SnapshotValidationRecord) jetInstance.getMap(sourceMapName)
                                                                       .get(SnapshotValidationRecord.KEY);
                         jobRepository.cacheValidationRecord(name, validationRecord);
                         if (cancelJob) {
-                            String terminationFailure = requestTermination(CANCEL_FORCEFUL).f1();
+                            String terminationFailure = requestTermination(CANCEL_FORCEFUL, true).f1();
                             if (terminationFailure != null) {
                                 throw new JetException("State for " + jobIdString() + " exported to '" + name
                                         + "', but failed to cancel the job: " + terminationFailure);
                             }
+                        } else {
+                            jobStatus = SUSPENDED;
                         }
                     }));
         }
@@ -350,7 +351,7 @@ public class MasterContext {
             // We already added a terminal snapshot to the queue. There will be one more added in
             // `requestTermination`, but we'll never get to execute that one because the execution
             // will terminate after our terminal snapshot.
-            String terminationFailure = requestTermination(CANCEL_GRACEFUL).f1();
+            String terminationFailure = requestTermination(CANCEL_GRACEFUL, false).f1();
             if (terminationFailure != null) {
                 throw new JetException("Cannot cancel " + jobIdString() + " and export to '" + name + "': "
                         + terminationFailure);
@@ -1131,7 +1132,7 @@ public class MasterContext {
 
     @Nonnull
     CompletableFuture<Void> gracefullyTerminate() {
-        return requestTermination(RESTART_GRACEFUL).f0();
+        return requestTermination(RESTART_GRACEFUL, false).f0();
     }
 
     /**
@@ -1160,7 +1161,7 @@ public class MasterContext {
         }
 
         JobStatus localStatus = jobStatus;
-        if (localStatus == RUNNING && requestTermination(TerminationMode.RESTART_GRACEFUL).f1() == null) {
+        if (localStatus == RUNNING && requestTermination(TerminationMode.RESTART_GRACEFUL, false).f1() == null) {
             logger.info("Requested restart of " + jobIdString() + " to make use of added member(s). Job was running on " +
                     executionPlanMap.size() + " members, cluster now has " + dataMembersWithPartitionsCount
                     + " data members with assigned partitions");
