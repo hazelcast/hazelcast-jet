@@ -257,9 +257,12 @@ public class MasterContext {
      *     <li>a string with a message why this call did nothing or null, if
      *          this call actually initiated the termination
      * </ol>
+     *
+     * @param allowWhileExportingSnapshot if false and jobStatus is
+     *      EXPORTING_SNAPSHOT, termination will be rejected
      */
     @Nonnull
-    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode, boolean allowExportingSnapshot) {
+    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode, boolean allowWhileExportingSnapshot) {
         JobStatus localStatus;
         assertLockNotHeld();
         Tuple2<CompletableFuture<Void>, String> result;
@@ -271,6 +274,9 @@ public class MasterContext {
             }
 
             localStatus = jobStatus();
+            if (localStatus == EXPORTING_SNAPSHOT && !allowWhileExportingSnapshot) {
+                return tuple2(executionCompletionFuture, "Cannot cancel when job status is " + EXPORTING_SNAPSHOT);
+            }
             if (localStatus == SUSPENDED && mode != CANCEL_FORCEFUL) {
                 // if suspended, we can only cancel the job. Other terminations have no effect.
                 return tuple2(executionCompletionFuture, "Job is " + SUSPENDED);
@@ -283,7 +289,7 @@ public class MasterContext {
             }
             requestedTerminationMode = mode;
             // handle cancellation of a suspended job
-            if (localStatus == SUSPENDED || allowExportingSnapshot && localStatus == EXPORTING_SNAPSHOT) {
+            if (localStatus == SUSPENDED || localStatus == EXPORTING_SNAPSHOT) {
                 this.jobStatus = FAILED;
                 setFinalResult(new CancellationException());
             }
@@ -362,7 +368,7 @@ public class MasterContext {
         return future;
     }
 
-    boolean isCancelled() {
+    private boolean isCancelled() {
         return requestedTerminationMode == CANCEL_FORCEFUL;
     }
 
