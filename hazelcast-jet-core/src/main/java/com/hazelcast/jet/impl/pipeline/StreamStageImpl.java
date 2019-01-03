@@ -90,7 +90,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public <C, R> GeneralStage<R> mapUsingContextAsync(@Nonnull ContextFactory<C> contextFactory, @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends R>> mapFn) {
+    public <C, R> GeneralStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends R>> mapFn
+    ) {
         // TODO [viliam]
         throw new UnsupportedOperationException("todo");
     }

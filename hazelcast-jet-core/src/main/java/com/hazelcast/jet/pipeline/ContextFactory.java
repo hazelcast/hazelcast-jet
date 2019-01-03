@@ -156,6 +156,9 @@ public final class ContextFactory<C> implements Serializable {
         return isSharedLocally;
     }
 
+    /**
+     * TODO [viliam] javadoc
+     */
     public enum Mode {
 
         /**
@@ -168,6 +171,10 @@ public final class ContextFactory<C> implements Serializable {
          * The transform function returns
          */
         ASYNC,
+
+        /**
+         * TODO [viliam] javadoc
+         */
         NON_COOPERATIVE
     }
 }

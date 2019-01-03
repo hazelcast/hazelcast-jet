@@ -50,7 +50,8 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
     C contextObject;
 
     private final ContextFactory<C> contextFactory;
-    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>> callAsyncFn;
+    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
+            callAsyncFn;
     private final int maxAsyncOpsPerMember;
 
     private ArrayDeque<CompletableFuture<? extends Traverser<? extends R>>> futures;
@@ -175,7 +176,8 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
         @Nonnull
         @Override
         public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new AsyncTransformUsingContextP<>(contextFactory, callAsyncFn, contextObject, maxAsyncOps))
+            return Stream.generate(() -> new AsyncTransformUsingContextP<>(contextFactory, callAsyncFn, contextObject,
+                                maxAsyncOps))
                          .limit(count)
                          .collect(toList());
         }
