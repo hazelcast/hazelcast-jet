@@ -166,7 +166,7 @@ public abstract class AbstractProcessor implements Processor {
      *         {@code false} otherwise.
      */
     protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
-        throw new UnsupportedOperationException("Missing implementation");
+        throw new UnsupportedOperationException("Missing implementation in " + getClass());
     }
 
     /**
@@ -267,7 +267,7 @@ public abstract class AbstractProcessor implements Processor {
      * @param value    value of the entry from the snapshot
      */
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        throw new UnsupportedOperationException("Missing implementation");
+        throw new UnsupportedOperationException("Missing implementation in " + getClass());
     }
 
     /**

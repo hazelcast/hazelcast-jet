@@ -107,7 +107,7 @@ public interface Processor {
      * @param inbox   the inbox containing the pending items
      */
     default void process(int ordinal, @Nonnull Inbox inbox) {
-        throw new UnsupportedOperationException("Missing implementation");
+        throw new UnsupportedOperationException("Missing implementation in " + getClass());
     }
 
     /**
@@ -137,7 +137,7 @@ public interface Processor {
      *         {@code false} otherwise.
      */
     default boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-        throw new UnsupportedOperationException("Missing implementation");
+        throw new UnsupportedOperationException("Missing implementation in " + getClass());
     }
 
     /**

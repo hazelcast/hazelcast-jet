@@ -178,12 +178,15 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
                 .flatMap(Set::stream)
                 .map(key -> closeWindows(keyToWindows.get(key), key, wm.timestamp()))
                 .flatMap(List::stream);
-        return traverseStream(closedWindows)
-                .append(wm)
+        Traverser<Object> result = traverseStream(closedWindows)
                 .onFirstNull(() -> {
                     lazyAdd(totalWindows, -windowsToClose.values().stream().mapToInt(Set::size).sum());
                     windowsToClose.clear();
                 });
+        if (wm != COMPLETING_WM) {
+            result = result.append(wm);
+        }
+        return result;
     }
 
     private void addToDeadlines(K key, long deadline) {

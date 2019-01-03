@@ -43,6 +43,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.util.Collection;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
@@ -168,7 +169,8 @@ public class SlidingWindowP_twoStageSnapshotTest {
                         outboxFrame(5, 10),
                         outboxFrame(6, 9),
                         outboxFrame(7, 7),
-                        outboxFrame(8, 4)
+                        outboxFrame(8, 4),
+                        wm(10)
                 )),
                 collectionToString(stage2Outbox.queue(0)));
     }
@@ -176,12 +178,18 @@ public class SlidingWindowP_twoStageSnapshotTest {
     private static void processStage2(
             SlidingWindowP p, TestOutbox stage1p1Outbox, TestOutbox stage1p2Outbox, TestInbox inbox
     ) {
-        inbox.addAll(stage1p1Outbox.queue(0));
-        inbox.addAll(stage1p2Outbox.queue(0));
-        stage1p1Outbox.queue(0).clear();
-        stage1p2Outbox.queue(0).clear();
+        moveAllIgnoringWatermarks(stage1p1Outbox.queue(0), inbox);
+        moveAllIgnoringWatermarks(stage1p2Outbox.queue(0), inbox);
         p.process(0, inbox);
         assertTrue(inbox.isEmpty());
+    }
+
+    private static void moveAllIgnoringWatermarks(Queue<Object> outboxQueue, TestInbox inbox) {
+        for (Object o; ((o = outboxQueue.poll()) != null); ) {
+            if (!(o instanceof Watermark)) {
+                inbox.add(o);
+            }
+        }
     }
 
     private static TestOutbox newOutbox() {
