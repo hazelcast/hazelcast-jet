@@ -111,8 +111,8 @@ public final class Sources {
      * policy specifies.
      * <p>
      * If you are implementing a custom source processor, be sure to check out
-     * the {@link EventTimeMapper} class that will help you correctly
-     * implement watermark emission.
+     * the {@link EventTimeMapper} class that will help you correctly implement
+     * watermark emission.
      *
      * @param sourceName user-friendly source name
      * @param metaSupplierFn factory of processor meta-suppliers

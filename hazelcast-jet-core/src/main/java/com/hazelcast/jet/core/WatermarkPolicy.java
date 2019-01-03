@@ -24,11 +24,11 @@ import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.lang.Math.max;
 
 /**
- * This object tracks and determines the current {@link Watermark} given
- * the event timestamps as they occur for a single input stream.
- * Typically the watermark will be advanced with a {@link #limitingLag(long) fixed lag}
+ * This object tracks and determines the current {@link Watermark} given the
+ * event timestamps as they occur for a single input stream. Typically the
+ * watermark will be advanced with a {@link #limitingLag(long) fixed lag}
  * behind the top observed timestamp so far.
- *
+ * <p>
  * This object is used by source processors to determine the current
  * watermark. The processor may choose to create several of these objects
  * to track each source partition separately and each processor will also

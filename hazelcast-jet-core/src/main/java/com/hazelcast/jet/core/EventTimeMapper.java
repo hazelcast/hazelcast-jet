@@ -32,9 +32,9 @@ import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
- * A utility to that helps a source emit events according to a given
- * {@link EventTimePolicy}. Generally this class should be used if a source
- * needs to emit {@link Watermark watermarks}. The mapper deals with the
+ * A utility to that helps a source emit events according to a given {@link
+ * EventTimePolicy}. Generally this class should be used if a source needs
+ * to emit {@link Watermark watermarks}. The mapper deals with the
  * following concerns:
  *
  * <h4>1. Reading partition by partition</h4>
@@ -63,15 +63,16 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *
  * <h4>3. Wrapping of events</h4>
  *
- * Events may need to be wrapped with the extracted timestamp
- * if {@link EventTimePolicy#wrapFn()} is set.
+ * Events may need to be wrapped with the extracted timestamp if {@link
+ * EventTimePolicy#wrapFn()} is set.
  *
  * <h4>4. Throttling of Watermarks</h4>
  *
  * Watermarks are only consumed by windowing operations and emitting
- * watermarks more frequently than the given {@link EventTimePolicy#watermarkThrottlingFrameSize()}
- * is wasteful since they are broadcast to all processors. The mapper
- * ensures that watermarks are emitted as seldom as possible.
+ * watermarks more frequently than the given {@link
+ * EventTimePolicy#watermarkThrottlingFrameSize()} is wasteful since they
+ * are broadcast to all processors. The mapper ensures that watermarks are
+ * emitted as seldom as possible.
  *
  * <h3>Usage</h3>
  *
