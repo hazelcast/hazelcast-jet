@@ -56,6 +56,9 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  *     the transformation the user does on the event objects themselves.
  * </li></ul>
  *
+ * This class should be used with {@link EventTimeMapper} when implementing a
+ * source processor.
+ *
  * @param <T> event type
  */
 public final class EventTimePolicy<T> implements Serializable {

@@ -24,23 +24,18 @@ import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.lang.Math.max;
 
 /**
- * This object runs inside a Jet processor, inspects the event timestamps
- * as they occur in the input and decides on the current value of the
- * watermark. It controls how much disorder Jet will allow in a data stream
- * and which events will be marked as "too late" and dropped. It also
- * decides what to do with the watermark when there are no events for a
- * while. If just one of the many processors working in parallel doesn't
- * receive any events, its watermark may fall behind and impede the
- * progress of the entire DAG. The policy may decide to advance the
- * watermark based on the passage of time alone.
- * <p>
- * The processor must report to this object the timestamp of every event it
- * receives by calling {@link #reportEvent(long)}. It must also ensure that,
- * even in the absence of events, it keeps checking the {@link
- * #getCurrentWatermark() current value} of the watermark. When the
- * watermark advances far enough (as decided by the {@link
- * WatermarkEmissionPolicy}, if in use), it must emit a watermark item to
- * its output edges.
+ * This object tracks and determines the current {@link Watermark} given
+ * the event timestamps as they occur for a single input stream.
+ * Typically the watermark will be advanced with a {@link #limitingLag(long) fixed lag}
+ * behind the top observed timestamp so far.
+ *
+ * This object is used by source processors to determine the current
+ * watermark. The processor may choose to create several of these objects
+ * to track each source partition separately and each processor will also
+ * have their own instance. The implementation does not need to be thread-safe.
+ *
+ * @see EventTimePolicy
+ * @see EventTimeMapper
  */
 public interface WatermarkPolicy {
 

@@ -239,7 +239,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void when_idleTimeout_then_idleMessageAfterTimeout() throws Exception {
-        // We can't inject MockClock to WatermarkSourceUtil inside the InsertWatermarkP, so we use real time.
+        // We can't inject MockClock to EventTimeMapper inside the InsertWatermarkP, so we use real time.
         // We send no events and expect, that after 100 ms WM will be emitted.
         createProcessor(100);
 
