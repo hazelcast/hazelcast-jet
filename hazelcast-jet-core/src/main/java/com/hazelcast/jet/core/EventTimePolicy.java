@@ -19,7 +19,6 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.function.DistributedObjLongBiFunction;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -247,14 +246,4 @@ public final class EventTimePolicy<T> implements Serializable {
         return idleTimeoutMillis;
     }
 
-    /**
-     * Private API. Returns new instance with emit policy replaced with the
-     * given argument.
-     */
-    @Nonnull
-    @PrivateApi
-    public EventTimePolicy<T> withThrottling(long watermarkThrottlingFrameSize, long watermarkThrottlingFrameOffset) {
-        return eventTimePolicy(timestampFn, wrapFn, newWmPolicyFn, watermarkThrottlingFrameSize,
-                watermarkThrottlingFrameOffset, idleTimeoutMillis);
-    }
 }

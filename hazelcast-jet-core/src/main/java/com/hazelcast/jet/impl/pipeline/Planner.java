@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -43,6 +44,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static java.util.stream.Collectors.toList;
 
@@ -87,12 +89,13 @@ public class Planner {
         for (Transform transform : adjacencyMap.keySet()) {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
-                if (t.getEventTimePolicy() != null) {
-                    t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(frameSizeGcd, 0));
+                EventTimePolicy policy = t.getEventTimePolicy();
+                if (policy != null) {
+                    t.setEventTimePolicy(withFrameSize(policy, frameSizeGcd));
                 }
             } else if (transform instanceof TimestampTransform) {
                 TimestampTransform t = (TimestampTransform) transform;
-                t.setEventTimePolicy(t.getEventTimePolicy().withThrottling(frameSizeGcd, 0));
+                t.setEventTimePolicy(withFrameSize(t.getEventTimePolicy(), frameSizeGcd));
             }
         }
 
@@ -180,6 +183,18 @@ public class Planner {
                 return candidate;
             }
         }
+    }
+
+    /**
+     * Returns new instance with emit policy replaced with the
+     * given argument.
+     */
+    @Nonnull
+    private static <T> EventTimePolicy<T> withFrameSize(
+            EventTimePolicy<T> original, long watermarkThrottlingFrameSize
+    ) {
+        return eventTimePolicy(original.timestampFn(), original.wrapFn(), original.newWmPolicyFn(),
+                watermarkThrottlingFrameSize, 0, original.idleTimeoutMillis());
     }
 
     public static <E> List<E> tailList(List<E> list) {
