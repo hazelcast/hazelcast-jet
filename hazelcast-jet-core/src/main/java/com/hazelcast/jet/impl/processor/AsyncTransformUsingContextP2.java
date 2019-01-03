@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -146,6 +147,7 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
                 Traverser<? extends R>> callAsyncFn;
         private final int maxAsyncOps;
         private transient C contextObject;
+        @SuppressFBWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
         private transient AtomicInteger asyncOpsCounter = new AtomicInteger();
 
         private Supplier(
