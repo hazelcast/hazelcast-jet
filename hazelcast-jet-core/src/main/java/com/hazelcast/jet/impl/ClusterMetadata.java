@@ -18,19 +18,14 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.core.Cluster;
-import com.hazelcast.core.Member;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ClusterMetadata implements IdentifiedDataSerializable {
 
@@ -38,7 +33,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
     private String version;
     private long clusterTime;
     private ClusterState state;
-    private Set<Member> members;
     private boolean sslEnabled;
 
     public ClusterMetadata() {
@@ -49,7 +43,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
         this.version = BuildInfoProvider.getBuildInfo().getJetBuildInfo().getVersion();
         this.state = cluster.getClusterState();
         this.clusterTime = cluster.getClusterTime();
-        this.members = cluster.getMembers();
         this.sslEnabled = sslEnabled;
     }
 
@@ -75,11 +68,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
     }
 
     @Nonnull
-    public Set<Member> getMembers() {
-        return members;
-    }
-
-    @Nonnull
     public boolean isSslEnabled() {
         return sslEnabled;
     }
@@ -99,10 +87,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
         out.writeUTF(name);
         out.writeUTF(version);
         out.writeObject(state);
-        out.writeInt(members.size());
-        for (Member member : members) {
-            out.writeObject(member);
-        }
         out.writeLong(clusterTime);
         out.writeBoolean(sslEnabled);
     }
@@ -112,13 +96,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
         name = in.readUTF();
         version = in.readUTF();
         state = in.readObject();
-        int memberSize = in.readInt();
-        if (memberSize > 0) {
-            members = new HashSet<>(memberSize);
-            for (int i = 0; i < memberSize; i++) {
-                members.add(in.readObject());
-            }
-        }
         clusterTime = in.readLong();
         sslEnabled = in.readBoolean();
     }
@@ -131,10 +108,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
                 ", clusterTime=" + clusterTime +
                 ", state=" + state +
                 ", sslEnabled=" + sslEnabled +
-                ", members=" + members.stream()
-                                      .map(Member::getAddress)
-                                      .map(Address::toString)
-                                      .collect(Collectors.joining(",")) +
                 '}';
     }
 
