@@ -25,8 +25,8 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.serialization.SerializationService;
 
-public class JetGetClusterMetadataMessageTask extends
-        AbstractJetMessageTask<JetGetClusterMetadataCodec.RequestParameters> {
+public class JetGetClusterMetadataMessageTask
+        extends AbstractJetMessageTask<JetGetClusterMetadataCodec.RequestParameters> {
     protected JetGetClusterMetadataMessageTask(ClientMessage clientMessage,
                                                Node node,
                                                Connection connection) {
