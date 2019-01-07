@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.SlidingWindowPolicy;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -30,6 +29,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
+import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static java.util.Arrays.asList;
@@ -130,9 +130,5 @@ public class SlidingWindowP_changeWindowSizeTest {
                 summingLong((Integer t) -> t),
                 TimestampedEntry::fromWindowResult,
                 true);
-    }
-
-    private static Watermark wm(long timestamp) {
-        return new Watermark(timestamp);
     }
 }

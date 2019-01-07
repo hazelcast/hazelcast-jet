@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
@@ -37,8 +38,11 @@ import static java.util.stream.Collectors.toList;
 
 /**
  * Processor which, for each received item, emits all the items from the
- * traverser returned by the given item-to-traverser function, using a context
- * object.
+ * traverser returned by the given async item-to-traverser function, using a
+ * context object.
+ * <p>
+ * This processor keeps the order of input items: a stalling call for one item
+ * will stall all subsequent items.
  *
  * @param <C> context object type
  * @param <T> received item type
@@ -54,9 +58,10 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
             callAsyncFn;
     private final int maxAsyncOpsPerMember;
 
-    private ArrayDeque<CompletableFuture<? extends Traverser<? extends R>>> futures;
-    private Traverser<? extends R> traverser;
+    private ArrayDeque<Object> queue;
+    private Traverser<?> traverser;
     private int maxOps;
+    private ResettableSingletonTraverser<Watermark> watermarkTraverser = new ResettableSingletonTraverser<>();
 
     /**
      * Constructs a processor with the given mapping function.
@@ -87,12 +92,12 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
         if (maxOps < 1) {
             throw new JetException("maxOps=" + maxOps);
         }
-        futures = new ArrayDeque<>(maxOps);
+        queue = new ArrayDeque<>(maxOps);
     }
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        if (futures.size() == maxOps) {
+        if (queue.size() == maxOps) {
             // if queue is full, apply backpressure
             return false;
         }
@@ -100,22 +105,33 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
         if (future == null) {
             return true;
         }
-        futures.add(future);
+        queue.add(future);
         return true;
+    }
+
+    @Override
+    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        return queue.size() < maxOps
+                && queue.add(watermark);
     }
 
     @Override
     public boolean tryProcess() {
         while (emitFromTraverser(traverser)) {
-            // we check the futures in submission order. While this might increase latency if some
-            // later-submitted item will get the result earlier, on the other hand we don't have to
-            // do many volatile reads to check all the futures in each call, nor a many-to-one
-            // concurrent queue.
-            for (CompletableFuture<? extends Traverser<? extends R>> f; (f = futures.peek()) != null; ) {
+            // We check the futures in submission order. While this might increase latency for some
+            // later-submitted item that gets the result before some earlier-submitted one, we don't
+            // have to do many volatile reads to check all the futures in each call or a concurrent
+            // queue. It's also easy to keep order of watermarks w.r.t. events.
+            for (Object o; (o = queue.peek()) != null; ) {
+                if (o instanceof Watermark) {
+                    watermarkTraverser.accept((Watermark) o);
+                    traverser = watermarkTraverser;
+                }
+                CompletableFuture<Traverser<? extends R>> f = (CompletableFuture<Traverser<? extends R>>) o;
                 if (!f.isDone()) {
                     return true;
                 }
-                f = futures.remove();
+                queue.remove();
                 try {
                     traverser = f.get();
                 } catch (Exception e) {

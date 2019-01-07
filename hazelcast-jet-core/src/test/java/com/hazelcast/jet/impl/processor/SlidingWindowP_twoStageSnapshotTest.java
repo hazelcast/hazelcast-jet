@@ -47,6 +47,7 @@ import java.util.Queue;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static java.util.Arrays.asList;
@@ -201,10 +202,6 @@ public class SlidingWindowP_twoStageSnapshotTest {
                 p.tsToKeyToAcc.isEmpty());
         assertTrue("slidingWindow is not empty: " + p.slidingWindow,
                 p.slidingWindow == null || p.slidingWindow.isEmpty());
-    }
-
-    private static Watermark wm(long timestamp) {
-        return new Watermark(timestamp);
     }
 
     private static TimestampedEntry<Long, ?> outboxFrame(long ts, long value) {

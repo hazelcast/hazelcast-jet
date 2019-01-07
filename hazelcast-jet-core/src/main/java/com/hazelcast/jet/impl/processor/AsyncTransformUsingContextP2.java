@@ -23,7 +23,9 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
-import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -31,16 +33,27 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static java.util.stream.Collectors.toList;
 
 /**
  * Processor which, for each received item, emits all the items from the
- * traverser returned by the given item-to-traverser function, using a context
- * object.
+ * traverser returned by the given async item-to-traverser function, using a
+ * context object.
+ * <p>
+ * This processors might reorder items: results are emitted as they are
+ * asynchronously delivered. However, this processor doesn't reorder items with
+ * respect to the watermarks that followed them. That is, a watermark is
+ * guaranteed to be emitted <i>after</i> results for all items that occurred
+ * before it are emitted.
  *
  * @param <C> context object type
  * @param <T> received item type
@@ -52,22 +65,23 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
     private C contextObject;
 
     private final ContextFactory<C> contextFactory;
-    private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-            CompletableFuture<Traverser<? extends R>>> callAsyncFn;
+    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
     private final AtomicInteger asyncOpsCounter;
     private final int maxAsyncOps;
 
-    private Traverser<? extends R> outputTraverser;
-    private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
-    private final ManyToOneConcurrentArrayQueue<Traverser<? extends R>> resultQueue;
+    private final Traverser<?> outputTraverser;
+    private final ManyToOneConcurrentArrayQueue<Tuple2<Long, Traverser<Object>>> resultQueue;
+    private Long lastReceivedWatermark = Long.MIN_VALUE;
+    private long lastEmittedWatermark = Long.MIN_VALUE;
+    // TODO [viliam] use more efficient structure
+    private final SortedMap<Long, Long> watermarkCounts = new TreeMap<>();
 
     /**
      * Constructs a processor with the given mapping function.
      */
     private AsyncTransformUsingContextP2(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                    CompletableFuture<Traverser<? extends R>>> callAsyncFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nullable C contextObject,
             @Nonnull AtomicInteger asyncOpsCounter,
             int maxAsyncOps
@@ -82,6 +96,32 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
         this.maxAsyncOps = maxAsyncOps;
 
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
+        outputTraverser = ((Traverser<Tuple2<Long, Traverser<Object>>>) resultQueue::poll)
+                .flatMap(tuple -> {
+                    Long count = watermarkCounts.merge(tuple.f0(), -1L, Long::sum);
+                    assert count >= 0 : "count=" + count;
+                    if (count == 0) {
+                        long wmToEmit = Long.MIN_VALUE;
+                        for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
+                            Entry<Long, Long> entry = it.next();
+                            if (entry.getValue() != 0) {
+                                wmToEmit = entry.getKey();
+                                break;
+                            } else {
+                                it.remove();
+                            }
+                        }
+                        if (watermarkCounts.isEmpty() && lastReceivedWatermark > lastEmittedWatermark) {
+                            wmToEmit = lastReceivedWatermark;
+                        }
+                        if (wmToEmit > Long.MIN_VALUE) {
+                            lastEmittedWatermark = wmToEmit;
+                            return tuple.f1()
+                                    .append(new Watermark(wmToEmit));
+                        }
+                    }
+                    return tuple.f1();
+                });
     }
 
     @Override
@@ -90,8 +130,6 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        Traverser<Traverser<? extends R>> outerTraverser = resultQueue::poll;
-        outputTraverser = outerTraverser.flatMap(t -> t);
     }
 
     @Override
@@ -104,21 +142,32 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        if (!Util.tryIncrement(asyncOpsCounter, 1, maxAsyncOps)) {
+        if (!emitFromTraverser(outputTraverser)
+                || !Util.tryIncrement(asyncOpsCounter, 1, maxAsyncOps)) {
             return false;
         }
-
-        CompletableFuture<Traverser<? extends R>> future =
-                callAsyncFn.apply(singletonTraverser, contextObject, (T) item);
+        CompletableFuture<Traverser<R>> future = callAsyncFn.apply(contextObject, (T) item);
         if (future == null) {
             return true;
         }
+        watermarkCounts.merge(lastReceivedWatermark, 1L, Long::sum);
+        Long lastWatermarkAtReceiveTime = lastReceivedWatermark;
+        // TODO [viliam] extract the action to a field to reduce GC litter
         future.thenAccept(e -> {
-            boolean result = resultQueue.offer(e);
-            assert result : "Offer failed, resultQueue doesn't have sufficient capacity";
+            boolean result = resultQueue.offer(tuple2(lastWatermarkAtReceiveTime, (Traverser<Object>) e));
+            assert result : "resultQueue doesn't have sufficient capacity";
             asyncOpsCounter.decrementAndGet();
         });
-        emitFromTraverser(outputTraverser);
+        return true;
+    }
+
+    @Override
+    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        lastReceivedWatermark = watermark.timestamp();
+        if (watermarkCounts.isEmpty()) {
+            lastEmittedWatermark = watermark.timestamp();
+            return tryEmit(watermark);
+        }
         return true;
     }
 
@@ -126,6 +175,11 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
     public boolean tryProcess() {
         emitFromTraverser(outputTraverser);
         return true;
+    }
+
+    @Override
+    public boolean complete() {
+        return emitFromTraverser(outputTraverser) && watermarkCounts.isEmpty();
     }
 
     @Override
@@ -143,8 +197,7 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
         static final long serialVersionUID = 1L;
 
         private final ContextFactory<C> contextFactory;
-        private final DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                Traverser<? extends R>> callAsyncFn;
+        private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
         private final int maxAsyncOps;
         private transient C contextObject;
         @SuppressFBWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
@@ -152,8 +205,7 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
-                @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                        Traverser<? extends R>> callAsyncFn,
+                @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
                 int maxAsyncOps
         ) {
             this.contextFactory = contextFactory;
@@ -170,7 +222,7 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
 
         @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new AsyncTransformUsingContextP2(contextFactory, callAsyncFn, contextObject,
+            return Stream.generate(() -> new AsyncTransformUsingContextP2<>(contextFactory, callAsyncFn, contextObject,
                                     asyncOpsCounter, maxAsyncOps))
                          .limit(count)
                          .collect(toList());
@@ -190,8 +242,7 @@ public final class AsyncTransformUsingContextP2<C, T, R> extends AbstractProcess
      */
     public static <C, T, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedTriFunction<ResettableSingletonTraverser<R>, ? super C, ? super T,
-                    Traverser<? extends R>> callAsyncFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             int maxAsyncOps
     ) {
         // TODO [viliam] make maxAsyncOps global value, not per member

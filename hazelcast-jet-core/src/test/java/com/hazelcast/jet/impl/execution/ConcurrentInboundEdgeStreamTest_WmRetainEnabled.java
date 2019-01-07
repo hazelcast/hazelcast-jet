@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
@@ -30,6 +29,7 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
@@ -162,10 +162,6 @@ public class ConcurrentInboundEdgeStreamTest_WmRetainEnabled {
 
     private void add(OneToOneConcurrentArrayQueue<Object> q, Object... items) {
         q.addAll(asList(items));
-    }
-
-    private Watermark wm(long timestamp) {
-        return new Watermark(timestamp);
     }
 
     private SnapshotBarrier barrier(long snapshotId) {

@@ -210,4 +210,8 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             }
         });
     }
+
+    public static Watermark wm(long timestamp) {
+        return new Watermark(timestamp);
+    }
 }

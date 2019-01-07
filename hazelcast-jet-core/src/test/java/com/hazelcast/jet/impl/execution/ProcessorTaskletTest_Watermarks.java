@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
@@ -301,10 +302,6 @@ public class ProcessorTaskletTest_Watermarks {
                     CALL_COUNT_LIMIT, expectedState, r),
                     ++iterCount < CALL_COUNT_LIMIT);
         }
-    }
-
-    private Watermark wm(long timestamp) {
-        return new Watermark(timestamp);
     }
 
     private static class ProcessorWithWatermarks implements Processor {

@@ -95,7 +95,7 @@ public interface Traverser<T> {
      * up to the item for which the predicate fails (exclusive).
      */
     @Nonnull
-    default Traverser<T> takeWhile(@Nonnull Predicate<? super T> pred) {
+    default Traverser<T> takeWhile(@Nonnull Predicate<? super T> predicate) {
         return new Traverser<T>() {
             boolean predicateSatisfied = true;
 
@@ -105,7 +105,7 @@ public interface Traverser<T> {
                     return null;
                 }
                 T t = Traverser.this.next();
-                predicateSatisfied = t == null || pred.test(t);
+                predicateSatisfied = t == null || predicate.test(t);
                 return predicateSatisfied ? t : null;
             }
         };
@@ -116,7 +116,7 @@ public interface Traverser<T> {
      * starting from the item for which the predicate fails (inclusive).
      */
     @Nonnull
-    default Traverser<T> dropWhile(@Nonnull Predicate<? super T> pred) {
+    default Traverser<T> dropWhile(@Nonnull Predicate<? super T> predicate) {
         return new Traverser<T>() {
             boolean predicateSatisfied = true;
 
@@ -126,7 +126,7 @@ public interface Traverser<T> {
                     return Traverser.this.next();
                 }
                 for (T t; (t = Traverser.this.next()) != null; ) {
-                    predicateSatisfied = pred.test(t);
+                    predicateSatisfied = predicate.test(t);
                     if (!predicateSatisfied) {
                         return t;
                     }

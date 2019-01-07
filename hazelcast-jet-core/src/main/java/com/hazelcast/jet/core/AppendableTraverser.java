@@ -59,8 +59,7 @@ public class AppendableTraverser<T> implements Traverser<T> {
      * {@inheritDoc}
      * @return {@code this} instance
      */
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Traverser<T> append(@Nonnull T item) {
         queue.add(item);
         return this;
