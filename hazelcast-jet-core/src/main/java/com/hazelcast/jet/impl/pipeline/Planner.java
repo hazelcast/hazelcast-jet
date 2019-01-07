@@ -186,8 +186,8 @@ public class Planner {
     }
 
     /**
-     * Returns new instance with emit policy replaced with the
-     * given argument.
+     * Returns a new instance with emit policy replaced with the given
+     * argument.
      */
     @Nonnull
     private static <T> EventTimePolicy<T> withFrameSize(

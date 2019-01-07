@@ -146,7 +146,8 @@ public abstract class WatermarkCoalescer {
     }
 
     /**
-     * Special-case implementation for zero inputs (source processors).
+     * Special-case implementation for single input (i.e. no coalescing, just
+     * forwarding).
      */
     private static final class SingleInputImpl extends WatermarkCoalescer {
 
