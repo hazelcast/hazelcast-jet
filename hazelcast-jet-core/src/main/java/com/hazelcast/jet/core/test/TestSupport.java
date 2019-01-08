@@ -35,12 +35,9 @@ import javax.annotation.Nonnull;
 import java.net.UnknownHostException;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiPredicate;
@@ -667,7 +664,6 @@ public final class TestSupport {
         TestInbox snapshotInbox = new TestInbox();
         boolean[] done = {false};
         boolean isCooperative = processor[0].isCooperative();
-        Set<Object> keys = new HashSet<>();
         do {
             checkTime("saveSnapshot", isCooperative, () -> done[0] = processor[0].saveToSnapshot());
             assertTrue("saveToSnapshot() call without progress",
@@ -677,12 +673,15 @@ public final class TestSupport {
             outbox[0].drainQueuesAndReset(actualOutput, logInputOutput);
         } while (!done[0]);
 
-        // check snapshot for duplicate keys
-        for (Object item : snapshotInbox.queue()) {
-            Entry<Object, Object> item2 = (Entry<Object, Object>) item;
-            assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
-                    "Duplicate: " + item2.getKey() + "\n  Keys so far: " + keys, keys.add(item2.getKey()));
-        }
+        // check snapshot for duplicate keys TODO [viliam] remove this?
+//        {
+//            Set<Object> keys = new HashSet<>();
+//            for (Object item : snapshotInbox.queue()) {
+//                Entry<Object, Object> item2 = (Entry<Object, Object>) item;
+//                assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
+//                        "Duplicate: " + item2.getKey() + "\n  Keys so far: " + keys, keys.add(item2.getKey()));
+//            }
+//        }
 
         if (!willRestore) {
             return;

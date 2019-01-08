@@ -21,7 +21,9 @@ import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@RunWith(HazelcastSerialClassRunner.class)
 public class SlidingWindowP_changeWindowSizeTest {
 
     @Test
