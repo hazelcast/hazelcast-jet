@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
@@ -40,15 +39,10 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.core.JetTestSupport.wm;
-import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByMinStep;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noThrottling;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
-import static com.hazelcast.jet.core.WatermarkPolicies.limitingLag;
+import static com.hazelcast.jet.core.JetTestSupport.wm;
+import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
-import static com.hazelcast.jet.impl.util.WatermarkPolicyUtil.limitingTimestampAndWallClockLag;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -72,7 +66,7 @@ public class InsertWatermarksPTest {
     private List<Object> resultToCheck = new ArrayList<>();
     private Context context;
     private DistributedSupplier<WatermarkPolicy> wmPolicy = limitingLag(LAG);
-    private WatermarkEmissionPolicy wmEmissionPolicy = noThrottling();
+    private long watermarkThrottlingFrameSize = 1;
 
     @Parameters(name = "outboxCapacity={0}")
     public static Collection<Object> parameters() {
@@ -83,14 +77,6 @@ public class InsertWatermarksPTest {
     public void setUp() {
         outbox = new TestOutbox(outboxCapacity);
         context = new TestProcessorContext();
-    }
-
-    @Test
-    public void when_firstEventLate_then_notDropped() throws Exception {
-        wmPolicy = () -> limitingTimestampAndWallClockLag(0, 0, clock::now);
-        doTest(
-                singletonList(item(clock.now - 1)),
-                asList(wm(clock.now), item(clock.now - 1)));
     }
 
     @Test
@@ -177,7 +163,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsIncrease_then_wmIncreases() throws Exception {
-        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(2));
+        watermarkThrottlingFrameSize = 2;
         doTest(
                 asList(
                         item(10),
@@ -199,7 +185,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsIncreaseAndStartAtVergeOfFrame_then_wmIncreases() throws Exception {
-        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(2));
+        watermarkThrottlingFrameSize = 2;
         doTest(
                 asList(
                         item(11),
@@ -220,7 +206,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_eventsNotAtTheVergeOfFrame_then_wmEmittedCorrectly() throws Exception {
-        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(10));
+        watermarkThrottlingFrameSize = 10;
         doTest(
                 asList(
                         item(14),
@@ -239,7 +225,7 @@ public class InsertWatermarksPTest {
 
     @Test
     public void emitByFrame_when_gapBetweenEvents_then_gapInWms() throws Exception {
-        wmEmissionPolicy = emitByFrame(tumblingWinPolicy(2));
+        watermarkThrottlingFrameSize = 2;
         doTest(
                 asList(
                         item(11),
@@ -253,47 +239,8 @@ public class InsertWatermarksPTest {
     }
 
     @Test
-    public void emitByMinStep_when_eventsIncrease_then_wmIncreases() throws Exception {
-        wmEmissionPolicy = emitByMinStep(2);
-        doTest(
-                asList(
-                        item(11),
-                        item(12),
-                        item(13),
-                        item(14)
-                ),
-                asList(
-                        wm(8),
-                        item(11),
-                        item(12),
-                        wm(10),
-                        item(13),
-                        item(14)
-                )
-        );
-    }
-
-    @Test
-    public void emitByMinStep_when_gapBetweenEvents_then_oneWm() throws Exception {
-        wmEmissionPolicy = emitByMinStep(2);
-        doTest(
-                asList(
-                        item(10),
-                        item(15),
-                        item(20)),
-                asList(
-                        wm(7),
-                        item(10),
-                        wm(12),
-                        item(15),
-                        wm(17),
-                        item(20))
-        );
-    }
-
-    @Test
     public void when_idleTimeout_then_idleMessageAfterTimeout() throws Exception {
-        // We can't inject MockClock to WatermarkSourceUtil inside the InsertWatermarkP, so we use real time.
+        // We can't inject MockClock to EventTimeMapper inside the InsertWatermarkP, so we use real time.
         // We send no events and expect, that after 100 ms WM will be emitted.
         createProcessor(100);
 
@@ -323,7 +270,8 @@ public class InsertWatermarksPTest {
     }
 
     private void createProcessor(long idleTimeoutMillis) throws Exception {
-        p = new InsertWatermarksP<>(eventTimePolicy(Item::getTimestamp, wmPolicy, wmEmissionPolicy, idleTimeoutMillis));
+        p = new InsertWatermarksP<>(eventTimePolicy(Item::getTimestamp, wmPolicy, watermarkThrottlingFrameSize, 0,
+                idleTimeoutMillis));
         p.init(outbox, context);
     }
 
@@ -419,10 +367,6 @@ public class InsertWatermarksPTest {
 
         MockClock(long now) {
             this.now = now;
-        }
-
-        long now() {
-            return now;
         }
 
         void set(long newNow) {

@@ -42,7 +42,6 @@ import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -69,7 +68,7 @@ public class ProcessorTaskletTest_Watermarks {
 
     @Test
     public void when_isCooperative_then_true() {
-        assertTrue(createTasklet(-1).isCooperative());
+        assertTrue(createTasklet().isCooperative());
     }
 
     @Test
@@ -83,10 +82,10 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         outstreams.add(outstream1);
 
-        ProcessorTasklet tasklet = createTasklet(-1);
+        ProcessorTasklet tasklet = createTasklet();
 
         // When
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(asList(0, 1, "wm(123)-0", wm(123)), outstream1.getBuffer());
@@ -106,22 +105,22 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream2);
         outstreams.add(outstream1);
 
-        ProcessorTasklet tasklet = createTasklet(-1);
+        ProcessorTasklet tasklet = createTasklet();
 
         // When
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(asList(0, 1, 2, 3), outstream1.getBuffer());
         outstream1.flush();
 
         // 100 ms later still no progress - we are waiting for the WM
-        callUntil(500, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         assertEquals(emptyList(), outstream1.getBuffer());
 
         // When watermark in the other queue
         instream2.push(wm(99));
-        callUntil(500, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         assertEquals(asList("wm(99)-0", wm(99)), outstream1.getBuffer());
     }
 
@@ -132,11 +131,11 @@ public class ProcessorTaskletTest_Watermarks {
         MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
         instreams.add(instream1);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(-1);
+        ProcessorTasklet tasklet = createTasklet();
         processor.processWatermarkCallCountdown = 2;
 
         // When
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(asList("wm(100)-2", "wm(100)-1", "wm(100)-0", wm(100)), outstream1.getBuffer());
@@ -149,33 +148,14 @@ public class ProcessorTaskletTest_Watermarks {
         MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
         instreams.add(instream1);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(-1);
+        ProcessorTasklet tasklet = createTasklet();
 
         // When
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(asList("wm(100)-0", wm(100), "wm(101)-0", wm(101)), outstream1.getBuffer());
     }
-
-    @Test
-    public void when_noWmOnOneQueue_then_processedAfterMaxRetainTime() {
-        // Given
-        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1000);
-        MockInboundStream instream2 = new MockInboundStream(0, singletonList(wm(100)), 1000);
-        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
-        instreams.add(instream1);
-        instreams.add(instream2);
-        outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(16);
-
-        // When
-        callUntil(400, tasklet, NO_PROGRESS);
-        callUntil(416, tasklet, NO_PROGRESS);
-        // Then
-        assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
-    }
-
 
     // #### IDLE_MESSAGE related tests ####
 
@@ -188,10 +168,10 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         instreams.add(instream2);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(16);
+        ProcessorTasklet tasklet = createTasklet();
 
         // When
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         // Then
         assertEquals(singletonList(IDLE_MESSAGE), outstream1.getBuffer());
     }
@@ -205,9 +185,9 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         instreams.add(instream2);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(16);
+        ProcessorTasklet tasklet = createTasklet();
 
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(singletonList(IDLE_MESSAGE), outstream1.getBuffer());
@@ -216,7 +196,7 @@ public class ProcessorTaskletTest_Watermarks {
         // When2
         instream1.push(wm(100));
         instream2.push(wm(101));
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         // Then2
         assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
     }
@@ -230,10 +210,10 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         instreams.add(instream2);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(16);
+        ProcessorTasklet tasklet = createTasklet();
 
         // When
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         // Then
         assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
     }
@@ -247,9 +227,9 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         instreams.add(instream2);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(16);
+        ProcessorTasklet tasklet = createTasklet();
 
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
@@ -258,9 +238,9 @@ public class ProcessorTaskletTest_Watermarks {
 
         // When2
         instream2.push(wm(101));
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         instream1.push(wm(102));
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
         // Then2
         assertEquals(asList("wm(101)-0", wm(101)), outstream1.getBuffer());
     }
@@ -273,33 +253,33 @@ public class ProcessorTaskletTest_Watermarks {
         instreams.add(instream1);
         instreams.add(instream2);
         outstreams.add(outstream1);
-        ProcessorTasklet tasklet = createTasklet(16);
+        ProcessorTasklet tasklet = createTasklet();
 
-        callUntil(400, tasklet, NO_PROGRESS);
+        callUntil(tasklet);
 
         // Then
         assertEquals(asList("wm(100)-0", wm(100)), outstream1.getBuffer());
     }
 
-    private ProcessorTasklet createTasklet(int maxWatermarkRetainMillis) {
+    private ProcessorTasklet createTasklet() {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
         SnapshotContext snapshotContext = new SnapshotContext(mock(ILogger.class), 1, "test job", -1, EXACTLY_ONCE);
         snapshotContext.initTaskletCount(1, 0);
         final ProcessorTasklet t = new ProcessorTasklet(context, new DefaultSerializationServiceBuilder().build(),
-                processor, instreams, outstreams, snapshotContext, snapshotCollector, maxWatermarkRetainMillis, null);
+                processor, instreams, outstreams, snapshotContext, snapshotCollector, null);
         t.init();
         return t;
     }
 
-    private static void callUntil(long now, ProcessorTasklet tasklet, ProgressState expectedState) {
+    private static void callUntil(ProcessorTasklet tasklet) {
         int iterCount = 0;
-        for (ProgressState r; (r = tasklet.call(MILLISECONDS.toNanos(now))) != expectedState; ) {
+        for (ProgressState r; (r = tasklet.call()) != NO_PROGRESS; ) {
             assertEquals("Failed to make progress", MADE_PROGRESS, r);
             assertTrue(String.format(
                     "tasklet.call() invoked %d times without reaching %s. Last state was %s",
-                    CALL_COUNT_LIMIT, expectedState, r),
+                    CALL_COUNT_LIMIT, NO_PROGRESS, r),
                     ++iterCount < CALL_COUNT_LIMIT);
         }
     }

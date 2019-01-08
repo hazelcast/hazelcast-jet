@@ -119,8 +119,8 @@ public class ProcessorTasklet implements Tasklet {
                             @Nonnull List<? extends OutboundEdgeStream> outstreams,
                             @Nonnull SnapshotContext ssContext,
                             @Nonnull OutboundCollector ssCollector,
-                            int maxWatermarkRetainMillis,
-                            @Nullable ProbeBuilder probeBuilder) {
+                            @Nullable ProbeBuilder probeBuilder
+    ) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
         this.serializationService = serializationService;
@@ -146,7 +146,7 @@ public class ProcessorTasklet implements Tasklet {
         pendingSnapshotId = ssContext.activeSnapshotId() + 1;
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
-        watermarkCoalescer = WatermarkCoalescer.create(maxWatermarkRetainMillis, instreams.size());
+        watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
         if (probeBuilder != null) {
             registerMetrics(instreams, probeBuilder);
         }
@@ -223,14 +223,9 @@ public class ProcessorTasklet implements Tasklet {
     @Override @Nonnull
     public ProgressState call() {
         assert !processorClosed : "processor closed";
-        return call(watermarkCoalescer.getTime());
-    }
-
-    // package-visible for testing
-    ProgressState call(long now) {
         progTracker.reset();
         outbox.reset();
-        stateMachineStep(now);
+        stateMachineStep();
         ProgressState progressState = progTracker.toProgressState();
         if (progressState.isDone()) {
             closeProcessor();
@@ -250,15 +245,15 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     @SuppressWarnings("checkstyle:returncount")
-    private void stateMachineStep(long now) {
+    private void stateMachineStep() {
         switch (state) {
             case PROCESS_WATERMARK:
                 progTracker.notDone();
                 if (pendingWatermark == null) {
-                    long wm = watermarkCoalescer.checkWmHistory(now);
+                    long wm = watermarkCoalescer.checkWmHistory();
                     if (wm == NO_NEW_WM) {
                         state = PROCESS_INBOX;
-                        stateMachineStep(now); // recursion
+                        stateMachineStep(); // recursion
                         break;
                     }
                     pendingWatermark = new Watermark(wm);
@@ -268,14 +263,14 @@ public class ProcessorTasklet implements Tasklet {
                         : processor.tryProcessWatermark(pendingWatermark)) {
                     state = PROCESS_INBOX;
                     pendingWatermark = null;
-                    stateMachineStep(now); // recursion
+                    stateMachineStep(); // recursion
                 }
                 break;
 
             case PROCESS_INBOX:
                 progTracker.notDone();
                 if (inbox.isEmpty() && (isSnapshotInbox() || processor.tryProcess())) {
-                    fillInbox(now);
+                    fillInbox();
                 }
                 if (!inbox.isEmpty()) {
                     if (isSnapshotInbox()) {
@@ -370,7 +365,7 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    private void fillInbox(long now) {
+    private void fillInbox() {
         assert inbox.isEmpty() : "inbox is not empty";
         assert pendingWatermark == null : "null wm expected, but was " + pendingWatermark;
 
@@ -395,7 +390,7 @@ public class ProcessorTasklet implements Tasklet {
             Object lastItem = inbox.queue().peekLast();
             if (lastItem instanceof Watermark) {
                 long newWmValue = ((Watermark) inbox.queue().removeLast()).timestamp();
-                long wm = watermarkCoalescer.observeWm(now, currInstream.ordinal(), newWmValue);
+                long wm = watermarkCoalescer.observeWm(currInstream.ordinal(), newWmValue);
                 if (wm != NO_NEW_WM) {
                     pendingWatermark = new Watermark(wm);
                 }
