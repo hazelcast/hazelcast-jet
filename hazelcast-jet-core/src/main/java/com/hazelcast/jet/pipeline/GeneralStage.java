@@ -114,31 +114,22 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches to this stage a filtering stage, one which applies the provided
-     * predicate function to each input item to decide whether to pass the item
-     * to the output or to discard it. The predicate function receives another
-     * parameter, the context object which Jet will create using the supplied
-     * {@code contextFactory}.
+     * Attaches a mapping stage which applies the supplied function to each
+     * input item independently and emits the value of the CompletableFuture
+     * the function returned as the output item, once the future is completed.
+     * The mapping function receives another parameter, the context object,
+     * which Jet will create using the supplied {@code contextFactory}.
+     * <p>
+     * The latency of the async call will add to the latency of items.
      * <p>
      * <strong>NOTE:</strong> any state you maintain in the context object does
      * not automatically become a part of a fault-tolerant snapshot. If Jet must
      * restore from a snapshot, your state will either be lost (if it was just
      * local state) or not rewound to the checkpoint (if it was stored in some
      * durable storage).
-     * Attaches to this stage a mapping stage, one which applies the supplied
-     * function to each input item independently and emits the function's result
-     * as the output item. The mapping function receives another parameter, the
-     * context object which Jet will create using the supplied {@code
-     * contextFactory}.
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
-     * <p>
-     * <strong>NOTE:</strong> any state you maintain in the context object does
-     * not automatically become a part of a fault-tolerant snapshot. If Jet must
-     * restore from a snapshot, your state will either be lost (if it was just
-     * local state) or not rewound to the checkpoint (if it was stored in some
-     * durable storage).
      *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function

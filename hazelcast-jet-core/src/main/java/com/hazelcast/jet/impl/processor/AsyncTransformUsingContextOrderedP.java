@@ -18,11 +18,13 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
@@ -33,6 +35,7 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.stream.Collectors.toList;
 
@@ -48,28 +51,27 @@ import static java.util.stream.Collectors.toList;
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcessor {
-
-    // package-visible for test
-    C contextObject;
+public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractProcessor {
 
     private final ContextFactory<C> contextFactory;
-    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
-            callAsyncFn;
+    private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
     private final int maxAsyncOpsPerMember;
 
+    private C contextObject;
+    // on the queue there is either:
+    // - tuple2(originalItem, future)
+    // - watermark
     private ArrayDeque<Object> queue;
-    private Traverser<?> traverser;
+    private Traverser<?> traverser = Traversers.empty();
     private int maxOps;
     private ResettableSingletonTraverser<Watermark> watermarkTraverser = new ResettableSingletonTraverser<>();
 
     /**
      * Constructs a processor with the given mapping function.
      */
-    private AsyncTransformUsingContextP(
+    private AsyncTransformUsingContextOrderedP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
-                    callAsyncFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nullable C contextObject,
             int maxAsyncOpsPerMember
     ) {
@@ -98,49 +100,83 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         if (queue.size() == maxOps) {
-            // if queue is full, apply backpressure
+            // if queue is full, try to emit and apply backpressure
+            tryFlushQueue();
             return false;
         }
-        CompletableFuture<? extends Traverser<? extends R>> future = callAsyncFn.apply(contextObject, (T) item);
-        if (future == null) {
-            return true;
+        T castedItem = (T) item;
+        CompletableFuture<? extends Traverser<? extends R>> future = callAsyncFn.apply(contextObject, castedItem);
+        if (future != null) {
+            queue.add(tuple2(castedItem, future));
         }
-        queue.add(future);
         return true;
     }
 
     @Override
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        tryFlushQueue();
         return queue.size() < maxOps
                 && queue.add(watermark);
     }
 
     @Override
     public boolean tryProcess() {
-        while (emitFromTraverser(traverser)) {
-            // We check the futures in submission order. While this might increase latency for some
-            // later-submitted item that gets the result before some earlier-submitted one, we don't
-            // have to do many volatile reads to check all the futures in each call or a concurrent
-            // queue. It's also easy to keep order of watermarks w.r.t. events.
-            for (Object o; (o = queue.peek()) != null; ) {
-                if (o instanceof Watermark) {
-                    watermarkTraverser.accept((Watermark) o);
-                    traverser = watermarkTraverser;
-                }
-                CompletableFuture<Traverser<? extends R>> f = (CompletableFuture<Traverser<? extends R>>) o;
+        tryFlushQueue();
+        // we return true - we can accept more items even while emitting this item
+        return true;
+    }
+
+    /**
+     * Drain items from queue until either:
+     * - an incomplete item is encountered
+     * - the outbox is full
+     *
+     * @return true, if there are no more in-flight items and everything was
+     * emitted to the outbox
+     */
+    private boolean tryFlushQueue() {
+        // We check the futures in submission order. While this might increase latency for some
+        // later-submitted item that gets the result before some earlier-submitted one, we don't
+        // have to do many volatile reads to check all the futures in each call or a concurrent
+        // queue. It also doesn't shuffle the stream items.
+        for (;;) {
+            if (!emitFromTraverser(traverser)) {
+                return false;
+            }
+            Object o = queue.peek();
+            if (o == null) {
+                return true;
+            }
+            if (o instanceof Watermark) {
+                watermarkTraverser.accept((Watermark) o);
+                traverser = watermarkTraverser;
+            } else {
+                CompletableFuture<Traverser<? extends R>> f =
+                        ((Tuple2<T, CompletableFuture<Traverser<? extends R>>>) o).f1();
                 if (!f.isDone()) {
-                    return true;
+                    return false;
                 }
-                queue.remove();
                 try {
                     traverser = f.get();
                 } catch (Exception e) {
                     throw sneakyThrow(e);
                 }
             }
+            queue.remove();
         }
-        // we return true - we can accept more items even while emitting this item
-        return true;
+    }
+
+    @Override
+    public boolean complete() {
+        return tryFlushQueue();
+    }
+
+    @Override
+    public boolean saveToSnapshot() {
+        // We're stateless, wait until responses to all async requests are emitted. This is a
+        // stop-the-world situation, no new async requests are sent while waiting. If async requests
+        // are slow, this might be a major slowdown.
+        return tryFlushQueue();
     }
 
     @Override
@@ -166,14 +202,13 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
         static final long serialVersionUID = 1L;
 
         private final ContextFactory<C> contextFactory;
-        private final DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
-                callAsyncFn;
+        private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
         private transient C contextObject;
         private int maxAsyncOps;
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
-                @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
+                @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>>
                         callAsyncFn,
                 int maxAsyncOps
         ) {
@@ -192,10 +227,11 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
         @Nonnull
         @Override
         public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new AsyncTransformUsingContextP<>(contextFactory, callAsyncFn, contextObject,
-                                maxAsyncOps))
-                         .limit(count)
-                         .collect(toList());
+            return Stream
+                    .generate(() -> new AsyncTransformUsingContextOrderedP<>(contextFactory, callAsyncFn, contextObject,
+                            maxAsyncOps))
+                    .limit(count)
+                    .collect(toList());
         }
 
         @Override
@@ -212,7 +248,7 @@ public final class AsyncTransformUsingContextP<C, T, R> extends AbstractProcesso
      */
     public static <C, T, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends Traverser<? extends R>>>
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>>
                     callAsyncFn,
             int maxAsyncOps
     ) {

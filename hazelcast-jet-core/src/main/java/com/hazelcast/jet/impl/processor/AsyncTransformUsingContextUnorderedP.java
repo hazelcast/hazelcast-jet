@@ -71,24 +71,21 @@ import static java.util.stream.Collectors.toList;
  * @param <K> extracted key type
  * @param <R> emitted item type
  */
-public final class AsyncTransformUsingContextP2<C, T, K, R> extends AbstractProcessor {
-
-    @Nonnull private final Function<T, K> extractKeyFn;
-    // package-visible for test
-    private C contextObject;
+public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends AbstractProcessor {
 
     private final ContextFactory<C> contextFactory;
     private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
     private final AtomicInteger asyncOpsCounter;
     private final int maxAsyncOps;
+    private final Function<T, K> extractKeyFn;
 
+    private C contextObject;
     private final Traverser<?> outputTraverser;
     private final ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Traverser<Object>>> resultQueue;
     // TODO [viliam] use more efficient structure
     private final SortedMap<Long, Long> watermarkCounts = new TreeMap<>();
     private final Map<T, Integer> inFlightItems = new IdentityHashMap<>();
     private Traverser<Entry> snapshotTraverser;
-    private boolean inComplete;
 
     private Long lastReceivedWm = Long.MIN_VALUE;
     private long lastEmittedWm = Long.MIN_VALUE;
@@ -97,7 +94,7 @@ public final class AsyncTransformUsingContextP2<C, T, K, R> extends AbstractProc
     /**
      * Constructs a processor with the given mapping function.
      */
-    private AsyncTransformUsingContextP2(
+    private AsyncTransformUsingContextUnorderedP(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nullable C contextObject,
@@ -138,7 +135,7 @@ public final class AsyncTransformUsingContextP2<C, T, K, R> extends AbstractProc
             if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
                 wmToEmit = lastReceivedWm;
             }
-            if (wmToEmit > Long.MIN_VALUE) {
+            if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
                 lastEmittedWm = wmToEmit;
                 return tuple.f2()
                             .append(new Watermark(wmToEmit));
@@ -207,17 +204,11 @@ public final class AsyncTransformUsingContextP2<C, T, K, R> extends AbstractProc
 
     @Override
     public boolean complete() {
-        inComplete = true;
         return emitFromTraverser(outputTraverser) && watermarkCounts.isEmpty();
     }
 
     @Override
     public boolean saveToSnapshot() {
-        if (inComplete) {
-            // If we are in completing phase, we can have a half-emitted item. Instead of finishing it and
-            // writing a snapshot, we finish the final items and save no state.
-            return complete();
-        }
         if (snapshotTraverser == null) {
             LoggingUtil.logFinest(getLogger(), "Saving to snapshot: %s, lastReceivedWm=%d", inFlightItems, lastReceivedWm);
             snapshotTraverser = traverseIterable(inFlightItems.entrySet())
@@ -295,10 +286,11 @@ public final class AsyncTransformUsingContextP2<C, T, K, R> extends AbstractProc
         @Nonnull
         @Override
         public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new AsyncTransformUsingContextP2<>(contextFactory, callAsyncFn, contextObject,
-                    asyncOpsCounter, maxAsyncOps, extractKeyFn))
-                         .limit(count)
-                         .collect(toList());
+            return Stream
+                    .generate(() -> new AsyncTransformUsingContextUnorderedP<>(contextFactory, callAsyncFn, contextObject,
+                            asyncOpsCounter, maxAsyncOps, extractKeyFn))
+                    .limit(count)
+                    .collect(toList());
         }
 
         @Override

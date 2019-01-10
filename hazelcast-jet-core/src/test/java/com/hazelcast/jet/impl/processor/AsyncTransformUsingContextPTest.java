@@ -17,13 +17,20 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
-import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
@@ -34,17 +41,41 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-@RunWith(HazelcastSerialClassRunner.class)
-public class AsyncTransformUsingContextP2Test {
+@RunWith(Parameterized.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+public class AsyncTransformUsingContextPTest {
+
+    @Parameter
+    public boolean ordered;
+
+    @Parameters(name = "ordered={0}")
+    public static Collection<Object> parameters() {
+        return asList(true, false);
+    }
+
+    private ProcessorSupplier getSupplier(DistributedBiFunction<? super String, ? super String,
+                    CompletableFuture<Traverser<String>>> mapFn
+    ) {
+        if (ordered) {
+            return AsyncTransformUsingContextOrderedP.<String, String, String>supplier(
+                    ContextFactory.withCreateFn(jet -> "foo"),
+                    mapFn,
+                    10
+            );
+        } else {
+            return AsyncTransformUsingContextUnorderedP.<String, String, String, String>supplier(
+                    ContextFactory.withCreateFn(jet -> "foo"),
+                    mapFn,
+                    10,
+                    DistributedFunction.identity()
+            );
+        }
+    }
 
     @Test
     public void test_completedFutures() {
         TestSupport
-                .verifyProcessor(AsyncTransformUsingContextP2.<String, String, String, String>supplier(
-                        ContextFactory.withCreateFn(jet -> "foo"),
-                        (ctx, item) -> completedFuture(traverseItems(item + "-1", item + "-2")),
-                        10,
-                        t -> "key"))
+                .verifyProcessor(getSupplier((ctx, item) -> completedFuture(traverseItems(item + "-1", item + "-2"))))
                 .input(asList("a", "b"))
                 .expectOutput(asList("a-1", "a-2", "b-1", "b-2"));
     }
@@ -52,15 +83,12 @@ public class AsyncTransformUsingContextP2Test {
     @Test
     public void test_futuresCompletedInSeparateThread() {
         TestSupport
-                .verifyProcessor(AsyncTransformUsingContextP2.<String, String, String, String>supplier(
-                        ContextFactory.withCreateFn(jet -> "foo"),
-                        (ctx, item) -> {
+                .verifyProcessor(getSupplier((ctx, item) -> {
                             CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
                             spawn(() -> f.complete(traverseItems(item + "-1", item + "-2")));
                             return f;
-                        },
-                        10,
-                        t -> "key"))
+                        })
+                )
                 .input(asList("a", "b", new Watermark(10)))
                 .outputChecker((expected, actual) ->
                         actual.equals(asList("a-1", "a-2", "b-1", "b-2", wm(10)))
@@ -72,11 +100,7 @@ public class AsyncTransformUsingContextP2Test {
     @Test
     public void test_mapToNull() {
         TestSupport
-                .verifyProcessor(AsyncTransformUsingContextP2.<String, String, String, String>supplier(
-                        ContextFactory.withCreateFn(jet -> "foo"),
-                        (ctx, item) -> null,
-                        10,
-                        t -> "key"))
+                .verifyProcessor(getSupplier((ctx, item) -> null))
                 .input(asList("a", "b"))
                 .expectOutput(emptyList());
     }
@@ -84,11 +108,9 @@ public class AsyncTransformUsingContextP2Test {
     @Test
     public void test_forwardWatermarksWithoutItems() {
         TestSupport
-                .verifyProcessor(AsyncTransformUsingContextP2.<String, String, String, String>supplier(
-                        ContextFactory.withCreateFn(jet -> "foo"),
-                        (ctx, item) -> { throw new UnsupportedOperationException(); },
-                        10,
-                        t -> "key"))
+                .verifyProcessor(getSupplier((ctx, item) -> {
+                    throw new UnsupportedOperationException();
+                }))
                 .input(singletonList(wm(10)))
                 .expectOutput(singletonList(wm(10)));
     }
