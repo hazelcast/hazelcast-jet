@@ -238,5 +238,10 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
             }
             return true;
         }
+
+        @Override
+        public boolean hasUnfinishedItem() {
+            return wrappedOutbox.hasUnfinishedItem();
+        }
     }
 }

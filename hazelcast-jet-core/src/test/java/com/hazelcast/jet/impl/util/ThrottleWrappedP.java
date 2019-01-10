@@ -130,5 +130,10 @@ public final class ThrottleWrappedP implements Processor {
         public boolean offerToSnapshot(@Nonnull Object key, @Nonnull Object value) {
             return wrappedOutbox.offerToSnapshot(key, value);
         }
+
+        @Override
+        public boolean hasUnfinishedItem() {
+            return wrappedOutbox.hasUnfinishedItem();
+        }
     }
 }

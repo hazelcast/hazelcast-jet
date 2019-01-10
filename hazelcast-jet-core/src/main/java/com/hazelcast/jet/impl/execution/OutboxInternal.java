@@ -27,8 +27,6 @@ public interface OutboxInternal extends Outbox {
      */
     void reset();
 
-    boolean hasUnfinishedItem();
-
     /**
      * Blocks the outbox so that it only allows offering of the current
      * unfinished item. If there's no unfinished item, the outbox will reject

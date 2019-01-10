@@ -269,8 +269,14 @@ public class ProcessorTasklet implements Tasklet {
 
             case PROCESS_INBOX:
                 progTracker.notDone();
-                if (inbox.isEmpty() && (isSnapshotInbox() || processor.tryProcess())) {
-                    fillInbox();
+                if (inbox.isEmpty()) {
+                    if (isSnapshotInbox() || processor.tryProcess()) {
+                        fillInbox();
+                    } else {
+                        assert outbox.hasUnfinishedItem() : "Processor.tryProcess() returned true, but there's " +
+                                "unfinished item in the outbox";
+                        return;
+                    }
                 }
                 if (!inbox.isEmpty()) {
                     if (isSnapshotInbox()) {
