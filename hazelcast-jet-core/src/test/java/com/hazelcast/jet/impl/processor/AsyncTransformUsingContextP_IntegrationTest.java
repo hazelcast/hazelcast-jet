@@ -89,13 +89,13 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         final int numItems = 10_000;
         sourceMap.putAll(IntStream.range(0, numItems).boxed().collect(toMap(i -> i, i -> i)));
 
-        Vertex source = dag.newVertex("source", throttle(streamMapP("sourceMap", alwaysTrue(), EventJournalMapEvent::getNewValue,
-                START_FROM_OLDEST, eventTimePolicy(
+        Vertex source = dag.newVertex("source", throttle(streamMapP("sourceMap", alwaysTrue(),
+                EventJournalMapEvent::getNewValue, START_FROM_OLDEST, eventTimePolicy(
                         i -> (long) ((Integer) i),
                         WatermarkPolicy.limitingLag(10),
                         10, 0, 0
                 )), 5000));
-        Vertex map = dag.newVertex("map", getSupplier()).localParallelism(2);
+        Vertex map = dag.newVertex("map", getAsyncMapPSupplier()).localParallelism(2);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sinkList"));
 
         // Use shorter queue to not block the barrier from source for too long due to
@@ -117,7 +117,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         assertTrueEventually(() -> assertEquals(expected, new HashSet<>(sinkList)));
     }
 
-    private ProcessorSupplier getSupplier() {
+    private ProcessorSupplier getAsyncMapPSupplier() {
         DistributedBiFunction<ExecutorService, Object, CompletableFuture<Traverser<String>>> mapFn = (executor, item) -> {
             CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
             executor.submit(() -> {
@@ -127,7 +127,8 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
             });
             return f;
         };
-        ContextFactory<ExecutorService> contextFactory = ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).shareLocally();
+        ContextFactory<ExecutorService> contextFactory =
+                ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).shareLocally();
 
         return ordered
                 ? AsyncTransformUsingContextOrderedP.supplier(contextFactory, mapFn, 100)
