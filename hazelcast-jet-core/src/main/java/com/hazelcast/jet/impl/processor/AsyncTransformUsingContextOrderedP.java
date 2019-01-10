@@ -117,6 +117,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
         tryFlushQueue();
         return queue.size() < maxOps
+                && !getOutbox().hasUnfinishedItem()
                 && queue.add(watermark);
     }
 
