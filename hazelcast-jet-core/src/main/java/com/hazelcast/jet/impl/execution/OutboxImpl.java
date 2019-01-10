@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.impl.util.Util;
@@ -34,7 +33,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.util.Preconditions.checkPositive;
 
-public class OutboxImpl implements Outbox {
+public class OutboxImpl implements OutboxInternal {
 
     private final OutboundCollector[] outstreams;
     private final ProgressTracker progTracker;
@@ -205,22 +204,17 @@ public class OutboxImpl implements Outbox {
         return success;
     }
 
+    @Override
     public boolean hasUnfinishedItem() {
         return unfinishedItem != null || unfinishedSnapshotKey != null;
     }
 
-    /**
-     * Blocks the outbox so that it only allows offering of the current
-     * unfinished item. If there's no unfinished item, the outbox will reject
-     * all {@code offer} calls, until {@link #unblock()} is called.
-     */
+    @Override
     public void block() {
         blocked = true;
     }
 
-    /**
-     * Reverses the {@link #block()} call.
-     */
+    @Override
     public void unblock() {
         blocked = false;
     }
@@ -229,11 +223,7 @@ public class OutboxImpl implements Outbox {
         return blocked && !hasUnfinishedItem();
     }
 
-    /**
-     * Resets the outbox so that it is available to receive another batch of
-     * items after any {@code offer()} method previously returned {@code
-     * false}.
-     */
+    @Override
     public void reset() {
         numRemainingInBatch = batchSize;
     }

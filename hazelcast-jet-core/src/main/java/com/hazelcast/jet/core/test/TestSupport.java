@@ -46,6 +46,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
+import static com.hazelcast.jet.core.test.JetAssert.assertFalse;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
@@ -552,8 +553,14 @@ public final class TestSupport {
                 boolean madeProgress = done[0] || !outbox[0].queue(0).isEmpty();
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
                 outbox[0].drainQueuesAndReset(actualOutputs, logInputOutput);
-                snapshotAndRestore(processor, outbox, actualOutputs, madeProgress && doSnapshots && !done[0],
-                        doRestoreEvery, restoreCount);
+                if (outbox[0].hasUnfinishedItem()) {
+                    assertFalse("outbox has unfinished items, but complete() claims to be done", done[0]);
+                    outbox[0].block();
+                } else {
+                    outbox[0].unblock();
+                    snapshotAndRestore(processor, outbox, actualOutputs, madeProgress && doSnapshots && !done[0],
+                            doRestoreEvery, restoreCount);
+                }
                 idleCount = idle(idler, idleCount, madeProgress);
                 if (runUntilCompletedTimeout > 0) {
                     elapsed = toMillis(System.nanoTime() - completeStart);
