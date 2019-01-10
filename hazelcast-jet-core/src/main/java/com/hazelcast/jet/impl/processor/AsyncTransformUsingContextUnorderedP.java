@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.internal.util.concurrent.ManyToOneConcurrentArrayQueue;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Processor;
@@ -80,12 +81,13 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     private final Function<T, K> extractKeyFn;
 
     private C contextObject;
-    private final Traverser<?> outputTraverser;
     private final ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Traverser<Object>>> resultQueue;
     // TODO [viliam] use more efficient structure
     private final SortedMap<Long, Long> watermarkCounts = new TreeMap<>();
     private final Map<T, Integer> inFlightItems = new IdentityHashMap<>();
+    private Traverser<Object> currentTraverser = Traversers.empty();
     private Traverser<Entry> snapshotTraverser;
+    private boolean tryProcessSucceeded;
 
     private Long lastReceivedWm = Long.MIN_VALUE;
     private long lastEmittedWm = Long.MIN_VALUE;
@@ -113,35 +115,50 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         this.extractKeyFn = extractKeyFn;
 
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
-        outputTraverser = ((Traverser<Tuple3<T, Long, Traverser<Object>>>) resultQueue::poll)
-                .flatMap(this::flatMapResultQueue);
     }
 
-    private Traverser<Object> flatMapResultQueue(Tuple3<T, Long, Traverser<Object>> tuple) {
-        inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
-        Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
-        assert count >= 0 : "count=" + count;
-        if (count == 0) {
-            long wmToEmit = Long.MIN_VALUE;
-            for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
-                Entry<Long, Long> entry = it.next();
-                if (entry.getValue() != 0) {
-                    wmToEmit = entry.getKey();
-                    break;
-                } else {
-                    it.remove();
+    /**
+     * Drain items from queue until either:
+     * - an incomplete item is encountered
+     * - the outbox is full
+     *
+     * @return true, if there are no more in-flight items and everything was
+     * emitted to the outbox
+     */
+    private boolean tryFlushQueue() {
+        for (;;) {
+            if (!emitFromTraverser(currentTraverser)) {
+                return false;
+            }
+            Tuple3<T, Long, Traverser<Object>> tuple = resultQueue.poll();
+            if (tuple == null) {
+                return watermarkCounts.isEmpty();
+            }
+            inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
+            Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
+            assert count >= 0 : "count=" + count;
+            currentTraverser = tuple.f2();
+            if (count == 0) {
+                long wmToEmit = Long.MIN_VALUE;
+                for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
+                    Entry<Long, Long> entry = it.next();
+                    if (entry.getValue() != 0) {
+                        wmToEmit = entry.getKey();
+                        break;
+                    } else {
+                        it.remove();
+                    }
+                }
+                if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
+                    wmToEmit = lastReceivedWm;
+                }
+                if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
+                    lastEmittedWm = wmToEmit;
+                    currentTraverser = currentTraverser
+                                .append(new Watermark(wmToEmit));
                 }
             }
-            if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
-                wmToEmit = lastReceivedWm;
-            }
-            if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
-                lastEmittedWm = wmToEmit;
-                return tuple.f2()
-                            .append(new Watermark(wmToEmit));
-            }
         }
-        return tuple.f2();
     }
 
     @Override
@@ -162,8 +179,12 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        if (!emitFromTraverser(outputTraverser)
-                || !Util.tryIncrement(asyncOpsCounter, 1, maxAsyncOps)) {
+        if (getOutbox().hasUnfinishedItem() && !emitFromTraverser(currentTraverser)) {
+            return false;
+        }
+        if (!Util.tryIncrement(asyncOpsCounter, 1, maxAsyncOps)) {
+            // if queue is full, try to emit and apply backpressure
+            tryFlushQueue();
             return false;
         }
         processItem((T) item);
@@ -198,17 +219,25 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public boolean tryProcess() {
-        emitFromTraverser(outputTraverser);
-        return true;
+        if (tryProcessSucceeded) {
+            tryFlushQueue();
+        } else {
+            // if we're running tryProcess for the second time, emit just the current traverser
+            emitFromTraverser(currentTraverser);
+        }
+        return tryProcessSucceeded = !getOutbox().hasUnfinishedItem();
     }
 
     @Override
     public boolean complete() {
-        return emitFromTraverser(outputTraverser) && watermarkCounts.isEmpty();
+        return tryFlushQueue();
     }
 
     @Override
     public boolean saveToSnapshot() {
+        if (!emitFromTraverser(currentTraverser)) {
+            return false;
+        }
         if (snapshotTraverser == null) {
             LoggingUtil.logFinest(getLogger(), "Saving to snapshot: %s, lastReceivedWm=%d", inFlightItems, lastReceivedWm);
             snapshotTraverser = traverseIterable(inFlightItems.entrySet())

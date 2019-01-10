@@ -99,17 +99,20 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sinkList"));
 
         // Use shorter queue to not block the barrier from source for too long due to
-        // backpressure from the slow mapper.
-        EdgeConfig edgeConfig = new EdgeConfig().setQueueSize(128);
-        dag.edge(between(source, map).setConfig(edgeConfig))
-           .edge(between(map, sink));
+        // backpressure from the slow mapper (in the edge to mapper).
+        EdgeConfig edgeToMapperConfig = new EdgeConfig().setQueueSize(128);
+        // Use shorter queue on output from mapper so that we experience backpressure
+        // and stress-test it.
+        EdgeConfig edgeFromMapperConfig = new EdgeConfig().setQueueSize(10);
+        dag.edge(between(source, map).setConfig(edgeToMapperConfig))
+           .edge(between(map, sink).setConfig(edgeFromMapperConfig));
 
         inst.newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0));
 
         IList<String> sinkList = inst.getList("sinkList");
         Set<String> expected = IntStream.range(0, numItems)
                                         .boxed()
-                                        .flatMap(i -> Stream.of(i + "-1", i + "-2"))
+                                        .flatMap(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"))
                                         .collect(toSet());
         assertTrueEventually(() -> assertEquals(expected, new HashSet<>(sinkList)));
     }
@@ -120,7 +123,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
             executor.submit(() -> {
                 // simulate random async call latency
                 sleepMillis(ThreadLocalRandom.current().nextInt(5));
-                return f.complete(traverseItems(item + "-1", item + "-2"));
+                return f.complete(traverseItems(item + "-1", item + "-2", item + "-3", item + "-4", item + "-5"));
             });
             return f;
         };

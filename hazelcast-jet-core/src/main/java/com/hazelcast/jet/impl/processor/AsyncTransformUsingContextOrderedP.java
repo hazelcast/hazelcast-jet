@@ -62,9 +62,10 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     // - tuple2(originalItem, future)
     // - watermark
     private ArrayDeque<Object> queue;
-    private Traverser<?> traverser = Traversers.empty();
+    private Traverser<?> currentTraverser = Traversers.empty();
     private int maxOps;
     private ResettableSingletonTraverser<Watermark> watermarkTraverser = new ResettableSingletonTraverser<>();
+    private boolean tryProcessSucceeded;
 
     /**
      * Constructs a processor with the given mapping function.
@@ -121,9 +122,12 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     @Override
     public boolean tryProcess() {
-        tryFlushQueue();
-        // we return true - we can accept more items even while emitting this item
-        return true;
+        if (tryProcessSucceeded) {
+            tryFlushQueue();
+        } else {
+            emitFromTraverser(currentTraverser);
+        }
+        return tryProcessSucceeded = !getOutbox().hasUnfinishedItem();
     }
 
     /**
@@ -140,7 +144,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         // have to do many volatile reads to check all the futures in each call or a concurrent
         // queue. It also doesn't shuffle the stream items.
         for (;;) {
-            if (!emitFromTraverser(traverser)) {
+            if (!emitFromTraverser(currentTraverser)) {
                 return false;
             }
             Object o = queue.peek();
@@ -149,7 +153,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             }
             if (o instanceof Watermark) {
                 watermarkTraverser.accept((Watermark) o);
-                traverser = watermarkTraverser;
+                currentTraverser = watermarkTraverser;
             } else {
                 CompletableFuture<Traverser<? extends R>> f =
                         ((Tuple2<T, CompletableFuture<Traverser<? extends R>>>) o).f1();
@@ -157,7 +161,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
                     return false;
                 }
                 try {
-                    traverser = f.get();
+                    currentTraverser = f.get();
                 } catch (Exception e) {
                     throw sneakyThrow(e);
                 }

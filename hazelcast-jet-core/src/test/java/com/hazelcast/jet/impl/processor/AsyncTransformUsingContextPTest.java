@@ -77,7 +77,11 @@ public class AsyncTransformUsingContextPTest {
         TestSupport
                 .verifyProcessor(getSupplier((ctx, item) -> completedFuture(traverseItems(item + "-1", item + "-2"))))
                 .input(asList("a", "b"))
-                .expectOutput(asList("a-1", "a-2", "b-1", "b-2"));
+                .outputChecker((expected, actual) ->
+                        actual.equals(asList("a-1", "a-2", "b-1", "b-2"))
+                                || !ordered && actual.equals(asList("b-1", "b-2", "a-1", "a-2")))
+                .disableProgressAssertion()
+                .expectOutput(singletonList("<see code>"));
     }
 
     @Test
@@ -92,7 +96,7 @@ public class AsyncTransformUsingContextPTest {
                 .input(asList("a", "b", new Watermark(10)))
                 .outputChecker((expected, actual) ->
                         actual.equals(asList("a-1", "a-2", "b-1", "b-2", wm(10)))
-                                || actual.equals(asList("b-1", "b-2", "a-1", "a-2", wm(10))))
+                                || !ordered && actual.equals(asList("b-1", "b-2", "a-1", "a-2", wm(10))))
                 .disableProgressAssertion()
                 .expectOutput(singletonList("<see code>"));
     }
