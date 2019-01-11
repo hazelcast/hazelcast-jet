@@ -18,17 +18,20 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.WatermarkEmissionPolicy;
 import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -41,14 +44,21 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.core.Edge.from;
-import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.emitByFrame;
-import static com.hazelcast.jet.core.WatermarkEmissionPolicy.noWatermarks;
+import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("unchecked")
 public class Planner {
+
+    private static final ILogger LOGGER = Logger.getLogger(Planner.class);
+
+    /**
+     * Maximum gap between two consecutive watermarks. This is not technically
+     * necessary, but improves debugging by avoiding too large gaps between WMs
+     * and the user can better observe if input to WM coalescing is lagging.
+     */
+    private static final int MAXIMUM_WATERMARK_GAP = 1_000;
 
     public final DAG dag = new DAG();
     public final Map<Transform, PlannerVertex> xform2vertex = new HashMap<>();
@@ -71,20 +81,21 @@ public class Planner {
                                                  .filter(frameSize -> frameSize > 0)
                                                  .mapToLong(i -> i)
                                                  .toArray());
-        // Update watermark emission policy on all wm gen params
-        // with the GCD frame length
-        WatermarkEmissionPolicy emitPolicy = frameSizeGcd > 0
-                ? emitByFrame(tumblingWinPolicy(frameSizeGcd))
-                : noWatermarks();
+        if (frameSizeGcd > MAXIMUM_WATERMARK_GAP) {
+            frameSizeGcd = Util.gcd(frameSizeGcd, MAXIMUM_WATERMARK_GAP);
+        }
+        LoggingUtil.logFine(LOGGER, "Watermarks in the pipeline will be throttled to %d", frameSizeGcd);
+        // Update watermark throttling frame length on all transforms with the determined length
         for (Transform transform : adjacencyMap.keySet()) {
             if (transform instanceof StreamSourceTransform) {
                 StreamSourceTransform t = (StreamSourceTransform) transform;
-                if (t.getEventTimePolicy() != null) {
-                    t.setEventTimePolicy(t.getEventTimePolicy().withEmitPolicy(emitPolicy));
+                EventTimePolicy policy = t.getEventTimePolicy();
+                if (policy != null) {
+                    t.setEventTimePolicy(withFrameSize(policy, frameSizeGcd));
                 }
             } else if (transform instanceof TimestampTransform) {
                 TimestampTransform t = (TimestampTransform) transform;
-                t.setEventTimePolicy(t.getEventTimePolicy().withEmitPolicy(emitPolicy));
+                t.setEventTimePolicy(withFrameSize(t.getEventTimePolicy(), frameSizeGcd));
             }
         }
 
@@ -172,6 +183,18 @@ public class Planner {
                 return candidate;
             }
         }
+    }
+
+    /**
+     * Returns a new instance with emit policy replaced with the given
+     * argument.
+     */
+    @Nonnull
+    private static <T> EventTimePolicy<T> withFrameSize(
+            EventTimePolicy<T> original, long watermarkThrottlingFrameSize
+    ) {
+        return eventTimePolicy(original.timestampFn(), original.wrapFn(), original.newWmPolicyFn(),
+                watermarkThrottlingFrameSize, 0, original.idleTimeoutMillis());
     }
 
     public static <E> List<E> tailList(List<E> list) {

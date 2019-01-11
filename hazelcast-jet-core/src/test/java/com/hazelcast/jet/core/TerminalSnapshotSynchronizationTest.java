@@ -18,7 +18,6 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
@@ -30,6 +29,7 @@ import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static org.junit.Assert.assertEquals;
 
@@ -44,7 +44,7 @@ public class TerminalSnapshotSynchronizationTest extends JetTestSupport {
     }
 
     private Job setup(boolean snapshotting) {
-        JetInstance[] instances = createJetMembers(new JetConfig(), NODE_COUNT);
+        JetInstance[] instances = createJetMembers(NODE_COUNT);
 
         DAG dag = new DAG();
         dag.newVertex("generator", () -> new NoOutputSourceP()).localParallelism(1);
@@ -53,7 +53,7 @@ public class TerminalSnapshotSynchronizationTest extends JetTestSupport {
                 .setProcessingGuarantee(snapshotting ? EXACTLY_ONCE : NONE)
                 .setSnapshotIntervalMillis(DAYS.toMillis(1));
         Job job = instances[0].newJob(dag, config);
-        sleepSeconds(1);
+        assertJobStatusEventually(job, RUNNING);
         return job;
     }
 
@@ -75,7 +75,7 @@ public class TerminalSnapshotSynchronizationTest extends JetTestSupport {
         assertJobStatusEventually(job, JobStatus.COMPLETING, 5);
         assertTrueAllTheTime(() -> assertEquals(JobStatus.COMPLETING, job.getStatus()), 5);
         SnapshotOperation.postponeResponses = false;
-        assertJobStatusEventually(job, JobStatus.RUNNING, 5);
+        assertJobStatusEventually(job, RUNNING, 5);
     }
 
     @Test
@@ -89,6 +89,6 @@ public class TerminalSnapshotSynchronizationTest extends JetTestSupport {
 
         // Then
         assertTrueEventually(() -> assertEquals(4, NoOutputSourceP.initCount.get()), 5);
-        assertJobStatusEventually(job, JobStatus.RUNNING, 5);
+        assertJobStatusEventually(job, RUNNING, 5);
     }
 }

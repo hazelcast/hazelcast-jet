@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.LocalMemberResetException;
-import com.hazelcast.core.Member;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
@@ -181,7 +180,7 @@ public class MasterContext {
      * The tuple contains:<ul>
      *     <li>{@code snapshotMapName}: user-specified name of the snapshot or
      *         null, if no name is specified
-     *     <li>{@code isTerminal}: if true, job will be terminated after the
+     *     <li>{@code isTerminal}: if true, execution will be terminated after the
      *         snapshot
      *     <li>{@code future}: future, that will be completed when the snapshot
      *         is validated.
@@ -258,9 +257,12 @@ public class MasterContext {
      *     <li>a string with a message why this call did nothing or null, if
      *          this call actually initiated the termination
      * </ol>
+     *
+     * @param allowWhileExportingSnapshot if false and jobStatus is
+     *      EXPORTING_SNAPSHOT, termination will be rejected
      */
     @Nonnull
-    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode) {
+    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode, boolean allowWhileExportingSnapshot) {
         JobStatus localStatus;
         assertLockNotHeld();
         Tuple2<CompletableFuture<Void>, String> result;
@@ -272,6 +274,9 @@ public class MasterContext {
             }
 
             localStatus = jobStatus();
+            if (localStatus == EXPORTING_SNAPSHOT && !allowWhileExportingSnapshot) {
+                return tuple2(executionCompletionFuture, "Cannot cancel when job status is " + EXPORTING_SNAPSHOT);
+            }
             if (localStatus == SUSPENDED && mode != CANCEL_FORCEFUL) {
                 // if suspended, we can only cancel the job. Other terminations have no effect.
                 return tuple2(executionCompletionFuture, "Job is " + SUSPENDED);
@@ -284,8 +289,8 @@ public class MasterContext {
             }
             requestedTerminationMode = mode;
             // handle cancellation of a suspended job
-            if (localStatus == SUSPENDED) {
-                this.jobStatus = COMPLETED;
+            if (localStatus == SUSPENDED || localStatus == EXPORTING_SNAPSHOT) {
+                this.jobStatus = FAILED;
                 setFinalResult(new CancellationException());
             }
             if (mode.isWithTerminalSnapshot()) {
@@ -333,17 +338,18 @@ public class MasterContext {
             JetInstance jetInstance = coordinationService.getJetService().getJetInstance();
             return copyMapUsingJob(jetInstance, COPY_MAP_JOB_QUEUE_SIZE, sourceMapName, EXPORTED_SNAPSHOTS_PREFIX + name)
                     .whenComplete(withTryCatch(logger, (r, t) -> {
-                        jobStatus = SUSPENDED;
                         SnapshotValidationRecord validationRecord =
                                 (SnapshotValidationRecord) jetInstance.getMap(sourceMapName)
                                                                       .get(SnapshotValidationRecord.KEY);
                         jobRepository.cacheValidationRecord(name, validationRecord);
                         if (cancelJob) {
-                            String terminationFailure = requestTermination(CANCEL_FORCEFUL).f1();
+                            String terminationFailure = requestTermination(CANCEL_FORCEFUL, true).f1();
                             if (terminationFailure != null) {
                                 throw new JetException("State for " + jobIdString() + " exported to '" + name
                                         + "', but failed to cancel the job: " + terminationFailure);
                             }
+                        } else {
+                            jobStatus = SUSPENDED;
                         }
                     }));
         }
@@ -351,7 +357,7 @@ public class MasterContext {
             // We already added a terminal snapshot to the queue. There will be one more added in
             // `requestTermination`, but we'll never get to execute that one because the execution
             // will terminate after our terminal snapshot.
-            String terminationFailure = requestTermination(CANCEL_GRACEFUL).f1();
+            String terminationFailure = requestTermination(CANCEL_GRACEFUL, false).f1();
             if (terminationFailure != null) {
                 throw new JetException("Cannot cancel " + jobIdString() + " and export to '" + name + "': "
                         + terminationFailure);
@@ -362,7 +368,7 @@ public class MasterContext {
         return future;
     }
 
-    boolean isCancelled() {
+    private boolean isCancelled() {
         return requestedTerminationMode == CANCEL_FORCEFUL;
     }
 
@@ -939,7 +945,7 @@ public class MasterContext {
                 jobExecutionRecord.setSuspended(true);
                 nonSynchronizedAction = () -> writeJobExecutionRecord(false);
             } else {
-                jobStatus = (isSuccess ? COMPLETED : FAILED);
+                jobStatus = isSuccess ? COMPLETED : FAILED;
 
                 if (failure instanceof LocalMemberResetException) {
                     logger.fine("Cancelling job " + jobIdString() + " locally: member (local or remote) reset. " +
@@ -972,7 +978,7 @@ public class MasterContext {
         if (failure instanceof CancellationException || failure instanceof JobTerminateRequestedException) {
             logger.info(String.format("Execution of %s completed in %,d ms, reason=%s",
                     jobIdString(), elapsed, failure));
-            return true;
+            return false;
         }
         logger.warning(String.format("Execution of %s failed after %,d ms", jobIdString(), elapsed), failure);
         return false;
@@ -1120,7 +1126,7 @@ public class MasterContext {
 
     @Nonnull
     CompletableFuture<Void> gracefullyTerminate() {
-        return requestTermination(RESTART_GRACEFUL).f0();
+        return requestTermination(RESTART_GRACEFUL, false).f0();
     }
 
     /**
@@ -1134,7 +1140,7 @@ public class MasterContext {
      * auto-scaling disabled, is already running on all members or if
      * we've managed to request a restart.
      */
-    boolean maybeScaleUp(Collection<Member> currentDataMembers) {
+    boolean maybeScaleUp(int dataMembersWithPartitionsCount) {
         if (!jobConfig().isAutoScaling()) {
             return true;
         }
@@ -1142,16 +1148,17 @@ public class MasterContext {
         // We only compare the number of our participating members and current members.
         // If there is any member in our participants that is not among current data members,
         // this job will be restarted anyway. If it's the other way, then the sizes won't match.
-        if (executionPlanMap == null || executionPlanMap.size() >= currentDataMembers.size()) {
+        if (executionPlanMap == null || executionPlanMap.size() == dataMembersWithPartitionsCount) {
             LoggingUtil.logFine(logger, "Not scaling %s up: not running or already running on all members",
                     jobIdString());
             return true;
         }
 
         JobStatus localStatus = jobStatus;
-        if (localStatus == RUNNING && requestTermination(TerminationMode.RESTART_GRACEFUL).f1() == null) {
+        if (localStatus == RUNNING && requestTermination(TerminationMode.RESTART_GRACEFUL, false).f1() == null) {
             logger.info("Requested restart of " + jobIdString() + " to make use of added member(s). Job was running on " +
-                    executionPlanMap.size() + " members, cluster now has " + currentDataMembers.size() + " data members");
+                    executionPlanMap.size() + " members, cluster now has " + dataMembersWithPartitionsCount
+                    + " data members with assigned partitions");
             return true;
         }
 
