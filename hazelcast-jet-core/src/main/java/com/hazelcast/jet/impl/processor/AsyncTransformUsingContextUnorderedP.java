@@ -33,6 +33,7 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -290,6 +291,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
         private final int maxAsyncOps;
         private transient C contextObject;
+        @SuppressFBWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
         private transient AtomicInteger asyncOpsCounter = new AtomicInteger();
         private DistributedFunction<T, K> extractKeyFn;
 
