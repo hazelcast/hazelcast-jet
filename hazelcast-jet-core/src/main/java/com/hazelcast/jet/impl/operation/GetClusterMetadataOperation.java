@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.config.SSLConfig;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.impl.ClusterMetadata;
@@ -41,8 +40,7 @@ public class GetClusterMetadataOperation extends Operation implements
         HazelcastInstance instance = service.getJetInstance().getHazelcastInstance();
         Cluster cluster = instance.getCluster();
         String name = instance.getConfig().getGroupConfig().getName();
-        SSLConfig sslConfig = instance.getConfig().getNetworkConfig().getSSLConfig();
-        response = new ClusterMetadata(name, cluster, sslConfig != null && sslConfig.isEnabled());
+        response = new ClusterMetadata(name, cluster);
     }
 
     @Override

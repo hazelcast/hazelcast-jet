@@ -65,4 +65,8 @@ public interface JetCodecTemplate {
 
     @Request(id = 14, retryable = true, response = ResponseMessageConst.DATA)
     Object getClusterMetadata();
+
+    @Request(id = 15, retryable = true, response = ResponseMessageConst.STRING)
+    Object getMemberXmlConfiguration();
+
 }

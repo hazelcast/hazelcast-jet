@@ -24,9 +24,12 @@ import com.hazelcast.client.impl.protocol.codec.JetGetClusterMetadataCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSummaryListCodec;
+import com.hazelcast.client.impl.protocol.codec.JetGetMemberXmlConfigurationCodec;
 import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec;
 import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.client.util.ClientDelegatingFuture;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.InMemoryXmlConfig;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Member;
@@ -147,6 +150,16 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     public ClusterMetadata getClusterMetadata() {
         return invokeRequestOnMasterAndDecodeResponse(JetGetClusterMetadataCodec.encodeRequest(),
                 response -> JetGetClusterMetadataCodec.decodeResponse(response).response);
+    }
+
+    /**
+     * Returns the member configuration.
+     */
+    @Nonnull
+    public Config getHazelcastConfig() {
+        String configString = invokeRequestOnMasterAndDecodeResponse(JetGetMemberXmlConfigurationCodec.encodeRequest(),
+                response -> JetGetMemberXmlConfigurationCodec.decodeResponse(response).response);
+        return new InMemoryXmlConfig(configString);
     }
 
     @Nonnull

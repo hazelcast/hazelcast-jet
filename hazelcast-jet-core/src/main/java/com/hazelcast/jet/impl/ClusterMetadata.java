@@ -33,17 +33,15 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
     private String version;
     private long clusterTime;
     private ClusterState state;
-    private boolean sslEnabled;
 
     public ClusterMetadata() {
     }
 
-    public ClusterMetadata(String name, Cluster cluster, boolean sslEnabled) {
+    public ClusterMetadata(String name, Cluster cluster) {
         this.name = name;
         this.version = BuildInfoProvider.getBuildInfo().getJetBuildInfo().getVersion();
         this.state = cluster.getClusterState();
         this.clusterTime = cluster.getClusterTime();
-        this.sslEnabled = sslEnabled;
     }
 
 
@@ -67,11 +65,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
         return clusterTime;
     }
 
-    @Nonnull
-    public boolean isSslEnabled() {
-        return sslEnabled;
-    }
-
     @Override
     public int getFactoryId() {
         return JetInitDataSerializerHook.FACTORY_ID;
@@ -88,7 +81,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
         out.writeUTF(version);
         out.writeObject(state);
         out.writeLong(clusterTime);
-        out.writeBoolean(sslEnabled);
     }
 
     @Override
@@ -97,7 +89,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
         version = in.readUTF();
         state = in.readObject();
         clusterTime = in.readLong();
-        sslEnabled = in.readBoolean();
     }
 
     @Override
@@ -107,7 +98,6 @@ public class ClusterMetadata implements IdentifiedDataSerializable {
                 ", version='" + version + '\'' +
                 ", clusterTime=" + clusterTime +
                 ", state=" + state +
-                ", sslEnabled=" + sslEnabled +
                 '}';
     }
 
