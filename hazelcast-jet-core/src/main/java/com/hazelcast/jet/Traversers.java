@@ -215,7 +215,9 @@ public final class Traversers {
         public T next() {
             try {
                 boolean advanced = spliterator.tryAdvance(this);
-                assert advanced == (nextItem != null) : "Spliterator emitted a null item";
+                if (advanced) {
+                    requireNonNull(nextItem);
+                }
                 return nextItem;
             } finally {
                 nextItem = null;

@@ -64,7 +64,7 @@ public class AsyncTransformUsingContextPTest {
                     CompletableFuture<Traverser<String>>> mapFn
     ) {
         ContextFactory<String> contextFactory = ContextFactory.withCreateFn(jet -> "foo");
-        if (ordered) {
+        if (!ordered) {
             contextFactory = contextFactory.unorderedAsyncResponses();
         }
         return flatMapUsingContextAsyncP(contextFactory, DistributedFunction.identity(), mapFn);
