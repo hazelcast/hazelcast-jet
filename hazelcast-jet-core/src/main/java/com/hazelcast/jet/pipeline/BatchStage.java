@@ -72,12 +72,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    default <C, R> BatchStage<R> mapUsingContextAsync(
+    <C, R> BatchStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
-    ) {
-        return (BatchStage<R>) GeneralStage.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C> BatchStage<T> filterUsingContext(
@@ -85,14 +83,11 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
-    @Nonnull
-    @Override
-    default <C> BatchStage<T> filterUsingContextAsync(
+    @Nonnull @Override
+    <C> BatchStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return (BatchStage<T>) GeneralStage.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C, R> BatchStage<R> flatMapUsingContext(

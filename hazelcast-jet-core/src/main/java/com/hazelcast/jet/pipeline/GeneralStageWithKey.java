@@ -18,7 +18,6 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
@@ -31,8 +30,6 @@ import com.hazelcast.jet.function.DistributedTriPredicate;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-
-import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -111,14 +108,10 @@ public interface GeneralStageWithKey<T, K> {
      * @return the newly attached stage
      */
     @Nonnull
-    default <C, R> GeneralStage<R> mapUsingContextAsync(
+    <C, R> GeneralStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
-    ) {
-        checkSerializable(mapAsyncFn, "mapAsyncFn");
-        return flatMapUsingContextAsync(contextFactory,
-                (c, k, t) -> mapAsyncFn.apply(c, k, t).thenApply(Traversers::singleton));
-    }
+    );
 
     /**
      * Attaches a filtering stage which applies the provided predicate function
@@ -156,14 +149,10 @@ public interface GeneralStageWithKey<T, K> {
      * TODO [viliam]
      */
     @Nonnull
-    default <C> GeneralStage<T> filterUsingContextAsync(
+    <C> GeneralStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        checkSerializable(filterAsyncFn, "filterAsyncFn");
-        return flatMapUsingContextAsync(contextFactory,
-                (c, k, t) -> filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
+    );
 
     /**
      * Attaches a flat-mapping stage which applies the supplied function to

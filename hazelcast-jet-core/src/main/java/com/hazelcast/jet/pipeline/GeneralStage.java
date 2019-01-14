@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
@@ -34,7 +33,6 @@ import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
-import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -142,14 +140,10 @@ public interface GeneralStage<T> extends Stage {
      * @return the newly attached stage
      */
     @Nonnull
-    default <C, R> GeneralStage<R> mapUsingContextAsync(
+    <C, R> GeneralStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
-    ) {
-        checkSerializable(mapAsyncFn, "mapAsyncFn");
-        return flatMapUsingContextAsync(contextFactory,
-                (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton));
-    }
+    );
 
     /**
      * Attaches a filtering stage which applies the provided predicate function
@@ -181,14 +175,10 @@ public interface GeneralStage<T> extends Stage {
      * TODO [viliam]
      */
     @Nonnull
-    default <C> GeneralStage<T> filterUsingContextAsync(
+    <C> GeneralStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        checkSerializable(filterAsyncFn, "filterAsyncFn");
-        return flatMapUsingContextAsync(contextFactory,
-                (c, t) -> filterAsyncFn.apply(c, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
+    );
 
     /**
      * Attaches a flat-mapping stage which applies the supplied function to

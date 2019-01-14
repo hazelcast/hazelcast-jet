@@ -680,16 +680,6 @@ public final class TestSupport {
             outbox[0].drainQueuesAndReset(actualOutput, logInputOutput);
         } while (!done[0]);
 
-        // check snapshot for duplicate keys TODO [viliam] remove this?
-//        {
-//            Set<Object> keys = new HashSet<>();
-//            for (Object item : snapshotInbox.queue()) {
-//                Entry<Object, Object> item2 = (Entry<Object, Object>) item;
-//                assertTrue("Duplicate key produced in saveToSnapshot()\n  " +
-//                        "Duplicate: " + item2.getKey() + "\n  Keys so far: " + keys, keys.add(item2.getKey()));
-//            }
-//        }
-
         if (!willRestore) {
             return;
         }

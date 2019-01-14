@@ -82,12 +82,10 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    default <C, R> BatchStage<R> mapUsingContextAsync(
+    <C, R> BatchStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
-    ) {
-        return (BatchStage<R>) GeneralStageWithKey.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C> BatchStage<T> filterUsingContext(
@@ -96,12 +94,10 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    default <C> BatchStage<T> filterUsingContextAsync(
+    <C> BatchStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return (BatchStage<T>) GeneralStageWithKey.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C, R> BatchStage<R> flatMapUsingContext(

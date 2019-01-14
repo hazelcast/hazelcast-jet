@@ -80,12 +80,10 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    default <C, R> StreamStage<R> mapUsingContextAsync(
+    <C, R> StreamStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
-    ) {
-        return (StreamStage<R>) GeneralStage.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C> StreamStage<T> filterUsingContext(
@@ -94,12 +92,10 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    default <C> GeneralStage<T> filterUsingContextAsync(
+    <C> GeneralStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return GeneralStage.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(

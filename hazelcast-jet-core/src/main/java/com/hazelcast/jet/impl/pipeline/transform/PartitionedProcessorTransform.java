@@ -89,12 +89,12 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextAsyncTransform(
             @Nonnull Transform upstream,
+            @Nonnull String operationName,
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn,
             @Nonnull DistributedFunction<? super T, ? extends K> partitionKeyFn
     ) {
-        // TODO [viliam] user more specific vertex name
-        return new PartitionedProcessorTransform<>("flatMapUsingPartitionedContextAsync",
+        return new PartitionedProcessorTransform<>(operationName + "UsingPartitionedContextAsync",
                 upstream, flatMapUsingContextAsyncP(contextFactory, partitionKeyFn, flatMapAsyncFn), partitionKeyFn);
     }
 

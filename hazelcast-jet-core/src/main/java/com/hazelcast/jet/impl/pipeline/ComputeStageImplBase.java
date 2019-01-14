@@ -187,13 +187,14 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     @SuppressWarnings("unchecked")
     <C, R, RET> RET attachFlatMapUsingContextAsync(
+            @Nonnull String operationName,
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        checkSerializable(flatMapAsyncFn, "flatMapAsyncFn");
+        checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
         DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);
         return (RET) attach(
-                flatMapUsingContextAsyncTransform(transform, contextFactory, adaptedFlatMapFn),
+                flatMapUsingContextAsyncTransform(transform, operationName, contextFactory, adaptedFlatMapFn),
                 fnAdapter);
     }
 
@@ -249,18 +250,19 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, K, R, RET> RET attachFlatMapUsingPartitionedContextAsync(
+    <C, K, R, RET> RET attachTransformUsingPartitionedContextAsync(
+            @Nonnull String operationName,
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedFunction<? super T, ? extends K> partitionKeyFn,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        checkSerializable(flatMapFn, "flatMapFn");
+        checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
-        DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextAsyncFn(flatMapFn);
+        DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);
         DistributedFunction adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
                 flatMapUsingPartitionedContextAsyncTransform(
-                        transform, contextFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
+                        transform, operationName, contextFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
     }
 

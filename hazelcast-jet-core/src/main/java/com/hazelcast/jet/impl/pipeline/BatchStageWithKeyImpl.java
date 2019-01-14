@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
@@ -62,11 +63,30 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     }
 
     @Nonnull @Override
+    public <C, R> BatchStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return attachTransformUsingContextAsync("map", contextFactory,
+                (c, k, t) -> mapAsyncFn.apply(c, k, t).thenApply(Traversers::singleton));
+    }
+
+    @Nonnull @Override
     public <C> BatchStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriPredicate<? super C, ? super K, ? super T> filterFn
     ) {
         return attachFilterUsingContext(contextFactory, filterFn);
+    }
+
+    @Nonnull @Override
+    public <C> BatchStage<T> filterUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>>
+                    filterAsyncFn
+    ) {
+        return attachTransformUsingContextAsync("filter", contextFactory,
+                (c, k, t) -> filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
     }
 
     @Nonnull @Override
@@ -83,7 +103,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     ) {
-        return attachFlatMapUsingContextAsync(contextFactory, flatMapAsyncFn);
+        return attachTransformUsingContextAsync("flatMap", contextFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

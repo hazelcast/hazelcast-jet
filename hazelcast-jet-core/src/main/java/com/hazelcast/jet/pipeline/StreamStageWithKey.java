@@ -67,12 +67,10 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    default <C, R> StreamStage<R> mapUsingContextAsync(
+    <C, R> StreamStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
-    ) {
-        return (StreamStage<R>) GeneralStageWithKey.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C> StreamStage<T> filterUsingContext(
@@ -81,12 +79,10 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    default <C> StreamStage<T> filterUsingContextAsync(
+    <C> StreamStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return (StreamStage<T>) GeneralStageWithKey.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
-    }
+    );
 
     @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(

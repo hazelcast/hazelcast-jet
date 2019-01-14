@@ -82,12 +82,12 @@ public class ProcessorTransform extends AbstractTransform {
 
     public static <C, T, R> ProcessorTransform flatMapUsingContextAsyncTransform(
             @Nonnull Transform upstream,
+            @Nonnull String operationName,
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        // TODO [viliam] use more specific vertex name than "flatMap"
         // TODO [viliam] use better key so that snapshots are local
-        return new ProcessorTransform("flatMapUsingContextAsync", upstream,
+        return new ProcessorTransform(operationName + "UsingContextAsync", upstream,
                 flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn));
     }
 

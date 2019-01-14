@@ -85,13 +85,14 @@ class StageWithGroupingBase<T, K> {
     }
 
     @Nonnull
-    <C, R, RET> RET attachFlatMapUsingContextAsync(
+    <C, R, RET> RET attachTransformUsingContextAsync(
+            @Nonnull String operationName,
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     ) {
         DistributedFunction<? super T, ? extends K> keyFn = keyFn();
-        return computeStage.attachFlatMapUsingPartitionedContextAsync(contextFactory, keyFn, (c, t) -> {
+        return computeStage.attachTransformUsingPartitionedContextAsync(operationName, contextFactory, keyFn, (c, t) -> {
             K k = keyFn.apply(t);
             return flatMapAsyncFn.apply(c, k, t);
         });
