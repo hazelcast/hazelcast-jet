@@ -67,7 +67,8 @@ public class JetMessageTaskFactoryProvider implements MessageTaskFactoryProvider
         factories[JetExistsDistributedObjectCodec.REQUEST_TYPE.id()] =
                 toFactory(JetExistsDistributedObjectMessageTask::new);
         factories[JetGetClusterMetadataCodec.REQUEST_TYPE.id()] = toFactory(JetGetClusterMetadataMessageTask::new);
-        factories[JetGetMemberXmlConfigurationCodec.REQUEST_TYPE.id()] = toFactory(JetGetMemberXmlConfigurationMessageTask::new);
+        factories[JetGetMemberXmlConfigurationCodec.REQUEST_TYPE.id()] =
+                toFactory(JetGetMemberXmlConfigurationMessageTask::new);
     }
 
     @Override
