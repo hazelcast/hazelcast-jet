@@ -20,6 +20,7 @@ import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
@@ -37,7 +38,10 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -73,9 +77,12 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
 
     private static final int NUM_ITEMS = 5_000;
 
+    private static JetTestInstanceFactory factory = new JetTestInstanceFactory();
+    private static JetInstance inst;
+
     @Parameter
     public boolean ordered;
-    private JetInstance inst;
+
     private IMapJet<Integer, Integer> journaledMap;
     private ContextFactory<ExecutorService> contextFactory;
     private DistributedBiFunction<ExecutorService, Integer, CompletableFuture<Traverser<String>>> mapFn;
@@ -88,16 +95,26 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         return asList(true, false);
     }
 
-    @Before
-    public void before() {
+    @BeforeClass
+    public static void beforeClass() {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName("journaledMap")
+                .setMapName("journaledMap*")
                 .setCapacity(100_000));
-        inst = createJetMember(config);
-        journaledMap = inst.getMap("journaledMap");
+        inst = factory.newMember(config);
+        factory.newMember(config);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        factory.shutdownAll();
+    }
+
+    @Before
+    public void before() {
+        journaledMap = inst.getMap(randomMapName("journaledMap"));
         journaledMap.putAll(IntStream.range(0, NUM_ITEMS).boxed().collect(toMap(i -> i, i -> i)));
-        sinkList = inst.getList("sinkList");
+        sinkList = inst.getList(randomMapName("sinkList"));
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
         contextFactory = ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).shareLocally();
@@ -127,11 +144,17 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         };
     }
 
+    @After
+    public void after() {
+        journaledMap.destroy();
+        sinkList.destroy();
+    }
+
     @Test
     public void stressTest() {
         DAG dag = new DAG();
 
-        Vertex source = dag.newVertex("source", throttle(streamMapP("journaledMap", alwaysTrue(),
+        Vertex source = dag.newVertex("source", throttle(streamMapP(journaledMap.getName(), alwaysTrue(),
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, eventTimePolicy(
                         i -> (long) ((Integer) i),
                         WatermarkPolicy.limitingLag(10),
