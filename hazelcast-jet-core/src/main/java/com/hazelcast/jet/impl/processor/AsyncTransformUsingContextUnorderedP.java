@@ -31,11 +31,12 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.util.LoggingUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -44,7 +45,6 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -92,7 +92,10 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     private long lastEmittedWm = Long.MIN_VALUE;
     private long minRestoredWm = Long.MAX_VALUE;
     private int maxAsyncOps;
-    private final AtomicInteger asyncOpsCounter = new AtomicInteger();
+    private int asyncOpsCounter;
+
+    /** Temporary collection for restored objects during snapshot restore. */
+    private ArrayDeque<T> restoredObjects;
 
     /**
      * Constructs a processor with the given mapping function.
@@ -129,6 +132,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             if (tuple == null) {
                 return watermarkCounts.isEmpty();
             }
+            asyncOpsCounter--;
             inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
             Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
             assert count >= 0 : "count=" + count;
@@ -183,29 +187,32 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         if (getOutbox().hasUnfinishedItem() && !emitFromTraverser(currentTraverser)) {
             return false;
         }
-        if (!Util.tryIncrement(asyncOpsCounter, 1, maxAsyncOps)) {
+        if (!processItem((T) item)) {
             // if queue is full, try to emit and apply backpressure
             tryFlushQueue();
             return false;
         }
-        processItem((T) item);
         return true;
     }
 
-    private void processItem(@Nonnull T item) {
+    @CheckReturnValue
+    private boolean processItem(@Nonnull T item) {
+        if (asyncOpsCounter == maxAsyncOps) {
+            return false;
+        }
         CompletableFuture<Traverser<R>> future = callAsyncFn.apply(contextObject, item);
         if (future == null) {
-            return;
+            return true;
         }
+        asyncOpsCounter++;
         watermarkCounts.merge(lastReceivedWm, 1L, Long::sum);
         Long lastWatermarkAtReceiveTime = lastReceivedWm;
-        // TODO [viliam] extract the action to a field to reduce GC litter
         future.whenComplete(withTryCatch(getLogger(), (r, e) -> {
-            asyncOpsCounter.decrementAndGet();
             boolean result = resultQueue.offer(tuple3(item, lastWatermarkAtReceiveTime, r != null ? r : e));
             assert result : "resultQueue doesn't have sufficient capacity";
         }));
         inFlightItems.merge(item, 1, Integer::sum);
+        return true;
     }
 
     @Override
@@ -259,10 +266,14 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             minRestoredWm = Math.min(minRestoredWm, (long) value);
             return;
         }
+        if (restoredObjects == null) {
+            restoredObjects = new ArrayDeque<>();
+        }
         Tuple2<T, Integer> value1 = (Tuple2<T, Integer>) value;
+        // we can't apply backpressure here, we have to store the items and execute them later
         for (int i = 0; i < value1.f1(); i++) {
+            restoredObjects.add(value1.f0());
             LoggingUtil.logFinest(getLogger(), "Restored: %s", value1.f0());
-            processItem(value1.f0());
         }
     }
 
@@ -270,6 +281,13 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     public boolean finishSnapshotRestore() {
         lastReceivedWm = minRestoredWm;
         logFine(getLogger(), "restored lastReceivedWm=%s", minRestoredWm);
+        if (restoredObjects == null) {
+            return true;
+        }
+        for (T t; (t = restoredObjects.peek()) != null && processItem(t); ) {
+            restoredObjects.remove();
+        }
+        restoredObjects = null;
         return true;
     }
 
