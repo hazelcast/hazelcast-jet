@@ -36,7 +36,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -55,7 +54,6 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     private final ContextFactory<C> contextFactory;
     private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
-    private final int maxAsyncOpsPerMember;
 
     private C contextObject;
     // on the queue there is either:
@@ -73,13 +71,11 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     private AsyncTransformUsingContextOrderedP(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-            @Nullable C contextObject,
-            int maxAsyncOpsPerMember
+            @Nullable C contextObject
     ) {
         this.contextFactory = contextFactory;
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
-        this.maxAsyncOpsPerMember = maxAsyncOpsPerMember;
 
         assert contextObject == null ^ contextFactory.isSharedLocally()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -91,9 +87,9 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        maxOps = maxAsyncOpsPerMember / context.localParallelism();
+        maxOps = Math.max(contextFactory.getMaxPendingCallsPerMember() / context.localParallelism(), 1);
         if (maxOps < 1) {
-            throw new JetException("maxOps=" + maxOps);
+            throw new JetException("maxOps=" + maxOps + ", must be >= 1");
         }
         queue = new ArrayDeque<>(maxOps);
     }
@@ -163,8 +159,8 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
                 }
                 try {
                     currentTraverser = f.get();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
+                } catch (Throwable e) {
+                    throw new JetException("Async operation completed exceptionally: " + e, e);
                 }
             }
             queue.remove();
@@ -209,17 +205,14 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         private final ContextFactory<C> contextFactory;
         private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
         private transient C contextObject;
-        private int maxAsyncOps;
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
                 @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>>
-                        callAsyncFn,
-                int maxAsyncOps
+                        callAsyncFn
         ) {
             this.contextFactory = contextFactory;
             this.callAsyncFn = callAsyncFn;
-            this.maxAsyncOps = maxAsyncOps;
         }
 
         @Override
@@ -233,8 +226,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         @Override
         public Collection<? extends Processor> get(int count) {
             return Stream
-                    .generate(() -> new AsyncTransformUsingContextOrderedP<>(contextFactory, callAsyncFn, contextObject,
-                            maxAsyncOps))
+                    .generate(() -> new AsyncTransformUsingContextOrderedP<>(contextFactory, callAsyncFn, contextObject))
                     .limit(count)
                     .collect(toList());
         }
@@ -254,9 +246,8 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     public static <C, T, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>>
-                    callAsyncFn,
-            int maxAsyncOps
+                    callAsyncFn
     ) {
-        return new Supplier<>(contextFactory, callAsyncFn, maxAsyncOps);
+        return new Supplier<>(contextFactory, callAsyncFn);
     }
 }

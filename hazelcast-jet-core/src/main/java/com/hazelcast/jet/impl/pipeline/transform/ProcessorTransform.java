@@ -28,7 +28,10 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 
+import java.util.concurrent.CompletableFuture;
+
 import static com.hazelcast.jet.core.processor.Processors.filterUsingContextP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 
@@ -75,6 +78,17 @@ public class ProcessorTransform extends AbstractTransform {
     ) {
         return new ProcessorTransform("flatMapUsingContext", upstream,
                 flatMapUsingContextP(contextFactory, flatMapFn));
+    }
+
+    public static <C, T, R> ProcessorTransform flatMapUsingContextAsyncTransform(
+            @Nonnull Transform upstream,
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    ) {
+        // TODO [viliam] use more specific vertex name than "flatMap"
+        // TODO [viliam] use better key so that snapshots are local
+        return new ProcessorTransform("flatMapUsingContextAsync", upstream,
+                flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn));
     }
 
     @Override

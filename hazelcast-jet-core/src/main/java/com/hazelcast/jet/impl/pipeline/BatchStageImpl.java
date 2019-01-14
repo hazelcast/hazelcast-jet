@@ -33,11 +33,9 @@ import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.ContextFactory;
-import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
-
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
@@ -91,15 +89,6 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <C, R> GeneralStage<R> mapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<? extends R>> mapFn
-    ) {
-        // TODO [viliam]
-        throw new UnsupportedOperationException("todo");
-    }
-
-    @Nonnull @Override
     public <C> BatchStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
@@ -113,6 +102,14 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
+    }
+
+    @Nonnull @Override
+    public <C, R> BatchStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    ) {
+        return attachFlatMapUsingContextAsync(contextFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

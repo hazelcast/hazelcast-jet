@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -39,6 +40,8 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedToLongFunction;
 import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP;
+import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
 import com.hazelcast.jet.impl.processor.RollingAggregateP;
@@ -51,6 +54,7 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
@@ -757,6 +761,19 @@ public final class Processors {
     }
 
     /**
+     * TODO [viliam] javadoc
+     */
+    @Nonnull
+    public static <C, T, K, R> ProcessorSupplier mapUsingContextAsyncP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedFunction<T, K> extractKeyFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapFn
+    ) {
+        return flatMapUsingContextAsyncP(contextFactory, extractKeyFn,
+                (c, t) -> mapFn.apply(c, t).thenApply(Traversers::singleton));
+    }
+
+    /**
      * Returns a supplier of processors for a vertex that emits the same items
      * it receives, but only those that pass the given predicate. The predicate
      * function receives another parameter, the context object which Jet will
@@ -780,6 +797,19 @@ public final class Processors {
             singletonTraverser.accept(filterFn.test(context, item) ? item : null);
             return singletonTraverser;
         });
+    }
+
+    /**
+     * TODO [viliam] javadoc
+     */
+    @Nonnull
+    public static <C, T, K> ProcessorSupplier filterUsingContextAsyncP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedFunction<T, K> extractKeyFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> mapFn
+    ) {
+        return flatMapUsingContextAsyncP(contextFactory, extractKeyFn,
+                (c, t) -> mapFn.apply(c, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
     }
 
     /**
@@ -808,6 +838,20 @@ public final class Processors {
     ) {
         return TransformUsingContextP.<C, T, R>supplier(contextFactory,
                 (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
+    }
+
+    /**
+     * TODO [viliam] javadoc
+     */
+    @Nonnull
+    public static <C, T, K, R> ProcessorSupplier flatMapUsingContextAsyncP(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedFunction<T, K> extractKeyFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapFn
+    ) {
+        return contextFactory.isOrderedAsyncResponses()
+                ? AsyncTransformUsingContextOrderedP.supplier(contextFactory, flatMapFn)
+                : AsyncTransformUsingContextUnorderedP.supplier(contextFactory, flatMapFn, extractKeyFn);
     }
 
     /**

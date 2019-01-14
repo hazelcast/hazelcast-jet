@@ -35,6 +35,8 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.concurrent.CompletableFuture;
+
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
@@ -70,15 +72,38 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
+    default <C, R> BatchStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (BatchStage<R>) GeneralStage.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <C> BatchStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
+    @Nonnull
+    @Override
+    default <C> BatchStage<T> filterUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+    ) {
+        return (BatchStage<T>) GeneralStage.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
+    }
+
     @Nonnull @Override
     <C, R> BatchStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    @Nonnull @Override
+    <C, R> BatchStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     );
 
     @Override @Nonnull

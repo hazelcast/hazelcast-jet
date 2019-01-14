@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
@@ -24,7 +25,9 @@ import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -35,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.core.JetTestSupport.wm;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextAsyncP;
 import static com.hazelcast.test.HazelcastTestSupport.spawn;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -44,6 +48,9 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class AsyncTransformUsingContextPTest {
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Parameter
     public boolean ordered;
@@ -56,20 +63,11 @@ public class AsyncTransformUsingContextPTest {
     private ProcessorSupplier getSupplier(DistributedBiFunction<? super String, ? super String,
                     CompletableFuture<Traverser<String>>> mapFn
     ) {
+        ContextFactory<String> contextFactory = ContextFactory.withCreateFn(jet -> "foo");
         if (ordered) {
-            return AsyncTransformUsingContextOrderedP.<String, String, String>supplier(
-                    ContextFactory.withCreateFn(jet -> "foo"),
-                    mapFn,
-                    10
-            );
-        } else {
-            return AsyncTransformUsingContextUnorderedP.<String, String, String, String>supplier(
-                    ContextFactory.withCreateFn(jet -> "foo"),
-                    mapFn,
-                    10,
-                    DistributedFunction.identity()
-            );
+            contextFactory = contextFactory.unorderedAsyncResponses();
         }
+        return flatMapUsingContextAsyncP(contextFactory, DistributedFunction.identity(), mapFn);
     }
 
     @Test
@@ -117,5 +115,28 @@ public class AsyncTransformUsingContextPTest {
                 }))
                 .input(singletonList(wm(10)))
                 .expectOutput(singletonList(wm(10)));
+    }
+
+    @Test
+    public void when_futureReturnsNullTraverser_then_resultFilteredOut() {
+        TestSupport
+                .verifyProcessor(getSupplier((ctx, item) -> null))
+                .input(singletonList(wm(10)))
+                .expectOutput(singletonList(wm(10)));
+    }
+
+    @Test
+    public void when_futureCompletedExceptionally_then_jobFails() {
+        exception.expect(JetException.class);
+        exception.expectMessage("test exception");
+        TestSupport
+                .verifyProcessor(getSupplier((ctx, item) -> {
+                    CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
+                    f.completeExceptionally(new RuntimeException("test exception"));
+                    return f;
+                }))
+                .input(singletonList("a"))
+                .expectOutput(emptyList());
+
     }
 }

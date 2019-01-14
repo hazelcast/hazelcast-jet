@@ -33,7 +33,6 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ContextFactory;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -54,6 +53,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.stream.Collectors.toList;
 
@@ -77,12 +77,10 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     private final ContextFactory<C> contextFactory;
     private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
-    private final AtomicInteger asyncOpsCounter;
-    private final int maxAsyncOps;
     private final Function<T, K> extractKeyFn;
 
     private C contextObject;
-    private final ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Traverser<Object>>> resultQueue;
+    private ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Object>> resultQueue;
     // TODO [viliam] use more efficient structure
     private final SortedMap<Long, Long> watermarkCounts = new TreeMap<>();
     private final Map<T, Integer> inFlightItems = new IdentityHashMap<>();
@@ -93,6 +91,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     private Long lastReceivedWm = Long.MIN_VALUE;
     private long lastEmittedWm = Long.MIN_VALUE;
     private long minRestoredWm = Long.MAX_VALUE;
+    private int maxAsyncOps;
+    private final AtomicInteger asyncOpsCounter = new AtomicInteger();
 
     /**
      * Constructs a processor with the given mapping function.
@@ -101,8 +101,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nullable C contextObject,
-            @Nonnull AtomicInteger asyncOpsCounter,
-            int maxAsyncOps,
             @Nonnull Function<T, K> extractKeyFn
     ) {
         assert contextObject == null ^ contextFactory.isSharedLocally()
@@ -111,11 +109,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         this.contextFactory = contextFactory;
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
-        this.asyncOpsCounter = asyncOpsCounter;
-        this.maxAsyncOps = maxAsyncOps;
         this.extractKeyFn = extractKeyFn;
-
-        resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
     }
 
     /**
@@ -131,14 +125,18 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             if (!emitFromTraverser(currentTraverser)) {
                 return false;
             }
-            Tuple3<T, Long, Traverser<Object>> tuple = resultQueue.poll();
+            Tuple3<T, Long, Object> tuple = resultQueue.poll();
             if (tuple == null) {
                 return watermarkCounts.isEmpty();
             }
             inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
             Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
             assert count >= 0 : "count=" + count;
-            currentTraverser = tuple.f2();
+            // the result is either Throwable or Traverser<Object>
+            if (tuple.f2() instanceof Throwable) {
+                throw new JetException("Async operation completed exceptionally: " + tuple.f2(), (Throwable) tuple.f2());
+            }
+            currentTraverser = (Traverser<Object>) tuple.f2();
             if (count == 0) {
                 long wmToEmit = Long.MIN_VALUE;
                 for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
@@ -168,6 +166,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
+        maxAsyncOps = Math.max(1, contextFactory.getMaxPendingCallsPerMember() / context.localParallelism());
+        resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
     }
 
     @Override
@@ -200,11 +200,11 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         watermarkCounts.merge(lastReceivedWm, 1L, Long::sum);
         Long lastWatermarkAtReceiveTime = lastReceivedWm;
         // TODO [viliam] extract the action to a field to reduce GC litter
-        future.thenAccept(e -> {
-            boolean result = resultQueue.offer(tuple3(item, lastWatermarkAtReceiveTime, (Traverser<Object>) e));
-            assert result : "resultQueue doesn't have sufficient capacity";
+        future.whenComplete(withTryCatch(getLogger(), (r, e) -> {
             asyncOpsCounter.decrementAndGet();
-        });
+            boolean result = resultQueue.offer(tuple3(item, lastWatermarkAtReceiveTime, r != null ? r : e));
+            assert result : "resultQueue doesn't have sufficient capacity";
+        }));
         inFlightItems.merge(item, 1, Integer::sum);
     }
 
@@ -289,20 +289,15 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
         private final ContextFactory<C> contextFactory;
         private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
-        private final int maxAsyncOps;
         private transient C contextObject;
-        @SuppressFBWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
-        private transient AtomicInteger asyncOpsCounter = new AtomicInteger();
         private DistributedFunction<T, K> extractKeyFn;
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
                 @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-                int maxAsyncOps,
                 DistributedFunction<T, K> extractKeyFn) {
             this.contextFactory = contextFactory;
             this.callAsyncFn = callAsyncFn;
-            this.maxAsyncOps = maxAsyncOps;
             this.extractKeyFn = extractKeyFn;
         }
 
@@ -311,7 +306,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             if (contextFactory.isSharedLocally()) {
                 contextObject = contextFactory.createFn().apply(context.jetInstance());
             }
-            asyncOpsCounter = new AtomicInteger();
         }
 
         @Nonnull
@@ -319,7 +313,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         public Collection<? extends Processor> get(int count) {
             return Stream
                     .generate(() -> new AsyncTransformUsingContextUnorderedP<>(contextFactory, callAsyncFn, contextObject,
-                            asyncOpsCounter, maxAsyncOps, extractKeyFn))
+                            extractKeyFn))
                     .limit(count)
                     .collect(toList());
         }
@@ -339,11 +333,10 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     public static <C, T, K, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-            int maxAsyncOps,
             DistributedFunction<T, K> extractKeyFn
     ) {
         // TODO [viliam] make maxAsyncOps global value, not per member
-        return new Supplier<>(contextFactory, callAsyncFn, maxAsyncOps, extractKeyFn);
+        return new Supplier<>(contextFactory, callAsyncFn, extractKeyFn);
     }
 
     private enum Keys {

@@ -29,6 +29,7 @@ import com.hazelcast.jet.function.DistributedSupplier;
 import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A stage in a distributed computation {@link Pipeline pipeline} that will
@@ -79,15 +80,37 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
+    default <C, R> StreamStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <C> StreamStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
     );
 
     @Nonnull @Override
+    default <C> GeneralStage<T> filterUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+    ) {
+        return GeneralStage.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
+    }
+
+    @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    @Nonnull @Override
+    <C, R> StreamStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     );
 
     @Override @Nonnull

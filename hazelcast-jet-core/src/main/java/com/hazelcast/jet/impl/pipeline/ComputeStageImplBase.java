@@ -53,6 +53,8 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.concurrent.CompletableFuture;
+
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
@@ -62,6 +64,7 @@ import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTran
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.partitionedCustomProcessorTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.customProcessorTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.filterUsingContextTransform;
+import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingContextAsyncTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingContextTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.mapUsingContextTransform;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -177,6 +180,19 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextFn(flatMapFn);
         return (RET) attach(
                 flatMapUsingContextTransform(transform, contextFactory, adaptedFlatMapFn),
+                fnAdapter);
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    <C, R, RET> RET attachFlatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    ) {
+        checkSerializable(flatMapAsyncFn, "flatMapAsyncFn");
+        DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);
+        return (RET) attach(
+                flatMapUsingContextAsyncTransform(transform, contextFactory, adaptedFlatMapFn),
                 fnAdapter);
     }
 

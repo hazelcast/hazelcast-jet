@@ -24,6 +24,9 @@ import com.hazelcast.jet.function.DistributedFunction;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.util.Preconditions.checkPositive;
+
 /**
  * A holder of functions needed to create and destroy a context object.
  * <p>
@@ -32,9 +35,15 @@ import java.io.Serializable;
  *     <li>{@link GeneralStage#mapUsingContext}
  *     <li>{@link GeneralStage#filterUsingContext}
  *     <li>{@link GeneralStage#flatMapUsingContext}
+ *     <li>{@link GeneralStage#mapUsingContextAsync}
+ *     <li>{@link GeneralStage#filterUsingContextAsync}
+ *     <li>{@link GeneralStage#flatMapUsingContextAsync}
  *     <li>{@link GeneralStageWithKey#mapUsingContext}
  *     <li>{@link GeneralStageWithKey#filterUsingContext}
  *     <li>{@link GeneralStageWithKey#flatMapUsingContext}
+ *     <li>{@link GeneralStageWithKey#mapUsingContextAsync}
+ *     <li>{@link GeneralStageWithKey#filterUsingContextAsync}
+ *     <li>{@link GeneralStageWithKey#flatMapUsingContextAsync}
  * </ul>
  *
  * @param <C> the user-defined context object type
@@ -43,22 +52,30 @@ public final class ContextFactory<C> implements Serializable {
 
     private static final boolean COOPERATIVE_DEFAULT = true;
     private static final boolean SHARE_LOCALLY_DEFAULT = false;
+    private static final int MAX_PENDING_CALLS_DEFAULT = 128;
+    private static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
     private final DistributedFunction<JetInstance, ? extends C> createFn;
     private final DistributedConsumer<? super C> destroyFn;
     private final boolean isCooperative;
     private final boolean isSharedLocally;
+    private final int maxPendingCallsPerMember;
+    private final boolean orderedAsyncResponses;
 
     private ContextFactory(
             DistributedFunction<JetInstance, ? extends C> createFn,
             DistributedConsumer<? super C> destroyFn,
             boolean isCooperative,
-            boolean isSharedLocally
+            boolean isSharedLocally,
+            int maxPendingCallsPerMember,
+            boolean orderedAsyncResponses
     ) {
         this.createFn = createFn;
         this.destroyFn = destroyFn;
         this.isCooperative = isCooperative;
         this.isSharedLocally = isSharedLocally;
+        this.maxPendingCallsPerMember = maxPendingCallsPerMember;
+        this.orderedAsyncResponses = orderedAsyncResponses;
     }
 
     /**
@@ -73,8 +90,10 @@ public final class ContextFactory<C> implements Serializable {
     public static <C> ContextFactory<C> withCreateFn(
             @Nonnull DistributedFunction<JetInstance, ? extends C> createContextFn
     ) {
+        checkSerializable(createContextFn, "createContextFn");
         return new ContextFactory<>(
-                createContextFn, DistributedConsumer.noop(), COOPERATIVE_DEFAULT, SHARE_LOCALLY_DEFAULT);
+                createContextFn, DistributedConsumer.noop(), COOPERATIVE_DEFAULT, SHARE_LOCALLY_DEFAULT,
+                MAX_PENDING_CALLS_DEFAULT, ORDERED_ASYNC_RESPONSES_DEFAULT);
     }
 
     /**
@@ -89,7 +108,9 @@ public final class ContextFactory<C> implements Serializable {
      */
     @Nonnull
     public ContextFactory<C> withDestroyFn(@Nonnull DistributedConsumer<? super C> destroyFn) {
-        return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally);
+        checkSerializable(destroyFn, "destroyFn");
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally,
+                maxPendingCallsPerMember, orderedAsyncResponses);
     }
 
     /**
@@ -104,7 +125,8 @@ public final class ContextFactory<C> implements Serializable {
      */
     @Nonnull
     public ContextFactory<C> nonCooperative() {
-        return new ContextFactory<>(createFn, destroyFn, false, isSharedLocally);
+        return new ContextFactory<>(createFn, destroyFn, false, isSharedLocally,
+                maxPendingCallsPerMember, orderedAsyncResponses);
     }
 
     /**
@@ -123,7 +145,72 @@ public final class ContextFactory<C> implements Serializable {
      */
     @Nonnull
     public ContextFactory<C> shareLocally() {
-        return new ContextFactory<>(createFn, destroyFn, isCooperative, true);
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, true,
+                maxPendingCallsPerMember, orderedAsyncResponses);
+    }
+
+    /**
+     * Returns a copy of this {@link ContextFactory} with the
+     * <em>maxPendingCallsPerMember</em> property set to the given value.
+     * Jet will not execute more concurrent async operations than this and will
+     * apply backpressure to the upstream.
+     * <p>
+     * The limit is shared among local processors backing single vertex where this
+     * factory is used. If you have multiple vertices or multiple jobs with
+     * this context factory, each will have its own limit.
+     * <p>
+     * This value is ignored when the {@code ContextFactory} is used in a
+     * synchronous transformation.
+     * <p>
+     * Default value is {@value #MAX_PENDING_CALLS_DEFAULT}.
+     *
+     * @return a copy of this factory with the {@code maxPendingCallsPerMember}
+     *      property set.
+     */
+    @Nonnull
+    public ContextFactory<C> maxPendingCallsPerMember(int maxPendingCallsPerMember) {
+        checkPositive(maxPendingCallsPerMember, "maxPendingCallsPerMember must be >= 1");
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally,
+                maxPendingCallsPerMember, orderedAsyncResponses);
+    }
+
+    /**
+     * Returns a copy of this {@link ContextFactory} with the
+     * <em>unorderedAsyncResponses</em> flag set to true.
+     * <p>
+     * There are two modes in which asynchronous responses can be
+     * processed:
+     * <ol>
+     *     <li><b>Unordered:</b> results of the async calls are emitted as they
+     *     arrive. This mode is enabled by this method.
+     *     <li><b>Ordered:</b> results of the async calls are emitted in the
+     *     submission order. This is the default.
+     * </ol>
+     * The unordered mode can be faster:<ul>
+     *     <li>in the ordered mode, one stalling call will block all subsequent
+     *     items, even though responses for them were already received
+     *     <li>to preserve the order after a restart, the ordered
+     *     implementation when saving a state to snapshot waits for all async
+     *     calls to complete. This creates a hiccup depending on the async call
+     *     latency. The unordered one saves in-flight items to the state
+     *     snapshot.
+     * </ul>
+     * On the other hand, in the unordered mode the order of watermarks is
+     * still preserved. That is, the watermark is forwarded after responses to
+     * all items that came before it were emitted. One stalling response will
+     * stall the window aggregation downstream, but the speculative results
+     * will be more correct with unordered approach.
+     * <p>
+     * This value is ignored when the {@code ContextFactory} is used in a
+     * synchronous transformation: the output is always ordered in this case.
+     *
+     * @return a copy of this factory with the {@code unorderedAsyncResponses}
+     *      flag set.
+     */
+    @Nonnull
+    public ContextFactory<C> unorderedAsyncResponses() {
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally,
+                maxPendingCallsPerMember, false);
     }
 
     /**
@@ -157,24 +244,18 @@ public final class ContextFactory<C> implements Serializable {
     }
 
     /**
-     * TODO [viliam] javadoc
+     * Returns the maximum pending calls per member, see {@link
+     * #maxPendingCallsPerMember(int)}.
      */
-    public enum Mode {
+    public int getMaxPendingCallsPerMember() {
+        return maxPendingCallsPerMember;
+    }
 
-        /**
-         * The transform function satisfies the conditions for {@linkplain
-         * Processor#isCooperative() cooperative processor}.
-         */
-        COOPERATIVE,
-
-        /**
-         * The transform function returns
-         */
-        ASYNC,
-
-        /**
-         * TODO [viliam] javadoc
-         */
-        NON_COOPERATIVE
+    /**
+     * Returns, whether the async responses are ordered, see {@link
+     * #unorderedAsyncResponses()}.
+     */
+    public boolean isOrderedAsyncResponses() {
+        return orderedAsyncResponses;
     }
 }
