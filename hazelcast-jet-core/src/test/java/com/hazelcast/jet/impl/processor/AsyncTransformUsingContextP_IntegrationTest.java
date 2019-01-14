@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2018, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,7 +187,6 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
                                          .flatMap(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"))
                                          .sorted()
                                          .collect(joining("\n"));
-        // TODO [viliam] remove the timeout
-        assertTrueEventually(() -> assertEquals(expected, sinkList.stream().sorted().collect(joining("\n"))), 10);
+        assertTrueEventually(() -> assertEquals(expected, sinkList.stream().sorted().collect(joining("\n"))));
     }
 }
