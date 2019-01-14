@@ -59,6 +59,7 @@ import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.filterUsingPartitionedContextTransform;
+import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingPartitionedContextAsyncTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingPartitionedContextTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.mapUsingContextPartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.partitionedCustomProcessorTransform;
@@ -242,6 +243,23 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         DistributedFunction adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
                 flatMapUsingPartitionedContextTransform(
+                        transform, contextFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
+                fnAdapter);
+    }
+
+    @Nonnull
+    @SuppressWarnings("unchecked")
+    <C, K, R, RET> RET attachFlatMapUsingPartitionedContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedFunction<? super T, ? extends K> partitionKeyFn,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapFn
+    ) {
+        checkSerializable(flatMapFn, "flatMapFn");
+        checkSerializable(partitionKeyFn, "partitionKeyFn");
+        DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextAsyncFn(flatMapFn);
+        DistributedFunction adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
+        return (RET) attach(
+                flatMapUsingPartitionedContextAsyncTransform(
                         transform, contextFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
     }

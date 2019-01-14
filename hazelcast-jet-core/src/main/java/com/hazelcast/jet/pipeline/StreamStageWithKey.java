@@ -25,6 +25,7 @@ import com.hazelcast.jet.function.DistributedTriPredicate;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * An intermediate step while constructing a windowed group-and-aggregate
@@ -66,15 +67,38 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
+    default <C, R> StreamStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (StreamStage<R>) GeneralStageWithKey.super.mapUsingContextAsync(contextFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <C> StreamStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriPredicate<? super C, ? super K, ? super T> filterFn
     );
 
     @Nonnull @Override
+    default <C> StreamStage<T> filterUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+    ) {
+        return (StreamStage<T>) GeneralStageWithKey.super.filterUsingContextAsync(contextFactory, filterAsyncFn);
+    }
+
+    @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    @Nonnull @Override
+    <C, R> StreamStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
+                    flatMapAsyncFn
     );
 
     @Nonnull @Override

@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
@@ -29,6 +30,9 @@ import com.hazelcast.jet.function.DistributedTriPredicate;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -81,6 +85,42 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
+     * Attaches a mapping stage which applies the supplied function to each
+     * input item independently and emits the value of the CompletableFuture
+     * the function returned as the output item, once the future is completed.
+     * The mapping function receives another parameter, the context object,
+     * which Jet will create using the supplied {@code contextFactory}.
+     * <p>
+     * The latency of the async call will add to the latency of items.
+     * <p>
+     * <strong>NOTE:</strong> any state you maintain in the context object does
+     * not automatically become a part of a fault-tolerant snapshot. If Jet must
+     * restore from a snapshot, your state will either be lost (if it was just
+     * local state) or not rewound to the checkpoint (if it was stored in some
+     * durable storage).
+     * <p>
+     * If the mapping result is {@code null}, it emits nothing. Therefore this
+     * stage can be used to implement filtering semantics as well.
+     *
+     * TODO [viliam] javadoc
+     *
+     * @param <C> type of context object
+     * @param <R> the result type of the mapping function
+     * @param contextFactory the context factory
+     * @param mapAsyncFn a stateless mapping function. Can map to null (return a null future)
+     * @return the newly attached stage
+     */
+    @Nonnull
+    default <C, R> GeneralStage<R> mapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        checkSerializable(mapAsyncFn, "mapAsyncFn");
+        return flatMapUsingContextAsync(contextFactory,
+                (c, k, t) -> mapAsyncFn.apply(c, k, t).thenApply(Traversers::singleton));
+    }
+
+    /**
      * Attaches a filtering stage which applies the provided predicate function
      * to each input item to decide whether to pass the item to the output or
      * to discard it. The predicate function receives another parameter, the
@@ -111,6 +151,19 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriPredicate<? super C, ? super K, ? super T> filterFn
     );
+
+    /**
+     * TODO [viliam]
+     */
+    @Nonnull
+    default <C> GeneralStage<T> filterUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+    ) {
+        checkSerializable(filterAsyncFn, "filterAsyncFn");
+        return flatMapUsingContextAsync(contextFactory,
+                (c, k, t) -> filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
+    }
 
     /**
      * Attaches a flat-mapping stage which applies the supplied function to
@@ -144,6 +197,16 @@ public interface GeneralStageWithKey<T, K> {
     <C, R> GeneralStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    );
+
+    /**
+     * TODO [viliam]
+     */
+    @Nonnull
+    <C, R> GeneralStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
+                    flatMapAsyncFn
     );
 
     /**

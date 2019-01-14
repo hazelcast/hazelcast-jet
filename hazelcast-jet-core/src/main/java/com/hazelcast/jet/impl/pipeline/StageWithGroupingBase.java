@@ -25,6 +25,7 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.GeneralStageWithKey;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
@@ -80,6 +81,19 @@ class StageWithGroupingBase<T, K> {
         return computeStage.attachFlatMapUsingPartitionedContext(contextFactory, keyFn, (c, t) -> {
             K k = keyFn.apply(t);
             return flatMapFn.apply(c, k, t);
+        });
+    }
+
+    @Nonnull
+    <C, R, RET> RET attachFlatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
+                    flatMapAsyncFn
+    ) {
+        DistributedFunction<? super T, ? extends K> keyFn = keyFn();
+        return computeStage.attachFlatMapUsingPartitionedContextAsync(contextFactory, keyFn, (c, t) -> {
+            K k = keyFn.apply(t);
+            return flatMapAsyncFn.apply(c, k, t);
         });
     }
 

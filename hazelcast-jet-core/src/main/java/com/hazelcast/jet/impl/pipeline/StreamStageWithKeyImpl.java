@@ -30,6 +30,7 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 
 public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> implements StreamStageWithKey<T, K> {
 
@@ -67,6 +68,15 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
+    }
+
+    @Nonnull @Override
+    public <C, R> StreamStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
+                    flatMapAsyncFn
+    ) {
+        return attachFlatMapUsingContextAsync(contextFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

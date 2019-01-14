@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.function.DistributedTriFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -77,7 +78,8 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
     private JetInstance inst;
     private IMapJet<Integer, Integer> journaledMap;
     private ContextFactory<ExecutorService> contextFactory;
-    private DistributedBiFunction<ExecutorService, Object, CompletableFuture<Traverser<String>>> mapFn;
+    private DistributedBiFunction<ExecutorService, Integer, CompletableFuture<Traverser<String>>> mapFn;
+    private DistributedTriFunction<ExecutorService, Integer, Integer, CompletableFuture<Traverser<String>>> keyedMapFn;
     private IListJet<String> sinkList;
     private JobConfig jobConfig;
 
@@ -104,6 +106,17 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         }
 
         mapFn = (executor, item) -> {
+            CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
+            executor.submit(() -> {
+                // simulate random async call latency
+                sleepMillis(ThreadLocalRandom.current().nextInt(5));
+                return f.complete(traverseItems(item + "-1", item + "-2", item + "-3", item + "-4", item + "-5"));
+            });
+            return f;
+        };
+
+        keyedMapFn = (executor, key, item) -> {
+            assert key == item % 10 : "item=" + item + ", key=" + key;
             CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
             executor.submit(() -> {
                 // simulate random async call latency
@@ -142,11 +155,25 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
     }
 
     @Test
-    public void test_pipelineApi() {
+    public void test_pipelineApiNonKeyed() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
          .withoutTimestamps()
          .flatMapUsingContextAsync(contextFactory, mapFn)
+         .setLocalParallelism(2)
+         .drainTo(Sinks.list(sinkList));
+
+        inst.newJob(p, jobConfig);
+        assertResult();
+    }
+
+    @Test
+    public void test_pipelineApiKeyed() {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+         .withoutTimestamps()
+         .groupingKey(i -> i % 10)
+         .flatMapUsingContextAsync(contextFactory, keyedMapFn)
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 

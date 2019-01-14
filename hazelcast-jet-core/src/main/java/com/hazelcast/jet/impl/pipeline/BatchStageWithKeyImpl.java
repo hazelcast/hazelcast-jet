@@ -32,6 +32,7 @@ import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DO_NOT_ADAPT;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -74,6 +75,15 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
+    }
+
+    @Nonnull @Override
+    public <C, R> BatchStage<R> flatMapUsingContextAsync(
+            @Nonnull ContextFactory<C> contextFactory,
+            @Nonnull DistributedTriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
+                    flatMapAsyncFn
+    ) {
+        return attachFlatMapUsingContextAsync(contextFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

@@ -846,7 +846,7 @@ public final class Processors {
     @Nonnull
     public static <C, T, K, R> ProcessorSupplier flatMapUsingContextAsyncP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedFunction<T, K> extractKeyFn,
+            @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapFn
     ) {
         return contextFactory.isOrderedAsyncResponses()

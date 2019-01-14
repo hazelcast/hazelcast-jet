@@ -77,7 +77,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     private final ContextFactory<C> contextFactory;
     private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
-    private final Function<T, K> extractKeyFn;
+    private final Function<? super T, ? extends K> extractKeyFn;
 
     private C contextObject;
     private ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Object>> resultQueue;
@@ -101,7 +101,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nullable C contextObject,
-            @Nonnull Function<T, K> extractKeyFn
+            @Nonnull Function<? super T, ? extends K> extractKeyFn
     ) {
         assert contextObject == null ^ contextFactory.isSharedLocally()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -290,12 +290,12 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         private final ContextFactory<C> contextFactory;
         private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
         private transient C contextObject;
-        private DistributedFunction<T, K> extractKeyFn;
+        private DistributedFunction<? super T, ? extends K> extractKeyFn;
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
                 @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-                DistributedFunction<T, K> extractKeyFn) {
+                DistributedFunction<? super T, ? extends K> extractKeyFn) {
             this.contextFactory = contextFactory;
             this.callAsyncFn = callAsyncFn;
             this.extractKeyFn = extractKeyFn;
@@ -333,9 +333,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     public static <C, T, K, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-            DistributedFunction<T, K> extractKeyFn
+            DistributedFunction<? super T, ? extends K> extractKeyFn
     ) {
-        // TODO [viliam] make maxAsyncOps global value, not per member
         return new Supplier<>(contextFactory, callAsyncFn, extractKeyFn);
     }
 

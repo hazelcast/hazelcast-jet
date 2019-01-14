@@ -133,6 +133,8 @@ public interface GeneralStage<T> extends Stage {
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
      *
+     * TODO [viliam] javadoc
+     *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function
      * @param contextFactory the context factory
