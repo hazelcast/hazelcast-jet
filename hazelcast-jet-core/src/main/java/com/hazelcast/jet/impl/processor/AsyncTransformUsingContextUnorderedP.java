@@ -95,7 +95,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     private int asyncOpsCounter;
 
     /** Temporary collection for restored objects during snapshot restore. */
-    private final ArrayDeque<T> restoredObjects = new ArrayDeque<>();
+    private ArrayDeque<T> restoredObjects = new ArrayDeque<>();
 
     /**
      * Constructs a processor with the given mapping function.
@@ -179,9 +179,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public boolean isCooperative() {
-        if (!contextFactory.isCooperative()) {
-            throw new JetException("Wrong processor created");
-        }
         return true;
     }
 
@@ -283,10 +280,17 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         for (T t; (t = restoredObjects.peek()) != null && processItem(t); ) {
             restoredObjects.remove();
         }
-        if (tryFlushQueue() && restoredObjects.isEmpty()) {
+        if (restoredObjects.isEmpty()) {
+            // finish current object, we can't return true with a half-emitted item
+            if (!emitFromTraverser(currentTraverser)) {
+                return false;
+            }
+            restoredObjects = new ArrayDeque<>(0); // minimize the internal storage
             lastReceivedWm = minRestoredWm;
             logFine(getLogger(), "restored lastReceivedWm=%s", minRestoredWm);
             return true;
+        } else {
+            tryFlushQueue();
         }
         return false;
     }

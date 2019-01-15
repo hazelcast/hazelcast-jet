@@ -311,6 +311,8 @@ public class ProcessorTasklet implements Tasklet {
                 progTracker.notDone();
                 if (isSnapshotInbox()
                         ? processor.finishSnapshotRestore() : processor.completeEdge(currInstream.ordinal())) {
+                    assert !outbox.hasUnfinishedItem() :
+                            "outbox has unfinished item after successful completeEdge() or finishSnapshotRestore()";
                     progTracker.madeProgress();
                     state = initialProcessingState();
                 }

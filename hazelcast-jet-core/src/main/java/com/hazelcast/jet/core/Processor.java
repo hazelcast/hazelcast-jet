@@ -146,7 +146,7 @@ public interface Processor {
      * If the call returns {@code false}, it will be called again before proceeding
      * to call any other method. Default implementation returns {@code true}.
      * <p>
-     * If this method tried to offer to outbox and the offer call returned
+     * If this method tried to offer to the outbox and the offer call returned
      * false, this method must also return false and retry the offer in the
      * next call.
      */
@@ -158,6 +158,10 @@ public interface Processor {
      * Called after the edge input with the supplied {@code ordinal} is
      * exhausted. If it returns {@code false}, it will be called again before
      * proceeding to call any other method.
+     * <p>
+     * If this method tried to offer to the outbox and the offer call returned
+     * false, this method must also return false and retry the offer in the
+     * next call.
      *
      * @return {@code true} if the processor is now done completing the edge,
      *         {@code false} otherwise.
@@ -234,6 +238,10 @@ public interface Processor {
      * <p>
      * If it returns {@code false}, it will be called again before proceeding
      * to call any other methods.
+     * <p>
+     * If this method tried to offer to the outbox and the offer call returned
+     * false, this method must also return false and retry the offer in the
+     * next call.
      * <p>
      * The default implementation takes no action and returns {@code true}.
      */

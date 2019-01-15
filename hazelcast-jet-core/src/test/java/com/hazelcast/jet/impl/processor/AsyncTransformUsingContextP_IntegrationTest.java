@@ -82,7 +82,7 @@ import static org.junit.Assert.assertTrue;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport {
 
-    private static final int NUM_ITEMS = 10_000;
+    private static final int NUM_ITEMS = 100;
 
     private static JetTestInstanceFactory factory = new JetTestInstanceFactory();
     private static JetInstance inst;
@@ -132,6 +132,13 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
     public void after() {
         journaledMap.destroy();
         sinkList.destroy();
+        for (Job job : inst.getJobs()) {
+            try {
+                job.cancel();
+            } catch (Exception e) {
+                logger.warning(null, e);
+            }
+        }
     }
 
     @Test
@@ -150,6 +157,11 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         API we can configure edge queue sizes, which we use to cause more trouble for the
         cooperative emission.
          */
+
+        // add more input to the source map
+        int numItems = 10_000;
+        journaledMap.putAll(IntStream.range(NUM_ITEMS, numItems).boxed().collect(toMap(i -> i, i -> i)));
+
         DAG dag = new DAG();
         Vertex source = dag.newVertex("source", throttle(streamMapP(journaledMap.getName(), alwaysTrue(),
                 EventJournalMapEvent::getNewValue, START_FROM_OLDEST, eventTimePolicy(
@@ -179,7 +191,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
                 JobStatus status = job.getStatus();
                 assertTrue("status=" + status, status == RUNNING || status == COMPLETED);
             });
-            sleepMillis(500);
+            sleepMillis(100);
             try {
                 job.restart();
             } catch (IllegalStateException e) {
@@ -187,7 +199,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
                 break;
             }
         }
-        assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"));
+        assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"), numItems);
     }
 
     @Test
@@ -201,7 +213,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .drainTo(Sinks.list(sinkList));
 
         inst.newJob(p, jobConfig);
-        assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"));
+        assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"), NUM_ITEMS);
     }
 
     @Test
@@ -215,7 +227,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .drainTo(Sinks.list(sinkList));
 
         inst.newJob(p, jobConfig);
-        assertResult(i -> Stream.of(i + "-1"));
+        assertResult(i -> Stream.of(i + "-1"), NUM_ITEMS);
     }
 
     @Test
@@ -229,7 +241,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .drainTo(Sinks.list(sinkList));
 
         inst.newJob(p, jobConfig);
-        assertResult(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty());
+        assertResult(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty(), NUM_ITEMS);
     }
 
     @Test
@@ -244,7 +256,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .drainTo(Sinks.list(sinkList));
 
         inst.newJob(p, jobConfig);
-        assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"));
+        assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"), NUM_ITEMS);
     }
 
     @Test
@@ -259,7 +271,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .drainTo(Sinks.list(sinkList));
 
         inst.newJob(p, jobConfig);
-        assertResult(i -> Stream.of(i + "-1"));
+        assertResult(i -> Stream.of(i + "-1"), NUM_ITEMS);
     }
 
     @Test
@@ -274,7 +286,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .drainTo(Sinks.list(sinkList));
 
         inst.newJob(p, jobConfig);
-        assertResult(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty());
+        assertResult(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty(), NUM_ITEMS);
     }
 
     private <R> DistributedBiFunction<ExecutorService, Integer, CompletableFuture<R>> transformNotPartitionedFn(
@@ -306,8 +318,8 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         };
     }
 
-    private void assertResult(Function<Integer, Stream<? extends String>> transformFn) {
-        String expected = IntStream.range(0, NUM_ITEMS)
+    private void assertResult(Function<Integer, Stream<? extends String>> transformFn, int numItems) {
+        String expected = IntStream.range(0, numItems)
                                          .boxed()
                                          .flatMap(transformFn)
                                          .sorted()

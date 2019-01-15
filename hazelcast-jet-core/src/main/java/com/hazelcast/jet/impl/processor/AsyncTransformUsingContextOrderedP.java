@@ -185,9 +185,6 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     @Override
     public boolean isCooperative() {
-        if (!contextFactory.isCooperative()) {
-            throw new JetException("Wrong processor type for this context");
-        }
         return true;
     }
 
