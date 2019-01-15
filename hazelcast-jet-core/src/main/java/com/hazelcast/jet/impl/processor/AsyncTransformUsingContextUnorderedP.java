@@ -95,7 +95,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     private int asyncOpsCounter;
 
     /** Temporary collection for restored objects during snapshot restore. */
-    private ArrayDeque<T> restoredObjects;
+    private final ArrayDeque<T> restoredObjects = new ArrayDeque<>();
 
     /**
      * Constructs a processor with the given mapping function.
@@ -141,6 +141,9 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
                 throw new JetException("Async operation completed exceptionally: " + tuple.f2(), (Throwable) tuple.f2());
             }
             currentTraverser = (Traverser<Object>) tuple.f2();
+            if (currentTraverser == null) {
+                currentTraverser = Traversers.empty();
+            }
             if (count == 0) {
                 long wmToEmit = Long.MIN_VALUE;
                 for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
@@ -243,6 +246,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public boolean saveToSnapshot() {
+        assert restoredObjects.isEmpty() : "restoredObjects not empty";
         if (!emitFromTraverser(currentTraverser)) {
             return false;
         }
@@ -266,9 +270,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             minRestoredWm = Math.min(minRestoredWm, (long) value);
             return;
         }
-        if (restoredObjects == null) {
-            restoredObjects = new ArrayDeque<>();
-        }
         Tuple2<T, Integer> value1 = (Tuple2<T, Integer>) value;
         // we can't apply backpressure here, we have to store the items and execute them later
         for (int i = 0; i < value1.f1(); i++) {
@@ -279,16 +280,15 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public boolean finishSnapshotRestore() {
-        lastReceivedWm = minRestoredWm;
-        logFine(getLogger(), "restored lastReceivedWm=%s", minRestoredWm);
-        if (restoredObjects == null) {
-            return true;
-        }
         for (T t; (t = restoredObjects.peek()) != null && processItem(t); ) {
             restoredObjects.remove();
         }
-        restoredObjects = null;
-        return true;
+        if (tryFlushQueue() && restoredObjects.isEmpty()) {
+            lastReceivedWm = minRestoredWm;
+            logFine(getLogger(), "restored lastReceivedWm=%s", minRestoredWm);
+            return true;
+        }
+        return false;
     }
 
     @Override

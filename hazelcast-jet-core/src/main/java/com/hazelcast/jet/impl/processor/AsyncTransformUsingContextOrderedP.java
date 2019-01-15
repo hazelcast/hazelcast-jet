@@ -159,6 +159,9 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
                 }
                 try {
                     currentTraverser = f.get();
+                    if (currentTraverser == null) {
+                        currentTraverser = Traversers.empty();
+                    }
                 } catch (Throwable e) {
                     throw new JetException("Async operation completed exceptionally: " + e, e);
                 }
