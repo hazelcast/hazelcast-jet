@@ -96,8 +96,8 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, T, R> DistributedBiFunction<? super C, ?, CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    <C, T, R> DistributedBiFunction<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return (DistributedBiFunction) flatMapAsyncFn;
     }
@@ -272,9 +272,9 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     }
 
     @Nonnull @Override
-    <C, T, R> DistributedBiFunction<? super C, ?, CompletableFuture<Traverser<?>>>
+    <C, T, R> DistributedBiFunction<? super C, ?, ? extends CompletableFuture<Traverser<?>>>
     adaptFlatMapUsingContextAsyncFn(
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return (C context, JetEvent<T> e) ->
                 flatMapAsyncFn.apply(context, e.payload()).thenApply(trav -> trav.map(re -> jetEvent(re, e.timestamp())));

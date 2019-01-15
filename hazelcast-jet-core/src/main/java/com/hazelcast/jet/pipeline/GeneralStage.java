@@ -142,7 +142,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     /**
@@ -172,12 +172,12 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * TODO [viliam]
+     * TODO [viliam] javadoc
      */
     @Nonnull
     <C> GeneralStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     /**
@@ -206,16 +206,16 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     /**
-     * TODO [viliam]
+     * TODO [viliam] javadoc
      */
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     );
 
     /**

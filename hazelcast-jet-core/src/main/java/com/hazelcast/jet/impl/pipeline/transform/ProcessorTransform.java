@@ -86,7 +86,9 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        // TODO [viliam] use better key so that snapshots are local
+        // TODO use better key so that snapshots are local. Currently they will
+        //      be sent to a random member. We keep it this way for simplicity:
+        //      the number of in-flight items is limited (maxAsyncOps)
         return new ProcessorTransform(operationName + "UsingContextAsync", upstream,
                 flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn));
     }

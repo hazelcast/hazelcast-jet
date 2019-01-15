@@ -146,7 +146,7 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * TODO [viliam]
+     * TODO [viliam] javadoc
      */
     @Nonnull
     <C> GeneralStage<T> filterUsingContextAsync(
@@ -189,7 +189,7 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * TODO [viliam]
+     * TODO [viliam] javadoc
      */
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContextAsync(

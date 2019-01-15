@@ -189,7 +189,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <C, R, RET> RET attachFlatMapUsingContextAsync(
             @Nonnull String operationName,
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
         DistributedBiFunction adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);

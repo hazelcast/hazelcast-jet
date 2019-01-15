@@ -82,7 +82,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     <C, R> StreamStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     @Nonnull @Override
@@ -94,19 +94,19 @@ public interface StreamStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     <C> StreamStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     @Nonnull @Override
     <C, R> StreamStage<R> flatMapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     );
 
     @Override @Nonnull

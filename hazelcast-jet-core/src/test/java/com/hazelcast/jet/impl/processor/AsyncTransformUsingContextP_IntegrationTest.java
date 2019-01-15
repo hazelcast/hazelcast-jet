@@ -324,8 +324,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
                                          .flatMap(transformFn)
                                          .sorted()
                                          .collect(joining("\n"));
-        // TODO [viliam]  remove timeout
         assertTrueEventually(() -> assertEquals(expected, sinkList.stream().map(Object::toString).sorted()
-                                                                  .collect(joining("\n"))), 5);
+                                                                  .collect(joining("\n"))));
     }
 }

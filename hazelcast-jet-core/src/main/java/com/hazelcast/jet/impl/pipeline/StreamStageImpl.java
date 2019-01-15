@@ -91,7 +91,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     @Nonnull @Override
     public <C, R> StreamStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
         return attachFlatMapUsingContextAsync("map", contextFactory,
                 (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton));
@@ -108,7 +108,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     @Nonnull @Override
     public <C> StreamStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     ) {
         return attachFlatMapUsingContextAsync("filter", contextFactory,
                 (c, t) -> filterAsyncFn.apply(c, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
@@ -117,7 +117,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     @Nonnull @Override
     public <C, R> StreamStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
     }
@@ -125,7 +125,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     @Nonnull @Override
     public <C, R> StreamStage<R> flatMapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return attachFlatMapUsingContextAsync("flatMap", contextFactory, flatMapAsyncFn);
     }

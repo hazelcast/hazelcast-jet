@@ -81,7 +81,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     private C contextObject;
     private ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Object>> resultQueue;
-    // TODO [viliam] use more efficient structure
+    // TODO we can use more efficient structure: we only remove from the beginning and add to the end
     private final SortedMap<Long, Long> watermarkCounts = new TreeMap<>();
     private final Map<T, Integer> inFlightItems = new IdentityHashMap<>();
     private Traverser<Object> currentTraverser = Traversers.empty();
