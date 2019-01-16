@@ -150,7 +150,7 @@ public class JetCommandLine implements Callable<Void> {
             throw new Exception("File " + file + " could not be found.");
         }
         System.out.printf("Submitting JAR '%s' with arguments %s%n", file, params);
-        JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), params);
+        JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
     }
 
     @Command(

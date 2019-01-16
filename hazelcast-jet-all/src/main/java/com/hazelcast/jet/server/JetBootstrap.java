@@ -33,6 +33,7 @@ import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -93,9 +94,11 @@ import java.util.jar.JarFile;
  */
 public final class JetBootstrap {
 
-    // these two params must be set before a job is submitted
+    // these params must be set before a job is submitted
     private static ClientConfig config;
-    private static String jarPathname;
+    private static String jarName;
+    private static String snapshotName;
+    private static String jobName;
 
     private static final Supplier<JetBootstrap> SUPPLIER =
             Util.memoizeConcurrent(() -> new JetBootstrap(Jet.newJetClient(config)));
@@ -106,9 +109,15 @@ public final class JetBootstrap {
         this.instance = new InstanceProxy((AbstractJetInstance) instance);
     }
 
-    public static void executeJar(ClientConfig clientConfig, String jar, List<String> args) throws Exception {
-        jarPathname = jar;
-        config = clientConfig;
+    static void executeJar(
+            @Nonnull ClientConfig clientConfig, @Nonnull String jar, @Nullable String snapshotName,
+            @Nullable String jobName, @Nonnull List<String> args
+    ) throws Exception {
+        JetBootstrap.jarName = jar;
+        JetBootstrap.config = clientConfig;
+        JetBootstrap.snapshotName = snapshotName;
+        JetBootstrap.jobName = jobName;
+
         try (JarFile jarFile = new JarFile(jar)) {
             if (jarFile.getManifest() == null) {
                 error("No manifest file in " + jar);
@@ -185,9 +194,11 @@ public final class JetBootstrap {
 
         @Nonnull @Override
         public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
-            if (jarPathname != null) {
-                config.addJar(jarPathname);
+            if (jarName != null) {
+                config.addJar(jarName);
             }
+            config.setInitialSnapshotName(snapshotName);
+            config.setName(jobName);
             return instance.newJob(dag, config);
         }
 
