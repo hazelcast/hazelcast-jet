@@ -96,7 +96,8 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, T, R> DistributedBiFunction<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
+    <C, T, R> DistributedBiFunction<? super C, ?, ? extends CompletableFuture<Traverser<?>>>
+    adaptFlatMapUsingContextAsyncFn(
             @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return (DistributedBiFunction) flatMapAsyncFn;
