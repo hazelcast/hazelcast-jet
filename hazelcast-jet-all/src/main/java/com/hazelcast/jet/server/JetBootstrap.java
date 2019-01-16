@@ -152,38 +152,32 @@ public final class JetBootstrap {
             this.instance = instance;
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public String getName() {
             return instance.getName();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public HazelcastInstance getHazelcastInstance() {
             return instance.getHazelcastInstance();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Cluster getCluster() {
             return instance.getCluster();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public JetConfig getConfig() {
             return instance.getConfig();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Job newJob(@Nonnull DAG dag) {
             return newJob(dag, new JobConfig());
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
             if (jarPathname != null) {
                 config.addJar(jarPathname);
@@ -191,8 +185,7 @@ public final class JetBootstrap {
             return instance.newJob(dag, config);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Job> getJobs() {
             return instance.getJobs();
         }
@@ -202,32 +195,27 @@ public final class JetBootstrap {
             return instance.getJob(jobId);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Job> getJobs(@Nonnull String name) {
             return instance.getJobs(name);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public <K, V> IMapJet<K, V> getMap(@Nonnull String name) {
             return instance.getMap(name);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public <K, V> ReplicatedMap<K, V> getReplicatedMap(@Nonnull String name) {
             return instance.getReplicatedMap(name);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public JetCacheManager getCacheManager() {
             return instance.getCacheManager();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public <E> IListJet<E> getList(@Nonnull String name) {
             return instance.getList(name);
         }
