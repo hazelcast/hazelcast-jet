@@ -761,16 +761,21 @@ public final class Processors {
     }
 
     /**
-     * TODO [viliam] javadoc
+     * Asynchronous version of {@link #mapUsingContextP}: the {@code
+     * mapAsyncFn} returns a {@code CompletableFuture<R>} instead of just
+     * {@code R}.
+     * <p>
+     * The function can return a null future or the future can return a null
+     * result: in both cases it will act just like a filter.
      */
     @Nonnull
     public static <C, T, K, R> ProcessorSupplier mapUsingContextAsyncP(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedFunction<T, K> extractKeyFn,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
         return flatMapUsingContextAsyncP(contextFactory, extractKeyFn,
-                (c, t) -> mapFn.apply(c, t).thenApply(Traversers::singleton));
+                (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton));
     }
 
     /**
@@ -800,16 +805,20 @@ public final class Processors {
     }
 
     /**
-     * TODO [viliam] javadoc
+     * Asynchronous version of {@link #filterUsingContextP}: the {@code
+     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
+     * just a {@code boolean}.
+     * <p>
+     * The function must not return a null future.
      */
     @Nonnull
     public static <C, T, K> ProcessorSupplier filterUsingContextAsyncP(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedFunction<T, K> extractKeyFn,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> mapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Boolean>> filterAsyncFn
     ) {
         return flatMapUsingContextAsyncP(contextFactory, extractKeyFn,
-                (c, t) -> mapFn.apply(c, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
+                (c, t) -> filterAsyncFn.apply(c, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
     }
 
     /**
@@ -841,17 +850,22 @@ public final class Processors {
     }
 
     /**
-     * TODO [viliam] javadoc
+     * Asynchronous version of {@link #flatMapUsingContextP}: the {@code
+     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
+     * instead of just a {@code Traverser<R>}.
+     * <p>
+     * The function can return a null future or the future can return a null
+     * traverser: in both cases it will act just like a filter.
      */
     @Nonnull
     public static <C, T, K, R> ProcessorSupplier flatMapUsingContextAsyncP(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return contextFactory.isOrderedAsyncResponses()
-                ? AsyncTransformUsingContextOrderedP.supplier(contextFactory, flatMapFn)
-                : AsyncTransformUsingContextUnorderedP.supplier(contextFactory, flatMapFn, extractKeyFn);
+                ? AsyncTransformUsingContextOrderedP.supplier(contextFactory, flatMapAsyncFn)
+                : AsyncTransformUsingContextUnorderedP.supplier(contextFactory, flatMapAsyncFn, extractKeyFn);
     }
 
     /**

@@ -100,14 +100,6 @@ public class AsyncTransformUsingContextPTest {
     }
 
     @Test
-    public void test_mapToNull() {
-        TestSupport
-                .verifyProcessor(getSupplier((ctx, item) -> null))
-                .input(asList("a", "b"))
-                .expectOutput(emptyList());
-    }
-
-    @Test
     public void test_forwardWatermarksWithoutItems() {
         TestSupport
                 .verifyProcessor(getSupplier((ctx, item) -> {
@@ -115,6 +107,14 @@ public class AsyncTransformUsingContextPTest {
                 }))
                 .input(singletonList(wm(10)))
                 .expectOutput(singletonList(wm(10)));
+    }
+
+    @Test
+    public void when_mapFnReturnsNullFuture_then_filteredOut() {
+        TestSupport
+                .verifyProcessor(getSupplier((ctx, item) -> null))
+                .input(asList("a", "b"))
+                .expectOutput(emptyList());
     }
 
     @Test

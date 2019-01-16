@@ -84,29 +84,19 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Attaches a mapping stage which applies the supplied function to each
-     * input item independently and emits the value of the CompletableFuture
-     * the function returned as the output item, once the future is completed.
-     * The mapping function receives another parameter, the context object,
-     * which Jet will create using the supplied {@code contextFactory}.
+     * Asynchronous version of {@link #mapUsingContext}: the {@code mapAsyncFn}
+     * returns a {@code CompletableFuture<R>} instead of just {@code R}.
+     * <p>
+     * The function can return a null future or the future can return a null
+     * result: in both cases it will act just like a filter.
      * <p>
      * The latency of the async call will add to the latency of items.
-     * <p>
-     * <strong>NOTE:</strong> any state you maintain in the context object does
-     * not automatically become a part of a fault-tolerant snapshot. If Jet must
-     * restore from a snapshot, your state will either be lost (if it was just
-     * local state) or not rewound to the checkpoint (if it was stored in some
-     * durable storage).
-     * <p>
-     * If the mapping result is {@code null}, it emits nothing. Therefore this
-     * stage can be used to implement filtering semantics as well.
-     *
-     * TODO [viliam] javadoc
      *
      * @param <C> type of context object
-     * @param <R> the result type of the mapping function
+     * @param <R> the future's result type of the mapping function
      * @param contextFactory the context factory
-     * @param mapAsyncFn a stateless mapping function. Can map to null (return a null future)
+     * @param mapAsyncFn a stateless mapping function. Can map to null (return
+     *      a null future)
      * @return the newly attached stage
      */
     @Nonnull
@@ -148,7 +138,18 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * TODO [viliam] javadoc
+     * Asynchronous version of {@link #filterUsingContext}: the {@code
+     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
+     * just a {@code boolean}.
+     * <p>
+     * The function must not return a null future.
+     * <p>
+     * The latency of the async call will add to the latency of items.
+     *
+     * @param <C> type of context object
+     * @param contextFactory the context factory
+     * @param filterAsyncFn a stateless filtering function
+     * @return the newly attached stage
      */
     @Nonnull
     <C> GeneralStage<T> filterUsingContextAsync(
@@ -191,7 +192,21 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * TODO [viliam] javadoc
+     * Asynchronous version of {@link #flatMapUsingContext}: the {@code
+     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
+     * instead of just {@code Traverser<R>}.
+     * <p>
+     * The function can return a null future or the future can return a null
+     * traverser: in both cases it will act just like a filter.
+     * <p>
+     * The latency of the async call will add to the latency of items.
+     *
+     * @param <C> type of context object
+     * @param <R> the type of the returned stage
+     * @param contextFactory the context factory
+     * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
+     *      (return a null future)
+     * @return the newly attached stage
      */
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContextAsync(
