@@ -184,6 +184,11 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>3.9.0</version>
+        </dependency>
 
         <!-- logging -->
         <dependency>
