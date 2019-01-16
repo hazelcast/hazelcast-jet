@@ -201,7 +201,7 @@ public interface Job {
     JobStateSnapshot cancelAndExportSnapshot(String name);
 
     /**
-     * Initiates an export of a state snapshot and saves it under the given
+     * Exports a state snapshot and saves it under the given
      * name. You can start a new job using the exported state using {@link
      * JobConfig#setInitialSnapshotName(String)}.
      * <p>
