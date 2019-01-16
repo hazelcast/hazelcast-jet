@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.DistributedBiFunction;
@@ -261,11 +263,16 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a {@link #mapUsingContext} stage where the context is a
-     * Hazelcast {@code IMap} with the supplied name. The mapping function
-     * will receive it as the first argument.
-     *
-     * TODO [viliam] use async here?
+     * Attaches a {@link #mapUsingContextAsync} stage where the context is a
+     * Hazelcast {@code IMap} with the supplied name. The mapping function will
+     * receive it as the first argument.
+     * <p>
+     * The operations on {@link IMap} typically return Hazelcast's custom
+     * {@link com.hazelcast.core.ICompletableFuture}, not the standard {@link
+     * java.util.concurrent.CompletableFuture}. Use {@link
+     * Util#toCompletableFuture(ICompletableFuture)} to convert them.
+     * <p>
+     * See also {@link GeneralStageWithKey#mapUsingIMapAsync}.
      *
      * @param mapName name of the {@code IMap}
      * @param mapFn the mapping function
@@ -275,19 +282,24 @@ public interface GeneralStage<T> extends Stage {
      * @return the newly attached stage
      */
     @Nonnull
-    default <K, V, R> GeneralStage<R> mapUsingIMap(
+    default <K, V, R> GeneralStage<R> mapUsingIMapAsync(
             @Nonnull String mapName,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return mapUsingContext(ContextFactories.iMapContext(mapName), mapFn);
+        return mapUsingContextAsync(ContextFactories.iMapContext(mapName), mapFn);
     }
 
     /**
-     * Attaches a {@link #mapUsingContext} stage where the context is a
-     * Hazelcast {@code IMap}. <strong>It is not necessarily the map you
-     * provide here</strong>, but a map with the same name in the Jet cluster
-     * that executes the pipeline. The mapping function will receive the
-     * replicated map as the first argument.
+     * Attaches a {@link #mapUsingContextAsync} stage where the context is a
+     * Hazelcast {@code IMap}. The mapping function will receive the map as the
+     * first argument.
+     * <p>
+     * The operations on {@link IMap} typically return Hazelcast's custom
+     * {@link com.hazelcast.core.ICompletableFuture}, not the standard {@link
+     * java.util.concurrent.CompletableFuture}. Use {@link
+     * Util#toCompletableFuture(ICompletableFuture)} to convert them.
+     * <p>
+     * See also {@link GeneralStageWithKey#mapUsingIMapAsync}.
      *
      * @param iMap the {@code IMap} to use as the context
      * @param mapFn the mapping function
@@ -297,11 +309,11 @@ public interface GeneralStage<T> extends Stage {
      * @return the newly attached stage
      */
     @Nonnull
-    default <K, V, R> GeneralStage<R> mapUsingIMap(
+    default <K, V, R> GeneralStage<R> mapUsingIMapAsync(
             @Nonnull IMap<K, V> iMap,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return mapUsingIMap(iMap.getName(), mapFn);
+        return mapUsingIMapAsync(iMap.getName(), mapFn);
     }
 
     /**

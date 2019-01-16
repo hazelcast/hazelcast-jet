@@ -34,7 +34,6 @@ import com.hazelcast.jet.function.DistributedTriFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
@@ -118,19 +117,19 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     @Override @Nonnull
-    default <K, V, R> BatchStage<R> mapUsingIMap(
+    default <K, V, R> BatchStage<R> mapUsingIMapAsync(
             @Nonnull String mapName,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(mapName, mapFn);
+        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMapAsync(mapName, mapFn);
     }
 
     @Override @Nonnull
-    default <K, V, R> BatchStage<R> mapUsingIMap(
+    default <K, V, R> BatchStage<R> mapUsingIMapAsync(
             @Nonnull IMap<K, V> iMap,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(iMap, mapFn);
+        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMapAsync(iMap, mapFn);
     }
 
     @Nonnull @Override

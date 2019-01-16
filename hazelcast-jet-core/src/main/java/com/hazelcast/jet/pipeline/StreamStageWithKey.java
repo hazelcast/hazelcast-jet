@@ -45,19 +45,19 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     StageWithKeyAndWindow<T, K> window(@Nonnull WindowDefinition wDef);
 
     @Nonnull @Override
-    default <V, R> StreamStage<R> mapUsingIMap(
+    default <V, R> StreamStage<R> mapUsingIMapAsync(
             @Nonnull String mapName,
             @Nonnull DistributedBiFunction<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (StreamStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMap(mapName, mapFn);
+        return (StreamStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMapAsync(mapName, mapFn);
     }
 
     @Nonnull @Override
-    default <V, R> StreamStage<R> mapUsingIMap(
+    default <V, R> StreamStage<R> mapUsingIMapAsync(
             @Nonnull IMap<K, V> iMap,
             @Nonnull DistributedBiFunction<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (StreamStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMap(iMap, mapFn);
+        return (StreamStage<R>) GeneralStageWithKey.super.mapUsingIMapAsync(iMap, mapFn);
     }
 
     @Nonnull @Override

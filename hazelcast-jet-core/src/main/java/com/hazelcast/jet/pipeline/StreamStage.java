@@ -126,19 +126,19 @@ public interface StreamStage<T> extends GeneralStage<T> {
     }
 
     @Override @Nonnull
-    default <K, V, R> StreamStage<R> mapUsingIMap(
+    default <K, V, R> StreamStage<R> mapUsingIMapAsync(
             @Nonnull String mapName,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(mapName, mapFn);
+        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingIMapAsync(mapName, mapFn);
     }
 
     @Override @Nonnull
-    default <K, V, R> StreamStage<R> mapUsingIMap(
+    default <K, V, R> StreamStage<R> mapUsingIMapAsync(
             @Nonnull IMap<K, V> iMap,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(iMap, mapFn);
+        return (StreamStage<R>) GeneralStage.super.<K, V, R>mapUsingIMapAsync(iMap, mapFn);
     }
 
     @Nonnull @Override
