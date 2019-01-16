@@ -30,11 +30,13 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
+import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
 import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.IVersionProvider;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -61,23 +63,33 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
         header = "Hazelcast Jet 0.8-SNAPSHOT",
         description = "Utility for interacting with a Hazelcast Jet cluster. Global options are:%n",
         versionProvider = JetVersionProvider.class,
-        mixinStandardHelpOptions = true
+        mixinStandardHelpOptions = true,
+        subcommands = {HelpCommand.class}
 )
 public class JetCommandLine implements Callable<Void> {
 
+    private static final int MAX_STR_LENGTH = 24;
+    private static final int WAIT_INTERVAL_MILLIS = 100;
+
     @Option(names = {"-f", "--config"},
-            description = "Path to the client config XML file. If not specified the default location will be used."
+            description = "Path to the client config XML file. " +
+                    "If specified addresses and group name options will be ignored. " +
+                    "If neither group name, address or config location are specified then the default XML in the " +
+                    "config path will be used."
     )
     private File configXml;
 
-    @Option(names = {"-a", "--address"},
+    @Option(names = {"-a", "--addresses"},
             split = ",",
+            arity = "1..*",
             description = "Comma-separated list of Jet node addresses in the format <hostname>:<port>"
     )
     private List<String> addresses;
 
     @Option(names = {"-g", "--group"},
-            description = "Group name"
+            description = "Group name to use when connecting to the cluster. " +
+                    "Must be specified together with the <addresses> parameter.",
+            defaultValue = "jet"
     )
     private String groupName;
 
@@ -95,44 +107,50 @@ public class JetCommandLine implements Callable<Void> {
         if (args.length == 0) {
             cmd.usage(out);
         } else {
-            cmd.parseWithHandlers(
+            List<Object> parsed = cmd.parseWithHandlers(
                     new RunAll().useOut(out).useAnsi(Ansi.AUTO),
                     new DefaultExceptionHandler<List<Object>>().useErr(err).useAnsi(Ansi.AUTO),
                     args
             );
+            // only top command was executed
+            if (parsed != null && parsed.size() == 1) {
+                cmd.usage(out);
+            }
         }
     }
 
     @Override
-    public Void call() throws Exception {
+    public Void call() {
         return null;
     }
 
-    @Command(description = "Submits a job to the cluster")
+    @Command(description = "Submits a job to the cluster",
+            mixinStandardHelpOptions = true
+    )
     public void submit(
             @Option(names = {"-s", "--snapshot"},
                     paramLabel = "<snapshot name>",
-                    description = "Name of initial snapshot to start the job from")
-                    String snapshotName,
+                    description = "Name of initial snapshot to start the job from"
+            ) String snapshotName,
             @Option(names = {"-n", "--name"},
                     paramLabel = "<name>",
-                    description = "Name of the job")
-                    String name,
+                    description = "Name of the job"
+            ) String name,
             @Parameters(index = "0",
                     paramLabel = "<jar file>",
-                    description = "The jar file to submit")
-                    File file,
+                    description = "The jar file to submit"
+            ) File file,
             @Parameters(index = "1..*",
                     paramLabel = "<arguments>",
                     description = "arguments to pass to the supplied jar file",
-                    defaultValue = "")
-                    List<String> params
+                    defaultValue = ""
+            ) List<String> params
     ) throws Exception {
         if (!file.exists()) {
             throw new Exception("File " + file + " could not be found.");
         }
         System.out.printf("Submitting JAR '%s' with arguments %s%n", file, params);
-        JetBootstrap.executeJar(file.getAbsolutePath(), params);
+        JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), params);
     }
 
     @Command(
@@ -142,8 +160,8 @@ public class JetCommandLine implements Callable<Void> {
     public void suspend(
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
-                    description = "Name of the job to suspend")
-                    String name
+                    description = "Name of the job to suspend"
+            ) String name
     ) throws IOException {
         runWithJet(jet -> {
             Job job = getJob(name, jet);
@@ -158,14 +176,13 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
-            description = "Cancels a running job",
-            mixinStandardHelpOptions = true
+            description = "Cancels a running job"
     )
     public void cancel(
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
-                    description = "Name of the job to terminate")
-                    String name
+                    description = "Name of the job to terminate"
+            ) String name
     ) throws IOException {
         runWithJet(jet -> {
             Job job = getJob(name, jet);
@@ -179,8 +196,7 @@ public class JetCommandLine implements Callable<Void> {
 
     @Command(
             name = "save-snapshot",
-            description = "Saves a named snapshot from a job",
-            mixinStandardHelpOptions = true
+            description = "Saves a named snapshot from a job"
     )
     public void saveSnapshot(
             @Parameters(index = "0",
@@ -214,8 +230,7 @@ public class JetCommandLine implements Callable<Void> {
 
     @Command(
             name = "delete-snapshot",
-            description = "Deletes a named snapshot",
-            mixinStandardHelpOptions = true
+            description = "Deletes a named snapshot"
     )
     public void deleteSnapshot(
             @Parameters(index = "0",
@@ -234,8 +249,7 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
-            description = "Restarts a running job",
-            mixinStandardHelpOptions = true
+            description = "Restarts a running job"
     )
     public void restart(
             @Parameters(index = "0",
@@ -254,8 +268,7 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
-            description = "Resumes a running job",
-            mixinStandardHelpOptions = true
+            description = "Resumes a running job"
     )
     public void resume(
             @Parameters(index = "0",
@@ -276,8 +289,7 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
-            description = "Lists running jobs on the cluster",
-            mixinStandardHelpOptions = true
+            description = "Lists running jobs on the cluster"
     )
     public void jobs(
             @Option(names = {"-a", "--all"},
@@ -293,7 +305,7 @@ public class JetCommandLine implements Callable<Void> {
                     .filter(job -> listAll || isActive(job.getStatus()))
                     .forEach(job -> {
                         String idString = idToString(job.getJobId());
-                        String name = job.getName().equals(idString) ? "N/A" : shorten(job.getName(), 24);
+                        String name = job.getName().equals(idString) ? "N/A" : shorten(job.getName(), MAX_STR_LENGTH);
                         LocalDateTime submissionTime = toLocalDateTime(job.getSubmissionTime());
                         System.out.printf("%-24s %-19s %-18s %-23s%n", name, idString, job.getStatus(), submissionTime);
                     });
@@ -301,8 +313,7 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
-            description = "Lists saved snapshots on the cluster",
-            mixinStandardHelpOptions = true
+            description = "Lists saved snapshots on the cluster"
     )
     public void snapshots(
     ) throws IOException {
@@ -312,8 +323,8 @@ public class JetCommandLine implements Callable<Void> {
             snapshots.stream()
                     .forEach(ss -> {
                         String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
-                        jobName = shorten(jobName, 24);
-                        String ssName = shorten(ss.name(), 24);
+                        jobName = shorten(jobName, MAX_STR_LENGTH);
+                        String ssName = shorten(ss.name(), MAX_STR_LENGTH);
                         LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
                         System.out.printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
                     });
@@ -321,7 +332,8 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     private void runWithJet(Consumer<JetInstance> consumer) throws IOException {
-        JetInstance jet = getJetInstance();
+        configureLogging();
+        JetInstance jet = Jet.newJetClient(getClientConfig());
         try {
             consumer.accept(jet);
         } finally {
@@ -329,16 +341,17 @@ public class JetCommandLine implements Callable<Void> {
         }
     }
 
-    private JetInstance getJetInstance() throws IOException {
-        configureLogging();
+    private ClientConfig getClientConfig() throws IOException {
         if (configXml != null) {
-            ClientConfig config = new XmlClientConfigBuilder(configXml).build();
-            return Jet.newJetClient(config);
+            return new XmlClientConfigBuilder(configXml).build();
         }
         if (addresses != null) {
-
+            ClientConfig config = new ClientConfig();
+            config.getNetworkConfig().addAddress(addresses.toArray(new String[0]));
+            config.getGroupConfig().setName(groupName);
+            return config;
         }
-        return Jet.newJetClient();
+        return XmlJetConfigBuilder.getClientConfig();
     }
 
     private void configureLogging() throws IOException {
@@ -375,7 +388,7 @@ public class JetCommandLine implements Callable<Void> {
 
     private static void waitForJobStatus(Job job, JobStatus status) {
         while (job.getStatus() != status) {
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(100));
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(WAIT_INTERVAL_MILLIS));
         }
     }
 
@@ -386,10 +399,12 @@ public class JetCommandLine implements Callable<Void> {
     public static class JetVersionProvider implements IVersionProvider {
 
         @Override
-        public String[] getVersion() throws Exception {
+        public String[] getVersion() {
             JetBuildInfo jetBuildInfo = BuildInfoProvider.getBuildInfo().getJetBuildInfo();
             return new String[]{
-                    jetBuildInfo.getVersion()
+                    "Hazelcast Jet " + jetBuildInfo.getVersion(),
+                    "Revision " + jetBuildInfo.getRevision(),
+                    "Build " + jetBuildInfo.getBuild()
             };
         }
     }

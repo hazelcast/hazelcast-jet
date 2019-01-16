@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.server;
 
+import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ReplicatedMap;
@@ -92,17 +93,22 @@ import java.util.jar.JarFile;
  */
 public final class JetBootstrap {
 
-    private static final Supplier<JetBootstrap> SUPPLIER =
-            Util.memoizeConcurrent(() -> new JetBootstrap(Jet.newJetClient()));
+    // these two params must be set before a job is submitted
+    private static ClientConfig config;
     private static String jarPathname;
+
+    private static final Supplier<JetBootstrap> SUPPLIER =
+            Util.memoizeConcurrent(() -> new JetBootstrap(Jet.newJetClient(config)));
+
     private final JetInstance instance;
 
     private JetBootstrap(JetInstance instance) {
         this.instance = new InstanceProxy((AbstractJetInstance) instance);
     }
 
-    public static void executeJar(String jar, List<String> args) throws Exception {
+    public static void executeJar(ClientConfig clientConfig, String jar, List<String> args) throws Exception {
         jarPathname = jar;
+        config = clientConfig;
         try (JarFile jarFile = new JarFile(jar)) {
             if (jarFile.getManifest() == null) {
                 error("No manifest file in " + jar);
