@@ -169,7 +169,7 @@ public interface Job {
     void cancel();
 
     /**
-     * Initiates an export of a state snapshot, saves it under the given name,
+     * Exports and saves a state snapshot with the given name,
      * and then cancels the job without processing any more data after the
      * barrier (graceful cancellation). It's similar to {@link #suspend()}
      * followed by a {@link #cancel()}, except that it won't process any more

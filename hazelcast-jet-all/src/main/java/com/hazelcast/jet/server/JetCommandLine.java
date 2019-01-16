@@ -19,6 +19,7 @@ package com.hazelcast.jet.server;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.core.Cluster;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.Jet;
@@ -28,6 +29,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.ClusterMetadata;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
@@ -97,24 +99,23 @@ public class JetCommandLine implements Callable<Void> {
             description = {"Show logs from Jet client"}
     )
     private boolean isVerbose;
+    private static PrintStream OUT = System.out;
+    private static PrintStream ERR = System.err;
 
     public static void main(String[] args) throws Exception {
-        PrintStream out = System.out;
-        PrintStream err = System.err;
-
         CommandLine cmd = new CommandLine(new JetCommandLine());
 
         if (args.length == 0) {
-            cmd.usage(out);
+            cmd.usage(OUT);
         } else {
             List<Object> parsed = cmd.parseWithHandlers(
-                    new RunAll().useOut(out).useAnsi(Ansi.AUTO),
-                    new DefaultExceptionHandler<List<Object>>().useErr(err).useAnsi(Ansi.AUTO),
+                    new RunAll().useOut(OUT).useAnsi(Ansi.AUTO),
+                    new DefaultExceptionHandler<List<Object>>().useErr(ERR).useAnsi(Ansi.AUTO),
                     args
             );
             // only top command was executed
             if (parsed != null && parsed.size() == 1) {
-                cmd.usage(out);
+                cmd.usage(OUT);
             }
         }
     }
@@ -149,7 +150,7 @@ public class JetCommandLine implements Callable<Void> {
         if (!file.exists()) {
             throw new Exception("File " + file + " could not be found.");
         }
-        System.out.printf("Submitting JAR '%s' with arguments %s%n", file, params);
+        printf("Submitting JAR '%s' with arguments %s%n", file, params);
         JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
     }
 
@@ -168,10 +169,10 @@ public class JetCommandLine implements Callable<Void> {
             if (job.getStatus() != JobStatus.RUNNING) {
                 throw new RuntimeException("Job '" + name + "' is not running. Current state: " + job.getStatus());
             }
-            System.out.printf("Suspending job %s...%n", formatJob(job));
+            printf("Suspending job %s...%n", formatJob(job));
             job.suspend();
             waitForJobStatus(job, JobStatus.SUSPENDED);
-            System.out.println("Job was successfully suspended.");
+            println("Job was successfully suspended.");
         });
     }
 
@@ -187,10 +188,10 @@ public class JetCommandLine implements Callable<Void> {
         runWithJet(jet -> {
             Job job = getJob(name, jet);
             assertJobActive(name, job);
-            System.out.printf("Terminating job %s...%n", formatJob(job));
+            printf("Terminating job %s...%n", formatJob(job));
             job.cancel();
             waitForJobStatus(job, JobStatus.FAILED);
-            System.out.println("Job was successfully terminated.");
+            println("Job was successfully terminated.");
         });
     }
 
@@ -215,16 +216,16 @@ public class JetCommandLine implements Callable<Void> {
             Job job = getJob(jobName, jet);
             assertJobActive(jobName, job);
             if (isTerminal) {
-                System.out.printf("Saving snapshot with name '%s' from job '%s' and terminating the job...%n",
+                printf("Saving snapshot with name '%s' from job '%s' and terminating the job...%n",
                         snapshotName, formatJob(job)
                 );
                 job.cancelAndExportSnapshot(snapshotName);
                 waitForJobStatus(job, JobStatus.FAILED);
             } else {
-                System.out.printf("Saving snapshot with name '%s' from job '%s'...%n", snapshotName, formatJob(job));
+                printf("Saving snapshot with name '%s' from job '%s'...%n", snapshotName, formatJob(job));
                 job.exportSnapshot(snapshotName);
             }
-            System.out.println("Snapshot was successfully exported.");
+            println("Snapshot was successfully exported.");
         });
     }
 
@@ -244,7 +245,7 @@ public class JetCommandLine implements Callable<Void> {
                 throw new JetException(String.format("No snapshot with name %s was found", snapshotName));
             }
             jobStateSnapshot.destroy();
-            System.out.println("Snapshot was successfully deleted.");
+            println("Snapshot was successfully deleted.");
         });
     }
 
@@ -260,15 +261,15 @@ public class JetCommandLine implements Callable<Void> {
         runWithJet(jet -> {
             Job job = getJob(name, jet);
             assertJobActive(name, job);
-            System.out.println("Restarting job " + formatJob(job) + "...");
+            println("Restarting job " + formatJob(job) + "...");
             job.restart();
             waitForJobStatus(job, JobStatus.RUNNING);
-            System.out.println("Job was successfully restarted.");
+            println("Job was successfully restarted.");
         });
     }
 
     @Command(
-            description = "Resumes a running job"
+            description = "Resumes a suspended job"
     )
     public void resume(
             @Parameters(index = "0",
@@ -281,10 +282,10 @@ public class JetCommandLine implements Callable<Void> {
             if (job.getStatus() != JobStatus.SUSPENDED) {
                 throw new RuntimeException("Job '" + name + "' is not suspended. Current state: " + job.getStatus());
             }
-            System.out.println("Resuming job " + formatJob(job) + "...");
+            println("Resuming job " + formatJob(job) + "...");
             job.resume();
             waitForJobStatus(job, JobStatus.RUNNING);
-            System.out.println("Job was successfully resumed.");
+            println("Job was successfully resumed.");
         });
     }
 
@@ -299,15 +300,16 @@ public class JetCommandLine implements Callable<Void> {
         runWithJet(jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
-            System.out.printf("%-24s %-19s %-18s %-23s%n", "NAME", "ID", "STATUS", "SUBMISSION TIME");
-
+            String format = "%-24s %-19s %-18s %-23s%n";
+            printf(format, "NAME", "ID", "STATUS", "SUBMISSION TIME");
             summaries.stream()
                     .filter(job -> listAll || isActive(job.getStatus()))
                     .forEach(job -> {
                         String idString = idToString(job.getJobId());
                         String name = job.getName().equals(idString) ? "N/A" : shorten(job.getName(), MAX_STR_LENGTH);
-                        LocalDateTime submissionTime = toLocalDateTime(job.getSubmissionTime());
-                        System.out.printf("%-24s %-19s %-18s %-23s%n", name, idString, job.getStatus(), submissionTime);
+                        printf(format,
+                                name, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime())
+                        );
                     });
         });
     }
@@ -319,15 +321,39 @@ public class JetCommandLine implements Callable<Void> {
     ) throws IOException {
         runWithJet(jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
-            System.out.printf("%-24s %-15s %-23s %-24s%n", "NAME", "SIZE (bytes)", "TIME", "JOB NAME");
-            snapshots.stream()
-                    .forEach(ss -> {
+            printf("%-24s %-15s %-23s %-24s%n", "NAME", "SIZE (bytes)", "TIME", "JOB NAME");
+            snapshots.forEach(ss -> {
                         String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
                         jobName = shorten(jobName, MAX_STR_LENGTH);
                         String ssName = shorten(ss.name(), MAX_STR_LENGTH);
                         LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
-                        System.out.printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
+                        printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
                     });
+        });
+    }
+
+    @Command(
+            description = "Shows current cluster state and information about members"
+    )
+    public void cluster() throws IOException {
+        runWithJet(jet -> {
+            JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
+            ClusterMetadata clusterMetadata = ((JetClientInstanceImpl) jet).getClusterMetadata();
+            Cluster cluster = client.getCluster();
+
+            println("State: " + clusterMetadata.getState());
+            println("Version: " + clusterMetadata.getVersion());
+            println("Size: " + cluster.getMembers().size());
+
+            println("");
+
+            String format = "%-24s %-19s%n";
+            printf(format, "ADDRESS", "UUID");
+            cluster.getMembers().forEach(member -> {
+                printf(format, member.getAddress(), member.getUuid());
+            });
+
+
         });
     }
 
@@ -368,6 +394,14 @@ public class JetCommandLine implements Callable<Void> {
             }
         }
         return job;
+    }
+
+    private static void printf(String format, Object... objects) {
+        OUT.printf(format, objects);
+    }
+
+    private static void println(String msg) {
+        OUT.println(msg);
     }
 
     private static String shorten(String name, int length) {
