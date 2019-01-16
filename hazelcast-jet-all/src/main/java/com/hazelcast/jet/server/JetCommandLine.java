@@ -72,6 +72,8 @@ public class JetCommandLine implements Callable<Void> {
 
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
+    private static final PrintStream OUT = System.out;
+    private static final PrintStream ERR = System.err;
 
     @Option(names = {"-f", "--config"},
             description = "Path to the client config XML file. " +
@@ -99,10 +101,8 @@ public class JetCommandLine implements Callable<Void> {
             description = {"Show logs from Jet client"}
     )
     private boolean isVerbose;
-    private static PrintStream OUT = System.out;
-    private static PrintStream ERR = System.err;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         CommandLine cmd = new CommandLine(new JetCommandLine());
 
         if (args.length == 0) {
@@ -349,10 +349,7 @@ public class JetCommandLine implements Callable<Void> {
 
             String format = "%-24s %-19s%n";
             printf(format, "ADDRESS", "UUID");
-            cluster.getMembers().forEach(member -> {
-                printf(format, member.getAddress(), member.getUuid());
-            });
-
+            cluster.getMembers().forEach(member -> printf(format, member.getAddress(), member.getUuid()));
 
         });
     }
