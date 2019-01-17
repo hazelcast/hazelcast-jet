@@ -188,8 +188,7 @@ public final class JetBootstrap {
             return instance.newJob(dag, config);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
             if (jarPathname != null) {
                 config.addJar(jarPathname);

@@ -179,7 +179,8 @@ public interface JetInstance {
     List<Job> getJobs();
 
     /**
-     * Returns the job with the given id or {@code null} if no such job could be found
+     * Returns the job with the given id or {@code null} if no such job could
+     * be found.
      */
     @Nullable
     Job getJob(long jobId);
