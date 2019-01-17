@@ -198,7 +198,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             return false;
         }
         if (snapshotTraverser == null) {
-            LoggingUtil.logFinest(getLogger(), "Saving to snapshot: %s, lastReceivedWm=%d", inFlightItems, lastReceivedWm);
+            LoggingUtil.logFinest(getLogger(), "Saving to snapshot: %s, lastReceivedWm=%d",
+                    inFlightItems, lastReceivedWm);
             snapshotTraverser = traverseIterable(inFlightItems.entrySet())
                     .<Entry>map(en -> entry(
                             extractKeyFn.apply(en.getKey()),
@@ -306,8 +307,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
                 }
                 if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
                     lastEmittedWm = wmToEmit;
-                    currentTraverser = currentTraverser
-                            .append(new Watermark(wmToEmit));
+                    currentTraverser = currentTraverser.append(new Watermark(wmToEmit));
                 }
             }
         }
@@ -325,7 +325,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
                 @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-                DistributedFunction<? super T, ? extends K> extractKeyFn) {
+                @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn
+        ) {
             this.contextFactory = contextFactory;
             this.callAsyncFn = callAsyncFn;
             this.extractKeyFn = extractKeyFn;
@@ -338,12 +339,11 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             }
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
             return Stream
-                    .generate(() -> new AsyncTransformUsingContextUnorderedP<>(contextFactory, callAsyncFn, contextObject,
-                            extractKeyFn))
+                    .generate(() -> new AsyncTransformUsingContextUnorderedP<>(
+                            contextFactory, callAsyncFn, contextObject, extractKeyFn))
                     .limit(count)
                     .collect(toList());
         }
@@ -363,7 +363,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     public static <C, T, K, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-            DistributedFunction<? super T, ? extends K> extractKeyFn
+            @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn
     ) {
         return new Supplier<>(contextFactory, callAsyncFn, extractKeyFn);
     }

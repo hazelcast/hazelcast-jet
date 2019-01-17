@@ -101,8 +101,9 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             tryFlushQueue();
             return false;
         }
+        @SuppressWarnings("unchecked")
         T castedItem = (T) item;
-        CompletableFuture<? extends Traverser<? extends R>> future = callAsyncFn.apply(contextObject, castedItem);
+        CompletableFuture<? extends Traverser<R>> future = callAsyncFn.apply(contextObject, castedItem);
         if (future != null) {
             queue.add(tuple2(castedItem, future));
         }
@@ -152,8 +153,8 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
                 watermarkTraverser.accept((Watermark) o);
                 currentTraverser = watermarkTraverser;
             } else {
-                CompletableFuture<Traverser<? extends R>> f =
-                        ((Tuple2<T, CompletableFuture<Traverser<? extends R>>>) o).f1();
+                @SuppressWarnings("unchecked")
+                CompletableFuture<Traverser<R>> f = ((Tuple2<T, CompletableFuture<Traverser<R>>>) o).f1();
                 if (!f.isDone()) {
                     return false;
                 }
@@ -208,8 +209,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
-                @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>>
-                        callAsyncFn
+                @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
         ) {
             this.contextFactory = contextFactory;
             this.callAsyncFn = callAsyncFn;
@@ -222,11 +222,11 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             }
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
             return Stream
-                    .generate(() -> new AsyncTransformUsingContextOrderedP<>(contextFactory, callAsyncFn, contextObject))
+                    .generate(() -> new AsyncTransformUsingContextOrderedP<>(
+                            contextFactory, callAsyncFn, contextObject))
                     .limit(count)
                     .collect(toList());
         }
@@ -245,8 +245,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
      */
     public static <C, T, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>>
-                    callAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return new Supplier<>(contextFactory, callAsyncFn);
     }
