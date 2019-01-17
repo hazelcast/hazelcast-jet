@@ -19,8 +19,9 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.JetException;
 
 /**
- * Thrown when a named job is submitted while there is an active job,
- * i.e., not completed/failed job, in the system with the same name.
+ * Thrown when a named job is submitted while there is an <em>active job</em>
+ * with the same name. Job is <em>active</em> if it is running, suspended or
+ * waiting to be run, until it completes or fails.
  */
 public class DuplicateActiveJobNameException extends JetException {
 
