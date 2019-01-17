@@ -152,23 +152,23 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    protected List<Long> getJobIdsByName(String name) {
+    public List<Long> getJobIdsByName(String name) {
         return invokeRequestOnMasterAndDecodeResponse(JetGetJobIdsByNameCodec.encodeRequest(name),
                 response -> JetGetJobIdsByNameCodec.decodeResponse(response).response);
     }
 
     @Override
-    protected Job newJobProxy(long jobId, DAG dag, JobConfig config) {
+    public Job newJobProxy(long jobId, DAG dag, JobConfig config) {
         return new ClientJobProxy(this, jobId, dag, config);
     }
 
     @Override
-    protected Job newJobProxy(long jobId) {
+    public Job newJobProxy(long jobId) {
         return new ClientJobProxy(this, jobId);
     }
 
     @Override
-    protected ILogger getLogger() {
+    public ILogger getLogger() {
         return client.getLoggingService().getLogger(getClass());
     }
 

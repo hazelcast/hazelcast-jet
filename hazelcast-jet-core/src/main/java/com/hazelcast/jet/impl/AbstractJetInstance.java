@@ -54,13 +54,13 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     @Nonnull @Override
-    public final Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
+    public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
         long jobId = uploadResourcesAndAssignId(config);
         return newJobProxy(jobId, dag, config);
     }
 
     @Nonnull @Override
-    public final Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
+    public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
         if (config.getName() == null) {
             return newJob(dag, config);
         } else {
@@ -86,7 +86,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     @Override
-    public final Job getJob(long jobId) {
+    public Job getJob(long jobId) {
         try {
             Job job = newJobProxy(jobId);
             // get the status for the side-effect of throwing an exception if the jobId is invalid
@@ -103,7 +103,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Nonnull @Override
     public List<Job> getJobs(@Nonnull String name) {
         return getJobIdsByName(name).stream()
-                                    .map(jobId -> newJobProxy(jobId))
+                                    .map(this::newJobProxy)
                                     .collect(toList());
     }
 
@@ -153,8 +153,8 @@ public abstract class AbstractJetInstance implements JetInstance {
         return jobRepository.get().uploadJobResources(config);
     }
 
-    protected abstract ILogger getLogger();
-    protected abstract Job newJobProxy(long jobId);
-    protected abstract Job newJobProxy(long jobId, DAG dag, JobConfig config);
-    protected abstract List<Long> getJobIdsByName(String name);
+    public abstract ILogger getLogger();
+    public abstract Job newJobProxy(long jobId);
+    public abstract Job newJobProxy(long jobId, DAG dag, JobConfig config);
+    public abstract List<Long> getJobIdsByName(String name);
 }

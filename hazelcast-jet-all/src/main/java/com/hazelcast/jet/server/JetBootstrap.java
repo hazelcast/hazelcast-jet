@@ -30,6 +30,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Method;
@@ -239,6 +240,26 @@ public final class JetBootstrap {
         @Override
         public boolean existsDistributedObject(@Nonnull String serviceName, @Nonnull String objectName) {
             return instance.existsDistributedObject(serviceName, objectName);
+        }
+
+        @Override
+        public ILogger getLogger() {
+            return instance.getLogger();
+        }
+
+        @Override
+        public Job newJobProxy(long jobId) {
+            return instance.newJobProxy(jobId);
+        }
+
+        @Override
+        public Job newJobProxy(long jobId, DAG dag, JobConfig config) {
+            return instance.newJobProxy(jobId, dag, config);
+        }
+
+        @Override
+        public List<Long> getJobIdsByName(String name) {
+            return instance.getJobIdsByName(name);
         }
     }
 }

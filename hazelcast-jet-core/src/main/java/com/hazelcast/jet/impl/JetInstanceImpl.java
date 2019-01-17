@@ -75,7 +75,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    protected List<Long> getJobIdsByName(String name) {
+    public List<Long> getJobIdsByName(String name) {
         Address masterAddress = nodeEngine.getMasterAddress();
         Future<List<Long>> future = nodeEngine
                 .getOperationService()
@@ -122,17 +122,17 @@ public class JetInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    protected Job newJobProxy(long jobId) {
+    public Job newJobProxy(long jobId) {
         return new JobProxy((NodeEngineImpl) nodeEngine, jobId);
     }
 
     @Override
-    protected Job newJobProxy(long jobId, DAG dag, JobConfig config) {
+    public Job newJobProxy(long jobId, DAG dag, JobConfig config) {
         return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
     }
 
     @Override
-    protected ILogger getLogger() {
+    public ILogger getLogger() {
         return nodeEngine.getLogger(getClass());
     }
 }
