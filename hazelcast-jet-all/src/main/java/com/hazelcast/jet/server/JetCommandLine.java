@@ -62,7 +62,7 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
 @Command(
         name = "jet",
-        header = "Hazelcast Jet 0.8-SNAPSHOT",
+        header = "Hazelcast Jet",
         description = "Utility for interacting with a Hazelcast Jet cluster. Global options are:%n",
         versionProvider = JetVersionProvider.class,
         mixinStandardHelpOptions = true,
@@ -86,6 +86,7 @@ public class JetCommandLine implements Callable<Void> {
     @Option(names = {"-a", "--addresses"},
             split = ",",
             arity = "1..*",
+            paramLabel = "<hostname>:<port>",
             description = "Comma-separated list of Jet node addresses in the format <hostname>:<port>"
     )
     private List<String> addresses;
