@@ -358,6 +358,7 @@ public abstract class AbstractProcessor implements Processor {
      * @param traverser traverser over items to emit
      * @return whether the traverser has been exhausted
      */
+    @SuppressWarnings("unchecked")
     protected final <E> boolean emitFromTraverser(@Nonnull int[] ordinals, @Nonnull Traverser<E> traverser) {
         E item;
         if (pendingItem != null) {

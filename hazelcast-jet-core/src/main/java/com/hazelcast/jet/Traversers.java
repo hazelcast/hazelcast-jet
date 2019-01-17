@@ -49,8 +49,8 @@ public final class Traversers {
 
     /**
      * Returns a traverser over the given single item.
-     *
-     * <p>You can use {@link ResettableSingletonTraverser} for less GC litter,
+     * <p>
+     * You can use {@link ResettableSingletonTraverser} for less GC litter,
      * if you can reuse the traverser instance.
      */
     @Nonnull

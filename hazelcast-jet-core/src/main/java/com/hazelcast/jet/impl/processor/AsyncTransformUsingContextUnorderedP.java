@@ -115,58 +115,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         this.extractKeyFn = extractKeyFn;
     }
 
-    /**
-     * Drain items from queue until either:
-     * - an incomplete item is encountered
-     * - the outbox is full
-     *
-     * @return true, if there are no more in-flight items and everything was
-     * emitted to the outbox
-     */
-    private boolean tryFlushQueue() {
-        for (;;) {
-            if (!emitFromTraverser(currentTraverser)) {
-                return false;
-            }
-            Tuple3<T, Long, Object> tuple = resultQueue.poll();
-            if (tuple == null) {
-                return watermarkCounts.isEmpty();
-            }
-            asyncOpsCounter--;
-            inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
-            Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
-            assert count >= 0 : "count=" + count;
-            // the result is either Throwable or Traverser<Object>
-            if (tuple.f2() instanceof Throwable) {
-                throw new JetException("Async operation completed exceptionally: " + tuple.f2(), (Throwable) tuple.f2());
-            }
-            currentTraverser = (Traverser<Object>) tuple.f2();
-            if (currentTraverser == null) {
-                currentTraverser = Traversers.empty();
-            }
-            if (count == 0) {
-                long wmToEmit = Long.MIN_VALUE;
-                for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
-                    Entry<Long, Long> entry = it.next();
-                    if (entry.getValue() != 0) {
-                        wmToEmit = entry.getKey();
-                        break;
-                    } else {
-                        it.remove();
-                    }
-                }
-                if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
-                    wmToEmit = lastReceivedWm;
-                }
-                if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
-                    lastEmittedWm = wmToEmit;
-                    currentTraverser = currentTraverser
-                                .append(new Watermark(wmToEmit));
-                }
-            }
-        }
-    }
-
     @Override
     protected void init(@Nonnull Context context) {
         if (!contextFactory.isSharedLocally()) {
@@ -178,16 +126,13 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     @Override
-    public boolean isCooperative() {
-        return true;
-    }
-
-    @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         if (getOutbox().hasUnfinishedItem() && !emitFromTraverser(currentTraverser)) {
             return false;
         }
-        if (!processItem((T) item)) {
+        @SuppressWarnings("unchecked")
+        T castedItem = (T) item;
+        if (!processItem(castedItem)) {
             // if queue is full, try to emit and apply backpressure
             tryFlushQueue();
             return false;
@@ -248,7 +193,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             return false;
         }
         if (snapshotTraverser == null) {
-            LoggingUtil.logFinest(getLogger(), "Saving to snapshot: %s, lastReceivedWm=%d", inFlightItems, lastReceivedWm);
+            LoggingUtil.logFinest(getLogger(), "Saving to snapshot: %s, lastReceivedWm=%d",
+                    inFlightItems, lastReceivedWm);
             snapshotTraverser = traverseIterable(inFlightItems.entrySet())
                     .<Entry>map(en -> entry(
                             extractKeyFn.apply(en.getKey()),
@@ -260,6 +206,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         if (key instanceof BroadcastKey) {
             assert ((BroadcastKey) key).key().equals(Keys.LAST_EMITTED_WM) : "Unexpected key: " + key;
@@ -305,6 +252,63 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         contextObject = null;
     }
 
+    /**
+     * Drains items from the queue until either:
+     * <ul><li>
+     *     encountering an incomplete item
+     * </li><li>
+     *     the outbox gets full
+     * </li></ul>
+     *
+     * @return true if there are no more in-flight items and everything was emitted
+     *         to the outbox
+     */
+    @SuppressWarnings("unchecked")
+    private boolean tryFlushQueue() {
+        for (;;) {
+            if (!emitFromTraverser(currentTraverser)) {
+                return false;
+            }
+            Tuple3<T, Long, Object> tuple = resultQueue.poll();
+            if (tuple == null) {
+                return watermarkCounts.isEmpty();
+            }
+            asyncOpsCounter--;
+            inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
+            Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
+            assert count >= 0 : "count=" + count;
+            // the result is either Throwable or Traverser<Object>
+            if (tuple.f2() instanceof Throwable) {
+                throw new JetException("Async operation completed exceptionally: " + tuple.f2(),
+                        (Throwable) tuple.f2());
+            }
+            currentTraverser = (Traverser<Object>) tuple.f2();
+            if (currentTraverser == null) {
+                currentTraverser = Traversers.empty();
+            }
+            if (count > 0) {
+                continue;
+            }
+            long wmToEmit = Long.MIN_VALUE;
+            for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
+                Entry<Long, Long> entry = it.next();
+                if (entry.getValue() != 0) {
+                    wmToEmit = entry.getKey();
+                    break;
+                } else {
+                    it.remove();
+                }
+            }
+            if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
+                wmToEmit = lastReceivedWm;
+            }
+            if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
+                lastEmittedWm = wmToEmit;
+                currentTraverser = currentTraverser.append(new Watermark(wmToEmit));
+            }
+        }
+    }
+
     private static final class Supplier<C, T, K, R> implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
@@ -317,7 +321,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         private Supplier(
                 @Nonnull ContextFactory<C> contextFactory,
                 @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-                DistributedFunction<? super T, ? extends K> extractKeyFn) {
+                @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn
+        ) {
             this.contextFactory = contextFactory;
             this.callAsyncFn = callAsyncFn;
             this.extractKeyFn = extractKeyFn;
@@ -330,12 +335,11 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             }
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
             return Stream
-                    .generate(() -> new AsyncTransformUsingContextUnorderedP<>(contextFactory, callAsyncFn, contextObject,
-                            extractKeyFn))
+                    .generate(() -> new AsyncTransformUsingContextUnorderedP<>(
+                            contextFactory, callAsyncFn, contextObject, extractKeyFn))
                     .limit(count)
                     .collect(toList());
         }
@@ -355,7 +359,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     public static <C, T, K, R> ProcessorSupplier supplier(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-            DistributedFunction<? super T, ? extends K> extractKeyFn
+            @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn
     ) {
         return new Supplier<>(contextFactory, callAsyncFn, extractKeyFn);
     }

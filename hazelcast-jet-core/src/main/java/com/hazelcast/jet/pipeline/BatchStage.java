@@ -97,7 +97,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull @Override
     <C, R> BatchStage<R> flatMapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>>
+                    flatMapAsyncFn
     );
 
     @Override @Nonnull

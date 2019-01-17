@@ -28,14 +28,14 @@ public interface OutboxInternal extends Outbox {
     void reset();
 
     /**
-     * Blocks the outbox so that it only allows offering of the current
-     * unfinished item. If there's no unfinished item, the outbox will reject
-     * all {@code offer} calls, until {@link #unblock()} is called.
+     * Blocks the outbox so it allows the caller only to offer the current
+     * unfinished item. If there is no unfinished item, the outbox will reject
+     * all items until you call {@link #unblock()}.
      */
     void block();
 
     /**
-     * Reverses the {@link #block()} call.
+     * Removes the effect of a previous {@link #block()} call (if any).
      */
     void unblock();
 }

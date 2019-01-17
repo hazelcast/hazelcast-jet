@@ -90,7 +90,7 @@ public interface GeneralStageWithKey<T, K> {
      * The function can return a null future or the future can return a null
      * result: in both cases it will act just like a filter.
      * <p>
-     * The latency of the async call will add to the latency of items.
+     * The latency of the async call will add to the latency of the items.
      *
      * @param <C> type of context object
      * @param <R> the future's result type of the mapping function
@@ -144,7 +144,7 @@ public interface GeneralStageWithKey<T, K> {
      * <p>
      * The function must not return a null future.
      * <p>
-     * The latency of the async call will add to the latency of items.
+     * The latency of the async call will add to the latency of the items.
      *
      * @param <C> type of context object
      * @param contextFactory the context factory
@@ -199,7 +199,7 @@ public interface GeneralStageWithKey<T, K> {
      * The function can return a null future or the future can return a null
      * traverser: in both cases it will act just like a filter.
      * <p>
-     * The latency of the async call will add to the latency of items.
+     * The latency of the async call will add to the latency of the items.
      *
      * @param <C> type of context object
      * @param <R> the type of the returned stage

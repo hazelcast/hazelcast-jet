@@ -99,7 +99,7 @@ public interface Outbox {
     }
 
     /**
-     * Returns true, if this outbox has an unfinished item and the same item
+     * Returns true if this outbox has an unfinished item and the same item
      * must be offered again. If it returns false, it is safe to offer a new
      * item.
      */
