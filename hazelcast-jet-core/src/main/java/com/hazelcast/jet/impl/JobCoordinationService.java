@@ -147,12 +147,12 @@ public class JobCoordinationService {
         JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
 
-        boolean isDuplicateJobName;
+        boolean hasDuplicateJobName;
         synchronized (lock) {
             assertIsMaster("Cannot submit job " + idToString(jobId) + " from non-master node");
             checkOperationalState();
-            isDuplicateJobName = checkDuplicateActiveJobName(jobId, config);
-            if (!isDuplicateJobName) {
+            hasDuplicateJobName = config.getName() != null && hasActiveJobWithName(config.getName());
+            if (!hasDuplicateJobName) {
                 // just try to initiate the coordination
                 MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
                 if (prev != null) {
@@ -162,10 +162,10 @@ public class JobCoordinationService {
             }
         }
 
-        if (isDuplicateJobName) {
+        if (hasDuplicateJobName) {
             jobRepository.deleteJob(jobId);
-            throw new DuplicateActiveJobNameException("There is another active job: "
-                    + idToString(jobId) + " with the same name: " + config.getName());
+            throw new DuplicateActiveJobNameException("Another active job with equal name (" + config.getName()
+                    + ") exists: " + idToString(jobId));
         }
 
         // If job is not currently running, it might be that it is just completed
@@ -180,23 +180,18 @@ public class JobCoordinationService {
         nodeEngine.getExecutionService().execute(COORDINATOR_EXECUTOR_NAME, () -> tryStartJob(masterContext));
     }
 
-    private boolean checkDuplicateActiveJobName(long jobId, JobConfig config) {
-        if (config.getName() != null) {
-            // if scanJob() has not run yet, master context objects may not be initialized.
-            // in this case, we cannot check if the new job submission has a duplicate job name.
-            // therefore, we will retry until scanJob() task runs at least once.
-            if (!jobsScanned) {
-                throw new RetryableHazelcastException("Cannot submit job: " + idToString(jobId) + " with name: "
-                        + config.getName() + " before the master node initializes job coordination service state");
-            }
-
-            return masterContexts.values()
-                                 .stream()
-                                 .anyMatch(ctx -> jobId != ctx.jobId()
-                                         && config.getName().equals(ctx.jobConfig().getName()));
+    private boolean hasActiveJobWithName(@Nonnull String jobName) {
+        // if scanJob() has not run yet, master context objects may not be initialized.
+        // in this case, we cannot check if the new job submission has a duplicate job name.
+        // therefore, we will retry until scanJob() task runs at least once.
+        if (!jobsScanned) {
+            throw new RetryableHazelcastException("Cannot submit job with name '" + jobName
+                    + "' before the master node initializes job coordination service state");
         }
 
-        return false;
+        return masterContexts.values()
+                             .stream()
+                             .anyMatch(ctx -> jobName.equals(ctx.jobConfig().getName()));
     }
 
     public void shutdown() {
