@@ -594,6 +594,63 @@ public class JobTest extends JetTestSupport {
     }
 
     @Test
+    public void when_suspendedNamedJob_then_newJobIfAbsentWithEqualNameJoinsIt() {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
+        JobConfig config = new JobConfig()
+                .setName("job1");
+
+        // When
+        Job job1 = instance1.newJob(dag, config);
+        assertJobStatusEventually(job1, RUNNING);
+        job1.suspend();
+        assertJobStatusEventually(job1, SUSPENDED);
+
+        // Then
+        Job job2 = instance2.newJobIfAbsent(dag, config);
+        assertEquals(job1.getId(), job2.getId());
+        assertEquals(job2.getStatus(), SUSPENDED);
+    }
+
+    @Test
+    public void when_suspendedNamedJob_then_newJobWithEqualNameFails() {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
+        JobConfig config = new JobConfig()
+                .setName("job1");
+
+        // When
+        Job job1 = instance1.newJob(dag, config);
+        assertJobStatusEventually(job1, RUNNING);
+        job1.suspend();
+        assertJobStatusEventually(job1, SUSPENDED);
+
+        // Then
+        expectedException.expect(DuplicateActiveJobNameException.class);
+        instance2.newJob(dag, config);
+    }
+
+    @Test
+    public void when_suspendedJobScannedOnNewMaster_then_newJobWithEqualNameFails() {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
+        JobConfig config = new JobConfig()
+                .setName("job1");
+
+        // When
+        Job job1 = instance1.newJob(dag, config);
+        assertJobStatusEventually(job1, RUNNING);
+        job1.suspend();
+        assertJobStatusEventually(job1, SUSPENDED);
+        // gracefully shutdown the master
+        instance1.shutdown();
+
+        // Then
+        expectedException.expect(DuplicateActiveJobNameException.class);
+        instance2.newJob(dag, config);
+    }
+
+    @Test
     public void when_jobIsSubmitted_then_jobSubmissionTimeIsQueried() throws InterruptedException {
         testJobSubmissionTimeWhenJobIsRunning(instance1);
     }
