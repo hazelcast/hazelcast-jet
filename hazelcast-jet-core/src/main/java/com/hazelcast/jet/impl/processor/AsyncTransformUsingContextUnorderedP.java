@@ -291,24 +291,25 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             if (currentTraverser == null) {
                 currentTraverser = Traversers.empty();
             }
-            if (count == 0) {
-                long wmToEmit = Long.MIN_VALUE;
-                for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
-                    Entry<Long, Long> entry = it.next();
-                    if (entry.getValue() != 0) {
-                        wmToEmit = entry.getKey();
-                        break;
-                    } else {
-                        it.remove();
-                    }
+            if (count > 0) {
+                continue;
+            }
+            long wmToEmit = Long.MIN_VALUE;
+            for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
+                Entry<Long, Long> entry = it.next();
+                if (entry.getValue() != 0) {
+                    wmToEmit = entry.getKey();
+                    break;
+                } else {
+                    it.remove();
                 }
-                if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
-                    wmToEmit = lastReceivedWm;
-                }
-                if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
-                    lastEmittedWm = wmToEmit;
-                    currentTraverser = currentTraverser.append(new Watermark(wmToEmit));
-                }
+            }
+            if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
+                wmToEmit = lastReceivedWm;
+            }
+            if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
+                lastEmittedWm = wmToEmit;
+                currentTraverser = currentTraverser.append(new Watermark(wmToEmit));
             }
         }
     }
