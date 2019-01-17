@@ -85,12 +85,13 @@ public interface GeneralStageWithKey<T, K> {
 
     /**
      * Attaches a mapping stage which applies the supplied function to each
-     * input item independently and emits the value of the CompletableFuture
-     * the function returned as the output item, once the future is completed.
-     * The mapping function receives another parameter, the context object,
-     * which Jet will create using the supplied {@code contextFactory}.
+     * input item independently and emits the result of the {@code
+     * CompletableFuture} the function returned as the output item, once the
+     * future is completed. The mapping function receives another parameter,
+     * the context object, which Jet will create using the supplied {@code
+     * contextFactory}.
      * <p>
-     * The latency of the async call will add to the latency of items.
+     * The latency of the async call will add to the latency of the items.
      * <p>
      * <strong>NOTE:</strong> any state you maintain in the context object does
      * not automatically become a part of a fault-tolerant snapshot. If Jet must
@@ -100,8 +101,6 @@ public interface GeneralStageWithKey<T, K> {
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
-     *
-     * TODO [viliam] javadoc
      *
      * @param <C> type of context object
      * @param <R> the result type of the mapping function

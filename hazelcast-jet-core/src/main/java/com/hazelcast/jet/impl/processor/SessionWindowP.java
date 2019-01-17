@@ -141,7 +141,6 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        @SuppressWarnings("unchecked")
         final long timestamp = timestampFns.get(ordinal).applyAsLong(item);
         if (timestamp < currentWatermark) {
             logLateEvent(getLogger(), currentWatermark, item);
@@ -204,6 +203,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean saveToSnapshot() {
         if (inComplete) {
@@ -346,6 +346,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         private int size;
         private long[] starts = new long[2];
         private long[] ends = new long[2];
+        @SuppressWarnings("unchecked")
         private A[] accs = (A[]) new Object[2];
 
         private void removeWindow(int idx) {
@@ -393,6 +394,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void readData(ObjectDataInput in) throws IOException {
             size = in.readInt();
             if (size > starts.length) {

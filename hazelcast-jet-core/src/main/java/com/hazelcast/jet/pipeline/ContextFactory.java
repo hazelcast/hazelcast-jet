@@ -151,13 +151,12 @@ public final class ContextFactory<C> implements Serializable {
 
     /**
      * Returns a copy of this {@link ContextFactory} with the
-     * <em>maxPendingCallsPerMember</em> property set to the given value.
-     * Jet will not execute more concurrent async operations than this and will
+     * <em>maxPendingCallsPerMember</em> property set to the given value. Jet
+     * will execute at most this many concurrent async operations and will
      * apply backpressure to the upstream.
      * <p>
-     * The limit is shared among local processors backing single vertex where this
-     * factory is used. If you have multiple vertices or multiple jobs with
-     * this context factory, each will have its own limit.
+     * If you use the same context factory on multiple pipeline stages, each
+     * stage will count the pending calls independently.
      * <p>
      * This value is ignored when the {@code ContextFactory} is used in a
      * synchronous transformation.
@@ -178,34 +177,35 @@ public final class ContextFactory<C> implements Serializable {
      * Returns a copy of this {@link ContextFactory} with the
      * <em>unorderedAsyncResponses</em> flag set to true.
      * <p>
-     * There are two modes in which asynchronous responses can be
-     * processed:
-     * <ol>
-     *     <li><b>Unordered:</b> results of the async calls are emitted as they
+     * Jet can process asynchronous responses in two modes:
+     * <ol><li>
+     *     <b>Unordered:</b> results of the async calls are emitted as they
      *     arrive. This mode is enabled by this method.
-     *     <li><b>Ordered:</b> results of the async calls are emitted in the
-     *     submission order. This is the default.
+     * </li><li>
+     *     <b>Ordered:</b> results of the async calls are emitted in the submission
+     *     order. This is the default.
      * </ol>
-     * The unordered mode can be faster:<ul>
-     *     <li>in the ordered mode, one stalling call will block all subsequent
-     *     items, even though responses for them were already received
-     *     <li>to preserve the order after a restart, the ordered
-     *     implementation when saving a state to snapshot waits for all async
-     *     calls to complete. This creates a hiccup depending on the async call
-     *     latency. The unordered one saves in-flight items to the state
-     *     snapshot.
+     * The unordered mode can be faster:
+     * <ul><li>
+     *     in the ordered mode, one stalling call will block all subsequent items,
+     *     even though responses for them were already received
+     * </li><li>
+     *     to preserve the order after a restart, the ordered implementation when
+     *     saving the state to the snapshot waits for all async calls to complete.
+     *     This creates a hiccup depending on the async call latency. The unordered
+     *     one saves in-flight items to the state snapshot.
      * </ul>
-     * On the other hand, in the unordered mode the order of watermarks is
-     * still preserved. That is, the watermark is forwarded after responses to
-     * all items that came before it were emitted. One stalling response will
-     * stall the window aggregation downstream, but the speculative results
-     * will be more correct with unordered approach.
+     * The order of watermarks is preserved even in the unordered mode. Jet
+     * forwards the watermark after having emitted all the results of the items
+     * that came before it. One stalling response will prevent a windowed
+     * operation downstream from finishing, but if the operation is configured
+     * to emit early results, they will be more correct with the unordered
+     * approach.
      * <p>
      * This value is ignored when the {@code ContextFactory} is used in a
      * synchronous transformation: the output is always ordered in this case.
      *
-     * @return a copy of this factory with the {@code unorderedAsyncResponses}
-     *      flag set.
+     * @return a copy of this factory with the {@code unorderedAsyncResponses} flag set.
      */
     @Nonnull
     public ContextFactory<C> unorderedAsyncResponses() {
@@ -252,7 +252,7 @@ public final class ContextFactory<C> implements Serializable {
     }
 
     /**
-     * Returns, whether the async responses are ordered, see {@link
+     * Tells whether the async responses are ordered, see {@link
      * #unorderedAsyncResponses()}.
      */
     public boolean isOrderedAsyncResponses() {

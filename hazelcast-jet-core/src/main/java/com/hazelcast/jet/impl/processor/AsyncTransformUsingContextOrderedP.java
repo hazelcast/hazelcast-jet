@@ -152,12 +152,15 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     }
 
     /**
-     * Drain items from queue until either:
-     * - an incomplete item is encountered
-     * - the outbox is full
+     * Drains items from the queue until either:
+     * <ul><li>
+     *     encountering an incomplete item
+     * </li><li>
+     *     the outbox gets full
+     * </li></ul>
      *
-     * @return true, if there are no more in-flight items and everything was
-     * emitted to the outbox
+     * @return true if there are no more in-flight items and everything was emitted
+     *         to the outbox
      */
     private boolean tryFlushQueue() {
         // We check the futures in submission order. While this might increase latency for some
