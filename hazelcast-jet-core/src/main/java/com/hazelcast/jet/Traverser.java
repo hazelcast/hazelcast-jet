@@ -19,6 +19,7 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.core.AppendableTraverser;
 import com.hazelcast.jet.impl.util.FlatMappingTraverser;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -52,6 +53,7 @@ public interface Traverser<T> {
      * filtering in addition to transformation.
      */
     @Nonnull
+    @CheckReturnValue
     default <R> Traverser<R> map(@Nonnull Function<? super T, ? extends R> mapFn) {
         return () -> {
             for (T t; (t = next()) != null;) {
@@ -69,6 +71,7 @@ public interface Traverser<T> {
      * only those that pass the given predicate.
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> filter(@Nonnull Predicate<? super T> filterFn) {
         return () -> {
             for (T t; (t = next()) != null;) {
@@ -86,6 +89,7 @@ public interface Traverser<T> {
      * resulting traversers, which must be <em>null-terminated</em>.
      */
     @Nonnull
+    @CheckReturnValue
     default <R> Traverser<R> flatMap(@Nonnull Function<? super T, ? extends Traverser<? extends R>> flatMapFn) {
         return new FlatMappingTraverser<>(this, flatMapFn);
     }
@@ -95,6 +99,7 @@ public interface Traverser<T> {
      * up to the item for which the predicate fails (exclusive).
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> takeWhile(@Nonnull Predicate<? super T> predicate) {
         return new Traverser<T>() {
             boolean predicateSatisfied = true;
@@ -116,6 +121,7 @@ public interface Traverser<T> {
      * starting from the item for which the predicate fails (inclusive).
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> dropWhile(@Nonnull Predicate<? super T> predicate) {
         return new Traverser<T>() {
             boolean predicateSatisfied = true;
@@ -147,6 +153,7 @@ public interface Traverser<T> {
      * {@link AppendableTraverser} might be a better choice.
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> append(@Nonnull T item) {
         return new Traverser<T>() {
             T appendedItem = item;
@@ -170,6 +177,7 @@ public interface Traverser<T> {
      * all the items of this traverser.
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> prepend(@Nonnull T item) {
         return new Traverser<T>() {
             private boolean itemReturned;
@@ -189,6 +197,7 @@ public interface Traverser<T> {
      * additionally passing each (non-null) item to the supplied consumer.
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> peek(@Nonnull Consumer<? super T> action) {
         return () -> {
             T t = next();
@@ -205,6 +214,7 @@ public interface Traverser<T> {
      * returns {@code null}.
      */
     @Nonnull
+    @CheckReturnValue
     default Traverser<T> onFirstNull(@Nonnull Runnable action) {
         return new Traverser<T>() {
             private boolean didRun;

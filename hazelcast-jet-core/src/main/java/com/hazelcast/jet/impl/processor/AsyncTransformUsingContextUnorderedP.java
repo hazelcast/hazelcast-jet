@@ -116,6 +116,11 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     @Override
+    public boolean isCooperative() {
+        return contextFactory.isCooperative();
+    }
+
+    @Override
     protected void init(@Nonnull Context context) {
         if (!contextFactory.isSharedLocally()) {
             assert contextObject == null : "contextObject is not null: " + contextObject;
@@ -152,10 +157,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         asyncOpsCounter++;
         watermarkCounts.merge(lastReceivedWm, 1L, Long::sum);
         Long lastWatermarkAtReceiveTime = lastReceivedWm;
-        future.whenComplete(withTryCatch(getLogger(), (r, e) -> {
-            boolean result = resultQueue.offer(tuple3(item, lastWatermarkAtReceiveTime, r != null ? r : e));
-            assert result : "resultQueue doesn't have sufficient capacity";
-        }));
+        future.whenComplete(withTryCatch(getLogger(),
+                (r, e) -> resultQueue.add(tuple3(item, lastWatermarkAtReceiveTime, r != null ? r : e))));
         inFlightItems.merge(item, 1, Integer::sum);
         return true;
     }
@@ -274,7 +277,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
                 return watermarkCounts.isEmpty();
             }
             asyncOpsCounter--;
-            inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
+            Integer inFlightItemsCount = inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o + n);
+            assert inFlightItemsCount == null || inFlightItemsCount > 0 : "inFlightItemsCount=" + inFlightItemsCount;
             Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
             assert count >= 0 : "count=" + count;
             // the result is either Throwable or Traverser<Object>
