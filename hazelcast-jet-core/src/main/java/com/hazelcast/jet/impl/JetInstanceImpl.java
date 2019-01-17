@@ -21,10 +21,13 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.DuplicateActiveJobNameException;
 import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.NodeEngine;
@@ -35,8 +38,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -63,6 +68,35 @@ public class JetInstanceImpl extends AbstractJetInstance {
         return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
     }
 
+    @Nonnull
+    @Override
+    public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
+        if (config.getName() == null) {
+            long jobId = uploadResourcesAndAssignId(config);
+            return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
+        } else {
+            while (true) {
+                Job job = getJob(config.getName());
+                if (job != null) {
+                    JobStatus status = job.getStatus();
+                    if (status != JobStatus.FAILED && status != JobStatus.COMPLETED) {
+                        return job;
+                    }
+                }
+
+                long jobId = 0;
+                try {
+                    jobId = uploadResourcesAndAssignId(config);
+                    return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
+                } catch (DuplicateActiveJobNameException e) {
+                    ILogger logger = nodeEngine.getLogger(getClass());
+                    logFine(logger, "Could not submit job: %s with duplicate name: %s", idToString(jobId),
+                            config.getName());
+                }
+            }
+        }
+    }
+
     @Nonnull @Override
     public List<Job> getJobs() {
         Address masterAddress = nodeEngine.getMasterAddress();
@@ -70,22 +104,29 @@ public class JetInstanceImpl extends AbstractJetInstance {
                 .getOperationService()
                 .createInvocationBuilder(JetService.SERVICE_NAME, new GetJobIdsOperation(), masterAddress)
                 .invoke();
-        return uncheckCall(() ->
-                future.get().stream().map(jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId)).collect(toList())
-        );
+
+        try {
+            return future.get()
+                         .stream()
+                         .map(jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId))
+                         .collect(toList());
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
     }
 
     @Override
     public Job getJob(long jobId) {
         try {
             Job job = new JobProxy((NodeEngineImpl) nodeEngine, jobId);
+            // we hit the master node to see if the job id is valid or not
             job.getStatus();
             return job;
-        } catch (Exception e) {
-            if (peel(e) instanceof JobNotFoundException) {
+        } catch (Throwable t) {
+            if (peel(t) instanceof JobNotFoundException) {
                 return null;
             }
-            throw e;
+            throw rethrow(t);
         }
     }
 
@@ -103,14 +144,22 @@ public class JetInstanceImpl extends AbstractJetInstance {
                 .createInvocationBuilder(JetService.SERVICE_NAME, new GetJobIdsByNameOperation(name), masterAddress)
                 .invoke();
 
-        return uncheckCall(future::get);
+        try {
+            return future.get();
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
     }
 
     @Override
     public void shutdown() {
-        JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
-        jetService.shutDownJobs();
-        super.shutdown();
+        try {
+            JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
+            jetService.shutDownJobs();
+            super.shutdown();
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
     }
 
     /**

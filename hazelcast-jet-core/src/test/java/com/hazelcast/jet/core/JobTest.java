@@ -108,6 +108,32 @@ public class JobTest extends JetTestSupport {
     }
 
     @Test
+    public void when_jobIsSubmittedFromNonMasterWithNewJobIfAbsent_then_jobStatusShouldBeStarting() {
+        testJobStatusWhenSubmittedWithNewJobIfAbsent(instance2);
+    }
+
+    @Test
+    public void when_jobIsSubmittedFromClientWithNewJobIfAbsent_then_jobStatusShouldBeStarting() {
+        testJobStatusWhenSubmittedWithNewJobIfAbsent(createJetClient());
+    }
+
+    private void testJobStatusWhenSubmittedWithNewJobIfAbsent(JetInstance submitter) {
+        PSThatWaitsOnInit.initLatch = new CountDownLatch(1);
+        DAG dag = new DAG().vertex(new Vertex("test", new PSThatWaitsOnInit(Identity::new)));
+
+        // When
+        Job job = submitter.newJobIfAbsent(dag, new JobConfig());
+        JobStatus status = job.getStatus();
+
+        assertTrue(status == NOT_RUNNING || status == STARTING);
+
+        PSThatWaitsOnInit.initLatch.countDown();
+
+        // Then
+        assertJobStatusEventually(job, COMPLETED);
+    }
+
+    @Test
     public void when_jobIsCancelled_then_jobStatusIsCompletedEventually() throws InterruptedException {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
@@ -149,6 +175,49 @@ public class JobTest extends JetTestSupport {
 
         // When
         Job submittedJob = instance1.newJob(dag);
+        NoOutputSourceP.executionStarted.await();
+
+        Collection<Job> trackedJobs = instance2.getJobs();
+        assertEquals(1, trackedJobs.size());
+        Job trackedJob = trackedJobs.iterator().next();
+
+        // Then
+        assertJobStatusEventually(trackedJob, RUNNING);
+
+        submittedJob.cancel();
+        joinAndExpectCancellation(submittedJob);
+    }
+
+    @Test
+    public void when_jobIsSubmittedWithCreateAndGetJob_then_trackedJobCanQueryJobStatus() throws InterruptedException {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
+
+        // When
+        Job submittedJob = instance1.newJobIfAbsent(dag, new JobConfig());
+        NoOutputSourceP.executionStarted.await();
+
+        Collection<Job> trackedJobs = instance2.getJobs();
+        assertEquals(1, trackedJobs.size());
+        Job trackedJob = trackedJobs.iterator().next();
+
+        // Then
+        assertJobStatusEventually(trackedJob, RUNNING);
+
+        submittedJob.cancel();
+        joinAndExpectCancellation(submittedJob);
+    }
+
+    @Test
+    public void when_namedJobIsSubmittedWithNewJobIfAbsent_then_trackedJobCanQueryJobStatus() throws InterruptedException {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
+        JobConfig config = new JobConfig();
+        String jobName = "job1";
+        config.setName(jobName);
+
+        // When
+        Job submittedJob = instance1.newJobIfAbsent(dag, config);
         NoOutputSourceP.executionStarted.await();
 
         Collection<Job> trackedJobs = instance2.getJobs();
@@ -386,43 +455,59 @@ public class JobTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobsAreRunning_then_lastSubmittedJobIsQueriedByName() throws InterruptedException {
-        testGetJobByNameWhenMultipleJobsAreRunning(instance1);
+    public void when_namedJobIsRunning_newNamedSubmitJoinsToExistingJob() {
+        testSubmitDuplicateNamedJobWhileOngoingNamedJob(instance1);
     }
-
 
     @Test
-    public void when_jobsAreRunning_then_lastSubmittedJobIsQueriedByNameFromClient() throws InterruptedException {
-        testGetJobByNameWhenMultipleJobsAreRunning(createJetClient());
+    public void when_namedJobIsRunning_newNamedSubmitFromClientJoinsToExistingJob() {
+        testSubmitDuplicateNamedJobWhileOngoingNamedJob(createJetClient());
     }
 
-    private void testGetJobByNameWhenMultipleJobsAreRunning(JetInstance instance) throws InterruptedException {
+    private void testSubmitDuplicateNamedJobWhileOngoingNamedJob(JetInstance instance) {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
         JobConfig config = new JobConfig();
         String jobName = "job1";
         config.setName(jobName);
+        Job job1 = instance.newJob(dag, config);
+        assertTrueEventually(() -> assertEquals(RUNNING, job1.getStatus()));
 
         // When
-        Job job1 = instance1.newJob(dag, config);
-        sleepAtLeastMillis(1);
-        Job job2 = instance1.newJob(dag, config);
-        NoOutputSourceP.executionStarted.await();
+        Job job2 = instance.newJobIfAbsent(dag, config);
 
         // Then
-        Job trackedJob = instance.getJob(jobName);
-
-        assertNotNull(trackedJob);
-        assertEquals(jobName, trackedJob.getName());
-        assertNotEquals(job1.getId(), trackedJob.getId());
-        assertEquals(job2.getId(), trackedJob.getId());
-        assertJobStatusEventually(trackedJob, RUNNING);
-
+        assertEquals(job1.getId(), job2.getId());
         NoOutputSourceP.proceedLatch.countDown();
     }
 
+
     @Test
-    public void when_jobsAreCompleted_then_lastSubmittedJobIsQueriedByName() {
+    public void when_namedJobIsRunning_newNamedJobFails() {
+        testDuplicateNamedJobWhileOngoingNamedJob(instance1);
+    }
+
+    @Test
+    public void when_namedJobIsRunning_newNamedJobFromClientFails() {
+        testDuplicateNamedJobWhileOngoingNamedJob(createJetClient());
+    }
+
+    private void testDuplicateNamedJobWhileOngoingNamedJob(JetInstance instance) {
+        // Given
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
+        JobConfig config = new JobConfig();
+        String jobName = "job1";
+        config.setName(jobName);
+        Job job1 = instance.newJob(dag, config);
+        assertTrueEventually(() -> assertEquals(RUNNING, job1.getStatus()));
+
+        expectedException.expect(DuplicateActiveJobNameException.class);
+
+        instance.newJob(dag, config);
+    }
+
+    @Test
+    public void when_namedJobHaveCompletedAndRunningSubmissions_then_runningJobIsQueriedByName() {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
         JobConfig config = new JobConfig();
@@ -431,12 +516,12 @@ public class JobTest extends JetTestSupport {
 
         // When
         Job job1 = instance1.newJob(dag, config);
-        sleepAtLeastMillis(1);
-        Job job2 = instance1.newJob(dag, config);
-
         NoOutputSourceP.proceedLatch.countDown();
         job1.join();
-        job2.join();
+
+        NoOutputSourceP.proceedLatch = new CountDownLatch(1);
+        Job job2 = instance1.newJob(dag, config);
+        assertTrueEventually(() -> assertEquals(RUNNING, job2.getStatus()));
 
         // Then
         Job trackedJob = instance1.getJob(jobName);
@@ -445,47 +530,11 @@ public class JobTest extends JetTestSupport {
         assertEquals(jobName, trackedJob.getName());
         assertNotEquals(job1.getId(), trackedJob.getId());
         assertEquals(job2.getId(), trackedJob.getId());
-        assertEquals(COMPLETED, trackedJob.getStatus());
+        assertEquals(RUNNING, trackedJob.getStatus());
     }
 
     @Test
-    public void when_lastSubmittedJobIsCompletedBeforePreviouslySubmittedRunningJob_then_itIsQueriedByName() {
-        // Given
-        DAG dag1 = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
-        DAG dag2 = new DAG().vertex(new Vertex("test", new MockPS(Identity::new, NODE_COUNT)));
-        JobConfig config = new JobConfig();
-        String jobName = "job1";
-        config.setName(jobName);
-
-        // When
-        Job job1 = instance1.newJob(dag1, config);
-        sleepAtLeastMillis(1);
-        Job job2 = instance1.newJob(dag2, config);
-        job2.join();
-
-        // Then
-        Job trackedJob = instance1.getJob(jobName);
-
-        assertNotNull(trackedJob);
-        assertEquals(jobName, trackedJob.getName());
-        assertNotEquals(job1.getId(), trackedJob.getId());
-        assertEquals(job2.getId(), trackedJob.getId());
-        assertEquals(COMPLETED, trackedJob.getStatus());
-
-        NoOutputSourceP.proceedLatch.countDown();
-    }
-
-    @Test
-    public void when_jobsAreRunning_then_theyAreQueriedByName() throws InterruptedException {
-        testGetJobsByNameWhenJobsAreRunning(instance1);
-    }
-
-    @Test
-    public void when_jobsAreRunning_then_theyAreQueriedByNameFromClient() throws InterruptedException {
-        testGetJobsByNameWhenJobsAreRunning(createJetClient());
-    }
-
-    private void testGetJobsByNameWhenJobsAreRunning(JetInstance instance) throws InterruptedException {
+    public void when_namedJobHaveCompletedAndRunningSubmissions_then_theyAreQueriedByName() {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
         JobConfig config = new JobConfig();
@@ -494,25 +543,26 @@ public class JobTest extends JetTestSupport {
 
         // When
         Job job1 = instance1.newJob(dag, config);
-        sleepAtLeastMillis(1);
+        NoOutputSourceP.proceedLatch.countDown();
+        job1.join();
+
+        NoOutputSourceP.proceedLatch = new CountDownLatch(1);
         Job job2 = instance1.newJob(dag, config);
-        NoOutputSourceP.executionStarted.await();
+        assertTrueEventually(() -> assertEquals(RUNNING, job2.getStatus()));
 
         // Then
-        List<Job> jobs = instance.getJobs(jobName);
-        assertEquals(2, jobs.size());
+        List<Job> trackedJobs = instance1.getJobs(jobName);
 
-        Job trackedJob1 = jobs.get(0);
-        Job trackedJob2 = jobs.get(1);
+        assertEquals(2, trackedJobs.size());
+
+        Job trackedJob1 = trackedJobs.get(0);
+        Job trackedJob2 = trackedJobs.get(1);
 
         assertEquals(job2.getId(), trackedJob1.getId());
-        assertEquals(jobName, trackedJob1.getName());
-        assertJobStatusEventually(trackedJob1, JobStatus.RUNNING);
-        assertEquals(job1.getId(), trackedJob2.getId());
-        assertEquals(jobName, trackedJob2.getName());
-        assertJobStatusEventually(trackedJob2, JobStatus.RUNNING);
+        assertEquals(RUNNING, trackedJob1.getStatus());
 
-        NoOutputSourceP.proceedLatch.countDown();
+        assertEquals(job1.getId(), trackedJob2.getId());
+        assertEquals(COMPLETED, trackedJob2.getStatus());
     }
 
     @Test
@@ -525,10 +575,14 @@ public class JobTest extends JetTestSupport {
 
         // When
         Job job1 = instance1.newJob(dag, config);
-        sleepAtLeastMillis(1);
-        Job job2 = instance1.newJob(dag, config);
         NoOutputSourceP.proceedLatch.countDown();
         job1.join();
+
+        sleepAtLeastMillis(1);
+
+        NoOutputSourceP.proceedLatch = new CountDownLatch(1);
+        Job job2 = instance1.newJob(dag, config);
+        NoOutputSourceP.proceedLatch.countDown();
         job2.join();
 
         // Then
@@ -543,36 +597,6 @@ public class JobTest extends JetTestSupport {
         assertEquals(COMPLETED, trackedJob1.getStatus());
         assertEquals(job1.getId(), trackedJob2.getId());
         assertEquals(jobName, trackedJob2.getName());
-        assertEquals(COMPLETED, trackedJob2.getStatus());
-    }
-
-    @Test
-    public void when_jobsAreCompletedInReverseOrderOfTheirSubmissionOrder_then_theyAreQueriedByName() {
-        // Given
-        DAG dag1 = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
-        DAG dag2 = new DAG().vertex(new Vertex("test", new MockPS(Identity::new, NODE_COUNT)));
-        JobConfig config = new JobConfig();
-        String jobName = "job1";
-        config.setName(jobName);
-
-        // When
-        Job job1 = instance1.newJob(dag1, config);
-        sleepAtLeastMillis(1);
-        Job job2 = instance1.newJob(dag2, config);
-        job2.join();
-        NoOutputSourceP.proceedLatch.countDown();
-        job1.join();
-
-        // Then
-        List<Job> jobs = instance1.getJobs(jobName);
-        assertEquals(2, jobs.size());
-
-        Job trackedJob1 = jobs.get(0);
-        Job trackedJob2 = jobs.get(1);
-
-        assertEquals(job2.getId(), trackedJob1.getId());
-        assertEquals(COMPLETED, trackedJob1.getStatus());
-        assertEquals(job1.getId(), trackedJob2.getId());
         assertEquals(COMPLETED, trackedJob2.getStatus());
     }
 

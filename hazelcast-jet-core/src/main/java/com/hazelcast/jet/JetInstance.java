@@ -22,6 +22,7 @@ import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.DuplicateActiveJobNameException;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.JobRepository;
@@ -87,6 +88,17 @@ public interface JetInstance {
      * <p>If the name in the JobConfig is null, it will set the generated jobId
      * as a name. If the name looks like a previously assigned jobId, it will
      * be replaced as well.
+     *
+     * <p>If the name in the JobConfig is non-null, Jet checks if there is
+     * an active job, i.e., non-completed / failed job, with the same name.
+     * If such a job exists, {@code #newJob(DAG, JobConfig)} call throws
+     * {@link DuplicateActiveJobNameException}. If there is a completed or
+     * failed job with the same name, {@code #newJob(DAG, JobConfig)} call
+     * submits the job successfully. This implies that there can be at most
+     * one active job with a given name, and you can re-use job names.
+     *
+     * @throws DuplicateActiveJobNameException if there is an active job,
+     *         i.e., non-completed / failed job, with the same name.
      */
     @Nonnull
     Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config);
@@ -107,10 +119,57 @@ public interface JetInstance {
      * <p>If the name in the JobConfig is null, it will set the generated jobId
      * as a name. If the name looks like a previously assigned jobId, it will
      * be replaced as well.
+     *
+     * <p>If the name in the JobConfig is non-null, Jet checks if there is
+     * an active job, i.e., non-completed / failed job, with the same name.
+     * If such a job exists, {@code #newJob(pipeline, JobConfig)} call throws
+     * {@link DuplicateActiveJobNameException}. If there is a completed or
+     * failed job with the same name, {@code #newJob(pipeline, JobConfig)} call
+     * submits the job successfully. This implies that there can be at most
+     * one active job with a given name, and you can re-use job names.
+     *
+     * @throws DuplicateActiveJobNameException if there is an active job,
+     *         i.e., non-completed / failed job, with the same name.
      */
     @Nonnull
     default Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         return newJob(pipeline.toDag(), config);
+    }
+
+    /**
+     * Creates and returns a Jet job based on the supplied DAG and job
+     * configuration. Jet will asynchronously start executing the job.
+     *
+     * <p>If the name in the JobConfig is null, it will set the generated jobId
+     * as a name. If the name looks like a previously assigned jobId, it will
+     * be replaced as well.
+     *
+     * <p>If the name in the JobConfig is non-null, Jet checks if there is
+     * an active job, i.e., non-completed / failed job, with the same name.
+     * If such a job exists, {@code #newJobIfAbsent(DAG, JobConfig)} call
+     * ignores the new DAG and returns a Job object for the currently existing
+     * job, regardless of whether DAGs are the same.
+     */
+    @Nonnull
+    Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config);
+
+    /**
+     * Creates and returns a Jet job based on the supplied pipeline and job
+     * configuration. Jet will asynchronously start executing the job.
+     *
+     * <p>If the name in the JobConfig is null, it will set the generated jobId
+     * as a name. If the name looks like a previously assigned jobId, it will
+     * be replaced as well.
+     *
+     * <p>If the name in the JobConfig is non-null, Jet checks if there is
+     * an active job, i.e., non-completed / failed job, with the same name.
+     * If such a job exists, {@code #newJobIfAbsent(pipeline, JobConfig)} call
+     * ignores the new pipeline and returns a Job object for the currently
+     * existing job, regardless of whether pipelines are the same.
+     */
+    @Nonnull
+    default Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
+        return newJobIfAbsent(pipeline.toDag(), config);
     }
 
     /**

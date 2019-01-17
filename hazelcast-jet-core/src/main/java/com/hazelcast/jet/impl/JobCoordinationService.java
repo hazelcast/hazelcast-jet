@@ -26,6 +26,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.DuplicateActiveJobNameException;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -41,6 +42,7 @@ import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,6 +97,7 @@ public class JobCoordinationService {
     private final Object lock = new Object();
     private volatile boolean isShutDown;
     private volatile boolean isClusterEnteringPassiveState;
+    private volatile boolean jobsScanned;
 
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
@@ -144,15 +147,25 @@ public class JobCoordinationService {
         JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
         MasterContext masterContext = new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
 
+        boolean isDuplicateJobName;
         synchronized (lock) {
+            assertIsMaster("Cannot submit job " + idToString(jobId) + " from non-master node");
             checkOperationalState();
-
-            // just try to initiate the coordination
-            MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
-            if (prev != null) {
-                logger.fine("Joining to already existing masterContext " + prev.jobIdString());
-                return;
+            isDuplicateJobName = checkDuplicateActiveJobName(jobId, config);
+            if (!isDuplicateJobName) {
+                // just try to initiate the coordination
+                MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
+                if (prev != null) {
+                    logger.fine("Joining to already existing masterContext " + prev.jobIdString());
+                    return;
+                }
             }
+        }
+
+        if (isDuplicateJobName) {
+            jobRepository.deleteJob(jobId);
+            throw new DuplicateActiveJobNameException("There is another active job: "
+                    + idToString(jobId) + " with the same name: " + config.getName());
         }
 
         // If job is not currently running, it might be that it is just completed
@@ -165,6 +178,25 @@ public class JobCoordinationService {
 
         logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request from client");
         nodeEngine.getExecutionService().execute(COORDINATOR_EXECUTOR_NAME, () -> tryStartJob(masterContext));
+    }
+
+    private boolean checkDuplicateActiveJobName(long jobId, JobConfig config) {
+        if (config.getName() != null) {
+            // if scanJob() has not run yet, master context objects may not be initialized.
+            // in this case, we cannot check if the new job submission has a duplicate job name.
+            // therefore, we will retry until scanJob() task runs at least once.
+            if (!jobsScanned) {
+                throw new RetryableHazelcastException("Cannot submit job: " + idToString(jobId) + " with name: "
+                        + config.getName() + " before the master node initializes job coordination service state");
+            }
+
+            return masterContexts.values()
+                                 .stream()
+                                 .anyMatch(ctx -> jobId != ctx.jobId()
+                                         && config.getName().equals(ctx.jobConfig().getName()));
+        }
+
+        return false;
     }
 
     public void shutdown() {
@@ -193,8 +225,14 @@ public class JobCoordinationService {
 
     public void reset() {
         assert !isMaster() : "this member is a master";
-        masterContexts.values().forEach(ctx -> ctx.setFinalResult(new CancellationException()));
-        masterContexts.clear();
+        List<MasterContext> ctxes;
+        synchronized (lock) {
+            ctxes = new ArrayList<>(masterContexts.values());
+            masterContexts.clear();
+            jobsScanned = false;
+        }
+
+        ctxes.forEach(ctx -> ctx.setFinalResult(new CancellationException()));
     }
 
     public CompletableFuture<Void> joinSubmittedJob(long jobId) {
@@ -717,6 +755,11 @@ public class JobCoordinationService {
                 }
             }
             performCleanup();
+            if (!jobsScanned) {
+                synchronized (lock) {
+                    jobsScanned = true;
+                }
+            }
         } catch (Exception e) {
             if (e instanceof HazelcastInstanceNotActiveException) {
                 return;

@@ -37,10 +37,13 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.DuplicateActiveJobNameException;
 import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.metrics.management.MetricsResultSet;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.serialization.SerializationService;
 
@@ -50,8 +53,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -90,30 +95,64 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return new ClientJobProxy(this, jobId, dag, config);
     }
 
+    @Nonnull
+    @Override
+    public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
+        if (config.getName() == null) {
+            long jobId = uploadResourcesAndAssignId(config);
+            return new ClientJobProxy(this, jobId, dag, config);
+        } else {
+            while (true) {
+                Job job = getJob(config.getName());
+                if (job != null) {
+                    JobStatus status = job.getStatus();
+                    if (status != JobStatus.FAILED && status != JobStatus.COMPLETED) {
+                        return job;
+                    }
+                }
+
+                long jobId = 0;
+                try {
+                    jobId = uploadResourcesAndAssignId(config);
+                    return new ClientJobProxy(this, jobId, dag, config);
+                } catch (DuplicateActiveJobNameException e) {
+                    ILogger logger = client.getLoggingService().getLogger(getClass());
+                    logFine(logger, "Could not submit job: %s with duplicate name: %s", idToString(jobId),
+                            config.getName());
+                }
+            }
+        }
+    }
+
     @Nonnull @Override
     public List<Job> getJobs() {
         ClientInvocation invocation = new ClientInvocation(
                 client, JetGetJobIdsCodec.encodeRequest(), null, masterAddress(client.getCluster())
         );
-        return uncheckCall(() -> {
+
+        try {
             ClientMessage response = invocation.invoke().get();
             Set<Long> jobs = serializationService.toObject(JetGetJobIdsCodec.decodeResponse(response).response);
             return jobs.stream().map(jobId -> new ClientJobProxy(this, jobId)).collect(toList());
-        });
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+
     }
 
     @Override
     public Job getJob(long jobId) {
         try {
             Job job = new ClientJobProxy(this, jobId);
+            // we hit the master node to see if the job id is valid or not
             job.getStatus();
             return job;
-        } catch (Exception e) {
-            if (peel(e) instanceof JobNotFoundException) {
+        } catch (Throwable t) {
+            if (peel(t) instanceof JobNotFoundException) {
                 return null;
             }
 
-            throw e;
+            throw rethrow(t);
         }
     }
 
@@ -193,10 +232,12 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     private <S> S invokeRequestAndDecodeResponse(Address address, ClientMessage request,
                                                  Function<ClientMessage, Object> decoder) {
         ClientInvocation invocation = new ClientInvocation(client, request, null, address);
-        return uncheckCall(() -> {
+        try {
             ClientMessage response = invocation.invoke().get();
             return serializationService.toObject(decoder.apply(response));
-        });
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
     }
 
     private static Address masterAddress(Cluster cluster) {
