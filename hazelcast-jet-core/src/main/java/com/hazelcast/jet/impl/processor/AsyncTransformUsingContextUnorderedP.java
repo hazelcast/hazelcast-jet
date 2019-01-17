@@ -115,63 +115,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         this.extractKeyFn = extractKeyFn;
     }
 
-    /**
-     * Drains items from the queue until either:
-     * <ul><li>
-     *     encountering an incomplete item
-     * </li><li>
-     *     the outbox gets full
-     * </li></ul>
-     *
-     * @return true if there are no more in-flight items and everything was emitted
-     *         to the outbox
-     */
-    @SuppressWarnings("unchecked")
-    private boolean tryFlushQueue() {
-        for (;;) {
-            if (!emitFromTraverser(currentTraverser)) {
-                return false;
-            }
-            Tuple3<T, Long, Object> tuple = resultQueue.poll();
-            if (tuple == null) {
-                return watermarkCounts.isEmpty();
-            }
-            asyncOpsCounter--;
-            inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
-            Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
-            assert count >= 0 : "count=" + count;
-            // the result is either Throwable or Traverser<Object>
-            if (tuple.f2() instanceof Throwable) {
-                throw new JetException("Async operation completed exceptionally: " + tuple.f2(),
-                        (Throwable) tuple.f2());
-            }
-            currentTraverser = (Traverser<Object>) tuple.f2();
-            if (currentTraverser == null) {
-                currentTraverser = Traversers.empty();
-            }
-            if (count == 0) {
-                long wmToEmit = Long.MIN_VALUE;
-                for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
-                    Entry<Long, Long> entry = it.next();
-                    if (entry.getValue() != 0) {
-                        wmToEmit = entry.getKey();
-                        break;
-                    } else {
-                        it.remove();
-                    }
-                }
-                if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
-                    wmToEmit = lastReceivedWm;
-                }
-                if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
-                    lastEmittedWm = wmToEmit;
-                    currentTraverser = currentTraverser
-                                .append(new Watermark(wmToEmit));
-                }
-            }
-        }
-    }
-
     @Override
     protected void init(@Nonnull Context context) {
         if (!contextFactory.isSharedLocally()) {
@@ -311,6 +254,63 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             contextFactory.destroyFn().accept(contextObject);
         }
         contextObject = null;
+    }
+
+    /**
+     * Drains items from the queue until either:
+     * <ul><li>
+     *     encountering an incomplete item
+     * </li><li>
+     *     the outbox gets full
+     * </li></ul>
+     *
+     * @return true if there are no more in-flight items and everything was emitted
+     *         to the outbox
+     */
+    @SuppressWarnings("unchecked")
+    private boolean tryFlushQueue() {
+        for (;;) {
+            if (!emitFromTraverser(currentTraverser)) {
+                return false;
+            }
+            Tuple3<T, Long, Object> tuple = resultQueue.poll();
+            if (tuple == null) {
+                return watermarkCounts.isEmpty();
+            }
+            asyncOpsCounter--;
+            inFlightItems.merge(tuple.f0(), -1, (o, n) -> o == 1 ? null : o - 1);
+            Long count = watermarkCounts.merge(tuple.f1(), -1L, Long::sum);
+            assert count >= 0 : "count=" + count;
+            // the result is either Throwable or Traverser<Object>
+            if (tuple.f2() instanceof Throwable) {
+                throw new JetException("Async operation completed exceptionally: " + tuple.f2(),
+                        (Throwable) tuple.f2());
+            }
+            currentTraverser = (Traverser<Object>) tuple.f2();
+            if (currentTraverser == null) {
+                currentTraverser = Traversers.empty();
+            }
+            if (count == 0) {
+                long wmToEmit = Long.MIN_VALUE;
+                for (Iterator<Entry<Long, Long>> it = watermarkCounts.entrySet().iterator(); it.hasNext(); ) {
+                    Entry<Long, Long> entry = it.next();
+                    if (entry.getValue() != 0) {
+                        wmToEmit = entry.getKey();
+                        break;
+                    } else {
+                        it.remove();
+                    }
+                }
+                if (watermarkCounts.isEmpty() && lastReceivedWm > lastEmittedWm) {
+                    wmToEmit = lastReceivedWm;
+                }
+                if (wmToEmit > Long.MIN_VALUE && wmToEmit > lastEmittedWm) {
+                    lastEmittedWm = wmToEmit;
+                    currentTraverser = currentTraverser
+                            .append(new Watermark(wmToEmit));
+                }
+            }
+        }
     }
 
     private static final class Supplier<C, T, K, R> implements ProcessorSupplier {
