@@ -82,6 +82,11 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     }
 
     @Override
+    public boolean isCooperative() {
+        return true;
+    }
+
+    @Override
     protected void init(@Nonnull Context context) {
         if (!contextFactory.isSharedLocally()) {
             assert contextObject == null : "contextObject is not null: " + contextObject;
@@ -128,6 +133,29 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         return tryProcessSucceeded = !getOutbox().hasUnfinishedItem();
     }
 
+    @Override
+    public boolean complete() {
+        return tryFlushQueue();
+    }
+
+    @Override
+    public boolean saveToSnapshot() {
+        // We're stateless, wait until responses to all async requests are emitted. This is a
+        // stop-the-world situation, no new async requests are sent while waiting. If async requests
+        // are slow, this might be a major slowdown.
+        return tryFlushQueue();
+    }
+
+    @Override
+    public void close() {
+        // close() might be called even if init() was not called.
+        // Only destroy the context if is not shared (i.e. it is our own).
+        if (contextObject != null && !contextFactory.isSharedLocally()) {
+            contextFactory.destroyFn().accept(contextObject);
+        }
+        contextObject = null;
+    }
+
     /**
      * Drain items from queue until either:
      * - an incomplete item is encountered
@@ -169,34 +197,6 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             }
             queue.remove();
         }
-    }
-
-    @Override
-    public boolean complete() {
-        return tryFlushQueue();
-    }
-
-    @Override
-    public boolean saveToSnapshot() {
-        // We're stateless, wait until responses to all async requests are emitted. This is a
-        // stop-the-world situation, no new async requests are sent while waiting. If async requests
-        // are slow, this might be a major slowdown.
-        return tryFlushQueue();
-    }
-
-    @Override
-    public boolean isCooperative() {
-        return true;
-    }
-
-    @Override
-    public void close() {
-        // close() might be called even if init() was not called.
-        // Only destroy the context if is not shared (i.e. it is our own).
-        if (contextObject != null && !contextFactory.isSharedLocally()) {
-            contextFactory.destroyFn().accept(contextObject);
-        }
-        contextObject = null;
     }
 
     private static final class Supplier<C, T, R> implements ProcessorSupplier {

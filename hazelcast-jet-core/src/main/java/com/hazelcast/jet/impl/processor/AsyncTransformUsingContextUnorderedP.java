@@ -116,6 +116,11 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     @Override
+    public boolean isCooperative() {
+        return true;
+    }
+
+    @Override
     protected void init(@Nonnull Context context) {
         if (!contextFactory.isSharedLocally()) {
             assert contextObject == null : "contextObject is not null: " + contextObject;
@@ -123,11 +128,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         }
         maxAsyncOps = Math.max(1, contextFactory.getMaxPendingCallsPerMember() / context.localParallelism());
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
-    }
-
-    @Override
-    public boolean isCooperative() {
-        return true;
     }
 
     @Override
