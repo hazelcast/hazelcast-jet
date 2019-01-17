@@ -21,9 +21,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.DuplicateActiveJobNameException;
-import com.hazelcast.jet.core.JobNotFoundException;
-import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.util.Util;
@@ -38,10 +35,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
-import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -63,41 +57,6 @@ public class JetInstanceImpl extends AbstractJetInstance {
     }
 
     @Nonnull @Override
-    public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
-        long jobId = uploadResourcesAndAssignId(config);
-        return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
-    }
-
-    @Nonnull
-    @Override
-    public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
-        if (config.getName() == null) {
-            long jobId = uploadResourcesAndAssignId(config);
-            return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
-        } else {
-            while (true) {
-                Job job = getJob(config.getName());
-                if (job != null) {
-                    JobStatus status = job.getStatus();
-                    if (status != JobStatus.FAILED && status != JobStatus.COMPLETED) {
-                        return job;
-                    }
-                }
-
-                long jobId = 0;
-                try {
-                    jobId = uploadResourcesAndAssignId(config);
-                    return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
-                } catch (DuplicateActiveJobNameException e) {
-                    ILogger logger = nodeEngine.getLogger(getClass());
-                    logFine(logger, "Could not submit job: %s with duplicate name: %s", idToString(jobId),
-                            config.getName());
-                }
-            }
-        }
-    }
-
-    @Nonnull @Override
     public List<Job> getJobs() {
         Address masterAddress = nodeEngine.getMasterAddress();
         Future<Set<Long>> future = nodeEngine
@@ -116,28 +75,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
     }
 
     @Override
-    public Job getJob(long jobId) {
-        try {
-            Job job = new JobProxy((NodeEngineImpl) nodeEngine, jobId);
-            // we hit the master node to see if the job id is valid or not
-            job.getStatus();
-            return job;
-        } catch (Throwable t) {
-            if (peel(t) instanceof JobNotFoundException) {
-                return null;
-            }
-            throw rethrow(t);
-        }
-    }
-
-    @Nonnull @Override
-    public List<Job> getJobs(@Nonnull String name) {
-        return getJobIdsByName(name).stream()
-                                    .map(jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId))
-                                    .collect(toList());
-    }
-
-    private List<Long> getJobIdsByName(String name) {
+    protected List<Long> getJobIdsByName(String name) {
         Address masterAddress = nodeEngine.getMasterAddress();
         Future<List<Long>> future = nodeEngine
                 .getOperationService()
@@ -181,5 +119,20 @@ public class JetInstanceImpl extends AbstractJetInstance {
     @Override
     public boolean existsDistributedObject(@Nonnull String serviceName, @Nonnull String objectName) {
         return Util.existsDistributedObject(nodeEngine, serviceName, objectName);
+    }
+
+    @Override
+    protected Job newJobProxy(long jobId) {
+        return new JobProxy((NodeEngineImpl) nodeEngine, jobId);
+    }
+
+    @Override
+    protected Job newJobProxy(long jobId, DAG dag, JobConfig config) {
+        return new JobProxy((NodeEngineImpl) nodeEngine, jobId, dag, config);
+    }
+
+    @Override
+    protected ILogger getLogger() {
+        return nodeEngine.getLogger(getClass());
     }
 }
