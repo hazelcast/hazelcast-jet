@@ -100,7 +100,7 @@ public interface Processor {
      * called again before proceeding to call any other methods. There is at
      * least one item in the inbox when this method is called.
      * <p>
-     * The default implementation throws an exception. It's suitable for source
+     * The default implementation throws an exception. It is suitable for source
      * processors.
      *
      * @param ordinal ordinal of the inbound edge
@@ -120,6 +120,10 @@ public interface Processor {
      * {@code timestamp} before any other processing method is called. Before
      * the method returns {@code true}, it should emit the watermark to the
      * downstream processors.
+     * <p>
+     * The default implementation throws an exception. For any non-sink
+     * processor you must provide an implementation that at least forwards the
+     * watermark. A sink processor may simply return {@code true}.
      *
      * <h3>Caution for Jobs With the At-Least-Once Guarantee</h3>
      * Jet propagates the value of the watermark by sending <em>watermark
@@ -143,11 +147,12 @@ public interface Processor {
      * of items in the inbox has been exhausted. It can be used to produce
      * output in the absence of input or to do general maintenance work.
      * <p>
-     * If the call returns {@code false}, it will be called again before proceeding
-     * to call any other method. Default implementation returns {@code true}.
+     * If the call returns {@code false}, it will be called again before
+     * proceeding to call any other method. Default implementation returns
+     * {@code true}.
      * <p>
      * If this method tried to offer to the outbox and the offer call returned
-     * false, this method must also return false and retry the offer in the
+     * false, this method must also return false and retry to offer in the
      * next call.
      */
     default boolean tryProcess() {

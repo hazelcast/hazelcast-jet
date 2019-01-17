@@ -116,13 +116,17 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     /**
-     * Drain items from queue until either:
-     * - an incomplete item is encountered
-     * - the outbox is full
+     * Drains items from the queue until either:
+     * <ul><li>
+     *     encountering an incomplete item
+     * </li><li>
+     *     the outbox gets full
+     * </li></ul>
      *
-     * @return true, if there are no more in-flight items and everything was
-     * emitted to the outbox
+     * @return true if there are no more in-flight items and everything was emitted
+     *         to the outbox
      */
+    @SuppressWarnings("unchecked")
     private boolean tryFlushQueue() {
         for (;;) {
             if (!emitFromTraverser(currentTraverser)) {
@@ -138,7 +142,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             assert count >= 0 : "count=" + count;
             // the result is either Throwable or Traverser<Object>
             if (tuple.f2() instanceof Throwable) {
-                throw new JetException("Async operation completed exceptionally: " + tuple.f2(), (Throwable) tuple.f2());
+                throw new JetException("Async operation completed exceptionally: " + tuple.f2(),
+                        (Throwable) tuple.f2());
             }
             currentTraverser = (Traverser<Object>) tuple.f2();
             if (currentTraverser == null) {
@@ -187,7 +192,9 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         if (getOutbox().hasUnfinishedItem() && !emitFromTraverser(currentTraverser)) {
             return false;
         }
-        if (!processItem((T) item)) {
+        @SuppressWarnings("unchecked")
+        T castedItem = (T) item;
+        if (!processItem(castedItem)) {
             // if queue is full, try to emit and apply backpressure
             tryFlushQueue();
             return false;
@@ -260,6 +267,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         if (key instanceof BroadcastKey) {
             assert ((BroadcastKey) key).key().equals(Keys.LAST_EMITTED_WM) : "Unexpected key: " + key;

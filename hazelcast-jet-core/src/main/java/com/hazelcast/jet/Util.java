@@ -118,7 +118,7 @@ public final class Util {
     }
 
     /**
-     * Wraps Hazelcast IMDG specific {@link ICompletableFuture} into java-standard
+     * Wraps Hazelcast IMDG's {@link ICompletableFuture} into Java's standard
      * {@link CompletableFuture}.
      *
      * @param future the future to wrap
