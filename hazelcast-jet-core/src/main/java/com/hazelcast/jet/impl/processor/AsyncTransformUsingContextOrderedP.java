@@ -82,11 +82,6 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     }
 
     @Override
-    public boolean isCooperative() {
-        return true;
-    }
-
-    @Override
     protected void init(@Nonnull Context context) {
         if (!contextFactory.isSharedLocally()) {
             assert contextObject == null : "contextObject is not null: " + contextObject;
