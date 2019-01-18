@@ -22,9 +22,8 @@ public interface OutboxInternal extends Outbox {
 
     /**
      * Resets the counter that prevents adding more than {@code batchSize}
-     * items until this method is called again. After you call this method, a
-     * subsequent {@link #offer} may still return {@code false} for other
-     * reasons, such as the outbox being full or blocked.
+     * items until this method is called again. Note that the counter may
+     * jump to the "full" state even before the outbox accepted that many items.
      */
     void reset();
 
