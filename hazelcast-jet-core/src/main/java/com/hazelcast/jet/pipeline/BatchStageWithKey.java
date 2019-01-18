@@ -72,7 +72,7 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull IMap<K, V> iMap,
             @Nonnull DistributedBiFunction<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (BatchStage<R>) GeneralStageWithKey.super.mapUsingIMapAsync(iMap, mapFn);
+        return (BatchStage<R>) GeneralStageWithKey.super.<V, R>mapUsingIMapAsync(iMap, mapFn);
     }
 
     @Nonnull @Override

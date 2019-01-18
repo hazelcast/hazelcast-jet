@@ -297,7 +297,6 @@ public interface GeneralStageWithKey<T, K> {
      * @return the newly attached stage
      */
     @Nonnull
-    @SuppressWarnings("unchecked")
     <R, OUT> GeneralStage<OUT> rollingAggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
             @Nonnull DistributedBiFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
