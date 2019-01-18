@@ -60,10 +60,12 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
+import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextAsyncP;
@@ -133,11 +135,15 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         journaledMap.destroy();
         sinkList.destroy();
         for (Job job : inst.getJobs()) {
-            try {
-                job.cancel();
-            } catch (Exception e) {
-                logger.warning(null, e);
-            }
+            assertTrueEventually(() -> {
+                logger.info("Cancelling job " + idToString(job.getId()));
+                try {
+                    job.cancel();
+                } catch (Exception e) {
+                    logger.warning("Failed to cancel the job, will retry", e);
+                }
+                assertJobStatusEventually(job, FAILED, 3);
+            });
         }
     }
 

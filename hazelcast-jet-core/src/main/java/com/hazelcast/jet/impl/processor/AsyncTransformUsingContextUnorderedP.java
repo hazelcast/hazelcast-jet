@@ -165,6 +165,12 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        assert lastEmittedWm <= lastReceivedWm : "lastEmittedWm=" + lastEmittedWm + ", lastReceivedWm=" + lastReceivedWm;
+        // Ignore a watermark that is going back. This is possible after restoring from a snapshot
+        // taken in at-least-once mode.
+        if (watermark.timestamp() <= lastReceivedWm) {
+            return true;
+        }
         lastReceivedWm = watermark.timestamp();
         if (watermarkCounts.isEmpty()) {
             lastEmittedWm = watermark.timestamp();
