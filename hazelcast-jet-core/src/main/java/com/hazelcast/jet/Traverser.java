@@ -31,6 +31,12 @@ import java.util.function.Predicate;
  * sequence if available, or {@code null} if not. If the traverser is
  * <em>null-terminated</em>, getting a {@code null} means it's exhausted and
  * will keep returning {@code null} forever.
+ * <p>
+ *
+ * All transformation methods ({@code map()}, {@code append()}, {@code peek()},
+ * ...) are allowed to either return a new instance or to modify {@code this}
+ * instance. For correct functionality, you must always use the returned value
+ * and stop using the original instance.
  *
  * @param <T> traversed item type
  */
