@@ -32,7 +32,6 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
-import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -67,6 +66,7 @@ import static com.hazelcast.jet.impl.TerminationMode.CANCEL_FORCEFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.Comparator.comparing;
@@ -676,8 +676,12 @@ public class JobCoordinationService {
             return masterContext.jobCompletionFuture();
         }
 
-        logger.info("Starting job " + idToString(masterContext.jobId()) + ": " + reason);
-        tryStartJob(masterContext);
+        if (!jobExecutionRecord.isSuspended()) {
+            logger.info("Starting job " + jobId + ": " + reason);
+            tryStartJob(masterContext);
+        } else {
+            logFine(logger, "Suspended job: %s is restored.", jobId);
+        }
 
         return masterContext.jobCompletionFuture();
     }
@@ -744,10 +748,7 @@ public class JobCoordinationService {
             for (JobRecord jobRecord : jobs) {
                 JobExecutionRecord jobExecutionRecord = ensureExecutionRecord(jobRecord.getJobId(),
                         jobRepository.getJobExecutionRecord(jobRecord.getJobId()));
-                if (!jobExecutionRecord.isSuspended()) {
-                    startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord,
-                            "discovered by scanning of JobRecords");
-                }
+                startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "discovered by scanning of JobRecords");
             }
             performCleanup();
             if (!jobsScanned) {

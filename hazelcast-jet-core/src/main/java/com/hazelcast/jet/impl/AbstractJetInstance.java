@@ -36,7 +36,6 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
@@ -73,13 +72,10 @@ public abstract class AbstractJetInstance implements JetInstance {
                     }
                 }
 
-                long jobId = 0;
                 try {
-                    jobId = uploadResourcesAndAssignId(config);
-                    return newJobProxy(jobId, dag, config);
+                    return newJob(dag, config);
                 } catch (DuplicateActiveJobNameException e) {
-                    logFine(getLogger(), "Could not submit job: %s with duplicate name: %s", idToString(jobId),
-                            config.getName());
+                    logFine(getLogger(), "Could not submit job with duplicate name: %s", config.getName());
                 }
             }
         }
