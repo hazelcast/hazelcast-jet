@@ -60,7 +60,7 @@ public class AppendableTraverser<T> implements Traverser<T> {
      * @return {@code this} instance
      */
     @Nonnull @Override
-    public Traverser<T> append(@Nonnull T item) {
+    public AppendableTraverser<T> append(@Nonnull T item) {
         queue.add(item);
         return this;
     }
