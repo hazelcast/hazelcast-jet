@@ -21,9 +21,10 @@ import com.hazelcast.jet.core.Outbox;
 public interface OutboxInternal extends Outbox {
 
     /**
-     * Resets the outbox so that it is available to receive another batch of
-     * items after any {@code offer()} method previously returned {@code
-     * false}.
+     * Resets the counter that prevents adding more than {@code batchSize}
+     * items until this method is called again. After you call this method, a
+     * subsequent {@link #offer} may still return {@code false} for other
+     * reasons, such as the outbox being full or blocked.
      */
     void reset();
 
