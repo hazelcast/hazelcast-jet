@@ -43,6 +43,7 @@ import com.hazelcast.util.Clock;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -302,23 +303,33 @@ public class JobCoordinationService {
     }
 
     /**
-     * Return the job IDs of jobs with given name, sorted by creation time, newest first.
+     * Return the job IDs of jobs with given name, sorted by <active/completed, creation time>, active & newest first.
      */
     public List<Long> getJobIds(String name) {
-        Map<Long, Long> jobs = new HashMap<>();
-
-        jobRepository.getJobRecords(name).forEach(r -> jobs.put(r.getJobId(), r.getCreationTime()));
-
-        masterContexts.values().stream()
-                      .filter(ctx -> name.equals(ctx.jobConfig().getName()))
-                      .forEach(ctx -> jobs.put(ctx.jobId(), ctx.jobRecord().getCreationTime()));
+        Map<Long, Long> activeJobs = new HashMap<>();
+        Map<Long, Long> completedJobs = new HashMap<>();
 
         jobRepository.getJobResults(name)
-                     .forEach(r -> jobs.put(r.getJobId(), r.getCreationTime()));
+                     .forEach(r -> completedJobs.put(r.getJobId(), r.getCreationTime()));
 
-        return jobs.entrySet().stream()
-                   .sorted(comparing((Function<Entry<Long, Long>, Long>) Entry::getValue).reversed())
-                   .map(Entry::getKey).collect(toList());
+        jobRepository.getJobRecords(name)
+                     .stream()
+                     .filter(r -> !completedJobs.containsKey(r.getJobId()))
+                     .forEach(r -> activeJobs.put(r.getJobId(), r.getCreationTime()));
+
+        masterContexts.values()
+                      .stream()
+                      .filter(ctx -> name.equals(ctx.jobConfig().getName()))
+                      .filter(ctx -> !completedJobs.containsKey(ctx.jobId()))
+                      .forEach(ctx -> activeJobs.put(ctx.jobId(), ctx.jobRecord().getCreationTime()));
+
+        List<Long> jobIds = new ArrayList<>(activeJobs.size() + completedJobs.size());
+
+        Comparator<Entry<Long, Long>> fn = comparing((Function<Entry<Long, Long>, Long>) Entry::getValue).reversed();
+        activeJobs.entrySet().stream().sorted(fn).map(Entry::getKey).forEach(jobIds::add);
+        completedJobs.entrySet().stream().sorted(fn).map(Entry::getKey).forEach(jobIds::add);
+
+        return jobIds;
     }
 
     /**
