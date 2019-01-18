@@ -55,7 +55,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.Util.idToString;
@@ -68,12 +67,14 @@ import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.dese
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * A service that handles MasterContexts on the coordinator member.
@@ -305,31 +306,20 @@ public class JobCoordinationService {
     /**
      * Return the job IDs of jobs with given name, sorted by <active/completed, creation time>, active & newest first.
      */
-    public List<Long> getJobIds(String name) {
-        Map<Long, Long> activeJobs = new HashMap<>();
-        Map<Long, Long> completedJobs = new HashMap<>();
+    public List<Long> getJobIds(@Nonnull String name) {
+        Map<Long, Long> jobs = jobRepository.getJobResults(name).stream()
+                .collect(toMap(JobResult::getJobId, JobResult::getCreationTime));
 
-        jobRepository.getJobResults(name)
-                     .forEach(r -> completedJobs.put(r.getJobId(), r.getCreationTime()));
+        for (MasterContext ctx : masterContexts.values()) {
+            if (name.equals(ctx.jobConfig().getName())) {
+                jobs.putIfAbsent(ctx.jobId(), Long.MAX_VALUE);
+            }
+        }
 
-        jobRepository.getJobRecords(name)
-                     .stream()
-                     .filter(r -> !completedJobs.containsKey(r.getJobId()))
-                     .forEach(r -> activeJobs.put(r.getJobId(), r.getCreationTime()));
-
-        masterContexts.values()
-                      .stream()
-                      .filter(ctx -> name.equals(ctx.jobConfig().getName()))
-                      .filter(ctx -> !completedJobs.containsKey(ctx.jobId()))
-                      .forEach(ctx -> activeJobs.put(ctx.jobId(), ctx.jobRecord().getCreationTime()));
-
-        List<Long> jobIds = new ArrayList<>(activeJobs.size() + completedJobs.size());
-
-        Comparator<Entry<Long, Long>> fn = comparing((Function<Entry<Long, Long>, Long>) Entry::getValue).reversed();
-        activeJobs.entrySet().stream().sorted(fn).map(Entry::getKey).forEach(jobIds::add);
-        completedJobs.entrySet().stream().sorted(fn).map(Entry::getKey).forEach(jobIds::add);
-
-        return jobIds;
+        return jobs.entrySet().stream()
+                   .sorted(comparing(Entry<Long, Long>::getValue).reversed())
+                   .map(Entry::getKey)
+                   .collect(toList());
     }
 
     /**
@@ -687,11 +677,11 @@ public class JobCoordinationService {
             return masterContext.jobCompletionFuture();
         }
 
-        if (!jobExecutionRecord.isSuspended()) {
+        if (jobExecutionRecord.isSuspended()) {
+            logFinest(logger, "MasterContext for suspended %s is created", masterContext.jobIdString());
+        } else {
             logger.info("Starting job " + jobId + ": " + reason);
             tryStartJob(masterContext);
-        } else {
-            logFine(logger, "Suspended job: %s is restored.", jobId);
         }
 
         return masterContext.jobCompletionFuture();

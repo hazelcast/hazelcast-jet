@@ -194,16 +194,18 @@ public interface JetInstance {
     Job getJob(long jobId);
 
     /**
-     * Returns all jobs submitted with the given name, ordered in descending order
-     * by submission time. Empty list will be returned if no job with the given
-     * name exists. The list includes completed jobs.
+     * Returns all jobs submitted with the given name, ordered in descending
+     * order by submission time. The active job is always first. Empty list
+     * will be returned if no job with the given name exists. The list includes
+     * completed jobs.
      */
     @Nonnull
     List<Job> getJobs(@Nonnull String name);
 
     /**
-     * Returns the last submitted job with the given name or {@code null}
-     * if no such job could be found.
+     * Returns the active or last submitted job with the given name or {@code
+     * null} if no such job could be found. The returned job can be already
+     * completed.
      */
     @Nullable
     default Job getJob(@Nonnull String name) {
