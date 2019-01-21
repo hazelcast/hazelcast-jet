@@ -36,9 +36,17 @@ public interface Job {
     /**
      * Returns the ID of this job.
      *
-     * @throws IllegalStateException if the job has not started yet, and thus has no id.
+     * @throws IllegalStateException if the job has not started yet, and thus has no ID.
      */
     long getId();
+
+    /**
+     * Returns the string representation of this job's ID
+     */
+    @Nonnull
+    default String getIdString() {
+        return Util.idToString(getId());
+    }
 
     /**
      * Returns the configuration this job was submitted with. Changes made to the

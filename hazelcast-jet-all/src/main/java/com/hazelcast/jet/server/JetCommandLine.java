@@ -54,6 +54,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 
@@ -72,8 +73,10 @@ public class JetCommandLine implements Callable<Void> {
 
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
-    private static final PrintStream OUT = System.out;
-    private static final PrintStream ERR = System.err;
+
+    private final Function<ClientConfig, JetInstance> jetClientFn;
+    private final PrintStream out;
+    private final PrintStream err;
 
     @Option(names = {"-f", "--config"},
             description = "Path to the client config XML file. " +
@@ -103,20 +106,31 @@ public class JetCommandLine implements Callable<Void> {
     )
     private boolean isVerbose;
 
-    public static void main(String[] args) {
-        CommandLine cmd = new CommandLine(new JetCommandLine());
+    public JetCommandLine(Function<ClientConfig, JetInstance> jetClientFn, PrintStream out, PrintStream err) {
+        this.jetClientFn = jetClientFn;
+        this.out = out;
+        this.err = err;
+    }
 
+    public static void main(String[] args) {
+        runCommandLine(Jet::newJetClient, System.out, System.err, args);
+    }
+
+    static void runCommandLine(
+            Function<ClientConfig, JetInstance> jetClientFn, PrintStream out, PrintStream err, String[] args
+    ) {
+        CommandLine cmd = new CommandLine(new JetCommandLine(jetClientFn, out, err));
         if (args.length == 0) {
-            cmd.usage(OUT);
+            cmd.usage(out);
         } else {
             List<Object> parsed = cmd.parseWithHandlers(
-                    new RunAll().useOut(OUT).useAnsi(Ansi.AUTO),
-                    new DefaultExceptionHandler<List<Object>>().useErr(ERR).useAnsi(Ansi.AUTO),
+                    new RunAll().useOut(out).useAnsi(Ansi.AUTO),
+                    new DefaultExceptionHandler<List<Object>>().useErr(err).useAnsi(Ansi.AUTO),
                     args
             );
             // only top command was executed
             if (parsed != null && parsed.size() == 1) {
-                cmd.usage(OUT);
+                cmd.usage(out);
             }
         }
     }
@@ -167,9 +181,7 @@ public class JetCommandLine implements Callable<Void> {
     ) throws IOException {
         runWithJet(jet -> {
             Job job = getJob(name, jet);
-            if (job.getStatus() != JobStatus.RUNNING) {
-                throw new RuntimeException("Job '" + name + "' is not running. Current state: " + job.getStatus());
-            }
+            assertJobRunning(name, job);
             printf("Suspending job %s...%n", formatJob(job));
             job.suspend();
             waitForJobStatus(job, JobStatus.SUSPENDED);
@@ -211,7 +223,10 @@ public class JetCommandLine implements Callable<Void> {
                     String snapshotName,
             @Option(names = {"-C", "--cancel"},
                     description = "Cancel the job after taking the snapshot")
-                    boolean isTerminal
+                    boolean isTerminal,
+            @Option(names = {"-s", "--suspend"},
+                    description = "Suspend the job after taking the snapshot")
+                    boolean isSuspend
     ) throws IOException {
         runWithJet(jet -> {
             Job job = getJob(jobName, jet);
@@ -261,7 +276,7 @@ public class JetCommandLine implements Callable<Void> {
     ) throws IOException {
         runWithJet(jet -> {
             Job job = getJob(name, jet);
-            assertJobActive(name, job);
+            assertJobRunning(name, job);
             println("Restarting job " + formatJob(job) + "...");
             job.restart();
             waitForJobStatus(job, JobStatus.RUNNING);
@@ -357,7 +372,7 @@ public class JetCommandLine implements Callable<Void> {
 
     private void runWithJet(Consumer<JetInstance> consumer) throws IOException {
         configureLogging();
-        JetInstance jet = Jet.newJetClient(getClientConfig());
+        JetInstance jet = jetClientFn.apply(getClientConfig());
         try {
             consumer.accept(jet);
         } finally {
@@ -394,12 +409,12 @@ public class JetCommandLine implements Callable<Void> {
         return job;
     }
 
-    private static void printf(String format, Object... objects) {
-        OUT.printf(format, objects);
+    private void printf(String format, Object... objects) {
+        out.printf(format, objects);
     }
 
-    private static void println(String msg) {
-        OUT.println(msg);
+    private void println(String msg) {
+        out.println(msg);
     }
 
     private static String shorten(String name, int length) {
@@ -415,6 +430,12 @@ public class JetCommandLine implements Callable<Void> {
     private static void assertJobActive(String name, Job job) {
         if (!isActive(job.getStatus())) {
             throw new RuntimeException("Job '" + name + "' is not active. Current state: " + job.getStatus());
+        }
+    }
+
+    private static void assertJobRunning(String name, Job job) {
+        if (job.getStatus() != JobStatus.RUNNING) {
+            throw new RuntimeException("Job '" + name + "' is not running. Current state: " + job.getStatus());
         }
     }
 
