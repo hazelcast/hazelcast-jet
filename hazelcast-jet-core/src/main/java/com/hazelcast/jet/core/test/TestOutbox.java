@@ -217,6 +217,11 @@ public final class TestOutbox implements OutboxInternal {
     }
 
     @Override
+    public long lastForwardedWm() {
+        return outbox.lastForwardedWm();
+    }
+
+    @Override
     public String toString() {
         return Arrays.toString(buckets);
     }

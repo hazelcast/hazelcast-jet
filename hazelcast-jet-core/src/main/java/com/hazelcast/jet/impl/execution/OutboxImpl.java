@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.impl.util.Util;
@@ -26,6 +27,7 @@ import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.stream.IntStream;
 
@@ -53,6 +55,7 @@ public class OutboxImpl implements OutboxInternal {
     private int[] unfinishedItemOrdinals;
     private Object unfinishedSnapshotKey;
     private Object unfinishedSnapshotValue;
+    private final AtomicLong lastForwardedWm = new AtomicLong();
 
     private boolean blocked;
 
@@ -119,6 +122,9 @@ public class OutboxImpl implements OutboxInternal {
         assert numRemainingInBatch != -1 : "Outbox.offer() called again after it returned false, without a " +
                 "call to reset(). You probably didn't return from Processor method after Outbox.offer() " +
                 "or AbstractProcessor.tryEmit() returned false";
+        if (item instanceof Watermark) {
+            lastForwardedWm.lazySet(((Watermark) item).timestamp());
+        }
         numRemainingInBatch--;
         boolean done = true;
         if (numRemainingInBatch == -1) {
@@ -237,5 +243,10 @@ public class OutboxImpl implements OutboxInternal {
 
     final boolean offerToEdgesAndSnapshot(Object item) {
         return offerInternal(allEdgesAndSnapshot, item);
+    }
+
+    @Override
+    public long lastForwardedWm() {
+        return lastForwardedWm.get();
     }
 }

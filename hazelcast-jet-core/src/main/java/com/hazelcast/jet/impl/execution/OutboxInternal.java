@@ -38,4 +38,12 @@ public interface OutboxInternal extends Outbox {
      * Removes the effect of a previous {@link #block()} call (if any).
      */
     void unblock();
+
+    /**
+     * Returns the watermark value
+     * <p>
+     * If there was no watermark added, it returns {@code Long.MIN_VALUE}. Can
+     * be called from a concurrent thread.
+     */
+    long lastForwardedWm();
 }
