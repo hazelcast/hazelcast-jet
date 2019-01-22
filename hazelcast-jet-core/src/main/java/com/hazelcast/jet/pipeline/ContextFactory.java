@@ -52,7 +52,7 @@ public final class ContextFactory<C> implements Serializable {
 
     private static final boolean COOPERATIVE_DEFAULT = true;
     private static final boolean SHARE_LOCALLY_DEFAULT = false;
-    private static final int MAX_PENDING_CALLS_DEFAULT = 128;
+    private static final int MAX_PENDING_CALLS_DEFAULT = 2048;
     private static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
     private final DistributedFunction<JetInstance, ? extends C> createFn;
