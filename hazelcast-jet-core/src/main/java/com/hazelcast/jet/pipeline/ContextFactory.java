@@ -260,7 +260,7 @@ public final class ContextFactory<C> implements Serializable {
     }
 
     /**
-     * Returns the maximum pending calls per member, see {@link
+     * Returns the maximum pending calls per processor, see {@link
      * #maxPendingCallsPerProcessor(int)}.
      */
     public int getMaxPendingCallsPerProcessor() {
