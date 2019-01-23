@@ -22,7 +22,6 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
@@ -37,7 +36,6 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
-import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -46,16 +44,16 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
+import static com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP.getMaxAsyncOps;
+import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supplierWithContext;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -102,8 +100,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
      */
     private AsyncTransformUsingContextUnorderedP(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nullable C contextObject,
+            @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull Function<? super T, ? extends K> extractKeyFn
     ) {
         assert contextObject == null ^ contextFactory.isSharedLocally()
@@ -126,7 +124,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        maxAsyncOps = Math.max(1, contextFactory.getMaxPendingCallsPerMember() / context.localParallelism());
+        maxAsyncOps = getMaxAsyncOps(contextFactory.getMaxPendingCallsPerMember(), context.localParallelism());
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
     }
 
@@ -319,49 +317,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         }
     }
 
-    private static final class Supplier<C, T, K, R> implements ProcessorSupplier {
-
-        static final long serialVersionUID = 1L;
-
-        private final ContextFactory<C> contextFactory;
-        private final DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
-        private transient C contextObject;
-        private DistributedFunction<? super T, ? extends K> extractKeyFn;
-
-        private Supplier(
-                @Nonnull ContextFactory<C> contextFactory,
-                @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
-                @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn
-        ) {
-            this.contextFactory = contextFactory;
-            this.callAsyncFn = callAsyncFn;
-            this.extractKeyFn = extractKeyFn;
-        }
-
-        @Override
-        public void init(@Nonnull ProcessorSupplier.Context context) {
-            if (contextFactory.isSharedLocally()) {
-                contextObject = contextFactory.createFn().apply(context.jetInstance());
-            }
-        }
-
-        @Nonnull @Override
-        public Collection<? extends Processor> get(int count) {
-            return Stream
-                    .generate(() -> new AsyncTransformUsingContextUnorderedP<>(
-                            contextFactory, callAsyncFn, contextObject, extractKeyFn))
-                    .limit(count)
-                    .collect(toList());
-        }
-
-        @Override
-        public void close(Throwable error) {
-            if (contextObject != null) {
-                contextFactory.destroyFn().accept(contextObject);
-            }
-        }
-    }
-
     /**
      * The {@link ResettableSingletonTraverser} is passed as a first argument to
      * {@code callAsyncFn}, it can be used if needed.
@@ -371,7 +326,9 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn
     ) {
-        return new Supplier<>(contextFactory, callAsyncFn, extractKeyFn);
+        return supplierWithContext(contextFactory,
+                (ctxF, ctxO) -> new AsyncTransformUsingContextUnorderedP<>(ctxF, ctxO, callAsyncFn, extractKeyFn)
+        );
     }
 
     private enum Keys {
