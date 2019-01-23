@@ -765,8 +765,19 @@ public final class Processors {
      * mapAsyncFn} returns a {@code CompletableFuture<R>} instead of just
      * {@code R}.
      * <p>
-     * The function can return a null future or the future can return a null
+     * The function can return a null future and the future can return a null
      * result: in both cases it will act just like a filter.
+     * <p>
+     * The {@code extractKeyFn} is used to extract keys under which to save
+     * in-flight items to the snapshot. If the input to this processor is over
+     * a partitioned edge, you should use the same key. If it's a round-robin
+     * edge, you can use any key, for example {@code Object::hashCode}.
+     *
+     * @param contextFactory the context factory
+     * @param extractKeyFn a function to extract snapshot keys
+     * @param mapAsyncFn a stateless mapping function
+     * @param <C> type of context object
+     * @param <T> type of received item
      */
     @Nonnull
     public static <C, T, K, R> ProcessorSupplier mapUsingContextAsyncP(
@@ -809,7 +820,19 @@ public final class Processors {
      * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
      * just a {@code boolean}.
      * <p>
-     * The function must not return a null future.
+     * The function can return a null future, but the future must not return
+     * null {@code Boolean}.
+     * <p>
+     * The {@code extractKeyFn} is used to extract keys under which to save
+     * in-flight items to the snapshot. If the input to this processor is over
+     * a partitioned edge, you should use the same key. If it's a round-robin
+     * edge, you can use any key, for example {@code Object::hashCode}.
+     *
+     * @param contextFactory the context factory
+     * @param extractKeyFn a function to extract snapshot keys
+     * @param filterAsyncFn a stateless predicate to test each received item against
+     * @param <C> type of context object
+     * @param <T> type of received item
      */
     @Nonnull
     public static <C, T, K> ProcessorSupplier filterUsingContextAsyncP(
@@ -854,8 +877,22 @@ public final class Processors {
      * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
      * instead of just a {@code Traverser<R>}.
      * <p>
-     * The function can return a null future or the future can return a null
-     * traverser: in both cases it will act just like a filter.
+     * The function can return a null future and the future can return a null
+     * traverser: in both cases it will act just like a filter. The traverser
+     * can't return null items - null is a terminator in {@link Traverser}, see
+     * its documentation.
+     * <p>
+     * The {@code extractKeyFn} is used to extract keys under which to save
+     * in-flight items to the snapshot. If the input to this processor is over
+     * a partitioned edge, you should use the same key. If it's a round-robin
+     * edge, you can use any key, for example {@code Object::hashCode}.
+     *
+     * @param contextFactory the context factory
+     * @param extractKeyFn a function to extract snapshot keys
+     * @param flatMapAsyncFn  a stateless function that maps the received item
+     *      to a future returning a traverser over the output items
+     * @param <C> type of context object
+     * @param <T> type of received item
      */
     @Nonnull
     public static <C, T, K, R> ProcessorSupplier flatMapUsingContextAsyncP(
