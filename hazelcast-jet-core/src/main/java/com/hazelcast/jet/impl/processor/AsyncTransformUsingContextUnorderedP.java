@@ -50,7 +50,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP.getMaxAsyncOps;
 import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supplierWithContext;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
@@ -124,7 +123,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        maxAsyncOps = getMaxAsyncOps(contextFactory.getMaxPendingCallsPerProcessor(), context.localParallelism());
+        maxAsyncOps = contextFactory.getMaxPendingCallsPerProcessor();
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
     }
 
