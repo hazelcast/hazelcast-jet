@@ -171,9 +171,9 @@ public class ProcessorTasklet implements Tasklet {
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
 
             InboundEdgeStream instream = instreams.get(finalI);
-            builderWithOrdinal.register(this, "topObservedWm", ProbeLevel.INFO, ProbeUnit.COUNT,
+            builderWithOrdinal.register(this, "topObservedWm", ProbeLevel.INFO, ProbeUnit.MS,
                     (LongProbeFunction<ProcessorTasklet>) t -> instream.topObservedWm());
-            builderWithOrdinal.register(this, "coalescedWm", ProbeLevel.INFO, ProbeUnit.COUNT,
+            builderWithOrdinal.register(this, "coalescedWm", ProbeLevel.INFO, ProbeUnit.MS,
                     (LongProbeFunction<ProcessorTasklet>) t -> instream.coalescedWm());
         }
 

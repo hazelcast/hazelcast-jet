@@ -118,7 +118,10 @@ public final class ContextFactory<C> implements Serializable {
      * <em>isCooperative</em> flag set to {@code false}. The context factory is
      * cooperative by default. Call this method if your transform function
      * doesn't follow the {@linkplain Processor#isCooperative() cooperative
-     * processor contract}.
+     * processor contract}, that is if it waits for IO, blocks for
+     * synchronization, takes too long to complete etc. If you intend to use
+     * the factory for an async operation, you also typically can use a
+     * cooperative processor. Cooperative processors offer higher performance.
      *
      * @return a copy of this factory with the {@code isCooperative} flag set
      * to {@code false}.
