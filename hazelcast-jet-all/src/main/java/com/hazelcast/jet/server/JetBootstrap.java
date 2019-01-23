@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.server;
 
+import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ReplicatedMap;
@@ -33,8 +34,13 @@ import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.jar.JarFile;
@@ -51,23 +57,23 @@ import java.util.jar.JarFile;
  * This helper is a part of the solution to the above "bootstrapping"
  * issue. To use it, follow these steps:
  * <ol><li>
- *     Write your {@code main()} method and your Jet code the usual way, except
- *     for calling {@link JetBootstrap#getInstance()} to acquire a Jet client
- *     instance (instead of {@link Jet#newJetClient()}).
+ * Write your {@code main()} method and your Jet code the usual way, except
+ * for calling {@link JetBootstrap#getInstance()} to acquire a Jet client
+ * instance (instead of {@link Jet#newJetClient()}).
  * </li><li>
- *     Create a runnable JAR with your entry point declared as the {@code
- *     Main-Class} in {@code MANIFEST.MF}.
+ * Create a runnable JAR with your entry point declared as the {@code
+ * Main-Class} in {@code MANIFEST.MF}.
  * </li><li>
- *     Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
- *     jet-submit.sh jetjob.jar}. The script is found in the Jet distribution
- *     zipfile, in the {@code bin} directory. On Windows use {@code
- *     jet-submit.bat}.
+ * Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
+ * jet-submit.sh jetjob.jar}. The script is found in the Jet distribution
+ * zipfile, in the {@code bin} directory. On Windows use {@code
+ * jet-submit.bat}.
  * </li><li>
- *     The Jet client will be configured from {@code hazelcast-client.xml}
- *     found in the {@code config} directory in Jet's distribution directory
- *     structure. Adjust that file to suit your needs.
+ * The Jet client will be configured from {@code hazelcast-client.xml}
+ * found in the {@code config} directory in Jet's distribution directory
+ * structure. Adjust that file to suit your needs.
  * </li></ol>
- *
+ * <p>
  * For example, write a class like this:
  * <pre>
  * public class CustomJetJob {
@@ -81,48 +87,53 @@ import java.util.jar.JarFile;
  *   }
  * }
  * </pre>
- *
+ * <p>
  * After building the JAR, submit the job:
  * <pre>
  * $ jet-submit.sh jetjob.jar
  * </pre>
- *
  */
 public final class JetBootstrap {
 
+    // these params must be set before a job is submitted
+    private static ClientConfig config;
+    private static String jarName;
+    private static String snapshotName;
+    private static String jobName;
+
     private static final Supplier<JetBootstrap> SUPPLIER =
-            Util.memoizeConcurrent(() -> new JetBootstrap(Jet.newJetClient()));
-    private static String jarPathname;
+            Util.memoizeConcurrent(() -> new JetBootstrap(Jet.newJetClient(config)));
+
     private final JetInstance instance;
 
     private JetBootstrap(JetInstance instance) {
         this.instance = new InstanceProxy((AbstractJetInstance) instance);
     }
 
-    /**
-     * Runs the supplied JAR file and sets the static jar file name
-     */
-    public static void main(String[] args) throws Exception {
-        int argLength = 1;
-        if (args.length < argLength) {
-            error(JetBootstrap.class.getSimpleName()
-                    + ".main() must be called with the JAR filename as the first argument");
-        }
+    static void executeJar(
+            @Nonnull ClientConfig clientConfig, @Nonnull String jar, @Nullable String snapshotName,
+            @Nullable String jobName, @Nonnull List<String> args
+    ) throws Exception {
+        JetBootstrap.config = clientConfig;
+        JetBootstrap.jarName = jar;
+        JetBootstrap.snapshotName = snapshotName;
+        JetBootstrap.jobName = jobName;
 
-        jarPathname = args[0];
-
-        try (JarFile jarFile = new JarFile(jarPathname)) {
+        try (JarFile jarFile = new JarFile(jar)) {
             if (jarFile.getManifest() == null) {
-                error("No manifest file in " + jarPathname);
+                error("No manifest file in " + jar);
             }
             String mainClass = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
             if (mainClass == null) {
                 error("No Main-Class found in manifest");
             }
-            String[] jobArgs = new String[args.length - argLength];
-            System.arraycopy(args, argLength, jobArgs, 0, args.length - argLength);
 
-            ClassLoader classLoader = JetBootstrap.class.getClassLoader();
+            URL jarUrl = new URL("file:///" + jar);
+            URLClassLoader classLoader = AccessController.doPrivileged(
+                    (PrivilegedAction<URLClassLoader>) () ->
+                            new URLClassLoader(new URL[]{jarUrl}, JetBootstrap.class.getClassLoader())
+            );
+
             Class<?> clazz = classLoader.loadClass(mainClass);
             Method main = clazz.getDeclaredMethod("main", String[].class);
             int mods = main.getModifiers();
@@ -130,6 +141,7 @@ public final class JetBootstrap {
                 error("Class " + clazz.getName()
                         + " has a main(String[] args) method which is not public static");
             }
+            String[] jobArgs = args.toArray(new String[0]);
             // upcast args to Object so it's passed as a single array-typed argument
             main.invoke(null, (Object) jobArgs);
         }
@@ -183,20 +195,21 @@ public final class JetBootstrap {
 
         @Nonnull @Override
         public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
-            addJarPathNameIfPresent(config);
-            return instance.newJob(dag, config);
+            return instance.newJob(dag, updateJobConfig(config));
         }
 
         @Nonnull @Override
         public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
-            addJarPathNameIfPresent(config);
-            return instance.newJobIfAbsent(dag, config);
+            return instance.newJobIfAbsent(dag, updateJobConfig(config));
         }
 
-        private void addJarPathNameIfPresent(@Nonnull JobConfig config) {
-            if (jarPathname != null) {
-                config.addJar(jarPathname);
+        private JobConfig updateJobConfig(@Nonnull JobConfig config) {
+            if (jarName != null) {
+                config.addJar(jarName);
             }
+            config.setInitialSnapshotName(snapshotName);
+            config.setName(jobName);
+            return config;
         }
 
         @Nonnull @Override

@@ -38,7 +38,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
@@ -119,7 +118,7 @@ public abstract class AbstractJobProxy<T> implements Job {
      */
     private String idAndName() {
         JobConfig config = jobConfig;
-        return idToString(jobId) + " (name "
+        return getIdString() + " (name "
                 + (config != null ? "'" + (config.getName() != null ? config.getName() : "") + "'" : "??")
                 + ')';
     }
@@ -169,7 +168,7 @@ public abstract class AbstractJobProxy<T> implements Job {
 
     @Override
     public String toString() {
-        return "Job{id=" + idToString(jobId)
+        return "Job{id=" + getIdString()
                 + ", name=" + getName()
                 + ", submissionTime=" + toLocalDateTime(getSubmissionTime())
                 + ", status=" + getStatus()

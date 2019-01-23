@@ -370,6 +370,7 @@ public class JobConfig implements Serializable {
      *
      * @return {@code this} instance for fluent API
      */
+    @Nonnull
     public JobConfig setClassLoaderFactory(@Nullable JobClassLoaderFactory classLoaderFactory) {
         this.classLoaderFactory = classLoaderFactory;
         return this;
@@ -385,8 +386,9 @@ public class JobConfig implements Serializable {
 
     /**
      * Returns the configured {@linkplain #setInitialSnapshotName(String)
-     * initial snapshot name}.
+     * initial snapshot name} or {@code null} if no initial snapshot is configured.
      */
+    @Nullable
     public String getInitialSnapshotName() {
         return initialSnapshotName;
     }
@@ -405,7 +407,8 @@ public class JobConfig implements Serializable {
      *      Job#exportSnapshot(String)}
      * @return {@code this} instance for fluent API
      */
-    public JobConfig setInitialSnapshotName(String initialSnapshotName) {
+    @Nonnull
+    public JobConfig setInitialSnapshotName(@Nullable String initialSnapshotName) {
         this.initialSnapshotName = initialSnapshotName;
         return this;
     }
