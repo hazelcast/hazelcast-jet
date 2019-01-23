@@ -183,18 +183,20 @@ public final class JetBootstrap {
 
         @Nonnull @Override
         public Job newJob(@Nonnull DAG dag, @Nonnull JobConfig config) {
-            if (jarPathname != null) {
-                config.addJar(jarPathname);
-            }
+            addJarPathNameIfPresent(config);
             return instance.newJob(dag, config);
         }
 
         @Nonnull @Override
         public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
+            addJarPathNameIfPresent(config);
+            return instance.newJobIfAbsent(dag, config);
+        }
+
+        private void addJarPathNameIfPresent(@Nonnull JobConfig config) {
             if (jarPathname != null) {
                 config.addJar(jarPathname);
             }
-            return instance.newJobIfAbsent(dag, config);
         }
 
         @Nonnull @Override

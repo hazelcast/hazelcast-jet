@@ -18,6 +18,7 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.Identity;
@@ -496,7 +497,7 @@ public class JobTest extends JetTestSupport {
         assertTrueEventually(() -> assertEquals(RUNNING, job1.getStatus()));
 
         // Then
-        expectedException.expect(DuplicateActiveJobNameException.class);
+        expectedException.expect(JobAlreadyExistsException.class);
         instance.newJob(dag, config);
     }
 
@@ -626,7 +627,7 @@ public class JobTest extends JetTestSupport {
         assertJobStatusEventually(job1, SUSPENDED);
 
         // Then
-        expectedException.expect(DuplicateActiveJobNameException.class);
+        expectedException.expect(JobAlreadyExistsException.class);
         instance2.newJob(dag, config);
     }
 
@@ -646,7 +647,7 @@ public class JobTest extends JetTestSupport {
         instance1.shutdown();
 
         // Then
-        expectedException.expect(DuplicateActiveJobNameException.class);
+        expectedException.expect(JobAlreadyExistsException.class);
         instance2.newJob(dag, config);
     }
 

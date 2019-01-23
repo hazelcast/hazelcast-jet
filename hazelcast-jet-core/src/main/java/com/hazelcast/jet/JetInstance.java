@@ -22,7 +22,6 @@ import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.DuplicateActiveJobNameException;
 import com.hazelcast.jet.function.DistributedBiFunction;
 import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.JobRepository;
@@ -96,14 +95,14 @@ public interface JetInstance {
      *
      * <p>If the name in the JobConfig is non-null, Jet checks if there is an
      * active job with equal name, in which case it throws {@link
-     * DuplicateActiveJobNameException}. Job is active if it is running,
+     * JobAlreadyExistsException}. Job is active if it is running,
      * suspended or waiting to be run; that is it has not completed or failed.
      * Thus there can be at most one active job with a given name at a time and
      * you can re-use the job name after the previous job completed.
      *
      * <p>See also {@link #newJobIfAbsent}.
      *
-     * @throws DuplicateActiveJobNameException if there is an active job with
+     * @throws JobAlreadyExistsException if there is an active job with
      *      an equal name
      */
     @Nonnull
@@ -115,14 +114,14 @@ public interface JetInstance {
      *
      * <p>If the name in the JobConfig is non-null, Jet checks if there is an
      * active job with equal name, in which case it throws {@link
-     * DuplicateActiveJobNameException}. Job is active if it is running,
+     * JobAlreadyExistsException}. Job is active if it is running,
      * suspended or waiting to be run; that is it has not completed or failed.
      * Thus there can be at most one active job with a given name at a time and
      * you can re-use the job name after the previous job completed.
      *
      * <p>See also {@link #newJobIfAbsent}.
      *
-     * @throws DuplicateActiveJobNameException if there is an active job with
+     * @throws JobAlreadyExistsException if there is an active job with
      *      an equal name
      */
     @Nonnull

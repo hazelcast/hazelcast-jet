@@ -26,7 +26,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.DuplicateActiveJobNameException;
+import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.util.Util;
@@ -74,7 +74,7 @@ public abstract class AbstractJetInstance implements JetInstance {
 
                 try {
                     return newJob(dag, config);
-                } catch (DuplicateActiveJobNameException e) {
+                } catch (JobAlreadyExistsException e) {
                     logFine(getLogger(), "Could not submit job with duplicate name: %s", config.getName());
                 }
             }

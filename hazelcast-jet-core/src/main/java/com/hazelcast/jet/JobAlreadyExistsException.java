@@ -14,34 +14,32 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.core;
-
-import com.hazelcast.jet.JetException;
+package com.hazelcast.jet;
 
 /**
  * Thrown when a named job is submitted while there is an <em>active job</em>
  * with the same name. Job is <em>active</em> if it is running, suspended or
  * waiting to be run, until it completes or fails.
  */
-public class DuplicateActiveJobNameException extends JetException {
+public class JobAlreadyExistsException extends JetException {
 
     /**
      * Creates the exception
      */
-    public DuplicateActiveJobNameException() {
+    public JobAlreadyExistsException() {
     }
 
     /**
      * Creates the exception with a message.
      */
-    public DuplicateActiveJobNameException(String message) {
+    public JobAlreadyExistsException(String message) {
         super(message);
     }
 
     /**
      * Creates the exception with a message and a cause.
      */
-    public DuplicateActiveJobNameException(String message, Throwable cause) {
+    public JobAlreadyExistsException(String message, Throwable cause) {
         super(message, cause);
     }
 }

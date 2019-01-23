@@ -23,15 +23,16 @@ import com.hazelcast.instance.Node;
 import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.DuplicateActiveJobNameException;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -43,7 +44,6 @@ import com.hazelcast.util.Clock;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -166,7 +166,7 @@ public class JobCoordinationService {
 
         if (hasDuplicateJobName) {
             jobRepository.deleteJob(jobId);
-            throw new DuplicateActiveJobNameException("Another active job with equal name (" + config.getName()
+            throw new JobAlreadyExistsException("Another active job with equal name (" + config.getName()
                     + ") exists: " + idToString(jobId));
         }
 
@@ -489,7 +489,7 @@ public class JobCoordinationService {
 
     void onMemberLeave(String uuid) {
         if (membersShuttingDown.remove(uuid) != null) {
-            LoggingUtil.logFine(logger, "Removed a shutting-down member: %s, now shuttingDownMembers=%s",
+            logFine(logger, "Removed a shutting-down member: %s, now shuttingDownMembers=%s",
                     uuid, membersShuttingDown.keySet());
         }
     }
