@@ -89,7 +89,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        maxAsyncOps = getMaxAsyncOps(contextFactory.getMaxPendingCallsPerMember(), context.localParallelism());
+        maxAsyncOps = getMaxAsyncOps(contextFactory.getMaxPendingCallsPerProcessor(), context.localParallelism());
         queue = new ArrayDeque<>(maxAsyncOps);
     }
 
@@ -197,11 +197,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     }
 
     static int getMaxAsyncOps(int maxPendingCallsPerMember, int localParallelism) {
-        int maxOps = Math.max(maxPendingCallsPerMember / localParallelism, 1);
-        if (maxOps < 1) {
-            throw new JetException("maxAsyncOps=" + maxOps + ", must be >= 1");
-        }
-        return maxOps;
+        return Math.max(maxPendingCallsPerMember / localParallelism, 1);
     }
 
     /**

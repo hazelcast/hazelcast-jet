@@ -50,16 +50,31 @@ import static com.hazelcast.util.Preconditions.checkPositive;
  */
 public final class ContextFactory<C> implements Serializable {
 
-    private static final boolean COOPERATIVE_DEFAULT = true;
-    private static final boolean SHARE_LOCALLY_DEFAULT = false;
-    private static final int MAX_PENDING_CALLS_DEFAULT = 2048;
-    private static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
+    /**
+     * Default value for {{@link #maxPendingCallsPerProcessor(int)}}
+     */
+    public static final int MAX_PENDING_CALLS_DEFAULT = 256;
+
+    /**
+     * Default value for {{@link #isCooperative()} (int)}}
+     */
+    public static final boolean COOPERATIVE_DEFAULT = true;
+
+    /**
+     * Default value for {{@link #shareLocally()}} }
+     */
+    public static final boolean SHARE_LOCALLY_DEFAULT = false;
+
+    /**
+     * Default value for {{@link #unorderedAsyncResponses()}}}} }
+     */
+    public static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
     private final DistributedFunction<JetInstance, ? extends C> createFn;
     private final DistributedConsumer<? super C> destroyFn;
     private final boolean isCooperative;
     private final boolean isSharedLocally;
-    private final int maxPendingCallsPerMember;
+    private final int maxPendingCallsPerProcessor;
     private final boolean orderedAsyncResponses;
 
     private ContextFactory(
@@ -67,14 +82,14 @@ public final class ContextFactory<C> implements Serializable {
             DistributedConsumer<? super C> destroyFn,
             boolean isCooperative,
             boolean isSharedLocally,
-            int maxPendingCallsPerMember,
+            int maxPendingCallsPerProcessor,
             boolean orderedAsyncResponses
     ) {
         this.createFn = createFn;
         this.destroyFn = destroyFn;
         this.isCooperative = isCooperative;
         this.isSharedLocally = isSharedLocally;
-        this.maxPendingCallsPerMember = maxPendingCallsPerMember;
+        this.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
         this.orderedAsyncResponses = orderedAsyncResponses;
     }
 
@@ -110,7 +125,7 @@ public final class ContextFactory<C> implements Serializable {
     public ContextFactory<C> withDestroyFn(@Nonnull DistributedConsumer<? super C> destroyFn) {
         checkSerializable(destroyFn, "destroyFn");
         return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally,
-                maxPendingCallsPerMember, orderedAsyncResponses);
+                maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
     /**
@@ -129,7 +144,7 @@ public final class ContextFactory<C> implements Serializable {
     @Nonnull
     public ContextFactory<C> nonCooperative() {
         return new ContextFactory<>(createFn, destroyFn, false, isSharedLocally,
-                maxPendingCallsPerMember, orderedAsyncResponses);
+                maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
     /**
@@ -141,22 +156,20 @@ public final class ContextFactory<C> implements Serializable {
      *     <li>one context object per member, if flag is enabled. Make
      *     sure the context object is <em>thread-safe</em> in this case.
      * </ul>
-     * If the pipeline has grouping, the context object is never shared and
-     * this flag is ignored.
      *
      * @return a copy of this factory with the {@code isSharedLocally} flag set.
      */
     @Nonnull
     public ContextFactory<C> shareLocally() {
         return new ContextFactory<>(createFn, destroyFn, isCooperative, true,
-                maxPendingCallsPerMember, orderedAsyncResponses);
+                maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
     /**
      * Returns a copy of this {@link ContextFactory} with the
-     * <em>maxPendingCallsPerMember</em> property set to the given value. Jet
-     * will execute at most this many concurrent async operations and will
-     * apply backpressure to the upstream.
+     * <em>maxPendingCallsPerProcessor</em> property set to the given value. Jet
+     * will execute at most this many concurrent async operations per processor
+     * and will apply backpressure to the upstream.
      * <p>
      * If you use the same context factory on multiple pipeline stages, each
      * stage will count the pending calls independently.
@@ -166,14 +179,14 @@ public final class ContextFactory<C> implements Serializable {
      * <p>
      * Default value is {@value #MAX_PENDING_CALLS_DEFAULT}.
      *
-     * @return a copy of this factory with the {@code maxPendingCallsPerMember}
+     * @return a copy of this factory with the {@code maxPendingCallsPerProcessor}
      *      property set.
      */
     @Nonnull
-    public ContextFactory<C> maxPendingCallsPerMember(int maxPendingCallsPerMember) {
-        checkPositive(maxPendingCallsPerMember, "maxPendingCallsPerMember must be >= 1");
+    public ContextFactory<C> maxPendingCallsPerProcessor(int maxPendingCallsPerProcessor) {
+        checkPositive(maxPendingCallsPerProcessor, "maxPendingCallsPerProcessor must be >= 1");
         return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally,
-                maxPendingCallsPerMember, orderedAsyncResponses);
+                maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
     /**
@@ -213,7 +226,7 @@ public final class ContextFactory<C> implements Serializable {
     @Nonnull
     public ContextFactory<C> unorderedAsyncResponses() {
         return new ContextFactory<>(createFn, destroyFn, isCooperative, isSharedLocally,
-                maxPendingCallsPerMember, false);
+                maxPendingCallsPerProcessor, false);
     }
 
     /**
@@ -248,10 +261,10 @@ public final class ContextFactory<C> implements Serializable {
 
     /**
      * Returns the maximum pending calls per member, see {@link
-     * #maxPendingCallsPerMember(int)}.
+     * #maxPendingCallsPerProcessor(int)}.
      */
-    public int getMaxPendingCallsPerMember() {
-        return maxPendingCallsPerMember;
+    public int getMaxPendingCallsPerProcessor() {
+        return maxPendingCallsPerProcessor;
     }
 
     /**

@@ -124,7 +124,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        maxAsyncOps = getMaxAsyncOps(contextFactory.getMaxPendingCallsPerMember(), context.localParallelism());
+        maxAsyncOps = getMaxAsyncOps(contextFactory.getMaxPendingCallsPerProcessor(), context.localParallelism());
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
     }
 
