@@ -122,9 +122,10 @@ public class JetCommandLineTest extends JetTestSupport {
     @Test
     public void test_cancelJob_invalidNameOrId() {
         // When
-        // Then
-        exception.expectMessage("No job with name or id 'invalid' was found");
         run("cancel", "invalid");
+        // Then
+        assertEquals("No job with name or id 'invalid' was found.", captureErr());
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -135,9 +136,10 @@ public class JetCommandLineTest extends JetTestSupport {
         assertJobStatusEventually(job, JobStatus.FAILED);
 
         // When
-        // Then
-        exception.expectMessage("is not active");
         run("cancel", job.getName());
+        // Then
+        assertContains(captureErr(), "is not active");
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -167,9 +169,10 @@ public class JetCommandLineTest extends JetTestSupport {
     @Test
     public void test_suspendJob_invalidNameOrId() {
         // When
-        // Then
-        exception.expectMessage("No job with name or id 'invalid' was found");
         run("cancel", "invalid");
+        // Then
+        assertEquals("No job with name or id 'invalid' was found.", captureErr());
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -180,9 +183,10 @@ public class JetCommandLineTest extends JetTestSupport {
         assertJobStatusEventually(job, JobStatus.FAILED);
 
         // When
-        // Then
-        exception.expectMessage("is not running");
         run("suspend", job.getName());
+        // Then
+        assertContains(captureErr(), "is not running");
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -216,9 +220,10 @@ public class JetCommandLineTest extends JetTestSupport {
     @Test
     public void test_resumeJob_invalidNameOrId() {
         // When
-        // Then
-        exception.expectMessage("No job with name or id 'invalid' was found");
         run("resume", "invalid");
+        // Then
+        assertEquals("No job with name or id 'invalid' was found.", captureErr());
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -228,9 +233,10 @@ public class JetCommandLineTest extends JetTestSupport {
         assertJobStatusEventually(job, JobStatus.RUNNING);
 
         // When
-        // Then
-        exception.expectMessage("is not suspended");
         run("resume", job.getName());
+        // Then
+        assertContains(captureErr(), "is not suspended");
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -264,9 +270,10 @@ public class JetCommandLineTest extends JetTestSupport {
     @Test
     public void test_restartJob_invalidNameOrId() {
         // When
-        // Then
-        exception.expectMessage("No job with name or id 'invalid' was found");
         run("restart", "invalid");
+        // Then
+        assertEquals("No job with name or id 'invalid' was found.", captureErr());
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -278,9 +285,10 @@ public class JetCommandLineTest extends JetTestSupport {
         assertJobStatusEventually(job, JobStatus.SUSPENDED);
 
         // When
-        // Then
-        exception.expectMessage("is not running");
         run("restart", job.getName());
+        // Then
+        assertContains(captureErr(), "is not running");
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -332,9 +340,10 @@ public class JetCommandLineTest extends JetTestSupport {
     @Test
     public void test_saveSnapshot_invalidNameOrId() {
         // When
-        // Then
-        exception.expectMessage("No job with name or id 'invalid' was found");
         run("save-snapshot", "invalid", "my-snapshot");
+        // Then
+        assertEquals("No job with name or id 'invalid' was found.", captureErr());
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -346,9 +355,10 @@ public class JetCommandLineTest extends JetTestSupport {
         assertJobStatusEventually(job, JobStatus.FAILED);
 
         // When
-        // Then
-        exception.expectMessage("is not active");
         run("save-snapshot", job.getIdString(), "my-snapshot");
+        // Then
+        assertContains(captureErr(), "is not active");
+        assertEquals("", captureOut());
     }
 
     @Test
@@ -412,6 +422,6 @@ public class JetCommandLineTest extends JetTestSupport {
 
     private String captureErr() {
         err.flush();
-        return new String(baosOut.toByteArray());
+        return new String(baosErr.toByteArray());
     }
 }

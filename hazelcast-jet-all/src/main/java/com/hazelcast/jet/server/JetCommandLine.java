@@ -23,7 +23,6 @@ import com.hazelcast.core.Cluster;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
@@ -44,6 +43,8 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.RunAll;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -80,9 +81,9 @@ public class JetCommandLine implements Callable<Void> {
 
     @Option(names = {"-f", "--config"},
             description = "Path to the client config XML file. " +
-                    "If specified addresses and group name options will be ignored. " +
+                    "If specified, addresses and group name options will be ignored. " +
                     "If neither group name, address or config location are specified then the default XML in the " +
-                    "config path will be used."
+                    "config path will be used"
     )
     private File configXml;
 
@@ -96,7 +97,7 @@ public class JetCommandLine implements Callable<Void> {
 
     @Option(names = {"-g", "--group"},
             description = "Group name to use when connecting to the cluster. " +
-                    "Must be specified together with the <addresses> parameter.",
+                    "Must be specified together with the <addresses> parameter",
             defaultValue = "jet"
     )
     private String groupName;
@@ -163,7 +164,8 @@ public class JetCommandLine implements Callable<Void> {
             ) List<String> params
     ) throws Exception {
         if (!file.exists()) {
-            throw new Exception("File " + file + " could not be found.");
+            eprintf("File %s could not be found.", file);
+            return;
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
         JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
@@ -180,8 +182,10 @@ public class JetCommandLine implements Callable<Void> {
             ) String name
     ) throws IOException {
         runWithJet(jet -> {
-            Job job = getJob(name, jet);
-            assertJobRunning(name, job);
+            Job job = getJob(jet, name);
+            if (job == null || !checkJobRunning(name, job)) {
+                return;
+            }
             printf("Suspending job %s...%n", formatJob(job));
             job.suspend();
             waitForJobStatus(job, JobStatus.SUSPENDED);
@@ -199,9 +203,11 @@ public class JetCommandLine implements Callable<Void> {
             ) String name
     ) throws IOException {
         runWithJet(jet -> {
-            Job job = getJob(name, jet);
-            assertJobActive(name, job);
-            printf("Terminating job %s...%n", formatJob(job));
+            Job job = getJob(jet, name);
+            if (job == null || !checkJobActive(name, job)) {
+                return;
+            }
+            printf("Cancelling job %s...%n", formatJob(job));
             job.cancel();
             waitForJobStatus(job, JobStatus.FAILED);
             println("Job was successfully terminated.");
@@ -223,14 +229,13 @@ public class JetCommandLine implements Callable<Void> {
                     String snapshotName,
             @Option(names = {"-C", "--cancel"},
                     description = "Cancel the job after taking the snapshot")
-                    boolean isTerminal,
-            @Option(names = {"-s", "--suspend"},
-                    description = "Suspend the job after taking the snapshot")
-                    boolean isSuspend
+                    boolean isTerminal
     ) throws IOException {
         runWithJet(jet -> {
-            Job job = getJob(jobName, jet);
-            assertJobActive(jobName, job);
+            Job job = getJob(jet, jobName);
+            if (job == null || !checkJobActive(jobName, job)) {
+                return;
+            }
             if (isTerminal) {
                 printf("Saving snapshot with name '%s' from job '%s' and terminating the job...%n",
                         snapshotName, formatJob(job)
@@ -258,7 +263,8 @@ public class JetCommandLine implements Callable<Void> {
         runWithJet(jet -> {
             JobStateSnapshot jobStateSnapshot = jet.getJobStateSnapshot(snapshotName);
             if (jobStateSnapshot == null) {
-                throw new JetException(String.format("No snapshot with name %s was found", snapshotName));
+                eprintf("No snapshot with name '%s' was found", snapshotName);
+                return;
             }
             jobStateSnapshot.destroy();
             println("Snapshot was successfully deleted.");
@@ -275,8 +281,10 @@ public class JetCommandLine implements Callable<Void> {
                     String name
     ) throws IOException {
         runWithJet(jet -> {
-            Job job = getJob(name, jet);
-            assertJobRunning(name, job);
+            Job job = getJob(jet, name);
+            if (job == null || !checkJobRunning(name, job)) {
+                return;
+            }
             println("Restarting job " + formatJob(job) + "...");
             job.restart();
             waitForJobStatus(job, JobStatus.RUNNING);
@@ -294,9 +302,13 @@ public class JetCommandLine implements Callable<Void> {
                     String name
     ) throws IOException {
         runWithJet(jet -> {
-            Job job = getJob(name, jet);
+            Job job = getJob(jet, name);
+            if (job == null) {
+                return;
+            }
             if (job.getStatus() != JobStatus.SUSPENDED) {
-                throw new RuntimeException("Job '" + name + "' is not suspended. Current state: " + job.getStatus());
+                eprintf("Job '%s' is not suspended. Current state: %s", name, job.getStatus());
+                return;
             }
             println("Resuming job " + formatJob(job) + "...");
             job.resume();
@@ -310,7 +322,7 @@ public class JetCommandLine implements Callable<Void> {
     )
     public void jobs(
             @Option(names = {"-a", "--all"},
-                    description = "Lists all jobs including completed or failed ones")
+                    description = "Lists all jobs including completed and failed ones")
                     boolean listAll
     ) throws IOException {
         runWithJet(jet -> {
@@ -366,7 +378,6 @@ public class JetCommandLine implements Callable<Void> {
             String format = "%-24s %-19s%n";
             printf(format, "ADDRESS", "UUID");
             cluster.getMembers().forEach(member -> printf(format, member.getAddress(), member.getUuid()));
-
         });
     }
 
@@ -398,12 +409,13 @@ public class JetCommandLine implements Callable<Void> {
        LogManager.getLogManager().getLogger("").setLevel(isVerbose ? Level.INFO : Level.WARNING);
     }
 
-    private static Job getJob(String nameOrId, JetInstance jet) {
+    @Nullable
+    private Job getJob(JetInstance jet, String nameOrId) {
         Job job = jet.getJob(nameOrId);
         if (job == null) {
             job = jet.getJob(Util.idFromString(nameOrId));
             if (job == null) {
-                throw new RuntimeException("No job with name or id '" + nameOrId + "' was found.");
+                eprintf("No job with name or id '%s' was found.", nameOrId);
             }
         }
         return job;
@@ -411,6 +423,10 @@ public class JetCommandLine implements Callable<Void> {
 
     private void printf(String format, Object... objects) {
         out.printf(format, objects);
+    }
+
+    private void eprintf(String format, Object... objects) {
+        err.printf(format, objects);
     }
 
     private void println(String msg) {
@@ -427,16 +443,22 @@ public class JetCommandLine implements Callable<Void> {
                 + ", submissionTime=" + toLocalDateTime(job.getSubmissionTime());
     }
 
-    private static void assertJobActive(String name, Job job) {
+    @CheckReturnValue
+    private boolean checkJobActive(String name, Job job) {
         if (!isActive(job.getStatus())) {
-            throw new RuntimeException("Job '" + name + "' is not active. Current state: " + job.getStatus());
+            eprintf("Job '%s' is not active. Current state: %s", name, job.getStatus());
+            return false;
         }
+        return true;
     }
 
-    private static void assertJobRunning(String name, Job job) {
+    @CheckReturnValue
+    private boolean checkJobRunning(String name, Job job) {
         if (job.getStatus() != JobStatus.RUNNING) {
-            throw new RuntimeException("Job '" + name + "' is not running. Current state: " + job.getStatus());
+            eprintf("Job '%s' is not running. Current state: %s", name, job.getStatus());
+            return false;
         }
+        return true;
     }
 
     private static void waitForJobStatus(Job job, JobStatus status) {

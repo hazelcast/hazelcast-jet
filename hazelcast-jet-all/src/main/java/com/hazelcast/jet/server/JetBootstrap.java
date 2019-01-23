@@ -113,8 +113,8 @@ public final class JetBootstrap {
             @Nonnull ClientConfig clientConfig, @Nonnull String jar, @Nullable String snapshotName,
             @Nullable String jobName, @Nonnull List<String> args
     ) throws Exception {
-        JetBootstrap.jarName = jar;
         JetBootstrap.config = clientConfig;
+        JetBootstrap.jarName = jar;
         JetBootstrap.snapshotName = snapshotName;
         JetBootstrap.jobName = jobName;
 
