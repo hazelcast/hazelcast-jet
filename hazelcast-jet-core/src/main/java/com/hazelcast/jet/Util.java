@@ -29,12 +29,16 @@ import com.hazelcast.map.journal.EventJournalMapEvent;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Map.Entry;
+<<<<<<< HEAD
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 <<<<<<<HEAD
 =======
 >>>>>>> Jet CLI (#1202)
+=======
+import java.util.regex.Pattern;
+>>>>>>> master
 
 /**
  * Miscellaneous utility methods useful in DAG building logic.
