@@ -40,6 +40,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.DefaultExceptionHandler;
 import picocli.CommandLine.ExecutionException;
 import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Help.Visibility;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.IVersionProvider;
 import picocli.CommandLine.Option;
@@ -67,9 +68,16 @@ import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 @Command(
         name = "jet",
         header = "Hazelcast Jet",
-        description = "Utility for interacting with a Hazelcast Jet cluster. Global options are:%n",
+        description = "Utility for interacting with a Hazelcast Jet cluster." +
+                "%n%n" +
+                "The command line tool uses the Jet client to connect and perform operations " +
+                "on the cluster. By default, the client config XML inside the config path will " +
+                "be used for the connection." +
+                "%n%n" +
+                "Global options are:%n",
         versionProvider = JetVersionProvider.class,
         mixinStandardHelpOptions = true,
+        sortOptions = false,
         subcommands = {HelpCommand.class}
 )
 public class JetCommandLine implements Callable<Void> {
@@ -82,10 +90,10 @@ public class JetCommandLine implements Callable<Void> {
     private final PrintStream err;
 
     @Option(names = {"-f", "--config"},
-            description = "Path to the client config XML file. " +
-                    "If specified, addresses and group name options will be ignored. " +
-                    "If neither group name, address or config location are specified then the default XML in the " +
-                    "config path will be used"
+            description = "Optional path to a client config XML file. " +
+                    "By default config/hazelcast-client.xml is used." +
+                    "If this option is specified then the addresses and group name options are ignored.",
+            order = 0
     )
     private File configXml;
 
@@ -93,19 +101,25 @@ public class JetCommandLine implements Callable<Void> {
             split = ",",
             arity = "1..*",
             paramLabel = "<hostname>:<port>",
-            description = "Comma-separated list of Jet node addresses in the format <hostname>:<port>"
+            description = "Optional comma-separated list of Jet node addresses in the format " +
+                    "<hostname>:<port> to connect to another cluster than the " +
+                    "one configured in config/hazelcast-client.xml",
+            order = 1
     )
     private List<String> addresses;
 
     @Option(names = {"-g", "--group"},
-            description = "Group name to use when connecting to the cluster. " +
-                    "Must be specified together with the <addresses> parameter",
-            defaultValue = "jet"
+            description = "The group name to use when connecting to the cluster " +
+                    "specified by the <addresses> parameter. ",
+            defaultValue = "jet",
+            showDefaultValue = Visibility.ALWAYS,
+            order = 2
     )
     private String groupName;
 
     @Option(names = {"-v", "--verbose"},
-            description = {"Show logs from Jet client and full stack trace of errors"}
+            description = {"Show logs from Jet client and full stack trace of errors"},
+            order = 100
     )
     private boolean isVerbose;
 
@@ -217,7 +231,7 @@ public class JetCommandLine implements Callable<Void> {
 
     @Command(
             name = "save-snapshot",
-            description = "Saves a named snapshot from a job"
+            description = "Exports a named snapshot from a job and optionally cancels it"
     )
     public void saveSnapshot(
             @Parameters(index = "0",
@@ -335,7 +349,7 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
-            description = "Lists saved snapshots on the cluster"
+            description = "Lists exported snapshots on the cluster"
     )
     public void snapshots() throws IOException {
         runWithJet(jet -> {
