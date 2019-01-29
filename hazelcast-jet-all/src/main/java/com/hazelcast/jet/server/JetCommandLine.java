@@ -20,7 +20,6 @@ package com.hazelcast.jet.server;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
 import com.hazelcast.core.Cluster;
-import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
@@ -62,12 +61,12 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 
+import static com.hazelcast.instance.BuildInfoProvider.getBuildInfo;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
 
 @Command(
         name = "jet",
-        header = "Hazelcast Jet",
         description = "Utility for interacting with a Hazelcast Jet cluster." +
                 "%n%n" +
                 "The command line tool uses the Jet client to connect and perform operations " +
@@ -140,6 +139,10 @@ public class JetCommandLine implements Callable<Void> {
             String[] args
     ) {
         CommandLine cmd = new CommandLine(new JetCommandLine(jetClientFn, out, err));
+
+        String jetVersion = getBuildInfo().getJetBuildInfo().getVersion();
+        cmd.getCommandSpec().usageMessage().header("Hazelcast Jet " + jetVersion);
+
         if (args.length == 0) {
             cmd.usage(out);
         } else {
@@ -469,7 +472,7 @@ public class JetCommandLine implements Callable<Void> {
 
         @Override
         public String[] getVersion() {
-            JetBuildInfo jetBuildInfo = BuildInfoProvider.getBuildInfo().getJetBuildInfo();
+            JetBuildInfo jetBuildInfo = getBuildInfo().getJetBuildInfo();
             return new String[]{
                     "Hazelcast Jet " + jetBuildInfo.getVersion(),
                     "Revision " + jetBuildInfo.getRevision(),
