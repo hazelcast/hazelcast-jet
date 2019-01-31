@@ -398,7 +398,9 @@ public class JetCommandLineTest extends JetTestSupport {
         p.drawFrom(Sources.mapJournal(SOURCE_NAME, START_FROM_OLDEST))
                 .withoutTimestamps()
                 .drainTo(Sinks.list(SINK_NAME));
-        return jet.newJob(p, new JobConfig().setName("job-infinite-pipeline"));
+        Job job = jet.newJob(p, new JobConfig().setName("job-infinite-pipeline"));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+        return job;
     }
 
     private void run(String... args) {
