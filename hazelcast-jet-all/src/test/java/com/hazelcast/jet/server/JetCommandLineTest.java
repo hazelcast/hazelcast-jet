@@ -38,6 +38,7 @@ import org.junit.runner.RunWith;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
@@ -70,10 +71,7 @@ public class JetCommandLineTest extends JetTestSupport {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
         jet = createJetMember(cfg);
-        baosOut = new ByteArrayOutputStream();
-        baosErr = new ByteArrayOutputStream();
-        out = new PrintStream(baosOut);
-        err = new PrintStream(baosErr);
+        resetOut();
 
         sourceMap = jet.getMap(SOURCE_NAME);
         IntStream.range(0, ITEM_COUNT).forEach(i -> sourceMap.put(i, i));
@@ -393,6 +391,40 @@ public class JetCommandLineTest extends JetTestSupport {
         assertContains(actual, "ACTIVE");
     }
 
+    @Test
+    public void test_verbosity() {
+        testVerbosity("cancel", "jobName", "-v");
+        testVerbosity("-v", "cancel", "jobName");
+        testVerbosity("cluster", "-v");
+        testVerbosity("-v", "cluster");
+        testVerbosity("delete-snapshot", "snapshotName", "-v");
+        testVerbosity("-v", "delete-snapshot", "snapshotName");
+        testVerbosity("list-jobs", "-v");
+        testVerbosity("-v", "list-jobs", "-v");
+        testVerbosity("list-snapshots", "-v");
+        testVerbosity("-v", "list-snapshots");
+        testVerbosity("restart", "jobName", "-v");
+        testVerbosity("-v", "restart", "jobName");
+        testVerbosity("resume", "jobName", "-v");
+        testVerbosity("-v", "resume", "jobName");
+        testVerbosity("save-snapshot", "jobName", "snapshotName", "-v");
+        testVerbosity("-v", "save-snapshot", "jobName", "snapshotName");
+        testVerbosity("submit", "-v", "job.jar");
+        testVerbosity("-v", "submit", "job.jar");
+        testVerbosity("suspend", "jobName", "-v");
+        testVerbosity("-v", "suspend", "jobName");
+    }
+
+    private void testVerbosity(String... args) {
+        System.out.println("Testing verbosity with parameters " + Arrays.toString(args));
+        try {
+            resetOut();
+            run(args);
+        } catch (Exception ignored) {
+        }
+        assertContains(captureOut(), "Verbose mode is on");
+    }
+
     private Job newJob() {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.mapJournal(SOURCE_NAME, START_FROM_OLDEST))
@@ -405,6 +437,15 @@ public class JetCommandLineTest extends JetTestSupport {
 
     private void run(String... args) {
         runCommandLine(cfg -> createJetClient(), out, err, false, args);
+    }
+
+
+
+    private void resetOut() {
+        baosOut = new ByteArrayOutputStream();
+        baosErr = new ByteArrayOutputStream();
+        out = new PrintStream(baosOut);
+        err = new PrintStream(baosErr);
     }
 
     private String captureOut() {

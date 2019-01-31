@@ -185,12 +185,12 @@ public class JetCommandLine implements Callable<Void> {
                     defaultValue = ""
             ) List<String> params
     ) throws Exception {
+        this.verbosity.merge(verbosity);
+        configureLogging();
         if (!file.exists()) {
             throw new Exception("File " + file + " could not be found.");
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
-        this.verbosity.merge(verbosity);
-        configureLogging();
         JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
     }
 
@@ -428,6 +428,7 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     private void configureLogging() throws IOException {
+        println("Verbose mode is on, setting logging level to INFO");
         StartServer.configureLogging();
         LogManager.getLogManager().getLogger("").setLevel(verbosity.isVerbose ? Level.INFO : Level.WARNING);
     }
