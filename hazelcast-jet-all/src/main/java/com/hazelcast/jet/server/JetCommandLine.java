@@ -190,6 +190,7 @@ public class JetCommandLine implements Callable<Void> {
             throw new Exception("File " + file + " could not be found.");
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
+        configureLogging();
         JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
     }
 
@@ -327,9 +328,10 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
+            name = "list-jobs",
             description = "Lists running jobs on the cluster"
     )
-    public void jobs(
+    public void listJobs(
             @Option(names = {"-a", "--all"},
                     description = "Lists all jobs including completed and failed ones")
                     boolean listAll
@@ -352,9 +354,10 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Command(
+            name = "list-snapshots",
             description = "Lists exported snapshots on the cluster"
     )
-    public void snapshots() throws IOException {
+    public void listSnapshots() throws IOException {
         runWithJet(jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-24s %-15s %-23s %-24s%n", "NAME", "SIZE (bytes)", "TIME", "JOB NAME");

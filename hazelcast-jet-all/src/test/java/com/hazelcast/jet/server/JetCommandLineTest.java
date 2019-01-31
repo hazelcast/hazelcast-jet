@@ -86,7 +86,7 @@ public class JetCommandLineTest extends JetTestSupport {
         Job job = newJob();
 
         // When
-        run("jobs");
+        run("list-jobs");
 
         // Then
         String actual = captureOut();
@@ -374,7 +374,7 @@ public class JetCommandLineTest extends JetTestSupport {
         JobStateSnapshot snapshot = job.exportSnapshot("my-snapshot");
 
         // When
-        run("snapshots");
+        run("list-snapshots");
 
         // Then
         String actual = captureOut();
