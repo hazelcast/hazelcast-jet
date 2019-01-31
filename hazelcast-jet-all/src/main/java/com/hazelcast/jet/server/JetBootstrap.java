@@ -157,8 +157,8 @@ public final class JetBootstrap {
     }
 
     /**
-     * Returns the bootstrapped {@code JetInstance}. The instance will automatically
-     * be shutdown once the {@code main()} method of the JAR returns.
+     * Returns the bootstrapped {@code JetInstance}. The instance will be
+     * automatically shut down once the {@code main()} method of the JAR returns.
      */
     public static JetInstance getInstance() {
         return SUPPLIER.get().instance;
