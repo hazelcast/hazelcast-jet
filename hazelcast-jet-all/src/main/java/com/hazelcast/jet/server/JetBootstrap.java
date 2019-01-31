@@ -65,7 +65,7 @@ import java.util.jar.JarFile;
  * Main-Class} in {@code MANIFEST.MF}.
  * </li><li>
  * Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
- * jet.sh  submit jetjob.jar}. The script is found in the Jet distribution
+ * jet.sh submit jetjob.jar}. The script is found in the Jet distribution
  * zipfile, in the {@code bin} directory. On Windows use {@code
  * jet.bat}.
  * </li><li>

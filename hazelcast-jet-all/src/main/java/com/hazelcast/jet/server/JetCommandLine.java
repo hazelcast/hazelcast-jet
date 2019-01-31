@@ -42,6 +42,7 @@ import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Help.Visibility;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.IVersionProvider;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParseResult;
@@ -116,11 +117,8 @@ public class JetCommandLine implements Callable<Void> {
     )
     private String groupName;
 
-    @Option(names = {"-v", "--verbose"},
-            description = {"Show logs from Jet client and full stack trace of errors"},
-            order = 100
-    )
-    private boolean isVerbose;
+    @Mixin(name = "verbosity")
+    private Verbosity verbosity;
 
     public JetCommandLine(Function<ClientConfig, JetInstance> jetClientFn, PrintStream out, PrintStream err) {
         this.jetClientFn = jetClientFn;
@@ -168,6 +166,7 @@ public class JetCommandLine implements Callable<Void> {
             mixinStandardHelpOptions = true
     )
     public void submit(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Option(names = {"-s", "--snapshot"},
                     paramLabel = "<snapshot name>",
                     description = "Name of initial snapshot to start the job from"
@@ -190,6 +189,7 @@ public class JetCommandLine implements Callable<Void> {
             throw new Exception("File " + file + " could not be found.");
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
+        this.verbosity.merge(verbosity);
         configureLogging();
         JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
     }
@@ -199,12 +199,13 @@ public class JetCommandLine implements Callable<Void> {
             mixinStandardHelpOptions = true
     )
     public void suspend(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
                     description = "Name of the job to suspend"
             ) String name
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
             printf("Suspending job %s...%n", formatJob(job));
@@ -218,12 +219,13 @@ public class JetCommandLine implements Callable<Void> {
             description = "Cancels a running job"
     )
     public void cancel(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
                     description = "Name of the job to terminate"
             ) String name
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobActive(name, job);
             printf("Cancelling job %s...%n", formatJob(job));
@@ -238,6 +240,7 @@ public class JetCommandLine implements Callable<Void> {
             description = "Exports a named snapshot from a job and optionally cancels it"
     )
     public void saveSnapshot(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
                     description = "Name of the job to terminate")
@@ -250,7 +253,7 @@ public class JetCommandLine implements Callable<Void> {
                     description = "Cancel the job after taking the snapshot")
                     boolean isTerminal
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             Job job = getJob(jet, jobName);
             assertJobActive(jobName, job);
             if (isTerminal) {
@@ -263,7 +266,7 @@ public class JetCommandLine implements Callable<Void> {
                 printf("Saving snapshot with name '%s' from job '%s'...%n", snapshotName, formatJob(job));
                 job.exportSnapshot(snapshotName);
             }
-            println("Snapshot was successfully exported.");
+            printf("Snapshot '%s' was successfully exported.%n", snapshotName);
         });
     }
 
@@ -272,18 +275,19 @@ public class JetCommandLine implements Callable<Void> {
             description = "Deletes a named snapshot"
     )
     public void deleteSnapshot(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<snapshot name>",
                     description = "Name of the snapshot")
                     String snapshotName
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             JobStateSnapshot jobStateSnapshot = jet.getJobStateSnapshot(snapshotName);
             if (jobStateSnapshot == null) {
-                throw new JetException(String.format("No snapshot with name %s was found", snapshotName));
+                throw new JetException(String.format("No snapshot with name '%s' was found", snapshotName));
             }
             jobStateSnapshot.destroy();
-            println("Snapshot was successfully deleted.");
+            printf("Snapshot '%s' was successfully deleted.%n", snapshotName);
         });
     }
 
@@ -291,12 +295,13 @@ public class JetCommandLine implements Callable<Void> {
             description = "Restarts a running job"
     )
     public void restart(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
                     description = "Name of the job to restart")
                     String name
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
             println("Restarting job " + formatJob(job) + "...");
@@ -310,12 +315,13 @@ public class JetCommandLine implements Callable<Void> {
             description = "Resumes a suspended job"
     )
     public void resume(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
                     description = "Name of the job to resume")
                     String name
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             Job job = getJob(jet, name);
             if (job.getStatus() != JobStatus.SUSPENDED) {
                 throw new RuntimeException("Job '" + name + "' is not suspended. Current state: " + job.getStatus());
@@ -332,11 +338,12 @@ public class JetCommandLine implements Callable<Void> {
             description = "Lists running jobs on the cluster"
     )
     public void listJobs(
+            @Mixin(name = "verbosity") Verbosity verbosity,
             @Option(names = {"-a", "--all"},
                     description = "Lists all jobs including completed and failed ones")
                     boolean listAll
     ) throws IOException {
-        runWithJet(jet -> {
+        runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
             String format = "%-24s %-19s %-18s %-23s%n";
@@ -357,8 +364,10 @@ public class JetCommandLine implements Callable<Void> {
             name = "list-snapshots",
             description = "Lists exported snapshots on the cluster"
     )
-    public void listSnapshots() throws IOException {
-        runWithJet(jet -> {
+    public void listSnapshots(
+            @Mixin(name = "verbosity") Verbosity verbosity
+    ) throws IOException {
+        runWithJet(verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-24s %-15s %-23s %-24s%n", "NAME", "SIZE (bytes)", "TIME", "JOB NAME");
             snapshots.forEach(ss -> {
@@ -374,8 +383,10 @@ public class JetCommandLine implements Callable<Void> {
     @Command(
             description = "Shows current cluster state and information about members"
     )
-    public void cluster() throws IOException {
-        runWithJet(jet -> {
+    public void cluster(
+            @Mixin(name = "verbosity") Verbosity verbosity
+    ) throws IOException {
+        runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             ClusterMetadata clusterMetadata = ((JetClientInstanceImpl) jet).getClusterMetadata();
             Cluster cluster = client.getCluster();
@@ -392,7 +403,8 @@ public class JetCommandLine implements Callable<Void> {
         });
     }
 
-    private void runWithJet(Consumer<JetInstance> consumer) throws IOException {
+    private void runWithJet(Verbosity verbosity, Consumer<JetInstance> consumer) throws IOException {
+        this.verbosity.merge(verbosity);
         configureLogging();
         JetInstance jet = jetClientFn.apply(getClientConfig());
         try {
@@ -417,7 +429,7 @@ public class JetCommandLine implements Callable<Void> {
 
     private void configureLogging() throws IOException {
         StartServer.configureLogging();
-        LogManager.getLogManager().getLogger("").setLevel(isVerbose ? Level.INFO : Level.WARNING);
+        LogManager.getLogManager().getLogger("").setLevel(verbosity.isVerbose ? Level.INFO : Level.WARNING);
     }
 
     private static Job getJob(JetInstance jet, String nameOrId) {
@@ -484,6 +496,19 @@ public class JetCommandLine implements Callable<Void> {
         }
     }
 
+    public static class Verbosity {
+
+        @Option(names = {"-v", "--verbosity"},
+                description = {"Show logs from Jet client and full stack trace of errors"},
+                order = 1
+        )
+        private boolean isVerbose;
+
+        void merge(Verbosity other) {
+            isVerbose |= other.isVerbose;
+        }
+    }
+
     static class ExceptionHandler<R> extends DefaultExceptionHandler<R> {
         @Override
         public R handleExecutionException(ExecutionException ex, ParseResult parseResult) {
@@ -493,13 +518,12 @@ public class JetCommandLine implements Callable<Void> {
                 cmdLine = cmdLine.getParent();
             }
             JetCommandLine jetCmd = cmdLine.getCommand();
-            if (jetCmd.isVerbose) {
+            if (jetCmd.verbosity.isVerbose) {
                 ex.printStackTrace(err());
             } else {
                 err().println("ERROR: " + ex.getCause().getMessage());
                 err().println();
-                err().println("To see the full stack trace, re-run with the -v/--verbose option");
-
+                err().println("To see the full stack trace, re-run with the -v/--verbosity option");
             }
             if (hasExitCode()) {
                 exit(exitCode());
