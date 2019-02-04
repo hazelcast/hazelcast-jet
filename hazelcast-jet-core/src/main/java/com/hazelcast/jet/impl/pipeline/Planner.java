@@ -58,7 +58,7 @@ public class Planner {
      * necessary, but improves debugging by avoiding too large gaps between WMs
      * and the user can better observe if input to WM coalescing is lagging.
      */
-    private static final int MAXIMUM_WATERMARK_GAP = 1_000;
+    private static final int MAXIMUM_WATERMARK_GAP = 100;
 
     public final DAG dag = new DAG();
     public final Map<Transform, PlannerVertex> xform2vertex = new HashMap<>();
@@ -81,6 +81,10 @@ public class Planner {
                                                  .filter(frameSize -> frameSize > 0)
                                                  .mapToLong(i -> i)
                                                  .toArray());
+        if (frameSizeGcd == 0) {
+            // even if there are no window aggregations, we want the watermarks for latency debugging
+            frameSizeGcd = MAXIMUM_WATERMARK_GAP;
+        }
         if (frameSizeGcd > MAXIMUM_WATERMARK_GAP) {
             frameSizeGcd = Util.gcd(frameSizeGcd, MAXIMUM_WATERMARK_GAP);
         }
