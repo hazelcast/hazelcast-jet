@@ -177,6 +177,7 @@ public class ProcessorsTest {
                         })))
                 .input(asList(1, 2, 1, 2))
                 .disableSnapshots()
+                .disableProgressAssertion()
                 .expectOutput(asList(2, 2));
     }
 
