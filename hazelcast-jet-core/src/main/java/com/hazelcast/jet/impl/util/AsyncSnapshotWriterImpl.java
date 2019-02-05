@@ -49,7 +49,7 @@ import java.util.function.Supplier;
 
 public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
-    private static final int DEFAULT_CHUNK_SIZE = 128 * 1024;
+    public static final int DEFAULT_CHUNK_SIZE = 128 * 1024;
 
     final int usableChunkSize; // this includes the serialization header for byte[], but not the terminator
     final byte[] serializedByteArrayHeader = new byte[3 * Bits.INT_SIZE_IN_BYTES];
