@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.instance.Node;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.operation.PrepareForPassiveClusterOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Packet;
@@ -40,15 +41,15 @@ class NodeExtensionCommon {
     private static final String COPYRIGHT_LINE = "Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.";
 
     private final Node node;
+    private final ILogger logger;
     private volatile JetService jetService;
-    private volatile ILogger logger;
 
     NodeExtensionCommon(Node node) {
         this.node = node;
+        this.logger = node.getLogger(getClass().getName());
     }
 
     void afterStart() {
-        logger = node.getLogger(getClass().getName());
         jetService().getJobCoordinationService().startScanningForJobs();
     }
 
@@ -86,6 +87,9 @@ class NodeExtensionCommon {
         JetService local = jetService;
         if (local == null) {
             local = jetService = node.nodeEngine.getService(JetService.SERVICE_NAME);
+        }
+        if (local == null) {
+            throw new JetException("Node engine doesn't have the JetService");
         }
         return local;
     }
