@@ -133,6 +133,7 @@ public class ProcessorsTest {
                         (int[] context, Integer item) ->
                                 supplyAsync(() -> item % context[0] != 0 ? item : null)))
                 .disableSnapshots()
+                .disableProgressAssertion()
                 .input(asList(1, 2, 3))
                 .expectOutput(asList(1, 3));
     }
