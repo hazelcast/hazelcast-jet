@@ -19,15 +19,16 @@ package com.hazelcast.jet.function;
 import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.joining;
 
 /**
  * Factory methods for several common distributed functions.
  */
 public final class DistributedFunctions {
+
+    /**
+     * The string key returned by {@link #constantKey()}.
+     */
+    public static final String CONSTANT_KEY = "ALL";
 
     private DistributedFunctions() {
     }
@@ -62,21 +63,12 @@ public final class DistributedFunctions {
     }
 
     /**
-     * Returns a function that always evaluates to the same value. This is
-     * useful as a key extractor in group-by operations where classification
-     * into a single group is desired.
-     * <p>
-     * Each invocation of this method will return a new function that will
-     * return a constant, randomly generated key to improve partition balance.
-     * The key has the form {@code "KEY:<3 random characters>"}
+     * Returns a function that always evaluates to the {@link #CONSTANT_KEY}.
+     * This is useful as a key extractor in group-by operations where no
+     * classification by key is desired.
      */
     @Nonnull
     public static <T> DistributedFunction<T, String> constantKey() {
-        // we use a string of 3 random characters from the range '0' .. 'z'
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        String key = "KEY:" + Stream.generate(() -> String.valueOf((char) ('0' + random.nextInt('z' - '0'))))
-                               .limit(3)
-                               .collect(joining());
-        return t -> key;
+        return t -> CONSTANT_KEY;
     }
 }

@@ -16,22 +16,21 @@
 
 package com.hazelcast.jet.function;
 
-import com.google.common.base.Objects;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.function.DistributedFunctions.CONSTANT_KEY;
+import static com.hazelcast.jet.function.DistributedPredicate.alwaysFalse;
+import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
-import static com.hazelcast.jet.function.DistributedPredicate.alwaysFalse;
-import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class DistributedFunctionsTest extends HazelcastTestSupport {
@@ -59,19 +58,7 @@ public class DistributedFunctionsTest extends HazelcastTestSupport {
 
     @Test
     public void when_constantKey() {
-        DistributedFunction<Object, String> f = constantKey();
-        assertEquals(f.apply(1), f.apply(2));
-        assertEquals(f.apply(1), f.apply(3));
-    }
-
-    @Test
-    public void when_constantKeyCalledTwice_then_constantKeyLikelyDifferent() {
-        for (int i = 0; i < 10; i++) {
-            if (!Objects.equal(constantKey().apply(1), constantKey().apply(1))) {
-                return;
-            }
-        }
-        fail("10 calls generated the same key, this is extremely unlikely");
+        assertEquals(CONSTANT_KEY, constantKey().apply(1));
     }
 
     @Test
