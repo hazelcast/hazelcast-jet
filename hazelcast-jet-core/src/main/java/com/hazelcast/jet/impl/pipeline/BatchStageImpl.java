@@ -39,7 +39,6 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -133,7 +132,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     public <R> BatchStage<R> rollingAggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        return groupingKey(constantKey()).rollingAggregate(aggrOp, (k, v) -> v);
+        Integer vertexNameHashCode = name().hashCode();
+        return groupingKey(t -> vertexNameHashCode).rollingAggregate(aggrOp, (k, v) -> v);
     }
 
     @Nonnull @Override

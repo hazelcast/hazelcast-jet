@@ -63,9 +63,12 @@ public final class DistributedFunctions {
     }
 
     /**
-     * Returns a function that always evaluates to the {@link #CONSTANT_KEY}.
-     * This is useful as a key extractor in group-by operations where no
-     * classification by key is desired.
+     * Returns a function that always evaluates to {@value #CONSTANT_KEY}. This
+     * is useful as a key extractor in group-by operations where no
+     * classification by key is desired. Note, however, that all such
+     * aggregations will run on the same member because they are routed using
+     * the same key. To likely avoid that, use different key for each such step
+     * using {@code t -> "foo"}.
      */
     @Nonnull
     public static <T> DistributedFunction<T, String> constantKey() {
