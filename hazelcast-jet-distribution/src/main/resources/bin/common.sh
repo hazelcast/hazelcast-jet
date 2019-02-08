@@ -38,6 +38,14 @@ if [ "x$JAVA_OPTS_DEFAULT" != "x" ]; then
     JAVA_OPTS="${JAVA_OPTS_DEFAULT} ${JAVA_OPTS}"
 fi
 
+if [ "x$JET_LICENSE_KEY" != "x" ]; then
+	JAVA_OPTS="$JAVA_OPTS -Dhazelcast.enterprise.license.key=${JET_LICENSE_KEY}"
+fi
+
+if [ "x$JET_LICENCE_KEY" != "x" ]; then
+	JAVA_OPTS="$JAVA_OPTS -Dhazelcast.enterprise.license.key=${JET_LICENCE_KEY}"
+fi
+
 CLASSPATH="$JET_HOME/lib/${hazelcast.jet.artifact}-${project.version}.jar:$CLASSPATH"
 JAVA_OPTS="$JAVA_OPTS -Dhazelcast.config=$JET_HOME/config/hazelcast.xml \
 -Dhazelcast.client.config=$JET_HOME/config/hazelcast-client.xml \
