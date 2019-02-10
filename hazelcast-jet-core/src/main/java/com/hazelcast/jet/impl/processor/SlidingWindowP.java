@@ -33,6 +33,8 @@ import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.util.collection.Long2ObjectHashMap;
+import com.hazelcast.util.function.LongFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -74,7 +76,7 @@ import static java.util.Objects.requireNonNull;
 public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
 
     // package-visible for testing
-    final Map<Long, Map<K, A>> tsToKeyToAcc = new HashMap<>();
+    final Long2ObjectHashMap<Map<K, A>> tsToKeyToAcc = new Long2ObjectHashMap<>();
     Map<K, A> slidingWindow;
     long nextWinToEmit = Long.MIN_VALUE;
 
@@ -118,7 +120,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     private ProcessingGuarantee processingGuarantee;
 
     // extracted lambdas to reduce GC litter
-    private Function<Long, Map<K, A>> createMapPerTsFunction;
+    private LongFunction<Map<K, A>> createMapPerTsFunction;
     private Function<K, A> createAccFunction;
     private boolean badFrameRestored;
 
