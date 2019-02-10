@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
+import com.hazelcast.jet.impl.util.CopyOnWriteCollection;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
@@ -32,7 +33,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -266,12 +266,14 @@ public class TaskletExecutionService {
         private static final int COOPERATIVE_LOGGING_THRESHOLD = 5;
 
         @Probe(name = "taskletCount")
-        private final List<TaskletTracker> trackers;
+        private final CopyOnWriteCollection<TaskletTracker> trackers;
+        private final CopyOnWriteCollection<TaskletTracker>.RefreshableIterator trackerIterator;
         @Probe
         private final AtomicLong iterationCount = new AtomicLong();
 
         CooperativeWorker() {
-            this.trackers = new CopyOnWriteArrayList<>();
+            this.trackers = new CopyOnWriteCollection<>();
+            this.trackerIterator = trackers.iterator();
         }
 
         @Override
@@ -285,7 +287,9 @@ public class TaskletExecutionService {
                     break;
                 }
                 boolean madeProgress = false;
-                for (TaskletTracker t : trackers) {
+                trackerIterator.refresh();
+                while (trackerIterator.hasNext()) {
+                    TaskletTracker t = trackerIterator.next();
                     long start = 0;
                     if (logger.isFinestEnabled()) {
                         start = System.nanoTime();
