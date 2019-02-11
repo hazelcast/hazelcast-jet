@@ -23,9 +23,8 @@ import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
+import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.BufferObjectDataInput;
-import com.hazelcast.util.concurrent.IdleStrategy;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -43,8 +42,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * Receives from a remote member the data associated with a single edge.
  */
 public class ReceiverTasklet implements Tasklet {
-
-    public static final ILogger LOG = Logger.getLogger(ReceiverTasklet.class);
 
     /**
      * The {@code ackedSeq} atomic array holds, per sending member, the sequence
@@ -77,8 +74,9 @@ public class ReceiverTasklet implements Tasklet {
      */
     private final int rwinMultiplier;
     private final double flowControlPeriodNs;
+    private final ILogger logger;
 
-    private final Queue<BufferObjectDataInput> incoming = new MPSCQueue<>((IdleStrategy) null);
+    private final Queue<BufferObjectDataInput> incoming = new MPSCQueue<>(null);
     private final ProgressTracker tracker = new ProgressTracker();
     private final ArrayDeque<ObjWithPtionIdAndSize> inbox = new ArrayDeque<>();
     private final OutboundCollector collector;
@@ -102,10 +100,12 @@ public class ReceiverTasklet implements Tasklet {
 
     //                 END FLOW-CONTROL STATE
 
-    public ReceiverTasklet(OutboundCollector collector, int rwinMultiplier, int flowControlPeriodMs) {
+    public ReceiverTasklet(OutboundCollector collector, int rwinMultiplier, int flowControlPeriodMs,
+                           LoggingService loggingService) {
         this.collector = collector;
         this.rwinMultiplier = rwinMultiplier;
         this.flowControlPeriodNs = (double) MILLISECONDS.toNanos(flowControlPeriodMs);
+        this.logger = loggingService.getLogger(getClass());
         this.receiveWindowCompressed = INITIAL_RECEIVE_WINDOW_COMPRESSED;
     }
 
@@ -205,7 +205,7 @@ public class ReceiverTasklet implements Tasklet {
                 rwinDiff = 0;
             }
             receiveWindowCompressed += rwinDiff / 2;
-            LoggingUtil.logFinest(LOG, "receiveWindowCompressed=%d", receiveWindowCompressed);
+            LoggingUtil.logFinest(logger, "receiveWindowCompressed=%d", receiveWindowCompressed);
         }
         return ackedSeqCompressed + receiveWindowCompressed;
     }
