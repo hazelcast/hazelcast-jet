@@ -96,11 +96,11 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     private final FlatMapper<Watermark, ?> wmFlatMapper;
 
     @Probe
-    private AtomicLong lateEventsDropped = new AtomicLong();
+    private final AtomicLong lateEventsDropped = new AtomicLong();
     @Probe
-    private AtomicLong totalFrames = new AtomicLong();
+    private final AtomicLong totalFrames = new AtomicLong();
     @Probe
-    private AtomicLong totalKeysInFrames = new AtomicLong();
+    private final AtomicLong totalKeysInFrames = new AtomicLong();
 
     @Nonnull
     private final A emptyAcc;

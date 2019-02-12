@@ -99,11 +99,11 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     private ProcessingGuarantee processingGuarantee;
 
     @Probe
-    private AtomicLong lateEventsDropped = new AtomicLong();
+    private final AtomicLong lateEventsDropped = new AtomicLong();
     @Probe
-    private AtomicLong totalKeys = new AtomicLong();
+    private final AtomicLong totalKeys = new AtomicLong();
     @Probe
-    private AtomicLong totalWindows = new AtomicLong();
+    private final AtomicLong totalWindows = new AtomicLong();
 
     private Traverser snapshotTraverser;
     private long minRestoredCurrentWatermark = Long.MAX_VALUE;
