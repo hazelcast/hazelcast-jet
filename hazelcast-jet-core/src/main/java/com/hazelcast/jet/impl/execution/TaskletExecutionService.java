@@ -19,9 +19,9 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
-import com.hazelcast.jet.impl.util.CopyOnWriteCollection;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
+import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.util.concurrent.BackoffIdleStrategy;
@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -42,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
@@ -266,60 +268,32 @@ public class TaskletExecutionService {
         private static final int COOPERATIVE_LOGGING_THRESHOLD = 5;
 
         @Probe(name = "taskletCount")
-        private final CopyOnWriteCollection<TaskletTracker> trackers;
-        private final CopyOnWriteCollection<TaskletTracker>.RefreshableIterator trackerIterator;
+        private final CopyOnWriteArrayList<TaskletTracker> trackers;
         @Probe
         private final AtomicLong iterationCount = new AtomicLong();
 
+        private final ProgressTracker progressTracker = new ProgressTracker();
+
         CooperativeWorker() {
-            this.trackers = new CopyOnWriteCollection<>();
-            this.trackerIterator = trackers.iterator();
+            this.trackers = new CopyOnWriteArrayList<>();
         }
 
         @Override
         public void run() {
-            final Thread thread = currentThread();
             long idleCount = 0;
+            Consumer<TaskletTracker> runTasklet = t -> runTasklet(Thread.currentThread(), t);
+
             while (true) {
                 Boolean gracefulShutdownLocal = gracefulShutdown.get();
                 // exit condition
                 if (gracefulShutdownLocal != null && (!gracefulShutdownLocal || trackers.isEmpty())) {
                     break;
                 }
-                boolean madeProgress = false;
-                trackerIterator.refresh();
-                while (trackerIterator.hasNext()) {
-                    TaskletTracker t = trackerIterator.next();
-                    long start = 0;
-                    if (logger.isFinestEnabled()) {
-                        start = System.nanoTime();
-                    }
-                    try {
-                        thread.setContextClassLoader(t.jobClassLoader);
-                        final ProgressState result = t.tasklet.call();
-                        if (result.isDone()) {
-                            dismissTasklet(t);
-                        } else {
-                            madeProgress |= result.isMadeProgress();
-                        }
-                    } catch (Throwable e) {
-                        logger.warning("Exception in " + t.tasklet, e);
-                        t.executionTracker.exception(new JetException("Exception in " + t.tasklet + ": " + e, e));
-                    }
-                    if (t.executionTracker.executionCompletedExceptionally()) {
-                        dismissTasklet(t);
-                    }
-
-                    if (logger.isFinestEnabled()) {
-                        long elapsedMs = NANOSECONDS.toMillis((System.nanoTime() - start));
-                        if (elapsedMs > COOPERATIVE_LOGGING_THRESHOLD) {
-                            logger.finest("Cooperative tasklet call of '" + t.tasklet + "' took more than "
-                                    + COOPERATIVE_LOGGING_THRESHOLD + " ms: " + elapsedMs + "ms");
-                        }
-                    }
-                }
+                progressTracker.reset();
+                // garbage-free iterator
+                trackers.forEach(runTasklet);
                 lazyIncrement(iterationCount);
-                if (madeProgress) {
+                if (progressTracker.isMadeProgress()) {
                     idleCount = 0;
                 } else {
                     IDLER_COOPERATIVE.idle(++idleCount);
@@ -329,6 +303,35 @@ public class TaskletExecutionService {
             // to a dead worker through work stealing.
             trackers.forEach(t -> t.executionTracker.taskletDone());
             trackers.clear();
+        }
+
+        private void runTasklet(Thread thread, TaskletTracker t) {
+            long start = 0;
+            if (logger.isFinestEnabled()) {
+                start = System.nanoTime();
+            }
+            try {
+                thread.setContextClassLoader(t.jobClassLoader);
+                final ProgressState result = t.tasklet.call();
+                progressTracker.mergeWith(result);
+                if (result.isDone()) {
+                    dismissTasklet(t);
+                }
+            } catch (Throwable e) {
+                logger.warning("Exception in " + t.tasklet, e);
+                t.executionTracker.exception(new JetException("Exception in " + t.tasklet + ": " + e, e));
+            }
+            if (t.executionTracker.executionCompletedExceptionally()) {
+                dismissTasklet(t);
+            }
+
+            if (logger.isFinestEnabled()) {
+                long elapsedMs = NANOSECONDS.toMillis((System.nanoTime() - start));
+                if (elapsedMs > COOPERATIVE_LOGGING_THRESHOLD) {
+                    logger.finest("Cooperative tasklet call of '" + t.tasklet + "' took more than "
+                            + COOPERATIVE_LOGGING_THRESHOLD + " ms: " + elapsedMs + "ms");
+                }
+            }
         }
 
         private void dismissTasklet(TaskletTracker t) {
