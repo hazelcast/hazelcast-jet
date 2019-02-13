@@ -131,8 +131,6 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     // values used temporarily during snapshot restore
     private long minRestoredNextWinToEmit = Long.MAX_VALUE;
     private long minRestoredFrameTs = Long.MAX_VALUE;
-
-    // extracted lambdas to reduce GC litter
     private boolean badFrameRestored;
 
     @SuppressWarnings("unchecked")
