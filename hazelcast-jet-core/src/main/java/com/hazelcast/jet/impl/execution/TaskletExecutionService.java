@@ -290,7 +290,7 @@ public class TaskletExecutionService {
                     break;
                 }
                 progressTracker.reset();
-                // use garbage-free iterator -- relies on specific implementation on COWArrayList
+                // use garbage-free iterator -- relies on implementation in COWArrayList that doesn't use an Iterator
                 trackers.forEach(runTasklet);
                 lazyIncrement(iterationCount);
                 if (progressTracker.isMadeProgress()) {
