@@ -25,8 +25,8 @@ import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.SessionWindowDef;
-import com.hazelcast.jet.pipeline.SlidingWindowDef;
+import com.hazelcast.jet.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
@@ -38,6 +38,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWind
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
+import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SESSION;
 import static java.util.Collections.nCopies;
@@ -75,9 +76,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     public void addToDag(Planner p) {
         if (wDef.kind() == SESSION) {
             addSessionWindow(p, wDef.downcast());
-        } else if (aggrOp.combineFn() == null) {
-            // We don't use single-stage even when optimizing for memory because the
-            // single-stage setup doesn't save memory with just one global key.
+        } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0 || getOptimization() == MEMORY) {
             addSlidingWindowSingleStage(p, wDef.downcast());
         } else {
             addSlidingWindowTwoStage(p, wDef.downcast());
@@ -96,13 +95,14 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //             ---------------------------
     //            | aggregateToSlidingWindowP | local parallelism = 1
     //             ---------------------------
-    private void addSlidingWindowSingleStage(Planner p, SlidingWindowDef wDef) {
+    private void addSlidingWindowSingleStage(Planner p, SlidingWindowDefinition wDef) {
         PlannerVertex pv = p.addVertex(this, name(), 1,
                 aggregateToSlidingWindowP(
                         nCopies(aggrOp.arity(), constantKey(name().hashCode())),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                         TimestampKind.EVENT,
                         wDef.toSlidingWindowPolicy(),
+                        wDef.earlyResultsPeriod(),
                         aggrOp,
                         mapToOutputFn.toKeyedWindowResultFn()
                 ));
@@ -126,7 +126,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //               -------------------------
     //              | combineToSlidingWindowP | local parallelism = 1
     //               -------------------------
-    private void addSlidingWindowTwoStage(Planner p, SlidingWindowDef wDef) {
+    private void addSlidingWindowTwoStage(Planner p, SlidingWindowDefinition wDef) {
         SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateByFrameP(
                 nCopies(aggrOp.arity(), constantKey(name().hashCode())),
@@ -154,10 +154,11 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //             ---------------------------
     //            | aggregateToSessionWindowP | local parallelism = 1
     //             ---------------------------
-    private void addSessionWindow(Planner p, SessionWindowDef wDef) {
+    private void addSessionWindow(Planner p, SessionWindowDefinition wDef) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 aggregateToSessionWindowP(
                         wDef.sessionTimeout(),
+                        wDef.earlyResultsPeriod(),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                         nCopies(aggrOp.arity(), constantKey(name().hashCode())),
                         aggrOp,
