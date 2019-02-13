@@ -288,9 +288,9 @@ public class Edge implements IdentifiedDataSerializable {
 
     /**
      * Activates a special-cased {@link RoutingPolicy#PARTITIONED PARTITIONED}
-     * routing policy where all items will be assigned the same, randomly
-     * chosen partition ID. Therefore all items will be directed to the same
-     * processor.
+     * routing policy where all items will be routed to the same partition ID,
+     * determined from the given {@code key}. It means that all items will be
+     * directed to the same processor and other processors will be idle.
      */
     @Nonnull
     public Edge allToOne(Object key) {
