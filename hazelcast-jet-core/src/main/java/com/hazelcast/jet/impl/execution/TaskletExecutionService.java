@@ -271,7 +271,6 @@ public class TaskletExecutionService {
         private final CopyOnWriteArrayList<TaskletTracker> trackers;
         @Probe
         private final AtomicLong iterationCount = new AtomicLong();
-
         private final ProgressTracker progressTracker = new ProgressTracker();
 
         CooperativeWorker() {
@@ -281,6 +280,7 @@ public class TaskletExecutionService {
         @Override
         public void run() {
             long idleCount = 0;
+            // capture thread once and prevent lambda allocation on each iteration
             Consumer<TaskletTracker> runTasklet = t -> runTasklet(Thread.currentThread(), t);
 
             while (true) {
@@ -290,7 +290,7 @@ public class TaskletExecutionService {
                     break;
                 }
                 progressTracker.reset();
-                // garbage-free iterator
+                // use garbage-free iterator -- relies on specific implementation on COWArrayList
                 trackers.forEach(runTasklet);
                 lazyIncrement(iterationCount);
                 if (progressTracker.isMadeProgress()) {
@@ -313,10 +313,10 @@ public class TaskletExecutionService {
             try {
                 thread.setContextClassLoader(t.jobClassLoader);
                 final ProgressState result = t.tasklet.call();
-                progressTracker.mergeWith(result);
                 if (result.isDone()) {
                     dismissTasklet(t);
                 }
+                progressTracker.mergeWith(result);
             } catch (Throwable e) {
                 logger.warning("Exception in " + t.tasklet, e);
                 t.executionTracker.exception(new JetException("Exception in " + t.tasklet + ": " + e, e));
