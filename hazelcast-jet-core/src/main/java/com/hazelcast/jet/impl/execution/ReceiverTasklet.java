@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.util.concurrent.MPSCQueue;
 import com.hazelcast.jet.config.InstanceConfig;
-import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -34,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static java.lang.Math.ceil;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -100,12 +100,14 @@ public class ReceiverTasklet implements Tasklet {
 
     //                 END FLOW-CONTROL STATE
 
-    public ReceiverTasklet(OutboundCollector collector, int rwinMultiplier, int flowControlPeriodMs,
-                           LoggingService loggingService) {
+    public ReceiverTasklet(
+            OutboundCollector collector, int rwinMultiplier, int flowControlPeriodMs,
+            LoggingService loggingService, String debugName
+    ) {
         this.collector = collector;
         this.rwinMultiplier = rwinMultiplier;
         this.flowControlPeriodNs = (double) MILLISECONDS.toNanos(flowControlPeriodMs);
-        this.logger = loggingService.getLogger(getClass());
+        this.logger = loggingService.getLogger(getClass().getName() + '.' + debugName);
         this.receiveWindowCompressed = INITIAL_RECEIVE_WINDOW_COMPRESSED;
     }
 
@@ -204,8 +206,11 @@ public class ReceiverTasklet implements Tasklet {
             if (numWaitingInInbox == 0 && rwinDiff < 0) {
                 rwinDiff = 0;
             }
-            receiveWindowCompressed += rwinDiff / 2;
-            LoggingUtil.logFinest(logger, "receiveWindowCompressed=%d", receiveWindowCompressed);
+            rwinDiff /= 2;
+            receiveWindowCompressed += rwinDiff;
+            if (rwinDiff != 0) {
+                logFinest(logger, "receiveWindowCompressed changed by %d to %d", rwinDiff, receiveWindowCompressed);
+            }
         }
         return ackedSeqCompressed + receiveWindowCompressed;
     }

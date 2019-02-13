@@ -552,7 +552,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            ReceiverTasklet receiverTasklet = new ReceiverTasklet(
                                    collector, edge.getConfig().getReceiveWindowMultiplier(),
                                    getConfig().getInstanceConfig().getFlowControlPeriodMs(),
-                                   nodeEngine.getLoggingService());
+                                   nodeEngine.getLoggingService(),
+                                   "receiverFor:" + edge.destVertex().name() + "#" + edge.destOrdinal());
                            addrToTasklet.put(addr, receiverTasklet);
                            if (firstTasklet == null) {
                                firstTasklet = receiverTasklet;

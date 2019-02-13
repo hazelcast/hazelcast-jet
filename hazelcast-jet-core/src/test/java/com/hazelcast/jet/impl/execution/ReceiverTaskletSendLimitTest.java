@@ -46,7 +46,7 @@ public class ReceiverTaskletSendLimitTest {
     @Before
     public void before() {
         tasklet = new ReceiverTasklet(null, RWIN_MULTIPLIER, FLOW_CONTROL_PERIOD_MS,
-                new LoggingServiceImpl(null, null, BuildInfoProvider.getBuildInfo()));
+                new LoggingServiceImpl(null, null, BuildInfoProvider.getBuildInfo()), "");
     }
 
     @Test

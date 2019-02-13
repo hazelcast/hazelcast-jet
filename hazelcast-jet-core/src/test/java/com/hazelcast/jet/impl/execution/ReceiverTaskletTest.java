@@ -41,7 +41,7 @@ public class ReceiverTaskletTest {
     @Before
     public void before() {
         collector = new MockOutboundCollector(2);
-        t = new ReceiverTasklet(collector, 3, 100, mock(LoggingService.class));
+        t = new ReceiverTasklet(collector, 3, 100, mock(LoggingService.class), "");
         serService = new DefaultSerializationServiceBuilder().build();
     }
 
