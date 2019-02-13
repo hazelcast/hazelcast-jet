@@ -23,11 +23,11 @@ import com.hazelcast.jet.function.DistributedFunction;
 import com.hazelcast.jet.impl.MasterContext;
 import com.hazelcast.jet.impl.SerializationConstants;
 import com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject;
+import com.hazelcast.jet.impl.util.ConstantFunction;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.util.UuidUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -262,6 +262,10 @@ public class Edge implements IdentifiedDataSerializable {
      */
     @Nonnull
     public <T> Edge partitioned(@Nonnull DistributedFunction<T, ?> extractKeyFn) {
+        // optimization for DistributedFunctions#constantKey()
+        if (extractKeyFn instanceof ConstantFunction) {
+            return allToOne(extractKeyFn.apply(null));
+        }
         return partitioned(extractKeyFn, defaultPartitioner());
     }
 
@@ -289,8 +293,8 @@ public class Edge implements IdentifiedDataSerializable {
      * processor.
      */
     @Nonnull
-    public Edge allToOne() {
-        return partitioned(wholeItem(), new Single());
+    public Edge allToOne(Object key) {
+        return partitioned(wholeItem(), new Single(key));
     }
 
     /**
@@ -534,20 +538,20 @@ public class Edge implements IdentifiedDataSerializable {
 
         private static final long serialVersionUID = 1L;
 
-        private final String key;
+        private final Object key;
         private int partition;
 
-        Single() {
-            key = UuidUtil.newUnsecureUuidString();
+        Single(Object key) {
+            this.key = key;
         }
 
         @Override
-        public void init(DefaultPartitionStrategy strategy) {
+        public void init(@Nonnull DefaultPartitionStrategy strategy) {
             partition = strategy.getPartition(key);
         }
 
         @Override
-        public int getPartition(Object item, int partitionCount) {
+        public int getPartition(@Nonnull Object item, int partitionCount) {
             return partition;
         }
     }

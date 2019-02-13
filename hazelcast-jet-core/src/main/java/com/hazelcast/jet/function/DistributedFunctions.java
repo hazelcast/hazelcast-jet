@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.jet.impl.util.ConstantFunction;
+
 import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,11 +26,6 @@ import java.util.Map.Entry;
  * Factory methods for several common distributed functions.
  */
 public final class DistributedFunctions {
-
-    /**
-     * The string key returned by {@link #constantKey()}.
-     */
-    public static final String CONSTANT_KEY = "ALL";
 
     private DistributedFunctions() {
     }
@@ -63,15 +60,14 @@ public final class DistributedFunctions {
     }
 
     /**
-     * Returns a function that always evaluates to {@value #CONSTANT_KEY}. This
+     * Returns a function that always evaluates to the given {@code key}. This
      * is useful as a key extractor in group-by operations where no
-     * classification by key is desired. Note, however, that all such
-     * aggregations will run on the same member because they are routed using
-     * the same key. To likely avoid that, use different key for each such step
-     * using {@code t -> "foo"}.
+     * classification by key is desired; in other words, a global group is
+     * used. Choose a random {@code key} so that each global group is handled
+     * by a random member.
      */
     @Nonnull
-    public static <T> DistributedFunction<T, String> constantKey() {
-        return t -> CONSTANT_KEY;
+    public static <T, K> DistributedFunction<T, K> constantKey(K key) {
+        return new ConstantFunction<>(key);
     }
 }

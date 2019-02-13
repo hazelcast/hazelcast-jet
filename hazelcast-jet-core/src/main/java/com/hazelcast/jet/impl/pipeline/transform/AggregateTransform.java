@@ -74,7 +74,7 @@ public class AggregateTransform<A, R> extends AbstractTransform {
     //                   ----------------
     private void addToDagSingleStage(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), 1, aggregateP(aggrOp));
-        p.addEdges(this, pv.v, edge -> edge.distributed().allToOne());
+        p.addEdges(this, pv.v, edge -> edge.distributed().allToOne(name().hashCode()));
     }
 
     //               ---------       ---------
@@ -100,6 +100,6 @@ public class AggregateTransform<A, R> extends AbstractTransform {
                          .localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, vertexName, 1, combineP(aggrOp));
         p.addEdges(this, v1);
-        p.dag.edge(between(v1, pv2.v).distributed().allToOne());
+        p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()));
     }
 }

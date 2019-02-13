@@ -231,7 +231,9 @@ public final class Processors {
     public static <A, R> DistributedSupplier<Processor> aggregateP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new GroupP<>(nCopies(aggrOp.arity(), constantKey()), aggrOp, (k, r) -> r);
+        // We should use the same constant key as the input edges do, but since
+        // the processor doesn't save the state, there's no need to.
+        return () -> new GroupP<>(nCopies(aggrOp.arity(), constantKey("ALL")), aggrOp, (k, r) -> r);
     }
 
     /**
@@ -254,7 +256,9 @@ public final class Processors {
     @Nonnull
     public static <A, R> DistributedSupplier<Processor> accumulateP(@Nonnull AggregateOperation<A, R> aggrOp) {
         return () -> new GroupP<>(
-                nCopies(aggrOp.arity(), constantKey()),
+                // We should use the same constant key as the input edges do, but since
+                // the processor doesn't save the state, there's no need to.
+                nCopies(aggrOp.arity(), constantKey("ALL")),
                 aggrOp.withIdentityFinish(),
                 (k, r) -> r);
     }
@@ -281,7 +285,9 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
         return () -> new GroupP<>(
-                constantKey(),
+                // We should use the same constant key as the input edges do, but since
+                // the processor doesn't save the state, there's no need to.
+                constantKey("ALL"),
                 aggrOp.withCombiningAccumulateFn(identity()),
                 (k, r) -> r);
     }

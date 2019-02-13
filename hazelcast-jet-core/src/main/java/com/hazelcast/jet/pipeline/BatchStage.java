@@ -22,6 +22,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
@@ -122,7 +123,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull String mapName,
             @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMapAsync(mapName, mapFn);
+        return (BatchStage<R>) GeneralStage.super.mapUsingIMapAsync(mapName, mapFn);
     }
 
     @Override @Nonnull
@@ -130,7 +131,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
             @Nonnull IMap<K, V> iMap,
             @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMapAsync(iMap, mapFn);
+        return (BatchStage<R>) GeneralStage.super.mapUsingIMapAsync(iMap, mapFn);
     }
 
     @Nonnull @Override
@@ -184,7 +185,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * Attaches a stage that performs the given aggregate operation over all
      * the items it receives. The aggregating stage emits a single item.
      *
-     * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @see AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
      * @param <R> the type of the result
      */
@@ -209,7 +210,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * <p>
      * The returned stage emits a single item.
      *
-     * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @see AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
      * @param <T1> type of items in {@code stage1}
      * @param <R> type of the result
@@ -286,7 +287,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * <p>
      * The aggregating stage emits a single item.
      *
-     * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @see AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}

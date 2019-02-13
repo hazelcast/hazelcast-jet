@@ -39,6 +39,7 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements StreamStage<T> {
@@ -131,8 +132,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <R> StreamStage<R> rollingAggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        Integer vertexNameHashCode = name().hashCode();
-        return groupingKey(t -> vertexNameHashCode).rollingAggregate(aggrOp, (k, v) -> v);
+        return groupingKey(constantKey(name().hashCode())).rollingAggregate(aggrOp, (k, v) -> v);
     }
 
     @Nonnull @Override
