@@ -299,8 +299,6 @@ public class TaskletExecutionService {
                     IDLER_COOPERATIVE.idle(++idleCount);
                 }
             }
-            // Best-effort attempt to release all tasklets. A tasklet can still be added
-            // to a dead worker through work stealing.
             trackers.forEach(t -> t.executionTracker.taskletDone());
             trackers.clear();
         }
