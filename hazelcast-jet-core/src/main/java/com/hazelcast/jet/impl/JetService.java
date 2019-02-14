@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.ClientEngineImpl;
-import com.hazelcast.config.ServiceConfig;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.Node;
@@ -49,9 +48,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.JetGroupProperty.JET_SHUTDOWNHOOK_ENABLED;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
-import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
+import static java.lang.Boolean.parseBoolean;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class JetService
@@ -94,11 +94,8 @@ public class JetService
     @Override
     public void init(NodeEngine engine, Properties properties) {
         this.nodeEngine = (NodeEngineImpl) engine;
+        this.config = (JetConfig) engine.getConfig().getServicesConfig().getServiceConfig(SERVICE_NAME).getConfigObject();
         this.sharedMigrationWatcher = new MigrationWatcher(engine.getHazelcastInstance());
-        ServiceConfig jetServiceConfig = engine.getConfig().getServicesConfig().getServiceConfig(SERVICE_NAME);
-        config = (JetConfig) jetServiceConfig.getConfigObject();
-        Properties jetServiceProperties = jetServiceConfig.getProperties();
-
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
         taskletExecutionService = new TaskletExecutionService(nodeEngine,
                 config.getInstanceConfig().getCooperativeThreadCount());
@@ -110,7 +107,7 @@ public class JetService
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);
         ExceptionUtil.registerJetExceptions(clientEngine.getClientExceptions());
 
-        if (Boolean.parseBoolean(jetServiceProperties.getProperty(SHUTDOWNHOOK_ENABLED.getName()))) {
+        if (parseBoolean(config.getHazelcastConfig().getProperties().getProperty(JET_SHUTDOWNHOOK_ENABLED.getName()))) {
             logger.finest("Adding Jet shutdown hook");
             Runtime.getRuntime().addShutdownHook(shutdownHookThread);
         }

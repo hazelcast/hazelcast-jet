@@ -242,7 +242,7 @@ public class JetConfig {
      * Sets the metrics collection config.
      */
     @Nonnull
-    public JetConfig setMetricsConfig(MetricsConfig metricsConfig) {
+    public JetConfig setMetricsConfig(@Nonnull MetricsConfig metricsConfig) {
         this.metricsConfig = metricsConfig;
         return this;
     }
@@ -250,6 +250,7 @@ public class JetConfig {
     /**
      * Returns the Jet-specific configuration properties.
      */
+    @Nonnull
     public Properties getProperties() {
         return properties;
     }
@@ -257,14 +258,25 @@ public class JetConfig {
     /**
      * Sets the Jet-specific configuration properties.
      */
-    public JetConfig setProperties(Properties properties) {
+    @Nonnull
+    public JetConfig setProperties(@Nonnull Properties properties) {
         this.properties = properties;
+        return this;
+    }
+
+    /**
+     * Sets the value of the specified property.
+     */
+    @Nonnull
+    public JetConfig setProperty(@Nonnull String name, @Nonnull String value) {
+        properties.put(name, value);
         return this;
     }
 
     /**
      * Returns the default DAG edge configuration.
      */
+    @Nonnull
     public EdgeConfig getDefaultEdgeConfig() {
         return defaultEdgeConfig;
     }
@@ -273,7 +285,8 @@ public class JetConfig {
      * Sets the configuration object that specifies the defaults to use
      * for a DAG edge configuration.
      */
-    public JetConfig setDefaultEdgeConfig(EdgeConfig defaultEdgeConfig) {
+    @Nonnull
+    public JetConfig setDefaultEdgeConfig(@Nonnull EdgeConfig defaultEdgeConfig) {
         this.defaultEdgeConfig = defaultEdgeConfig;
         return this;
     }
