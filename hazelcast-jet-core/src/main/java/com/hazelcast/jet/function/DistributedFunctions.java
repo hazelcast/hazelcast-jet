@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.function;
 
-import com.hazelcast.jet.impl.util.ConstantFunction;
-
 import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -57,17 +55,5 @@ public final class DistributedFunctions {
     @Nonnull
     public static <K, V> DistributedFunction<Entry<K, V>, V> entryValue() {
         return Map.Entry::getValue;
-    }
-
-    /**
-     * Returns a function that always evaluates to the given {@code key}. This
-     * is useful as a key extractor in group-by operations where no
-     * classification by key is desired; in other words, a global group is
-     * used. Choose a random {@code key} so that each global group is handled
-     * by a random member.
-     */
-    @Nonnull
-    public static <T, K> DistributedFunction<T, K> constantKey(K key) {
-        return new ConstantFunction<>(key);
     }
 }

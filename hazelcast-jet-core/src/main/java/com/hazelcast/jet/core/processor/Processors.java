@@ -58,7 +58,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.DistributedFunction.identity;
-import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -233,7 +232,7 @@ public final class Processors {
     ) {
         // We should use the same constant key as the input edges do, but since
         // the processor doesn't save the state, there's no need to.
-        return () -> new GroupP<>(nCopies(aggrOp.arity(), constantKey("ALL")), aggrOp, (k, r) -> r);
+        return () -> new GroupP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
     }
 
     /**
@@ -258,7 +257,7 @@ public final class Processors {
         return () -> new GroupP<>(
                 // We should use the same constant key as the input edges do, but since
                 // the processor doesn't save the state, there's no need to.
-                nCopies(aggrOp.arity(), constantKey("ALL")),
+                nCopies(aggrOp.arity(), t -> "ALL"),
                 aggrOp.withIdentityFinish(),
                 (k, r) -> r);
     }
@@ -287,7 +286,7 @@ public final class Processors {
         return () -> new GroupP<>(
                 // We should use the same constant key as the input edges do, but since
                 // the processor doesn't save the state, there's no need to.
-                constantKey("ALL"),
+                t -> "ALL",
                 aggrOp.withCombiningAccumulateFn(identity()),
                 (k, r) -> r);
     }

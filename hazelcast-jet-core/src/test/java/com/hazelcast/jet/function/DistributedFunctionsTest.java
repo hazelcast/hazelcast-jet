@@ -22,7 +22,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.DistributedFunctions.constantKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.function.DistributedFunctions.entryValue;
 import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
@@ -53,12 +52,6 @@ public class DistributedFunctionsTest extends HazelcastTestSupport {
     @Test
     public void when_entryValue() {
         assertEquals(2, entryValue().apply(entry(1, 2)));
-    }
-
-    @Test
-    public void when_constantKey() {
-        String key = "ALL";
-        assertEquals(key, constantKey(key).apply(1));
     }
 
     @Test
