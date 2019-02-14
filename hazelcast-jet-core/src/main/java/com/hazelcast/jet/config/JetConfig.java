@@ -20,6 +20,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.io.InputStream;
@@ -209,6 +210,7 @@ public class JetConfig {
      */
     @Nonnull
     public JetConfig setHazelcastConfig(@Nonnull Config config) {
+        Preconditions.checkNotNull(config, "config");
         hazelcastConfig = config;
         return this;
     }
@@ -226,6 +228,7 @@ public class JetConfig {
      */
     @Nonnull
     public JetConfig setInstanceConfig(@Nonnull InstanceConfig instanceConfig) {
+        Preconditions.checkNotNull(instanceConfig, "instanceConfig");
         this.instanceConfig = instanceConfig;
         return this;
     }
@@ -243,6 +246,7 @@ public class JetConfig {
      */
     @Nonnull
     public JetConfig setMetricsConfig(@Nonnull MetricsConfig metricsConfig) {
+        Preconditions.checkNotNull(metricsConfig, "metricsConfig");
         this.metricsConfig = metricsConfig;
         return this;
     }
@@ -260,6 +264,7 @@ public class JetConfig {
      */
     @Nonnull
     public JetConfig setProperties(@Nonnull Properties properties) {
+        Preconditions.checkNotNull(properties, "properties");
         this.properties = properties;
         return this;
     }
@@ -269,6 +274,8 @@ public class JetConfig {
      */
     @Nonnull
     public JetConfig setProperty(@Nonnull String name, @Nonnull String value) {
+        Preconditions.checkNotNull(name, "name");
+        Preconditions.checkNotNull(value, "value");
         properties.put(name, value);
         return this;
     }
@@ -287,6 +294,7 @@ public class JetConfig {
      */
     @Nonnull
     public JetConfig setDefaultEdgeConfig(@Nonnull EdgeConfig defaultEdgeConfig) {
+        Preconditions.checkNotNull(defaultEdgeConfig, "defaultEdgeConfig");
         this.defaultEdgeConfig = defaultEdgeConfig;
         return this;
     }

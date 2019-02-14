@@ -37,6 +37,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 import com.hazelcast.spi.properties.HazelcastProperties;
+import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.util.Properties;
@@ -63,6 +64,7 @@ public final class Jet {
      */
     @Nonnull
     public static JetInstance newJetInstance(@Nonnull JetConfig config) {
+        Preconditions.checkNotNull(config, "config");
         return newJetInstanceImpl(config, cfg ->
                 HazelcastInstanceFactory.newHazelcastInstance(cfg, cfg.getInstanceName(), new JetNodeContext()));
     }
@@ -93,6 +95,7 @@ public final class Jet {
      */
     @Nonnull
     public static JetInstance newJetClient(@Nonnull ClientConfig config) {
+        Preconditions.checkNotNull(config, "config");
         return getJetClientInstance(HazelcastClient.newHazelcastClient(config));
     }
 
@@ -126,7 +129,9 @@ public final class Jet {
         Properties hzProperties = hzConfig.getProperties();
 
         // Disable HZ shutdown hook, as we will use the Jet-specific property instead
-        String hzHookEnabled = hzProperties.getProperty(SHUTDOWNHOOK_ENABLED.getName());
+        String hzHookEnabled = hzProperties.getProperty(
+                SHUTDOWNHOOK_ENABLED.getName(), SHUTDOWNHOOK_ENABLED.getDefaultValue()
+        );
         if (!jetProps.containsKey(JET_SHUTDOWNHOOK_ENABLED)) {
             jetProps.setProperty(JET_SHUTDOWNHOOK_ENABLED.getName(), hzHookEnabled);
         }
