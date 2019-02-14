@@ -128,7 +128,7 @@ public final class Jet {
 
         hzConfig.getServicesConfig()
                 .addServiceConfig(new ServiceConfig()
-                        .setEnabled(true)
+                        .setEnabled(false)
                         .setName(JetService.SERVICE_NAME)
                         .setClassName(JetService.class.getName())
                         .setProperties(jetServiceProperties(properties))
