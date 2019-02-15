@@ -52,6 +52,9 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.copyMapUsingJob;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+/**
+ * Part of {@link MasterContext} that deals with snapshot creation.
+ */
 class MasterSnapshotContext {
 
     /**

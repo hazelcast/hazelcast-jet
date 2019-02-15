@@ -47,7 +47,10 @@ import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 
 /**
  * Data pertaining to single job on master member. There's one instance per job,
- * shared between multiple executions.
+ * shared between multiple executions. It's has 2 subcomponents:<ul>
+ *      <li>{@link MasterJobContext}
+ *      <li>{@link MasterSnapshotContext}
+ * </ul>
  */
 public class MasterContext {
 
