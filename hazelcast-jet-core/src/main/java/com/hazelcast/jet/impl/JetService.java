@@ -101,7 +101,7 @@ public class JetService
                 config.getInstanceConfig().getCooperativeThreadCount());
         jobRepository = new JobRepository(jetInstance);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
-        jobCoordinationService = new JobCoordinationService(nodeEngine, this, config, jobRepository);
+        jobCoordinationService = createJobCoordinationService();
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
 
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);
@@ -177,6 +177,15 @@ public class JetService
         jobCoordinationService.reset();
     }
 
+    JobCoordinationService createJobCoordinationService() {
+        return new JobCoordinationService(nodeEngine, this, config, jobRepository);
+    }
+
+    public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
+        throw new UnsupportedOperationException("You need Hazelcast Jet Enterprise with Rolling Job Upgrades " +
+                "enabled to use this feature");
+    }
+
     public JetInstance getJetInstance() {
         return jetInstance;
     }
@@ -187,6 +196,14 @@ public class JetService
 
     public JobRepository getJobRepository() {
         return jobRepository;
+    }
+
+    public NodeEngineImpl getNodeEngine() {
+        return nodeEngine;
+    }
+
+    public JetConfig getConfig() {
+        return config;
     }
 
     public JobCoordinationService getJobCoordinationService() {

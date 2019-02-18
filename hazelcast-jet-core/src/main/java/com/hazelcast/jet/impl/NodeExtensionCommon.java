@@ -100,7 +100,7 @@ class NodeExtensionCommon {
         return "Configured Hazelcast Serialization version: " + node.getBuildInfo().getSerializationVersion();
     }
 
-    public Map<String, Object> createExtensionServices() {
+    Map<String, Object> createExtensionServices() {
         Map<String, Object> extensionServices = new HashMap<>();
         extensionServices.put(JetService.SERVICE_NAME, jetService);
         return extensionServices;
