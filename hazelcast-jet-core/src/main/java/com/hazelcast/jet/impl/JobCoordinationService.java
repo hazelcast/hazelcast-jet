@@ -473,7 +473,7 @@ public class JobCoordinationService {
                 || clusterState == PASSIVE || clusterState == IN_TRANSITION) {
             return false;
         }
-        if (!checkAllMembersHaveTheSameState(clusterState)) {
+        if (!allMembersHaveSameState(clusterState)) {
             LoggingUtil.logFine(logger, "Not starting jobs because not all members have the same state: %s",
                     clusterState);
             return false;
@@ -490,20 +490,17 @@ public class JobCoordinationService {
                 && !partitionService.hasOnGoingMigrationLocal();
     }
 
-    private boolean checkAllMembersHaveTheSameState(ClusterState clusterState) {
+    private boolean allMembersHaveSameState(ClusterState clusterState) {
+        // TODO remove once the issue is fixed on the imdg side
         Set<Member> members = nodeEngine.getClusterService().getMembers();
         List<Future<ClusterMetadata>> futures =
                 members.stream()
                        .filter(member -> !member.localMember())
                        .map(this::clusterMetadataAsync)
                        .collect(toList());
-        try {
-            return futures.stream().map(future -> uncheckCall(future::get))
-                          .allMatch(metaData -> metaData.getState() == clusterState);
-        } catch (Exception e) {
-            logger.warning("Exception while checking if all members have same cluster state", e);
-            return false;
-        }
+        return futures.stream()
+                      .map(future -> uncheckCall(future::get))
+                      .allMatch(metaData -> metaData.getState() == clusterState);
     }
 
     private Future<ClusterMetadata> clusterMetadataAsync(Member member) {
@@ -775,10 +772,10 @@ public class JobCoordinationService {
 
     // runs periodically to restart jobs on coordinator failure and perform GC
     private void scanJobs() {
-        if (!shouldStartJobs()) {
-            return;
-        }
         try {
+            if (!shouldStartJobs()) {
+                return;
+            }
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
             for (JobRecord jobRecord : jobs) {
                 JobExecutionRecord jobExecutionRecord = ensureExecutionRecord(jobRecord.getJobId(),
