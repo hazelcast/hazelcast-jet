@@ -48,6 +48,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
  */
 class MasterSnapshotContext {
 
+    @SuppressWarnings("WeakerAccess") // accessed from subclass in jet-enterprise
     final MasterContext mc;
     private final ILogger logger;
 
