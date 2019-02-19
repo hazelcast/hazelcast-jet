@@ -40,7 +40,6 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
-import com.hazelcast.spi.impl.operationservice.InternalOperationService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
 
@@ -493,17 +492,23 @@ public class JobCoordinationService {
 
     private boolean checkAllMembersHaveTheSameState(ClusterState clusterState) {
         Set<Member> members = nodeEngine.getClusterService().getMembers();
-        InternalOperationService operationService = nodeEngine.getOperationService();
         List<Future<ClusterMetadata>> futures =
                 members.stream()
-                       .filter(m -> !m.localMember())
-                       .map(m -> {
-                           Future<ClusterMetadata> future = operationService.invokeOnTarget(JetService.SERVICE_NAME,
-                                   new GetClusterMetadataOperation(), m.getAddress());
-                           return future;
-                       })
+                       .filter(member -> !member.localMember())
+                       .map(this::clusterMetadataAsync)
                        .collect(toList());
-        return futures.stream().map(f -> uncheckCall(f::get)).allMatch(metaData -> metaData.getState() == clusterState);
+        try {
+            return futures.stream().map(future -> uncheckCall(future::get))
+                          .allMatch(metaData -> metaData.getState() == clusterState);
+        } catch (Exception e) {
+            logger.warning("Exception while checking if all members have same cluster state", e);
+            return false;
+        }
+    }
+
+    private Future<ClusterMetadata> clusterMetadataAsync(Member member) {
+        return nodeEngine.getOperationService().invokeOnTarget(JetService.SERVICE_NAME,
+                new GetClusterMetadataOperation(), member.getAddress());
     }
 
     void onMemberAdded(MemberImpl addedMember) {
