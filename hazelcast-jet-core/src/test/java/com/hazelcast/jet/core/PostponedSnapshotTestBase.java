@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 
 public class PostponedSnapshotTestBase extends JetTestSupport {
 
+    @SuppressWarnings("WeakerAccess") // used by subclass in jet-enterprise
     protected static volatile AtomicIntegerArray latches;
 
     protected JetInstance instance;
@@ -45,6 +46,7 @@ public class PostponedSnapshotTestBase extends JetTestSupport {
         latches = new AtomicIntegerArray(2);
     }
 
+    @SuppressWarnings("WeakerAccess") // used by subclass in jet-enterprise
     protected Job startJob(long snapshotInterval) {
         DAG dag = new DAG();
         Vertex highPrioritySource = dag.newVertex("highPrioritySource", () -> new SourceP(0)).localParallelism(1);
