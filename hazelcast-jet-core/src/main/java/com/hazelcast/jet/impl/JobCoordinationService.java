@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.core.Member;
 import com.hazelcast.instance.MemberImpl;
 import com.hazelcast.instance.Node;
 import com.hazelcast.internal.cluster.ClusterService;
@@ -32,12 +33,14 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
+import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
+import com.hazelcast.spi.impl.operationservice.InternalOperationService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
 
@@ -54,8 +57,11 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
+import static com.hazelcast.cluster.ClusterState.PASSIVE;
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.COMPLETING;
@@ -69,6 +75,7 @@ import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -464,7 +471,12 @@ public class JobCoordinationService {
     boolean shouldStartJobs() {
         ClusterState clusterState = nodeEngine.getClusterService().getClusterState();
         if (!isMaster() || !nodeEngine.isRunning() || isClusterEnteringPassiveState
-                || clusterState != ClusterState.ACTIVE && clusterState != ClusterState.NO_MIGRATION) {
+                || clusterState == PASSIVE || clusterState == IN_TRANSITION) {
+            return false;
+        }
+        if (!checkAllMembersHaveTheSameState(clusterState)) {
+            LoggingUtil.logFine(logger, "Not starting jobs because not all members have the same state: %s",
+                    clusterState);
             return false;
         }
         // if there are any members in a shutdown process, don't start jobs
@@ -477,6 +489,21 @@ public class JobCoordinationService {
         return partitionService.getPartitionStateManager().isInitialized()
                 && partitionService.areMigrationTasksAllowed()
                 && !partitionService.hasOnGoingMigrationLocal();
+    }
+
+    private boolean checkAllMembersHaveTheSameState(ClusterState clusterState) {
+        Set<Member> members = nodeEngine.getClusterService().getMembers();
+        InternalOperationService operationService = nodeEngine.getOperationService();
+        List<Future<ClusterMetadata>> futures =
+                members.stream()
+                       .filter(m -> !m.localMember())
+                       .map(m -> {
+                           Future<ClusterMetadata> future = operationService.invokeOnTarget(JetService.SERVICE_NAME,
+                                   new GetClusterMetadataOperation(), m.getAddress());
+                           return future;
+                       })
+                       .collect(toList());
+        return futures.stream().map(f -> uncheckCall(f::get)).allMatch(metaData -> metaData.getState() == clusterState);
     }
 
     void onMemberAdded(MemberImpl addedMember) {
