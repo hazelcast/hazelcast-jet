@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.config;
 
-import com.hazelcast.internal.serialization.impl.SerializationUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.nio.ObjectDataInput;
