@@ -435,7 +435,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeLong(snapshotIntervalMillis);
         out.writeBoolean(autoScaling);
         out.writeBoolean(splitBrainProtectionEnabled);
-        SerializationUtil.writeNullableList(resourceConfigs, out);
+        out.writeObject(resourceConfigs);
         out.writeObject(classLoaderFactory);
         out.writeUTF(initialSnapshotName);
     }
@@ -447,7 +447,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         snapshotIntervalMillis = in.readLong();
         autoScaling = in.readBoolean();
         splitBrainProtectionEnabled = in.readBoolean();
-        resourceConfigs = SerializationUtil.readNullableList(in);
+        resourceConfigs = in.readObject();
         classLoaderFactory = in.readObject();
         initialSnapshotName = in.readUTF();
     }
