@@ -53,6 +53,7 @@ public class JetConfigTest_loadFromClassPath {
         properties.setProperty("flow.control.period", "456");
         properties.setProperty("backup.count", "6");
         properties.setProperty("scale.up.delay.millis", "1234");
+        properties.setProperty("lossless.recovery.enabled", "true");
 
         properties.setProperty("metrics.enabled", "false");
         properties.setProperty("metrics.jmxEnabled", "false");
