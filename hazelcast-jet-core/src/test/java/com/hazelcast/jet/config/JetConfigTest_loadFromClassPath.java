@@ -65,6 +65,7 @@ public class JetConfigTest_loadFromClassPath {
         assertEquals(456, config.getInstanceConfig().getFlowControlPeriodMs());
         assertEquals(6, config.getInstanceConfig().getBackupCount());
         assertEquals(1234, config.getInstanceConfig().getScaleUpDelayMillis());
+        assertTrue(config.getInstanceConfig().isLosslessRecoveryEnabled());
 
         MetricsConfig metricsConfig = config.getMetricsConfig();
         assertFalse(metricsConfig.isEnabled());

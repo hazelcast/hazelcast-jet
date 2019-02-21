@@ -140,7 +140,8 @@ public class InstanceConfig {
     }
 
     /**
-     * Returns if lossless recovery is enabled.
+     * Returns if lossless recovery is enabled, see {@link
+     * #setLosslessRecoveryEnabled(boolean)}.
      */
     public boolean isLosslessRecoveryEnabled() {
         return losslessRecoveryEnabled;
@@ -162,14 +163,12 @@ public class InstanceConfig {
      *        .steParallelism(2);
      * }</pre>
      * <p>
-     * Note: the {@linkplain Job#exportSnapshot exported snapshots} will also
-     * covered.
+     * Note: the snapshots exported using {@link Job#exportSnapshot}
+     * will also have Hot Restart storage enabled.
      * <p>
      * Feature is disabled by default. If you enable this option in open-source
      * Hazelcast Jet, the member will fail to start, you need Jet Enterprise to
      * run it and obtain a license from Hazelcast.
-     *
-     * TODO [viliam] do the XML and spring parts
      */
     public InstanceConfig setLosslessRecoveryEnabled(boolean enabled) {
         this.losslessRecoveryEnabled = enabled;
