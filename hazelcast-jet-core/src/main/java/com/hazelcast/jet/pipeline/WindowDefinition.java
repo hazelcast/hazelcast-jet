@@ -85,17 +85,6 @@ public interface WindowDefinition {
     WindowDefinition setEarlyResultsPeriod(long earlyResultPeriod);
 
     /**
-     * Returns this window definition downcast to the type determined through
-     * type inference at the call site. It will be an unchecked downcast and
-     * may fail at runtime with a {@code ClassCastException}.
-     *
-     * @param <W> The target type of the downcast
-     * @return this object, downcast into the inferred type
-     */
-    @Nonnull
-    <W extends WindowDefinition> W downcast();
-
-    /**
      * Returns the optimal watermark stride for this window definition.
      * Watermarks that are more spaced out are better for performance, but they
      * hurt the responsiveness of a windowed pipeline stage. The Planner will

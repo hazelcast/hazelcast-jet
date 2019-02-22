@@ -47,12 +47,6 @@ public class SessionWindowDefinition<T> extends WindowDefinitionBase {
         return SESSION;
     }
 
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    public SessionWindowDefinition<T> downcast() {
-        return this;
-    }
-
     @Override
     public long preferredWatermarkStride() {
         return Math.min(MAX_WATERMARK_STRIDE, Math.max(1, sessionTimeout / MIN_WMS_PER_SESSION));

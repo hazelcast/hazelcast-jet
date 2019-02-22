@@ -53,12 +53,6 @@ public class SlidingWindowDefinition extends WindowDefinitionBase {
         return SLIDING;
     }
 
-    @Nonnull @Override
-    @SuppressWarnings("unchecked")
-    public SlidingWindowDefinition downcast() {
-        return this;
-    }
-
     @Override
     public long preferredWatermarkStride() {
         return slideBy;

@@ -75,11 +75,11 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     @Override
     public void addToDag(Planner p) {
         if (wDef.kind() == SESSION) {
-            addSessionWindow(p, wDef.downcast());
+            addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0 || getOptimization() == MEMORY) {
-            addSlidingWindowSingleStage(p, wDef.downcast());
+            addSlidingWindowSingleStage(p, (SlidingWindowDefinition) wDef);
         } else {
-            addSlidingWindowTwoStage(p, wDef.downcast());
+            addSlidingWindowTwoStage(p, (SlidingWindowDefinition) wDef);
         }
     }
 
