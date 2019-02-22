@@ -487,9 +487,14 @@ public interface GeneralStage<T> extends Stage {
     StreamStage<T> addTimestamps(@Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLag);
 
     /**
-     * Attaches a sink stage, one that accepts data but doesn't
-     * emit any. The supplied argument specifies what to do with the received
-     * data (typically push it to some outside resource).
+     * Attaches a sink stage, one that accepts data but doesn't emit any. The
+     * supplied argument specifies what to do with the received data (typically
+     * push it to some outside resource).
+     * <p>
+     * The supplied sink cannot be used to drain another stages in this
+     * pipeline, you have to provide a new {@link Sink} each time, which is
+     * inefficient. If you want to drain multiple stages to the same sink, use
+     * {@link Pipeline#drainTo}.
      *
      * @return the newly attached sink stage
      */

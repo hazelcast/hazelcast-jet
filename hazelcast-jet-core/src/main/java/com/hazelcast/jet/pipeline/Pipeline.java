@@ -43,6 +43,14 @@ import javax.annotation.Nonnull;
 public interface Pipeline {
 
     /**
+     * Creates a new, empty pipeline.
+     */
+    @Nonnull
+    static Pipeline create() {
+        return new PipelineImpl();
+    }
+
+    /**
      * Returns a pipeline stage that represents a bounded (batch) data source. It
      * has no upstream stages and emits the data (typically coming from an outside
      * source) to its downstream stages.
@@ -100,14 +108,6 @@ public interface Pipeline {
      */
     @Nonnull
     DAG toDag();
-
-    /**
-     * Creates a new, empty pipeline.
-     */
-    @Nonnull
-    static Pipeline create() {
-        return new PipelineImpl();
-    }
 
     /**
      * Returns a DOT format (graphviz) representation of the Pipeline.
