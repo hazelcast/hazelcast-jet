@@ -73,20 +73,6 @@ public interface Pipeline {
     <T> StreamSourceStage<T> drawFrom(@Nonnull StreamSource<? extends T> source);
 
     /**
-     * Attaches the supplied sink to two pipeline stages. Returns the
-     * {@code SinkStage} representing the sink. You need this method when you
-     * want to drain more than one stage to the same sink. In the typical case
-     * you'll use {@link GeneralStage#drainTo(Sink)} instead.
-     *
-     * @param <T> the type of data being drained to the sink
-     */
-    <T> SinkStage drainTo(
-            @Nonnull Sink<? super T> sink,
-            @Nonnull GeneralStage<? extends T> stage0,
-            @Nonnull GeneralStage<? extends T> stage1
-    );
-
-    /**
      * Attaches the supplied sink to two or more pipeline stages. Returns the
      * {@code SinkStage} representing the sink. You need this method when you
      * want to drain more than one stage to the same sink. In the typical case
@@ -99,7 +85,7 @@ public interface Pipeline {
             @Nonnull Sink<? super T> sink,
             @Nonnull GeneralStage<? extends T> stage0,
             @Nonnull GeneralStage<? extends T> stage1,
-            @Nonnull GeneralStage<? extends T>... moreStages
+            @Nonnull GeneralStage<? extends T> ... moreStages
     );
 
     /**
