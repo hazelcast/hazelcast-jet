@@ -753,7 +753,7 @@ public final class Processors {
      * <p>
      * Unlike {@link #rollingAggregateP} (with the "{@code Keyed}" part),
      * this method creates one context object per processor (or per member, if
-     * {@linkplain ContextFactory#shareLocally() shared}).
+     * {@linkplain ContextFactory#withLocalSharing() shared}).
      * <p>
      * While it's allowed to store some local state in the context object, it
      * won't be saved to the snapshot and will misbehave in a fault-tolerant

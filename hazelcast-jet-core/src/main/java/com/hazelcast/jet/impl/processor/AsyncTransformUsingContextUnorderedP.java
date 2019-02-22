@@ -108,7 +108,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull Function<? super T, ? extends K> extractKeyFn
     ) {
-        assert contextObject == null ^ contextFactory.isSharedLocally()
+        assert contextObject == null ^ contextFactory.hasLocalSharing()
                 : "if contextObject is shared, it must be non-null, or vice versa";
 
         this.contextFactory = contextFactory;
@@ -119,12 +119,12 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public boolean isCooperative() {
-        return contextFactory.isCooperative();
+        return contextFactory.isCooperativeProcessor();
     }
 
     @Override
     protected void init(@Nonnull Context context) {
-        if (!contextFactory.isSharedLocally()) {
+        if (!contextFactory.hasLocalSharing()) {
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
@@ -260,7 +260,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     public void close() {
         // close() might be called even if init() was not called.
         // Only destroy the context if is not shared (i.e. it is our own).
-        if (contextObject != null && !contextFactory.isSharedLocally()) {
+        if (contextObject != null && !contextFactory.hasLocalSharing()) {
             contextFactory.destroyFn().accept(contextObject);
         }
         contextObject = null;
