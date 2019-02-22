@@ -35,8 +35,7 @@ public class JetNodeExtension extends DefaultNodeExtension implements JetPacketC
 
     @Override
     public void beforeStart() {
-        JetConfig config = (JetConfig) node.getConfig().getServicesConfig().getServiceConfig(JetService.SERVICE_NAME)
-                                           .getConfigObject();
+        JetConfig config = JetService.findJetServiceConfig(node.getConfig());
         if (config.getInstanceConfig().isLosslessRecoveryEnabled()) {
             throw new UnsupportedOperationException("Lossless Recovery is not available in the open-source version of " +
                     "Hazelcast Jet");
