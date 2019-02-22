@@ -44,7 +44,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         implements StageWithKeyAndWindow<T, K> {
 
     @Nonnull
-    private final WindowDefinition wDef;
+    private final WindowDefinitionBase wDef;
 
     StageWithKeyAndWindowImpl(
             @Nonnull StreamStageImpl<T> computeStage,
@@ -52,7 +52,7 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull WindowDefinition wDef
     ) {
         super(computeStage, keyFn);
-        this.wDef = wDef;
+        this.wDef = (WindowDefinitionBase) wDef;
     }
 
     @Nonnull @Override

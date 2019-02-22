@@ -26,9 +26,9 @@ import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.SessionWindowDefinition;
-import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
-import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
+import com.hazelcast.jet.impl.pipeline.WindowDefinitionBase;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -42,12 +42,11 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.function.DistributedFunctions.entryKey;
 import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
-import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SESSION;
 import static java.util.Collections.nCopies;
 
 public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
     @Nonnull
-    private final WindowDefinition wDef;
+    private final WindowDefinitionBase wDef;
     @Nonnull
     private final List<DistributedFunction<?, ? extends K>> keyFns;
     @Nonnull
@@ -57,7 +56,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
 
     public WindowGroupTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull WindowDefinition wDef,
+            @Nonnull WindowDefinitionBase wDef,
             @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
             @Nonnull AggregateOperation<?, ? extends R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
@@ -69,8 +68,8 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
         this.mapToOutputFn = mapToOutputFn;
     }
 
-    private static String createName(WindowDefinition wDef) {
-        return wDef.kind().name().toLowerCase() + "-window";
+    private static String createName(WindowDefinitionBase wDef) {
+        return wDef.name() + "-window";
     }
 
     @Override
@@ -80,7 +79,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        if (wDef.kind() == SESSION) {
+        if (wDef instanceof SessionWindowDefinition) {
             addSessionWindow(p, (SessionWindowDefinition) wDef);
         } else if (aggrOp.combineFn() == null || wDef.earlyResultsPeriod() > 0 || getOptimization() == MEMORY) {
             addSlidingWindowSingleStage(p, (SlidingWindowDefinition) wDef);

@@ -24,6 +24,8 @@ import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.DistributedBiFunction;
+import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
 import org.junit.Test;
 
 import java.util.List;
@@ -165,7 +167,8 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         StreamStage<Integer> stage = sourceStageFromList(input, earlyResultsPeriod);
 
         // When
-        SlidingWindowDefinition wDef = sliding(winSize, slideBy).setEarlyResultsPeriod(earlyResultsPeriod);
+        SlidingWindowDefinition wDef =
+                (SlidingWindowDefinition) sliding(winSize, slideBy).setEarlyResultsPeriod(earlyResultsPeriod);
         StreamStage<TimestampedItem<Long>> aggregated = stage.window(wDef)
                                                              .aggregate(summingLong(i -> i));
 

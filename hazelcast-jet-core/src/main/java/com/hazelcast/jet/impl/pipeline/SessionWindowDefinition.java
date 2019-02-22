@@ -14,19 +14,10 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.impl.pipeline;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SESSION;
-
-/**
- * Represents the definition of a {@link
- * com.hazelcast.jet.pipeline.WindowDefinition.WindowKind#SESSION
- * session} window.
- *
- * @param <T> type of the stream item
- */
 public class SessionWindowDefinition<T> extends WindowDefinitionBase {
     private static final int MAX_WATERMARK_STRIDE = 100;
     private static final int MIN_WMS_PER_SESSION = 100;
@@ -43,8 +34,8 @@ public class SessionWindowDefinition<T> extends WindowDefinitionBase {
     }
 
     @Nonnull @Override
-    public WindowKind kind() {
-        return SESSION;
+    public String name() {
+        return "session";
     }
 
     @Override

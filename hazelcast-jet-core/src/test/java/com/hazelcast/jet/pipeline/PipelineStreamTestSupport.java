@@ -19,6 +19,8 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.TimestampedItem;
+import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

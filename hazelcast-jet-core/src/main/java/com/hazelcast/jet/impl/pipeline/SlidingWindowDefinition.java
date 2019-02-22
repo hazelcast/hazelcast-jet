@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
-import static com.hazelcast.jet.pipeline.WindowDefinition.WindowKind.SLIDING;
 import static com.hazelcast.util.Preconditions.checkPositive;
 import static com.hazelcast.util.Preconditions.checkTrue;
 
-/**
- * Represents the definition of a {@link WindowKind#SLIDING sliding
- * window}.
- */
 public class SlidingWindowDefinition extends WindowDefinitionBase {
     private final long windowSize;
     private final long slideBy;
@@ -49,8 +44,8 @@ public class SlidingWindowDefinition extends WindowDefinitionBase {
     }
 
     @Nonnull @Override
-    public WindowKind kind() {
-        return SLIDING;
+    public String name() {
+        return "sliding";
     }
 
     @Override

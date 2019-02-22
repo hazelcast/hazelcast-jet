@@ -41,11 +41,11 @@ import static java.util.Collections.singletonList;
 public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     private final StreamStageImpl<T> streamStage;
-    private final WindowDefinition wDef;
+    private final WindowDefinitionBase wDef;
 
     StageWithWindowImpl(@Nonnull StreamStageImpl<T> streamStage, @Nonnull WindowDefinition wDef) {
         this.streamStage = streamStage;
-        this.wDef = wDef;
+        this.wDef = (WindowDefinitionBase) wDef;
     }
 
     @Nonnull @Override

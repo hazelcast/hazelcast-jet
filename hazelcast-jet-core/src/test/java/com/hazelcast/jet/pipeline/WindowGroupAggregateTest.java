@@ -25,6 +25,8 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
 import org.junit.Test;
 
 import java.util.List;
@@ -232,7 +234,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         WindowTestFixture fx = new WindowTestFixture(earlyResultsPeriod != 0);
 
         // When
-        SlidingWindowDefinition wDef = sliding(winSize, slideBy).setEarlyResultsPeriod(earlyResultsPeriod);
+        SlidingWindowDefinition wDef =
+                (SlidingWindowDefinition) sliding(winSize, slideBy).setEarlyResultsPeriod(earlyResultsPeriod);
         StageWithKeyAndWindow<Entry<String, Integer>, String> windowed = fx.newSourceStage().window(wDef);
 
         // Then

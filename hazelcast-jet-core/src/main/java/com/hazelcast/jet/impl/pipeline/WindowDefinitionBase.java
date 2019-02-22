@@ -14,12 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.impl.pipeline;
 
-abstract class WindowDefinitionBase implements WindowDefinition {
+import com.hazelcast.jet.pipeline.WindowDefinition;
+
+public abstract class WindowDefinitionBase implements WindowDefinition {
     private long earlyResultPeriod;
 
-    @Override
+    /**
+     * Returns the optimal watermark stride for this window definition.
+     * Watermarks that are more spaced out are better for performance, but they
+     * hurt the responsiveness of a windowed pipeline stage. The Planner will
+     * determine the actual stride, which may be an integer fraction of the
+     * value returned here.
+     */
+    public abstract long preferredWatermarkStride();
+
     public long earlyResultsPeriod() {
         return earlyResultPeriod;
     }
@@ -29,4 +39,6 @@ abstract class WindowDefinitionBase implements WindowDefinition {
         this.earlyResultPeriod = earlyResultPeriod;
         return this;
     }
+
+    public abstract String name();
 }
