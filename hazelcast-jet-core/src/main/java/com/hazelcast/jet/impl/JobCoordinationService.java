@@ -486,15 +486,20 @@ public class JobCoordinationService {
 
     private boolean allMembersHaveSameState(ClusterState clusterState) {
         // TODO remove once the issue is fixed on the imdg side
-        Set<Member> members = nodeEngine.getClusterService().getMembers();
-        List<Future<ClusterMetadata>> futures =
-                members.stream()
-                       .filter(member -> !member.localMember())
-                       .map(this::clusterMetadataAsync)
-                       .collect(toList());
-        return futures.stream()
-                      .map(future -> uncheckCall(future::get))
-                      .allMatch(metaData -> metaData.getState() == clusterState);
+        try {
+            Set<Member> members = nodeEngine.getClusterService().getMembers();
+            List<Future<ClusterMetadata>> futures =
+                    members.stream()
+                           .filter(member -> !member.localMember())
+                           .map(this::clusterMetadataAsync)
+                           .collect(toList());
+            return futures.stream()
+                          .map(future -> uncheckCall(future::get))
+                          .allMatch(metaData -> metaData.getState() == clusterState);
+        } catch (Exception e) {
+            logger.warning("Exception during member state check", e);
+            return false;
+        }
     }
 
     private Future<ClusterMetadata> clusterMetadataAsync(Member member) {
