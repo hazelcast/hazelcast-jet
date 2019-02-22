@@ -160,7 +160,7 @@ public class InstanceConfig {
      *    jetConfig.getHazelcastConfig().getHotRestartPersistenceConfig()
      *        .setEnabled(true)
      *        .setBaseDir(new File("/mnt/hot-restart"))
-     *        .steParallelism(2);
+     *        .setParallelism(2);
      * }</pre>
      * <p>
      * Note: the snapshots exported using {@link Job#exportSnapshot}
