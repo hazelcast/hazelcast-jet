@@ -36,7 +36,6 @@ import org.junit.Test;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -58,7 +57,6 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
 public class StreamStageTest extends PipelineStreamTestSupport {
@@ -103,11 +101,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().map(mapFn), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().map(mapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
     @Test
@@ -122,11 +119,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         filtered.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().filter(filterFn), formatFn);
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkStreamOfInt(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().filter(filterFn), formatFn),
+                streamToString(sinkStreamOfInt(), formatFn));
     }
 
     @Test
@@ -142,11 +138,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         flatMapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().flatMap(flatMapFn), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().flatMap(flatMapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
     @Test
@@ -163,12 +158,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-
-        String expectedString = streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
     @Test
@@ -185,11 +178,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
     @Test
@@ -205,14 +197,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-
-        String expectedString = streamToString(
-                input.stream().filter(i -> i % 2 == acceptedRemainder),
-                formatFn);
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkStreamOfInt(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().filter(i -> i % 2 == acceptedRemainder), formatFn),
+                streamToString(sinkStreamOfInt(), formatFn));
     }
 
     @Test
@@ -231,13 +219,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(
-                input.stream().filter(r -> r % 2 == acceptedRemainder),
-                formatFn);
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkStreamOfInt(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().filter(r -> r % 2 == acceptedRemainder), formatFn),
+                streamToString(sinkStreamOfInt(), formatFn));
     }
 
     @Test
@@ -256,11 +241,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         flatMapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().flatMap(flatMapFn), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().flatMap(flatMapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
     @Test
@@ -280,11 +264,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         flatMapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().flatMap(flatMapFn), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().flatMap(flatMapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
     @Test
@@ -304,17 +287,15 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(
-                input.stream().map(i -> String.format("(%04d, %s%04d)", i, valuePrefix, i)),
-                identity());
+        jet().newJob(p).join();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
-        assertTrueEventually(
-                () -> assertEquals(expectedString,
-                        streamToString(
-                                this.<Integer, String>sinkStreamOfEntry(),
-                                e -> String.format("(%04d, %s)", e.getKey(), e.getValue()))),
-                ASSERT_TIMEOUT_SECONDS);
+        assertEquals(
+                streamToString(
+                        input.stream().map(i -> String.format("(%04d, %s%04d)", i, valuePrefix, i)),
+                        identity()),
+                streamToString(
+                        this.<Integer, String>sinkStreamOfEntry(),
+                        e -> String.format("(%04d, %s)", e.getKey(), e.getValue())));
     }
 
     @Test
@@ -335,17 +316,15 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(
-                input.stream().map(i -> String.format("(%04d, %s%04d)", i, valuePrefix, i)),
-                identity());
+        jet().newJob(p).join();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
-        assertTrueEventually(
-                () -> assertEquals(expectedString,
-                        streamToString(
-                                this.<Integer, String>sinkStreamOfEntry(),
-                                e -> String.format("(%04d, %s)", e.getKey(), e.getValue()))),
-                ASSERT_TIMEOUT_SECONDS);
+        assertEquals(
+                streamToString(
+                        input.stream().map(i -> String.format("(%04d, %s%04d)", i, valuePrefix, i)),
+                        identity()),
+                streamToString(
+                        this.<Integer, String>sinkStreamOfEntry(),
+                        e -> String.format("(%04d, %s)", e.getKey(), e.getValue())));
     }
 
     @Test
@@ -366,17 +345,15 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(
-                input.stream().map(i -> String.format("(%04d, %s%04d)", i, valuePrefix, i)),
-                identity());
+        jet().newJob(p).join();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
-        assertTrueEventually(
-                () -> assertEquals(expectedString,
-                        streamToString(
-                                this.<Integer, String>sinkStreamOfEntry(),
-                                e -> String.format("(%04d, %s)", e.getKey(), e.getValue()))),
-                ASSERT_TIMEOUT_SECONDS);
+        assertEquals(
+                streamToString(
+                        input.stream().map(i -> String.format("(%04d, %s%04d)", i, valuePrefix, i)),
+                        identity()),
+                streamToString(
+                        this.<Integer, String>sinkStreamOfEntry(),
+                        e -> String.format("(%04d, %s)", e.getKey(), e.getValue())));
     }
 
     @Test
@@ -390,12 +367,11 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         rolled.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
         Function<Object, String> formatFn = i -> String.format("%04d", (Long) i);
-        String expectedString = streamToString(LongStream.rangeClosed(1, itemCount).boxed(), formatFn);
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        assertEquals(
+                streamToString(LongStream.rangeClosed(1, itemCount).boxed(), formatFn),
+                streamToString(sinkList.stream(), formatFn));
     }
 
     @Test
@@ -410,15 +386,13 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
         Function<Entry<Integer, Long>, String> formatFn = e -> String.format("(%d, %04d)", e.getKey(), e.getValue());
-        String expectedString = streamToString(
-                IntStream.range(2, itemCount + 2).mapToObj(i -> entry(i % 2, (long) i / 2)),
-                formatFn
-        );
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkStreamOfEntry(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        assertEquals(
+                streamToString(
+                        IntStream.range(2, itemCount + 2).mapToObj(i -> entry(i % 2, (long) i / 2)),
+                        formatFn),
+                streamToString(sinkStreamOfEntry(), formatFn));
     }
 
     @Test
@@ -435,15 +409,13 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(
-                IntStream.range(2, itemCount + 2).mapToObj(i -> entry(i % 2, (long) i / 2)),
-                e -> formatFn.apply(e.getKey(), e.getValue())
-        );
-        assertTrueEventually(() -> assertEquals(
-                expectedString,
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(
+                        IntStream.range(2, itemCount + 2).mapToObj(i -> entry(i % 2, (long) i / 2)),
+                        e -> formatFn.apply(e.getKey(), e.getValue())),
                 streamToString(sinkList.stream().map(String.class::cast), identity())
-        ), ASSERT_TIMEOUT_SECONDS);
+        );
     }
 
     @Test
@@ -458,8 +430,8 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p);
-        assertTrueFiveSeconds(() -> assertEquals(0, sinkList.size()));
+        jet().newJob(p).join();
+        assertEquals(0, sinkList.size());
     }
 
     @Test
@@ -478,16 +450,15 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         rolling.window(tumbling(1))
                .aggregate(identity)
                .drainTo(sink);
-        jet().newJob(p);
-        String expectedString = LongStream.range(0, itemCount)
-                                          .mapToObj(i -> String.format("(%04d %04d)", i + 1, i))
-                                          .collect(joining("\n"));
-        assertTrueEventually(() -> assertEquals(
-                expectedString,
+        jet().newJob(p).join();
+        assertEquals(
+                LongStream.range(0, itemCount)
+                          .mapToObj(i -> String.format("(%04d %04d)", i + 1, i))
+                          .collect(joining("\n")),
                 streamToString(
                         this.<Long>sinkStreamOfTsItem(),
                         tsItem -> String.format("(%04d %04d)", tsItem.timestamp(), tsItem.item()))
-        ), ASSERT_TIMEOUT_SECONDS);
+        );
     }
 
     @Test
@@ -503,11 +474,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         merged.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().flatMap(i -> Stream.of(i, i)), formatFn);
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkStreamOfInt(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().flatMap(i -> Stream.of(i, i)), formatFn),
+                streamToString(sinkStreamOfInt(), formatFn));
     }
 
     @Test
@@ -530,18 +500,17 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         hashJoined.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
         BiFunction<Integer, String, String> formatFn = (i, value) -> String.format("(%04d, %s)", i, value);
-        String expectedString = streamToString(
-                input.stream().map(i -> formatFn.apply(i, ENRICHING_FORMAT_FN.apply(prefixA, i))),
-                identity());
         // sinkList: tuple2(0, "A-0000"), tuple2(1, "A-0001"), ...
-        assertTrueEventually(() -> assertEquals(
-                expectedString,
+        assertEquals(
+                streamToString(
+                        input.stream().map(i -> formatFn.apply(i, ENRICHING_FORMAT_FN.apply(prefixA, i))),
+                        identity()),
                 streamToString(
                         sinkList.stream().map(t2 -> (Tuple2<Integer, String>) t2),
                         t2 -> formatFn.apply(t2.f0(), t2.f1()))
-        ), ASSERT_TIMEOUT_SECONDS);
+        );
     }
 
     @Test
@@ -567,22 +536,20 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         hashJoined.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
 
         TriFunction<Integer, String, String, String> formatFn =
                 (i, valueA, valueB) -> String.format("(%04d, %s, %s)", i, valueA, valueB);
-        String expectedString = streamToString(
-                input.stream().map(i -> formatFn.apply(i,
-                        ENRICHING_FORMAT_FN.apply(prefixA, i),
-                        ENRICHING_FORMAT_FN.apply(prefixB, i)
-                )),
-                identity());
         // sinkList: tuple3(0, "A-0000", "B-0000"), tuple3(1, "A-0001", "B-0001"), ...
-        assertTrueEventually(() -> assertEquals(
-                expectedString,
+        assertEquals(
+                streamToString(
+                        input.stream().map(i -> formatFn.apply(i,
+                                ENRICHING_FORMAT_FN.apply(prefixA, i),
+                                ENRICHING_FORMAT_FN.apply(prefixB, i))),
+                        identity()),
                 streamToString(sinkList.stream().map(t3 -> (Tuple3<Integer, String, String>) t3),
                         t3 -> formatFn.apply(t3.f0(), t3.f1(), t3.f2()))
-        ), ASSERT_TIMEOUT_SECONDS);
+        );
     }
 
     @Test
@@ -607,22 +574,20 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         joined.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
 
         TriFunction<Integer, String, String, String> formatFn =
                 (i, valueA, valueB) -> String.format("(%04d, %s, %s)", i, valueA, valueB);
-        String expectedString = streamToString(
-                input.stream().map(i -> formatFn.apply(i,
-                        ENRICHING_FORMAT_FN.apply(prefixA, i),
-                        ENRICHING_FORMAT_FN.apply(prefixB, i)
-                )),
-                identity());
         // sinkList: tuple2(0, ibt(tagA: "A-0000", tagB: "B-0000")), tuple2(1, ibt(tagA: "A-0001", tagB: "B-0001"))
-        assertTrueEventually(() -> assertEquals(
-                expectedString,
+        assertEquals(
+                streamToString(
+                        input.stream().map(i -> formatFn.apply(i,
+                                ENRICHING_FORMAT_FN.apply(prefixA, i),
+                                ENRICHING_FORMAT_FN.apply(prefixB, i))),
+                        identity()),
                 streamToString(sinkList.stream().map(t2 -> (Tuple2<Integer, ItemsByTag>) t2),
                         t2 -> formatFn.apply(t2.f0(), t2.f1().get(tagA), t2.f1().get(tagB)))
-        ), ASSERT_TIMEOUT_SECONDS);
+        );
     }
 
     private BatchStage<Entry<Integer, String>> enrichingStage(List<Integer> input, String prefix) {
@@ -649,11 +614,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         custom.drainTo(sink);
-        jet().newJob(p);
-        String expectedString = streamToString(input.stream().map(mapFn), identity());
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkList.stream(), Object::toString)),
-                ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().map(mapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
     }
 
 
@@ -675,14 +639,11 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         custom.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
 
         // Each processor emitted distinct keys it observed. If groupingKey isn't
         // correctly partitioning, multiple processors will observe the same keys.
-        assertTrueEventually(() -> assertEquals(
-                "0\n1",
-                streamToString(sinkList.stream().map(Object::toString), identity())
-        ), ASSERT_TIMEOUT_SECONDS);
+        assertEquals("0\n1", streamToString(sinkList.stream().map(Object::toString), identity()));
     }
 
     @Test
@@ -695,12 +656,11 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         peeked.drainTo(sink);
-        jet().newJob(p);
+        jet().newJob(p).join();
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
-        String expectedString = streamToString(input.stream(), formatFn);
-        assertTrueEventually(
-                () -> assertEquals(expectedString, streamToString(sinkStreamOfInt(), formatFn)),
-                ASSERT_TIMEOUT_SECONDS);
+        assertEquals(
+                streamToString(input.stream(), formatFn),
+                streamToString(sinkStreamOfInt(), formatFn));
     }
 
     @Test
@@ -708,6 +668,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // Given
         List<Integer> input = sequence(itemCount);
         DistributedPredicate<Integer> filterFn = i -> i % 2 == 1;
+        Function<Integer, String> formatFn = i -> String.format("%04d", i);
 
         // When
         sourceStageFromList(input)
@@ -716,9 +677,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
          .drainTo(sink);
 
         // Then
-        jet().newJob(p);
-
-        Map<Integer, Integer> expected = toBag(input.stream().filter(filterFn).collect(toList()));
-        assertTrueEventually(() -> assertEquals(expected, sinkToBag()), ASSERT_TIMEOUT_SECONDS);
+        jet().newJob(p).join();
+        assertEquals(
+                streamToString(input.stream().filter(filterFn), formatFn),
+                streamToString(sinkStreamOfInt(), formatFn));
     }
 }
