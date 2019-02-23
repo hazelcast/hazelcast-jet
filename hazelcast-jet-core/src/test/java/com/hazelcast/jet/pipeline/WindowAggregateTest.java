@@ -64,7 +64,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         SlidingWindowDefinition tumbling = tumbling(2);
 
         // When
-        StageWithWindow<Integer> stage = sourceStageFromList(emptyList()).window(tumbling);
+        StageWithWindow<Integer> stage = streamStageFromList(emptyList()).window(tumbling);
 
         // Then
         assertEquals(tumbling, stage.windowDefinition());
@@ -79,7 +79,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                                             .flatMap(i -> IntStream.of(i, i))
                                             .boxed()
                                             .collect(toList());
-        StageWithWindow<Integer> windowed = sourceStageFromList(timestamps)
+        StageWithWindow<Integer> windowed = streamStageFromList(timestamps)
                 .window(tumbling(winSize));
 
         // When
@@ -107,7 +107,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                 (timestamp, item) -> String.format("(%04d, %04d)", timestamp, item);
 
         List<Integer> input = sequence(itemCount);
-        StreamStage<Integer> stage = sourceStageFromList(input);
+        StreamStage<Integer> stage = streamStageFromList(input);
 
         // When
         SlidingWindowDefinition wDef = tumbling(winSize);
@@ -134,7 +134,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                 (timestamp, item) -> String.format("(%04d, %04d)", timestamp, item);
 
         List<Integer> input = sequence(itemCount);
-        StreamStage<Integer> stage = sourceStageFromList(input, EARLY_RESULTS_PERIOD);
+        StreamStage<Integer> stage = streamStageFromList(input, EARLY_RESULTS_PERIOD);
 
         // When
         SlidingWindowDefinition wDef = tumbling(winSize).setEarlyResultsPeriod(EARLY_RESULTS_PERIOD);
@@ -165,7 +165,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         BiFunction<Long, Long, String> formatFn =
                 (timestamp, item) -> String.format("(%04d, %04d)", timestamp, item);
         // If emitting early results, keep the watermark behind all input
-        StreamStage<Integer> stage = sourceStageFromList(input);
+        StreamStage<Integer> stage = streamStageFromList(input);
 
         // When
         SlidingWindowDefinition wDef = sliding(winSize, slideBy);
@@ -193,7 +193,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         BiFunction<Long, Long, String> formatFn =
                 (timestamp, item) -> String.format("(%04d, %04d)", timestamp, item);
         // If emitting early results, keep the watermark behind all input
-        StreamStage<Integer> stage = sourceStageFromList(input, EARLY_RESULTS_PERIOD);
+        StreamStage<Integer> stage = streamStageFromList(input, EARLY_RESULTS_PERIOD);
 
         // When
         SlidingWindowDefinition wDef = sliding(winSize, slideBy).setEarlyResultsPeriod(EARLY_RESULTS_PERIOD);
@@ -228,7 +228,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // When
         SessionWindowDefinition wDef = session(sessionTimeout);
-        StageWithWindow<Integer> windowed = sourceStageFromList(input).window(wDef);
+        StageWithWindow<Integer> windowed = streamStageFromList(input).window(wDef);
 
         // Then
         windowed.aggregate(summingLong(i -> i),
@@ -257,7 +257,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                                                  .collect(toList());
         BiFunction<Long, Long, String> formatFn = (timestamp, sum) -> String.format("(%04d, %04d)", timestamp, sum);
         // Keep the watermark behind all input
-        StreamStage<Integer> stage = sourceStageFromList(input, EARLY_RESULTS_PERIOD);
+        StreamStage<Integer> stage = streamStageFromList(input, EARLY_RESULTS_PERIOD);
 
         // When
         SessionWindowDefinition wDef = session(sessionTimeout).setEarlyResultsPeriod(EARLY_RESULTS_PERIOD);
@@ -298,7 +298,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     private void assertEarlyResultsEmittedRepeatedly(WindowDefinition wDef) {
         // Given
         long earlyResultPeriod = 50;
-        StreamStage<Integer> srcStage = sourceStageFromList(singletonList(1), earlyResultPeriod);
+        StreamStage<Integer> srcStage = streamStageFromList(singletonList(1), earlyResultPeriod);
 
         // When
         StageWithWindow<Integer> stage = srcStage.window(wDef.setEarlyResultsPeriod(earlyResultPeriod));
@@ -314,7 +314,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     @Test
     public void when_slidingWindow_outputFnReturnsNull_then_filteredOut() {
         // Given
-        StreamStage<Integer> stage = sourceStageFromList(sequence(itemCount));
+        StreamStage<Integer> stage = streamStageFromList(sequence(itemCount));
 
         // When
         StreamStage<Object> aggregated = stage.window(sliding(2, 1))
@@ -329,7 +329,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     @Test
     public void when_sessionWindow_outputFnReturnsNull_then_filteredOut() {
         // Given
-        StreamStage<Integer> stage = sourceStageFromList(sequence(itemCount));
+        StreamStage<Integer> stage = streamStageFromList(sequence(itemCount));
 
         // When
         StreamStage<Object> aggregated = stage.window(session(1))
@@ -357,7 +357,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                 .stringResults(e -> FORMAT_FN_3.apply(e.getKey(), tuple3(e.getValue(), e.getValue(), e.getValue())));
 
         StreamStage<Integer> newStage() {
-            return sourceStageFromList(input);
+            return streamStageFromList(input);
         }
     }
 

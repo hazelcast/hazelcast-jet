@@ -90,7 +90,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
     public void windowDefinition() {
         SlidingWindowDefinition tumbling = tumbling(2);
         StageWithKeyAndWindow<Integer, Integer> stage =
-                sourceStageFromList(emptyList()).groupingKey(wholeItem()).window(tumbling);
+                streamStageFromList(emptyList()).groupingKey(wholeItem()).window(tumbling);
         assertEquals(tumbling, stage.windowDefinition());
     }
 
@@ -115,8 +115,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         StreamStageWithKey<Entry<String, Integer>, String> newSourceStage() {
             StreamStage<Integer> sourceStage = emittingEarlyResults
-                    ? sourceStageFromList(input, EARLY_RESULTS_PERIOD)
-                    : sourceStageFromList(input);
+                    ? streamStageFromList(input, EARLY_RESULTS_PERIOD)
+                    : streamStageFromList(input);
             return sourceStage.flatMap(i -> traverseItems(entry("a", i), entry("b", i)))
                               .groupingKey(Entry::getKey);
         }
@@ -128,7 +128,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         itemCount = (int) roundUp(itemCount, 2);
         int winSize = itemCount / 2;
         List<Integer> timestamps = sequence(itemCount);
-        StageWithKeyAndWindow<Integer, Integer> windowed = sourceStageFromList(timestamps)
+        StageWithKeyAndWindow<Integer, Integer> windowed = streamStageFromList(timestamps)
                 .groupingKey(i -> i / 2)
                 .window(tumbling(winSize));
 
@@ -157,7 +157,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         int winSize = itemCount / 2;
         List<Integer> timestamps = sequence(itemCount);
 
-        StageWithKeyAndWindow<Integer, Integer> windowed = sourceStageFromList(timestamps)
+        StageWithKeyAndWindow<Integer, Integer> windowed = streamStageFromList(timestamps)
                 .groupingKey(i -> i / 2)
                 .window(tumbling(winSize));
 
@@ -276,7 +276,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         // Given
         List<Integer> input = asList(0, 1, 2);
         StreamStage<Entry<String, String>> srcStage =
-                sourceStageFromList(input)
+                streamStageFromList(input)
                         .flatMap(i -> traverseItems(entry("a", "a" + i), entry("b", "b" + i)));
 
         // When

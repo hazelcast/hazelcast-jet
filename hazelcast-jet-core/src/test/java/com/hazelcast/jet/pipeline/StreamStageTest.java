@@ -70,7 +70,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         String stageName = randomName();
 
         // When
-        StreamStage<Integer> stage = sourceStageFromList(emptyList());
+        StreamStage<Integer> stage = streamStageFromList(emptyList());
         stage.setName(stageName);
 
         // Then
@@ -83,7 +83,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         int localParallelism = 10;
 
         // When
-        StreamStage<Integer> stage = sourceStageFromList(emptyList());
+        StreamStage<Integer> stage = streamStageFromList(emptyList());
         stage.setLocalParallelism(localParallelism);
 
         // Then
@@ -97,7 +97,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         DistributedFunction<Integer, String> mapFn = item -> String.format("%04d-x", item);
 
         // When
-        StreamStage<String> mapped = sourceStageFromList(input).map(mapFn);
+        StreamStage<String> mapped = streamStageFromList(input).map(mapFn);
 
         // Then
         mapped.drainTo(sink);
@@ -115,7 +115,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
 
         // When
-        StreamStage<Integer> filtered = sourceStageFromList(input).filter(filterFn);
+        StreamStage<Integer> filtered = streamStageFromList(input).filter(filterFn);
 
         // Then
         filtered.drainTo(sink);
@@ -133,7 +133,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 i -> Stream.of("A", "B").map(s -> String.format("%04d-%s", i, s));
 
         // When
-        StreamStage<String> flatMapped = sourceStageFromList(input)
+        StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMap(o -> traverseStream(flatMapFn.apply(o)));
 
         // Then
@@ -152,7 +152,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         String suffix = "-context";
 
         // When
-        StreamStage<String> mapped = sourceStageFromList(input).mapUsingContext(
+        StreamStage<String> mapped = streamStageFromList(input).mapUsingContext(
                 ContextFactory.withCreateFn(x -> suffix),
                 formatFn);
 
@@ -172,7 +172,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         String suffix = "-keyed-context";
 
         // When
-        StreamStage<String> mapped = sourceStageFromList(input)
+        StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingContext(ContextFactory.withCreateFn(i -> suffix), (suff, k, i) -> formatFn.apply(suff, i));
 
@@ -192,7 +192,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
 
         // When
-        StreamStage<Integer> mapped = sourceStageFromList(input)
+        StreamStage<Integer> mapped = streamStageFromList(input)
                 .filterUsingContext(ContextFactory.withCreateFn(i -> acceptedRemainder), (rem, i) -> i % 2 == rem);
 
         // Then
@@ -211,7 +211,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         int acceptedRemainder = 1;
 
         // When
-        StreamStage<Integer> mapped = sourceStageFromList(input)
+        StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingContext(
                         ContextFactory.withCreateFn(i -> acceptedRemainder),
@@ -233,7 +233,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 i -> Stream.of("A", "B").map(s -> String.format("%04d-%s", i, s));
 
         // When
-        StreamStage<String> flatMapped = sourceStageFromList(input)
+        StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMapUsingContext(
                         ContextFactory.withCreateFn(x -> flatMapFn),
                         (fn, i) -> traverseStream(fn.apply(i))
@@ -255,7 +255,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 i -> Stream.of("A", "B").map(s -> String.format("%04d-%s", i, s));
 
         // When
-        StreamStage<String> flatMapped = sourceStageFromList(input)
+        StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingContext(
                         ContextFactory.withCreateFn(x -> flatMapFn),
@@ -282,7 +282,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         }
 
         // When
-        StreamStage<Entry<Integer, String>> mapped = sourceStageFromList(input)
+        StreamStage<Entry<Integer, String>> mapped = streamStageFromList(input)
                 .mapUsingReplicatedMap(map, (m, i) -> entry(i, m.get(i)));
 
         // Then
@@ -310,7 +310,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         }
 
         // When
-        StreamStage<Entry<Integer, String>> mapped = sourceStageFromList(input)
+        StreamStage<Entry<Integer, String>> mapped = streamStageFromList(input)
                 .mapUsingIMapAsync(map, (m, i) -> Util.toCompletableFuture(m.getAsync(i))
                                                       .thenApply(v -> entry(i, v)));
 
@@ -339,7 +339,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         }
 
         // When
-        StreamStage<Entry<Integer, String>> mapped = sourceStageFromList(input)
+        StreamStage<Entry<Integer, String>> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingIMapAsync(map, Util::entry);
 
@@ -362,7 +362,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        StreamStage<Long> rolled = sourceStageFromList(input)
+        StreamStage<Long> rolled = streamStageFromList(input)
                 .rollingAggregate(counting());
 
         // Then
@@ -380,7 +380,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        StreamStage<Entry<Integer, Long>> mapped = sourceStageFromList(input)
+        StreamStage<Entry<Integer, Long>> mapped = streamStageFromList(input)
                 .groupingKey(i -> i % 2)
                 .rollingAggregate(counting());
 
@@ -403,7 +403,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 (key, count) -> String.format("(%d, %04d)", key, count);
 
         // When
-        StreamStage<String> mapped = sourceStageFromList(input)
+        StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i % 2)
                 .rollingAggregate(counting(), formatFn);
 
@@ -424,7 +424,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        StreamStage<String> mapped = sourceStageFromList(input)
+        StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i % 2)
                 .rollingAggregate(counting(), (x, y) -> null);
 
@@ -444,7 +444,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .andExportFinish(acc -> (int) acc.get());
 
         // When
-        StreamStage<Integer> rolling = sourceStageFromList(input).rollingAggregate(identity);
+        StreamStage<Integer> rolling = streamStageFromList(input).rollingAggregate(identity);
 
         // Then
         rolling.window(tumbling(1))
@@ -466,8 +466,8 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // Given
         List<Integer> input = sequence(itemCount);
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
-        StreamStage<Integer> srcStage0 = sourceStageFromList(input);
-        StreamStage<Integer> srcStage1 = sourceStageFromList(input);
+        StreamStage<Integer> srcStage0 = streamStageFromList(input);
+        StreamStage<Integer> srcStage1 = streamStageFromList(input);
 
         // When
         StreamStage<Integer> merged = srcStage0.merge(srcStage1);
@@ -492,7 +492,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         @SuppressWarnings("Convert2MethodRef")
         // there's a method ref bug in JDK
-        StreamStage<Tuple2<Integer, String>> hashJoined = sourceStageFromList(input).hashJoin(
+        StreamStage<Tuple2<Integer, String>> hashJoined = streamStageFromList(input).hashJoin(
                 enrichingStage,
                 joinMapEntries(wholeItem()),
                 (i, valueA) -> tuple2(i, valueA)
@@ -528,7 +528,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         @SuppressWarnings("Convert2MethodRef")
         // there's a method ref bug in JDK
-        StreamStage<Tuple3<Integer, String, String>> hashJoined = sourceStageFromList(input).hashJoin2(
+        StreamStage<Tuple3<Integer, String, String>> hashJoined = streamStageFromList(input).hashJoin2(
                 enrichingStage1, joinMapEntries(wholeItem()),
                 enrichingStage2, joinMapEntries(wholeItem()),
                 (i, valueA, valueB) -> tuple3(i, valueA, valueB)
@@ -565,7 +565,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         BatchStage<Entry<Integer, String>> enrichingStage2 = enrichingStage(input, prefixB);
 
         // When
-        StreamHashJoinBuilder<Integer> builder = sourceStageFromList(input).hashJoinBuilder();
+        StreamHashJoinBuilder<Integer> builder = streamStageFromList(input).hashJoinBuilder();
         Tag<String> tagA = builder.add(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = builder.add(enrichingStage2, joinMapEntries(wholeItem()));
         @SuppressWarnings("Convert2MethodRef")
@@ -605,7 +605,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         DistributedFunction<Integer, String> mapFn = item -> String.format("%04d-x", item);
 
         // When
-        StreamStage<String> custom = sourceStageFromList(input).customTransform("map",
+        StreamStage<String> custom = streamStageFromList(input).customTransform("map",
                 Processors.mapP(o -> {
                     @SuppressWarnings("unchecked")
                     JetEvent<Integer> jetEvent = (JetEvent<Integer>) o;
@@ -628,7 +628,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         DistributedFunction<Integer, Integer> extractKeyFn = i -> i % 2;
 
         // When
-        StreamStage<Object> custom = sourceStageFromList(input)
+        StreamStage<Object> custom = streamStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingContextP(
                         ContextFactory.withCreateFn(jet -> new HashSet<>()),
@@ -652,7 +652,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        StreamStage<Integer> peeked = sourceStageFromList(input).peek();
+        StreamStage<Integer> peeked = streamStageFromList(input).peek();
 
         // Then
         peeked.drainTo(sink);
@@ -671,7 +671,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
 
         // When
-        sourceStageFromList(input)
+        streamStageFromList(input)
          .filter(filterFn)
          .peek(Object::toString)
          .drainTo(sink);

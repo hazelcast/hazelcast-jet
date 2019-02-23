@@ -49,7 +49,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
      * entire Jet job to complete.
      *
      */
-    StreamStage<Integer> sourceStageFromList(List<Integer> input) {
+    StreamStage<Integer> streamStageFromList(List<Integer> input) {
         StreamSource<Integer> source = SourceBuilder
                 .timestampedStream("sequence", x -> null)
                 .<Integer>fillBufferFn((x, buf) -> {
@@ -67,7 +67,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
      * The stage emits (1e9 / {@value SOURCE_EVENT_PERIOD_NANOS}) items per
      * second. After it exhausts the input, it remains idle forever.
      */
-    StreamStage<Integer> sourceStageFromList(List<Integer> input, long earlyResultsPeriod) {
+    StreamStage<Integer> streamStageFromList(List<Integer> input, long earlyResultsPeriod) {
         Preconditions.checkPositive(earlyResultsPeriod, "earlyResultsPeriod must greater than zero");
         StreamSource<Integer> source = SourceBuilder
                 .timestampedStream("sequence", x -> new LongLongAccumulator(System.nanoTime(), 0))
