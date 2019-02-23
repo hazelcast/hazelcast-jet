@@ -87,7 +87,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         distinct.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 IntStream.range(0, itemCount)
                          .mapToObj(i -> String.format("(%04d, %04d)", roundUp(i + 1, winSize), i))
@@ -116,7 +116,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         // Then
         windowed.aggregate(summingLong(i -> i))
                 .drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 new SlidingWindowSimulator(wDef)
                         .acceptStream(input.stream())
@@ -174,7 +174,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 new SlidingWindowSimulator(wDef)
                         .acceptStream(input.stream())
@@ -234,7 +234,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         windowed.aggregate(summingLong(i -> i),
                 (start, end, sum) -> new TimestampedItem<>(start, sum))
                 .drainTo(sink);
-        jet().newJob(p).join();
+        execute();
 
         assertEquals(
                 new SessionWindowSimulator(wDef, sessionLength + sessionTimeout)
@@ -372,7 +372,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         //Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString2,
                 streamToString(
                         this.<Tuple2<Long, Long>>sinkStreamOfTsItem(),
@@ -391,7 +391,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         //Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString2,
                 streamToString(
                         this.<Tuple2<Long, Long>>sinkStreamOfTsItem(),
@@ -410,7 +410,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString2,
                 streamToString(sinkList.stream().map(String.class::cast), identity()));
     }
@@ -428,7 +428,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString2,
                 streamToString(sinkList.stream().map(String.class::cast), identity()));
     }
@@ -444,7 +444,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString3,
                 streamToString(this.<Tuple3<Long, Long, Long>>sinkStreamOfTsItem(),
                         tsItem -> FORMAT_FN_3.apply(tsItem.timestamp(), tsItem.item())
@@ -463,7 +463,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         //Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString3,
                 streamToString(this.<Tuple3<Long, Long, Long>>sinkStreamOfTsItem(),
                         tsItem -> FORMAT_FN_3.apply(tsItem.timestamp(), tsItem.item())
@@ -483,7 +483,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString3,
                 streamToString(sinkList.stream().map(String.class::cast), identity()));
     }
@@ -501,7 +501,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString3,
                 streamToString(sinkList.stream().map(String.class::cast), identity()));
     }
@@ -520,7 +520,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString2,
                 streamToString(sinkList.stream().map(String.class::cast), identity()));
     }
@@ -544,7 +544,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         aggregated.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(fx.expectedString2,
                 streamToString(sinkList.stream().map(String.class::cast), identity())
         );

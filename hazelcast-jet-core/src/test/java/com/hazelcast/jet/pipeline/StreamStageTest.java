@@ -101,7 +101,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().map(mapFn), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -119,7 +119,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         filtered.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().filter(filterFn), formatFn),
                 streamToString(sinkStreamOfInt(), formatFn));
@@ -138,7 +138,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         flatMapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -158,7 +158,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -178,7 +178,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -197,7 +197,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().filter(i -> i % 2 == acceptedRemainder), formatFn),
                 streamToString(sinkStreamOfInt(), formatFn));
@@ -219,7 +219,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().filter(r -> r % 2 == acceptedRemainder), formatFn),
                 streamToString(sinkStreamOfInt(), formatFn));
@@ -241,7 +241,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         flatMapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -264,7 +264,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         flatMapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -287,7 +287,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
         assertEquals(
                 streamToString(
@@ -316,7 +316,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
         assertEquals(
                 streamToString(
@@ -345,7 +345,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
         assertEquals(
                 streamToString(
@@ -367,7 +367,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         rolled.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         Function<Object, String> formatFn = i -> String.format("%04d", (Long) i);
         assertEquals(
                 streamToString(LongStream.rangeClosed(1, itemCount).boxed(), formatFn),
@@ -386,7 +386,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         Function<Entry<Integer, Long>, String> formatFn = e -> String.format("(%d, %04d)", e.getKey(), e.getValue());
         assertEquals(
                 streamToString(
@@ -409,7 +409,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(
                         IntStream.range(2, itemCount + 2).mapToObj(i -> entry(i % 2, (long) i / 2)),
@@ -430,7 +430,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mapped.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(0, sinkList.size());
     }
 
@@ -450,7 +450,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         rolling.window(tumbling(1))
                .aggregate(identity)
                .drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 LongStream.range(0, itemCount)
                           .mapToObj(i -> String.format("(%04d %04d)", i + 1, i))
@@ -474,7 +474,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         merged.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().flatMap(i -> Stream.of(i, i)), formatFn),
                 streamToString(sinkStreamOfInt(), formatFn));
@@ -500,7 +500,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         hashJoined.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         BiFunction<Integer, String, String> formatFn = (i, value) -> String.format("(%04d, %s)", i, value);
         // sinkList: tuple2(0, "A-0000"), tuple2(1, "A-0001"), ...
         assertEquals(
@@ -536,7 +536,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         hashJoined.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
 
         TriFunction<Integer, String, String, String> formatFn =
                 (i, valueA, valueB) -> String.format("(%04d, %s, %s)", i, valueA, valueB);
@@ -574,7 +574,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         joined.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
 
         TriFunction<Integer, String, String, String> formatFn =
                 (i, valueA, valueB) -> String.format("(%04d, %s, %s)", i, valueA, valueB);
@@ -614,7 +614,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         custom.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().map(mapFn), identity()),
                 streamToString(sinkList.stream(), Object::toString));
@@ -639,7 +639,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         custom.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
 
         // Each processor emitted distinct keys it observed. If groupingKey isn't
         // correctly partitioning, multiple processors will observe the same keys.
@@ -656,7 +656,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         peeked.drainTo(sink);
-        jet().newJob(p).join();
+        execute();
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
         assertEquals(
                 streamToString(input.stream(), formatFn),
@@ -677,7 +677,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
          .drainTo(sink);
 
         // Then
-        jet().newJob(p).join();
+        execute();
         assertEquals(
                 streamToString(input.stream().filter(filterFn), formatFn),
                 streamToString(sinkStreamOfInt(), formatFn));
