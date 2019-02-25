@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.SlidingWindowPolicy;
-
-import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.util.Preconditions.checkPositive;
 import static com.hazelcast.util.Preconditions.checkTrue;
 
-public class SlidingWindowDefinition extends WindowDefinitionBase {
+/**
+ * Represents the definition of a sliding window.
+ */
+public class SlidingWindowDefinition extends WindowDefinition {
     private final long windowSize;
     private final long slideBy;
 
@@ -39,18 +40,7 @@ public class SlidingWindowDefinition extends WindowDefinitionBase {
 
     @Override
     public SlidingWindowDefinition setEarlyResultsPeriod(long earlyResultPeriod) {
-        super.setEarlyResultsPeriod(earlyResultPeriod);
-        return this;
-    }
-
-    @Nonnull @Override
-    public String name() {
-        return "sliding";
-    }
-
-    @Override
-    public long preferredWatermarkStride() {
-        return slideBy;
+        return (SlidingWindowDefinition) super.setEarlyResultsPeriod(earlyResultPeriod);
     }
 
     /**
@@ -71,7 +61,7 @@ public class SlidingWindowDefinition extends WindowDefinitionBase {
     /**
      * Returns the policy object used by the Core API processors to drive the
      * sliding window logic.
-     * */
+     */
     public SlidingWindowPolicy toSlidingWindowPolicy() {
         return slidingWinPolicy(windowSize, slideBy);
     }

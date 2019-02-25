@@ -16,16 +16,24 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
-import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
-
 import javax.annotation.Nonnull;
 
 /**
  * The definition of the window for a windowed aggregation operation. To obtain
  * a window definition, use the factory methods provided in this interface.
  */
-public interface WindowDefinition {
+public abstract class WindowDefinition {
+
+    private long earlyResultPeriod;
+
+    /**
+     * Returns the {@linkplain #setEarlyResultsPeriod early results period} for
+     * this window definition. A return value of zero means that the stage
+     * won't emit early window results.
+     */
+    public long earlyResultsPeriod() {
+        return earlyResultPeriod;
+    }
 
     /**
      * Sets the period in milliseconds at which the windowed aggregation
@@ -52,7 +60,10 @@ public interface WindowDefinition {
      *                          results to the next one
      * @return {@code this}
      */
-    WindowDefinition setEarlyResultsPeriod(long earlyResultPeriod);
+    public WindowDefinition setEarlyResultsPeriod(long earlyResultPeriod) {
+        this.earlyResultPeriod = earlyResultPeriod;
+        return this;
+    }
 
     /**
      * Returns a sliding window definition with the given parameters.
@@ -64,7 +75,7 @@ public interface WindowDefinition {
      * @param slideBy the size of the sliding step. Window size must be multiple of this number.
      */
     @Nonnull
-    static WindowDefinition sliding(long windowSize, long slideBy) {
+    public static SlidingWindowDefinition sliding(long windowSize, long slideBy) {
         return new SlidingWindowDefinition(windowSize, slideBy);
     }
 
@@ -76,7 +87,7 @@ public interface WindowDefinition {
      * @param windowSize the size of the window (size of the range of the timestamps it covers)
      */
     @Nonnull
-    static SlidingWindowDefinition tumbling(long windowSize) {
+    public static SlidingWindowDefinition tumbling(long windowSize) {
         return new SlidingWindowDefinition(windowSize, windowSize);
     }
 
@@ -116,7 +127,7 @@ public interface WindowDefinition {
      *                       successive timestamps included in a window.
      */
     @Nonnull
-    static SessionWindowDefinition session(long sessionTimeout) {
+    public static SessionWindowDefinition session(long sessionTimeout) {
         return new SessionWindowDefinition(sessionTimeout);
     }
 }

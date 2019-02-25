@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.pipeline;
+package com.hazelcast.jet.pipeline;
 
-import javax.annotation.Nonnull;
-
-public class SessionWindowDefinition<T> extends WindowDefinitionBase {
-    private static final int MAX_WATERMARK_STRIDE = 100;
-    private static final int MIN_WMS_PER_SESSION = 100;
+/**
+ * Represents the definition of a session window.
+ */
+public class SessionWindowDefinition extends WindowDefinition {
     private final long sessionTimeout;
 
     SessionWindowDefinition(long sessionTimeout) {
@@ -29,18 +28,7 @@ public class SessionWindowDefinition<T> extends WindowDefinitionBase {
 
     @Override
     public SessionWindowDefinition setEarlyResultsPeriod(long earlyResultPeriod) {
-        super.setEarlyResultsPeriod(earlyResultPeriod);
-        return this;
-    }
-
-    @Nonnull @Override
-    public String name() {
-        return "session";
-    }
-
-    @Override
-    public long preferredWatermarkStride() {
-        return Math.min(MAX_WATERMARK_STRIDE, Math.max(1, sessionTimeout / MIN_WMS_PER_SESSION));
+        return (SessionWindowDefinition) super.setEarlyResultsPeriod(earlyResultPeriod);
     }
 
     /**

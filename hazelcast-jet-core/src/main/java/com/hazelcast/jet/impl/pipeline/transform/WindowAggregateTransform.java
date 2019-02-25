@@ -25,10 +25,10 @@ import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
 import com.hazelcast.jet.impl.util.ConstantFunction;
-import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
-import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
-import com.hazelcast.jet.impl.pipeline.WindowDefinitionBase;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -43,16 +43,19 @@ import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST
 import static java.util.Collections.nCopies;
 
 public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
+    private static final int MAX_WATERMARK_STRIDE = 100;
+    private static final int MIN_WMS_PER_SESSION = 100;
+
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
     @Nonnull
-    private final WindowDefinitionBase wDef;
+    private final WindowDefinition wDef;
     @Nonnull
     private final WindowResultFunction<? super R, ? extends OUT> mapToOutputFn;
 
     public WindowAggregateTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull WindowDefinitionBase wDef,
+            @Nonnull WindowDefinition wDef,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
             @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
     ) {
@@ -62,13 +65,37 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
         this.mapToOutputFn = mapToOutputFn;
     }
 
-    private static String createName(WindowDefinitionBase wDef) {
-        return wDef.name() + "-window";
+    static String createName(WindowDefinition wDef) {
+        if (wDef instanceof SlidingWindowDefinition) {
+            return "sliding-window";
+        } else if (wDef instanceof SessionWindowDefinition) {
+            return "session-window";
+        } else {
+            throw new IllegalArgumentException(wDef.getClass().getName());
+        }
+    }
+
+    /**
+     * Returns the optimal watermark stride for this window definition.
+     * Watermarks that are more spaced out are better for performance, but they
+     * hurt the responsiveness of a windowed pipeline stage. The Planner will
+     * determine the actual stride, which may be an integer fraction of the
+     * value returned here.
+     */
+    static long preferredWatermarkStride(WindowDefinition wDef) {
+        if (wDef instanceof SlidingWindowDefinition) {
+            return ((SlidingWindowDefinition) wDef).slideBy();
+        } else if (wDef instanceof SessionWindowDefinition) {
+            long timeout = ((SessionWindowDefinition) wDef).sessionTimeout();
+            return Math.min(MAX_WATERMARK_STRIDE, Math.max(1, timeout / MIN_WMS_PER_SESSION));
+        } else {
+            throw new IllegalArgumentException(wDef.getClass().getName());
+        }
     }
 
     @Override
     public long preferredWatermarkStride() {
-        return wDef.preferredWatermarkStride();
+        return preferredWatermarkStride(wDef);
     }
 
     @Override

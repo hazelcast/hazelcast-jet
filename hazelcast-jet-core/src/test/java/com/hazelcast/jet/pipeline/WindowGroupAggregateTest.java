@@ -25,8 +25,6 @@ import com.hazelcast.jet.datamodel.TimestampedEntry;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
-import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
 import org.junit.Test;
 
 import java.util.List;

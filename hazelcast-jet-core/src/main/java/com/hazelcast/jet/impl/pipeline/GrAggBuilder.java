@@ -31,6 +31,7 @@ import com.hazelcast.jet.pipeline.GroupAggregateBuilder1;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder1;
 
 import javax.annotation.Nonnull;
@@ -53,7 +54,7 @@ import static java.util.stream.Collectors.toList;
  */
 public class GrAggBuilder<K> {
     private final PipelineImpl pipelineImpl;
-    private final WindowDefinitionBase wDef;
+    private final WindowDefinition wDef;
     private final List<ComputeStageImplBase> upstreamStages = new ArrayList<>();
     private final List<DistributedFunction<?, ? extends K>> keyFns = new ArrayList<>();
 
@@ -71,7 +72,7 @@ public class GrAggBuilder<K> {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
         pipelineImpl = (PipelineImpl) computeStage.getPipeline();
-        wDef = (WindowDefinitionBase) stage.windowDefinition();
+        wDef = stage.windowDefinition();
         upstreamStages.add(computeStage);
         keyFns.add(stage.keyFn());
     }

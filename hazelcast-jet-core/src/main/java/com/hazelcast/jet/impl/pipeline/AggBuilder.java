@@ -40,7 +40,7 @@ import static java.util.stream.Collectors.toList;
 
 public class AggBuilder {
     @Nullable
-    private final WindowDefinitionBase wDef;
+    private final WindowDefinition wDef;
     @Nonnull
     private final PipelineImpl pipelineImpl;
     @Nonnull
@@ -50,7 +50,7 @@ public class AggBuilder {
             @Nonnull GeneralStage<T0> stage0,
             @Nullable WindowDefinition wDef
     ) {
-        this.wDef = (WindowDefinitionBase) wDef;
+        this.wDef = wDef;
         this.pipelineImpl = ((AbstractStage) stage0).pipelineImpl;
         add(stage0);
     }

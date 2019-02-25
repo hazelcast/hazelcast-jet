@@ -26,9 +26,9 @@ import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.impl.pipeline.SessionWindowDefinition;
-import com.hazelcast.jet.impl.pipeline.SlidingWindowDefinition;
-import com.hazelcast.jet.impl.pipeline.WindowDefinitionBase;
+import com.hazelcast.jet.pipeline.SessionWindowDefinition;
+import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -46,7 +46,7 @@ import static java.util.Collections.nCopies;
 
 public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
     @Nonnull
-    private final WindowDefinitionBase wDef;
+    private final WindowDefinition wDef;
     @Nonnull
     private final List<DistributedFunction<?, ? extends K>> keyFns;
     @Nonnull
@@ -56,7 +56,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
 
     public WindowGroupTransform(
             @Nonnull List<Transform> upstream,
-            @Nonnull WindowDefinitionBase wDef,
+            @Nonnull WindowDefinition wDef,
             @Nonnull List<DistributedFunction<?, ? extends K>> keyFns,
             @Nonnull AggregateOperation<?, ? extends R> aggrOp,
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
@@ -68,13 +68,13 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
         this.mapToOutputFn = mapToOutputFn;
     }
 
-    private static String createName(WindowDefinitionBase wDef) {
-        return wDef.name() + "-window";
+    private static String createName(WindowDefinition wDef) {
+        return WindowAggregateTransform.createName(wDef);
     }
 
     @Override
     public long preferredWatermarkStride() {
-        return wDef.preferredWatermarkStride();
+        return WindowAggregateTransform.preferredWatermarkStride(wDef);
     }
 
     @Override
