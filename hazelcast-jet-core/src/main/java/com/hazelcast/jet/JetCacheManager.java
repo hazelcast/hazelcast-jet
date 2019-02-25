@@ -37,7 +37,7 @@ public interface JetCacheManager {
     /**
      * Returns the cache instance with the specified, optionally prefixed, cache
      * name:
-     * <pre>{@code 
+     * <pre>{@code
      * <prefixed_cache_name> = [<uri_prefix>/][<cl_prefix>/]<simple_cache_name>
      * }</pre>
      * where {@code <simple_cache_name>} is the cache name without any prefix.
