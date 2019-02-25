@@ -916,7 +916,7 @@ public final class Processors {
             @Nonnull DistributedFunction<? super T, ? extends K> extractKeyFn,
             @Nonnull DistributedBiFunction<? super C, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return contextFactory.isOrderedAsyncResponses()
+        return contextFactory.hasOrderedAsyncResponses()
                 ? AsyncTransformUsingContextOrderedP.supplier(contextFactory, flatMapAsyncFn)
                 : AsyncTransformUsingContextUnorderedP.supplier(contextFactory, flatMapAsyncFn, extractKeyFn);
     }

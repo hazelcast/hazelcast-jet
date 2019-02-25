@@ -94,7 +94,7 @@ public class TransformUsingContextPTest {
     private void testEqualCooperativity(boolean cooperative) throws Exception {
         ContextFactory<String> contextFactory = ContextFactory.withCreateFn(jet -> "foo");
         if (!cooperative) {
-            contextFactory = contextFactory.withNonCooperativeProcessor();
+            contextFactory = contextFactory.toNonCooperative();
         }
 
         ProcessorSupplier supplier = supplier(contextFactory, mapToContext());

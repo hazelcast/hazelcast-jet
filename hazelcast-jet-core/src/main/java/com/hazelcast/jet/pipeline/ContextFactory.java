@@ -56,7 +56,7 @@ public final class ContextFactory<C> implements Serializable {
     public static final int MAX_PENDING_CALLS_DEFAULT = 256;
 
     /**
-     * Default value for {@link #isCooperativeProcessor}.
+     * Default value for {@link #isCooperative}.
      */
     public static final boolean COOPERATIVE_DEFAULT = true;
 
@@ -66,13 +66,13 @@ public final class ContextFactory<C> implements Serializable {
     public static final boolean SHARE_LOCALLY_DEFAULT = false;
 
     /**
-     * Default value for {@link #isOrderedAsyncResponses}.
+     * Default value for {@link #hasOrderedAsyncResponses}.
      */
     public static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
     private final DistributedFunction<JetInstance, ? extends C> createFn;
     private final DistributedConsumer<? super C> destroyFn;
-    private final boolean isCooperativeProcessor;
+    private final boolean isCooperative;
     private final boolean hasLocalSharing;
     private final int maxPendingCallsPerProcessor;
     private final boolean orderedAsyncResponses;
@@ -80,14 +80,14 @@ public final class ContextFactory<C> implements Serializable {
     private ContextFactory(
             DistributedFunction<JetInstance, ? extends C> createFn,
             DistributedConsumer<? super C> destroyFn,
-            boolean isCooperativeProcessor,
+            boolean isCooperative,
             boolean hasLocalSharing,
             int maxPendingCallsPerProcessor,
             boolean orderedAsyncResponses
     ) {
         this.createFn = createFn;
         this.destroyFn = destroyFn;
-        this.isCooperativeProcessor = isCooperativeProcessor;
+        this.isCooperative = isCooperative;
         this.hasLocalSharing = hasLocalSharing;
         this.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
         this.orderedAsyncResponses = orderedAsyncResponses;
@@ -124,25 +124,25 @@ public final class ContextFactory<C> implements Serializable {
     @Nonnull
     public ContextFactory<C> withDestroyFn(@Nonnull DistributedConsumer<? super C> destroyFn) {
         checkSerializable(destroyFn, "destroyFn");
-        return new ContextFactory<>(createFn, destroyFn, isCooperativeProcessor, hasLocalSharing,
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, hasLocalSharing,
                 maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
     /**
      * Returns a copy of this {@link ContextFactory} with the
-     * <em>isCooperativeProcessor</em> flag set to {@code false}. The context
-     * factory is cooperative by default. Call this method if your transform
-     * function doesn't follow the {@linkplain Processor#isCooperative()
-     * cooperative processor contract}, that is if it waits for IO, blocks for
+     * <em>isCooperative</em> flag set to {@code false}. The context factory is
+     * cooperative by default. Call this method if your transform function
+     * doesn't follow the {@linkplain Processor#isCooperative() cooperative
+     * processor contract}, that is if it waits for IO, blocks for
      * synchronization, takes too long to complete etc. If you intend to use
      * the factory for an async operation, you also typically can use a
      * cooperative processor. Cooperative processors offer higher performance.
      *
-     * @return a copy of this factory with the {@code isCooperativeProcessor} flag set
+     * @return a copy of this factory with the {@code isCooperative} flag set
      * to {@code false}.
      */
     @Nonnull
-    public ContextFactory<C> withNonCooperativeProcessor() {
+    public ContextFactory<C> toNonCooperative() {
         return new ContextFactory<>(createFn, destroyFn, false, hasLocalSharing,
                 maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
@@ -162,7 +162,7 @@ public final class ContextFactory<C> implements Serializable {
      */
     @Nonnull
     public ContextFactory<C> withLocalSharing() {
-        return new ContextFactory<>(createFn, destroyFn, isCooperativeProcessor, true,
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, true,
                 maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
@@ -186,7 +186,7 @@ public final class ContextFactory<C> implements Serializable {
     @Nonnull
     public ContextFactory<C> withMaxPendingCallsPerProcessor(int maxPendingCallsPerProcessor) {
         checkPositive(maxPendingCallsPerProcessor, "maxPendingCallsPerProcessor must be >= 1");
-        return new ContextFactory<>(createFn, destroyFn, isCooperativeProcessor, hasLocalSharing,
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, hasLocalSharing,
                 maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
@@ -226,7 +226,7 @@ public final class ContextFactory<C> implements Serializable {
      */
     @Nonnull
     public ContextFactory<C> withUnorderedAsyncResponses() {
-        return new ContextFactory<>(createFn, destroyFn, isCooperativeProcessor, hasLocalSharing,
+        return new ContextFactory<>(createFn, destroyFn, isCooperative, hasLocalSharing,
                 maxPendingCallsPerProcessor, false);
     }
 
@@ -247,14 +247,14 @@ public final class ContextFactory<C> implements Serializable {
     }
 
     /**
-     * Returns the {@code isCooperativeProcessor} flag.
+     * Returns the {@code isCooperative} flag.
      */
-    public boolean isCooperativeProcessor() {
-        return isCooperativeProcessor;
+    public boolean isCooperative() {
+        return isCooperative;
     }
 
     /**
-     * Returns the {@code isLocalSharing} flag.
+     * Returns the {@code hasLocalSharing} flag.
      */
     public boolean hasLocalSharing() {
         return hasLocalSharing;
@@ -264,7 +264,7 @@ public final class ContextFactory<C> implements Serializable {
      * Returns the maximum pending calls per processor, see {@link
      * #withMaxPendingCallsPerProcessor(int)}.
      */
-    public int getMaxPendingCallsPerProcessor() {
+    public int maxPendingCallsPerProcessor() {
         return maxPendingCallsPerProcessor;
     }
 
@@ -272,7 +272,7 @@ public final class ContextFactory<C> implements Serializable {
      * Tells whether the async responses are ordered, see {@link
      * #withUnorderedAsyncResponses()}.
      */
-    public boolean isOrderedAsyncResponses() {
+    public boolean hasOrderedAsyncResponses() {
         return orderedAsyncResponses;
     }
 }

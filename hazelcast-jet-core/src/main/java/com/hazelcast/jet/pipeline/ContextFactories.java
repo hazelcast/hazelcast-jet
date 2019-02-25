@@ -74,7 +74,7 @@ public final class ContextFactories {
      * GeneralStageWithKey#mapUsingIMapAsync(IMap, DistributedBiFunction)}.
      * <p>
      * If you plan to use a sync method on the map, call {@link
-     * ContextFactory#withNonCooperativeProcessor()} on the returned factory.
+     * ContextFactory#toNonCooperative()} on the returned factory.
      *
      * @param mapName name of the map used as context
      * @param <K> key type

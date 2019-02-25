@@ -67,7 +67,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
 
     @Override
     public boolean isCooperative() {
-        return contextFactory.isCooperativeProcessor();
+        return contextFactory.isCooperative();
     }
 
     @Override

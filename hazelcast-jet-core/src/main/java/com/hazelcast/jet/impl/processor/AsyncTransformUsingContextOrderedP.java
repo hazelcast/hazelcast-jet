@@ -85,7 +85,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     @Override
     public boolean isCooperative() {
-        return contextFactory.isCooperativeProcessor();
+        return contextFactory.isCooperative();
     }
 
     @Override
@@ -94,7 +94,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
-        maxAsyncOps = contextFactory.getMaxPendingCallsPerProcessor();
+        maxAsyncOps = contextFactory.maxPendingCallsPerProcessor();
         queue = new ArrayDeque<>(maxAsyncOps);
     }
 
