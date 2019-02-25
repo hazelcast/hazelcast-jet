@@ -35,6 +35,7 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
@@ -106,7 +107,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
                         keyFns,
                         nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                         TimestampKind.EVENT,
-                        wDef.toSlidingWindowPolicy(),
+                        slidingWinPolicy(wDef.windowSize(), wDef.slideBy()),
                         wDef.earlyResultsPeriod(),
                         aggrOp,
                         mapToOutputFn
@@ -132,7 +133,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
     //             | combineToSlidingWindowP |
     //              -------------------------
     private void addSlidingWindowTwoStage(Planner p, SlidingWindowDefinition wDef) {
-        SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
+        SlidingWindowPolicy winPolicy = slidingWinPolicy(wDef.windowSize(), wDef.slideBy());
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateByFrameP(
                 keyFns,
                 nCopies(keyFns.size(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),

@@ -16,9 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.core.SlidingWindowPolicy;
-
-import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.util.Preconditions.checkPositive;
 import static com.hazelcast.util.Preconditions.checkTrue;
 
@@ -56,13 +53,5 @@ public class SlidingWindowDefinition extends WindowDefinition {
      */
     public long slideBy() {
         return slideBy;
-    }
-
-    /**
-     * Returns the policy object used by the Core API processors to drive the
-     * sliding window logic.
-     */
-    public SlidingWindowPolicy toSlidingWindowPolicy() {
-        return slidingWinPolicy(windowSize, slideBy);
     }
 }

@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByFrameP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWindowP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
@@ -127,7 +128,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
                         nCopies(aggrOp.arity(), new ConstantFunction<>(name().hashCode())),
                         nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
                         TimestampKind.EVENT,
-                        wDef.toSlidingWindowPolicy(),
+                        slidingWinPolicy(wDef.windowSize(), wDef.slideBy()),
                         wDef.earlyResultsPeriod(),
                         aggrOp,
                         mapToOutputFn.toKeyedWindowResultFn()
@@ -153,7 +154,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     //              | combineToSlidingWindowP | local parallelism = 1
     //               -------------------------
     private void addSlidingWindowTwoStage(Planner p, SlidingWindowDefinition wDef) {
-        SlidingWindowPolicy winPolicy = wDef.toSlidingWindowPolicy();
+        SlidingWindowPolicy winPolicy = slidingWinPolicy(wDef.windowSize(), wDef.slideBy());
         Vertex v1 = p.dag.newVertex(name() + FIRST_STAGE_VERTEX_NAME_SUFFIX, accumulateByFrameP(
                 nCopies(aggrOp.arity(), new ConstantFunction<>(name().hashCode())),
                 nCopies(aggrOp.arity(), (DistributedToLongFunction<JetEvent>) JetEvent::timestamp),
