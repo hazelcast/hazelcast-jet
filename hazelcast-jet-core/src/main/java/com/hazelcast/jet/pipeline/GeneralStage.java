@@ -491,10 +491,9 @@ public interface GeneralStage<T> extends Stage {
      * supplied argument specifies what to do with the received data (typically
      * push it to some outside resource).
      * <p>
-     * The supplied sink cannot be used to drain another stages in this
-     * pipeline, you have to provide a new {@link Sink} each time, which is
-     * inefficient. If you want to drain multiple stages to the same sink, use
-     * {@link Pipeline#drainTo}.
+     * You cannot reuse the sink in other {@code drainTo} calls. If you want to
+     * drain multiple stages to the same sink, use {@link Pipeline#drainTo}.
+     * This will be more efficient than creating a new sink each time.
      *
      * @return the newly attached sink stage
      */

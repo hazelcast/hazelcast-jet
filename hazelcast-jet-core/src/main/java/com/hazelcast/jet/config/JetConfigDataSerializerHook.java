@@ -27,7 +27,7 @@ import static com.hazelcast.jet.impl.JetFactoryIdHelper.JET_CONFIG_DS_FACTORY_ID
 
 /**
  * Hazelcast serializer hooks for the classes in the {@code
- * com.hazelcast.jet.config} package. This is a private API.
+ * com.hazelcast.jet.config} package. This is private API.
  */
 @PrivateApi
 public final class JetConfigDataSerializerHook implements DataSerializerHook {

@@ -28,7 +28,7 @@ import static com.hazelcast.jet.impl.JetFactoryIdHelper.JET_DS_FACTORY_ID;
 
 /**
  * A Java Service Provider hook for Hazelcast's Identified Data Serializable
- * mechanism. This is a private API.
+ * mechanism. This is private API.
  */
 @PrivateApi
 public final class JetDataSerializerHook implements DataSerializerHook {

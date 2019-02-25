@@ -85,7 +85,7 @@ public interface Pipeline {
             @Nonnull Sink<? super T> sink,
             @Nonnull GeneralStage<? extends T> stage0,
             @Nonnull GeneralStage<? extends T> stage1,
-            @Nonnull GeneralStage<? extends T> ... moreStages
+            @Nonnull GeneralStage<? extends T>... moreStages
     );
 
     /**
