@@ -70,8 +70,8 @@ public final class ContextFactories {
      * the enriching dataset up-to-date.
      * <p>
      * Instead of using this factory, you can call {@link
-     * GeneralStage#mapUsingIMapAsync(IMap, DistributedBiFunction)} or {@link
-     * GeneralStageWithKey#mapUsingIMapAsync(IMap, DistributedBiFunction)}.
+     * GeneralStage#mapUsingIMap(IMap, DistributedBiFunction)} or {@link
+     * GeneralStageWithKey#mapUsingIMap(IMap, DistributedBiFunction)}.
      * <p>
      * If you plan to use a sync method on the map, call {@link
      * ContextFactory#toNonCooperative()} on the returned factory.
