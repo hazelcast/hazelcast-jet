@@ -25,9 +25,9 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedPredicate;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
 import org.junit.Test;
 
@@ -47,7 +47,7 @@ import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.DistributedFunctions.wholeItem;
+import static com.hazelcast.jet.function.Functions.wholeItem;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static java.util.Arrays.asList;
@@ -105,7 +105,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void map() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedFunction<Integer, String> formatFn = i -> String.format("%04d-string", i);
+        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
 
         // When
         BatchStage<String> mapped = batchStageFromList(input).map(formatFn);
@@ -121,7 +121,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void filter() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedPredicate<Integer> filterFn = i -> i % 2 == 1;
+        PredicateEx<Integer> filterFn = i -> i % 2 == 1;
 
         // When
         BatchStage<Integer> filtered = batchStageFromList(input).filter(filterFn);
@@ -156,7 +156,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void mapUsingContext() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedBiFunction<String, Integer, String> formatFn = (s, i) -> String.format("%04d-%s", i, s);
+        BiFunctionEx<String, Integer, String> formatFn = (s, i) -> String.format("%04d-%s", i, s);
         String suffix = "-context";
 
         // When
@@ -177,7 +177,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void mapUsingContext_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedBiFunction<Integer, String, String> formatFn = (i, s) -> String.format("%04d-%s", i, s);
+        BiFunctionEx<Integer, String, String> formatFn = (i, s) -> String.format("%04d-%s", i, s);
         String suffix = "-keyed-context";
 
         // When
@@ -439,7 +439,7 @@ public class BatchStageTest extends PipelineTestSupport {
     @Test
     public void distinct_keyed() {
         // Given
-        DistributedFunction<Integer, Integer> keyFn = i -> i / 2;
+        FunctionEx<Integer, Integer> keyFn = i -> i / 2;
         List<Integer> input = IntStream.range(0, 2 * itemCount).boxed().collect(toList());
         Collections.shuffle(input);
 
@@ -581,7 +581,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void customTransform() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedFunction<Integer, String> formatFn = i -> String.format("%04d", i);
+        FunctionEx<Integer, String> formatFn = i -> String.format("%04d", i);
 
         // When
         BatchStage<String> custom = batchStageFromList(input)
@@ -599,7 +599,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void customTransform_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
-        DistributedFunction<Integer, Integer> extractKeyFn = i -> i % 2;
+        FunctionEx<Integer, Integer> extractKeyFn = i -> i % 2;
 
         // When
         BatchStage<Object> custom = batchStageFromList(input)

@@ -25,18 +25,18 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.DistributedBiFunction;
-import com.hazelcast.jet.function.DistributedBiPredicate;
-import com.hazelcast.jet.function.DistributedFunction;
-import com.hazelcast.jet.function.DistributedPredicate;
-import com.hazelcast.jet.function.DistributedSupplier;
-import com.hazelcast.jet.function.DistributedToLongFunction;
-import com.hazelcast.jet.function.DistributedTriFunction;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.BiPredicateEx;
+import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.function.TriFunction;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.function.DistributedPredicate.alwaysTrue;
+import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -60,7 +60,7 @@ public interface GeneralStage<T> extends Stage {
      * @return the newly attached stage
      */
     @Nonnull
-    <R> GeneralStage<R> map(@Nonnull DistributedFunction<? super T, ? extends R> mapFn);
+    <R> GeneralStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn);
 
     /**
      * Attaches a filtering stage which applies the provided predicate function
@@ -71,7 +71,7 @@ public interface GeneralStage<T> extends Stage {
      * @return the newly attached stage
      */
     @Nonnull
-    GeneralStage<T> filter(@Nonnull DistributedPredicate<T> filterFn);
+    GeneralStage<T> filter(@Nonnull PredicateEx<T> filterFn);
 
     /**
      * Attaches a flat-mapping stage which applies the supplied function to
@@ -85,7 +85,7 @@ public interface GeneralStage<T> extends Stage {
      */
     @Nonnull
     <R> GeneralStage<R> flatMap(
-            @Nonnull DistributedFunction<? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     );
 
     /**
@@ -114,7 +114,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends R> mapFn
+            @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     );
 
     /**
@@ -136,7 +136,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     /**
@@ -162,7 +162,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C> GeneralStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiPredicate<? super C, ? super T> filterFn
+            @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     );
 
     /**
@@ -182,7 +182,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C> GeneralStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
+            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     /**
@@ -211,7 +211,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends Traverser<R>> flatMapFn
+            @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     /**
@@ -234,7 +234,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <C, R> GeneralStage<R> flatMapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull DistributedBiFunction<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>>
+            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     );
 
@@ -253,7 +253,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     default <K, V, R> GeneralStage<R> mapUsingReplicatedMap(
             @Nonnull String mapName,
-            @Nonnull DistributedBiFunction<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull BiFunctionEx<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
     ) {
         return mapUsingContext(ContextFactories.replicatedMapContext(mapName), mapFn);
     }
@@ -275,7 +275,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     default <K, V, R> GeneralStage<R> mapUsingReplicatedMap(
             @Nonnull ReplicatedMap<K, V> replicatedMap,
-            @Nonnull DistributedBiFunction<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull BiFunctionEx<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
     ) {
         return mapUsingReplicatedMap(replicatedMap.getName(), mapFn);
     }
@@ -302,7 +302,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     default <K, V, R> GeneralStage<R> mapUsingIMapAsync(
             @Nonnull String mapName,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
+            @Nonnull BiFunctionEx<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
         return mapUsingContextAsync(ContextFactories.iMapContext(mapName), mapFn);
     }
@@ -329,7 +329,7 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     default <K, V, R> GeneralStage<R> mapUsingIMapAsync(
             @Nonnull IMap<K, V> iMap,
-            @Nonnull DistributedBiFunction<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
+            @Nonnull BiFunctionEx<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
     ) {
         return mapUsingIMapAsync(iMap.getName(), mapFn);
     }
@@ -381,7 +381,7 @@ public interface GeneralStage<T> extends Stage {
     <K, T1_IN, T1, R> GeneralStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
-            @Nonnull DistributedBiFunction<T, T1, R> mapToOutputFn
+            @Nonnull BiFunctionEx<T, T1, R> mapToOutputFn
     );
 
     /**
@@ -410,7 +410,7 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,
             @Nonnull JoinClause<K2, ? super T, ? super T2_IN, ? extends T2> joinClause2,
-            @Nonnull DistributedTriFunction<T, T1, T2, R> mapToOutputFn
+            @Nonnull TriFunction<T, T1, T2, R> mapToOutputFn
     );
 
     /**
@@ -433,7 +433,7 @@ public interface GeneralStage<T> extends Stage {
      * @param <K> type of the key
      */
     @Nonnull
-    <K> GeneralStageWithKey<T, K> groupingKey(@Nonnull DistributedFunction<? super T, ? extends K> keyFn);
+    <K> GeneralStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
     /**
      * Adds a timestamp to each item in the stream using the supplied function
@@ -467,7 +467,7 @@ public interface GeneralStage<T> extends Stage {
      * event could render the old one late, if the allowed lag is not large
      * enough.<br>
      * To add timestamps in source, use {@link
-     * StreamSourceStage#withTimestamps(DistributedToLongFunction, long)
+     * StreamSourceStage#withTimestamps(ToLongFunctionEx, long)
      * withTimestamps()}.
      * <p>
      * <b>Warning:</b> make sure the property you access in {@code timestampFn}
@@ -484,7 +484,7 @@ public interface GeneralStage<T> extends Stage {
      * @throws IllegalArgumentException if this stage already has timestamps
      */
     @Nonnull
-    StreamStage<T> addTimestamps(@Nonnull DistributedToLongFunction<? super T> timestampFn, long allowedLag);
+    StreamStage<T> addTimestamps(@Nonnull ToLongFunctionEx<? super T> timestampFn, long allowedLag);
 
     /**
      * Attaches a sink stage, one that accepts data but doesn't emit any. The
@@ -517,17 +517,17 @@ public interface GeneralStage<T> extends Stage {
      * on a local machine.
      *
      * @param shouldLogFn a function to filter the logged items. You can use {@link
-     *                    DistributedPredicate#alwaysTrue()
+     *                    PredicateEx#alwaysTrue()
      *                    alwaysTrue()} as a pass-through filter when you don't need any
      *                    filtering.
      * @param toStringFn  a function that returns a string representation of the item
-     * @see #peek(DistributedFunction)
+     * @see #peek(FunctionEx)
      * @see #peek()
      */
     @Nonnull
     GeneralStage<T> peek(
-            @Nonnull DistributedPredicate<? super T> shouldLogFn,
-            @Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn
+            @Nonnull PredicateEx<? super T> shouldLogFn,
+            @Nonnull FunctionEx<? super T, ? extends CharSequence> toStringFn
     );
 
     /**
@@ -544,11 +544,11 @@ public interface GeneralStage<T> extends Stage {
      * on a local machine.
      *
      * @param toStringFn  a function that returns a string representation of the item
-     * @see #peek(DistributedPredicate, DistributedFunction)
+     * @see #peek(PredicateEx, FunctionEx)
      * @see #peek()
      */
     @Nonnull
-    default GeneralStage<T> peek(@Nonnull DistributedFunction<? super T, ? extends CharSequence> toStringFn) {
+    default GeneralStage<T> peek(@Nonnull FunctionEx<? super T, ? extends CharSequence> toStringFn) {
         return peek(alwaysTrue(), toStringFn);
     }
 
@@ -561,8 +561,8 @@ public interface GeneralStage<T> extends Stage {
      * receive it. Its primary purpose is for development use, when running Jet
      * on a local machine.
      *
-     * @see #peek(DistributedPredicate, DistributedFunction)
-     * @see #peek(DistributedFunction)
+     * @see #peek(PredicateEx, FunctionEx)
+     * @see #peek(FunctionEx)
      */
     @Nonnull
     default GeneralStage<T> peek() {
@@ -583,7 +583,7 @@ public interface GeneralStage<T> extends Stage {
      */
     @Nonnull
     <R> GeneralStage<R> customTransform(
-            @Nonnull String stageName, @Nonnull DistributedSupplier<Processor> procSupplier);
+            @Nonnull String stageName, @Nonnull SupplierEx<Processor> procSupplier);
 
     /**
      * Attaches a stage with a custom transform based on the provided supplier
