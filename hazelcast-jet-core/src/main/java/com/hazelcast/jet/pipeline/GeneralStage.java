@@ -238,7 +238,7 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Attaches a mapping stage where for each item a lookup to the
+     * Attaches a mapping stage where for each item a lookup in the
      * {@code ReplicatedMap} with the supplied name is performed and the
      * result of the lookup is merged with the item and emitted.
      * <p>
@@ -254,7 +254,8 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * @param mapName name of the {@code ReplicatedMap}
-     * @param lookupKeyFn a function which returns the key to lookup in the map
+     * @param lookupKeyFn a function which returns the key to look up in the
+     *          map. Must not return null
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code ReplicatedMap}
      * @param <V> type of the value in the {@code ReplicatedMap}
@@ -273,7 +274,7 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup to the
+     * Attaches a mapping stage where for each item a lookup in the
      * supplied {@code ReplicatedMap} is performed and the result of the
      * lookup is merged with the item and emitted.
      * <p>
@@ -289,7 +290,8 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * @param replicatedMap the {@code ReplicatedMap} to lookup from
-     * @param lookupKeyFn a function which returns the key to lookup in the map
+     * @param lookupKeyFn a function which returns the key to look up in the
+     *          map. Must not return null
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code ReplicatedMap}
      * @param <V> type of the value in the {@code ReplicatedMap}
@@ -306,8 +308,8 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup to the
-     * {@code Map} with the supplied name is performed and the
+     * Attaches a mapping stage where for each item a lookup in the
+     * {@code IMap} with the supplied name is performed and the
      * result of the lookup is merged with the item and emitted.
      * <p>
      * If the result of the mapping is {@code null}, it emits nothing.
@@ -325,7 +327,8 @@ public interface GeneralStage<T> extends Stage {
      * this operation.
      *
      * @param mapName name of the {@code IMap}
-     * @param lookupKeyFn a function which returns the key to lookup in the map
+     * @param lookupKeyFn a function which returns the key to look up in the
+     *          map. Must not return null
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code IMap}
      * @param <V> type of the value in the {@code IMap}
@@ -344,8 +347,8 @@ public interface GeneralStage<T> extends Stage {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup to the
-     * supplied {@code Map} is performed and the result of the
+     * Attaches a mapping stage where for each item a lookup in the
+     * supplied {@code IMap} is performed and the result of the
      * lookup is merged with the item and emitted.
      * <p>
      * If the result of the mapping is {@code null}, it emits nothing.
@@ -363,7 +366,8 @@ public interface GeneralStage<T> extends Stage {
      * this operation.
      *
      * @param iMap the {@code IMap} to lookup from
-     * @param lookupKeyFn a function which returns the key to lookup in the map
+     * @param lookupKeyFn a function which returns the key to look up in the
+     *          map. Must not return null
      * @param mapFn the mapping function
      * @param <K> type of the key in the {@code IMap}
      * @param <V> type of the value in the {@code IMap}
@@ -471,8 +475,11 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Specifies the function that will extract a key from the items in the
      * associated pipeline stage. This enables the operations that need the
-     * key, such as grouped aggregation. The key must not be null and must
-     * properly implement {@code equals()} and {@code hashCode()}.
+     * key, such as grouped aggregation.
+     * <p>
+     * <b>Note:</b> make sure the extracted key is not-null, it would fail the
+     * job otherwise. Also make sure that it implements {@code equals()} and
+     * {@code hashCode()}.
      *
      * @param keyFn function that extracts the grouping key
      * @param <K> type of the key

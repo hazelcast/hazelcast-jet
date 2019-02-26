@@ -218,7 +218,7 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Attaches a mapping stage where for each item a lookup to the
+     * Attaches a mapping stage where for each item a lookup in the
      * {@code IMap} with the supplied name using the grouping key is performed
      * and the result of the lookup is merged with the item and emitted.
      * <p>
@@ -256,7 +256,7 @@ public interface GeneralStageWithKey<T, K> {
     }
 
     /**
-     * Attaches a mapping stage where for each item a lookup to the
+     * Attaches a mapping stage where for each item a lookup in the
      * supplied {@code IMap} using the grouping key is performed
      * and the result of the lookup is merged with the item and emitted.
      * <p>

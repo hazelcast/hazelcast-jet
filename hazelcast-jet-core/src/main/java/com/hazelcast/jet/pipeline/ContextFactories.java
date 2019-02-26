@@ -88,5 +88,4 @@ public final class ContextFactories {
                 .withCreateFn(jet -> jet.<K, V>getMap(mapName))
                 .withLocalSharing();
     }
-
 }
