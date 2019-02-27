@@ -107,33 +107,37 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Override @Nonnull
     default <K, V, R> BatchStage<R> mapUsingReplicatedMap(
             @Nonnull String mapName,
-            @Nonnull BiFunctionEx<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
+            @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingReplicatedMap(mapName, mapFn);
+        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingReplicatedMap(mapName, lookupKeyFn, mapFn);
     }
 
     @Override @Nonnull
     default <K, V, R> BatchStage<R> mapUsingReplicatedMap(
             @Nonnull ReplicatedMap<K, V> replicatedMap,
-            @Nonnull BiFunctionEx<? super ReplicatedMap<K, V>, ? super T, ? extends R> mapFn
+            @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
+            @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingReplicatedMap(replicatedMap, mapFn);
+        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingReplicatedMap(replicatedMap, lookupKeyFn, mapFn);
     }
 
     @Override @Nonnull
-    default <K, V, R> BatchStage<R> mapUsingIMapAsync(
+    default <K, V, R> BatchStage<R> mapUsingIMap(
             @Nonnull String mapName,
-            @Nonnull BiFunctionEx<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
+            @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
+            @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.mapUsingIMapAsync(mapName, mapFn);
+        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(mapName, lookupKeyFn, mapFn);
     }
 
     @Override @Nonnull
-    default <K, V, R> BatchStage<R> mapUsingIMapAsync(
+    default <K, V, R> BatchStage<R> mapUsingIMap(
             @Nonnull IMap<K, V> iMap,
-            @Nonnull BiFunctionEx<? super IMap<K, V>, ? super T, ? extends CompletableFuture<R>> mapFn
+            @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
+            @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return (BatchStage<R>) GeneralStage.super.mapUsingIMapAsync(iMap, mapFn);
+        return (BatchStage<R>) GeneralStage.super.<K, V, R>mapUsingIMap(iMap, lookupKeyFn, mapFn);
     }
 
     @Nonnull @Override

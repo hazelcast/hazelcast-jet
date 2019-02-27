@@ -27,8 +27,8 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
@@ -283,7 +283,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Entry<Integer, String>> mapped = streamStageFromList(input)
-                .mapUsingReplicatedMap(map, (m, i) -> entry(i, m.get(i)));
+                .mapUsingReplicatedMap(map, FunctionEx.identity(), Util::entry);
 
         // Then
         mapped.drainTo(sink);
@@ -311,8 +311,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Entry<Integer, String>> mapped = streamStageFromList(input)
-                .mapUsingIMapAsync(map, (m, i) -> Util.toCompletableFuture(m.getAsync(i))
-                                                      .thenApply(v -> entry(i, v)));
+                .mapUsingIMap(map, FunctionEx.identity(), Util::entry);
 
         // Then
         mapped.drainTo(sink);
@@ -341,7 +340,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Entry<Integer, String>> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
-                .mapUsingIMapAsync(map, Util::entry);
+                .mapUsingIMap(map, Util::entry);
 
         // Then
         mapped.drainTo(sink);
