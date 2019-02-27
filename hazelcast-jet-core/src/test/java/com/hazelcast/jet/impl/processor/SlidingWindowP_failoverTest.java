@@ -63,7 +63,7 @@ public class SlidingWindowP_failoverTest {
                 wDef,
                 0L,
                 aggrOp,
-                TimestampedEntry::fromWindowResult,
+                TimestampedEntry::fromKeyedWindowResult,
                 true);
 
         Outbox outbox = new TestOutbox(128);

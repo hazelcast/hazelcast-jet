@@ -22,6 +22,8 @@ import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedItem;
+import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
@@ -99,7 +101,7 @@ public class WindowAggregateBuilder<R0> {
      */
     @Nonnull
     public <OUT> StreamStage<OUT> build(
-            @Nonnull WindowResultFunction<? super ItemsByTag, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super WindowResult<ItemsByTag>, ? extends OUT> mapToOutputFn
     ) {
         AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         CreateOutStageFn<OUT, StreamStage<OUT>> createOutStageFn = StreamStageImpl::new;

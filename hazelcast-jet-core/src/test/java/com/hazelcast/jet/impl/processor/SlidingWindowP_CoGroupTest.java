@@ -53,7 +53,7 @@ public class SlidingWindowP_CoGroupTest {
                 tumblingWinPolicy(1),
                 0L,
                 aggregateOperation2(toList(), toList()),
-                TimestampedEntry::fromWindowResult);
+                TimestampedEntry::fromKeyedWindowResult);
 
         Entry<String, String> entry1 = entry("k1", "a");
         Entry<String, String> entry2 = entry("k2", "b");

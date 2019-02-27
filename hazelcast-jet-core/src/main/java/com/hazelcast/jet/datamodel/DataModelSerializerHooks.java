@@ -133,19 +133,60 @@ class DataModelSerializerHooks {
             return new StreamSerializer<WindowResult>() {
                 @Override
                 public void write(ObjectDataOutput out, WindowResult object) throws IOException {
-                    out.writeObject(object.getKey());
-                    out.writeLong(object.getStart());
-                    out.writeLong(object.getEnd());
-                    out.writeObject(object.getValue());
+                    out.writeLong(object.start());
+                    out.writeLong(object.end());
+                    out.writeObject(object.result());
                 }
 
                 @Override
                 public WindowResult read(ObjectDataInput in) throws IOException {
-                    Object key = in.readObject();
                     long start = in.readLong();
                     long end = in.readLong();
                     Object result = in.readObject();
-                    return new WindowResult<>(start, end, key, result);
+                    return new WindowResult<>(start, end, result);
+                }
+
+                @Override
+                public int getTypeId() {
+                    return SerializerHookConstants.WINDOW_RESULT;
+                }
+
+                @Override
+                public void destroy() {
+                }
+            };
+        }
+
+        @Override public boolean isOverwritable() {
+            return false;
+        }
+    }
+
+    public static final class KeyedWindowResultHook implements SerializerHook<KeyedWindowResult> {
+
+        @Override
+        public Class<KeyedWindowResult> getSerializationType() {
+            return KeyedWindowResult.class;
+        }
+
+        @Override
+        public Serializer createSerializer() {
+            return new StreamSerializer<KeyedWindowResult>() {
+                @Override
+                public void write(ObjectDataOutput out, KeyedWindowResult object) throws IOException {
+                    out.writeLong(object.start());
+                    out.writeLong(object.end());
+                    out.writeObject(object.key());
+                    out.writeObject(object.result());
+                }
+
+                @Override
+                public KeyedWindowResult read(ObjectDataInput in) throws IOException {
+                    long start = in.readLong();
+                    long end = in.readLong();
+                    Object key = in.readObject();
+                    Object result = in.readObject();
+                    return new KeyedWindowResult<>(start, end, key, result);
                 }
 
                 @Override

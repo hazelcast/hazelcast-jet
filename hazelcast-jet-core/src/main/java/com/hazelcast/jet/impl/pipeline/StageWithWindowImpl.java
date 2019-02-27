@@ -19,8 +19,8 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
@@ -68,7 +68,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     @Nonnull @Override
     public <R, OUT> StreamStage<OUT> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
         checkSerializable(mapToOutputFn, "mapToOutputFn");
@@ -77,8 +77,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
 
     // This method was extracted in order to capture the wildcard parameter A.
     private <A, R, OUT> StreamStage<OUT> attachAggregate(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(
@@ -93,8 +93,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     @Nonnull @Override
     public <T1, R, OUT> StreamStage<OUT> aggregate2(
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents((ComputeStageImplBase) stage1, "stage1");
@@ -105,8 +105,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     // This method was extracted in order to capture the wildcard parameter A.
     private <T1, A, R, OUT> StreamStage<OUT> attachAggregate2(
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(
@@ -122,8 +122,8 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     public <T1, T2, R, OUT> StreamStage<OUT> aggregate3(
             @Nonnull StreamStage<T1> stage1,
             @Nonnull StreamStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         ComputeStageImplBase stageImpl1 = (ComputeStageImplBase) stage1;
         ComputeStageImplBase stageImpl2 = (ComputeStageImplBase) stage2;
@@ -135,11 +135,11 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     }
 
     // This method was extracted in order to capture the wildcard parameter A.
-    private <T1, T2, A, R, OUT> StreamStage<OUT> attachAggregate3(
+    private <T1, T2, K, A, R, OUT> StreamStage<OUT> attachAggregate3(
             @Nonnull StreamStage<T1> stage1,
             @Nonnull StreamStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<OUT>>(

@@ -109,8 +109,8 @@ public class SlidingWindowPTest {
                         winPolicy,
                         0L,
                         operation,
-                        TimestampedEntry::fromWindowResult)
-                : combineToSlidingWindowP(winPolicy, operation, TimestampedEntry::fromWindowResult);
+                        TimestampedEntry::fromKeyedWindowResult)
+                : combineToSlidingWindowP(winPolicy, operation, TimestampedEntry::fromKeyedWindowResult);
 
         // new supplier to save the last supplied instance
         supplier = () -> lastSuppliedProcessor = (SlidingWindowP) procSupplier.get();

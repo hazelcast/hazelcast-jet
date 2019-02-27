@@ -232,7 +232,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         windowed.aggregate(summingLong(i -> i),
-                (start, end, sum) -> new TimestampedItem<>(start, sum))
+                winResult -> new TimestampedItem<>(winResult.start(), winResult.result()))
                 .drainTo(sink);
         execute();
 
@@ -266,9 +266,9 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         // Then
         windowed.aggregate(summingLong(i -> i),
                 // suppress incomplete windows to get predictable results
-                (start, end, sum) -> end - start != sessionLength + sessionTimeout - 1
+                winResult -> winResult.end() - winResult.start() != sessionLength + sessionTimeout - 1
                         ? null
-                        : new TimestampedItem<>(start, sum))
+                        : new TimestampedItem<>(winResult.start(), winResult.result()))
                 .drainTo(sink);
         jet().newJob(p);
 
@@ -318,7 +318,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Object> aggregated = stage.window(sliding(2, 1))
-                                              .aggregate(counting(), (x, y, z) -> null);
+                                              .aggregate(counting(), x -> null);
 
         // Then
         aggregated.drainTo(sink);
@@ -333,7 +333,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Object> aggregated = stage.window(session(1))
-                                              .aggregate(counting(), (x, y, z) -> null);
+                                              .aggregate(counting(), x -> null);
 
         // Then
         aggregated.drainTo(sink);
@@ -406,7 +406,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> aggregated = fx.stage0.aggregate2(SUMMING, fx.newStage(), SUMMING,
-                (start, end, sum0, sum1) -> FORMAT_FN_2.apply(end, tuple2(sum0, sum1)));
+                winResult -> FORMAT_FN_2.apply(winResult.end(), winResult.result()));
 
         // Then
         aggregated.drainTo(sink);
@@ -424,7 +424,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         StreamStage<String> aggregated = fx.stage0.aggregate2(
                 fx.newStage(),
                 aggregateOperation2(SUMMING, SUMMING),
-                (start, end, sums) -> FORMAT_FN_2.apply(end, sums));
+                winResult -> FORMAT_FN_2.apply(winResult.end(), winResult.result()));
 
         // Then
         aggregated.drainTo(sink);
@@ -479,7 +479,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         StreamStage<String> aggregated = fx.stage0.aggregate3(SUMMING,
                 fx.newStage(), SUMMING,
                 fx.newStage(), SUMMING,
-                (start, end, sum0, sum1, sum2) -> FORMAT_FN_3.apply(end, tuple3(sum0, sum1, sum2)));
+                wr -> FORMAT_FN_3.apply(wr.end(), wr.result()));
 
         // Then
         aggregated.drainTo(sink);
@@ -497,7 +497,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         StreamStage<String> aggregated = fx.stage0.aggregate3(
                 fx.newStage(), fx.newStage(),
                 aggregateOperation3(SUMMING, SUMMING, SUMMING),
-                (start, end, sums) -> FORMAT_FN_3.apply(end, sums));
+                winResult -> FORMAT_FN_3.apply(winResult.end(), winResult.result()));
 
         // Then
         aggregated.drainTo(sink);
@@ -515,8 +515,8 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         WindowAggregateBuilder<Long> b = fx.stage0.aggregateBuilder(SUMMING);
         Tag<Long> tag0 = b.tag0();
         Tag<Long> tag1 = b.add(fx.newStage(), SUMMING);
-        StreamStage<String> aggregated = b.build((start, end, sums) ->
-                FORMAT_FN_2.apply(end, tuple2(sums.get(tag0), sums.get(tag1))));
+        StreamStage<String> aggregated = b.build(wr ->
+                FORMAT_FN_2.apply(wr.end(), tuple2(wr.result().get(tag0), wr.result().get(tag1))));
 
         // Then
         aggregated.drainTo(sink);
@@ -540,7 +540,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         Tag<Long> tag1 = b2.add(tag1_in, SUMMING);
 
         StreamStage<String> aggregated = b.build(b2.build(),
-                (start, end, sums) -> FORMAT_FN_2.apply(end, tuple2(sums.get(tag0), sums.get(tag1))));
+                wr -> FORMAT_FN_2.apply(wr.end(), tuple2(wr.result().get(tag0), wr.result().get(tag1))));
 
         // Then
         aggregated.drainTo(sink);

@@ -20,9 +20,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
@@ -53,14 +53,14 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
     @Nonnull
     private final AggregateOperation<?, ? extends R> aggrOp;
     @Nonnull
-    private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
+    private final FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn;
 
     public WindowGroupTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull WindowDefinition wDef,
             @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
             @Nonnull AggregateOperation<?, ? extends R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         super(createName(wDef), upstream);
         this.wDef = wDef;

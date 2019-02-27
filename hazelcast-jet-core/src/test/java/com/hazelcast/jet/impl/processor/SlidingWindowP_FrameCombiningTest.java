@@ -47,7 +47,8 @@ public class SlidingWindowP_FrameCombiningTest {
     public void when_multipleFrames_then_combine() {
         TestSupport
                 .verifyProcessor(
-                        combineToSlidingWindowP(slidingWinPolicy(8, 4), toSet(), TimestampedEntry::fromWindowResult))
+                        combineToSlidingWindowP(slidingWinPolicy(8, 4), toSet(),
+                                TimestampedEntry::fromKeyedWindowResult))
                 .input(asList(
                         frame(2, set("a")),
                         frame(4, set("b")),
@@ -60,12 +61,12 @@ public class SlidingWindowP_FrameCombiningTest {
                 ));
     }
 
-    private <V> TimestampedEntry<Long, V> frame(long ts, V value) {
+    private static <V> TimestampedEntry<Long, V> frame(long ts, V value) {
         return new TimestampedEntry<>(ts, KEY, value);
     }
 
     @SafeVarargs
-    private final <E> Set<E> set(E ... elements) {
-        return new HashSet(asList(elements));
+    private static <E> Set<E> set(E... elements) {
+        return new HashSet<>(asList(elements));
     }
 }

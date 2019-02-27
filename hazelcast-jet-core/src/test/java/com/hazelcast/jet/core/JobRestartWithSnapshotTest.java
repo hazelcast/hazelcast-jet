@@ -105,6 +105,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         when_nodeDown_then_jobRestartsFromSnapshot(true);
     }
 
+    @SuppressWarnings("unchecked")
     private void when_nodeDown_then_jobRestartsFromSnapshot(boolean twoStage) throws Exception {
         /* Design of this test:
 
@@ -165,7 +166,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     aggrOp.withIdentityFinish()
             ));
             Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::fromWindowResult));
+                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::fromKeyedWindowResult));
 
             dag.edge(between(insWm, aggregateStage1)
                     .partitioned(entryKey()))
@@ -181,7 +182,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     wDef,
                     0L,
                     aggrOp,
-                    TimestampedEntry::fromWindowResult));
+                    TimestampedEntry::fromKeyedWindowResult));
 
             dag.edge(between(insWm, aggregate)
                     .distributed()

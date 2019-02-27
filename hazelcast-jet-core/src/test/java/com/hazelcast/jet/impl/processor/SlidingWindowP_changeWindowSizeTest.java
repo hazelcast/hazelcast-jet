@@ -48,9 +48,9 @@ public class SlidingWindowP_changeWindowSizeTest {
                 slidingWinPolicy(3, 1),
                 slidingWinPolicy(2, 1),
                 asList(
-                        new TimestampedEntry(3, "key", 3L),
-                        new TimestampedEntry(4, "key", 5L),
-                        new TimestampedEntry(5, "key", 3L)
+                        new TimestampedEntry<>(3, "key", 3L),
+                        new TimestampedEntry<>(4, "key", 5L),
+                        new TimestampedEntry<>(5, "key", 3L)
                 ));
     }
 
@@ -60,10 +60,10 @@ public class SlidingWindowP_changeWindowSizeTest {
                 slidingWinPolicy(2, 1),
                 slidingWinPolicy(3, 1),
                 asList(
-                        new TimestampedEntry(3, "key", 3L),
-                        new TimestampedEntry(4, "key", 6L),
-                        new TimestampedEntry(5, "key", 5L),
-                        new TimestampedEntry(6, "key", 3L)
+                        new TimestampedEntry<>(3, "key", 3L),
+                        new TimestampedEntry<>(4, "key", 6L),
+                        new TimestampedEntry<>(5, "key", 5L),
+                        new TimestampedEntry<>(6, "key", 3L)
                 ));
     }
 
@@ -72,7 +72,7 @@ public class SlidingWindowP_changeWindowSizeTest {
         test(
                 tumblingWinPolicy(2),
                 tumblingWinPolicy(3),
-                singletonList(new TimestampedEntry(6, "key", 5L)));
+                singletonList(new TimestampedEntry<>(6, "key", 5L)));
     }
 
     @Test
@@ -81,8 +81,8 @@ public class SlidingWindowP_changeWindowSizeTest {
                 tumblingWinPolicy(3),
                 tumblingWinPolicy(2),
                 asList(
-                        new TimestampedEntry(4, "key", 3L),
-                        new TimestampedEntry(6, "key", 3L)
+                        new TimestampedEntry<>(4, "key", 3L),
+                        new TimestampedEntry<>(6, "key", 3L)
                 ));
     }
 
@@ -91,7 +91,7 @@ public class SlidingWindowP_changeWindowSizeTest {
         test(
                 tumblingWinPolicy(1),
                 tumblingWinPolicy(4),
-                singletonList(new TimestampedEntry(4, "key", 5L)));
+                singletonList(new TimestampedEntry<>(4, "key", 5L)));
     }
 
     private static void test(SlidingWindowPolicy policy1, SlidingWindowPolicy policy2,
@@ -132,7 +132,7 @@ public class SlidingWindowP_changeWindowSizeTest {
                 winPolicy,
                 0L,
                 summingLong((Integer t) -> t),
-                TimestampedEntry::fromWindowResult,
+                TimestampedEntry::fromKeyedWindowResult,
                 true);
     }
 }

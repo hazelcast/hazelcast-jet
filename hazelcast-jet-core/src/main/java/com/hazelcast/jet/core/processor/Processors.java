@@ -30,16 +30,16 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.ConsumerEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
@@ -428,8 +428,8 @@ public final class Processors {
             @Nonnull TimestampKind timestampKind,
             @Nonnull SlidingWindowPolicy winPolicy,
             long earlyResultsPeriod,
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         return aggregateByKeyAndWindowP(
                 keyFns, timestampFns, timestampKind, winPolicy, earlyResultsPeriod, aggrOp, mapToOutputFn, true);
@@ -483,7 +483,7 @@ public final class Processors {
                 winPolicy.toTumblingByFrame(),
                 0L,
                 aggrOp.withIdentityFinish(),
-                TimestampedEntry::fromWindowResult,
+                TimestampedEntry::fromKeyedWindowResult,
                 false
         );
     }
@@ -525,8 +525,8 @@ public final class Processors {
     @Nonnull
     public static <K, A, R, OUT> SupplierEx<Processor> combineToSlidingWindowP(
             @Nonnull SlidingWindowPolicy winPolicy,
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         FunctionEx<TimestampedEntry<K, A>, K> keyFn = TimestampedEntry::getKey;
         ToLongFunctionEx<TimestampedEntry<K, A>> timestampFn = TimestampedEntry::getTimestamp;
@@ -569,8 +569,8 @@ public final class Processors {
             @Nonnull TimestampKind timestampKind,
             @Nonnull SlidingWindowPolicy winPolicy,
             long earlyResultsPeriod,
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn,
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn,
             boolean isLastStage
     ) {
         return () -> new SlidingWindowP<>(
@@ -642,8 +642,8 @@ public final class Processors {
             long earlyResultsPeriod,
             @Nonnull List<ToLongFunctionEx<?>> timestampFns,
             @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
-            @Nonnull AggregateOperation<A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+            @Nonnull AggregateOperation<A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         return () -> new SessionWindowP<>(
                 sessionTimeout, earlyResultsPeriod, timestampFns, keyFns, aggrOp, mapToOutputFn);

@@ -20,9 +20,10 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedEntry;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import javax.annotation.Nonnull;
@@ -95,19 +96,19 @@ public class WindowGroupAggregateBuilder<K, R0> {
      */
     @Nonnull
     public <OUT> StreamStage<OUT> build(
-            @Nonnull KeyedWindowResultFunction<? super K, ItemsByTag, OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, ItemsByTag>, ? extends OUT> mapToOutputFn
     ) {
         AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         return grAggBuilder.buildStream(aggrOp, mapToOutputFn);
     }
 
     /**
-     * Convenience for {@link #build(KeyedWindowResultFunction)} which results
+     * Convenience for {@link #build(FunctionEx)} which results
      * in a stage that emits {@link TimestampedEntry}s. The timestamp of the
      * entry corresponds to the timestamp of the window's end.
      */
     @Nonnull
     public StreamStage<TimestampedEntry<K, ItemsByTag>> build() {
-        return build(TimestampedEntry::fromWindowResult);
+        return build(TimestampedEntry::fromKeyedWindowResult);
     }
 }

@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.datamodel;
 
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
-
 import javax.annotation.Nonnull;
 import java.util.Map;
 
@@ -93,15 +91,12 @@ public final class TimestampedEntry<K, V> implements Map.Entry<K, V> {
     }
 
     /**
-     * This method matches the shape of the functional interface {@link
-     * KeyedWindowResultFunction}.
-     * <p>
-     * Constructs a {@code TimestampedEntry} using the window end time as the
-     * timestamp.
+     * Constructs a {@link TimestampedEntry} from a {@link WindowResult} using
+     * the window end time as the timestamp.
      */
-    public static <K, V> TimestampedEntry<K, V> fromWindowResult(
-            long winStart, long winEnd, @Nonnull K key, @Nonnull V value
+    public static <K, R> TimestampedEntry<K, R> fromKeyedWindowResult(
+            @Nonnull KeyedWindowResult<? extends K, ? extends R> winResult
     ) {
-        return new TimestampedEntry<>(winEnd, key, value);
+        return new TimestampedEntry<>(winResult.end(), winResult.key(), winResult.result());
     }
 }

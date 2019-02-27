@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -46,6 +46,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
@@ -54,7 +55,7 @@ public class SessionWindowPTest {
 
     private static final int SESSION_TIMEOUT = 10;
     private SupplierEx<Processor> supplier;
-    private SessionWindowP<String, ?, Long, WindowResult<String, Long>> lastSuppliedProcessor;
+    private SessionWindowP<String, ?, Long, KeyedWindowResult<String, Long>> lastSuppliedProcessor;
 
     @Before
     public void before() {
@@ -64,7 +65,7 @@ public class SessionWindowPTest {
                 singletonList((ToLongFunctionEx<Entry<Object, Long>>) Entry::getValue),
                 singletonList(entryKey()),
                 AggregateOperations.counting(),
-                WindowResult::new);
+                identity());
     }
 
     @After
@@ -121,9 +122,9 @@ public class SessionWindowPTest {
         verifyProcessor(supplier)
                 .input(inbox)
                 .expectOutput(asList(
-                        new WindowResult(1, 22, "a", 3),
+                        new KeyedWindowResult(1, 22, "a", 3),
                         new Watermark(25),
-                        new WindowResult(30, 50, "a", 3)));
+                        new KeyedWindowResult(30, 50, "a", 3)));
     }
 
     @Test
@@ -146,8 +147,8 @@ public class SessionWindowPTest {
                         entry("key", 10L)
                 ))
                 .expectOutput(asList(
-                        new WindowResult(0, 10, "key", 1L),
-                        new WindowResult(10, 20, "key", 1L)
+                        new KeyedWindowResult(0, 10, "key", 1L),
+                        new KeyedWindowResult(10, 20, "key", 1L)
                 ));
     }
 
@@ -232,10 +233,10 @@ public class SessionWindowPTest {
         ));
     }
 
-    private static Stream<WindowResult<String, Long>> expectedSessions(String key) {
+    private static Stream<KeyedWindowResult<String, Long>> expectedSessions(String key) {
         return Stream.of(
-                new WindowResult<>(1, 22, key, 3L),
-                new WindowResult<>(30, 50, key, 3L)
+                new KeyedWindowResult<>(1, 22, key, 3L),
+                new KeyedWindowResult<>(30, 50, key, 3L)
         );
     }
 }

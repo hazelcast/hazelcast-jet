@@ -18,7 +18,8 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.function.WindowResultFunction;
+import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
@@ -70,7 +71,7 @@ public class AggBuilder {
     public <A, R, OUT, OUT_STAGE extends GeneralStage<OUT>> OUT_STAGE build(
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn,
-            @Nullable WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nullable FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
 

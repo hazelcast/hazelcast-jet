@@ -24,14 +24,14 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
-import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
@@ -63,7 +63,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <T, R> FunctionEx<?, ? extends Traverser<?>> adaptFlatMapFn(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
@@ -71,7 +70,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <C, T, R> BiFunctionEx<? super C, ?, ?> adaptMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
@@ -79,7 +77,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <C, T> BiPredicateEx<? super C, ?> adaptFilterUsingContextFn(
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     ) {
@@ -87,7 +84,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <C, T, R> BiFunctionEx<? super C, ?, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
@@ -96,15 +92,13 @@ public class FunctionAdapter {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>>
-    adaptFlatMapUsingContextAsyncFn(
+    <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return (BiFunctionEx) flatMapAsyncFn;
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <T, R extends CharSequence> FunctionEx<?, ? extends R> adaptToStringFn(
             @Nonnull FunctionEx<? super T, ? extends R> toStringFn
     ) {
@@ -118,7 +112,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     public <T, T1, R> BiFunctionEx<?, ? super T1, ?> adaptHashJoinOutputFn(
             @Nonnull BiFunctionEx<? super T, ? super T1, ? extends R> mapToOutputFn
     ) {
@@ -126,7 +119,6 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     <T, T1, T2, R> TriFunction<?, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
             @Nonnull TriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
     ) {
@@ -134,17 +126,17 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    <R, OUT> WindowResultFunction<? super R, ?> adaptWindowResultFn(
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> windowResultFn
+    <K, R, OUT> FunctionEx<? super WindowResult<R>, ?> adaptWindowResultFn(
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> winResultFn
     ) {
-        return windowResultFn;
+        return winResultFn;
     }
 
     @Nonnull
-    <K, R, OUT> KeyedWindowResultFunction<? super K, ? super R, ?> adaptKeyedWindowResultFn(
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
+    <K, R, OUT> FunctionEx<? super KeyedWindowResult<K, R>, ?> adaptKeyedWindowResultFn(
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> winResultFn
     ) {
-        return keyedWindowResultFn;
+        return winResultFn;
     }
 
     @Nonnull
@@ -312,21 +304,20 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     }
 
     @Nonnull @Override
-    <R, OUT> WindowResultFunction<? super R, ? extends JetEvent<OUT>> adaptWindowResultFn(
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> windowResultFn
+    <K, R, OUT> FunctionEx<? super WindowResult<R>, ? extends JetEvent<OUT>> adaptWindowResultFn(
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> winResultFn
     ) {
         // use `winEnd - 1` for jetEvent, see https://github.com/hazelcast/hazelcast-jet/issues/898
-        return (winStart, winEnd, windowResult) ->
-                jetEvent(windowResultFn.apply(winStart, winEnd, windowResult), winEnd - 1);
+        return windowResult ->
+                jetEvent(winResultFn.apply(windowResult), windowResult.end() - 1);
     }
 
     @Nonnull @Override
-    <K, R, OUT> KeyedWindowResultFunction<? super K, ? super R, ? extends JetEvent<OUT>> adaptKeyedWindowResultFn(
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> keyedWindowResultFn
+    <K, R, OUT> FunctionEx<? super KeyedWindowResult<K, R>, ? extends JetEvent<OUT>> adaptKeyedWindowResultFn(
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> winResultFn
     ) {
         // use `winEnd - 1` for jetEvent, see https://github.com/hazelcast/hazelcast-jet/issues/898
-        return (winStart, winEnd, key, windowResult) ->
-                jetEvent(keyedWindowResultFn.apply(winStart, winEnd, key, windowResult), winEnd - 1);
+        return winResult -> jetEvent(winResultFn.apply(winResult), winResult.end() - 1);
     }
 
     @Nonnull @Override

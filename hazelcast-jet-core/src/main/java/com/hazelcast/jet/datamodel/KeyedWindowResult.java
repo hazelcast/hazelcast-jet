@@ -22,71 +22,54 @@ import java.util.Objects;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
 
 /**
- * Holds the result of an aggregate operation performed over a time
- * window.
+ * Holds the result of a group-and-aggregate operation performed over a
+ * time window.
  *
+ * @param <K> type of key
  * @param <R> type of aggregated result
  */
-public class WindowResult<R> {
-    private final long start;
-    private final long end;
-    private final R result;
+public class KeyedWindowResult<K, R> extends WindowResult<R> {
+    private final K key;
 
     /**
      * @param start  start time of the window
      * @param end    end time of the window
+     * @param key    grouping key
      * @param result result of aggregation
      */
-    public WindowResult(long start, long end, @Nonnull R result) {
-        this.start = start;
-        this.end = end;
-        this.result = result;
+    public KeyedWindowResult(long start, long end, @Nonnull K key, @Nonnull R result) {
+        super(start, end, result);
+        this.key = key;
     }
 
     /**
-     * Returns the starting timestamp of the window.
-     */
-    public long start() {
-        return start;
-    }
-
-    /**
-     * Returns the ending timestamp of the window.
-     */
-    public long end() {
-        return end;
-    }
-
-    /**
-     * Returns the aggregated result.
+     * Returns the key.
      */
     @Nonnull
-    public R result() {
-        return result;
+    public K key() {
+        return key;
     }
 
     @Override
     public boolean equals(Object obj) {
-        WindowResult that;
+        KeyedWindowResult that;
         return this == obj
-                || obj instanceof WindowResult
-                    && this.start == (that = (WindowResult) obj).start
-                    && this.end == that.end
-                    && Objects.equals(this.result, that.result);
+                || obj instanceof KeyedWindowResult
+                && super.equals(that = (KeyedWindowResult) obj)
+                && Objects.equals(this.key, that.key);
     }
 
     @Override
     public int hashCode() {
-        int hc = 17;
-        hc = 73 * hc + Long.hashCode(start);
-        hc = 73 * hc + Long.hashCode(end);
-        hc = 73 * hc + Objects.hashCode(result);
+        int hc = super.hashCode();
+        hc = 73 * hc + Objects.hashCode(key);
         return hc;
     }
 
     @Override
     public String toString() {
         return String.format(
-                "WindowResult{start=%s, end=%s, value='%s'}", toLocalTime(start), toLocalTime(end), result);
+                "KeyedWindowResult{start=%s, end=%s, key='%s', value='%s'}",
+                toLocalTime(start()), toLocalTime(end()), key, result());
     }
 }

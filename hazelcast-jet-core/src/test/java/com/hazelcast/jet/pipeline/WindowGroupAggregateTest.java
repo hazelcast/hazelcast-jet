@@ -40,7 +40,6 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperati
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.Functions.wholeItem;
 import static com.hazelcast.jet.pipeline.WindowDefinition.session;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
@@ -163,7 +162,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> distinct = windowed.distinct(
-                (start, end, item) -> String.format("(%04d, %04d)", end, item / 2)
+                winResult -> String.format("(%04d, %04d)", winResult.end(), winResult.result() / 2)
         );
 
         // Then
@@ -286,9 +285,10 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 .map(TimestampedEntry::getValue)
                 .window(tumbling(1))
                 .aggregate(AggregateOperations.toList(),
-                        (start, end, listOfList) -> {
+                        winResult -> {
+                            List<List<String>> listOfList = winResult.result();
                             listOfList.sort(comparing(l -> l.get(0)));
-                            return formatTsItem(end, listOfList.get(0), listOfList.get(1));
+                            return formatTsItem(winResult.end(), listOfList.get(0), listOfList.get(1));
                         })
                 .drainTo(sink);
 
@@ -325,7 +325,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         windowed.aggregate(SUMMING,
-                (start, end, key, sum) -> new TimestampedEntry<>(start, key, sum))
+                winResult -> new TimestampedEntry<>(winResult.start(), winResult.key(), winResult.result()))
                 .drainTo(sink);
         execute();
         assertEquals(
@@ -353,11 +353,10 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // Then
         windowed.aggregate(SUMMING,
-                (start, end, key, sum) ->
-                        // suppress incomplete windows to get predictable results
-                        end - start != sessionLength + sessionTimeout - 1
-                                ? null
-                                : new TimestampedEntry<>(start, key, sum))
+                //   suppress incomplete windows to get predictable results
+                wr -> wr.end() - wr.start() != sessionLength + sessionTimeout - 1
+                        ? null
+                        : new TimestampedEntry<>(wr.start(), wr.key(), wr.result()))
                 .drainTo(sink);
         jet().newJob(p);
         String expectedString = new SessionWindowSimulator(wDef, sessionLength + sessionTimeout)
@@ -413,8 +412,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> aggregated = stage0.aggregate2(SUMMING,
-                fx.newSourceStage(), SUMMING, (start, end, key, sum0, sum1) ->
-                        TS_ENTRY_FORMAT_FN_2.apply(new TimestampedEntry<>(end, key, tuple2(sum0, sum1))));
+                fx.newSourceStage(), SUMMING,
+                wr -> TS_ENTRY_FORMAT_FN_2.apply(TimestampedEntry.fromKeyedWindowResult(wr)));
 
         // Then
         aggregated.drainTo(sink);
@@ -432,7 +431,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> aggregated = stage0.aggregate2(
                 fx.newSourceStage(), aggregateOperation2(SUMMING, SUMMING),
-                (start, end, key, sums) -> TS_ENTRY_FORMAT_FN_2.apply(new TimestampedEntry<>(end, key, sums)));
+                wr -> TS_ENTRY_FORMAT_FN_2.apply(TimestampedEntry.fromKeyedWindowResult(wr)));
 
         // Then
         aggregated.drainTo(sink);
@@ -488,8 +487,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         StreamStage<String> aggregated = stage0.aggregate3(SUMMING,
                 fx.newSourceStage(), SUMMING,
                 fx.newSourceStage(), SUMMING,
-                (start, end, key, sum0, sum1, sum2) ->
-                        TS_ENTRY_FORMAT_FN_3.apply(new TimestampedEntry<>(end, key, tuple3(sum0, sum1, sum2))));
+                wr -> TS_ENTRY_FORMAT_FN_3.apply(TimestampedEntry.fromKeyedWindowResult(wr)));
 
         // Then
         aggregated.drainTo(sink);
@@ -508,7 +506,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         StreamStage<String> aggregated = stage0.aggregate3(
                 fx.newSourceStage(), fx.newSourceStage(),
                 aggregateOperation3(SUMMING, SUMMING, SUMMING),
-                (start, end, key, sums) -> TS_ENTRY_FORMAT_FN_3.apply(new TimestampedEntry<>(end, key, sums)));
+                wr -> TS_ENTRY_FORMAT_FN_3.apply(TimestampedEntry.fromKeyedWindowResult(wr)));
 
         // Then
         aggregated.drainTo(sink);
@@ -528,8 +526,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         WindowGroupAggregateBuilder<String, Long> b = stage0.window(fx.tumblingWinDef).aggregateBuilder(SUMMING);
         Tag<Long> tag0 = b.tag0();
         Tag<Long> tag1 = b.add(stage1, SUMMING);
-        StreamStage<String> aggregated = b.build((start, end, key, sums) ->
-                String.format("(%04d %s: %04d, %04d)", end, key, sums.get(tag0), sums.get(tag1)));
+        StreamStage<String> aggregated = b.build(wr -> String.format("(%04d %s: %04d, %04d)",
+                wr.end(), wr.key(), wr.result().get(tag0), wr.result().get(tag1)));
 
         // Then
         aggregated.drainTo(sink);
@@ -559,8 +557,8 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
 
         StreamStage<String> aggregated = b.build(
                 b2.build(),
-                (start, end, key, sums) ->
-                        String.format("(%04d %s: %04d, %04d)", end, key, sums.get(tag0), sums.get(tag1)));
+                wr -> String.format("(%04d %s: %04d, %04d)",
+                        wr.end(), wr.key(), wr.result().get(tag0), wr.result().get(tag1)));
 
         // Then
         aggregated.drainTo(sink);

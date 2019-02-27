@@ -20,8 +20,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
-import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
@@ -52,13 +53,13 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
     @Nonnull
     private final WindowDefinition wDef;
     @Nonnull
-    private final WindowResultFunction<? super R, ? extends OUT> mapToOutputFn;
+    private final FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn;
 
     public WindowAggregateTransform(
             @Nonnull List<Transform> upstream,
             @Nonnull WindowDefinition wDef,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull WindowResultFunction<? super R, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> mapToOutputFn
     ) {
         super(createName(wDef), upstream);
         this.aggrOp = aggrOp;
@@ -131,7 +132,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
                         slidingWinPolicy(wDef.windowSize(), wDef.slideBy()),
                         wDef.earlyResultsPeriod(),
                         aggrOp,
-                        mapToOutputFn.toKeyedWindowResultFn()
+                        mapToOutputFn
                 ));
         p.addEdges(this, pv.v, edge -> edge.distributed().allToOne(name().hashCode()));
     }
@@ -164,7 +165,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
         ));
         v1.localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, name(), 1,
-                combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn.toKeyedWindowResultFn()));
+                combineToSlidingWindowP(winPolicy, aggrOp, mapToOutputFn));
         p.addEdges(this, v1);
         p.dag.edge(between(v1, pv2.v).distributed().allToOne(name().hashCode()));
     }
@@ -189,7 +190,7 @@ public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
                         nCopies(aggrOp.arity(), (ToLongFunctionEx<JetEvent>) JetEvent::timestamp),
                         nCopies(aggrOp.arity(), new ConstantFunctionEx<>(name().hashCode())),
                         aggrOp,
-                        mapToOutputFn.toKeyedWindowResultFn()));
+                        mapToOutputFn));
         p.addEdges(this, pv.v, edge -> edge.distributed().allToOne(name().hashCode()));
     }
 }

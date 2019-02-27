@@ -19,8 +19,8 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
@@ -62,7 +62,7 @@ public class StageWithKeyAndWindowImpl<T, K>
 
     public <R, OUT> StreamStage<OUT> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
         checkSerializable(mapToOutputFn, "mapToOutputFn");
@@ -71,8 +71,8 @@ public class StageWithKeyAndWindowImpl<T, K>
 
     // This method was extracted in order to capture the wildcard parameter A.
     private <A, R, OUT> StreamStage<OUT> attachAggregate(
-            @Nonnull AggregateOperation1<? super T, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return computeStage.attach(new WindowGroupTransform<K, R, JetEvent<OUT>>(
@@ -89,7 +89,7 @@ public class StageWithKeyAndWindowImpl<T, K>
     public <T1, R, OUT> StreamStage<OUT> aggregate2(
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(((StageWithGroupingBase) stage1).computeStage, "stage1");
@@ -100,8 +100,8 @@ public class StageWithKeyAndWindowImpl<T, K>
     // This method was extracted in order to capture the wildcard parameter A.
     private <T1, A, R, OUT> StreamStage<OUT> attachAggregate2(
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         Transform upstream1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
@@ -121,7 +121,7 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
             @Nonnull StreamStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         ComputeStageImplBase stageImpl1 = ((StageWithGroupingBase) stage1).computeStage;
         ComputeStageImplBase stageImpl2 = ((StageWithGroupingBase) stage2).computeStage;
@@ -136,8 +136,8 @@ public class StageWithKeyAndWindowImpl<T, K>
     private <T1, T2, A, R, OUT> StreamStage<OUT> attachAggregate3(
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
             @Nonnull StreamStageWithKey<T2, ? extends K> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp,
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         Transform transform1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         Transform transform2 = ((StageWithGroupingBase) stage2).computeStage.transform;

@@ -108,7 +108,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                             wDef,
                             0L,
                             counting,
-                            TimestampedEntry::fromWindowResult));
+                            TimestampedEntry::fromKeyedWindowResult));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(MyEvent::getKey).distributed())
                     .edge(between(slidingWin, sink));
@@ -123,7 +123,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                             counting.withIdentityFinish()
                     ));
             Vertex slidingWin = dag.newVertex("slidingWin",
-                    combineToSlidingWindowP(wDef, counting, TimestampedEntry::fromWindowResult));
+                    combineToSlidingWindowP(wDef, counting, TimestampedEntry::fromKeyedWindowResult));
             dag
                     .edge(between(insertPP, accumulateByFrame).partitioned(keyFn))
                     .edge(between(accumulateByFrame, slidingWin).partitioned(entryKey()).distributed())

@@ -17,10 +17,10 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -93,7 +93,6 @@ public class GrAggBuilder<K> {
         return (Tag<E>) tag(upstreamStages.size() - 1);
     }
 
-    @SuppressWarnings("unchecked")
     public <A, R, OUT> BatchStage<OUT> buildBatch(
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
             @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
@@ -108,7 +107,7 @@ public class GrAggBuilder<K> {
     @SuppressWarnings("unchecked")
     public <A, R, OUT> StreamStage<OUT> buildStream(
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull KeyedWindowResultFunction<? super K, ? super R, OUT> mapToOutputFn
+            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());

@@ -98,7 +98,7 @@ public class SlidingWindowP_twoStageSnapshotTest {
         );
 
         SupplierEx<Processor> procSupplier2 =
-                combineToSlidingWindowP(windowDef, aggrOp, TimestampedEntry::fromWindowResult);
+                combineToSlidingWindowP(windowDef, aggrOp, TimestampedEntry::fromKeyedWindowResult);
 
         // new supplier to save the last supplied instance
         stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier1.get();

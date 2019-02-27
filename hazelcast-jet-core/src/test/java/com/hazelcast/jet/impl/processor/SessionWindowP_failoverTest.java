@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.processor.SessionWindowP.Keys;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -42,6 +41,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static java.util.Collections.singletonList;
+import static java.util.function.Function.identity;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -61,7 +61,7 @@ public class SessionWindowP_failoverTest {
                 singletonList((ToLongFunctionEx<Entry<?, Long>>) Entry::getValue),
                 singletonList(entryKey()),
                 aggrOp,
-                WindowResult::new);
+                identity());
 
         Outbox outbox = new TestOutbox(128);
         Context context = new TestProcessorContext()
