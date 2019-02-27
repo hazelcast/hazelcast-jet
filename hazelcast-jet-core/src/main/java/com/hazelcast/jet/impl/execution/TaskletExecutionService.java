@@ -109,7 +109,7 @@ public class TaskletExecutionService {
     /**
      * Submits the tasklets for execution and returns a future which gets
      * completed when the execution of all the tasklets has completed. If an
-     * exception occurrs or the execution gets cancelled, the future will be
+     * exception occurs or the execution gets cancelled, the future will be
      * completed exceptionally, but only after all the tasklets have finished
      * executing. The returned future does not support cancellation, instead
      * the supplied {@code cancellationFuture} should be used.
@@ -386,7 +386,7 @@ public class TaskletExecutionService {
                     e = new IllegalStateException("cancellationFuture should be completed exceptionally");
                 }
                 exception(e);
-                blockingFutures.forEach(f -> f.cancel(true)); // CompletableFuture.cancel ignores the flag
+                blockingFutures.forEach(f -> f.cancel(true));
             }));
         }
 
@@ -409,5 +409,4 @@ public class TaskletExecutionService {
             return executionException.get() != null;
         }
     }
-
 }

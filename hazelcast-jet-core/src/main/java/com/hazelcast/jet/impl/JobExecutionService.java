@@ -21,6 +21,7 @@ import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembershipManager;
 import com.hazelcast.internal.cluster.impl.operations.TriggerMemberListPublishOp;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
@@ -218,7 +219,8 @@ public class JobExecutionService {
         try {
             created.initialize(plan);
         } finally {
-            executionContexts.put(executionId, created);
+            ExecutionContext oldContext = executionContexts.put(executionId, created);
+            assert oldContext == null : "Duplicate ExecutionContext for execution " + Util.idToString(executionId);
         }
 
         // initial log entry with all of jobId, jobName, executionId
@@ -285,15 +287,15 @@ public class JobExecutionService {
         }
     }
 
-    public ExecutionContext assertExecutionContext(Address coordinator, long jobId, long executionId,
+    public ExecutionContext assertExecutionContext(Address callerAddress, long jobId, long executionId,
                                                    String callerOpName) {
         Address masterAddress = nodeEngine.getMasterAddress();
-        if (!coordinator.equals(masterAddress)) {
+        if (!callerAddress.equals(masterAddress)) {
             failIfNotRunning();
 
             throw new IllegalStateException(String.format(
-                    "Coordinator %s cannot do '%s' for %s: it is not the master, the master is %s",
-                    coordinator, callerOpName, jobIdAndExecutionId(jobId, executionId), masterAddress));
+                    "Caller %s cannot do '%s' for %s: it is not the master, the master is %s",
+                    callerAddress, callerOpName, jobIdAndExecutionId(jobId, executionId), masterAddress));
         }
 
         failIfNotRunning();
@@ -302,12 +304,12 @@ public class JobExecutionService {
         if (executionContext == null) {
             throw new TopologyChangedException(String.format(
                     "%s not found for coordinator %s for '%s'",
-                    jobIdAndExecutionId(jobId, executionId), coordinator, callerOpName));
-        } else if (!(executionContext.coordinator().equals(coordinator) && executionContext.jobId() == jobId)) {
+                    jobIdAndExecutionId(jobId, executionId), callerAddress, callerOpName));
+        } else if (!(executionContext.coordinator().equals(callerAddress) && executionContext.jobId() == jobId)) {
             throw new IllegalStateException(String.format(
                     "%s, originally from coordinator %s, cannot do '%s' by coordinator %s and execution %s",
                     executionContext.jobNameAndExecutionId(), executionContext.coordinator(),
-                    callerOpName, coordinator, idToString(executionId)));
+                    callerOpName, callerAddress, idToString(executionId)));
         }
 
         return executionContext;
@@ -337,8 +339,7 @@ public class JobExecutionService {
         }
 
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
-        logger.info("Start execution of "
-                + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
+        logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
         CompletableFuture<Void> future = execCtx.beginExecution();
         future.whenComplete(withTryCatch(logger, (i, e) -> {
             if (e instanceof CancellationException) {
