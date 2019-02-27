@@ -91,10 +91,10 @@ class DataModelSerializerHooks {
         public Serializer createSerializer() {
             return new StreamSerializer<TimestampedEntry>() {
                 @Override
-                public void write(ObjectDataOutput out, TimestampedEntry object) throws IOException {
-                    out.writeLong(object.getTimestamp());
-                    out.writeObject(object.getKey());
-                    out.writeObject(object.getValue());
+                public void write(ObjectDataOutput out, TimestampedEntry tse) throws IOException {
+                    out.writeLong(tse.getTimestamp());
+                    out.writeObject(tse.getKey());
+                    out.writeObject(tse.getValue());
                 }
 
                 @Override
@@ -132,10 +132,11 @@ class DataModelSerializerHooks {
         public Serializer createSerializer() {
             return new StreamSerializer<WindowResult>() {
                 @Override
-                public void write(ObjectDataOutput out, WindowResult object) throws IOException {
-                    out.writeLong(object.start());
-                    out.writeLong(object.end());
-                    out.writeObject(object.result());
+                public void write(ObjectDataOutput out, WindowResult wr) throws IOException {
+                    out.writeLong(wr.start());
+                    out.writeLong(wr.end());
+                    out.writeObject(wr.result());
+                    out.writeBoolean(wr.isEarly());
                 }
 
                 @Override
@@ -143,7 +144,8 @@ class DataModelSerializerHooks {
                     long start = in.readLong();
                     long end = in.readLong();
                     Object result = in.readObject();
-                    return new WindowResult<>(start, end, result);
+                    boolean isEarly = in.readBoolean();
+                    return new WindowResult<>(start, end, result, isEarly);
                 }
 
                 @Override
@@ -173,11 +175,11 @@ class DataModelSerializerHooks {
         public Serializer createSerializer() {
             return new StreamSerializer<KeyedWindowResult>() {
                 @Override
-                public void write(ObjectDataOutput out, KeyedWindowResult object) throws IOException {
-                    out.writeLong(object.start());
-                    out.writeLong(object.end());
-                    out.writeObject(object.key());
-                    out.writeObject(object.result());
+                public void write(ObjectDataOutput out, KeyedWindowResult kwr) throws IOException {
+                    out.writeLong(kwr.start());
+                    out.writeLong(kwr.end());
+                    out.writeObject(kwr.key());
+                    out.writeObject(kwr.result());
                 }
 
                 @Override
@@ -186,12 +188,12 @@ class DataModelSerializerHooks {
                     long end = in.readLong();
                     Object key = in.readObject();
                     Object result = in.readObject();
-                    return new KeyedWindowResult<>(start, end, key, result);
+                    return new KeyedWindowResult<>(start, end, key, result, true);
                 }
 
                 @Override
                 public int getTypeId() {
-                    return SerializerHookConstants.WINDOW_RESULT;
+                    return SerializerHookConstants.KEYED_WINDOW_RESULT;
                 }
 
                 @Override

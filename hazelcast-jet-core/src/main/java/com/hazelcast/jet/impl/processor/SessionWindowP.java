@@ -297,8 +297,8 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
             @Override
             public OUT next() {
                 while (i < w.size) {
-                    OUT out = mapToOutputFn.apply(
-                            new KeyedWindowResult<>(w.starts[i], w.ends[i], key, aggrOp.exportFn().apply(w.accs[i]))
+                    OUT out = mapToOutputFn.apply(new KeyedWindowResult<>(
+                            w.starts[i], w.ends[i], key, aggrOp.exportFn().apply(w.accs[i]), true)
                     );
                     i++;
                     if (out != null) {
@@ -318,7 +318,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         int i = 0;
         for (; i < w.size && w.ends[i] < wm; i++) {
             OUT out = mapToOutputFn.apply(
-                    new KeyedWindowResult<>(w.starts[i], w.ends[i], key, aggrOp.finishFn().apply(w.accs[i]))
+                    new KeyedWindowResult<>(w.starts[i], w.ends[i], key, aggrOp.finishFn().apply(w.accs[i]), false)
             );
             if (out != null) {
                 results.add(out);

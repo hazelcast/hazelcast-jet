@@ -80,7 +80,7 @@ public interface StageWithWindow<T> {
      * through. To create the item to emit, the stage calls the supplied {@code
      * mapToOutputFn}.
      *
-     * @param mapToOutputFn function that returns the items to emit
+     * @param mapToOutputFn function that returns the output item
      * @return the newly attached stage
      */
     @Nonnull
@@ -110,7 +110,7 @@ public interface StageWithWindow<T> {
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output item
      * @param <R> the type of the result
      */
     @Nonnull
@@ -157,7 +157,7 @@ public interface StageWithWindow<T> {
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of items in {@code stage1}
      * @param <R> type of the aggregation result
      * @param <OUT> type of the output item
@@ -213,7 +213,7 @@ public interface StageWithWindow<T> {
      * @param aggrOp0 aggregate operation to perform on this stage
      * @param stage1 the other stage
      * @param aggrOp1 aggregate operation to perform on the other stage
-     * @param mapToOutputFn function to apply to the aggregated results
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of the items in the other stage
      * @param <R0> type of the aggregated result for this stage
      * @param <R1> type of the aggregated result for the other stage
@@ -277,7 +277,10 @@ public interface StageWithWindow<T> {
      * accumulator.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param stage1 the first additional stage
+     * @param stage2 the second additional stage
      * @param aggrOp the aggregate operation to perform
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}
      * @param <R> type of the result
@@ -311,6 +314,8 @@ public interface StageWithWindow<T> {
      * accumulator.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param stage1 the first additional stage
+     * @param stage2 the second additional stage
      * @param aggrOp the aggregate operation to perform
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}
@@ -339,6 +344,11 @@ public interface StageWithWindow<T> {
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      *
+     * @param aggrOp0 aggregate operation to perform on this stage
+     * @param stage1 the first additional stage
+     * @param aggrOp1 aggregate operation to perform on {@code stage1}
+     * @param stage2 the second additional stage
+     * @param aggrOp2 aggregate operation to perform on {@code stage2}
      * @param mapToOutputFn the function that creates the output item
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}
@@ -373,6 +383,11 @@ public interface StageWithWindow<T> {
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      *
+     * @param aggrOp0 aggregate operation to perform on this stage
+     * @param stage1 the first additional stage
+     * @param aggrOp1 aggregate operation to perform on {@code stage1}
+     * @param stage2 the second additional stage
+     * @param aggrOp2 aggregate operation to perform on {@code stage2}
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}
      * @param <R0> type of the result from stream-0
@@ -409,9 +424,9 @@ public interface StageWithWindow<T> {
      * stage-2:
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * StreamStage<Long> stage0 = p.drawFrom(source0);
-     * StreamStage<Long> stage1 = p.drawFrom(source1);
-     * StreamStage<Long> stage2 = p.drawFrom(source2);
+     * StreamStage<Long> stage0 = p.drawFrom(source0).withNativeTimestamps(0L);;
+     * StreamStage<Long> stage1 = p.drawFrom(source1).withNativeTimestamps(0L);;
+     * StreamStage<Long> stage2 = p.drawFrom(source2).withNativeTimestamps(0L);;
      * WindowAggregateBuilder<Long> b = stage0
      *         .window(sliding(1000, 10))
      *         .aggregateBuilder(AggregateOperations.counting());
@@ -462,9 +477,9 @@ public interface StageWithWindow<T> {
      * sliding window and counts the distinct strings across all streams:
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * StreamStage<String> stage0 = p.drawFrom(source0);
-     * StreamStage<String> stage1 = p.drawFrom(source1);
-     * StreamStage<String> stage2 = p.drawFrom(source2);
+     * StreamStage<String> stage0 = p.drawFrom(source0).withNativeTimestamps(0L);;
+     * StreamStage<String> stage1 = p.drawFrom(source1).withNativeTimestamps(0L);;
+     * StreamStage<String> stage2 = p.drawFrom(source2).withNativeTimestamps(0L);;
      * WindowAggregateBuilder1<String> b = stage0
      *         .window(sliding(1000, 10))
      *         .aggregateBuilder();
@@ -477,11 +492,12 @@ public interface StageWithWindow<T> {
      *         .andAccumulate(tag1, (acc, item) -> acc.add(item))
      *         .andAccumulate(tag2, (acc, item) -> acc.add(item))
      *         .andCombine(HashSet::addAll)
-     *         .andFinish(HashSet::size));
+     *         .andExportFinish(HashSet::size));
      * }</pre>
      */
     @Nonnull
     default WindowAggregateBuilder1<T> aggregateBuilder() {
         return new WindowAggregateBuilder1<>(streamStage(), windowDefinition());
     }
+
 }

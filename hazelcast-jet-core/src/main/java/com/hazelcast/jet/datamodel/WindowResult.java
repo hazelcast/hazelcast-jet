@@ -31,16 +31,19 @@ public class WindowResult<R> {
     private final long start;
     private final long end;
     private final R result;
+    private final boolean isEarly;
 
     /**
      * @param start  start time of the window
      * @param end    end time of the window
      * @param result result of aggregation
+     * @param isEarly whether this is an early result, to be followed by the final one
      */
-    public WindowResult(long start, long end, @Nonnull R result) {
+    public WindowResult(long start, long end, @Nonnull R result, boolean isEarly) {
         this.start = start;
         this.end = end;
         this.result = result;
+        this.isEarly = isEarly;
     }
 
     /**
@@ -65,6 +68,14 @@ public class WindowResult<R> {
         return result;
     }
 
+    /**
+     * Returns whether this is an early window result, to be followed by the
+     * final one.
+     */
+    public boolean isEarly() {
+        return isEarly;
+    }
+
     @Override
     public boolean equals(Object obj) {
         WindowResult that;
@@ -72,6 +83,7 @@ public class WindowResult<R> {
                 || obj instanceof WindowResult
                     && this.start == (that = (WindowResult) obj).start
                     && this.end == that.end
+                    && this.isEarly == that.isEarly
                     && Objects.equals(this.result, that.result);
     }
 
@@ -80,6 +92,7 @@ public class WindowResult<R> {
         int hc = 17;
         hc = 73 * hc + Long.hashCode(start);
         hc = 73 * hc + Long.hashCode(end);
+        hc = 73 * hc + Boolean.hashCode(isEarly);
         hc = 73 * hc + Objects.hashCode(result);
         return hc;
     }
@@ -87,6 +100,7 @@ public class WindowResult<R> {
     @Override
     public String toString() {
         return String.format(
-                "WindowResult{start=%s, end=%s, value='%s'}", toLocalTime(start), toLocalTime(end), result);
+                "WindowResult{start=%s, end=%s, value='%s', isEarly=%s}",
+                toLocalTime(start), toLocalTime(end), result, isEarly);
     }
 }

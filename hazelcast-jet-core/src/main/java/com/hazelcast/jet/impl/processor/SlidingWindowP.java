@@ -211,7 +211,8 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                                 winEnd - winPolicy.windowSize(),
                                 winEnd,
                                 e.getKey(),
-                                aggrOp.exportFn().apply(e.getValue()))))
+                                aggrOp.exportFn().apply(e.getValue()),
+                                true)))
                         .onFirstNull(() -> completeEarlyWindow(winEnd)))
                 .onFirstNull(() -> {
                     slidingWindow = slidingWindowBackup;
@@ -360,7 +361,8 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                 .flatMap(winEnd -> traverseIterable(computeWindow(winEnd).entrySet())
                         .map(e -> mapToOutputFn.apply(new KeyedWindowResult<>(
                                 winEnd - winPolicy.windowSize(), winEnd,
-                                e.getKey(), aggrOp.finishFn().apply(e.getValue()))))
+                                e.getKey(), aggrOp.finishFn().apply(e.getValue()),
+                                false)))
                         .onFirstNull(() -> completeWindow(winEnd)));
     }
 

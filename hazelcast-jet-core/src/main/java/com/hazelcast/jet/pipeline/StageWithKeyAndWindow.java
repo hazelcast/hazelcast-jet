@@ -64,9 +64,10 @@ public interface StageWithKeyAndWindow<T, K> {
      * within their window according to the grouping key (no two items emitted
      * for a window map to the same key). There is no guarantee among the items
      * with the same key which one it will pass through. To create the item to
-     * emit, the stage calls the supplied {@code mapToOutputFn}.
+     * emit, the stage calls the supplied {@code mapToOutputFn} with the key and
+     * the item.
      *
-     * @param mapToOutputFn function that returns the item to emit
+     * @param mapToOutputFn function that returns the output item
      * @return the newly attached stage
      */
     @Nonnull
@@ -102,7 +103,7 @@ public interface StageWithKeyAndWindow<T, K> {
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
      * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn function that returns the output items
+     * @param mapToOutputFn function that returns the output item
      * @param <R> type of the aggregation result
      * @param <OUT> type of the output item
      */
@@ -148,8 +149,9 @@ public interface StageWithKeyAndWindow<T, K> {
      * operation that combines the input streams into the same accumulator.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param stage1 the other stage
      * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of items in {@code stage1}
      * @param <R> type of the aggregation result
      * @param <OUT> type of the output item
@@ -180,6 +182,7 @@ public interface StageWithKeyAndWindow<T, K> {
      * operation that combines the input streams into the same accumulator.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param stage1 the other stage
      * @param aggrOp the aggregate operation to perform
      * @param <T1> type of items in {@code stage1}
      * @param <R> type of the aggregation result
@@ -207,7 +210,7 @@ public interface StageWithKeyAndWindow<T, K> {
      * @param aggrOp0 aggregate operation to perform on this stage
      * @param stage1 the other stage
      * @param aggrOp1 aggregate operation to perform on the other stage
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of the items in the other stage
      * @param <R0> type of the aggregated result for this stage
      * @param <R1> type of the aggregated result for the other stage
@@ -277,8 +280,10 @@ public interface StageWithKeyAndWindow<T, K> {
      * accumulator.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param stage1 the first additional stage
+     * @param stage2 the second additional stage
      * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}
      * @param <R> type of the aggregation result
@@ -314,6 +319,8 @@ public interface StageWithKeyAndWindow<T, K> {
      * accumulator.
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
+     * @param stage1 the first additional stage
+     * @param stage2 the second additional stage
      * @param aggrOp the aggregate operation to perform
      * @param <T1> type of items in {@code stage1}
      * @param <T2> type of items in {@code stage2}
@@ -345,7 +352,7 @@ public interface StageWithKeyAndWindow<T, K> {
      * @param aggrOp1 aggregate operation to perform on {@code stage1}
      * @param stage2 the second additional stage
      * @param aggrOp2 aggregate operation to perform on {@code stage2}
-     * @param mapToOutputFn the function that creates the output item
+     * @param mapToOutputFn function that returns the output item
      * @param <T1> type of the items in {@code stage1}
      * @param <T2> type of the items in {@code stage2}
      * @param <R0> type of the aggregated result for this stage
@@ -421,12 +428,15 @@ public interface StageWithKeyAndWindow<T, K> {
      * stage-1 and takes the average of those in stage-2:
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * StreamStageWithGrouping<Entry<String, Long>, String> stage0 =
-     *         p.drawFrom(source0).groupingKey(Entry::getKey);
-     * StreamStageWithGrouping<Entry<String, Long>, String> stage1 =
-     *         p.drawFrom(source1).groupingKey(Entry::getKey);
-     * StreamStageWithGrouping<Entry<String, Long>, String> stage2 =
-     *         p.drawFrom(source2).groupingKey(Entry::getKey);
+     * StreamStageWithKey<Entry<String, Long>, String> stage0 =
+     *         p.drawFrom(source0).withNativeTimestamps(0L)
+     *          .groupingKey(Entry::getKey);
+     * StreamStageWithKey<Entry<String, Long>, String> stage1 =
+     *         p.drawFrom(source1).withNativeTimestamps(0L)
+     *          .groupingKey(Entry::getKey);
+     * StreamStageWithKey<Entry<String, Long>, String> stage2 =
+     *         p.drawFrom(source2).withNativeTimestamps(0L)
+     *          .groupingKey(Entry::getKey);
      * WindowGroupAggregateBuilder<String, Long> b = stage0
      *         .window(sliding(1000, 10))
      *         .aggregateBuilder(AggregateOperations.counting());

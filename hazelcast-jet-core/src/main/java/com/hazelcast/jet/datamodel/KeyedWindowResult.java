@@ -25,25 +25,26 @@ import static com.hazelcast.jet.impl.util.Util.toLocalTime;
  * Holds the result of a group-and-aggregate operation performed over a
  * time window.
  *
- * @param <K> type of key
- * @param <R> type of aggregated result
+ * @param <K> type of the grouping key
+ * @param <R> type of the aggregated result
  */
 public class KeyedWindowResult<K, R> extends WindowResult<R> {
     private final K key;
 
     /**
-     * @param start  start time of the window
-     * @param end    end time of the window
-     * @param key    grouping key
-     * @param result result of aggregation
+     * @param start   start time of the window
+     * @param end     end time of the window
+     * @param key     grouping key
+     * @param result  result of aggregation
+     * @param isEarly whether this is an early result, to be followed by the final one
      */
-    public KeyedWindowResult(long start, long end, @Nonnull K key, @Nonnull R result) {
-        super(start, end, result);
+    public KeyedWindowResult(long start, long end, @Nonnull K key, @Nonnull R result, boolean isEarly) {
+        super(start, end, result, isEarly);
         this.key = key;
     }
 
     /**
-     * Returns the key.
+     * Returns the grouping key.
      */
     @Nonnull
     public K key() {
@@ -69,7 +70,7 @@ public class KeyedWindowResult<K, R> extends WindowResult<R> {
     @Override
     public String toString() {
         return String.format(
-                "KeyedWindowResult{start=%s, end=%s, key='%s', value='%s'}",
-                toLocalTime(start()), toLocalTime(end()), key, result());
+                "KeyedWindowResult{start=%s, end=%s, key='%s', value='%s', isEarly=%s}",
+                toLocalTime(start()), toLocalTime(end()), key, result(), isEarly());
     }
 }

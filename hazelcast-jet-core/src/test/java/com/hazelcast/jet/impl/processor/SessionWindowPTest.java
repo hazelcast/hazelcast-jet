@@ -111,10 +111,8 @@ public class SessionWindowPTest {
 
     @Test
     public void when_batchProcessing_then_flushEverything() {
-        List<Object> inbox = new ArrayList<>();
-
         // Given
-        inbox.addAll(eventsWithKey("a"));
+        List<Object> inbox = new ArrayList<>(eventsWithKey("a"));
         // This watermark will cause the first session to be emitted, but not the second.
         // The second session will be emitted in complete()
         inbox.add(new Watermark(25));
@@ -122,9 +120,9 @@ public class SessionWindowPTest {
         verifyProcessor(supplier)
                 .input(inbox)
                 .expectOutput(asList(
-                        new KeyedWindowResult(1, 22, "a", 3),
+                        new KeyedWindowResult<>(1, 22, "a", 3, false),
                         new Watermark(25),
-                        new KeyedWindowResult(30, 50, "a", 3)));
+                        new KeyedWindowResult<>(30, 50, "a", 3, false)));
     }
 
     @Test
@@ -147,12 +145,13 @@ public class SessionWindowPTest {
                         entry("key", 10L)
                 ))
                 .expectOutput(asList(
-                        new KeyedWindowResult(0, 10, "key", 1L),
-                        new KeyedWindowResult(10, 20, "key", 1L)
+                        new KeyedWindowResult<>(0, 10, "key", 1L, false),
+                        new KeyedWindowResult<>(10, 20, "key", 1L, false)
                 ));
     }
 
     private void assertCorrectness(List<Object> events) {
+        @SuppressWarnings("unchecked")
         List<Object> expectedOutput = events.stream()
                                                .map(e -> ((Entry<String, Long>) e).getKey())
                                                .flatMap(SessionWindowPTest::expectedSessions)
@@ -235,8 +234,8 @@ public class SessionWindowPTest {
 
     private static Stream<KeyedWindowResult<String, Long>> expectedSessions(String key) {
         return Stream.of(
-                new KeyedWindowResult<>(1, 22, key, 3L),
-                new KeyedWindowResult<>(30, 50, key, 3L)
+                new KeyedWindowResult<>(1, 22, key, 3L, false),
+                new KeyedWindowResult<>(30, 50, key, 3L, false)
         );
     }
 }

@@ -49,11 +49,12 @@ public final class SerializerHookConstants {
     public static final int BROADCAST_ENTRY = -319;
     public static final int BROADCAST_KEY = -320;
     public static final int WINDOW_RESULT = -321;
-    public static final int HASH_MAP = -322;
-    public static final int HASH_SET = -323;
-    public static final int JET_EVENT = -324;
-    public static final int TIMESTAMPED_ITEM = -325;
-    public static final int PRIORITY_QUEUE = -326;
+    public static final int KEYED_WINDOW_RESULT = -322;
+    public static final int HASH_MAP = -323;
+    public static final int HASH_SET = -324;
+    public static final int JET_EVENT = -325;
+    public static final int TIMESTAMPED_ITEM = -326;
+    public static final int PRIORITY_QUEUE = -327;
 
 
     // reserved for hadoop module: -380 to -390
