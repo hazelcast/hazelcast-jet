@@ -133,12 +133,8 @@ public class JetService
         // this will prevent accepting more jobs
         jobCoordinationService.shutdown();
         jobExecutionService.shutdown(true);
-        taskletExecutionService.shutdown(true);
 
         notifyMasterWeAreShuttingDown(future);
-        // We initiated shutdown on this member, it won't accept any new jobs. After all
-        // tasklets running locally are done, we can continue the shutdown.
-        taskletExecutionService.awaitWorkerTermination();
         future.join();
     }
 
@@ -171,7 +167,7 @@ public class JetService
 
         jobCoordinationService.shutdown();
         jobExecutionService.shutdown(false);
-        taskletExecutionService.shutdown(false);
+        taskletExecutionService.shutdown();
         taskletExecutionService.awaitWorkerTermination();
         networking.shutdown();
     }
