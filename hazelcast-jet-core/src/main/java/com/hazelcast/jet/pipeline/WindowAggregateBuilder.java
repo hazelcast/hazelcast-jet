@@ -24,7 +24,6 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.WindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
@@ -109,7 +108,7 @@ public class WindowAggregateBuilder<R0> {
     }
 
     /**
-     * Convenience for {@link #build(WindowResultFunction) build(mapToOutputFn)}
+     * Convenience for {@link #build(FunctionEx) build(mapToOutputFn)}
      * which emits {@code TimestampedItem}s as output. The timestamp corresponds
      * to the window's end.
      *
