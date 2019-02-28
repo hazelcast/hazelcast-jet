@@ -25,7 +25,6 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
-import com.hazelcast.jet.impl.exception.ShutdownInProgressException;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
@@ -75,7 +74,6 @@ public class JobExecutionService {
     // does not guarantee at most one computation per key.
     // key: jobId
     private final ConcurrentHashMap<Long, JetClassLoader> classLoaders = new ConcurrentHashMap<>();
-    private volatile boolean shouldRejectJobs;
 
     JobExecutionService(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecutionService,
                         JobRepository jobRepository) {
@@ -111,9 +109,6 @@ public class JobExecutionService {
         return ctx != null ? ctx.senderMap() : null;
     }
 
-    public synchronized void rejectJobs() {
-        shouldRejectJobs = true;
-    }
     public synchronized void shutdown() {
         cancelAllExecutions("Node is shutting down", HazelcastInstanceNotActiveException::new);
     }
@@ -185,12 +180,7 @@ public class JobExecutionService {
             long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
             Set<MemberInfo> participants, ExecutionPlan plan
     ) {
-        if (shouldRejectJobs) {
-            throw new ShutdownInProgressException();
-        }
-
         verifyClusterInformation(jobId, executionId, coordinator, coordinatorMemberListVersion, participants);
-
         failIfNotRunning();
 
         if (!executionContextJobIds.add(jobId)) {
@@ -334,10 +324,6 @@ public class JobExecutionService {
     }
 
     public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
-        if (shouldRejectJobs) {
-            throw new ShutdownInProgressException();
-        }
-
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
         CompletableFuture<Void> future = execCtx.beginExecution();
