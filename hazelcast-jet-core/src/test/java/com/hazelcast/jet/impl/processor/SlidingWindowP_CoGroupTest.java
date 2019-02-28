@@ -19,7 +19,8 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
@@ -27,13 +28,13 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -53,7 +54,8 @@ public class SlidingWindowP_CoGroupTest {
                 tumblingWinPolicy(1),
                 0L,
                 aggregateOperation2(toList(), toList()),
-                TimestampedEntry::fromKeyedWindowResult);
+                (KeyedWindowResult<String, Tuple2<List<Entry<String, String>>, List<Entry<String, String>>>> kwr) ->
+                        result(kwr.end(), kwr.key(), kwr.result().f0(), kwr.result().f1()));
 
         Entry<String, String> entry1 = entry("k1", "a");
         Entry<String, String> entry2 = entry("k2", "b");
@@ -66,9 +68,18 @@ public class SlidingWindowP_CoGroupTest {
                            asList(entry3, entry4, entry5)
                    ))
                    .expectOutput(asList(
-                           new TimestampedEntry<>(1, "k1", tuple2(singletonList(entry1), asList(entry3, entry5))),
-                           new TimestampedEntry<>(1, "k2", tuple2(singletonList(entry2), emptyList())),
-                           new TimestampedEntry<>(1, "k3", tuple2(emptyList(), singletonList(entry4)))
+                           result(1, "k1", singletonList(entry1), asList(entry3, entry5)),
+                           result(1, "k2", singletonList(entry2), emptyList()),
+                           result(1, "k3", emptyList(), singletonList(entry4))
                    ));
+    }
+
+    private static String result(
+            long winEnd,
+            String key,
+            List<Entry<String, String>> result1,
+            List<Entry<String, String>> result2
+    ) {
+        return String.format("(%03d, %s: %s, %s)", winEnd, key, result1, result2);
     }
 }

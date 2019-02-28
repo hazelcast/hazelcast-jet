@@ -80,47 +80,6 @@ class DataModelSerializerHooks {
         }
     }
 
-    public static final class TimestampedEntryHook implements SerializerHook<TimestampedEntry> {
-
-        @Override
-        public Class<TimestampedEntry> getSerializationType() {
-            return TimestampedEntry.class;
-        }
-
-        @Override
-        public Serializer createSerializer() {
-            return new StreamSerializer<TimestampedEntry>() {
-                @Override
-                public void write(ObjectDataOutput out, TimestampedEntry tse) throws IOException {
-                    out.writeLong(tse.getTimestamp());
-                    out.writeObject(tse.getKey());
-                    out.writeObject(tse.getValue());
-                }
-
-                @Override
-                public TimestampedEntry read(ObjectDataInput in) throws IOException {
-                    long timestamp = in.readLong();
-                    Object key = in.readObject();
-                    Object value = in.readObject();
-                    return new TimestampedEntry<>(timestamp, key, value);
-                }
-
-                @Override
-                public int getTypeId() {
-                    return SerializerHookConstants.TIMESTAMPED_ENTRY;
-                }
-
-                @Override
-                public void destroy() {
-                }
-            };
-        }
-
-        @Override public boolean isOverwritable() {
-            return false;
-        }
-    }
-
     public static final class WindowResultHook implements SerializerHook<WindowResult> {
 
         @Override

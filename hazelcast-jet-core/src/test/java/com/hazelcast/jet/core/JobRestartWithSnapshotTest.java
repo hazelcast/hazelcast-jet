@@ -27,7 +27,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.JobExecutionRecord;
@@ -63,6 +63,7 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
@@ -154,7 +155,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                 o -> ((Entry<Integer, Integer>) o).getValue(), limitingLag(0), wDef.frameSize(), wDef.frameOffset(), -1)))
                           .localParallelism(1);
         Vertex map = dag.newVertex("map",
-                mapP((TimestampedEntry e) -> entry(asList(e.getTimestamp(), (long) (int) e.getKey()), e.getValue())));
+                mapP((KeyedWindowResult kwr) -> entry(asList(kwr.end(), (long) (int) kwr.key()), kwr.result())));
         Vertex writeMap = dag.newVertex("writeMap", SinkProcessors.writeMapP("result"));
 
         if (twoStage) {
@@ -166,7 +167,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     aggrOp.withIdentityFinish()
             ));
             Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                    combineToSlidingWindowP(wDef, aggrOp, TimestampedEntry::fromKeyedWindowResult));
+                    combineToSlidingWindowP(wDef, aggrOp, identity()));
 
             dag.edge(between(insWm, aggregateStage1)
                     .partitioned(entryKey()))
@@ -182,7 +183,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     wDef,
                     0L,
                     aggrOp,
-                    TimestampedEntry::fromKeyedWindowResult));
+                    identity()));
 
             dag.edge(between(insWm, aggregate)
                     .distributed()

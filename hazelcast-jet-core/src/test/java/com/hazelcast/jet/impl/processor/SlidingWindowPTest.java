@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
@@ -53,6 +53,7 @@ import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
+import static com.hazelcast.jet.function.FunctionEx.identity;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
@@ -109,8 +110,8 @@ public class SlidingWindowPTest {
                         winPolicy,
                         0L,
                         operation,
-                        TimestampedEntry::fromKeyedWindowResult)
-                : combineToSlidingWindowP(winPolicy, operation, TimestampedEntry::fromKeyedWindowResult);
+                        identity())
+                : combineToSlidingWindowP(winPolicy, operation, identity());
 
         // new supplier to save the last supplied instance
         supplier = () -> lastSuppliedProcessor = (SlidingWindowP) procSupplier.get();
@@ -317,10 +318,10 @@ public class SlidingWindowPTest {
                 // frameTs is higher than any event timestamp in that frame;
                 // therefore we generate an event with frameTs - 1
                 ? entry(frameTs - 1, value)
-                : new TimestampedEntry<>(frameTs, KEY, new LongAccumulator(value));
+                : new KeyedWindowResult<>(frameTs - 4, frameTs, KEY, new LongAccumulator(value));
     }
 
-    private static TimestampedEntry<Long, ?> outboxFrame(long ts, long value) {
-        return new TimestampedEntry<>(ts, KEY, value);
+    private static KeyedWindowResult<Long, ?> outboxFrame(long ts, long value) {
+        return new KeyedWindowResult<>(ts - 4, ts, KEY, value);
     }
 }

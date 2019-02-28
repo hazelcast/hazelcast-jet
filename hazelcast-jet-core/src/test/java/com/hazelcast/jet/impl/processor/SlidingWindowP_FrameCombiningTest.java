@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Rule;
@@ -48,25 +48,29 @@ public class SlidingWindowP_FrameCombiningTest {
         TestSupport
                 .verifyProcessor(
                         combineToSlidingWindowP(slidingWinPolicy(8, 4), toSet(),
-                                TimestampedEntry::fromKeyedWindowResult))
+                                (KeyedWindowResult<Long, Set<String>> kwr) -> result(kwr.end(), kwr.result())))
                 .input(asList(
                         frame(2, set("a")),
                         frame(4, set("b")),
                         frame(6, set("c"))
                 ))
                 .expectOutput(asList(
-                        frame(4, set("a", "b")),
-                        frame(8, set("a", "b", "c")),
-                        frame(12, set("c"))
+                        result(4, set("a", "b", "xxx")),
+                        result(8, set("a", "b", "c")),
+                        result(12, set("c"))
                 ));
     }
 
-    private static <V> TimestampedEntry<Long, V> frame(long ts, V value) {
-        return new TimestampedEntry<>(ts, KEY, value);
+    private static <V> KeyedWindowResult<Long, V> frame(long ts, V value) {
+        return new KeyedWindowResult<>(0, ts, KEY, value);
     }
 
     @SafeVarargs
     private static <E> Set<E> set(E... elements) {
         return new HashSet<>(asList(elements));
+    }
+
+    private static String result(long winEnd, Set<String> result) {
+        return String.format("(%03d, %s: %s)", winEnd, KEY, result);
     }
 }

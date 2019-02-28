@@ -28,7 +28,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.datamodel.TimestampedEntry;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
@@ -50,6 +50,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
+import static com.hazelcast.jet.function.FunctionEx.identity;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -97,8 +98,7 @@ public class SlidingWindowP_twoStageSnapshotTest {
                 ((AggregateOperation1<? super Entry<Long, Long>, LongAccumulator, ?>) aggrOp).withIdentityFinish()
         );
 
-        SupplierEx<Processor> procSupplier2 =
-                combineToSlidingWindowP(windowDef, aggrOp, TimestampedEntry::fromKeyedWindowResult);
+        SupplierEx<Processor> procSupplier2 = combineToSlidingWindowP(windowDef, aggrOp, identity());
 
         // new supplier to save the last supplied instance
         stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier1.get();
@@ -121,7 +121,8 @@ public class SlidingWindowP_twoStageSnapshotTest {
         TestOutbox stage1p2Outbox = newOutbox();
         TestOutbox stage2Outbox = newOutbox();
         TestInbox inbox = new TestInbox();
-        TestProcessorContext context = new TestProcessorContext().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+        TestProcessorContext context = new TestProcessorContext()
+                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
 
         stage1p1.init(stage1p1Outbox, context);
         stage1p2.init(stage1p2Outbox, context);
@@ -204,8 +205,8 @@ public class SlidingWindowP_twoStageSnapshotTest {
                 p.slidingWindow == null || p.slidingWindow.isEmpty());
     }
 
-    private static TimestampedEntry<Long, ?> outboxFrame(long ts, long value) {
-        return new TimestampedEntry<>(ts, KEY, value);
+    private static KeyedWindowResult<Long, ?> outboxFrame(long ts, long value) {
+        return new KeyedWindowResult<>(ts - 4, ts, KEY, value);
     }
 
     private static String collectionToString(Collection<?> list) {
