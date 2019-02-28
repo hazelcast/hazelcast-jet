@@ -339,4 +339,8 @@ public class JobExecutionService {
         }));
         return future;
     }
+
+    int numberOfExecutions() {
+        return executionContexts.size();
+    }
 }
