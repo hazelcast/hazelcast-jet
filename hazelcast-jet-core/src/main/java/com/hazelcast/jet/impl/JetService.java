@@ -243,8 +243,8 @@ public class JetService
 
     @Override
     public void memberRemoved(MembershipServiceEvent event) {
-        jobExecutionService.onMemberLeave(event.getMember().getAddress());
-        jobCoordinationService.onMemberLeave(event.getMember().getUuid());
+        jobExecutionService.onMemberRemoved(event.getMember().getAddress());
+        jobCoordinationService.onMemberRemoved(event.getMember().getUuid());
     }
 
     @Override

@@ -133,7 +133,7 @@ public class JobExecutionService {
      * Cancels executions that contain the left address as the coordinator or a
      * job participant
      */
-    void onMemberLeave(Address address) {
+    void onMemberRemoved(Address address) {
         executionContexts.values().stream()
              // note that coordinator might not be a participant (in case it is a lite member)
              .filter(exeCtx -> exeCtx.coordinator().equals(address) || exeCtx.hasParticipant(address))
