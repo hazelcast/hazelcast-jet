@@ -45,6 +45,8 @@ public class KeyedWindowResult<K, R> extends WindowResult<R> implements Entry<K,
     }
 
     /**
+     * Constructs a keyed window result that is not early.
+     *
      * @param start   start time of the window
      * @param end     end time of the window
      * @param key     grouping key
@@ -91,8 +93,11 @@ public class KeyedWindowResult<K, R> extends WindowResult<R> implements Entry<K,
     public boolean equals(Object obj) {
         KeyedWindowResult that;
         return this == obj
-                || obj instanceof KeyedWindowResult
-                && super.equals(that = (KeyedWindowResult) obj)
+                || obj.getClass() == KeyedWindowResult.class
+                && this.start() == (that = (KeyedWindowResult) obj).start()
+                && this.end() == that.end()
+                && this.isEarly() == that.isEarly()
+                && Objects.equals(this.result(), that.result())
                 && Objects.equals(this.key, that.key);
     }
 

@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.Repeat;
 import org.junit.After;
@@ -32,10 +31,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -46,7 +47,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
@@ -62,10 +62,10 @@ public class SessionWindowPTest {
         supplier = () -> lastSuppliedProcessor = new SessionWindowP<>(
                 SESSION_TIMEOUT,
                 0L,
-                singletonList((ToLongFunctionEx<Entry<Object, Long>>) Entry::getValue),
+                Collections.<ToLongFunction<Entry<?, Long>>>singletonList(Entry::getValue),
                 singletonList(entryKey()),
                 AggregateOperations.counting(),
-                identity());
+                KeyedWindowResult::new);
     }
 
     @After

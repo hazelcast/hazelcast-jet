@@ -96,6 +96,6 @@ public class WindowAggregateBuilder<R0> {
         AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         CreateOutStageFn<WindowResult<ItemsByTag>, StreamStage<WindowResult<ItemsByTag>>> createOutStageFn =
                 StreamStageImpl::new;
-        return aggBuilder.build(aggrOp, createOutStageFn, identity());
+        return aggBuilder.build(aggrOp, createOutStageFn);
     }
 }

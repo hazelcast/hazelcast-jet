@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -29,7 +30,6 @@ import org.junit.runner.RunWith;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.toSet;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static java.util.Arrays.asList;
@@ -47,8 +47,8 @@ public class SlidingWindowP_FrameCombiningTest {
     public void when_multipleFrames_then_combine() {
         TestSupport
                 .verifyProcessor(
-                        combineToSlidingWindowP(slidingWinPolicy(8, 4), toSet(),
-                                (KeyedWindowResult<Long, Set<String>> kwr) -> result(kwr.end(), kwr.result())))
+                        combineToSlidingWindowP(slidingWinPolicy(8, 4), AggregateOperations.<String>toSet(),
+                                (start, end, key, result, isEarly) -> result(end, result)))
                 .input(asList(
                         frame(2, set("a")),
                         frame(4, set("b")),

@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.datamodel.TimestampedItem;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import org.junit.Test;
 
@@ -43,7 +44,7 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
-public class SourceBuilderTest extends PipelineTestSupport {
+public class SourceBuilderTest extends PipelineStreamTestSupport {
 
     private static final String LINE_PREFIX = "line";
     private static final int PREFERRED_LOCAL_PARALLELISM = 2;
@@ -216,8 +217,9 @@ public class SourceBuilderTest extends PipelineTestSupport {
 
             jet().newJob(p).join();
 
-            List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount + 1)
-                    .mapToObj(i -> new TimestampedItem<>(i, 1L))
+            List<WindowResult<Long>> expected = LongStream
+                    .range(1, itemCount + 1)
+                    .mapToObj(i -> new WindowResult<>(i - 1, i, 1L))
                     .collect(toList());
 
             assertEquals(expected, new ArrayList<>(sinkList));

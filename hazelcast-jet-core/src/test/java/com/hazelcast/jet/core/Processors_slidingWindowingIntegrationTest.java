@@ -51,7 +51,6 @@ import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
-import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -109,7 +108,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                             wDef,
                             0L,
                             counting,
-                            identity()));
+                            KeyedWindowResult::new));
             dag
                     .edge(between(insertPP, slidingWin).partitioned(MyEvent::getKey).distributed())
                     .edge(between(slidingWin, sink));
@@ -124,7 +123,7 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                             counting.withIdentityFinish()
                     ));
             Vertex slidingWin = dag.newVertex("slidingWin",
-                    combineToSlidingWindowP(wDef, counting, identity()));
+                    combineToSlidingWindowP(wDef, counting, KeyedWindowResult::new));
             dag
                     .edge(between(insertPP, accumulateByFrame).partitioned(keyFn))
                     .edge(between(accumulateByFrame, slidingWin).partitioned(entryKey()).distributed())
@@ -143,9 +142,10 @@ public class Processors_slidingWindowingIntegrationTest extends JetTestSupport {
                 new KeyedWindowResult<>(-1000, 1000, "a", 1L),
                 new KeyedWindowResult<>(0, 2000, "a", 1L)
         );
-        assertTrueEventually(() ->
-                assertEquals(streamToString(expectedOutput.stream()), streamToString(new ArrayList<>(sinkList).stream())),
-                5);
+        assertTrueEventually(() -> assertEquals(
+                streamToString(expectedOutput.stream()),
+                streamToString(new ArrayList<>(sinkList).stream())
+        ), 5);
         // wait a little more and make sure, that there are no more frames
         Thread.sleep(1000);
         assertEquals(expectedOutput.size(), sinkList.size());

@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.function.Functions;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
@@ -33,7 +33,6 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
-import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static java.util.Arrays.asList;
@@ -48,15 +47,15 @@ public class SlidingWindowP_CoGroupTest {
     @SuppressWarnings("unchecked")
     public void test() {
         SupplierEx supplier = Processors.aggregateToSlidingWindowP(
-                asList(entryKey(), entryKey()),
+                asList(Functions.<String>entryKey(), entryKey()),
                 asList(t -> 1L, t -> 1L),
                 TimestampKind.FRAME,
                 tumblingWinPolicy(1),
                 0L,
-                aggregateOperation2(toList(), toList()),
-                (KeyedWindowResult<String, Tuple2<List<Entry<String, String>>, List<Entry<String, String>>>> kwr) ->
-                        result(kwr.end(), kwr.key(), kwr.result().f0(), kwr.result().f1()));
-
+                aggregateOperation2(
+                        AggregateOperations.<Entry<String, String>>toList(),
+                        AggregateOperations.<Entry<String, String>>toList()),
+                (start, end, key, result, isEarly) -> result(end, key, result.f0(), result.f1()));
         Entry<String, String> entry1 = entry("k1", "a");
         Entry<String, String> entry2 = entry("k2", "b");
         Entry<String, String> entry3 = entry("k1", "c");

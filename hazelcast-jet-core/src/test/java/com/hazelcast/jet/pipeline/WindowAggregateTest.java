@@ -21,9 +21,9 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.BiFunctionEx;
 import org.junit.Test;
 
@@ -437,14 +437,14 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
         Tag<Long> tag0 = b2.add(tag0_in, SUMMING);
         Tag<Long> tag1 = b2.add(tag1_in, SUMMING);
 
-        StreamStage<String> aggregated = b.build(b2.build(),
-                wr -> FORMAT_FN_2.apply(wr.end(), tuple2(wr.result().get(tag0), wr.result().get(tag1))));
+        StreamStage<WindowResult<ItemsByTag>> aggregated = b.build(b2.build());
 
         // Then
         aggregated.drainTo(sink);
         execute();
         assertEquals(fx.expectedString2,
-                streamToString(sinkList.stream().map(String.class::cast), identity())
+                streamToString(this.<ItemsByTag>sinkStreamOfWinResult(),
+                        wr -> FORMAT_FN_2.apply(wr.end(), tuple2(wr.result().get(tag0), wr.result().get(tag1))))
         );
     }
 }

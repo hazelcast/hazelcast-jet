@@ -31,7 +31,6 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.adaptAggregateOperation2;
@@ -70,8 +69,7 @@ public class StageWithKeyAndWindowImpl<T, K>
                         singletonList(computeStage.transform),
                         wDef,
                         singletonList(fnAdapter.adaptKeyFn(keyFn())),
-                        fnAdapter.adaptAggregateOperation1(aggrOp),
-                        fnAdapter.adaptKeyedWindowResultFn(identity())
+                        fnAdapter.adaptAggregateOperation1(aggrOp)
                 ),
                 fnAdapter);
     }
@@ -90,8 +88,7 @@ public class StageWithKeyAndWindowImpl<T, K>
                         wDef,
                         asList(fnAdapter.adaptKeyFn(keyFn()),
                                 fnAdapter.adaptKeyFn(stage1.keyFn())),
-                        adaptAggregateOperation2(aggrOp),
-                        fnAdapter.adaptKeyedWindowResultFn(identity())
+                        adaptAggregateOperation2(aggrOp)
                 ),
                 fnAdapter);
     }
@@ -116,8 +113,7 @@ public class StageWithKeyAndWindowImpl<T, K>
                         asList(fnAdapter.adaptKeyFn(keyFn()),
                                 fnAdapter.adaptKeyFn(stage1.keyFn()),
                                 fnAdapter.adaptKeyFn(stage2.keyFn())),
-                        adaptAggregateOperation3(aggrOp),
-                        fnAdapter.adaptKeyedWindowResultFn(identity())
+                        adaptAggregateOperation3(aggrOp)
                 ),
                 fnAdapter);
     }

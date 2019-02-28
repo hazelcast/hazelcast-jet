@@ -47,6 +47,17 @@ public class WindowResult<R> {
     }
 
     /**
+     * Constructs a window result that is not early.
+     *
+     * @param start  start time of the window
+     * @param end    end time of the window
+     * @param result result of aggregation
+     */
+    public WindowResult(long start, long end, @Nonnull R result) {
+        this(start, end, result, false);
+    }
+
+    /**
      * Returns the starting timestamp of the window.
      */
     public long start() {
@@ -80,7 +91,7 @@ public class WindowResult<R> {
     public boolean equals(Object obj) {
         WindowResult that;
         return this == obj
-                || obj instanceof WindowResult
+                || obj.getClass() == WindowResult.class
                     && this.start == (that = (WindowResult) obj).start
                     && this.end == that.end
                     && this.isEarly == that.isEarly

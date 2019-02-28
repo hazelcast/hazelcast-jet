@@ -20,7 +20,6 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,6 +29,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.JetTestSupport.wm;
@@ -130,13 +130,14 @@ public class SlidingWindowP_changeWindowSizeTest {
     }
 
     private static SlidingWindowP createProcessor(SlidingWindowPolicy winPolicy) {
+        List<Function<Integer, String>> keyFns = singletonList((Integer t) -> "key");
         return new SlidingWindowP<>(
-                singletonList((Integer t) -> "key"),
+                keyFns,
                 singletonList((Integer t) -> winPolicy.higherFrameTs(t)),
                 winPolicy,
                 0L,
                 summingLong((Integer t) -> t),
-                (KeyedWindowResult<String, Long> kwr) -> result(kwr.end(), kwr.key(), kwr.result()),
+                (start, end, key, result, isEarly) -> result(end, key, result),
                 true);
     }
 

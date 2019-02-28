@@ -28,8 +28,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.core.processor.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -98,7 +97,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull
     private final A emptyAcc;
     @Nonnull
-    private final FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn;
+    private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
     @Nullable
     private final BiConsumer<? super A, ? super A> combineFn;
     private final boolean isLastStage;
@@ -141,7 +140,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
             @Nonnull SlidingWindowPolicy winPolicy,
             long earlyResultsPeriod,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn,
             boolean isLastStage
     ) {
         checkTrue(keyFns.size() == aggrOp.arity(), keyFns.size() + " key functions " +
@@ -207,12 +206,12 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
             .boxed();
         earlyWinTraverser = traverseStream(earlyWinRange)
                 .flatMap(winEnd -> traverseIterable(computeWindow(winEnd).entrySet())
-                        .map(e -> mapToOutputFn.apply(new KeyedWindowResult<>(
+                        .map(e -> mapToOutputFn.apply(
                                 winEnd - winPolicy.windowSize(),
                                 winEnd,
                                 e.getKey(),
                                 aggrOp.exportFn().apply(e.getValue()),
-                                true)))
+                                true))
                         .onFirstNull(() -> completeEarlyWindow(winEnd)))
                 .onFirstNull(() -> {
                     slidingWindow = slidingWindowBackup;
@@ -359,10 +358,10 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         }
         return traverseStream(range(rangeStart, wm, winPolicy.frameSize()).boxed())
                 .flatMap(winEnd -> traverseIterable(computeWindow(winEnd).entrySet())
-                        .map(e -> mapToOutputFn.apply(new KeyedWindowResult<>(
+                        .map(e -> mapToOutputFn.apply(
                                 winEnd - winPolicy.windowSize(), winEnd,
                                 e.getKey(), aggrOp.finishFn().apply(e.getValue()),
-                                false)))
+                                false))
                         .onFirstNull(() -> completeWindow(winEnd)));
     }
 

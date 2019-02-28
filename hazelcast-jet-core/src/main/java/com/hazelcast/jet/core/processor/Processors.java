@@ -427,7 +427,7 @@ public final class Processors {
             @Nonnull SlidingWindowPolicy winPolicy,
             long earlyResultsPeriod,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return aggregateByKeyAndWindowP(
                 keyFns, timestampFns, timestampKind, winPolicy, earlyResultsPeriod, aggrOp, mapToOutputFn, true);
@@ -480,7 +480,7 @@ public final class Processors {
                 winPolicy.toTumblingByFrame(),
                 0L,
                 aggrOp.withIdentityFinish(),
-                identity(),
+                KeyedWindowResult::new,
                 false
         );
     }
@@ -523,7 +523,7 @@ public final class Processors {
     public static <K, A, R, OUT> SupplierEx<Processor> combineToSlidingWindowP(
             @Nonnull SlidingWindowPolicy winPolicy,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         FunctionEx<KeyedWindowResult<K, A>, K> keyFn = KeyedWindowResult::key;
         ToLongFunctionEx<KeyedWindowResult<K, A>> timestampFn = KeyedWindowResult::end;
@@ -567,7 +567,7 @@ public final class Processors {
             @Nonnull SlidingWindowPolicy winPolicy,
             long earlyResultsPeriod,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn,
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn,
             boolean isLastStage
     ) {
         return () -> new SlidingWindowP<>(
@@ -640,7 +640,7 @@ public final class Processors {
             @Nonnull List<ToLongFunctionEx<?>> timestampFns,
             @Nonnull List<FunctionEx<?, ? extends K>> keyFns,
             @Nonnull AggregateOperation<A, ? extends R> aggrOp,
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> mapToOutputFn
+            @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return () -> new SessionWindowP<>(
                 sessionTimeout, earlyResultsPeriod, timestampFns, keyFns, aggrOp, mapToOutputFn);

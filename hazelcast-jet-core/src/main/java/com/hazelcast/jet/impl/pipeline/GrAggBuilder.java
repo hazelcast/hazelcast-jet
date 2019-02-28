@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
-import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -59,7 +58,6 @@ public class GrAggBuilder<K> {
     private final List<ComputeStageImplBase> upstreamStages = new ArrayList<>();
     private final List<FunctionEx<?, ? extends K>> keyFns = new ArrayList<>();
 
-    @SuppressWarnings("unchecked")
     public GrAggBuilder(BatchStageWithKey<?, K> stage0) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage0).computeStage;
         pipelineImpl = (PipelineImpl) computeStage.getPipeline();
@@ -68,7 +66,6 @@ public class GrAggBuilder<K> {
         keyFns.add(stage0.keyFn());
     }
 
-    @SuppressWarnings("unchecked")
     public GrAggBuilder(StageWithKeyAndWindow<?, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
         ensureJetEvents(computeStage, "This pipeline stage");
@@ -117,9 +114,7 @@ public class GrAggBuilder<K> {
         }
 
         Transform transform = new WindowGroupTransform<K, R, JetEvent<KeyedWindowResult<K, R>>>(
-                upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp),
-                fnAdapter.adaptKeyedWindowResultFn(identity())
-        );
+                upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp));
         pipelineImpl.connect(upstreamTransforms, transform);
         return new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
     }

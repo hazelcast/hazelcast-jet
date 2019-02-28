@@ -53,7 +53,6 @@ import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.core.test.TestSupport.verifyProcessor;
-import static com.hazelcast.jet.function.FunctionEx.identity;
 import static java.util.Arrays.asList;
 import static java.util.Collections.shuffle;
 import static java.util.Collections.singletonList;
@@ -110,8 +109,8 @@ public class SlidingWindowPTest {
                         winPolicy,
                         0L,
                         operation,
-                        identity())
-                : combineToSlidingWindowP(winPolicy, operation, identity());
+                KeyedWindowResult::new)
+                : combineToSlidingWindowP(winPolicy, operation, KeyedWindowResult::new);
 
         // new supplier to save the last supplied instance
         supplier = () -> lastSuppliedProcessor = (SlidingWindowP) procSupplier.get();

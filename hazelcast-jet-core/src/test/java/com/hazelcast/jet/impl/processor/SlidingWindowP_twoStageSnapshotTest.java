@@ -50,7 +50,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
-import static com.hazelcast.jet.function.FunctionEx.identity;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -95,10 +94,10 @@ public class SlidingWindowP_twoStageSnapshotTest {
                 singletonList((ToLongFunctionEx<? super Entry<Long, Long>>) Entry::getKey),
                 TimestampKind.EVENT,
                 windowDef,
-                ((AggregateOperation1<? super Entry<Long, Long>, LongAccumulator, ?>) aggrOp).withIdentityFinish()
+                aggrOp.withIdentityFinish()
         );
 
-        SupplierEx<Processor> procSupplier2 = combineToSlidingWindowP(windowDef, aggrOp, identity());
+        SupplierEx<Processor> procSupplier2 = combineToSlidingWindowP(windowDef, aggrOp, KeyedWindowResult::new);
 
         // new supplier to save the last supplied instance
         stage1Supplier = () -> lastSuppliedStage1Processor = (SlidingWindowP<?, ?, ?, ?>) procSupplier1.get();

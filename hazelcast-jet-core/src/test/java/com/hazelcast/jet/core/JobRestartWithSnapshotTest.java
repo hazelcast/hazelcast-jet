@@ -63,7 +63,6 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
-import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.function.Functions.entryKey;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
@@ -108,7 +107,8 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
 
     @SuppressWarnings("unchecked")
     private void when_nodeDown_then_jobRestartsFromSnapshot(boolean twoStage) throws Exception {
-        /* Design of this test:
+        /*
+        Design of this test:
 
         It uses a random partitioned generator of source events. The events are
         Map.Entry(partitionId, timestamp). For each partition timestamps from
@@ -135,7 +135,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
         The sink writes to an IMap which is an idempotent sink.
 
         The resulting contents of the sink map are compared to expected value.
-         */
+        */
 
         DAG dag = new DAG();
 
@@ -167,7 +167,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     aggrOp.withIdentityFinish()
             ));
             Vertex aggregateStage2 = dag.newVertex("aggregateStage2",
-                    combineToSlidingWindowP(wDef, aggrOp, identity()));
+                    combineToSlidingWindowP(wDef, aggrOp, KeyedWindowResult::new));
 
             dag.edge(between(insWm, aggregateStage1)
                     .partitioned(entryKey()))
@@ -183,7 +183,7 @@ public class JobRestartWithSnapshotTest extends JetTestSupport {
                     wDef,
                     0L,
                     aggrOp,
-                    identity()));
+                    KeyedWindowResult::new));
 
             dag.edge(between(insWm, aggregate)
                     .distributed()
