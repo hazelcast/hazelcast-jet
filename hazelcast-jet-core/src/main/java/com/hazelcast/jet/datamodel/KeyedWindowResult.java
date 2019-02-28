@@ -17,6 +17,7 @@
 package com.hazelcast.jet.datamodel;
 
 import javax.annotation.Nonnull;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
@@ -28,7 +29,7 @@ import static com.hazelcast.jet.impl.util.Util.toLocalTime;
  * @param <K> type of the grouping key
  * @param <R> type of the aggregated result
  */
-public class KeyedWindowResult<K, R> extends WindowResult<R> {
+public class KeyedWindowResult<K, R> extends WindowResult<R> implements Entry<K, R> {
     private final K key;
 
     /**
@@ -59,6 +60,31 @@ public class KeyedWindowResult<K, R> extends WindowResult<R> {
     @Nonnull
     public K key() {
         return key;
+    }
+
+    /**
+     * Alias for {@link #key}, implements {@code Map.Entry}.
+     */
+    @Override
+    public K getKey() {
+        return key;
+    }
+
+    /**
+     * Alias for {@link #result()}, implements {@code Map.Entry}.
+     */
+    @Override
+    public R getValue() {
+        return result();
+    }
+
+    /**
+     * Implements {@code Map.Entry}, throws {@code
+     * UnsupportedOperationException}.
+     */
+    @Override
+    public R setValue(R value) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
