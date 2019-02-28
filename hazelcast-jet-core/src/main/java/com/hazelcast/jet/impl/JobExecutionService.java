@@ -75,7 +75,7 @@ public class JobExecutionService {
     // does not guarantee at most one computation per key.
     // key: jobId
     private final ConcurrentHashMap<Long, JetClassLoader> classLoaders = new ConcurrentHashMap<>();
-    private volatile boolean isShutdown;
+    private volatile boolean shouldRejectJobs;
 
     JobExecutionService(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecutionService,
                         JobRepository jobRepository) {
@@ -111,11 +111,11 @@ public class JobExecutionService {
         return ctx != null ? ctx.senderMap() : null;
     }
 
-    public synchronized void shutdown(boolean graceful) {
-        isShutdown = true;
-        if (!graceful) {
-            cancelAllExecutions("shutdown", HazelcastInstanceNotActiveException::new);
-        }
+    public synchronized void rejectJobs() {
+        shouldRejectJobs = true;
+    }
+    public synchronized void shutdown() {
+        cancelAllExecutions("Node is shutting down", HazelcastInstanceNotActiveException::new);
     }
 
     public void reset() {
@@ -185,7 +185,7 @@ public class JobExecutionService {
             long jobId, long executionId, Address coordinator, int coordinatorMemberListVersion,
             Set<MemberInfo> participants, ExecutionPlan plan
     ) {
-        if (isShutdown) {
+        if (shouldRejectJobs) {
             throw new ShutdownInProgressException();
         }
 
@@ -334,7 +334,7 @@ public class JobExecutionService {
     }
 
     public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
-        if (isShutdown) {
+        if (shouldRejectJobs) {
             throw new ShutdownInProgressException();
         }
 

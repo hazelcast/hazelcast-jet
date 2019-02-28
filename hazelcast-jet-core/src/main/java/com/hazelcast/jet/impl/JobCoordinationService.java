@@ -107,7 +107,7 @@ public class JobCoordinationService {
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Void>> membersShuttingDown = new ConcurrentHashMap<>();
     private final Object lock = new Object();
-    private volatile boolean isShutDown;
+    private volatile boolean shouldRejectJobs;
     private volatile boolean isClusterEnteringPassiveState;
     private volatile boolean jobsScanned;
 
@@ -211,9 +211,9 @@ public class JobCoordinationService {
                              .anyMatch(ctx -> jobName.equals(ctx.jobConfig().getName()));
     }
 
-    public void shutdown() {
+    public void rejectJobs() {
         synchronized (lock) {
-            isShutDown = true;
+            shouldRejectJobs = true;
         }
     }
 
@@ -434,7 +434,7 @@ public class JobCoordinationService {
         shutting-down member runs have completed the terminal snapshot.
         */
         if (uuid.equals(nodeEngine.getLocalMember().getUuid())) {
-            shutdown();
+            rejectJobs();
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         CompletableFuture<Void> oldFuture = membersShuttingDown.putIfAbsent(uuid, future);
@@ -612,7 +612,7 @@ public class JobCoordinationService {
     }
 
     private void checkOperationalState() {
-        if (isShutDown) {
+        if (shouldRejectJobs) {
             throw new ShutdownInProgressException();
         }
         if (isClusterEnteringPassiveState) {

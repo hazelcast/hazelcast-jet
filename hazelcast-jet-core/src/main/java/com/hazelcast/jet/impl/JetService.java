@@ -130,9 +130,9 @@ public class JetService
             shutdownFuture.get().join();
             return;
         }
-        // this will prevent accepting more jobs
-        jobCoordinationService.shutdown();
-        jobExecutionService.shutdown(true);
+        // we will prevent accepting more jobs and let master cancel all running executions
+        jobCoordinationService.rejectJobs();
+        jobExecutionService.rejectJobs();
 
         notifyMasterWeAreShuttingDown(future);
         future.join();
@@ -165,8 +165,9 @@ public class JetService
             Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
         }
 
-        jobCoordinationService.shutdown();
-        jobExecutionService.shutdown(false);
+        jobCoordinationService.rejectJobs();
+        jobExecutionService.rejectJobs();
+        jobExecutionService.shutdown();
         taskletExecutionService.shutdown();
         taskletExecutionService.awaitWorkerTermination();
         networking.shutdown();
