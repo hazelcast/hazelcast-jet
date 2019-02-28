@@ -44,6 +44,16 @@ public class KeyedWindowResult<K, R> extends WindowResult<R> {
     }
 
     /**
+     * @param start   start time of the window
+     * @param end     end time of the window
+     * @param key     grouping key
+     * @param result  result of aggregation
+     */
+    public KeyedWindowResult(long start, long end, @Nonnull K key, @Nonnull R result) {
+        this(start, end, key, result, false);
+    }
+
+    /**
      * Returns the grouping key.
      */
     @Nonnull

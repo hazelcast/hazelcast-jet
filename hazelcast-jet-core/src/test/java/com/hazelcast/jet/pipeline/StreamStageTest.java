@@ -455,8 +455,8 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                           .mapToObj(i -> String.format("(%04d %04d)", i + 1, i))
                           .collect(joining("\n")),
                 streamToString(
-                        this.<Long>sinkStreamOfTsItem(),
-                        tsItem -> String.format("(%04d %04d)", tsItem.timestamp(), tsItem.item()))
+                        this.<Long>sinkStreamOfWinResult(),
+                        wr -> String.format("(%04d %04d)", wr.end(), wr.result()))
         );
     }
 
