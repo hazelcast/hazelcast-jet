@@ -608,7 +608,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 Processors.mapP(o -> {
                     @SuppressWarnings("unchecked")
                     JetEvent<Integer> jetEvent = (JetEvent<Integer>) o;
-                    return jetEvent(mapFn.apply(jetEvent.payload()), jetEvent.timestamp());
+                    return jetEvent(jetEvent.timestamp(), mapFn.apply(jetEvent.payload()));
                 }));
 
         // Then
@@ -632,7 +632,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                         ContextFactory.withCreateFn(jet -> new HashSet<>()),
                         (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
-                            return seen.add(key) ? jetEvent(key, jetEvent.timestamp()) : null;
+                            return seen.add(key) ? jetEvent(jetEvent.timestamp(), key) : null;
                         }));
 
         // Then
