@@ -135,16 +135,16 @@ class DataModelSerializerHooks {
                 public void write(ObjectDataOutput out, WindowResult wr) throws IOException {
                     out.writeLong(wr.start());
                     out.writeLong(wr.end());
-                    out.writeObject(wr.result());
                     out.writeBoolean(wr.isEarly());
+                    out.writeObject(wr.result());
                 }
 
                 @Override
                 public WindowResult read(ObjectDataInput in) throws IOException {
                     long start = in.readLong();
                     long end = in.readLong();
-                    Object result = in.readObject();
                     boolean isEarly = in.readBoolean();
+                    Object result = in.readObject();
                     return new WindowResult<>(start, end, result, isEarly);
                 }
 
@@ -178,6 +178,7 @@ class DataModelSerializerHooks {
                 public void write(ObjectDataOutput out, KeyedWindowResult kwr) throws IOException {
                     out.writeLong(kwr.start());
                     out.writeLong(kwr.end());
+                    out.writeBoolean(kwr.isEarly());
                     out.writeObject(kwr.key());
                     out.writeObject(kwr.result());
                 }
@@ -186,9 +187,10 @@ class DataModelSerializerHooks {
                 public KeyedWindowResult read(ObjectDataInput in) throws IOException {
                     long start = in.readLong();
                     long end = in.readLong();
+                    boolean isEarly = in.readBoolean();
                     Object key = in.readObject();
                     Object result = in.readObject();
-                    return new KeyedWindowResult<>(start, end, key, result, true);
+                    return new KeyedWindowResult<>(start, end, key, result, isEarly);
                 }
 
                 @Override
