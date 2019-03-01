@@ -31,7 +31,6 @@ import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DO_NOT_ADAPT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static java.util.stream.Collectors.toList;
 
@@ -79,7 +78,7 @@ public class AggBuilder {
         } else {
             transform = new AggregateTransform<>(upstreamTransforms, adaptedAggrOp);
         }
-        OUT_STAGE attached = createOutStageFn.get(transform, DO_NOT_ADAPT, pipelineImpl);
+        OUT_STAGE attached = createOutStageFn.get(transform, ADAPT_TO_JET_EVENT, pipelineImpl);
         pipelineImpl.connect(upstreamTransforms, transform);
         return attached;
     }
