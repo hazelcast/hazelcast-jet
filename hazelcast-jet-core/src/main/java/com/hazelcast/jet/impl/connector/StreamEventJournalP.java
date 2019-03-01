@@ -41,13 +41,11 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
-import com.hazelcast.projection.Projection;
 import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +66,8 @@ import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.jet.impl.util.Util.asClientConfig;
 import static com.hazelcast.jet.impl.util.Util.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.jet.impl.util.Util.maybeUnwrapImdgFunction;
+import static com.hazelcast.jet.impl.util.Util.maybeUnwrapImdgPredicate;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static java.util.stream.Collectors.groupingBy;
@@ -87,7 +87,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Nonnull
     private final Predicate<? super E> predicate;
     @Nonnull
-    private final Projection<? super E, ? extends T> projection;
+    private final com.hazelcast.util.function.Function<? super E, ? extends T> projection;
     @Nonnull
     private final JournalInitialPosition initialPos;
     @Nonnull
@@ -126,8 +126,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
         this.eventJournalReader = eventJournalReader;
-        this.predicate = (Predicate<? super E> & Serializable) predicateFn::test;
-        this.projection = toProjection(projectionFn);
+        this.predicate = maybeUnwrapImdgPredicate(predicateFn);
+        this.projection = maybeUnwrapImdgFunction(projectionFn);
         this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
 
@@ -305,17 +305,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     }
 
     private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
-        return eventJournalReader.readFromEventJournal(offset,
-                1, MAX_FETCH_SIZE, partition, predicate, projection);
-    }
-
-    private static <E, T> Projection<E, T> toProjection(Function<E, T> projectionFn) {
-        return new Projection<E, T>() {
-            @Override
-            public T transform(E input) {
-                return projectionFn.apply(input);
-            }
-        };
+        return eventJournalReader.readFromEventJournal(offset, 1, MAX_FETCH_SIZE, partition, predicate, projection);
     }
 
     private static class ClusterMetaSupplier<E, T> implements ProcessorMetaSupplier {
@@ -393,7 +383,6 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                     clientXml, eventJournalReaderSupplier, predicate, projection, initialPos,
                     eventTimePolicy);
         }
-
     }
 
     private static class ClusterProcessorSupplier<E, T> implements ProcessorSupplier {

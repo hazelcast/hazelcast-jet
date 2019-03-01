@@ -224,7 +224,6 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         );
     }
 
-
     @Test
     public void cacheJournal_withDefaultFilter() {
         // Given
@@ -315,7 +314,6 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         assertEquals(toBag(expected), sinkToBag());
     }
 
-
     @Test
     public void cacheJournal_byName() {
         // Given
@@ -393,7 +391,6 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         // Then
         testCacheJournal_withPredicateAndProjection(cache, source);
     }
-
 
     @Test
     public void remoteCacheJournal_withPredicateAndProjectionFn() {
