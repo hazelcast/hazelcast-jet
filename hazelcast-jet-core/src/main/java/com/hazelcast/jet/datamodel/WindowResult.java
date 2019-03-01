@@ -88,18 +88,15 @@ public class WindowResult<R> {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        WindowResult<?> that = (WindowResult<?>) o;
-        return start == that.start &&
-                end == that.end &&
-                isEarly == that.isEarly &&
-                Objects.equals(result, that.result);
+    public boolean equals(Object obj) {
+        WindowResult that;
+        return this == obj
+                || obj != null
+                && obj.getClass() == WindowResult.class
+                && this.start == (that = (WindowResult) obj).start
+                && this.end == that.end
+                && this.isEarly == that.isEarly
+                && Objects.equals(this.result, that.result);
     }
 
     @Override
