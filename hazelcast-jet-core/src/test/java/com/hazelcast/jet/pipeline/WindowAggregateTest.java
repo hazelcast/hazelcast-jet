@@ -242,7 +242,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                         .stringResults(e -> formatFn.apply(e.getKey(), e.getValue())),
                 streamToString(
                         this.<Long>sinkStreamOfWinResult(),
-                        wr -> formatFn.apply(wr.end(), wr.result()))
+                        wr -> formatFn.apply(wr.start(), wr.result()))
         );
     }
 
@@ -277,7 +277,7 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
                 expectedString,
                 streamToString(
                         this.<Long>sinkStreamOfWinResult(),
-                        wr -> formatFn.apply(wr.end(), wr.result()),
+                        wr -> formatFn.apply(wr.start(), wr.result()),
                         WindowResult::end
                 )),
                 ASSERT_TIMEOUT_SECONDS);
@@ -290,13 +290,13 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
 
     @Test
     public void when_sessionWinWithEarlyResults_then_emitRepeatedly() {
-        assertEarlyResultsEmittedRepeatedly(session(9));
+        assertEarlyResultsEmittedRepeatedly(session(10));
     }
 
     private void assertEarlyResultsEmittedRepeatedly(WindowDefinition wDef) {
         // Given
         long earlyResultPeriod = 50;
-        StreamStage<Integer> srcStage = streamStageFromList(singletonList(1), earlyResultPeriod);
+        StreamStage<Integer> srcStage = streamStageFromList(singletonList(0), earlyResultPeriod);
 
         // When
         StageWithWindow<Integer> stage = srcStage.window(wDef.setEarlyResultsPeriod(earlyResultPeriod));
