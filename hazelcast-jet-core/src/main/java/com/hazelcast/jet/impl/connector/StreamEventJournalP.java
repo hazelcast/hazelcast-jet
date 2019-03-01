@@ -23,8 +23,11 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Partition;
+import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.internal.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.internal.journal.EventJournalReader;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -41,6 +44,7 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
+import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.util.function.Predicate;
 
@@ -59,6 +63,7 @@ import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
+import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
@@ -157,6 +162,14 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         Arrays.setAll(futures, i -> eventJournalReader.subscribeToEventJournal(partitionIds[i]));
         for (int i = 0; i < futures.length; i++) {
             emitOffsets[i] = readOffsets[i] = getSequence(futures[i].get());
+        }
+
+        if (!isRemoteReader) {
+            // try to serde projection/predicate to fail fast if they aren't known to IMDG
+            HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
+            InternalSerializationService ss = hzInstance.getSerializationService();
+            deserializeWithCustomClassLoader(ss, hzInstance.getClass().getClassLoader(), ss.toData(predicate));
+            deserializeWithCustomClassLoader(ss, hzInstance.getClass().getClassLoader(), ss.toData(projection));
         }
     }
 
@@ -296,6 +309,10 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 // This exception can be safely ignored - it means the instance was shutting down,
                 // so we shouldn't unnecessarily throw an exception here.
                 return null;
+            } else if (ex instanceof HazelcastSerializationException) {
+                throw new JetException("Serialization error when reading the journal: are the key, value, " +
+                        "predicate and projection classes visible to IMDG? You need to use User Code " +
+                        "Deployment, adding the classes to JetConfig isn't enough", e);
             } else {
                 throw rethrow(ex);
             }
