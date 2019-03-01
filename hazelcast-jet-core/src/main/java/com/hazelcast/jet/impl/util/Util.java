@@ -563,7 +563,7 @@ public final class Util {
         }
         return name + '-' + index;
     }
-    
+
     public static <T> PredicateEx<T> wrapImdgPredicate(com.hazelcast.util.function.Predicate<T> predicate) {
         return new ImdgPredicateWrapper(predicate);
     }
@@ -598,7 +598,7 @@ public final class Util {
             return wrapped.test(t);
         }
     }
-    
+
     private static final class ImdgFunctionWrapper<T, R> implements FunctionEx<T, R> {
         private final com.hazelcast.util.function.Function<T, R> wrapped;
 
