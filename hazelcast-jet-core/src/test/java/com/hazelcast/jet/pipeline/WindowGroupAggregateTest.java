@@ -58,7 +58,10 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
     private static final Function<KeyedWindowResult<String, Long>, Tuple2<Long, String>> TS_ENTRY_DISTINCT_FN =
             kwr -> tuple2(kwr.end(), kwr.key());
 
-    private static final Function<KeyedWindowResult<String, Long>, String> KWR_FORMAT_FN =
+    private static final Function<KeyedWindowResult<String, Long>, String> KWR_WIN_START_FORMAT_FN =
+            kwr -> String.format("(%04d %s: %04d)", kwr.start(), kwr.key(), kwr.result());
+
+    private static final Function<KeyedWindowResult<String, Long>, String> KWR_WIN_END_FORMAT_FN =
             kwr -> String.format("(%04d %s: %04d)", kwr.end(), kwr.key(), kwr.result());
 
     private static final Function<KeyedWindowResult<String, Tuple2<Long, Long>>, String> TS_ENTRY_FORMAT_FN_2 =
@@ -167,7 +170,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 new SlidingWindowSimulator(wDef)
                         .acceptStream(fx.input.stream())
                         .stringResults(MOCK_FORMAT_FN),
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
+                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_END_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
         );
     }
 
@@ -190,7 +193,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 .stringResults(MOCK_FORMAT_FN);
         assertTrueEventually(() -> assertEquals(
                 expectedString,
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
+                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_END_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
         ), ASSERT_TIMEOUT_SECONDS);
     }
 
@@ -213,7 +216,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 new SlidingWindowSimulator(wDef)
                         .acceptStream(fx.input.stream())
                         .stringResults(MOCK_FORMAT_FN),
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
+                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_END_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
         );
     }
 
@@ -237,7 +240,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 .stringResults(MOCK_FORMAT_FN);
         assertTrueEventually(() -> assertEquals(
                 expectedString,
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
+                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_END_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
         ), ASSERT_TIMEOUT_SECONDS);
     }
 
@@ -298,11 +301,12 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
         windowed.aggregate(SUMMING)
                 .drainTo(sink);
         execute();
+
         assertEquals(
                 new SessionWindowSimulator(wDef, sessionLength + sessionTimeout)
                         .acceptStream(fx.input.stream())
                         .stringResults(MOCK_FORMAT_FN),
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
+                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_START_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
         );
     }
 
@@ -332,7 +336,7 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
                 .stringResults(MOCK_FORMAT_FN);
         assertTrueEventually(() -> assertEquals(
                 expectedString,
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
+                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_START_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
         ), ASSERT_TIMEOUT_SECONDS);
     }
 
