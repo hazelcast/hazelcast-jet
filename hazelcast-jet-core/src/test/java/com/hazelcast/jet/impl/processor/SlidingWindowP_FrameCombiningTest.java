@@ -55,7 +55,7 @@ public class SlidingWindowP_FrameCombiningTest {
                         frame(6, set("c"))
                 ))
                 .expectOutput(asList(
-                        result(4, set("a", "b", "xxx")),
+                        result(4, set("a", "b")),
                         result(8, set("a", "b", "c")),
                         result(12, set("c"))
                 ));

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import org.junit.Test;
@@ -258,8 +257,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             jet().newJob(p);
 
-            List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount - lateness)
-                    .mapToObj(i -> new TimestampedItem<>(i, 1L))
+            List<WindowResult<Long>> expected = LongStream.range(1, itemCount - lateness)
+                    .mapToObj(i -> new WindowResult<>(i - 1, i, 1L))
                     .collect(toList());
 
             assertTrueEventually(() -> assertEquals(expected, new ArrayList<>(sinkList)), 10);
@@ -300,8 +299,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             jet().newJob(p).join();
 
-            List<TimestampedItem<Long>> expected = LongStream.range(1, itemCount + 1)
-                    .mapToObj(i -> new TimestampedItem<>(i, (long) PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT))
+            List<WindowResult<Long>> expected = LongStream.range(1, itemCount + 1)
+                    .mapToObj(i -> new WindowResult<>(i - 1, i, (long) PREFERRED_LOCAL_PARALLELISM * MEMBER_COUNT))
                     .collect(toList());
 
             assertEquals(expected, new ArrayList<>(sinkList));

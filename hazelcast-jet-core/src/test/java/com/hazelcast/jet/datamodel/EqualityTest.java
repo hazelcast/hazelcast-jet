@@ -59,8 +59,15 @@ public class EqualityTest {
     @Test
     public void windowResult_equalsAndHashCode() {
         EqualsVerifier.forClass(WindowResult.class)
-                      .suppress(Warning.STRICT_INHERITANCE)
-                      .verify();
+                .usingGetClass()
+                .verify();
+    }
+
+    @Test
+    public void keyedWindowResult_equalsAndHashCode() {
+        EqualsVerifier.forClass(KeyedWindowResult.class)
+                .usingGetClass()
+                .verify();
     }
 
 }

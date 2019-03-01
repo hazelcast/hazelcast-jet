@@ -92,7 +92,7 @@ public class WindowResult<R> {
         WindowResult that;
         return this == obj
                 || obj != null
-                && obj.getClass() == WindowResult.class
+                && obj.getClass() == getClass()
                 && this.start == (that = (WindowResult) obj).start
                 && this.end == that.end
                 && this.isEarly == that.isEarly
