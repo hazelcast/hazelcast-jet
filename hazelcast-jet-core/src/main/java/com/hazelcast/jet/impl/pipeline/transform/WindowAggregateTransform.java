@@ -45,7 +45,7 @@ import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimi
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static java.util.Collections.nCopies;
 
-public class WindowAggregateTransform<A, R, OUT> extends AbstractTransform {
+public class WindowAggregateTransform<A, R> extends AbstractTransform {
     private static final int MAX_WATERMARK_STRIDE = 100;
     private static final int MIN_WMS_PER_SESSION = 100;
 

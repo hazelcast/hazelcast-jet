@@ -21,7 +21,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
@@ -77,7 +76,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<WindowResult<R>>>(
+        return streamStage.attach(new WindowAggregateTransform<A, R>(
                         singletonList(streamStage.transform),
                         wDef,
                         fnAdapter.adaptAggregateOperation1(aggrOp)
@@ -100,7 +99,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull StreamStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
-        return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<WindowResult<R>>>(
+        return streamStage.attach(new WindowAggregateTransform<A, R>(
                         asList(streamStage.transform, ((StreamStageImpl) stage1).transform),
                         wDef,
                         adaptAggregateOperation2(aggrOp)
@@ -128,7 +127,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull StreamStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, A, ? extends R> aggrOp
     ) {
-        return streamStage.attach(new WindowAggregateTransform<A, R, JetEvent<WindowResult<R>>>(
+        return streamStage.attach(new WindowAggregateTransform<A, R>(
                         asList(streamStage.transform,
                                 ((StreamStageImpl) stage1).transform,
                                 ((StreamStageImpl) stage2).transform),

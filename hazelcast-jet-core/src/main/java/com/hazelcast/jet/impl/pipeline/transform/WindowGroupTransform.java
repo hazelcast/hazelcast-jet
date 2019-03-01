@@ -46,7 +46,7 @@ import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimi
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static java.util.Collections.nCopies;
 
-public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
+public class WindowGroupTransform<K, R> extends AbstractTransform {
     @Nonnull
     private final WindowDefinition wDef;
     @Nonnull

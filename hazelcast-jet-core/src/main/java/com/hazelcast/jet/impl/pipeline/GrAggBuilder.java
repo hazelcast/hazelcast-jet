@@ -21,7 +21,6 @@ import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
@@ -113,7 +112,7 @@ public class GrAggBuilder<K> {
             adaptedKeyFns.add(fnAdapter.adaptKeyFn(keyFn));
         }
 
-        Transform transform = new WindowGroupTransform<K, R, JetEvent<KeyedWindowResult<K, R>>>(
+        Transform transform = new WindowGroupTransform<K, R>(
                 upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp));
         pipelineImpl.connect(upstreamTransforms, transform);
         return new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);

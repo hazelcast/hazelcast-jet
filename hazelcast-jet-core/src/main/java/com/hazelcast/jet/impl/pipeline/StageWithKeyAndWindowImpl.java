@@ -21,7 +21,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
@@ -65,7 +64,7 @@ public class StageWithKeyAndWindowImpl<T, K>
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        return computeStage.attach(new WindowGroupTransform<K, R, JetEvent<KeyedWindowResult<K, R>>>(
+        return computeStage.attach(new WindowGroupTransform<K, R>(
                         singletonList(computeStage.transform),
                         wDef,
                         singletonList(fnAdapter.adaptKeyFn(keyFn())),
@@ -83,7 +82,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         ensureJetEvents(((StageWithGroupingBase) stage1).computeStage, "stage1");
         Transform upstream1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        return computeStage.attach(new WindowGroupTransform<K, R, JetEvent<KeyedWindowResult<K, R>>>(
+        return computeStage.attach(new WindowGroupTransform<K, R>(
                         asList(computeStage.transform, upstream1),
                         wDef,
                         asList(fnAdapter.adaptKeyFn(keyFn()),
@@ -107,7 +106,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         Transform transform1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         Transform transform2 = ((StageWithGroupingBase) stage2).computeStage.transform;
         JetEventFunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
-        return computeStage.attach(new WindowGroupTransform<K, R, JetEvent<KeyedWindowResult<K, R>>>(
+        return computeStage.attach(new WindowGroupTransform<K, R>(
                         asList(computeStage.transform, transform1, transform2),
                         wDef,
                         asList(fnAdapter.adaptKeyFn(keyFn()),
