@@ -30,6 +30,7 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;

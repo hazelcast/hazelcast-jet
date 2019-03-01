@@ -29,7 +29,6 @@ import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
-import static com.hazelcast.jet.function.FunctionEx.identity;
 
 /**
  * Offers a step-by-step fluent API to build a pipeline stage that

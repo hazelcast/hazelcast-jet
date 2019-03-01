@@ -25,8 +25,6 @@ import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.function.FunctionEx.identity;
-
 /**
  * Offers a step-by-step fluent API to build a pipeline stage that
  * performs a windowed co-aggregation of the data from several input stages.
@@ -77,9 +75,7 @@ public class WindowAggregateBuilder1<T0> {
      * the tags you registered with this builder.
      *
      * @param aggrOp        the aggregate operation to perform
-     * @param mapToOutputFn a function that creates the output item from the aggregation result
      * @param <R>           the type of the aggregation result
-     * @param <OUT>         the type of the output item
      * @return a new stage representing the co-aggregation
      */
     @Nonnull

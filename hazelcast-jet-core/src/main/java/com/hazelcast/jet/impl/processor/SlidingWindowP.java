@@ -28,7 +28,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.core.processor.KeyedWindowResultFunction;
+import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;

@@ -90,22 +90,23 @@ public class KeyedWindowResult<K, R> extends WindowResult<R> implements Entry<K,
     }
 
     @Override
-    public boolean equals(Object obj) {
-        KeyedWindowResult that;
-        return this == obj
-                || obj.getClass() == KeyedWindowResult.class
-                && this.start() == (that = (KeyedWindowResult) obj).start()
-                && this.end() == that.end()
-                && this.isEarly() == that.isEarly()
-                && Objects.equals(this.result(), that.result())
-                && Objects.equals(this.key, that.key);
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        KeyedWindowResult<?, ?> that = (KeyedWindowResult<?, ?>) o;
+        return Objects.equals(key, that.key);
     }
 
     @Override
     public int hashCode() {
-        int hc = super.hashCode();
-        hc = 73 * hc + Objects.hashCode(key);
-        return hc;
+        return Objects.hash(super.hashCode(), key);
     }
 
     @Override

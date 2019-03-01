@@ -20,10 +20,10 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.JetEvent;
-import com.hazelcast.jet.core.processor.KeyedWindowResultFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.SessionWindowDefinition;
@@ -41,6 +41,7 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateToSessionWind
 import static com.hazelcast.jet.core.processor.Processors.aggregateToSlidingWindowP;
 import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindowP;
 import static com.hazelcast.jet.function.Functions.entryKey;
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static java.util.Collections.nCopies;
@@ -106,7 +107,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
                         slidingWinPolicy(wDef.windowSize(), wDef.slideBy()),
                         wDef.earlyResultsPeriod(),
                         aggrOp,
-                        KeyedWindowResultFunction::keyedWindowResult
+                        WindowGroupTransform::keyedWindowResult
                 ));
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(keyFns.get(ord)));
     }
@@ -138,7 +139,7 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
                 aggrOp));
         v1.localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, name(), localParallelism(),
-                combineToSlidingWindowP(winPolicy, aggrOp, KeyedWindowResultFunction::keyedWindowResult));
+                combineToSlidingWindowP(winPolicy, aggrOp, WindowGroupTransform::keyedWindowResult));
         p.addEdges(this, v1, (e, ord) -> e.partitioned(keyFns.get(ord), HASH_CODE));
         p.dag.edge(between(v1, pv2.v).distributed().partitioned(entryKey()));
     }
@@ -163,8 +164,15 @@ public class WindowGroupTransform<K, R, OUT> extends AbstractTransform {
                         nCopies(keyFns.size(), (ToLongFunctionEx<JetEvent>) JetEvent::timestamp),
                         keyFns,
                         aggrOp,
-                        KeyedWindowResultFunction::keyedWindowResult
+                        WindowGroupTransform::keyedWindowResult
                 ));
         p.addEdges(this, pv.v, (e, ord) -> e.distributed().partitioned(keyFns.get(ord)));
     }
+
+    private static <K, R> JetEvent<KeyedWindowResult<K, R>> keyedWindowResult(
+            long winStart, long winEnd, @Nonnull K key, @Nonnull R windowResult, boolean isEarly
+    ) {
+        return jetEvent(winEnd - 1, new KeyedWindowResult<>(winStart, winEnd, key, windowResult, isEarly));
+    }
+
 }
