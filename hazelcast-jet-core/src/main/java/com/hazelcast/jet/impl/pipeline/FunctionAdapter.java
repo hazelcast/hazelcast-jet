@@ -24,8 +24,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -123,20 +121,6 @@ public class FunctionAdapter {
             @Nonnull TriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
     ) {
         return mapToOutputFn;
-    }
-
-    @Nonnull
-    <K, R, OUT> FunctionEx<? super WindowResult<R>, ?> adaptWindowResultFn(
-            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> winResultFn
-    ) {
-        return winResultFn;
-    }
-
-    @Nonnull
-    <K, R, OUT> FunctionEx<? super KeyedWindowResult<K, R>, ?> adaptKeyedWindowResultFn(
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> winResultFn
-    ) {
-        return winResultFn;
     }
 
     @Nonnull
@@ -301,23 +285,6 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             @Nonnull TriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
     ) {
         return (e, t1, t2) -> jetEvent(e.timestamp(), mapToOutputFn.apply(e.payload(), t1, t2));
-    }
-
-    @Nonnull @Override
-    <K, R, OUT> FunctionEx<? super WindowResult<R>, ? extends JetEvent<OUT>> adaptWindowResultFn(
-            @Nonnull FunctionEx<? super WindowResult<R>, ? extends OUT> winResultFn
-    ) {
-        // use `winEnd - 1` for jetEvent, see https://github.com/hazelcast/hazelcast-jet/issues/898
-        return windowResult ->
-                jetEvent(windowResult.end() - 1, winResultFn.apply(windowResult));
-    }
-
-    @Nonnull @Override
-    <K, R, OUT> FunctionEx<? super KeyedWindowResult<K, R>, ? extends JetEvent<OUT>> adaptKeyedWindowResultFn(
-            @Nonnull FunctionEx<? super KeyedWindowResult<K, R>, ? extends OUT> winResultFn
-    ) {
-        // use `winEnd - 1` for jetEvent, see https://github.com/hazelcast/hazelcast-jet/issues/898
-        return winResult -> jetEvent(winResult.end() - 1, winResultFn.apply(winResult));
     }
 
     @Nonnull @Override
