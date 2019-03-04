@@ -168,8 +168,13 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             // try to serde projection/predicate to fail fast if they aren't known to IMDG
             HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
             InternalSerializationService ss = hzInstance.getSerializationService();
-            deserializeWithCustomClassLoader(ss, hzInstance.getClass().getClassLoader(), ss.toData(predicate));
-            deserializeWithCustomClassLoader(ss, hzInstance.getClass().getClassLoader(), ss.toData(projection));
+            try {
+                deserializeWithCustomClassLoader(ss, hzInstance.getClass().getClassLoader(), ss.toData(predicate));
+                deserializeWithCustomClassLoader(ss, hzInstance.getClass().getClassLoader(), ss.toData(projection));
+            } catch (HazelcastSerializationException e) {
+                throw new JetException("The projection or predicate classes are not known to IMDG. It's not enough to " +
+                        "add them to the job class path, they must be deployed using User code deployment: " + e, e);
+            }
         }
     }
 
