@@ -58,7 +58,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class PeekingWrapperTest {
 
-    private static final JetEvent<Integer> TEST_JET_EVENT = jetEvent(2, 123);
+    private static final JetEvent<Integer> TEST_JET_EVENT = jetEvent(123, 2);
 
     @Parameter
     public String mode;
@@ -99,7 +99,7 @@ public class PeekingWrapperTest {
     }
 
     @Test
-    public void when_peekInputWithPeekingProcessor_distributedSupplier() throws Exception {
+    public void when_peekInputWithPeekingProcessor_supplier() throws Exception {
         // Given
         SupplierEx<Processor> wrappedSupplier = procSupplier(TestPeekRemoveProcessor.class);
         peekP = (toStringFn == null
@@ -112,7 +112,7 @@ public class PeekingWrapperTest {
     }
 
     @Test
-    public void when_peekInputWithPollingProcessor_distributedSupplier() throws Exception {
+    public void when_peekInputWithPollingProcessor_supplier() throws Exception {
         // Given
         SupplierEx<Processor> passThroughPSupplier = procSupplier(TestPollProcessor.class);
         peekP = (toStringFn == null
@@ -156,7 +156,7 @@ public class PeekingWrapperTest {
     }
 
     @Test
-    public void when_peekOutput_distributedSupplier() throws Exception {
+    public void when_peekOutput_supplier() throws Exception {
         // Given
         SupplierEx<Processor> passThroughPSupplier = peekOutputProcessorSupplier();
         peekP = (toStringFn == null
@@ -195,7 +195,7 @@ public class PeekingWrapperTest {
     }
 
     @Test
-    public void when_peekSnapshot_distributedSupplier() throws Exception {
+    public void when_peekSnapshot_supplier() throws Exception {
         // Given
         SupplierEx<Processor> wrappedSupplier = procSupplier(TestSourceProcessor.class);
         peekP = (toStringFn == null

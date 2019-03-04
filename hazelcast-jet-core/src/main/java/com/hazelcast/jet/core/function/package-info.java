@@ -14,16 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.exception;
-
-import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.operation.InitExecutionOperation;
-import com.hazelcast.jet.impl.operation.StartExecutionOperation;
-
 /**
- * An exception thrown internally for {@link InitExecutionOperation} and
- * {@link StartExecutionOperation} to indicate that the member is shutting
- * down.
+ * Functional interfaces used by Jet Core API
  */
-public class ShutdownInProgressException extends JetException {
-}
+package com.hazelcast.jet.core.function;
