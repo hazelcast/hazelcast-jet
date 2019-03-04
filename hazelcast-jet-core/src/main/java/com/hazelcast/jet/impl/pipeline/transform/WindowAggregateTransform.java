@@ -163,7 +163,9 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
                 winPolicy,
                 aggrOp
         ));
-        v1.localParallelism(1);
+        // We use requested parallelism for 1st stage: edge to it is local-unicast, each processor
+        // can process part of the input which will be combined into one result in 2nd stage.
+        v1.localParallelism(localParallelism());
         PlannerVertex pv2 = p.addVertex(this, name(), 1,
                 combineToSlidingWindowP(winPolicy, aggrOp, jetEventOfWindowResultFn()));
         p.addEdges(this, v1);
