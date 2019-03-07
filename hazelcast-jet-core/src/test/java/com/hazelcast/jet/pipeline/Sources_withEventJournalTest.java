@@ -491,7 +491,8 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         cache.put("key", car);
 
         // When
-        StreamSource<Entry<Object, Object>> source = Sources.remoteCacheJournal(cacheName, clientConfig, START_FROM_OLDEST);
+        StreamSource<Entry<Object, Object>> source =
+                Sources.remoteCacheJournal(cacheName, clientConfig, START_FROM_OLDEST);
 
         // Then
         p.drawFrom(source).withoutTimestamps().map(en -> en.getValue().toString()).drainTo(sink);
