@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConfigXmlGenerator;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -70,6 +71,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -205,6 +207,15 @@ public final class Util {
         return nodeEngine.getProxyService()
                   .getDistributedObjectNames(serviceName)
                   .contains(objectName);
+    }
+
+    public static Optional<DistributedObject> getDistributedObjectIfExits(
+            NodeEngine nodeEngine, String serviceName, String objectName
+    ) {
+        return nodeEngine.getProxyService()
+                .getDistributedObjects(serviceName)
+                .stream().filter(o -> o.getName().equals(objectName))
+                .findFirst();
     }
 
     public interface RunnableExc {
