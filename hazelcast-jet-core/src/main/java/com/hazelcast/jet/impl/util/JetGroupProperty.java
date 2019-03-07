@@ -20,6 +20,7 @@ import com.hazelcast.spi.properties.HazelcastProperty;
 
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -34,8 +35,9 @@ public final class JetGroupProperty {
             = new HazelcastProperty("jet.shutdownhook.enabled", SHUTDOWNHOOK_ENABLED.getDefaultValue());
     public static final HazelcastProperty JOB_RESULTS_TTL_SECONDS
             = new HazelcastProperty("jet.job.results.ttl.seconds", DAYS.toSeconds(7), SECONDS);
+    public static final HazelcastProperty JET_MINIMUM_IDLE_TIME
+            = new HazelcastProperty("jet.minimum.idle.time", 25, MICROSECONDS);
 
     private JetGroupProperty() {
     }
-
 }
