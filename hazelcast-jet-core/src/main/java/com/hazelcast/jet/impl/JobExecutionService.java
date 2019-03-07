@@ -313,7 +313,8 @@ public class JobExecutionService {
             try {
                 executionContext.completeExecution(error);
             } finally {
-                classLoaders.remove(executionContext.jobId());
+                JetClassLoader removed = classLoaders.remove(executionContext.jobId());
+                removed.shutdown();
                 executionContextJobIds.remove(executionContext.jobId());
                 logger.fine("Completed execution of " + executionContext.jobNameAndExecutionId());
             }

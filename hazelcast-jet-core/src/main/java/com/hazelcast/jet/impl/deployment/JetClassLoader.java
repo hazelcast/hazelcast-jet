@@ -39,6 +39,7 @@ public class JetClassLoader extends ClassLoader {
 
     private final Map<String, byte[]> resources;
     private JobResourceURLStreamHandler jobResourceURLStreamHandler;
+    private volatile boolean isShutdown;
 
     public JetClassLoader(@Nullable ClassLoader parent, Map<String, byte[]> resources) {
         super(parent == null ? JetClassLoader.class.getClassLoader() : parent);
@@ -63,6 +64,7 @@ public class JetClassLoader extends ClassLoader {
 
     @Override
     protected URL findResource(String name) {
+        checkShutdown();
         if (isEmpty(name) || !resources.containsKey(name)) {
             return null;
         }
@@ -80,13 +82,24 @@ public class JetClassLoader extends ClassLoader {
         return new SingleURLEnumeration(findResource(name));
     }
 
+    public void shutdown() {
+        isShutdown = true;
+    }
+
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
+        checkShutdown();
         byte[] classData = resources.get(name);
         if (classData == null) {
             return null;
         }
         return new InflaterInputStream(new ByteArrayInputStream(classData));
+    }
+
+    private void checkShutdown() {
+        if (isShutdown) {
+            throw new RuntimeException(getClass().getSimpleName() + " was shut down");
+        }
     }
 
     private static boolean isEmpty(String className) {
