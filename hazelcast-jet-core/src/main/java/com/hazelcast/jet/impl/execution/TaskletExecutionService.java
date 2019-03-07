@@ -46,6 +46,7 @@ import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -77,14 +78,17 @@ public class TaskletExecutionService {
     private volatile IdleStrategy idlerCooperative;
     private volatile IdleStrategy idlerNonCooperative;
 
-    public TaskletExecutionService(NodeEngineImpl nodeEngine, int threadCount, long minimumIdleTime) {
+    public TaskletExecutionService(NodeEngineImpl nodeEngine, int threadCount, long minimumIdleTimeNs) {
         this.hzInstanceName = nodeEngine.getHazelcastInstance().getName();
         this.cooperativeWorkers = new CooperativeWorker[threadCount];
         this.cooperativeThreadPool = new Thread[threadCount];
         this.logger = nodeEngine.getLoggingService().getLogger(TaskletExecutionService.class);
 
-        idlerCooperative = new BackoffIdleStrategy(0, 0, minimumIdleTime, MAXIMUM_IDLE_COOPERATIVE);
-        idlerNonCooperative = new BackoffIdleStrategy(0, 0, minimumIdleTime, MAXIMUM_IDLE_NON_COOPERATIVE);
+        logFine(logger, "Actual minimum idle time=%dµs", NANOSECONDS.toMicros(minimumIdleTimeNs));
+        idlerCooperative = new BackoffIdleStrategy(0, 0, minimumIdleTimeNs,
+                Math.max(minimumIdleTimeNs, MAXIMUM_IDLE_COOPERATIVE));
+        idlerNonCooperative = new BackoffIdleStrategy(0, 0, minimumIdleTimeNs,
+                Math.max(minimumIdleTimeNs, MAXIMUM_IDLE_NON_COOPERATIVE));
 
         nodeEngine.getMetricsRegistry().newProbeBuilder()
                        .withTag("module", "jet")

@@ -100,10 +100,10 @@ public class JetService
         this.config = findJetServiceConfig(engine.getConfig());
         this.sharedMigrationWatcher = new MigrationWatcher(engine.getHazelcastInstance());
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
-        HazelcastProperties properties = new HazelcastProperties(hzProperties);
+        HazelcastProperties jetProperties = new HazelcastProperties(config.getProperties());
         taskletExecutionService = new TaskletExecutionService(nodeEngine,
                 config.getInstanceConfig().getCooperativeThreadCount(),
-                properties.getNanos(JetGroupProperty.JET_MINIMUM_IDLE_TIME));
+                jetProperties.getNanos(JetGroupProperty.JET_MINIMUM_IDLE_TIME));
         jobRepository = new JobRepository(jetInstance);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
