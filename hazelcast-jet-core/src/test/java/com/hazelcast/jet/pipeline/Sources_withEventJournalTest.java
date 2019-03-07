@@ -328,12 +328,12 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
                                 .getResource("deployment/sample-pojo-1.0-car.jar");
         assertNotNull("jar not found", jarResource);
         ClassLoader cl = new URLClassLoader(new URL[]{jarResource});
-        Class<?> personClz = cl.loadClass("com.sample.pojo.car.Car");
-        Object person = personClz.getConstructor(String.class, String.class)
+        Class<?> carClz = cl.loadClass("com.sample.pojo.car.Car");
+        Object car = carClz.getConstructor(String.class, String.class)
                                  .newInstance("make", "model");
         IMap<String, Object> map = remoteHz.getMap(srcName);
         // the class of the value is unknown to the remote IMDG member, it will be only known to Jet
-        map.put("key", person);
+        map.put("key", car);
 
         // When
         StreamSource<Entry<Object, Object>> source = Sources.remoteMapJournal(srcName, clientConfig, START_FROM_OLDEST);
@@ -343,7 +343,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         JobConfig jobConfig = new JobConfig();
         jobConfig.addJar(jarResource);
         Job job = jet().newJob(p, jobConfig);
-        List<Object> expected = singletonList(person.toString());
+        List<Object> expected = singletonList(car.toString());
         assertTrueEventually(() -> assertEquals(expected, new ArrayList<>(sinkList)), 10);
         job.cancel();
     }
@@ -482,22 +482,23 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
                                 .getResource("deployment/sample-pojo-1.0-car.jar");
         assertNotNull("jar not found", jarResource);
         ClassLoader cl = new URLClassLoader(new URL[]{jarResource});
-        Class<?> personClz = cl.loadClass("com.sample.pojo.car.Car");
-        Object person = personClz.getConstructor(String.class, String.class)
+        Class<?> carClz = cl.loadClass("com.sample.pojo.car.Car");
+        Object car = carClz.getConstructor(String.class, String.class)
                                  .newInstance("make", "model");
-        ICache<String, Object> cache = remoteHz.getCacheManager().getCache(srcName);
+        String cacheName = JOURNALED_CACHE_PREFIX + randomName();
+        ICache<String, Object> cache = remoteHz.getCacheManager().getCache(cacheName);
         // the class of the value is unknown to the remote IMDG member, it will be only known to Jet
-        cache.put("key", person);
+        cache.put("key", car);
 
         // When
-        StreamSource<Entry<Object, Object>> source = Sources.remoteCacheJournal(srcName, clientConfig, START_FROM_OLDEST);
+        StreamSource<Entry<Object, Object>> source = Sources.remoteCacheJournal(cacheName, clientConfig, START_FROM_OLDEST);
 
         // Then
         p.drawFrom(source).withoutTimestamps().map(en -> en.getValue().toString()).drainTo(sink);
         JobConfig jobConfig = new JobConfig();
         jobConfig.addJar(jarResource);
         Job job = jet().newJob(p, jobConfig);
-        List<Object> expected = singletonList(person.toString());
+        List<Object> expected = singletonList(car.toString());
         assertTrueEventually(() -> assertEquals(expected, new ArrayList<>(sinkList)), 10);
         job.cancel();
     }
