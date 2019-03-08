@@ -168,7 +168,7 @@ public class JobRepository {
             }
             // now upload it all
             jobResourcesMap.putAll(tmpMap);
-        } catch (IOException e) {
+        } catch (Exception e) {
             jobResourcesMap.destroy();
             throw new JetException("Job resource upload failed", e);
         }
@@ -293,14 +293,15 @@ public class JobRepository {
      * so that it will not be used again for a new job submission.
      */
     void deleteJob(long jobId) {
-        // Delete the job record
+        // delete the job record
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
-        // Delete the execution ids, but keep the job id
+        // delete the execution ids, but keep the job id
         randomIds.removeAll(new FilterExecutionIdByJobIdPredicate(jobId));
 
-        // Delete job resources
-        destroySnapshotDataMaps(jobId);
+        // delete job resources
+        instance.getMap(snapshotDataMapName(jobId, 0)).destroy();
+        instance.getMap(snapshotDataMapName(jobId, 1)).destroy();
         getJobResources(jobId).destroy();
     }
 
@@ -328,6 +329,7 @@ public class JobRepository {
                     long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
                     // if job is finished, we can safely delete the map
                     if (jobResults.containsKey(id)) {
+                        logger.fine("Deleting job resource map " + map.getName() + " because job is already finished");
                         map.destroy();
                     } else if (!activeJobs.contains(id)) {
                         // job might not submitted yet, check how long the map has been there
@@ -337,6 +339,9 @@ public class JobRepository {
                                     IMap resourceMap = (IMap) obj;
                                     long creationTime = resourceMap.getLocalMapStats().getCreationTime();
                                     if (isResourceMapExpired(creationTime)) {
+                                        logger.fine(
+                                                "Deleting job resource map " + map.getName() + " because map has expired"
+                                        );
                                         resourceMap.destroy();
                                     }
                                 });
@@ -419,15 +424,6 @@ public class JobRepository {
      */
     public static String exportedSnapshotMapName(String name) {
         return JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name;
-    }
-
-    /**
-     * Delete all snapshots for a given job.
-     */
-    private void destroySnapshotDataMaps(long jobId) {
-        instance.getMap(snapshotDataMapName(jobId, 0)).destroy();
-        instance.getMap(snapshotDataMapName(jobId, 1)).destroy();
-        logFine(logger, "Destroyed both snapshot maps for job %s", idToString(jobId));
     }
 
     void clearSnapshotData(long jobId, int dataMapIndex) {
