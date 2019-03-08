@@ -329,11 +329,13 @@ public class JobRepository {
                 .filter(map -> map.getName().startsWith(RESOURCES_MAP_NAME_PREFIX))
                 .forEach(map -> {
                     long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
-                    // if job is finished, we can safely delete the map
-                    if (jobResults.containsKey(id)) {
+                    if (activeJobs.contains(id)) {
+                       // job is still active, do nothing
+                    } else if (jobResults.containsKey(id)) {
+                        // if job is finished, we can safely delete the map
                         logger.fine("Deleting job resource map " + map.getName() + " because job is already finished");
                         map.destroy();
-                    } else if (!activeJobs.contains(id)) {
+                    } else {
                         // job might not submitted yet, check how long the map has been there
                         // we have to be careful not to recreate the map
                         getDistributedObjectIfExits(nodeEngine, MapService.SERVICE_NAME, map.getName())
