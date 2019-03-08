@@ -48,7 +48,7 @@ public final class JetGroupProperty {
      * very high value (>10000µs) limits the throughput.
      */
     public static final HazelcastProperty JET_MINIMUM_IDLE_TIME
-            = new HazelcastProperty("jet.minimum.idle.time", 25, MICROSECONDS);
+            = new HazelcastProperty("jet.minimum.idle.microseconds", 25, MICROSECONDS);
 
     private JetGroupProperty() {
     }
