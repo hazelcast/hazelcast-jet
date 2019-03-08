@@ -311,13 +311,15 @@ public class JobRepository {
     void cleanup(NodeEngine nodeEngine) {
         Collection<DistributedObject> maps =
                 nodeEngine.getProxyService().getDistributedObjects(MapService.SERVICE_NAME);
+
+        // we need to take the list of active job records after getting the list of maps --
+        // otherwise the job records could be missing newly submitted jobs
         Set<Long> activeJobs = jobRecords.keySet();
 
         maps.stream()
                 .filter(map -> map.getName().startsWith(SNAPSHOT_DATA_MAP_PREFIX))
                 .forEach(map -> {
                     long id = jobIdFromMapName(map.getName(), SNAPSHOT_DATA_MAP_PREFIX);
-                    // job is not active
                     if (!activeJobs.contains(id)) {
                         map.destroy();
                     }
