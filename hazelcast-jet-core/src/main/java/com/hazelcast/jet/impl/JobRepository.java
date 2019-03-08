@@ -310,13 +310,14 @@ public class JobRepository {
     void cleanup(NodeEngine nodeEngine) {
         Collection<DistributedObject> maps =
                 nodeEngine.getProxyService().getDistributedObjects(MapService.SERVICE_NAME);
+        Set<Long> activeJobs = jobRecords.keySet();
 
         maps.stream()
                 .filter(map -> map.getName().startsWith(SNAPSHOT_DATA_MAP_PREFIX))
                 .forEach(map -> {
                     long id = jobIdFromMapName(map.getName(), SNAPSHOT_DATA_MAP_PREFIX);
                     // job is not active
-                    if (!jobRecords.containsKey(id)) {
+                    if (!activeJobs.contains(id)) {
                         map.destroy();
                     }
                 });
@@ -328,7 +329,7 @@ public class JobRepository {
                     // if job is finished, we can safely delete the map
                     if (jobResults.containsKey(id)) {
                         map.destroy();
-                    } else if (!jobRecords.containsKey(id)) {
+                    } else if (!activeJobs.contains(id)) {
                         // job might not submitted yet, check how long the map has been there
                         // we have to be careful not to recreate the map
                         getDistributedObjectIfExits(nodeEngine, MapService.SERVICE_NAME, map.getName())
