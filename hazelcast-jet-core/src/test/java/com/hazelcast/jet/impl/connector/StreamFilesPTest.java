@@ -278,8 +278,6 @@ public class StreamFilesPTest extends JetTestSupport {
         initializeProcessor(null);
         driverThread.start();
 
-        ILogger logger = Logger.getLogger(this.getClass());
-
         // When
         Path file = workDir.toPath().resolve("a.txt");
         writeToFile(file, "line1\n");
