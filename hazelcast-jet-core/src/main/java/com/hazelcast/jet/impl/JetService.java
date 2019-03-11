@@ -103,7 +103,7 @@ public class JetService
         HazelcastProperties jetProperties = new HazelcastProperties(config.getProperties());
         taskletExecutionService = new TaskletExecutionService(nodeEngine,
                 config.getInstanceConfig().getCooperativeThreadCount(),
-                jetProperties.getNanos(JetGroupProperty.JET_MINIMUM_IDLE_TIME));
+                jetProperties.getNanos(JetGroupProperty.JET_MINIMUM_IDLE_MICROSECONDS));
         jobRepository = new JobRepository(jetInstance);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
