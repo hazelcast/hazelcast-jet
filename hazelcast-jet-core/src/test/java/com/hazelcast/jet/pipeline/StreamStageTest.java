@@ -108,6 +108,29 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
+    public void map_fused() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        FunctionEx<Integer, String> mapFn1 = item -> String.format("%04d", item);
+        FunctionEx<String, String> mapFn2 = item -> item + "-x";
+        FunctionEx<String, String> mapFn3 = item -> item + "x";
+        FunctionEx<Integer, String> mapFn = item -> String.format("%04d-xx", item);
+
+        // When
+        StreamStage<String> mapped = streamStageFromList(input)
+                .map(mapFn1)
+                .map(mapFn2)
+                .map(mapFn3);
+
+        // Then
+        mapped.drainTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().map(mapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
     public void filter() {
         // Given
         List<Integer> input = sequence(itemCount);

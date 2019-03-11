@@ -26,7 +26,6 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
@@ -692,13 +691,10 @@ public final class Processors {
     public static <T, R> SupplierEx<Processor> mapP(
             @Nonnull FunctionEx<T, R> mapFn
     ) {
-        return () -> {
-            final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
-            return new TransformP<T, R>(item -> {
-                trav.accept(mapFn.apply(item));
-                return trav;
-            });
-        };
+        return () -> new TransformP<T, R>((trav, item) -> {
+            trav.accept(mapFn.apply(item));
+            return trav;
+        });
     }
 
     /**
@@ -712,13 +708,10 @@ public final class Processors {
      */
     @Nonnull
     public static <T> SupplierEx<Processor> filterP(@Nonnull PredicateEx<T> filterFn) {
-        return () -> {
-            final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
-            return new TransformP<T, T>(item -> {
-                trav.accept(filterFn.test(item) ? item : null);
-                return trav;
-            });
-        };
+        return () -> new TransformP<T, T>((trav, item) -> {
+            trav.accept(filterFn.test(item) ? item : null);
+            return trav;
+        });
     }
 
     /**
@@ -737,7 +730,7 @@ public final class Processors {
     public static <T, R> SupplierEx<Processor> flatMapP(
             @Nonnull FunctionEx<T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return () -> new TransformP<>(flatMapFn);
+        return () -> new TransformP<T, R>((singletonTraverser, t) -> flatMapFn.apply(t));
     }
 
     /**

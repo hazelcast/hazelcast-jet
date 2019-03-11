@@ -26,11 +26,9 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
-import com.hazelcast.jet.impl.pipeline.transform.FilterTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GlobalRollingAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
-import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MergeTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.RollingAggregateTransform;
@@ -104,14 +102,22 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <R, RET> RET attachMap(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         checkSerializable(mapFn, "mapFn");
-        return (RET) attach(new MapTransform(this.transform, fnAdapter.adaptMapFn(mapFn)), fnAdapter);
+        FunctionEx adaptedFn = fnAdapter.adaptMapFn(mapFn);
+        return (RET) attach(new FlatMapTransform<>(transform, (trav, item) -> {
+            trav.accept(adaptedFn.apply(item));
+            return trav;
+        }), fnAdapter);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
-        return (RET) attach(new FilterTransform(transform, fnAdapter.adaptFilterFn(filterFn)), fnAdapter);
+        PredicateEx adaptedFn = fnAdapter.adaptFilterFn(filterFn);
+        return (RET) attach(new FlatMapTransform<>(transform, (trav, item) -> {
+            trav.accept(adaptedFn.test(item) ? item : null);
+            return trav;
+        }), fnAdapter);
     }
 
     @Nonnull
@@ -120,7 +126,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
-        return (RET) attach(new FlatMapTransform(transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
+        FunctionEx adaptedFn = fnAdapter.adaptFlatMapFn(flatMapFn);
+        return (RET) attach(new FlatMapTransform(transform, (trav, item) -> adaptedFn.apply(item)), fnAdapter);
     }
 
     @Nonnull

@@ -21,32 +21,33 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.impl.processor.FusedTransformP;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
-public class FlatMapTransform<T, R> extends AbstractTransform {
-    @Nonnull
-    private BiFunctionEx<ResettableSingletonTraverser<R>, ? super T, ? extends Traverser<? extends R>> flatMapFn;
+public class FusedTransform<T, R> extends AbstractTransform {
+    private final int transformCount;
+    private BiFunctionEx<ResettableSingletonTraverser[], ? super T, ? extends Traverser<? extends R>> flatMapFns;
 
-    public FlatMapTransform(
-            @Nonnull Transform upstream,
-            @Nonnull BiFunctionEx<ResettableSingletonTraverser<R>, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    public FusedTransform(
+            @Nonnull List<Transform> upstream,
+            int transformCount,
+            @Nonnull BiFunctionEx<ResettableSingletonTraverser[], ? super T, ? extends Traverser<? extends R>> flatMapFns
     ) {
-        super("flat-map", upstream);
-        this.flatMapFn = flatMapFn;
-    }
-
-    @Nonnull
-    public BiFunctionEx<ResettableSingletonTraverser<R>, ? super T, ? extends Traverser<? extends R>> flatMapFn() {
-        return flatMapFn;
+        // TODO [viliam] name composed of fused names
+        super("fused", upstream);
+        this.transformCount = transformCount;
+        this.flatMapFns = flatMapFns;
     }
 
     @Override
     public void addToDag(Planner p) {
-        BiFunctionEx<ResettableSingletonTraverser<R>, ? super T, ? extends Traverser<? extends R>> flatMapFnLocal =
-                flatMapFn;
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), () -> new TransformP<T, R>(flatMapFnLocal));
+        BiFunctionEx<ResettableSingletonTraverser[], ? super T, ? extends Traverser<? extends R>> flatMapFnsLocal =
+                flatMapFns;
+        int transformCountLocal = transformCount;
+        PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
+                () -> new FusedTransformP<T, R>(transformCountLocal, flatMapFnsLocal));
         p.addEdges(this, pv.v);
     }
 }

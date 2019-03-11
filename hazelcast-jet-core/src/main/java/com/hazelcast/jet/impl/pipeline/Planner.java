@@ -16,14 +16,19 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
+import com.hazelcast.jet.impl.pipeline.transform.FusedTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
@@ -34,6 +39,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +77,7 @@ public class Planner {
         pipeline.makeNamesUnique();
         Map<Transform, List<Transform>> adjacencyMap = pipeline.adjacencyMap();
         validateNoLeakage(adjacencyMap);
+        checkTopologicalSort(adjacencyMap.entrySet());
 
         // Find the greatest common denominator of all frame lengths
         // appearing in the pipeline
@@ -101,11 +108,63 @@ public class Planner {
             }
         }
 
-        checkTopologicalSort(adjacencyMap.entrySet());
-        for (Transform transform : adjacencyMap.keySet()) {
+        // fuse subsequent transforms into one stage
+        List<Transform> transforms = new ArrayList<>(adjacencyMap.keySet());
+        for (int i = 0; i < transforms.size(); i++) {
+            Transform transform = transforms.get(i);
+            List<FlatMapTransform> chain = findFusableChain(transform, adjacencyMap);
+            if (chain == null) {
+                continue;
+            }
+            // remove children and replace parent with parent fused with the child
+            transforms.removeAll(chain.subList(1, chain.size()));
+            FusedTransform fused = fuseFlatMapTransforms(chain);
+            transforms.set(i, fused);
+            FlatMapTransform lastChild = chain.get(chain.size() - 1);
+            for (Transform grandchild : adjacencyMap.get(lastChild)) {
+                grandchild.upstream().replaceAll(p -> p == lastChild ? fused : p);
+            }
+        }
+
+        for (Transform transform : transforms) {
             transform.addToDag(this);
         }
         return dag;
+    }
+
+    private static List<FlatMapTransform> findFusableChain(
+            Transform transform,
+            Map<Transform, List<Transform>> adjacencyMap
+    ) {
+        ArrayList<FlatMapTransform> chain = new ArrayList<>();
+        for (;;) {
+            if (transform instanceof FlatMapTransform) {
+                chain.add((FlatMapTransform) transform);
+                List<Transform> children = adjacencyMap.get(transform);
+                if (children.size() == 1 && children.get(0) instanceof FlatMapTransform
+                        && children.get(0).localParallelism() == transform.localParallelism()) {
+                    transform = children.get(0);
+                    continue;
+                }
+            }
+            break;
+        }
+
+        return chain.size() > 1 ? chain : null;
+    }
+
+    private static FusedTransform fuseFlatMapTransforms(List<FlatMapTransform> chain) {
+        List<BiFunctionEx<ResettableSingletonTraverser, Object, Traverser>> functions = chain.stream()
+                .map(t -> (BiFunctionEx<ResettableSingletonTraverser, Object, Traverser>) t.flatMapFn())
+                .collect(toList());
+        return new FusedTransform<Object, Object>(chain.get(0).upstream(), functions.size(), (trav, item) -> {
+            Traverser res = functions.get(0).apply(trav[0], item);
+            for (int i = 1; i < functions.size(); i++) {
+                int finalI = i;
+                res = res.flatMap(r -> functions.get(finalI).apply(trav[finalI], r));
+            }
+            return res;
+        });
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

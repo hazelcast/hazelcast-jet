@@ -22,25 +22,26 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.function.BiFunctionEx;
 
 import javax.annotation.Nonnull;
+import java.util.Arrays;
 
 /**
  * Processor which, for each received item, emits all the items from the
  * traverser returned by the given item-to-traverser function.
- *
- * @param <T> received item type
- * @param <R> emitted item type
  */
-public class TransformP<T, R> extends AbstractProcessor {
+public class FusedTransformP<T, R> extends AbstractProcessor {
     private final FlatMapper<T, R> flatMapper;
-    private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
+    private final ResettableSingletonTraverser[] singletonTraversers;
 
     /**
      * Constructs a processor with the given mapping function.
      */
-    public TransformP(
-            @Nonnull BiFunctionEx<ResettableSingletonTraverser<R>, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    public FusedTransformP(
+            int transformCount,
+            @Nonnull BiFunctionEx<ResettableSingletonTraverser[], ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        this.flatMapper = flatMapper(t -> flatMapFn.apply(singletonTraverser, t));
+        singletonTraversers = new ResettableSingletonTraverser[transformCount];
+        Arrays.setAll(singletonTraversers, i -> new ResettableSingletonTraverser());
+        this.flatMapper = flatMapper(t -> flatMapFn.apply(singletonTraversers, t));
     }
 
     @Override
