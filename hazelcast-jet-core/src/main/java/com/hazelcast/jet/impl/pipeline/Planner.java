@@ -109,6 +109,8 @@ public class Planner {
             }
         }
 
+        Map<Transform, List<Transform>> originalParents = new HashMap<>();
+
         // fuse subsequent transforms into one stage
         List<Transform> transforms = new ArrayList<>(adjacencyMap.keySet());
         for (int i = 0; i < transforms.size(); i++) {
@@ -121,15 +123,25 @@ public class Planner {
             transforms.removeAll(chain.subList(1, chain.size()));
             Transform fused = fuseFlatMapTransforms(chain);
             transforms.set(i, fused);
-            Transform lastChild = chain.get(chain.size() - 1);
-            for (Transform grandchild : adjacencyMap.get(lastChild)) {
-                grandchild.upstream().replaceAll(p -> p == lastChild ? fused : p);
+            Transform lastInChain = chain.get(chain.size() - 1);
+            for (Transform downstream : adjacencyMap.get(lastInChain)) {
+                originalParents.put(downstream, new ArrayList<>(downstream.upstream()));
+                downstream.upstream().replaceAll(p -> p == lastInChain ? fused : p);
             }
         }
 
         for (Transform transform : transforms) {
             transform.addToDag(this);
         }
+
+        // restore original parents
+        for (Entry<Transform, List<Transform>> en : originalParents.entrySet()) {
+            List<Transform> upstream = en.getKey().upstream();
+            for (int i = 0; i < upstream.size(); i++) {
+                en.getKey().upstream().set(i, en.getValue().get(i));
+            }
+        }
+
         return dag;
     }
 

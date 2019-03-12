@@ -23,6 +23,7 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
@@ -60,6 +61,7 @@ import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class StreamStageTest extends PipelineStreamTestSupport {
 
@@ -215,7 +217,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     private void test_fusing(Function<GeneralStage<Integer>, GeneralStage<String>> addToPipelineFn,
-                                 Function<Integer, Stream<String>> plainFlatMapFn) {
+                             Function<Integer, Stream<String>> plainFlatMapFn) {
         // Given
         List<Integer> input = sequence(itemCount);
 
@@ -225,6 +227,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mappedStage.drainTo(sink);
+        DAG dag = p.toDag();
+        int[] count = {0};
+        dag.iterator().forEachRemaining(v -> count[0]++);
+        assertEquals("vertex count unexpected, probably not fused. DAG:\n" + dag, 3, count[0]);
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(plainFlatMapFn), Objects::toString),
