@@ -18,8 +18,7 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.ResettableSingletonTraverser;
-import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 
@@ -32,15 +31,12 @@ import javax.annotation.Nonnull;
  */
 public class TransformP<T, R> extends AbstractProcessor {
     private final FlatMapper<T, R> flatMapper;
-    private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
 
     /**
      * Constructs a processor with the given mapping function.
      */
-    public TransformP(
-            @Nonnull BiFunctionEx<ResettableSingletonTraverser<R>, ? super T, ? extends Traverser<? extends R>> flatMapFn
-    ) {
-        this.flatMapper = flatMapper(t -> flatMapFn.apply(singletonTraverser, t));
+    public TransformP(@Nonnull FunctionEx<T, ? extends Traverser<? extends R>> mapper) {
+        this.flatMapper = flatMapper(mapper);
     }
 
     @Override

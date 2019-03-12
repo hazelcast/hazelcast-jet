@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
@@ -180,11 +181,12 @@ public class Planner {
         }
 
         FunctionEx trailingMapFn = mergeMapFunctions(chain.subList(lastFlatMap, chain.size()));
+        String name = chain.stream().map(Transform::name).collect(Collectors.joining(", ", "fused(", ")"));
         if (flatMapFn == null) {
-            return new MapTransform(chain.get(0).upstream().get(0), trailingMapFn);
+            return new MapTransform(name, chain.get(0).upstream().get(0), trailingMapFn);
         } else {
             flatMapFn = flatMapFn.andThen(t -> t.map(trailingMapFn));
-            return new FlatMapTransform(chain.get(0).upstream().get(0), flatMapFn);
+            return new FlatMapTransform(name, chain.get(0).upstream().get(0), flatMapFn);
         }
     }
 
