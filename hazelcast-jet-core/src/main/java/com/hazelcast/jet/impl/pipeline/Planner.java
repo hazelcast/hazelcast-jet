@@ -17,18 +17,18 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
-import com.hazelcast.jet.impl.pipeline.transform.FusedTransform;
+import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
@@ -112,15 +112,15 @@ public class Planner {
         List<Transform> transforms = new ArrayList<>(adjacencyMap.keySet());
         for (int i = 0; i < transforms.size(); i++) {
             Transform transform = transforms.get(i);
-            List<FlatMapTransform> chain = findFusableChain(transform, adjacencyMap);
+            List<Transform> chain = findFusableChain(transform, adjacencyMap);
             if (chain == null) {
                 continue;
             }
             // remove children and replace parent with parent fused with the child
             transforms.removeAll(chain.subList(1, chain.size()));
-            FusedTransform fused = fuseFlatMapTransforms(chain);
+            Transform fused = fuseFlatMapTransforms(chain);
             transforms.set(i, fused);
-            FlatMapTransform lastChild = chain.get(chain.size() - 1);
+            Transform lastChild = chain.get(chain.size() - 1);
             for (Transform grandchild : adjacencyMap.get(lastChild)) {
                 grandchild.upstream().replaceAll(p -> p == lastChild ? fused : p);
             }
@@ -132,16 +132,16 @@ public class Planner {
         return dag;
     }
 
-    private static List<FlatMapTransform> findFusableChain(
+    private static List<Transform> findFusableChain(
             Transform transform,
             Map<Transform, List<Transform>> adjacencyMap
     ) {
-        ArrayList<FlatMapTransform> chain = new ArrayList<>();
+        ArrayList<Transform> chain = new ArrayList<>();
         for (;;) {
-            if (transform instanceof FlatMapTransform) {
-                chain.add((FlatMapTransform) transform);
+            if (isMapOrFlatMap(transform)) {
+                chain.add(transform);
                 List<Transform> children = adjacencyMap.get(transform);
-                if (children.size() == 1 && children.get(0) instanceof FlatMapTransform
+                if (children.size() == 1 && isMapOrFlatMap(children.get(0))
                         && children.get(0).localParallelism() == transform.localParallelism()) {
                     transform = children.get(0);
                     continue;
@@ -153,18 +153,50 @@ public class Planner {
         return chain.size() > 1 ? chain : null;
     }
 
-    private static FusedTransform fuseFlatMapTransforms(List<FlatMapTransform> chain) {
-        List<BiFunctionEx<ResettableSingletonTraverser, Object, Traverser>> functions = chain.stream()
-                .map(t -> (BiFunctionEx<ResettableSingletonTraverser, Object, Traverser>) t.flatMapFn())
-                .collect(toList());
-        return new FusedTransform<Object, Object>(chain.get(0).upstream(), functions.size(), (trav, item) -> {
-            Traverser res = functions.get(0).apply(trav[0], item);
-            for (int i = 1; i < functions.size(); i++) {
-                int finalI = i;
-                res = res.flatMap(r -> functions.get(finalI).apply(trav[finalI], r));
+    private static boolean isMapOrFlatMap(Transform transform) {
+        return transform instanceof MapTransform
+                || transform instanceof FlatMapTransform;
+    }
+
+    private static Transform fuseFlatMapTransforms(List<Transform> chain) {
+        assert chain.size() > 1 : "chain.size()=" + chain.size();
+        assert chain.stream().allMatch(Planner::isMapOrFlatMap) : "chain contains unexpected transforms: " + chain;
+        assert chain.get(0).upstream().size() == 1;
+
+        int lastFlatMap = 0;
+        FunctionEx<Object, Traverser> flatMapFn = null;
+        for (int i = 0; i < chain.size(); i++) {
+            if (chain.get(i) instanceof FlatMapTransform) {
+                FunctionEx<Object, Traverser> function = ((FlatMapTransform) chain.get(i)).flatMapFn();
+                FunctionEx<Object, Object> inputMapFn = mergeMapFunctions(chain.subList(lastFlatMap, i));
+                flatMapFn = flatMapFn == null
+                        ? (Object t) -> {
+                                Object mappedValue = inputMapFn.apply(t);
+                                return mappedValue != null ? function.apply(mappedValue) : Traversers.empty();
+                            }
+                        : flatMapFn.andThen(r -> r.map(inputMapFn).flatMap(function));
+                lastFlatMap = i + 1;
             }
-            return res;
-        });
+        }
+
+        FunctionEx trailingMapFn = mergeMapFunctions(chain.subList(lastFlatMap, chain.size()));
+        if (flatMapFn == null) {
+            return new MapTransform(chain.get(0).upstream().get(0), trailingMapFn);
+        } else {
+            flatMapFn = flatMapFn.andThen(t -> t.map(trailingMapFn));
+            return new FlatMapTransform(chain.get(0).upstream().get(0), flatMapFn);
+        }
+    }
+
+    private static FunctionEx mergeMapFunctions(List<Transform> chain) {
+        List<FunctionEx> functions = chain.stream().map(t -> ((MapTransform) t).mapFn()).collect(toList());
+        return t -> {
+            Object result = t;
+            for (int i = 0; i < functions.size() && result != null; i++) {
+                result = functions.get(i).apply(result);
+            }
+            return result;
+        };
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

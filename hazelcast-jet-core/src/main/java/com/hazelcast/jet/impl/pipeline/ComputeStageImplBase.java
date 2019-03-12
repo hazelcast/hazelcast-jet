@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GlobalRollingAggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
+import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MergeTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
 import com.hazelcast.jet.impl.pipeline.transform.RollingAggregateTransform;
@@ -102,22 +103,15 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <R, RET> RET attachMap(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         checkSerializable(mapFn, "mapFn");
-        FunctionEx adaptedFn = fnAdapter.adaptMapFn(mapFn);
-        return (RET) attach(new FlatMapTransform<>(transform, (trav, item) -> {
-            trav.accept(adaptedFn.apply(item));
-            return trav;
-        }), fnAdapter);
+        return (RET) attach(new MapTransform(this.transform, fnAdapter.adaptMapFn(mapFn)), fnAdapter);
     }
 
     @Nonnull
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
-        PredicateEx adaptedFn = fnAdapter.adaptFilterFn(filterFn);
-        return (RET) attach(new FlatMapTransform<>(transform, (trav, item) -> {
-            trav.accept(adaptedFn.test(item) ? item : null);
-            return trav;
-        }), fnAdapter);
+        PredicateEx<T> adaptedFn = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
+        return (RET) attach(new MapTransform<T, T>(transform, t -> adaptedFn.test(t) ? t : null), fnAdapter);
     }
 
     @Nonnull
@@ -126,8 +120,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
-        FunctionEx adaptedFn = fnAdapter.adaptFlatMapFn(flatMapFn);
-        return (RET) attach(new FlatMapTransform(transform, (trav, item) -> adaptedFn.apply(item)), fnAdapter);
+        return (RET) attach(new FlatMapTransform(transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
     }
 
     @Nonnull

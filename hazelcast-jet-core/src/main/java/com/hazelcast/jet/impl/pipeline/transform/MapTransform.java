@@ -16,35 +16,33 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.processor.Processors.flatMapP;
+import static com.hazelcast.jet.core.processor.Processors.mapP;
 
-public class FlatMapTransform<T, R> extends AbstractTransform {
+public class MapTransform<T, R> extends AbstractTransform {
     @Nonnull
-    private FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn;
+    private FunctionEx<? super T, ? extends R> mapFn;
 
-    public FlatMapTransform(
+    public MapTransform(
             @Nonnull Transform upstream,
-            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull FunctionEx<? super T, ? extends R> mapFn
     ) {
-        super("flat-map", upstream);
-        this.flatMapFn = flatMapFn;
+        super("map", upstream);
+        this.mapFn = mapFn;
     }
 
-    @Nonnull
-    public FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn() {
-        return flatMapFn;
+    public FunctionEx<? super T, ? extends R> mapFn() {
+        return mapFn;
     }
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), flatMapP(flatMapFn()));
+        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), mapP(mapFn()));
         p.addEdges(this, pv.v);
     }
 }

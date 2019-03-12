@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
@@ -37,6 +38,7 @@ import org.junit.Test;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -108,29 +110,6 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void map_fused() {
-        // Given
-        List<Integer> input = sequence(itemCount);
-        FunctionEx<Integer, String> mapFn1 = item -> String.format("%04d", item);
-        FunctionEx<String, String> mapFn2 = item -> item + "-x";
-        FunctionEx<String, String> mapFn3 = item -> item + "x";
-        FunctionEx<Integer, String> mapFn = item -> String.format("%04d-xx", item);
-
-        // When
-        StreamStage<String> mapped = streamStageFromList(input)
-                .map(mapFn1)
-                .map(mapFn2)
-                .map(mapFn3);
-
-        // Then
-        mapped.drainTo(sink);
-        execute();
-        assertEquals(
-                streamToString(input.stream().map(mapFn), identity()),
-                streamToString(sinkList.stream(), Object::toString));
-    }
-
-    @Test
     public void filter() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -164,6 +143,91 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
+    public void fusing_map() {
+        test_fusing(
+                stage -> stage
+                        .map(item -> String.format("%04d", item))
+                        .map(item -> item + "-x"),
+                item -> Stream.of(String.format("%04d-x", item))
+        );
+    }
+
+    @Test
+    public void fusing_flatMap() {
+        test_fusing(
+                stage -> stage
+                        .flatMap(item -> Traversers.traverseItems(String.format("%04d-a", item), String.format("%04d-b", item)))
+                        .flatMap(item -> Traversers.traverseItems(item + "1", item + "2")),
+                item -> Stream.of(String.format("%04d-a1", item), String.format("%04d-a2", item),
+                        String.format("%04d-b1", item), String.format("%04d-b2", item))
+        );
+    }
+
+    @Test
+    public void fusing_filter() {
+        test_fusing(
+                stage -> stage
+                        .filter(i -> i % 2 == 0)
+                        .filter(i -> i % 3 == 0)
+                        .map(Objects::toString),
+                item -> item % 2 == 0 && item % 3 == 0 ? Stream.of(item.toString()) : Stream.empty()
+        );
+    }
+
+    @Test
+    public void fusing_flatMap_with_inputMap() {
+        test_fusing(
+                stage -> stage
+                        .map(Objects::toString)
+                        .flatMap(item -> Traversers.traverseItems(item + "-1", item + "-2")),
+                item -> Stream.of(item.toString() + "-1", item.toString() + "-2")
+        );
+    }
+
+    @Test
+    public void fusing_flatMap_with_outputMap() {
+        test_fusing(
+                stage -> stage
+                        .flatMap(item -> Traversers.traverseItems(item + "-1", item + "-2"))
+                        .map(item -> item + "x"),
+                item -> Stream.of(item.toString() + "-1x", item.toString() + "-2x")
+        );
+    }
+
+    @Test
+    public void fusing_flatMapComplex() {
+        test_fusing(
+                stage -> stage
+                        .filter(item -> item % 2 == 0)
+                        .map(item -> item + "-x")
+                        .flatMap(item -> Traversers.traverseItems(item + "1", item + "2"))
+                        .map(item -> item + "y")
+                        .flatMap(item -> Traversers.traverseItems(item + "3", item + "4"))
+                        .map(item -> item + "z"),
+                item -> item % 2 == 0
+                        ? Stream.of(item + "-x1y3z", item + "-x2y3z", item + "-x1y4z", item + "-x2y4z")
+                        : Stream.empty()
+        );
+    }
+
+    private void test_fusing(Function<GeneralStage<Integer>, GeneralStage<String>> addToPipelineFn,
+                                 Function<Integer, Stream<String>> plainFlatMapFn) {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Integer> sourceStage = streamStageFromList(input);
+        GeneralStage<String> mappedStage = addToPipelineFn.apply(sourceStage);
+
+        // Then
+        mappedStage.drainTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().flatMap(plainFlatMapFn), Objects::toString),
                 streamToString(sinkList.stream(), Object::toString));
     }
 
