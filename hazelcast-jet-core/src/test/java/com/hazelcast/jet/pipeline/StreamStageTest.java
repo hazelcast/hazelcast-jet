@@ -61,7 +61,6 @@ import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class StreamStageTest extends PipelineStreamTestSupport {
 
@@ -227,14 +226,66 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         mappedStage.drainTo(sink);
-        DAG dag = p.toDag();
-        int[] count = {0};
-        dag.iterator().forEachRemaining(v -> count[0]++);
-        assertEquals("vertex count unexpected, probably not fused. DAG:\n" + dag, 3, count[0]);
+        assertVertexCount(p.toDag(), 3);
+        assertContainsFused(true);
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(plainFlatMapFn), Objects::toString),
                 streamToString(sinkList.stream(), Object::toString));
+    }
+
+    private void assertVertexCount(DAG dag, int expectedCount) {
+        int[] count = {0};
+        dag.iterator().forEachRemaining(v -> count[0]++);
+        assertEquals("unexpected vertex count in DAG:\n" + dag.toDotString(), expectedCount, count[0]);
+    }
+
+    @Test
+    public void fusing_testWithBranch() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        StreamStage<String> mappedSource = streamStageFromList(input)
+                .map(item -> item + "-x");
+
+        // When
+        StreamStage<String> mapped1 = mappedSource.map(item -> item + "-branch1");
+        StreamStage<String> mapped2 = mappedSource.map(item -> item + "-branch2");
+        p.drainTo(sink, mapped1, mapped2);
+
+        // Then
+        assertContainsFused(false);
+        assertVertexCount(p.toDag(), 5);
+        execute();
+        assertEquals(
+                streamToString(input.stream().flatMap(t -> Stream.of(t + "-x-branch1", t + "-x-branch2")), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
+    public void fusing_when_localParallelismDifferent_then_notFused() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        streamStageFromList(input)
+                .map(item -> item + "-a")
+                .setLocalParallelism(1)
+                .map(item -> item + "b")
+                .setLocalParallelism(2)
+                .drainTo(sink);
+
+        // Then
+        assertContainsFused(false);
+        assertVertexCount(p.toDag(), 4);
+        execute();
+        assertEquals(
+                streamToString(input.stream().map(t -> t  + "-ab"), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    private void assertContainsFused(boolean expectedContains) {
+        String dotString = p.toDag().toDotString();
+        assertEquals(dotString, expectedContains, dotString.contains("fused"));
     }
 
     @Test
