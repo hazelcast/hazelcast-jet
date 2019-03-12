@@ -109,9 +109,8 @@ public class Planner {
             }
         }
 
+        // fuse subsequent map/filter/flatMap transforms into one
         Map<Transform, List<Transform>> originalParents = new HashMap<>();
-
-        // fuse subsequent transforms into one stage
         List<Transform> transforms = new ArrayList<>(adjacencyMap.keySet());
         for (int i = 0; i < transforms.size(); i++) {
             Transform transform = transforms.get(i);
@@ -119,7 +118,7 @@ public class Planner {
             if (chain == null) {
                 continue;
             }
-            // remove children and replace parent with parent fused with the child
+            // remove transforms in the chain and replace the parent with a fused transform
             transforms.removeAll(chain.subList(1, chain.size()));
             Transform fused = fuseFlatMapTransforms(chain);
             transforms.set(i, fused);
@@ -145,35 +144,24 @@ public class Planner {
         return dag;
     }
 
-    private static List<Transform> findFusableChain(
-            Transform transform,
-            Map<Transform, List<Transform>> adjacencyMap
-    ) {
+    private static List<Transform> findFusableChain(Transform transform, Map<Transform, List<Transform>> adjacencyMap) {
         ArrayList<Transform> chain = new ArrayList<>();
         for (;;) {
-            if (isMapOrFlatMap(transform)) {
+            if (transform instanceof MapTransform || transform instanceof FlatMapTransform) {
                 chain.add(transform);
-                List<Transform> children = adjacencyMap.get(transform);
-                if (children.size() == 1 && isMapOrFlatMap(children.get(0))
-                        && children.get(0).localParallelism() == transform.localParallelism()) {
-                    transform = children.get(0);
+                List<Transform> downstreams = adjacencyMap.get(transform);
+                if (downstreams.size() == 1 && downstreams.get(0).localParallelism() == transform.localParallelism()) {
+                    transform = downstreams.get(0);
                     continue;
                 }
             }
             break;
         }
-
         return chain.size() > 1 ? chain : null;
-    }
-
-    private static boolean isMapOrFlatMap(Transform transform) {
-        return transform instanceof MapTransform
-                || transform instanceof FlatMapTransform;
     }
 
     private static Transform fuseFlatMapTransforms(List<Transform> chain) {
         assert chain.size() > 1 : "chain.size()=" + chain.size();
-        assert chain.stream().allMatch(Planner::isMapOrFlatMap) : "chain contains unexpected transforms: " + chain;
         assert chain.get(0).upstream().size() == 1;
 
         int lastFlatMap = 0;
@@ -182,12 +170,18 @@ public class Planner {
             if (chain.get(i) instanceof FlatMapTransform) {
                 FunctionEx<Object, Traverser> function = ((FlatMapTransform) chain.get(i)).flatMapFn();
                 FunctionEx<Object, Object> inputMapFn = mergeMapFunctions(chain.subList(lastFlatMap, i));
-                flatMapFn = flatMapFn == null
-                        ? (Object t) -> {
+                if (inputMapFn != null) {
+                    flatMapFn = flatMapFn == null
+                            ? (Object t) -> {
                                 Object mappedValue = inputMapFn.apply(t);
                                 return mappedValue != null ? function.apply(mappedValue) : Traversers.empty();
                             }
-                        : flatMapFn.andThen(r -> r.map(inputMapFn).flatMap(function));
+                            : flatMapFn.andThen(r -> r.map(inputMapFn).flatMap(function));
+                } else {
+                    flatMapFn = flatMapFn == null
+                            ? function::apply
+                            : flatMapFn.andThen(r -> r.flatMap(function));
+                }
                 lastFlatMap = i + 1;
             }
         }
@@ -197,12 +191,17 @@ public class Planner {
         if (flatMapFn == null) {
             return new MapTransform(name, chain.get(0).upstream().get(0), trailingMapFn);
         } else {
-            flatMapFn = flatMapFn.andThen(t -> t.map(trailingMapFn));
+            if (trailingMapFn != null) {
+                flatMapFn = flatMapFn.andThen(t -> t.map(trailingMapFn));
+            }
             return new FlatMapTransform(name, chain.get(0).upstream().get(0), flatMapFn);
         }
     }
 
     private static FunctionEx mergeMapFunctions(List<Transform> chain) {
+        if (chain.isEmpty()) {
+            return null;
+        }
         List<FunctionEx> functions = chain.stream().map(t -> ((MapTransform) t).mapFn()).collect(toList());
         return t -> {
             Object result = t;

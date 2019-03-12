@@ -161,7 +161,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     public void fusing_flatMap() {
         test_fusing(
                 stage -> stage
-                        .flatMap(item -> Traversers.traverseItems(String.format("%04d-a", item), String.format("%04d-b", item)))
+                        .flatMap(i -> Traversers.traverseItems(String.format("%04d-a", i), String.format("%04d-b", i)))
                         .flatMap(item -> Traversers.traverseItems(item + "1", item + "2")),
                 item -> Stream.of(String.format("%04d-a1", item), String.format("%04d-a2", item),
                         String.format("%04d-b1", item), String.format("%04d-b2", item))
@@ -212,6 +212,37 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 item -> item % 2 == 0
                         ? Stream.of(item + "-x1y3z", item + "-x2y3z", item + "-x1y4z", item + "-x2y4z")
                         : Stream.empty()
+        );
+    }
+
+    @Test
+    public void fusing_mapToNull_leading() {
+        test_fusing(
+                stage -> stage
+                        .map(item -> (String) null)
+                        .flatMap(Traversers::traverseItems),
+                item -> Stream.empty()
+        );
+    }
+
+    @Test
+    public void fusing_mapToNull_inside() {
+        test_fusing(
+                stage -> stage
+                        .flatMap(Traversers::traverseItems)
+                        .map(item -> (String) null)
+                        .flatMap(Traversers::traverseItems),
+                item -> Stream.empty()
+        );
+    }
+
+    @Test
+    public void fusing_mapToNull_trailing() {
+        test_fusing(
+                stage -> stage
+                        .flatMap(Traversers::traverseItems)
+                        .map(item -> (String) null),
+                item -> Stream.empty()
         );
     }
 
