@@ -158,6 +158,7 @@ public final class Jet {
 
         MapConfig internalMapConfig = new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + '*')
                 .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
+                // we query creationTime of resources maps
                 .setStatisticsEnabled(true);
 
         internalMapConfig.getMergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName());
