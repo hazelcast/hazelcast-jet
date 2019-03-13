@@ -59,7 +59,6 @@ import java.util.zip.DeflaterOutputStream;
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.Util.getDistributedObjectIfExits;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
@@ -316,41 +315,37 @@ public class JobRepository {
         // otherwise the job records could be missing newly submitted jobs
         Set<Long> activeJobs = jobRecords.keySet();
 
-        maps.stream()
-                .filter(map -> map.getName().startsWith(SNAPSHOT_DATA_MAP_PREFIX))
-                .forEach(map -> {
-                    long id = jobIdFromMapName(map.getName(), SNAPSHOT_DATA_MAP_PREFIX);
-                    if (!activeJobs.contains(id)) {
-                        map.destroy();
+        for (DistributedObject map : maps) {
+            if (map.getName().startsWith(SNAPSHOT_DATA_MAP_PREFIX)) {
+                long id = jobIdFromMapName(map.getName(), SNAPSHOT_DATA_MAP_PREFIX);
+                if (!activeJobs.contains(id)) {
+                    logFine(logger, "Deleting snapshot data map '%s' because job already finished", map.getName());
+                    map.destroy();
+                }
+            } else if (map.getName().startsWith(RESOURCES_MAP_NAME_PREFIX)) {
+                long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
+                if (activeJobs.contains(id)) {
+                    // job is still active, do nothing
+                    continue;
+                }
+                if (jobResults.containsKey(id)) {
+                    // if job is finished, we can safely delete the map
+                    logFine(logger, "Deleting job resource map '%s' because job is already finished", map.getName());
+                    map.destroy();
+                } else {
+                    // Job might be in the process of uploading resources, check how long the map has been there.
+                    // If we happen to recreate a just-deleted map, it will be destroyed again after
+                    // resourcesExpirationMillis.
+                    IMap resourceMap = (IMap) map;
+                    long creationTime = resourceMap.getLocalMapStats().getCreationTime();
+                    if (isResourceMapExpired(creationTime)) {
+                        logger.fine("Deleting job resource map " + map.getName() + " because the map " +
+                                "was created long ago and job record or result still doesn't exist");
+                        resourceMap.destroy();
                     }
-                });
-
-        maps.stream()
-                .filter(map -> map.getName().startsWith(RESOURCES_MAP_NAME_PREFIX))
-                .forEach(map -> {
-                    long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
-                    if (activeJobs.contains(id)) {
-                       // job is still active, do nothing
-                    } else if (jobResults.containsKey(id)) {
-                        // if job is finished, we can safely delete the map
-                        logger.fine("Deleting job resource map " + map.getName() + " because job is already finished");
-                        map.destroy();
-                    } else {
-                        // job might not submitted yet, check how long the map has been there
-                        // we have to be careful not to recreate the map
-                        getDistributedObjectIfExits(nodeEngine, MapService.SERVICE_NAME, map.getName())
-                                .ifPresent(obj -> {
-                                    IMap resourceMap = (IMap) obj;
-                                    long creationTime = resourceMap.getLocalMapStats().getCreationTime();
-                                    if (isResourceMapExpired(creationTime)) {
-                                        logger.fine(
-                                                "Deleting job resource map " + map.getName() + " because map has expired"
-                                        );
-                                        resourceMap.destroy();
-                                    }
-                                });
-                    }
-                });
+                }
+            }
+        }
     }
 
     private long jobIdFromMapName(String map, String prefix) {
