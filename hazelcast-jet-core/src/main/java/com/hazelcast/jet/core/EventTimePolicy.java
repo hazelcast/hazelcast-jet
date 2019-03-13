@@ -245,5 +245,4 @@ public final class EventTimePolicy<T> implements Serializable {
     public long idleTimeoutMillis() {
         return idleTimeoutMillis;
     }
-
 }

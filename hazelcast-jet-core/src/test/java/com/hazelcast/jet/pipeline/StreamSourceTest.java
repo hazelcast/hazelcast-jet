@@ -37,27 +37,29 @@ public class StreamSourceTest extends PipelineTestSupport {
 
     @Test
     public void test_shortIdle() {
-        test(1000);
+        test(500);
     }
 
     private void test(int idleTimeout) {
-        Pipeline p = Pipeline.create();
-
-        StreamSource<Object> source = SourceBuilder.timestampedStream("src", Context::globalProcessorIndex)
-                                                   .distributed(1)
-                                                   .fillBufferFn((index, buf) -> {
-                                                       if (index == 0) {
-                                                           buf.add("item", System.currentTimeMillis());
-                                                           Thread.sleep(10);
-                                                       }
-                                                   })
-                                                   .build();
+        StreamSource<Object> source = SourceBuilder
+                .stream("src", Context::globalProcessorIndex)
+                .distributed(1)
+                .fillBufferFn((index, buf) -> {
+                    // Only 1 instance will generate output. Until other instances are marked
+                    // idle, there should be no output.
+                    if (index == 0) {
+                        buf.add("item");
+                        Thread.sleep(10);
+                    }
+                })
+                .build();
         if (idleTimeout != DEFAULT_IDLE_TIMEOUT) {
-            source.setPartitionIdleTimeout(idleTimeout);
+            source = source.setPartitionIdleTimeout(idleTimeout);
         }
 
+        Pipeline p = Pipeline.create();
         p.drawFrom(source)
-         .withNativeTimestamps(0)
+         .withIngestionTimestamps()
          .window(WindowDefinition.tumbling(100))
          .aggregate(counting())
          .drainTo(sink);
@@ -69,7 +71,7 @@ public class StreamSourceTest extends PipelineTestSupport {
         } else if (idleTimeout < 1000) {
             assertTrueEventually(() -> assertTrue("sink empty", sinkList.size() > 0));
         } else {
-            fail("idleTimeout=" + idleTimeout);
+            fail("test not designed for idleTimeout=" + idleTimeout);
         }
 
         job.cancel();
