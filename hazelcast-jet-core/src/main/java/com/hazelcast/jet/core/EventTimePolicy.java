@@ -86,7 +86,6 @@ public final class EventTimePolicy<T> implements Serializable {
     private final SupplierEx<? extends WatermarkPolicy> newWmPolicyFn;
     private final long watermarkThrottlingFrameSize;
     private final long watermarkThrottlingFrameOffset;
-
     private final long idleTimeoutMillis;
 
     private EventTimePolicy(
@@ -101,6 +100,7 @@ public final class EventTimePolicy<T> implements Serializable {
         checkNotNegative(watermarkThrottlingFrameOffset, "watermarkThrottlingFrameOffset must be >= 0");
         checkTrue(watermarkThrottlingFrameOffset < watermarkThrottlingFrameSize || watermarkThrottlingFrameSize == 0,
                 "offset must be smaller than frame size");
+        checkNotNegative(idleTimeoutMillis, "idleTimeoutMillis must be >= 0 (0 means disabled)");
         this.timestampFn = timestampFn;
         this.newWmPolicyFn = newWmPolicyFn;
         this.wrapFn = wrapFn;

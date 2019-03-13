@@ -40,4 +40,24 @@ public interface StreamSource<T> {
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}.
      */
     boolean supportsNativeTimestamps();
+
+    /**
+     * Sets a timeout after which idle partitions will be excluded from
+     * watermark coalescing. That is, the source will advance the watermark
+     * based on events from other partitions and will ignore the idle
+     * partition. If all partitions are idle (or if the source only has one
+     * partition), it will emit a special <em>idle message</em> and the
+     * downstream processor will exclude this processor from watermark
+     * coalescing.
+     * <p>
+     * The default timeout is 60 seconds. Must be a positive number or ETP
+     *
+     * @param timeoutMillis the timeout in milliseconds
+     */
+    StreamSource<T> setPartitionIdleTimeout(long timeoutMillis);
+
+    /**
+     * Returns the value set by {@link #setPartitionIdleTimeout(long)}.
+     */
+    long partitionIdleTimeout();
 }
