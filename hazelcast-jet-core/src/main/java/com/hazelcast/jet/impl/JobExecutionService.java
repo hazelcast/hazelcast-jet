@@ -89,7 +89,7 @@ public class JobExecutionService {
                             ClassLoader parent = config.getClassLoaderFactory() != null
                                     ? config.getClassLoaderFactory().getJobClassLoader()
                                     : null;
-                            return new JetClassLoader(parent, jobRepository.getJobResources(jobId));
+                            return new JetClassLoader(parent, jobId, jobRepository.getJobResources(jobId));
                         }));
     }
 

@@ -31,18 +31,21 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.zip.InflaterInputStream;
 
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JetClassLoader extends ClassLoader {
 
     private static final String JOB_URL_PROTOCOL = "jet-job-resource";
 
+    private final long jobId;
     private final Map<String, byte[]> resources;
     private JobResourceURLStreamHandler jobResourceURLStreamHandler;
     private volatile boolean isShutdown;
 
-    public JetClassLoader(@Nullable ClassLoader parent, Map<String, byte[]> resources) {
+    public JetClassLoader(@Nullable ClassLoader parent, long jobId, Map<String, byte[]> resources) {
         super(parent == null ? JetClassLoader.class.getClassLoader() : parent);
+        this.jobId = jobId;
         this.resources = resources;
 
         jobResourceURLStreamHandler = new JobResourceURLStreamHandler();
@@ -64,7 +67,7 @@ public class JetClassLoader extends ClassLoader {
 
     @Override
     protected URL findResource(String name) {
-        checkShutdown();
+        checkShutdown(name);
         if (isEmpty(name) || !resources.containsKey(name)) {
             return null;
         }
@@ -88,7 +91,7 @@ public class JetClassLoader extends ClassLoader {
 
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
-        checkShutdown();
+        checkShutdown(name);
         byte[] classData = resources.get(name);
         if (classData == null) {
             return null;
@@ -96,9 +99,10 @@ public class JetClassLoader extends ClassLoader {
         return new InflaterInputStream(new ByteArrayInputStream(classData));
     }
 
-    private void checkShutdown() {
+    private void checkShutdown(String resource) {
         if (isShutdown) {
-            throw new RuntimeException(getClass().getSimpleName() + " was shut down");
+            throw new RuntimeException("Classloader for job " + idToString(jobId) + " tried to load '" + resource
+                    + "' after the job was completed. The classloader used for jobs is disposed after job is completed");
         }
     }
 
