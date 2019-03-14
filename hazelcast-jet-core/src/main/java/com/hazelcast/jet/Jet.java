@@ -91,7 +91,7 @@ public final class Jet {
      * Creates a Jet client with the given Hazelcast client configuration.
      *
      * {@link JetClientConfig} may be used to create a configuration with the
-     * default group name and password for Jet.
+     * default group name for Jet.
      */
     @Nonnull
     public static JetInstance newJetClient(@Nonnull ClientConfig config) {
@@ -119,7 +119,7 @@ public final class Jet {
         return new JetClientInstanceImpl(((HazelcastClientProxy) client).client);
     }
 
-    private static void configureJetService(JetConfig jetConfig) {
+    private static synchronized void configureJetService(JetConfig jetConfig) {
         Config hzConfig = jetConfig.getHazelcastConfig();
         if (!(hzConfig.getConfigPatternMatcher() instanceof MatchingPointConfigPatternMatcher)) {
             throw new UnsupportedOperationException("Custom config pattern matcher is not supported in Jet");
@@ -158,7 +158,9 @@ public final class Jet {
 
         MapConfig internalMapConfig = new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + '*')
                 .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
-                .setStatisticsEnabled(false);
+                // we query creationTime of resources maps
+                .setStatisticsEnabled(true);
+
         internalMapConfig.getMergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName());
 
         HazelcastProperties properties = new HazelcastProperties(hzProperties);
@@ -172,5 +174,4 @@ public final class Jet {
         MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
         applyMetricsConfig(hzConfig, metricsConfig);
     }
-
 }
