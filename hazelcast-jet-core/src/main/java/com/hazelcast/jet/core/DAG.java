@@ -141,10 +141,6 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         if (edge.getDestination() == null) {
             throw new IllegalArgumentException("Edge has no destination");
         }
-        if (edges.contains(edge)) {
-            throw new IllegalArgumentException("This DAG already has an edge between '" + edge.getSourceName()
-                    + "' and '" + edge.getDestName() + '\'');
-        }
         if (!containsVertex(edge.getSource())) {
             throw new IllegalArgumentException(
                     containsVertexName(edge.getSource())
@@ -177,7 +173,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         if (edge.getSource() == edge.getDestination()) {
             throw new IllegalArgumentException("Attempted to add an edge from " + edge.getSourceName() + " to itself");
         }
-        edges.add(edge);
+        boolean success = edges.add(edge);
+        assert success : "Duplicate edge added: " + edge;
         return this;
     }
 
