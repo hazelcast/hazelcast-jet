@@ -21,12 +21,14 @@ import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.processor.DiagnosticProcessors.peekInputP;
+import static com.hazelcast.jet.core.Edge.from;
+import static com.hazelcast.jet.function.Functions.wholeItem;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
 
 public class MultigraphTest extends JetTestSupport {
@@ -34,18 +36,19 @@ public class MultigraphTest extends JetTestSupport {
     @Test
     public void test() {
         DAG dag = new DAG();
-        Vertex source = dag.newVertex("source", ListSource.supplier(Arrays.asList(1, 2, 3)));
-        Vertex sink = dag.newVertex("sink", peekInputP(SinkProcessors.writeListP("sink")));
-        dag.edge(Edge.from(source, 0).to(sink, 0));
-        dag.edge(Edge.from(source, 1).to(sink, 1));
+        List<Integer> input = IntStream.range(0, 200_000).boxed().collect(Collectors.toList());
+        Vertex source = dag.newVertex("source", ListSource.supplier(input));
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
+        dag.edge(from(source, 0).to(sink, 0));
+        dag.edge(from(source, 1).to(sink, 1).partitioned(wholeItem()).distributed());
 
         JetInstance instance = createJetMember();
+        createJetMember();
         instance.newJob(dag).join();
 
-        assertEquals(new HashMap<Integer, Long>() {{
-            put(1, 2L);
-            put(2, 2L);
-            put(3, 2L);
-        }}, instance.getList("sink").stream().collect(Collectors.groupingBy(identity(), Collectors.counting())));
+        int numMembers = 2;
+        long numEdges = 2;
+        assertEquals(input.stream().collect(toMap(identity(), v -> numMembers * numEdges)),
+                instance.getList("sink").stream().collect(Collectors.groupingBy(identity(), Collectors.counting())));
     }
 }
