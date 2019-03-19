@@ -28,8 +28,9 @@
         <scale-up-delay-millis>10000</scale-up-delay-millis>
         <!-- Sets whether lossless job restart is enabled for the node. With
              lossless restart you can restart the whole cluster without losing the
-             jobs and their state. The feature is implemented on top of the Hot
-             Restart feature of Hazelcast IMDG which persists the data to disk. -->
+             jobs and their state. 
+             Hot Restart Persistence must be enabled in order to run Lossless Restart . 
+             Set <hot-restart-persistence enabled="true"> in hazelcast.xml -->
         <lossless-restart-enabled>false</lossless-restart-enabled>
     </instance>
     <edge-defaults>
