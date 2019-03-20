@@ -131,7 +131,7 @@ public final class JetConfigXmlGenerator {
     }
 
     private static void metrics(XmlGenerator gen, MetricsConfig metrics) {
-        gen.open("metrics", "enabled", metrics.isEnabled())
+        gen.open("metrics", "enabled", metrics.isEnabled(), "jmxEnabled", metrics.isJmxEnabled())
            .node("retention-seconds", metrics.getRetentionSeconds())
            .node("collection-interval-seconds", metrics.getCollectionIntervalSeconds())
            .node("metrics-for-data-structures", metrics.isMetricsForDataStructuresEnabled())
@@ -142,7 +142,7 @@ public final class JetConfigXmlGenerator {
         gen.open("edge-defaults")
            .node("queue-size", defaultEdge.getQueueSize())
            .node("packet-size-limit", defaultEdge.getPacketSizeLimit())
-           .node("receive-window-multiplie", defaultEdge.getReceiveWindowMultiplier())
+           .node("receive-window-multiplier", defaultEdge.getReceiveWindowMultiplier())
            .close();
 
     }
@@ -151,7 +151,7 @@ public final class JetConfigXmlGenerator {
         gen.open("instance")
            .node("cooperative-thread-count", instance.getCooperativeThreadCount())
            .node("flow-control-period", instance.getFlowControlPeriodMs())
-           .node("backup-coun", instance.getBackupCount())
+           .node("backup-count", instance.getBackupCount())
            .node("scale-up-delay-millis", instance.getScaleUpDelayMillis())
            .node("lossless-restart-enabled", instance.isLosslessRestartEnabled())
            .close();
