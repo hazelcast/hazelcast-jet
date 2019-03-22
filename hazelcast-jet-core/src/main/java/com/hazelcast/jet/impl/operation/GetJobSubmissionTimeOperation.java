@@ -20,9 +20,9 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
-public class GetJobSubmissionTimeOperation extends AbstractJobOperation implements AllowedDuringPassiveState {
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
-    private long response;
+public class GetJobSubmissionTimeOperation extends AbstractJobOperation implements AllowedDuringPassiveState {
 
     public GetJobSubmissionTimeOperation() {
     }
@@ -34,12 +34,13 @@ public class GetJobSubmissionTimeOperation extends AbstractJobOperation implemen
     @Override
     public void run() {
         JetService service = getService();
-        response = service.getJobCoordinationService().getJobSubmissionTime(jobId());
+        service.getJobCoordinationService().getJobSubmissionTime(jobId())
+               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
     }
 
     @Override
-    public Object getResponse() {
-        return response;
+    public boolean returnsResponse() {
+        return false;
     }
 
     @Override

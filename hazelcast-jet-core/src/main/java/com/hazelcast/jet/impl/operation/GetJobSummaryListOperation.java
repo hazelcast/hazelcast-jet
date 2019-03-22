@@ -18,19 +18,16 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobCoordinationService;
-import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.ReadonlyOperation;
 
-import java.util.List;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class GetJobSummaryListOperation
         extends Operation
         implements IdentifiedDataSerializable, ReadonlyOperation {
-
-    private List<JobSummary> response;
 
     public GetJobSummaryListOperation() {
     }
@@ -39,12 +36,13 @@ public class GetJobSummaryListOperation
     public void run() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
-        response = coordinationService.getJobSummaryList();
+        coordinationService.getJobSummaryList()
+                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
     }
 
     @Override
-    public Object getResponse() {
-        return response;
+    public boolean returnsResponse() {
+        return false;
     }
 
     @Override

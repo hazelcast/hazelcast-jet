@@ -44,7 +44,13 @@ public class SubmitJobOperation extends AbstractJobOperation {
     public void run() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
-        coordinationService.submitJob(jobId(), dag, config);
+        coordinationService.submitJob(jobId(), dag, config)
+                           .whenComplete((r, f) -> sendResponse(f != null ? f : r));
+    }
+
+    @Override
+    public boolean returnsResponse() {
+        return false;
     }
 
     @Override

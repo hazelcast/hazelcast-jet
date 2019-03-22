@@ -23,14 +23,11 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
-import java.util.ArrayList;
-import java.util.List;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class GetJobIdsOperation
         extends Operation
         implements IdentifiedDataSerializable, AllowedDuringPassiveState {
-
-    private List<Long> response;
 
     public GetJobIdsOperation() {
     }
@@ -39,12 +36,13 @@ public class GetJobIdsOperation
     public void run() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
-        response = new ArrayList<>(coordinationService.getAllJobIds());
+        coordinationService.getAllJobIds()
+                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
     }
 
     @Override
-    public Object getResponse() {
-        return response;
+    public boolean returnsResponse() {
+        return false;
     }
 
     @Override

@@ -16,14 +16,13 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
-public class GetJobStatusOperation extends AbstractJobOperation implements AllowedDuringPassiveState {
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
-    private JobStatus response;
+public class GetJobStatusOperation extends AbstractJobOperation implements AllowedDuringPassiveState {
 
     public GetJobStatusOperation() {
     }
@@ -35,12 +34,13 @@ public class GetJobStatusOperation extends AbstractJobOperation implements Allow
     @Override
     public void run() {
         JetService service = getService();
-        response = service.getJobCoordinationService().getJobStatus(jobId());
+        service.getJobCoordinationService().getJobStatus(jobId())
+               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
     }
 
     @Override
-    public Object getResponse() {
-        return response;
+    public boolean returnsResponse() {
+        return false;
     }
 
     @Override
