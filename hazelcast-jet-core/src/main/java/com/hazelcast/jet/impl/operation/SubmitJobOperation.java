@@ -28,7 +28,7 @@ import java.io.IOException;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
-public class SubmitJobOperation extends AbstractJobOperation {
+public class SubmitJobOperation extends AsyncJobOperation {
 
     // force serialization of fields to avoid sharing of the mutable instances if submitted to the master member
     private Data dag;
@@ -44,16 +44,11 @@ public class SubmitJobOperation extends AbstractJobOperation {
     }
 
     @Override
-    public void run() {
+    public void doRun() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
         coordinationService.submitJob(jobId(), dag, config)
                            .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
-    }
-
-    @Override
-    public boolean returnsResponse() {
-        return false;
     }
 
     @Override

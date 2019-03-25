@@ -32,7 +32,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
  * job. See also {@link TerminateExecutionOperation}, which is sent from
  * coordinator to members to terminate execution.
  */
-public class TerminateJobOperation extends AbstractJobOperation {
+public class TerminateJobOperation extends AsyncJobOperation {
 
     private TerminationMode terminationMode;
 
@@ -45,15 +45,10 @@ public class TerminateJobOperation extends AbstractJobOperation {
     }
 
     @Override
-    public void run() {
+    public void doRun() {
         JetService service = getService();
         service.getJobCoordinationService().terminateJob(jobId(), terminationMode)
                .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
-    }
-
-    @Override
-    public boolean returnsResponse() {
-        return false;
     }
 
     @Override
