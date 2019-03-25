@@ -45,13 +45,15 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
 
     @Override
     public final void run() {
+        CompletableFuture<?> future;
         try {
-            doRun()
-                    .whenComplete(withTryCatch(getLogger(), (r, f) -> doSendResponse(f != null ? peel(f) : r)));
+            future = doRun();
         } catch (Exception e) {
             logError(e);
             doSendResponse(e);
+            return;
         }
+        future.whenComplete(withTryCatch(getLogger(), (r, f) -> doSendResponse(f != null ? peel(f) : r)));
     }
 
     protected abstract CompletableFuture<?> doRun() throws Exception;
@@ -68,10 +70,10 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
 
     private void doSendResponse(Object value) {
         try {
-            sendResponse(value);
-        } finally {
             final JetService service = getService();
             service.getLiveOperationRegistry().deregister(this);
+        } finally {
+            sendResponse(value);
         }
     }
 
