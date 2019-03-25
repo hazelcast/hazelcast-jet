@@ -26,6 +26,7 @@ import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class GetJobIdsByNameOperation
@@ -46,7 +47,7 @@ public class GetJobIdsByNameOperation
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
         coordinationService.getJobIds(name)
-                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
+                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
     }
 
     @Override

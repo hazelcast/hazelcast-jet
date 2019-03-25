@@ -24,6 +24,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 /**
@@ -47,7 +48,7 @@ public class TerminateJobOperation extends AbstractJobOperation {
     public void run() {
         JetService service = getService();
         service.getJobCoordinationService().terminateJob(jobId(), terminationMode)
-               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
+               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
     }
 
     @Override

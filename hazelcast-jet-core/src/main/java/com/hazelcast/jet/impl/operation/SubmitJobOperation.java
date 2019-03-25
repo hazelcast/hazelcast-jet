@@ -25,6 +25,7 @@ import com.hazelcast.nio.serialization.Data;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class SubmitJobOperation extends AbstractJobOperation {
@@ -47,7 +48,7 @@ public class SubmitJobOperation extends AbstractJobOperation {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
         coordinationService.submitJob(jobId(), dag, config)
-                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
+                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
     }
 
     @Override

@@ -23,6 +23,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 /**
@@ -45,7 +46,7 @@ public class StartExecutionOperation extends AsyncJobOperation {
     protected void doRun() {
         JetService service = getService();
         service.getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId)
-                .whenComplete(withTryCatch(getLogger(), (i, e) -> doSendResponse(e)));
+                .whenComplete(withTryCatch(getLogger(), (i, e) -> doSendResponse(peel(e))));
     }
 
     @Override

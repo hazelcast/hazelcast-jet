@@ -20,6 +20,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class GetJobStatusOperation extends AbstractJobOperation implements AllowedDuringPassiveState {
@@ -35,7 +36,7 @@ public class GetJobStatusOperation extends AbstractJobOperation implements Allow
     public void run() {
         JetService service = getService();
         service.getJobCoordinationService().getJobStatus(jobId())
-               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
+               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
     }
 
     @Override
