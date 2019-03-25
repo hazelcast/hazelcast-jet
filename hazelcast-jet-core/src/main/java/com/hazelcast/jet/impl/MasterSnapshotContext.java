@@ -231,7 +231,9 @@ class MasterSnapshotContext {
                 stats.duration(), stats.numBytes(),
                 stats.numKeys(), stats.numChunks(),
                 snapshotMapName));
-        mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
+        if (!wasExport) {
+            mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
+        }
         if (future != null) {
             if (isSuccess) {
                 future.complete(null);

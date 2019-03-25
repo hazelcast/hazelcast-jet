@@ -47,5 +47,4 @@ public class GetJobSubmissionTimeOperation extends AbstractJobOperation implemen
     public int getId() {
         return JetInitDataSerializerHook.GET_JOB_SUBMISSION_TIME_OP;
     }
-
 }

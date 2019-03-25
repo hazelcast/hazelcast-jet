@@ -18,21 +18,30 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.environment.RuntimeAvailableProcessorsRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 @RunWith(HazelcastSerialClassRunner.class)
-public class ParallelJobSubmissionTest extends JetTestSupport {
+public class ParallelStressTest extends JetTestSupport {
+
+    @Rule
+    public RuntimeAvailableProcessorsRule runtimeAvailableProcessorsRule = new RuntimeAvailableProcessorsRule(2);
+
     @Test
-    public void test() throws Exception {
+    public void stressTest_parallelJobSubmissionAndCompletion() throws Exception {
         /*
         This test tests the issue #1339 (https://github.com/hazelcast/hazelcast-jet/issues/1339)
         There's no assert in this test. If the problem reproduces, the jobs won't complete and will
@@ -49,6 +58,34 @@ public class ParallelJobSubmissionTest extends JetTestSupport {
         }
         for (Future<Job> future : futures) {
             future.get().join();
+        }
+    }
+
+    @Test
+    public void stressTest_parallelSnapshots() {
+        /*
+        This test tests an issue similar to #1339 (https://github.com/hazelcast/hazelcast-jet/issues/1339).
+        `onSnapshotCompleted` used to run on an async thread and it called `IMap.clear()`, which deadlocks
+        in imdg 3.12.
+        There's no assert in this test. If the problem reproduces, the jobs won't get cancelled and will
+        get stuck.
+         */
+        DAG dag = new DAG();
+        dag.newVertex("p", TestProcessors.DummyStatefulP::new);
+        JetInstance instance = createJetMember();
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.setSnapshotIntervalMillis(0).setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+        List<Job> jobs = new ArrayList<>();
+        for (int i = 0; i < 30; i++) {
+            jobs.add(instance.newJob(dag, jobConfig));
+        }
+        sleepSeconds(3);
+        for (Job job : jobs) {
+            job.cancel();
+            try {
+                job.join();
+            } catch (CancellationException expected) {
+            }
         }
     }
 }

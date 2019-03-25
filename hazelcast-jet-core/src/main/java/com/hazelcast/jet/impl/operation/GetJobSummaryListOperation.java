@@ -20,20 +20,19 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobCoordinationService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.ReadonlyOperation;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class GetJobSummaryListOperation
-        extends Operation
+        extends AsyncOperation
         implements IdentifiedDataSerializable, ReadonlyOperation {
 
     public GetJobSummaryListOperation() {
     }
 
     @Override
-    public void run() {
+    public void doRun() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
         coordinationService.getJobSummaryList()
@@ -41,18 +40,7 @@ public class GetJobSummaryListOperation
     }
 
     @Override
-    public boolean returnsResponse() {
-        return false;
-    }
-
-    @Override
-    public int getFactoryId() {
-        return JetInitDataSerializerHook.FACTORY_ID;
-    }
-
-    @Override
     public int getId() {
         return JetInitDataSerializerHook.GET_JOB_SUMMARY_LIST_OP;
     }
-
 }

@@ -203,7 +203,8 @@ public class JobCoordinationService {
         });
     }
 
-    private MasterContext createMasterContext(JobRecord jobRecord, JobExecutionRecord jobExecutionRecord) {
+    @SuppressWarnings("WeakerAccess") // used by jet-enterprise
+    MasterContext createMasterContext(JobRecord jobRecord, JobExecutionRecord jobExecutionRecord) {
         return new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
     }
 
@@ -857,7 +858,8 @@ public class JobCoordinationService {
         return record != null ? record : new JobExecutionRecord(jobId, getQuorumSize(), false);
     }
 
-    private void assertIsMaster(String error) {
+    @SuppressWarnings("WeakerAccess") // used by jet-enterprise
+    void assertIsMaster(String error) {
         if (!isMaster()) {
             throw new JetException(error + ". Master address: " + nodeEngine.getClusterService().getMasterAddress());
         }
@@ -884,10 +886,7 @@ public class JobCoordinationService {
             try {
                 return CompletableFuture.completedFuture(action.call());
             } catch (Throwable e) {
-                // replace with CompletableFuture.failedFuture(e) in java9
-                CompletableFuture<T> future = new CompletableFuture<>();
-                future.completeExceptionally(e);
-                return future;
+                return com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture(e);
             }
         }
 

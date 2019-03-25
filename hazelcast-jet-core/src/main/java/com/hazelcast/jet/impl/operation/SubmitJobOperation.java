@@ -25,6 +25,8 @@ import com.hazelcast.nio.serialization.Data;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+
 public class SubmitJobOperation extends AbstractJobOperation {
 
     // force serialization of fields to avoid sharing of the mutable instances if submitted to the master member
@@ -45,7 +47,7 @@ public class SubmitJobOperation extends AbstractJobOperation {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
         coordinationService.submitJob(jobId(), dag, config)
-                           .whenComplete((r, f) -> sendResponse(f != null ? f : r));
+                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
     }
 
     @Override
@@ -71,5 +73,4 @@ public class SubmitJobOperation extends AbstractJobOperation {
         dag = in.readData();
         config = in.readData();
     }
-
 }

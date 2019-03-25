@@ -22,7 +22,6 @@ import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
 import java.io.IOException;
@@ -30,7 +29,7 @@ import java.io.IOException;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 
 public class GetJobIdsByNameOperation
-        extends Operation
+        extends AsyncOperation
         implements IdentifiedDataSerializable, AllowedDuringPassiveState {
 
     private String name;
@@ -43,21 +42,11 @@ public class GetJobIdsByNameOperation
     }
 
     @Override
-    public void run() {
+    public void doRun() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
         coordinationService.getJobIds(name)
                            .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
-    }
-
-    @Override
-    public boolean returnsResponse() {
-        return false;
-    }
-
-    @Override
-    public int getFactoryId() {
-        return JetInitDataSerializerHook.FACTORY_ID;
     }
 
     @Override

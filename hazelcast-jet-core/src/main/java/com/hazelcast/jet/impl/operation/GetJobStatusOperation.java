@@ -47,5 +47,4 @@ public class GetJobStatusOperation extends AbstractJobOperation implements Allow
     public int getId() {
         return JetInitDataSerializerHook.GET_JOB_STATUS_OP;
     }
-
 }

@@ -24,6 +24,8 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+
 /**
  * Operation sent from client to coordinator member to terminate particular
  * job. See also {@link TerminateExecutionOperation}, which is sent from
@@ -45,7 +47,7 @@ public class TerminateJobOperation extends AbstractJobOperation {
     public void run() {
         JetService service = getService();
         service.getJobCoordinationService().terminateJob(jobId(), terminationMode)
-               .whenComplete((r, f) -> sendResponse(f != null ? f : r));
+               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? f : r)));
     }
 
     @Override
