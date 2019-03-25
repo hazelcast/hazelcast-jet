@@ -18,12 +18,13 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobCoordinationService;
+import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.ReadonlyOperation;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class GetJobSummaryListOperation
         extends AsyncOperation
@@ -33,11 +34,10 @@ public class GetJobSummaryListOperation
     }
 
     @Override
-    public void doRun() {
+    public CompletableFuture<List<JobSummary>> doRun() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
-        coordinationService.getJobSummaryList()
-                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
+        return coordinationService.getJobSummaryList();
     }
 
     @Override

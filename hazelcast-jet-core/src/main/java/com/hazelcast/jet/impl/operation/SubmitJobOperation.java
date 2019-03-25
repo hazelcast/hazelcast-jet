@@ -24,9 +24,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 
 import java.io.IOException;
-
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import java.util.concurrent.CompletableFuture;
 
 public class SubmitJobOperation extends AsyncJobOperation {
 
@@ -44,11 +42,10 @@ public class SubmitJobOperation extends AsyncJobOperation {
     }
 
     @Override
-    public void doRun() {
+    public CompletableFuture<Void> doRun() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
-        coordinationService.submitJob(jobId(), dag, config)
-                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
+        return coordinationService.submitJob(jobId(), dag, config);
     }
 
     @Override

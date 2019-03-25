@@ -23,9 +23,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
-
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Operation sent from client to coordinator member to terminate particular
@@ -45,10 +43,9 @@ public class TerminateJobOperation extends AsyncJobOperation {
     }
 
     @Override
-    public void doRun() {
+    public CompletableFuture<Void> doRun() {
         JetService service = getService();
-        service.getJobCoordinationService().terminateJob(jobId(), terminationMode)
-               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
+        return service.getJobCoordinationService().terminateJob(jobId(), terminationMode);
     }
 
     @Override

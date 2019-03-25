@@ -22,8 +22,6 @@ import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
-
 /**
  * Operation sent from a non-master member to master to notify it that the
  * caller is about to shut down. The master should request termination of all
@@ -35,10 +33,9 @@ public class NotifyMemberShutdownOperation extends AsyncOperation implements All
     }
 
     @Override
-    protected void doRun() {
+    protected CompletableFuture<Void> doRun() {
         JetService service = getService();
-        CompletableFuture<Void> future = service.getJobCoordinationService().addShuttingDownMember(getCallerUuid());
-        future.whenComplete(withTryCatch(getLogger(), (r, e) -> sendResponse(null)));
+        return service.getJobCoordinationService().addShuttingDownMember(getCallerUuid());
     }
 
     @Override

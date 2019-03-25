@@ -24,9 +24,9 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.Objects.requireNonNull;
 
@@ -55,16 +55,14 @@ public class SnapshotOperation extends AsyncJobOperation {
     }
 
     @Override
-    protected void doRun() {
+    protected CompletableFuture<SnapshotOperationResult> doRun() {
         JetService service = getService();
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
                 getCallerAddress(), jobId(), executionId, getClass().getSimpleName()
         );
-        ctx.beginSnapshot(snapshotId, mapName, isTerminal).whenComplete(withTryCatch(getLogger(),
-                (result, exc) -> {
-                    if (exc != null) {
-                        result = new SnapshotOperationResult(0, 0, 0, exc);
-                    }
+        CompletableFuture<SnapshotOperationResult> future = ctx.beginSnapshot(snapshotId, mapName, isTerminal)
+                .exceptionally(exc -> new SnapshotOperationResult(0, 0, 0, exc))
+                .thenApply(result -> {
                     if (result.getError() == null) {
                         logFine(getLogger(),
                                 "Snapshot %s for %s finished successfully on member",
@@ -73,18 +71,21 @@ public class SnapshotOperation extends AsyncJobOperation {
                         getLogger().warning(String.format("Snapshot %d for %s finished with an error on member: %s",
                                 snapshotId, ctx.jobNameAndExecutionId(), result.getError()));
                     }
-                    maybeSendResponse(result);
-                }));
+                    return result;
+                });
+        CompletableFuture<SnapshotOperationResult> future2 = new CompletableFuture<>();
+        future.thenAccept(result -> maybeCompleteFuture(future2, result));
+        return future2;
     }
 
-    private void maybeSendResponse(SnapshotOperationResult result) {
+    private void maybeCompleteFuture(CompletableFuture<SnapshotOperationResult> future, SnapshotOperationResult result) {
         if (postponeResponses) {
             getNodeEngine().getExecutionService()
-                           .schedule(() -> maybeSendResponse(result), RETRY_MS, TimeUnit.MILLISECONDS);
+                           .schedule(() -> maybeCompleteFuture(future, result), RETRY_MS, TimeUnit.MILLISECONDS);
             return;
         }
 
-        doSendResponse(result);
+        future.complete(result);
     }
 
     @Override

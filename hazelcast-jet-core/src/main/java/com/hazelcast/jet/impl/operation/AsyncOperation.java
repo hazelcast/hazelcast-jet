@@ -22,7 +22,11 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.ExceptionAction;
 import com.hazelcast.spi.Operation;
 
+import java.util.concurrent.CompletableFuture;
+
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 public abstract class AsyncOperation extends Operation implements IdentifiedDataSerializable {
@@ -36,14 +40,15 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
     @Override
     public final void run() {
         try {
-            doRun();
+            doRun()
+                    .whenComplete(withTryCatch(getLogger(), (r, f) -> doSendResponse(f != null ? peel(f) : r)));
         } catch (Exception e) {
             logError(e);
             doSendResponse(e);
         }
     }
 
-    protected abstract void doRun() throws Exception;
+    protected abstract CompletableFuture<?> doRun() throws Exception;
 
     @Override
     public final boolean returnsResponse() {
@@ -55,7 +60,7 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
         throw new UnsupportedOperationException();
     }
 
-    final void doSendResponse(Object value) {
+    private void doSendResponse(Object value) {
         try {
             sendResponse(value);
         } finally {
@@ -73,5 +78,4 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
     public final int getFactoryId() {
         return JetInitDataSerializerHook.FACTORY_ID;
     }
-
 }

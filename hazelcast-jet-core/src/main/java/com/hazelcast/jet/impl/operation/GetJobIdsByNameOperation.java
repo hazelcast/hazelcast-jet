@@ -25,9 +25,8 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
 import java.io.IOException;
-
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class GetJobIdsByNameOperation
         extends AsyncOperation
@@ -43,11 +42,10 @@ public class GetJobIdsByNameOperation
     }
 
     @Override
-    public void doRun() {
+    public CompletableFuture<List<Long>> doRun() {
         JetService service = getService();
         JobCoordinationService coordinationService = service.getJobCoordinationService();
-        coordinationService.getJobIds(name)
-                           .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
+        return coordinationService.getJobIds(name);
     }
 
     @Override

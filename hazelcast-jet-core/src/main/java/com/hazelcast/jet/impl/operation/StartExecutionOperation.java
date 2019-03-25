@@ -22,9 +22,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
-
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Operation sent from master to members to start execution of a job. It is
@@ -43,10 +41,9 @@ public class StartExecutionOperation extends AsyncJobOperation {
     }
 
     @Override
-    protected void doRun() {
+    protected CompletableFuture<Void> doRun() {
         JetService service = getService();
-        service.getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId)
-                .whenComplete(withTryCatch(getLogger(), (i, e) -> doSendResponse(peel(e))));
+        return service.getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId);
     }
 
     @Override

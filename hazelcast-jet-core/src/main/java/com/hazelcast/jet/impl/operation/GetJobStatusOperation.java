@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
+import java.util.concurrent.CompletableFuture;
 
 public class GetJobStatusOperation extends AsyncJobOperation implements AllowedDuringPassiveState {
 
@@ -33,10 +33,9 @@ public class GetJobStatusOperation extends AsyncJobOperation implements AllowedD
     }
 
     @Override
-    public void doRun() {
+    public CompletableFuture<JobStatus> doRun() {
         JetService service = getService();
-        service.getJobCoordinationService().getJobStatus(jobId())
-               .whenComplete(withTryCatch(getLogger(), (r, f) -> sendResponse(f != null ? peel(f) : r)));
+        return service.getJobCoordinationService().getJobStatus(jobId());
     }
 
     @Override
