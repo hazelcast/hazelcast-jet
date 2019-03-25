@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
@@ -33,8 +32,7 @@ public class GetJobSubmissionTimeOperation extends AsyncJobOperation implements 
 
     @Override
     public CompletableFuture<Long> doRun() {
-        JetService service = getService();
-        return service.getJobCoordinationService().getJobSubmissionTime(jobId());
+        return getJobCoordinationService().getJobSubmissionTime(jobId());
     }
 
     @Override

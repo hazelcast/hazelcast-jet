@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 
 import java.util.concurrent.CompletableFuture;
@@ -32,9 +31,7 @@ public class PrepareForPassiveClusterOperation extends AsyncOperation {
 
     @Override
     protected CompletableFuture<Void> doRun() {
-        return this.<JetService>getService()
-                .getJobCoordinationService()
-                .prepareForPassiveClusterState();
+        return getJobCoordinationService().prepareForPassiveClusterState();
     }
 
     @Override

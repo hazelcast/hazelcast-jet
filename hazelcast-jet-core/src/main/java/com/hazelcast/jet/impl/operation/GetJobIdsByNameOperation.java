@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.JobCoordinationService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -43,9 +41,7 @@ public class GetJobIdsByNameOperation
 
     @Override
     public CompletableFuture<List<Long>> doRun() {
-        JetService service = getService();
-        JobCoordinationService coordinationService = service.getJobCoordinationService();
-        return coordinationService.getJobIds(name);
+        return getJobCoordinationService().getJobIds(name);
     }
 
     @Override

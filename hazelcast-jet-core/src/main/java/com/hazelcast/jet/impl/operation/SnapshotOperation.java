@@ -73,19 +73,26 @@ public class SnapshotOperation extends AsyncJobOperation {
                     }
                     return result;
                 });
-        CompletableFuture<SnapshotOperationResult> future2 = new CompletableFuture<>();
-        future.thenAccept(result -> maybeCompleteFuture(future2, result));
-        return future2;
-    }
 
-    private void maybeCompleteFuture(CompletableFuture<SnapshotOperationResult> future, SnapshotOperationResult result) {
-        if (postponeResponses) {
-            getNodeEngine().getExecutionService()
-                           .schedule(() -> maybeCompleteFuture(future, result), RETRY_MS, TimeUnit.MILLISECONDS);
-            return;
+        if (!postponeResponses) {
+            return future;
         }
 
-        future.complete(result);
+        return future.thenCompose(result -> {
+            CompletableFuture<SnapshotOperationResult> f2 = new CompletableFuture<>();
+            tryCompleteLater(result, f2);
+            return f2;
+        });
+    }
+
+    private void tryCompleteLater(SnapshotOperationResult result, CompletableFuture<SnapshotOperationResult> future) {
+        getNodeEngine().getExecutionService().schedule(() -> {
+            if (postponeResponses) {
+                tryCompleteLater(result, future);
+            } else {
+                future.complete(result);
+            }
+        }, RETRY_MS, TimeUnit.MILLISECONDS);
     }
 
     @Override

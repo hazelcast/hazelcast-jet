@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.core.JobStatus;
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
@@ -34,8 +33,7 @@ public class GetJobStatusOperation extends AsyncJobOperation implements AllowedD
 
     @Override
     public CompletableFuture<JobStatus> doRun() {
-        JetService service = getService();
-        return service.getJobCoordinationService().getJobStatus(jobId());
+        return getJobCoordinationService().getJobStatus(jobId());
     }
 
     @Override

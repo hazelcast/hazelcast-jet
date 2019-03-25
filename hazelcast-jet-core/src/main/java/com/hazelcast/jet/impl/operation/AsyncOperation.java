@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobCoordinationService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.ExceptionAction;
@@ -29,6 +30,11 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
+/**
+ * Base class for async operations. Handles registration/deregistration of
+ * operations from live registry, exception handling and peeling and
+ * logging of exceptions
+ */
 public abstract class AsyncOperation extends Operation implements IdentifiedDataSerializable {
 
     @Override
@@ -67,6 +73,15 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
             final JetService service = getService();
             service.getLiveOperationRegistry().deregister(this);
         }
+    }
+
+    protected JetService getJetService() {
+        assert getServiceName().equals(JetService.SERVICE_NAME) : "Service is not Jet Service";
+        return getService();
+    }
+
+    protected JobCoordinationService getJobCoordinationService() {
+        return getJetService().getJobCoordinationService();
     }
 
     @Override

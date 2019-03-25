@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.JobCoordinationService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -43,9 +41,7 @@ public class SubmitJobOperation extends AsyncJobOperation {
 
     @Override
     public CompletableFuture<Void> doRun() {
-        JetService service = getService();
-        JobCoordinationService coordinationService = service.getJobCoordinationService();
-        return coordinationService.submitJob(jobId(), dag, config);
+        return getJobCoordinationService().submitJob(jobId(), dag, config);
     }
 
     @Override

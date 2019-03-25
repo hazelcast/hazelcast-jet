@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -42,8 +41,7 @@ public class StartExecutionOperation extends AsyncJobOperation {
 
     @Override
     protected CompletableFuture<Void> doRun() {
-        JetService service = getService();
-        return service.getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId);
+        return getJetService().getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId);
     }
 
     @Override

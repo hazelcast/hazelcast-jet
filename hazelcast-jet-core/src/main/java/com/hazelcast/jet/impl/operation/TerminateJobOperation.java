@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
@@ -44,8 +43,7 @@ public class TerminateJobOperation extends AsyncJobOperation {
 
     @Override
     public CompletableFuture<Void> doRun() {
-        JetService service = getService();
-        return service.getJobCoordinationService().terminateJob(jobId(), terminationMode);
+        return getJobCoordinationService().terminateJob(jobId(), terminationMode);
     }
 
     @Override

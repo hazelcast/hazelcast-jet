@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
@@ -34,8 +33,7 @@ public class NotifyMemberShutdownOperation extends AsyncOperation implements All
 
     @Override
     protected CompletableFuture<Void> doRun() {
-        JetService service = getService();
-        return service.getJobCoordinationService().addShuttingDownMember(getCallerUuid());
+        return getJobCoordinationService().addShuttingDownMember(getCallerUuid());
     }
 
     @Override
