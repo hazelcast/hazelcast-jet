@@ -18,15 +18,12 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.ReadonlyOperation;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class GetJobSummaryListOperation
-        extends AsyncOperation
-        implements IdentifiedDataSerializable, ReadonlyOperation {
+public class GetJobSummaryListOperation extends AsyncOperation implements ReadonlyOperation {
 
     public GetJobSummaryListOperation() {
     }

@@ -17,15 +17,12 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class GetJobIdsOperation
-        extends AsyncOperation
-        implements IdentifiedDataSerializable, AllowedDuringPassiveState {
+public class GetJobIdsOperation extends AsyncOperation implements AllowedDuringPassiveState {
 
     public GetJobIdsOperation() {
     }
