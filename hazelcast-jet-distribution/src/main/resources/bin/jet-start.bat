@@ -4,7 +4,7 @@ SETLOCAL
 
 if NOT DEFINED JAVA_HOME goto error
 set RUN_JAVA=%JAVA_HOME%\bin\java
-
+set JET_HOME="%~dp0.."
 
 REM ******* you can enable following variables by uncommenting them
 
@@ -23,7 +23,12 @@ if NOT "%MAX_HEAP_SIZE%" == "" (
 	set JAVA_OPTS=%JAVA_OPTS% -Xmx%MAX_HEAP_SIZE%
 )
 
-set CLASSPATH=%~dp0..\lib\${hazelcast.jet.artifact}-${project.version}.jar;%CLASSPATH%
+set JAVA_OPTS=%JAVA_OPTS%^
+ -Dhazelcast.jet.config=%JET_HOME%\config\hazelcast-jet.xml^
+ -Dhazelcast.config=%JET_HOME%\config\hazelcast.xml^
+ -Djet.home=%JET_HOME%
+
+set CLASSPATH=%JET_HOME%\lib\${hazelcast.jet.artifact}-${project.version}.jar;%CLASSPATH%
 
 ECHO ########################################
 ECHO # RUN_JAVA=%RUN_JAVA%
@@ -38,7 +43,6 @@ goto endofscript
 :error
 ECHO JAVA_HOME environment variable must be set!
 pause
-
 
 :endofscript
 

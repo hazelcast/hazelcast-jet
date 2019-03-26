@@ -23,6 +23,7 @@ import com.hazelcast.logging.Logger;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -296,6 +297,7 @@ public class JetConfig {
         Config config = new Config();
         config.getNetworkConfig().getJoin().getMulticastConfig().setMulticastPort(DEFAULT_JET_MULTICAST_PORT);
         config.getGroupConfig().setName(DEFAULT_GROUP_NAME);
+        config.getHotRestartPersistenceConfig().setBaseDir(new File("recovery").getAbsoluteFile());
         return config;
     }
 }
