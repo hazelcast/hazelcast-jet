@@ -66,7 +66,7 @@ public final class XmlJetConfigLocator {
                 () -> fromProperties(HAZELCAST_MEMBER_CONFIG_PROPERTY, properties),
                 () -> XmlJetConfigLocator.fromWorkingDirectory(HAZELCAST_MEMBER_XML),
                 () -> XmlJetConfigLocator.fromClasspath(HAZELCAST_MEMBER_XML),
-                () -> XmlJetConfigLocator.defaultFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_XML),
+                () -> XmlJetConfigLocator.fromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_XML),
                 () -> XmlJetConfigLocator.defaultFromClasspath(HAZELCAST_MEMBER_DEFAULT_XML)
         ));
     }
