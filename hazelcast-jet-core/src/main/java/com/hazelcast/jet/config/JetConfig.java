@@ -18,6 +18,7 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
+import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.util.Preconditions;
@@ -46,6 +47,13 @@ public class JetConfig {
     public static final String DEFAULT_GROUP_NAME = "jet";
 
     private static final ILogger LOGGER = Logger.getLogger(JetConfig.class);
+
+    static {
+        // set jet.home to CWD if not already configured
+        if (System.getProperty(JetProperties.JET_HOME.getName()) == null) {
+            System.setProperty(JetProperties.JET_HOME.getName(), JetProperties.JET_HOME.getDefaultValue());
+        }
+    }
 
     private Config hazelcastConfig = defaultHazelcastConfig();
     private InstanceConfig instanceConfig = new InstanceConfig();
@@ -297,7 +305,11 @@ public class JetConfig {
         Config config = new Config();
         config.getNetworkConfig().getJoin().getMulticastConfig().setMulticastPort(DEFAULT_JET_MULTICAST_PORT);
         config.getGroupConfig().setName(DEFAULT_GROUP_NAME);
-        config.getHotRestartPersistenceConfig().setBaseDir(new File("recovery").getAbsoluteFile());
+        config.getHotRestartPersistenceConfig().setBaseDir(new File(jetHome(), "recovery").getAbsoluteFile());
         return config;
+    }
+
+    private static String jetHome() {
+        return System.getProperty("jet.home", ".");
     }
 }

@@ -49,8 +49,8 @@ import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.XmlJetConfigBuilder.getClientConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
-import static com.hazelcast.jet.impl.util.JetGroupProperty.JET_SHUTDOWNHOOK_ENABLED;
-import static com.hazelcast.jet.impl.util.JetGroupProperty.JOB_RESULTS_TTL_SECONDS;
+import static com.hazelcast.jet.impl.util.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
+import static com.hazelcast.jet.impl.util.JetProperties.JOB_RESULTS_TTL_SECONDS;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 
 /**
