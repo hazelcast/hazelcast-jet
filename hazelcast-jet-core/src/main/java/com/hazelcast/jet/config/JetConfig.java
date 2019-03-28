@@ -21,6 +21,7 @@ import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.spi.properties.HazelcastProperty;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -50,8 +51,9 @@ public class JetConfig {
 
     static {
         // set jet.home to CWD if not already configured
-        if (System.getProperty(JetProperties.JET_HOME.getName()) == null) {
-            System.setProperty(JetProperties.JET_HOME.getName(), JetProperties.JET_HOME.getDefaultValue());
+        HazelcastProperty jetHome = JetProperties.JET_HOME;
+        if (System.getProperty(jetHome.getName()) == null) {
+            System.setProperty(jetHome.getName(), jetHome.getDefaultValue());
         }
     }
 
