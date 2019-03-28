@@ -18,16 +18,16 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
-import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.spi.properties.HazelcastProperty;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.InputStream;
 import java.util.Properties;
+
+import static com.hazelcast.jet.impl.util.JetProperties.JET_HOME;
 
 /**
  * Configuration object for a Jet instance.
@@ -50,11 +50,9 @@ public class JetConfig {
     private static final ILogger LOGGER = Logger.getLogger(JetConfig.class);
 
     static {
-        // set jet.home to CWD if not already configured
-        HazelcastProperty jetHome = JetProperties.JET_HOME;
-        if (System.getProperty(jetHome.getName()) == null) {
-            System.setProperty(jetHome.getName(), jetHome.getDefaultValue());
-        }
+        String value = jetHome();
+        LOGGER.info("jet.home is " + value);
+        System.setProperty(JET_HOME.getName(), value);
     }
 
     private Config hazelcastConfig = defaultHazelcastConfig();
@@ -311,7 +309,12 @@ public class JetConfig {
         return config;
     }
 
+    /**
+     * Returns the absolute path for jet.home based from the system property
+     * {@link com.hazelcast.jet.impl.util.JetProperties#JET_HOME}
+     */
     private static String jetHome() {
-        return System.getProperty("jet.home", ".");
+
+        return new File(System.getProperty(JET_HOME.getName(), JET_HOME.getDefaultValue())).getAbsolutePath();
     }
 }

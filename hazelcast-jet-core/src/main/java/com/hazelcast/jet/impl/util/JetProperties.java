@@ -36,7 +36,7 @@ public final class JetProperties {
     public static final HazelcastProperty JOB_RESULTS_TTL_SECONDS
             = new HazelcastProperty("jet.job.results.ttl.seconds", DAYS.toSeconds(7), SECONDS);
     public static final HazelcastProperty JET_HOME
-            = new HazelcastProperty("jet.home", ".");
+            = new HazelcastProperty("jet.home", "");
 
     /**
      * The minimum time in microseconds the worker threads will sleep if none
