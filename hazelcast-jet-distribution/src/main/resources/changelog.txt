@@ -4,14 +4,14 @@
 it better with IMDG 3.x versions that it is based on
 * Starting with 3.0, main Job API and the pipeline API will be backwards compatible in further minor
 versions. Core API will only be compatible between patch versions.
-  - Several APIs have been streamlines in preparation for this change. Please see the breaking changes
+  - Several APIs have been streamlined in preparation for this change. Please see the breaking changes
   section of the release notes for a list of specific changes.
 * Pipeline API has the following new additions:
   - Support for async map/filter/flatMapUsingContext methods
   - Support for emitting early results for a window before a window has completed
 * Being able to atomically create a job only if it's not already running using
   JetInstance.newJobIfAbsent
-* [Jet Enterprise] Support for job upgrades via taking a named snapshot and then starting the job
+* [Jet Enterprise] Support for job upgrades and A/B testing via taking a named snapshot and then starting the job
   from the saved snapshot.
 * [Jet Enterprise] Being able to restart the whole cluster and restoring jobs by using
 IMDG Hot Restart to persist the cluster to disk
