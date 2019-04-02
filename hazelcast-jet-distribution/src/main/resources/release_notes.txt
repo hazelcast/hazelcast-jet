@@ -21,7 +21,6 @@ The label in the brackets refer to the respective module.
 
 [pipeline-api] Remove watermarks from a pipeline with no windowing stages [#1091]
 [pipeline-api] Optimize mapWithMerging to use less memory [#1107]
-
 [pipeline-api] Improve performance of global aggregation [#1242]
 [pipeline-api] Don't require User Code Deployment when reading from remote IMDG journal [#1306]
 [core] Automatically restart job if a partition is being migrated when reading from IMap [#1243]
