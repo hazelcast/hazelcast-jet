@@ -14,9 +14,10 @@ versions. Core API will only be compatible between patch versions.
 * [Jet Enterprise] Support for job upgrades and A/B testing via taking a named snapshot and then starting the job
   from the saved snapshot.
 * [Jet Enterprise] Being able to restart the whole cluster and restoring jobs by using
-IMDG Hot Restart to persist the cluster to disk
+  IMDG Hot Restart to persist the cluster to disk
 * New Jet Command Line Interface for job management of a cluster
-* Support for improved Watermark diagnostiscs in Jet Management Center
+* Support for improved Watermark diagnostics in Jet Management Center
+* Support for showing map stats in Jet Management Center
 * Full support for JDK 11
 * Update Hazelcast version to 3.12
 

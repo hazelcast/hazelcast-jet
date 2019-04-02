@@ -28,6 +28,9 @@ The label in the brackets refer to the respective module.
 [core] Reuse same maps when taking snapshots [#1104]
 [core] Added new metrics for monitoring watermarks and latencies [#1173]
 [core] Make minimum idle time in execution service configurable [#1317]
+[code-samples] Introduce Tensorflow integration sample [#172]
+[code-samples] Introduce Early Window Results sample [#181]
+
 
 3. Fixes
 
@@ -56,7 +59,7 @@ have been removed [#1293]
 [core-api] Watermark policies except `limitingLag` is removed [#1184]
 [core-api] maxRetain option from EdgeConfig is removed [#1184]
 [core] MetricsConfig.setMetricsForDataStructures is renamed to setMetricsForDataStructuresEnabled [#1201]
-[core] jet-submit.sh script has been superceeded by `jet.sh submit` command [#1202]
+[core] jet-submit.sh script has been superseded by `jet.sh submit` command [#1202]
 [core] When submitting jobs, if a job with same name already exists an exception will be thrown [#1203]
 [core] Group password is deprecated and removed [#1302]
 
