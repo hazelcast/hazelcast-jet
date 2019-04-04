@@ -22,10 +22,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.function.*;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -106,6 +103,11 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     <R> StreamStage<Entry<K, R>> rollingAggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     );
+
+    @Nonnull
+    default <R, RK> StreamStageWithKey<R, RK> pipe(@Nonnull FunctionEx<StreamStageWithKey<T, K>, StreamStageWithKey<R, RK>> transformationFunction) {
+        return transformationFunction.apply(this);
+    }
 
     @Nonnull @Override
     default <R> StreamStage<R> customTransform(@Nonnull String stageName,

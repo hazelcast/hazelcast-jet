@@ -26,10 +26,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.function.*;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -411,6 +408,11 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     @Nonnull
     default GroupAggregateBuilder1<T, K> aggregateBuilder() {
         return new GroupAggregateBuilder1<>(this);
+    }
+
+    @Nonnull
+    default <R, RK> BatchStageWithKey<R, RK> pipe(@Nonnull FunctionEx<BatchStageWithKey<T, K>, BatchStageWithKey<R, RK>> transformationFunction) {
+        return transformationFunction.apply(this);
     }
 
     @Nonnull @Override

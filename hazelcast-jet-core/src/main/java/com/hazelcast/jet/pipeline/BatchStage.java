@@ -454,6 +454,44 @@ public interface BatchStage<T> extends GeneralStage<T> {
         return (BatchStage<T>) GeneralStage.super.peek(toStringFn);
     }
 
+    /**
+     * Allows to extract common pipeline transformations to separate functions and then chain usage of those functions.
+     *
+     * Instead of writing:
+     * <pre>{@code
+     *     Pipeline p = Pipeline.create();
+     *     BatchStage<String> readSourceStage = p.drawFrom(source());
+     *     BatchStage<String> withCalculatedFields = addSomeFieldsCalculationToStage(readSourceStage);
+     *     BatchStage<String> filtered = addFiltersToStage(withCalculatedFields);
+     *     filtered.drainTo(sink());
+     * }</pre>
+     *
+     * you can write:
+     * <pre>{@code
+     *     Pipeline p = Pipeline.create();
+     *
+     *     p.drawFrom(source())
+     *       .pipe(this::addSomeFieldsCalculationToStage)
+     *       .pipe(this::addFiltersToStage)
+     *       .drainTo(sink());
+     * }</pre>
+     *
+     * where {@code addSomeFieldsCalculationToStage} may be used commonly in application to add chain of steps to Pipeline, for example:
+     * <pre>{@code
+     *     BatchStage<String> addSomeFieldsCalculationToStage(BatchStage<String> inputStage) {
+     *          return inputStage
+     *              .map(//some mapping)
+     *              .flatMap(//some mapping)
+     *              // etc
+     *          ;
+     *     }
+     * }</pre>
+     */
+    @Nonnull
+    default <R> BatchStage<R> pipe(@Nonnull FunctionEx<BatchStage<T>, BatchStage<R>> transformationFunction) {
+        return transformationFunction.apply(this);
+    }
+
     @Nonnull @Override
     default <R> BatchStage<R> customTransform(@Nonnull String stageName,
                                               @Nonnull SupplierEx<Processor> procSupplier) {
