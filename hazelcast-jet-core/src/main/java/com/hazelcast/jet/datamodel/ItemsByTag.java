@@ -35,7 +35,12 @@ import java.util.Set;
  * whose static type is encoded in the tags.
  */
 public final class ItemsByTag {
-    static final Object NONE = new Object();
+    static final Object NONE = new Object() {
+        @Override
+        public String toString() {
+            return "NONE";
+        }
+    };
 
     private final Map<Tag<?>, Object> map = new HashMap<>();
 

@@ -21,7 +21,6 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
-import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.jet.pipeline.BatchStage;
 
 import javax.annotation.Nonnull;
@@ -31,14 +30,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.util.Preconditions.checkTrue;
-import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -67,10 +64,11 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("unchecked")
 public class HashJoinP<E0> extends AbstractProcessor {
 
-    private static final List<Object> LIST_WITH_NULL = singletonList(null);
+    private static final Object NONE = new Object();
+    private static final Object[] NO_MATCH = new Object[]{NONE};
 
     private final List<Function<E0, Object>> keyFns;
-    private final List<Map<Object, Object>> lookupTables;
+    private final List<Map<Object, Object[]>> lookupTables;
 
     private final FlatMapper<E0, Object> flatMapper;
 
@@ -85,50 +83,52 @@ public class HashJoinP<E0> extends AbstractProcessor {
         this.keyFns = keyFns;
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
         if (!tags.isEmpty()) {
+            requireNonNull(mapToOutputBiFn,
+                    "!tags.isEmpty(), but mapToOutputBiFn == null");
             this.flatMapper = itemsByTagFlatMapper(tags, mapToOutputBiFn);
             return;
         }
         if (keyFns.size() == 1) {
             BiFunction mapToOutput = requireNonNull(mapToOutputBiFn,
                     "tags.isEmpty() && keyFns.size() == 1, but mapToOutputBiFn == null");
-            this.flatMapper = flatMapper(item -> traverseStream(lookupJoined(0, item).stream()
-                    .map(joinedObject -> mapToOutput.apply(item, joinedObject))
-                    .filter(Objects::nonNull)));
+            this.flatMapper = flatMapper(item ->
+                    traverseArray(lookupValues(0, item))
+                            .map(value -> mapToOutput.apply(item, matchedValue(value)))
+            );
             return;
         }
         checkTrue(keyFns.size() == 2, "tags.isEmpty(), but keyFns.size() is neither 1 nor 2");
         TriFunction mapToOutput = requireNonNull(mapToOutputTriFn,
                 "tags.isEmpty() && keyFns.size() == 2, but mapToOutputTriFn == null");
         this.flatMapper = flatMapper(object -> {
-            List<Object> joined0 = lookupJoined(0, object);
-            List<Object> joined1 = lookupJoined(1, object);
-            return traverseStream(joined0.stream()
-                    .flatMap(firstJoined -> joined1.stream()
-                            .map(secondJoined -> mapToOutput.apply(object, firstJoined, secondJoined)))
-                    .filter(Objects::nonNull));
+            Object[] valuesFor0 = lookupValues(0, object);
+            Object[] valuesFor1 = lookupValues(1, object);
+            return traverseArray(valuesFor0)
+                    .flatMap(value0 -> traverseArray(valuesFor1)
+                    .map(value1 -> mapToOutput.apply(object, matchedValue(value0), matchedValue(value1))));
         });
     }
 
-    private FlatMapper<E0, Object> itemsByTagFlatMapper(@Nonnull List<Tag> tags, @Nullable BiFunction mapToOutputBiFn) {
+    private FlatMapper<E0, Object> itemsByTagFlatMapper(@Nonnull List<Tag> tags, BiFunction mapToOutputBiFn) {
         assert mapToOutputBiFn != null : "mapToOutputBiFn required";
-        List<Object>[] lookedUpValues = new List[keyFns.size()];
+        Object[][] lookedUpValues = new Object[keyFns.size()][];
         List<ItemsByTag> values = new ArrayList<>();
         int[] indices = new int[keyFns.size()];
         return flatMapper(primaryItem -> {
             for (int i = 0; i < keyFns.size(); i++) {
-                lookedUpValues[i] = lookupJoined(i, primaryItem);
+                lookedUpValues[i] = lookupValues(i, primaryItem);
             }
             Arrays.fill(indices, 0);
             values.clear();
-            while (indices[0] < lookedUpValues[0].size()) {
+            while (indices[0] < lookedUpValues[0].length) {
                 ItemsByTag val = new ItemsByTag();
                 for (int j = 0; j < lookedUpValues.length; j++) {
-                    val.put(tags.get(j), lookedUpValues[j].get(indices[j]));
+                    val.put(tags.get(j), matchedValue(lookedUpValues[j][indices[j]]));
                 }
                 values.add(val);
                 for (int j = indices.length - 1; j >= 0; j--) {
                     indices[j]++;
-                    if (j == 0 || indices[j] < lookedUpValues[j].size()) {
+                    if (j == 0 || indices[j] < lookedUpValues[j].length) {
                         break;
                     }
                     indices[j] = 0;
@@ -137,6 +137,10 @@ public class HashJoinP<E0> extends AbstractProcessor {
             return traverseIterable(values)
                     .map(map -> mapToOutputBiFn.apply(primaryItem, map));
         });
+    }
+
+    private Object matchedValue(Object joinedObject) {
+        return joinedObject == NONE ? null : joinedObject;
     }
 
     @Override
@@ -154,14 +158,12 @@ public class HashJoinP<E0> extends AbstractProcessor {
     }
 
     @Nonnull
-    private List<Object> lookupJoined(int index, E0 item) {
-        Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+    private Object[] lookupValues(int index, E0 item) {
+        Map<Object, Object[]> lookupTableForOrdinal = lookupTables.get(index);
 
         Object lookupTableKey = keyFns.get(index).apply(item);
-        Object objects = lookupTableForOrdinal.get(lookupTableKey);
+        Object[] objects = lookupTableForOrdinal.get(lookupTableKey);
 
-        return objects == null ? LIST_WITH_NULL
-                : objects instanceof HashJoinArrayList ? (List<Object>) objects
-                : singletonList(objects);
+        return objects == null ? NO_MATCH : objects;
     }
 }

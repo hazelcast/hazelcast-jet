@@ -21,8 +21,8 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -32,21 +32,7 @@ import java.util.function.Function;
  */
 public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
 
-    private static final BiFunction<Object, Object, Object> MERGE_FN = (o, n) -> {
-        if (o instanceof HashJoinArrayList) {
-            ((HashJoinArrayList) o).add(n);
-            return o;
-        } else {
-            HashJoinArrayList res = new HashJoinArrayList();
-            res.add(o);
-            res.add(n);
-            return res;
-        }
-    };
-
-    // the value is either a V or a HashJoinArrayList (if multiple values for
-    // the key were observed)
-    private final Map<K, Object> lookupTable = new HashMap<>();
+    private final Map<K, List<V>> lookupTable = new HashMap<>();
     @Nonnull private final Function<T, K> keyFn;
     @Nonnull private final Function<T, V> projectFn;
 
@@ -61,20 +47,14 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        lookupTable.merge(key, value, MERGE_FN);
+        lookupTable.computeIfAbsent(key, (k -> new ArrayList<>())).add(value);
         return true;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean complete() {
+        ((Map) lookupTable).replaceAll((k, list) -> ((List<T>) list).toArray());
         return tryEmit(lookupTable);
-    }
-
-    // We need a custom ArrayList subclass because the user's V type could be
-    // ArrayList and then the logic that relies on instanceof would break
-    static final class HashJoinArrayList extends ArrayList<Object> {
-        HashJoinArrayList() {
-            super(2);
-        }
     }
 }

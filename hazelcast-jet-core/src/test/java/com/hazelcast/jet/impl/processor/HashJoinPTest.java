@@ -23,7 +23,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Test;
@@ -31,7 +30,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -70,8 +68,8 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(0, 1, 2),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(2, "b")
+                                keyAndValues(1, "a"),
+                                keyAndValues(2, "b")
                         ))
                 ), new int[]{ 10, 1 })
                 .expectOutput(asList(
@@ -97,8 +95,8 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(0, 1, 2),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(2, asCustomList("b", "c"))
+                                keyAndValues(1, "a"),
+                                keyAndValues(2, "b", "c")
                         ))
 
                 ), new int[]{ 10, 1 })
@@ -124,12 +122,12 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(1, 2, 3),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(3, "c")
+                                keyAndValues(1, "a"),
+                                keyAndValues(3, "c")
                         )),
                         singletonList(toMap(
-                                tuple2(1, "A"),
-                                tuple2(2, "B")
+                                keyAndValues(1, "A"),
+                                keyAndValues(2, "B")
                         ))
                 ), new int[]{ 10, 1, 1 })
                 .expectOutput(asList(
@@ -153,14 +151,14 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(0, 1, 2, 3, 4),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(2, asCustomList("b", "c")),
-                                tuple2(4, asCustomList("d", "e"))
+                                keyAndValues(1, "a"),
+                                keyAndValues(2, "b", "c"),
+                                keyAndValues(4, "d", "e")
                         )),
                         singletonList(toMap(
-                                tuple2(2, "A"),
-                                tuple2(3, asCustomList("B", "C")),
-                                tuple2(4, asCustomList("D", "E"))
+                                keyAndValues(2, "A"),
+                                keyAndValues(3, "B", "C"),
+                                keyAndValues(4, "D", "E")
                         ))
                 ), new int[]{ 10, 1, 1 })
                 .expectOutput(asList(
@@ -191,12 +189,12 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(1, 2, 3),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(3, "c")
+                                keyAndValues(1, "a"),
+                                keyAndValues(3, "c")
                         )),
                         singletonList(toMap(
-                                tuple2(1, "A"),
-                                tuple2(2, "B")
+                                keyAndValues(1, "A"),
+                                keyAndValues(2, "B")
                         ))
                 ), new int[]{ 10, 1, 1 })
                 .expectOutput(asList(
@@ -220,14 +218,14 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(0, 1, 2, 3, 4),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(2, asCustomList("b", "c")),
-                                tuple2(4, asCustomList("d", "e"))
+                                keyAndValues(1, "a"),
+                                keyAndValues(2, "b", "c"),
+                                keyAndValues(4, "d", "e")
                         )),
                         singletonList(toMap(
-                                tuple2(2, "A"),
-                                tuple2(3, asCustomList("B", "C")),
-                                tuple2(4, asCustomList("D", "E"))
+                                keyAndValues(2, "A"),
+                                keyAndValues(3, "B", "C"),
+                                keyAndValues(4, "D", "E")
                         ))
                 ), new int[]{ 10, 1, 1 })
                 .expectOutput(asList(
@@ -258,7 +256,7 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(0, 1),
                         singletonList(toMap(
-                                tuple2(1, "a")
+                                keyAndValues(1, "a")
                         ))
                 ), new int[]{ 10, 1 })
                 .expectOutput(singletonList(
@@ -279,12 +277,12 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(0, 1, 2, 3),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(2, "b")
+                                keyAndValues(1, "a"),
+                                keyAndValues(2, "b")
                         )),
                         singletonList(toMap(
-                                tuple2(1, "A"),
-                                tuple2(3, "C")
+                                keyAndValues(1, "A"),
+                                keyAndValues(3, "C")
                         ))
                 ), new int[]{ 10, 1, 1 })
                 .expectOutput(singletonList(
@@ -296,7 +294,7 @@ public class HashJoinPTest extends JetTestSupport {
         SupplierEx<Processor> supplier = () -> new HashJoinP<>(
                 asList(e -> e, e -> e),
                 asList(tag0(), tag1()),
-                (item, map) -> ((ItemsByTag) map).get(tag0()) == null ? null : tuple2(item, map),
+                (item, itemsByTag) -> ((ItemsByTag) itemsByTag).get(tag0()) == null ? null : tuple2(item, itemsByTag),
                 null
         );
 
@@ -305,12 +303,12 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         asList(1, 2, 3),
                         singletonList(toMap(
-                                tuple2(1, "a"),
-                                tuple2(3, "c")
+                                keyAndValues(1, "a"),
+                                keyAndValues(3, "c")
                         )),
                         singletonList(toMap(
-                                tuple2(1, "A"),
-                                tuple2(2, "B")
+                                keyAndValues(1, "A"),
+                                keyAndValues(2, "B")
                         ))
                 ), new int[]{ 10, 1, 1 })
                 .expectOutput(asList(
@@ -337,7 +335,7 @@ public class HashJoinPTest extends JetTestSupport {
                 .inputs(asList(
                         singletonList(0),
                         singletonList(toMap(
-                                tuple2(0, listItem)
+                                keyAndValues(0, listItem)
                         ))
                 ), new int[]{ 10, 1 })
                 .expectOutput(singletonList(
@@ -346,14 +344,12 @@ public class HashJoinPTest extends JetTestSupport {
     }
 
     @SafeVarargs
-    private static <T> HashJoinArrayList asCustomList(T ... values) {
-        HashJoinArrayList res = new HashJoinArrayList();
-        Collections.addAll(res, values);
-        return res;
+    private static <K, V> Tuple2<K, V[]> keyAndValues(K key, V... args) {
+        return tuple2(key, args);
     }
 
     @SafeVarargs
-    private static <K, V> Map<K, V> toMap(Tuple2<K, V>... entries) {
+    private static <K, V> Map<K, V[]> toMap(Tuple2<K, V[]>... entries) {
         return Stream.of(entries).collect(Collectors.toMap(Tuple2::f0, Tuple2::f1));
     }
 }
