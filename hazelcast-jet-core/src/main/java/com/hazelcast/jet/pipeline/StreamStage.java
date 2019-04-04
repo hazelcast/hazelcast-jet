@@ -186,6 +186,11 @@ public interface StreamStage<T> extends GeneralStage<T> {
         return (StreamStage<T>) GeneralStage.super.peek(toStringFn);
     }
 
+    @Nonnull
+    default <R> StreamStage<R> pipe(@Nonnull FunctionEx<StreamStage<T>, StreamStage<R>> transformationFunction) {
+        return transformationFunction.apply(this);
+    }
+
     @Nonnull @Override
     default <R> StreamStage<R> customTransform(@Nonnull String stageName,
                                                @Nonnull SupplierEx<Processor> procSupplier) {

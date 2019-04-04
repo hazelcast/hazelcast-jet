@@ -56,6 +56,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         this(transform, pipeline);
     }
 
+    @Override
+    public <R> BatchStage<R> pipe(FunctionEx<BatchStage<T>, BatchStage<R>> pipedTransformation) {
+        return pipedTransformation.apply(this);
+    }
+
     @Nonnull @Override
     public <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
         checkSerializable(keyFn, "keyFn");
