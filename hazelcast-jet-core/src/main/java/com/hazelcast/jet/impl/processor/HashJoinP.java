@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
@@ -31,14 +32,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.util.Preconditions.checkTrue;
-import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -67,11 +64,8 @@ import static java.util.Objects.requireNonNull;
 @SuppressWarnings("unchecked")
 public class HashJoinP<E0> extends AbstractProcessor {
 
-    private static final List<Object> LIST_WITH_NULL = singletonList(null);
-
     private final List<Function<E0, Object>> keyFns;
     private final List<Map<Object, Object>> lookupTables;
-
     private final FlatMapper<E0, Object> flatMapper;
 
     private boolean ordinal0consumed;
@@ -84,59 +78,29 @@ public class HashJoinP<E0> extends AbstractProcessor {
     ) {
         this.keyFns = keyFns;
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
+        BiFunction<E0, Object[], Object> outputMapper;
         if (!tags.isEmpty()) {
-            this.flatMapper = itemsByTagFlatMapper(tags, mapToOutputBiFn);
-            return;
-        }
-        if (keyFns.size() == 1) {
+            assert mapToOutputBiFn != null : "mapToOutputBiFn required with tags";
+            outputMapper = (item, tuple) -> {
+                ItemsByTag res = new ItemsByTag();
+                for (int i = 0; i < tags.size(); i++) {
+                    res.put(tags.get(i), tuple[i]);
+                }
+                return mapToOutputBiFn.apply(item, res);
+            };
+        } else if (keyFns.size() == 1) {
             BiFunction mapToOutput = requireNonNull(mapToOutputBiFn,
                     "tags.isEmpty() && keyFns.size() == 1, but mapToOutputBiFn == null");
-            this.flatMapper = flatMapper(item -> traverseStream(lookupJoined(0, item).stream()
-                    .map(joinedObject -> mapToOutput.apply(item, joinedObject))
-                    .filter(Objects::nonNull)));
-            return;
+            outputMapper = (item, tuple) -> mapToOutput.apply(item, tuple[0]);
+        } else {
+            checkTrue(keyFns.size() == 2, "tags.isEmpty(), but keyFns.size() is neither 1 nor 2");
+            TriFunction mapToOutput = requireNonNull(mapToOutputTriFn,
+                    "tags.isEmpty() && keyFns.size() == 2, but mapToOutputTriFn == null");
+            outputMapper = (item, tuple) -> mapToOutput.apply(item, tuple[0], tuple[1]);
         }
-        checkTrue(keyFns.size() == 2, "tags.isEmpty(), but keyFns.size() is neither 1 nor 2");
-        TriFunction mapToOutput = requireNonNull(mapToOutputTriFn,
-                "tags.isEmpty() && keyFns.size() == 2, but mapToOutputTriFn == null");
-        this.flatMapper = flatMapper(object -> {
-            List<Object> joined0 = lookupJoined(0, object);
-            List<Object> joined1 = lookupJoined(1, object);
-            return traverseStream(joined0.stream()
-                    .flatMap(firstJoined -> joined1.stream()
-                            .map(secondJoined -> mapToOutput.apply(object, firstJoined, secondJoined)))
-                    .filter(Objects::nonNull));
-        });
-    }
 
-    private FlatMapper<E0, Object> itemsByTagFlatMapper(@Nonnull List<Tag> tags, @Nullable BiFunction mapToOutputBiFn) {
-        assert mapToOutputBiFn != null : "mapToOutputBiFn required";
-        List<Object>[] lookedUpValues = new List[keyFns.size()];
-        List<ItemsByTag> values = new ArrayList<>();
-        int[] indices = new int[keyFns.size()];
-        return flatMapper(primaryItem -> {
-            for (int i = 0; i < keyFns.size(); i++) {
-                lookedUpValues[i] = lookupJoined(i, primaryItem);
-            }
-            Arrays.fill(indices, 0);
-            values.clear();
-            while (indices[0] < lookedUpValues[0].size()) {
-                ItemsByTag val = new ItemsByTag();
-                for (int j = 0; j < lookedUpValues.length; j++) {
-                    val.put(tags.get(j), lookedUpValues[j].get(indices[j]));
-                }
-                values.add(val);
-                for (int j = indices.length - 1; j >= 0; j--) {
-                    indices[j]++;
-                    if (j == 0 || indices[j] < lookedUpValues[j].size()) {
-                        break;
-                    }
-                    indices[j] = 0;
-                }
-            }
-            return traverseIterable(values)
-                    .map(map -> mapToOutputBiFn.apply(primaryItem, map));
-        });
+        TraverseCombinations traverser = new TraverseCombinations(keyFns.size(), outputMapper);
+        flatMapper = flatMapper(traverser::accept);
     }
 
     @Override
@@ -154,14 +118,61 @@ public class HashJoinP<E0> extends AbstractProcessor {
     }
 
     @Nonnull
-    private List<Object> lookupJoined(int index, E0 item) {
+    private Object lookupJoined(int index, E0 item) {
         Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
+        Object key = keyFns.get(index).apply(item);
+        return lookupTableForOrdinal.get(key);
+    }
 
-        Object lookupTableKey = keyFns.get(index).apply(item);
-        Object objects = lookupTableForOrdinal.get(lookupTableKey);
+    private class TraverseCombinations<OUT> implements Traverser<OUT> {
+        private final BiFunction<E0, Object[], OUT> outputMapper;
+        private final Object[] lookedUpValues;
+        private final int[] indices;
+        private final int[] sizes;
+        private final Object[] tuple;
+        private E0 currentItem;
 
-        return objects == null ? LIST_WITH_NULL
-                : objects instanceof HashJoinArrayList ? (List<Object>) objects
-                : singletonList(objects);
+        TraverseCombinations(int keyCount, BiFunction<E0, Object[], OUT> outputMapper) {
+            this.outputMapper = outputMapper;
+
+            lookedUpValues = new Object[keyCount];
+            indices = new int[keyCount];
+            sizes = new int[keyCount];
+            tuple = new Object[keyCount];
+        }
+
+        TraverseCombinations<OUT> accept(E0 item) {
+            assert Arrays.stream(indices).allMatch(i -> i == 0) : "indices not all zero: " + Arrays.toString(indices);
+            for (int i = 0; i < lookedUpValues.length; i++) {
+                lookedUpValues[i] = lookupJoined(i, item);
+                sizes[i] = lookedUpValues[i] instanceof HashJoinArrayList
+                        ? ((HashJoinArrayList) lookedUpValues[i]).size() : 1;
+            }
+            currentItem = item;
+            return this;
+        }
+
+        @Override
+        public OUT next() {
+            while (indices[0] < sizes[0]) {
+                for (int j = 0; j < lookedUpValues.length; j++) {
+                    tuple[j] = sizes[j] == 1 ? lookedUpValues[j]
+                            : ((HashJoinArrayList) lookedUpValues[j]).get(indices[j]);
+                }
+                for (int j = indices.length - 1; j >= 0; j--) {
+                    indices[j]++;
+                    if (j == 0 || indices[j] < sizes[j]) {
+                        break;
+                    }
+                    indices[j] = 0;
+                }
+                OUT res = outputMapper.apply(currentItem, tuple);
+                if (res != null) {
+                    return res;
+                }
+            }
+            Arrays.fill(indices, 0);
+            return null;
+        }
     }
 }
