@@ -68,7 +68,7 @@ public class HashJoinP<E0> extends AbstractProcessor {
     private final List<Map<Object, Object>> lookupTables;
     private final FlatMapper<E0, Object> flatMapper;
 
-    private boolean ordinal0consumed;
+    private boolean ordinal0Consumed;
 
     public HashJoinP(
             @Nonnull List<Function<E0, Object>> keyFns,
@@ -78,10 +78,12 @@ public class HashJoinP<E0> extends AbstractProcessor {
     ) {
         this.keyFns = keyFns;
         this.lookupTables = new ArrayList<>(Collections.nCopies(keyFns.size(), null));
-        BiFunction<E0, Object[], Object> outputMapper;
+        BiFunction<E0, Object[], Object> mapTupleToOutputFn;
         if (!tags.isEmpty()) {
-            assert mapToOutputBiFn != null : "mapToOutputBiFn required with tags";
-            outputMapper = (item, tuple) -> {
+            if (mapToOutputBiFn == null) {
+                throw new NullPointerException("mapToOutputBiFn required with tags");
+            }
+            mapTupleToOutputFn = (item, tuple) -> {
                 ItemsByTag res = new ItemsByTag();
                 for (int i = 0; i < tags.size(); i++) {
                     res.put(tags.get(i), tuple[i]);
@@ -91,49 +93,48 @@ public class HashJoinP<E0> extends AbstractProcessor {
         } else if (keyFns.size() == 1) {
             BiFunction mapToOutput = requireNonNull(mapToOutputBiFn,
                     "tags.isEmpty() && keyFns.size() == 1, but mapToOutputBiFn == null");
-            outputMapper = (item, tuple) -> mapToOutput.apply(item, tuple[0]);
+            mapTupleToOutputFn = (item, tuple) -> mapToOutput.apply(item, tuple[0]);
         } else {
             checkTrue(keyFns.size() == 2, "tags.isEmpty(), but keyFns.size() is neither 1 nor 2");
             TriFunction mapToOutput = requireNonNull(mapToOutputTriFn,
                     "tags.isEmpty() && keyFns.size() == 2, but mapToOutputTriFn == null");
-            outputMapper = (item, tuple) -> mapToOutput.apply(item, tuple[0], tuple[1]);
+            mapTupleToOutputFn = (item, tuple) -> mapToOutput.apply(item, tuple[0], tuple[1]);
         }
 
-        TraverseCombinations traverser = new TraverseCombinations(keyFns.size(), outputMapper);
+        CombinationsTraverser traverser = new CombinationsTraverser(keyFns.size(), mapTupleToOutputFn);
         flatMapper = flatMapper(traverser::accept);
     }
 
     @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
-        assert !ordinal0consumed : "Edge 0 must have a lower priority than all other edges";
+        assert !ordinal0Consumed : "Edge 0 must have a lower priority than all other edges";
         lookupTables.set(ordinal - 1, (Map) item);
         return true;
     }
 
     @Override
     protected boolean tryProcess0(@Nonnull Object item) {
-        E0 e0 = (E0) item;
-        ordinal0consumed = true;
-        return flatMapper.tryProcess(e0);
+        ordinal0Consumed = true;
+        return flatMapper.tryProcess((E0) item);
     }
 
     @Nonnull
-    private Object lookupJoined(int index, E0 item) {
+    private Object lookUpJoined(int index, E0 item) {
         Map<Object, Object> lookupTableForOrdinal = lookupTables.get(index);
         Object key = keyFns.get(index).apply(item);
         return lookupTableForOrdinal.get(key);
     }
 
-    private class TraverseCombinations<OUT> implements Traverser<OUT> {
-        private final BiFunction<E0, Object[], OUT> outputMapper;
+    private class CombinationsTraverser<OUT> implements Traverser<OUT> {
+        private final BiFunction<E0, Object[], OUT> mapTupleToOutputFn;
         private final Object[] lookedUpValues;
         private final int[] indices;
         private final int[] sizes;
         private final Object[] tuple;
         private E0 currentItem;
 
-        TraverseCombinations(int keyCount, BiFunction<E0, Object[], OUT> outputMapper) {
-            this.outputMapper = outputMapper;
+        CombinationsTraverser(int keyCount, BiFunction<E0, Object[], OUT> mapTupleToOutputFn) {
+            this.mapTupleToOutputFn = mapTupleToOutputFn;
 
             lookedUpValues = new Object[keyCount];
             indices = new int[keyCount];
@@ -141,13 +142,19 @@ public class HashJoinP<E0> extends AbstractProcessor {
             tuple = new Object[keyCount];
         }
 
-        TraverseCombinations<OUT> accept(E0 item) {
-            assert Arrays.stream(indices).allMatch(i -> i == 0) : "indices not all zero: " + Arrays.toString(indices);
+        /**
+         * Accept the next item to traverse. The previous item must be fully
+         * traversed.
+         */
+        CombinationsTraverser<OUT> accept(E0 item) {
+            assert currentItem == null : "currentItem not null";
+            // look up matching values for each joined table
             for (int i = 0; i < lookedUpValues.length; i++) {
-                lookedUpValues[i] = lookupJoined(i, item);
+                lookedUpValues[i] = lookUpJoined(i, item);
                 sizes[i] = lookedUpValues[i] instanceof HashJoinArrayList
                         ? ((HashJoinArrayList) lookedUpValues[i]).size() : 1;
             }
+            Arrays.fill(indices, 0);
             currentItem = item;
             return this;
         }
@@ -155,10 +162,14 @@ public class HashJoinP<E0> extends AbstractProcessor {
         @Override
         public OUT next() {
             while (indices[0] < sizes[0]) {
+                // populate the tuple and create the result object
                 for (int j = 0; j < lookedUpValues.length; j++) {
                     tuple[j] = sizes[j] == 1 ? lookedUpValues[j]
                             : ((HashJoinArrayList) lookedUpValues[j]).get(indices[j]);
                 }
+                OUT result = mapTupleToOutputFn.apply(currentItem, tuple);
+
+                // advance indices to the next combination
                 for (int j = indices.length - 1; j >= 0; j--) {
                     indices[j]++;
                     if (j == 0 || indices[j] < sizes[j]) {
@@ -166,12 +177,13 @@ public class HashJoinP<E0> extends AbstractProcessor {
                     }
                     indices[j] = 0;
                 }
-                OUT res = outputMapper.apply(currentItem, tuple);
-                if (res != null) {
-                    return res;
+
+                if (result != null) {
+                    return result;
                 }
             }
-            Arrays.fill(indices, 0);
+
+            currentItem = null;
             return null;
         }
     }
