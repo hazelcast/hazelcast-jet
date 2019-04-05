@@ -47,7 +47,7 @@ public class HashJoinCollectP<K, T, V> extends AbstractProcessor {
         T t = (T) item;
         K key = keyFn.apply(t);
         V value = projectFn.apply(t);
-        lookupTable.computeIfAbsent(key, (k -> new ArrayList<>())).add(value);
+        lookupTable.computeIfAbsent(key, (k -> new ArrayList<>(1))).add(value);
         return true;
     }
 
