@@ -49,8 +49,8 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     private static final int MAX_WATERMARK_STRIDE = 100;
     private static final int MIN_WMS_PER_SESSION = 100;
     private static final KeyedWindowResultFunction JET_EVENT_WINDOW_RESULT_FN =
-            (start, end, ignoredKey, result, isEarly) ->
-                    jetEvent(end - 1, new WindowResult<>(start, end, result, isEarly));
+            (start, end, key, result, isEarly) ->
+                    jetEvent(new WindowResult<>(start, end, result, isEarly), key, end - 1);
 
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
@@ -197,7 +197,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<R>> jetEventOfWindowResultFn() {
+    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<R, K>> jetEventOfWindowResultFn() {
         return JET_EVENT_WINDOW_RESULT_FN;
     }
 }

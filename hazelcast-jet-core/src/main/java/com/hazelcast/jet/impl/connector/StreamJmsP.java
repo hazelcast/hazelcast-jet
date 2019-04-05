@@ -58,8 +58,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
     private final ConsumerEx<? super Session> flushFn;
     private final FunctionEx<? super Message, ? extends T> projectionFn;
-    private final EventTimeMapper<? super T> eventTimeMapper;
+    private final EventTimePolicy<? super T> eventTimePolicy;
 
+    private EventTimeMapper<? super T> eventTimeMapper;
     private Session session;
     private MessageConsumer consumer;
     private Traverser<Object> traverser;
@@ -76,9 +77,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         this.consumerFn = consumerFn;
         this.flushFn = flushFn;
         this.projectionFn = projectionFn;
-
-        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
-        eventTimeMapper.addPartitions(1);
+        this.eventTimePolicy = eventTimePolicy;
     }
 
     /**
@@ -105,6 +104,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
+        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, context.globalProcessorIndex());
+        eventTimeMapper.addPartitions(1);
+
         session = newSessionFn.apply(connection);
         consumer = consumerFn.apply(session);
         traverser = ((Traverser<Message>) () -> uncheckCall(() -> consumer.receiveNoWait()))

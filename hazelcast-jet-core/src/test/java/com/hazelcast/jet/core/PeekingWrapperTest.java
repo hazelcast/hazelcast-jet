@@ -58,7 +58,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class PeekingWrapperTest {
 
-    private static final JetEvent<Integer> TEST_JET_EVENT = jetEvent(123, 2);
+    private static final JetEvent<Integer, String> TEST_JET_EVENT = jetEvent(2, "key", 123);
 
     @Parameter
     public String mode;

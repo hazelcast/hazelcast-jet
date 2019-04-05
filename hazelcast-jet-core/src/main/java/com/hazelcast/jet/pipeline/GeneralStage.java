@@ -828,6 +828,12 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     StreamStage<T> addTimestamps(@Nonnull ToLongFunctionEx<? super T> timestampFn, long allowedLag);
 
+    @Nonnull
+    GeneralStage<T> repartitionLocal();
+
+    @Nonnull
+    GeneralStage<T> repartitionGlobal();
+
     /**
      * Attaches a sink stage, one that accepts data but doesn't emit any. The
      * supplied argument specifies what to do with the received data (typically

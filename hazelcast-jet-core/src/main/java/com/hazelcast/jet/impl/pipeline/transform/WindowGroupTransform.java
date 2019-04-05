@@ -51,7 +51,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
 
     private static final KeyedWindowResultFunction JET_EVENT_KEYED_WINDOW_RESULT_FN =
             (winStart, winEnd, key, windowResult, isEarly) ->
-                    jetEvent(winEnd - 1, new KeyedWindowResult<>(winStart, winEnd, key, windowResult, isEarly));
+                    jetEvent(new KeyedWindowResult<>(winStart, winEnd, key, windowResult, isEarly), key, winEnd - 1);
 
     @Nonnull
     private final WindowDefinition wDef;
@@ -176,7 +176,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<? extends KeyedWindowResult<K, ? extends R>>>
+    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<? extends KeyedWindowResult<K, ? extends R>, K>>
     jetEventOfKeyedWindowResultFn() {
         return JET_EVENT_KEYED_WINDOW_RESULT_FN;
     }

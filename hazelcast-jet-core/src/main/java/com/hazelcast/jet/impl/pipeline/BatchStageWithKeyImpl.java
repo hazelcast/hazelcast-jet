@@ -39,7 +39,6 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DO_NOT_ADAPT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -78,7 +77,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
 
     @Nonnull @Override
     public BatchStage<T> distinct() {
-        return computeStage.attach(new DistinctTransform<>(computeStage.transform, keyFn()), DO_NOT_ADAPT);
+        return computeStage.attach(new DistinctTransform<>(computeStage.transform, keyFn()));
     }
 
     @Nonnull @Override
@@ -146,8 +145,8 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
                         singletonList(computeStage.transform),
                         singletonList(keyFn()),
                         aggrOp,
-                        Util::entry),
-                DO_NOT_ADAPT);
+                        Util::entry)
+        );
     }
 
     @Nonnull @Override
@@ -161,7 +160,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
                         asList(keyFn(), stage1.keyFn()),
                         aggrOp,
                         Util::entry
-                ), DO_NOT_ADAPT);
+                ));
     }
 
     @Nonnull @Override
@@ -175,7 +174,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
                         aggrOp,
-                        Util::entry),
-                DO_NOT_ADAPT);
+                        Util::entry)
+        );
     }
 }

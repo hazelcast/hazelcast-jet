@@ -83,7 +83,7 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
     }
 
     public static class Timestamped<T>
-            extends SourceBufferImpl<JetEvent<T>>
+            extends SourceBufferImpl<JetEvent<T, Integer>>
             implements TimestampedSourceBuffer<T> {
 
         public Timestamped() {
@@ -92,7 +92,7 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
 
         @Override
         public void add(@Nonnull T item, long timestamp) {
-            addInternal(jetEvent(timestamp, item));
+            addInternal(jetEvent(item, 0, timestamp)); // todo [viliam] user processorIndex as partition
         }
     }
 }

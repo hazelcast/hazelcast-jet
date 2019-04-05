@@ -64,8 +64,10 @@ public class ConvenientSourceP<C, T, S> extends AbstractProcessor {
     private final BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn;
     private final Consumer<? super C> destroyFn;
     private final SourceBufferConsumerSide<?> buffer;
-    private final EventTimeMapper<T> eventTimeMapper;
+    private final EventTimePolicy<? super T> eventTimePolicy;
     private BroadcastKey<Integer> snapshotKey;
+
+    private EventTimeMapper<T> eventTimeMapper;
 
     private boolean initialized;
     private C ctx;
@@ -88,12 +90,7 @@ public class ConvenientSourceP<C, T, S> extends AbstractProcessor {
         this.restoreSnapshotFn = restoreSnapshotFn;
         this.destroyFn = destroyFn;
         this.buffer = buffer;
-        if (eventTimePolicy != null) {
-            eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
-            eventTimeMapper.addPartitions(1);
-        } else {
-            eventTimeMapper = null;
-        }
+        this.eventTimePolicy = eventTimePolicy;
     }
 
     @Override
@@ -103,9 +100,16 @@ public class ConvenientSourceP<C, T, S> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
+        if (eventTimePolicy != null) {
+            eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, context.globalProcessorIndex());
+            eventTimeMapper.addPartitions(1);
+        } else {
+            eventTimeMapper = null;
+        }
+
         ctx = createFn.apply(context);
         snapshotKey = broadcastKey(context.globalProcessorIndex());
-        // createFn is allowed to return null, we'll call `destroyFn` even for null `ctx`
+        // createFn is allowed to return null, that's why we need this flag:
         initialized = true;
     }
 
@@ -119,7 +123,7 @@ public class ConvenientSourceP<C, T, S> extends AbstractProcessor {
                     : buffer.traverse().flatMap(t -> {
                         // if eventTimeMapper is not null, we know that T is JetEvent<T>
                         @SuppressWarnings("unchecked")
-                        JetEvent<T> je = (JetEvent<T>) t;
+                        JetEvent<T, Integer> je = (JetEvent<T, Integer>) t;
                         return eventTimeMapper.flatMapEvent(je.payload(), 0, je.timestamp());
                     });
         }

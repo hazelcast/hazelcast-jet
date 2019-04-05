@@ -31,6 +31,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.outputAdaptingMetaSupplier;
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.util.Collections.emptyList;
 
@@ -69,9 +70,9 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
         if (emitsWatermarks || eventTimePolicy == null) {
             // Reached when the source either emits both JetEvents and watermarks
             // or neither. In these cases we don't have to insert watermarks.
-            p.addVertex(this, name(), localParallelism(),
-                    metaSupplierFn.apply(eventTimePolicy != null ? eventTimePolicy : noEventTime())
-            );
+            ProcessorMetaSupplier metaSupplier =
+                    metaSupplierFn.apply(eventTimePolicy != null ? eventTimePolicy : noEventTime());
+            p.addVertex(this, name(), localParallelism(), metaSupplier);
         } else {
             //                  ------------
             //                 |  sourceP   |
@@ -83,7 +84,8 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             //                 |  insertWmP  |
             //                  -------------
             String v1name = name();
-            Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(eventTimePolicy))
+            ProcessorMetaSupplier metaSupplier = metaSupplierFn.apply(eventTimePolicy);
+            Vertex v1 = p.dag.newVertex(v1name, outputAdaptingMetaSupplier(metaSupplier))
                              .localParallelism(localParallelism());
             int localParallelism = v1.determineLocalParallelism(localParallelism());
             PlannerVertex pv2 = p.addVertex(
@@ -100,10 +102,6 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
 
     public void setEventTimePolicy(@Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         this.eventTimePolicy = eventTimePolicy;
-    }
-
-    public boolean emitsJetEvents() {
-        return eventTimePolicy != null;
     }
 
     @Override

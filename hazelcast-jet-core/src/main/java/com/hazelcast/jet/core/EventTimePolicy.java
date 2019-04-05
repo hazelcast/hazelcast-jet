@@ -16,9 +16,10 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.jet.core.function.ObjLongBiFunction;
+import com.hazelcast.jet.core.function.ObjObjLongTriFunction;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.impl.JetEvent;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -70,7 +71,7 @@ public final class EventTimePolicy<T> implements Serializable {
      */
     public static final long DEFAULT_IDLE_TIMEOUT = 60_000L;
 
-    private static final ObjLongBiFunction<?, ?> NO_WRAPPING = (event, timestamp) -> event;
+    private static final ObjObjLongTriFunction<?, ?, ?> NO_WRAPPING = (event, key, timestamp) -> event;
 
     private static final SupplierEx<WatermarkPolicy> NO_WATERMARKS = () -> new WatermarkPolicy() {
         @Override
@@ -85,7 +86,7 @@ public final class EventTimePolicy<T> implements Serializable {
     };
 
     private final ToLongFunctionEx<? super T> timestampFn;
-    private final ObjLongBiFunction<? super T, ?> wrapFn;
+    private final ObjObjLongTriFunction<? super T, ?, ?> wrapFn;
     private final SupplierEx<? extends WatermarkPolicy> newWmPolicyFn;
     private final long watermarkThrottlingFrameSize;
     private final long watermarkThrottlingFrameOffset;
@@ -93,7 +94,7 @@ public final class EventTimePolicy<T> implements Serializable {
 
     private EventTimePolicy(
             @Nullable ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull ObjLongBiFunction<? super T, ?> wrapFn,
+            @Nonnull ObjObjLongTriFunction<? super T, ?, ?> wrapFn,
             @Nonnull SupplierEx<? extends WatermarkPolicy> newWmPolicyFn,
             long watermarkThrottlingFrameSize,
             long watermarkThrottlingFrameOffset,
@@ -130,7 +131,7 @@ public final class EventTimePolicy<T> implements Serializable {
      */
     public static <T> EventTimePolicy<T> eventTimePolicy(
             @Nullable ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull ObjLongBiFunction<? super T, ?> wrapFn,
+            @Nonnull ObjObjLongTriFunction<? super T, ?, ?> wrapFn,
             @Nonnull SupplierEx<? extends WatermarkPolicy> newWmPolicyFn,
             long watermarkThrottlingFrameSize,
             long watermarkThrottlingFrameOffset,
@@ -177,12 +178,12 @@ public final class EventTimePolicy<T> implements Serializable {
      * your job will keep accumulating the data without producing any output.
      */
     public static <T> EventTimePolicy<T> noEventTime() {
-        return eventTimePolicy(i -> Long.MIN_VALUE, noWrapping(), NO_WATERMARKS, 0, 0, 0);
+        return eventTimePolicy(i -> JetEvent.NO_TIMESTAMP, JetEvent::jetEvent, NO_WATERMARKS, 0, 0, 0);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> ObjLongBiFunction<T, Object> noWrapping() {
-        return (ObjLongBiFunction<T, Object>) NO_WRAPPING;
+    private static <T, K> ObjObjLongTriFunction<T, K, Object> noWrapping() {
+        return (ObjObjLongTriFunction<T, K, Object>) NO_WRAPPING;
     }
 
     /**
@@ -198,7 +199,7 @@ public final class EventTimePolicy<T> implements Serializable {
      * into the emitted item.
      */
     @Nonnull
-    public ObjLongBiFunction<? super T, ?> wrapFn() {
+    public ObjObjLongTriFunction<? super T, ?, ?> wrapFn() {
         return wrapFn;
     }
 

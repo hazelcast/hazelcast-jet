@@ -20,33 +20,38 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-import static com.hazelcast.jet.impl.util.Util.toLocalTime;
-
 /**
- * Holds a stream event and its timestamp. Jet processors receive and send
- * these objects, but the user's lambdas in the Pipeline API don't observe
- * them.
+ * All stream items in Jet jobs created using Pipeline are of this type.
+ * Combines the event with timestamp and key.
  *
  * @param <T> type of the wrapped event
+ * @param <K> type of the wrapped key
  */
-public final class JetEvent<T> {
-    private final long timestamp;
-    private final T payload;
+public final class JetEvent<T, K> {
+    public static final long NO_TIMESTAMP = Long.MIN_VALUE;
 
-    private JetEvent(long timestamp, @Nonnull T payload) {
-        this.timestamp = timestamp;
+    @Nonnull private final T payload;
+    @Nonnull private final K key;
+    private final long timestamp;
+
+    private JetEvent(@Nonnull T payload, @Nonnull K key, long timestamp) {
         this.payload = payload;
+        this.key = key;
+        this.timestamp = timestamp;
     }
 
     /**
      * Creates a new {@code JetEvent} with the given components.
      */
     @Nullable
-    public static <T> JetEvent<T> jetEvent(long timestamp, @Nullable T payload) {
+    public static <T, K> JetEvent<T, K> jetEvent(@Nullable T payload, @Nullable K key, long timestamp) {
         if (payload == null) {
             return null;
         }
-        return new JetEvent<>(timestamp, payload);
+        if (key == null) {
+            throw new IllegalArgumentException("Key is required");
+        }
+        return new JetEvent<>(payload, key, timestamp);
     }
 
     /**
@@ -64,9 +69,14 @@ public final class JetEvent<T> {
         return payload;
     }
 
+    @Nonnull
+    public K key() {
+        return key;
+    }
+
     @Override
     public String toString() {
-        return "JetEvent{ts=" + toLocalTime(timestamp) + ", payload=" + payload + '}';
+        return "JetEvent{payload=" + payload + ", key=" + key + ", timestamp=" + timestamp + '}';
     }
 
     @Override
@@ -77,12 +87,14 @@ public final class JetEvent<T> {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        JetEvent<?> jetEvent = (JetEvent<?>) o;
-        return timestamp == jetEvent.timestamp && Objects.equals(payload, jetEvent.payload);
+        JetEvent<?, ?> jetEvent = (JetEvent<?, ?>) o;
+        return timestamp == jetEvent.timestamp &&
+                payload.equals(jetEvent.payload) &&
+                key.equals(jetEvent.key);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(payload, timestamp);
+        return Objects.hash(payload, key, timestamp);
     }
 }

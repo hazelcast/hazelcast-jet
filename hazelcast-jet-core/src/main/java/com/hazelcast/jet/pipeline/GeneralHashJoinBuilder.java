@@ -19,12 +19,12 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
-import com.hazelcast.jet.impl.pipeline.FunctionAdapter;
+import com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +58,6 @@ import static java.util.stream.Stream.concat;
 public abstract class GeneralHashJoinBuilder<T0> {
     private final Transform transform0;
     private final PipelineImpl pipelineImpl;
-    private final FunctionAdapter fnAdapter;
     private final CreateOutStageFn<T0> createOutStageFn;
     private final Map<Tag<?>, TransformAndClause> clauses = new HashMap<>();
 
@@ -66,7 +65,6 @@ public abstract class GeneralHashJoinBuilder<T0> {
         this.transform0 = transformOf(stage0);
         this.pipelineImpl = (PipelineImpl) stage0.getPipeline();
         this.createOutStageFn = createOutStageFn;
-        this.fnAdapter = ((ComputeStageImplBase) stage0).fnAdapter;
     }
 
     /**
@@ -98,25 +96,25 @@ public abstract class GeneralHashJoinBuilder<T0> {
                         orderedClauses.stream().map(e -> e.getValue().transform())
                 ).collect(toList());
         // A probable javac bug forced us to extract this variable
-        Stream<JoinClause<?, T0, ?, ?>> joinClauses = orderedClauses
-                .stream()
-                .map(e -> e.getValue().clause())
-                .map(fnAdapter::adaptJoinClause);
-        HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform<>(
+        List<JoinClause<?, T0, ?, ?>> joinClauses = new ArrayList<>();
+        List<Tag> tags = new ArrayList<>();
+        for (Entry<Tag<?>, TransformAndClause> entry : orderedClauses) {
+            joinClauses.add(JetEventFunctionAdapter.INSTANCE.adaptJoinClause(entry.getValue().clause()));
+            tags.add(entry.getKey());
+        }
+        HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform(
                 upstream,
-                joinClauses.collect(toList()),
-                orderedClauses.stream()
-                              .map(Entry::getKey)
-                              .collect(toList()),
-                fnAdapter.adaptHashJoinOutputFn(mapToOutputFn));
+                joinClauses,
+                tags,
+                JetEventFunctionAdapter.INSTANCE.adaptHashJoinOutputFn(mapToOutputFn));
         pipelineImpl.connect(upstream, hashJoinTransform);
-        return createOutStageFn.get(hashJoinTransform, fnAdapter, pipelineImpl);
+        return createOutStageFn.get(hashJoinTransform, pipelineImpl);
     }
 
     @FunctionalInterface
     interface CreateOutStageFn<T0> {
         <R> GeneralStage<R> get(
-                HashJoinTransform<T0, R> hashJoinTransform, FunctionAdapter fnAdapter, PipelineImpl stage);
+                HashJoinTransform<T0, R> hashJoinTransform, PipelineImpl stage);
     }
 
     private static class TransformAndClause<K, E0, T1, T1_OUT> {

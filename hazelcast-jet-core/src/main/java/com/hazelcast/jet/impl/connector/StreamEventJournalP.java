@@ -97,8 +97,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     private final JournalInitialPosition initialPos;
     @Nonnull
     private final int[] partitionIds;
-    @Nonnull
-    private final EventTimeMapper<? super T> eventTimeMapper;
+    @Nonnull private final EventTimePolicy<? super T> eventTimePolicy;
+
+    private EventTimeMapper<? super T> eventTimeMapper;
 
     private final boolean isRemoteReader;
 
@@ -135,12 +136,16 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         this.projection = maybeUnwrapImdgFunction(projectionFn);
         this.initialPos = initialPos;
         this.isRemoteReader = isRemoteReader;
+        this.eventTimePolicy = eventTimePolicy;
 
         partitionIds = assignedPartitions.stream().mapToInt(Integer::intValue).toArray();
         emitOffsets = new long[partitionIds.length];
         readOffsets = new long[partitionIds.length];
+    }
 
-        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+    @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, context.globalProcessorIndex());
 
         // Do not coalesce partition WMs because the number of partitions is far
         // larger than the number of consumers by default and it is not
@@ -153,10 +158,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         // others. This might be changed in the future and/or made optional.
         assert partitionIds.length > 0 : "no partitions assigned";
         eventTimeMapper.addPartitions(1);
-    }
 
-    @Override
-    protected void init(@Nonnull Context context) throws Exception {
         @SuppressWarnings("unchecked")
         ICompletableFuture<EventJournalInitialSubscriberState>[] futures = new ICompletableFuture[partitionIds.length];
         Arrays.setAll(futures, i -> eventJournalReader.subscribeToEventJournal(partitionIds[i]));

@@ -50,7 +50,7 @@ public class SerializerHooksTest {
         return Arrays.asList(
                 new Object[]{new String[]{"a", "b", "c"}},
                 new SimpleImmutableEntry<>("key", "value"),
-                jetEvent(System.currentTimeMillis(), "payload")
+                jetEvent("payload", "key", System.currentTimeMillis())
         );
     }
 

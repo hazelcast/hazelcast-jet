@@ -989,8 +989,8 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> custom = streamStageFromList(input).customTransform("map",
                 Processors.mapP(o -> {
                     @SuppressWarnings("unchecked")
-                    JetEvent<Integer> jetEvent = (JetEvent<Integer>) o;
-                    return jetEvent(jetEvent.timestamp(), mapFn.apply(jetEvent.payload()));
+                    JetEvent<Integer, ?> jetEvent = (JetEvent<Integer, ?>) o;
+                    return jetEvent(mapFn.apply(jetEvent.payload()), jetEvent.key(), jetEvent.timestamp());
                 }));
 
         // Then
@@ -1012,9 +1012,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingContextP(
                         ContextFactory.withCreateFn(jet -> new HashSet<>()),
-                        (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
+                        (Set<Integer> seen, JetEvent<Integer, ?> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
-                            return seen.add(key) ? jetEvent(jetEvent.timestamp(), key) : null;
+                            return seen.add(key) ? jetEvent(key, jetEvent.key(), jetEvent.timestamp()) : null;
                         }));
 
         // Then

@@ -67,12 +67,13 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
     private final Properties properties;
     private final List<String> topics;
     private final FunctionEx<? super ConsumerRecord<K, V>, ? extends T> projectionFn;
-    private final EventTimeMapper<? super T> eventTimeMapper;
+    private EventTimeMapper<? super T> eventTimeMapper;
     private int totalParallelism;
     private boolean snapshottingEnabled;
 
     private KafkaConsumer<K, V> consumer;
     private final int[] partitionCounts;
+    private final EventTimePolicy<? super T> eventTimePolicy;
     private long nextMetadataCheck = Long.MIN_VALUE;
 
     /**
@@ -94,8 +95,8 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
         this.properties = properties;
         this.topics = topics;
         this.projectionFn = projectionFn;
-        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         partitionCounts = new int[topics.size()];
+        this.eventTimePolicy = eventTimePolicy;
     }
 
     @Override
@@ -105,6 +106,7 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
+        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, context.globalProcessorIndex());
         processorIndex = context.globalProcessorIndex();
         totalParallelism = context.totalParallelism();
         snapshottingEnabled = context.snapshottingEnabled();

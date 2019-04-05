@@ -36,14 +36,21 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
  */
 public class InsertWatermarksP<T> extends AbstractProcessor {
 
-    private final EventTimeMapper<? super T> eventTimeMapper;
+    private final EventTimePolicy<? super T> eventTimePolicy;
+
+    private EventTimeMapper<? super T> eventTimeMapper;
     private Traverser<Object> traverser;
 
     // value to be used temporarily during snapshot restore
     private long minRestoredWm = Long.MAX_VALUE;
 
     public InsertWatermarksP(EventTimePolicy<? super T> eventTimePolicy) {
-        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        this.eventTimePolicy = eventTimePolicy;
+    }
+
+    @Override
+    protected void init(@Nonnull Context context) throws Exception {
+        eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, context.globalProcessorIndex());
         eventTimeMapper.addPartitions(1);
     }
 

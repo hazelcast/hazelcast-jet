@@ -25,28 +25,30 @@ import java.io.Serializable;
  * the second argument is a {@code long}.
  *
  * @param <T> the type of the first argument to the function
+ * @param <U> the type of the second argument to the function
  * @param <R> the type of the result of the function
  *
  * @since 3.0
  */
 @FunctionalInterface
-public interface ObjLongBiFunction<T, R> extends Serializable {
+public interface ObjObjLongTriFunction<T, U, R> extends Serializable {
 
     /**
-     * Exception-declaring version of {@link ObjLongBiFunction#apply}.
+     * Exception-declaring version of {@link ObjObjLongTriFunction#apply}.
      */
-    R applyEx(T t, long u) throws Exception;
+    R applyEx(T t, U u, long v) throws Exception;
 
     /**
      * Applies this function to the given arguments.
      *
      * @param t the first function argument
      * @param u the second function argument
+     * @param v the third function argument
      * @return the function result
      */
-    default R apply(T t, long u) {
+    default R apply(T t, U u, long v) {
         try {
-            return applyEx(t, u);
+            return applyEx(t, u, v);
         } catch (Exception e) {
             throw ExceptionUtil.sneakyThrow(e);
         }

@@ -173,6 +173,12 @@ public interface StreamStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
+    StreamStage<T> repartitionGlobal();
+
+    @Nonnull @Override
+    StreamStage<T> repartitionLocal();
+
+    @Nonnull @Override
     <K, T1_IN, T1, R> StreamStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,

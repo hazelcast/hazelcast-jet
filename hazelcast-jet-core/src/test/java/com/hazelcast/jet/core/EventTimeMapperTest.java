@@ -40,7 +40,7 @@ public class EventTimeMapperTest {
     @Test
     public void smokeTest() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 5)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 5), 0
         );
         eventTimeMapper.addPartitions(0L, 2);
 
@@ -60,7 +60,7 @@ public class EventTimeMapperTest {
     @Test
     public void smokeTest_disabledIdleTimeout() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 0)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 0), 0
         );
         eventTimeMapper.addPartitions(2);
 
@@ -81,7 +81,7 @@ public class EventTimeMapperTest {
     @Test
     public void test_zeroPartitions() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 0)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 0), 0
         );
 
         // it should immediately emit the idle message, even though the idle timeout is -1
@@ -97,7 +97,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_idle_event_idle_then_twoIdleMessagesSent() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10), 0
         );
         eventTimeMapper.addPartitions(1);
         assertTraverser(eventTimeMapper.flatMapEvent(ns(0), 10L, 0, NO_NATIVE_TIME), wm(10 - LAG), 10L);
@@ -114,7 +114,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_eventInOneOfTwoPartitions_then_wmAndIdleMessageForwardedAfterTimeout() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 1, 0, 10), 0
         );
         eventTimeMapper.addPartitions(ns(0), 2);
 
@@ -130,7 +130,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_noTimestampFnAndNoNativeTime_then_throw() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(null, limitingLag(LAG), 1, 0, 10)
+                eventTimePolicy(null, limitingLag(LAG), 1, 0, 10), 0
         );
         eventTimeMapper.addPartitions(ns(0), 1);
 
@@ -141,7 +141,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_noTimestampFn_then_useNativeTime() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(null, limitingLag(LAG), 1, 0, 5)
+                eventTimePolicy(null, limitingLag(LAG), 1, 0, 5), 0
         );
         eventTimeMapper.addPartitions(0L, 1);
 
@@ -152,7 +152,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_throttlingToMaxFrame_then_noWatermarksOutput() {
         EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(
-                eventTimePolicy(Long::longValue, limitingLag(LAG), 0, 0, 5)
+                eventTimePolicy(Long::longValue, limitingLag(LAG), 0, 0, 5), 0
         );
         eventTimeMapper.addPartitions(0L, 1);
 
@@ -163,7 +163,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_restoredState_then_wmDoesNotGoBack() {
         EventTimePolicy<Long> eventTimePolicy = eventTimePolicy(Long::longValue, limitingLag(0), 1, 0, 5);
-        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, 0);
         eventTimeMapper.addPartitions(0L, 1);
 
         // When
@@ -178,7 +178,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_twoActiveQueues_theLaggingOneRemoved_then_wmForwarded() {
         EventTimePolicy<Long> eventTimePolicy = eventTimePolicy(Long::longValue, limitingLag(0), 1, 0, 5);
-        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, 0);
         eventTimeMapper.addPartitions(0L, 2);
 
         // When
@@ -191,7 +191,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_twoActiveQueues_theAheadOneRemoved_then_noWmForwarded() {
         EventTimePolicy<Long> eventTimePolicy = eventTimePolicy(Long::longValue, limitingLag(0), 1, 0, 5);
-        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, 0);
         eventTimeMapper.addPartitions(0L, 2);
 
         // When
@@ -205,7 +205,7 @@ public class EventTimeMapperTest {
     @Test
     public void when_threePartitions_laggingOneRemoved_secondLaggingOneIdle_then_noWmForwarded() {
         EventTimePolicy<Long> eventTimePolicy = eventTimePolicy(Long::longValue, limitingLag(0), 1, 0, 5);
-        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        EventTimeMapper<Long> eventTimeMapper = new EventTimeMapper<>(eventTimePolicy, 0);
         eventTimeMapper.addPartitions(0L, 3);
 
         // When

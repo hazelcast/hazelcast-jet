@@ -22,6 +22,7 @@ import com.hazelcast.jet.pipeline.BatchSource;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.outputAdaptingMetaSupplier;
 import static java.util.Collections.emptyList;
 
 public class BatchSourceTransform<T> extends AbstractTransform implements BatchSource<T> {
@@ -46,6 +47,6 @@ public class BatchSourceTransform<T> extends AbstractTransform implements BatchS
 
     @Override
     public void addToDag(Planner p) {
-        p.addVertex(this, name(), localParallelism(), metaSupplier);
+        p.addVertex(this, name(), localParallelism(), outputAdaptingMetaSupplier(metaSupplier));
     }
 }

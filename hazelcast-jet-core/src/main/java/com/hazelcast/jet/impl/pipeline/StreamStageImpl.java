@@ -45,10 +45,9 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     public StreamStageImpl(
             @Nonnull Transform transform,
-            @Nonnull FunctionAdapter fnAdapter,
             @Nonnull PipelineImpl pipeline
     ) {
-        super(transform, fnAdapter, pipeline, true);
+        super(transform, pipeline, true);
     }
 
     @Nonnull @Override
@@ -159,6 +158,16 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
+    public StreamStage<T> repartitionGlobal() {
+        return attachRepartition(true);
+    }
+
+    @Nonnull @Override
+    public StreamStage<T> repartitionLocal() {
+        return attachRepartition(false);
+    }
+
+    @Nonnull @Override
     public <K, T1_IN, T1, R> StreamStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -193,9 +202,9 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+    <RET> RET attach(@Nonnull AbstractTransform transform) {
         pipelineImpl.connect(transform.upstream(), transform);
-        return (RET) new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
+        return (RET) new StreamStageImpl<>(transform, pipelineImpl);
     }
 
     @Nonnull @Override

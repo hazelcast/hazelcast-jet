@@ -78,7 +78,7 @@ public final class TradeGenerator {
         return SourceProcessors.convenientTimestampedSourceP(
                 procCtx -> new TradeGenerator(numTickers, tradesPerSec),
                 TradeGenerator::generateTrades,
-                eventTimePolicy(Trade::getTime, (trade, x) -> trade, limitingLag(MAX_LAG),
+                eventTimePolicy(Trade::getTime, limitingLag(MAX_LAG),
                         watermarkStride, 0, DEFAULT_IDLE_TIMEOUT),
                 ctx -> null,
                 (ctx, states) -> { },

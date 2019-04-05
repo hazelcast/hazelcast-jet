@@ -54,9 +54,6 @@ import static com.hazelcast.jet.function.Functions.wholeItem;
  */
 public interface BatchStage<T> extends GeneralStage<T> {
 
-    /**
-     * {@inheritDoc}
-     */
     @Nonnull
     <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
@@ -185,6 +182,12 @@ public interface BatchStage<T> extends GeneralStage<T> {
      */
     @Nonnull
     BatchStage<T> merge(@Nonnull BatchStage<? extends T> other);
+
+    @Nonnull @Override
+    BatchStage<T> repartitionGlobal();
+
+    @Nonnull @Override
+    BatchStage<T> repartitionLocal();
 
     @Nonnull @Override
     <K, T1_IN, T1, R> BatchStage<R> hashJoin(

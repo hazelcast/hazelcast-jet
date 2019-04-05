@@ -18,7 +18,8 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.core.function.ObjLongBiFunction;
+import com.hazelcast.jet.core.function.ObjObjLongTriFunction;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.pipeline.Sources;
 
 import javax.annotation.Nonnull;
@@ -137,12 +138,15 @@ public class EventTimeMapper<T> {
 
     private static final WatermarkPolicy[] EMPTY_WATERMARK_POLICIES = {};
     private static final long[] EMPTY_LONGS = {};
+    private static final int INT_SIZE_IN_BITS = 32;
+    private static final int PROCESSOR_INDEX_BITS = 16;
 
     private final long idleTimeoutNanos;
     @Nullable
     private final ToLongFunction<? super T> timestampFn;
     private final Supplier<? extends WatermarkPolicy> newWmPolicyFn;
-    private final ObjLongBiFunction<? super T, ?> wrapFn;
+    private final ObjObjLongTriFunction<? super T, Object, ?> wrapFn;
+    private final int globalProcessorIndexHighBits;
     @Nullable
     private final SlidingWindowPolicy watermarkThrottlingFrame;
     private final AppendableTraverser<Object> traverser = new AppendableTraverser<>(2);
@@ -161,11 +165,15 @@ public class EventTimeMapper<T> {
      * @param eventTimePolicy event time policy as passed in {@link
      *                        Sources#streamFromProcessorWithWatermarks}
      */
-    public EventTimeMapper(EventTimePolicy<? super T> eventTimePolicy) {
+    public EventTimeMapper(EventTimePolicy<? super T> eventTimePolicy, int globalProcessorIndex) {
+        if (globalProcessorIndex >= 1 << PROCESSOR_INDEX_BITS) {
+            throw new IllegalArgumentException("globalProcessorIndex must be < " + (1 << PROCESSOR_INDEX_BITS));
+        }
         this.idleTimeoutNanos = MILLISECONDS.toNanos(eventTimePolicy.idleTimeoutMillis());
         this.timestampFn = eventTimePolicy.timestampFn();
-        this.wrapFn = eventTimePolicy.wrapFn();
+        this.wrapFn = (ObjObjLongTriFunction<? super T, Object, ?>) eventTimePolicy.wrapFn();
         this.newWmPolicyFn = eventTimePolicy.newWmPolicyFn();
+        this.globalProcessorIndexHighBits = globalProcessorIndex << PROCESSOR_INDEX_BITS;
         if (eventTimePolicy.watermarkThrottlingFrameSize() != 0) {
             this.watermarkThrottlingFrame = tumblingWinPolicy(eventTimePolicy.watermarkThrottlingFrameSize())
                     .withOffset(eventTimePolicy.watermarkThrottlingFrameOffset());
@@ -220,7 +228,15 @@ public class EventTimeMapper<T> {
             }
         }
         handleEventInternal(now, partitionIndex, eventTime);
-        return traverser.append(wrapFn.apply(event, eventTime));
+        Object key;
+        if (event instanceof JetEvent) {
+            // if the input is JetEvent, reuse its key - this is the case of addTimestamps
+            key = ((JetEvent) event).key();
+        } else {
+            // use a combination of source's partition index and global processor index as the key
+            key = globalProcessorIndexHighBits | partitionIndex;
+        }
+        return traverser.append(wrapFn.apply(event, key, eventTime));
     }
 
     private void handleEventInternal(long now, int partitionIndex, long eventTime) {
@@ -281,6 +297,9 @@ public class EventTimeMapper<T> {
     void addPartitions(long now, int addedCount) {
         int oldPartitionCount = wmPolicies.length;
         int newPartitionCount = oldPartitionCount + checkNotNegative(addedCount, "addedCount must be >= 0");
+        if (newPartitionCount >= 1 << (INT_SIZE_IN_BITS - PROCESSOR_INDEX_BITS)) {
+            throw new IllegalArgumentException("too many partitions: " + newPartitionCount);
+        }
 
         wmPolicies = Arrays.copyOf(wmPolicies, newPartitionCount);
         watermarks = Arrays.copyOf(watermarks, newPartitionCount);

@@ -38,8 +38,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.stream.Collectors.toList;
 
@@ -67,7 +65,6 @@ public class GrAggBuilder<K> {
 
     public GrAggBuilder(StageWithKeyAndWindow<?, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
-        ensureJetEvents(computeStage, "This pipeline stage");
         pipelineImpl = (PipelineImpl) computeStage.getPipeline();
         wDef = stage.windowDefinition();
         upstreamStages.add(computeStage);
@@ -77,7 +74,6 @@ public class GrAggBuilder<K> {
     @SuppressWarnings("unchecked")
     public <T> Tag<T> add(StreamStageWithKey<T, K> stage) {
         ComputeStageImplBase computeStage = ((StageWithGroupingBase) stage).computeStage;
-        ensureJetEvents(computeStage, "This pipeline stage");
         upstreamStages.add(computeStage);
         keyFns.add(stage.keyFn());
         return (Tag<T>) tag(upstreamStages.size() - 1);
@@ -104,17 +100,16 @@ public class GrAggBuilder<K> {
     @SuppressWarnings("unchecked")
     public <A, R> StreamStage<KeyedWindowResult<K, R>> buildStream(@Nonnull AggregateOperation<A, ? extends R> aggrOp) {
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
 
         // Avoided Stream API here due to static typing issues
         List<FunctionEx<?, ? extends K>> adaptedKeyFns = new ArrayList<>();
         for (FunctionEx keyFn : keyFns) {
-            adaptedKeyFns.add(fnAdapter.adaptKeyFn(keyFn));
+            adaptedKeyFns.add(JetEventFunctionAdapter.INSTANCE.adaptKeyFn(keyFn));
         }
 
         Transform transform = new WindowGroupTransform<K, R>(
-                upstreamTransforms, wDef, adaptedKeyFns, fnAdapter.adaptAggregateOperation(aggrOp));
+                upstreamTransforms, wDef, adaptedKeyFns, JetEventFunctionAdapter.INSTANCE.adaptAggregateOperation(aggrOp));
         pipelineImpl.connect(upstreamTransforms, transform);
-        return new StreamStageImpl<>(transform, fnAdapter, pipelineImpl);
+        return new StreamStageImpl<>(transform, pipelineImpl);
     }
 }

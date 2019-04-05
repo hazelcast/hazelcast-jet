@@ -40,9 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.util.Util.addOrIncrementIndexInName;
 import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
 import static java.util.stream.Collectors.toList;
@@ -83,12 +81,8 @@ public class PipelineImpl implements Pipeline {
                 .map(s -> (AbstractStage) s)
                 .map(s -> s.transform)
                 .collect(toList());
-        int[] ordinalsToAdapt = IntStream
-                .range(0, stages.length)
-                .filter(i -> ((ComputeStageImplBase) stages[i]).fnAdapter == ADAPT_TO_JET_EVENT)
-                .toArray();
         SinkImpl sinkImpl = (SinkImpl) sink;
-        SinkTransform sinkTransform = new SinkTransform(sinkImpl, upstream, ordinalsToAdapt);
+        SinkTransform sinkTransform = new SinkTransform(sinkImpl, upstream);
         SinkStageImpl sinkStage = new SinkStageImpl(sinkTransform, this);
         sinkImpl.onAssignToStage();
         connect(upstream, sinkTransform);

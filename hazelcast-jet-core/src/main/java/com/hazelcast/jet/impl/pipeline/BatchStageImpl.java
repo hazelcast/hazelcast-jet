@@ -46,16 +46,12 @@ import static java.util.Collections.singletonList;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
-    BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
-        super(transform, DO_NOT_ADAPT, pipeline, true);
-    }
-
     /**
      * This constructor exists just to match the shape of the functional interface
      * {@code GeneralHashJoinBuilder.CreateOutStageFn}
      */
-    public BatchStageImpl(@Nonnull Transform transform, FunctionAdapter ignored, @Nonnull PipelineImpl pipeline) {
-        this(transform, pipeline);
+    public BatchStageImpl(@Nonnull Transform transform, @Nonnull PipelineImpl pipeline) {
+        super(transform, pipeline, true);
     }
 
     @Nonnull @Override
@@ -161,6 +157,16 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
+    public BatchStage<T> repartitionGlobal() {
+        return attachRepartition(true);
+    }
+
+    @Nonnull @Override
+    public BatchStage<T> repartitionLocal() {
+        return attachRepartition(false);
+    }
+
+    @Nonnull @Override
     public <K, T1_IN, T1, R> BatchStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -183,7 +189,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull @Override
     @SuppressWarnings("unchecked")
     public <R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapter);
+        return attach(new AggregateTransform<>(singletonList(transform), aggrOp));
     }
 
     @Nonnull @Override
@@ -191,7 +197,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp), DO_NOT_ADAPT);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp));
     }
 
     @Nonnull @Override
@@ -201,8 +207,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
     ) {
         return attach(new AggregateTransform<>(
-                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
-                DO_NOT_ADAPT);
+                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp)
+        );
     }
 
     @Nonnull @Override
@@ -223,7 +229,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+    <RET> RET attach(@Nonnull AbstractTransform transform) {
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }
