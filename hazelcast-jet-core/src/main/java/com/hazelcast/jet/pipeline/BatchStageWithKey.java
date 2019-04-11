@@ -419,8 +419,8 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @see BatchStage#apply(FunctionEx)
      */
     @Nonnull
-    default <R, RK> BatchStageWithKey<R, RK> apply(
-            @Nonnull FunctionEx<BatchStageWithKey<T, K>, BatchStageWithKey<R, RK>> transformationFunction
+    default <R> BatchStage<R> apply(
+            @Nonnull FunctionEx<BatchStageWithKey<T, K>, BatchStage<R>> transformationFunction
     ) {
         return transformationFunction.apply(this);
     }

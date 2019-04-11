@@ -113,8 +113,8 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @see BatchStage#apply(FunctionEx)
      */
     @Nonnull
-    default <R, RK> StreamStageWithKey<R, RK> apply(
-            @Nonnull FunctionEx<StreamStageWithKey<T, K>, StreamStageWithKey<R, RK>> transformationFunction
+    default <R> StreamStage<R> apply(
+            @Nonnull FunctionEx<StreamStageWithKey<T, K>, StreamStage<R>> transformationFunction
     ) {
         return transformationFunction.apply(this);
     }

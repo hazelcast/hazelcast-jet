@@ -325,6 +325,25 @@ public class BatchAggregateTest extends PipelineTestSupport {
                 streamToString(sinkStreamOfEntry(), FORMAT_FN));
     }
 
+    @Test
+    public void groupAggregateWithAppliedExtensionFunction() {
+        // Given
+        FunctionEx<Integer, Integer> keyFn = i -> i % 5;
+
+        // When
+        BatchStage<Entry<Integer, Long>> aggregated = sourceStageFromInput()
+                .groupingKey(keyFn)
+                .apply(s -> s.aggregate(SUMMING));
+
+        // Then
+        aggregated.drainTo(sink);
+        execute();
+        Map<Integer, Long> expected = input.stream().collect(groupingBy(keyFn, summingLong(i -> i)));
+        assertEquals(
+                streamToString(expected.entrySet().stream(), FORMAT_FN),
+                streamToString(sinkStreamOfEntry(), FORMAT_FN));
+    }
+
     private class GroupAggregateFixture {
         final FunctionEx<Integer, Integer> keyFn;
         final FunctionEx<Integer, Integer> mapFn1;
