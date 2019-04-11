@@ -119,8 +119,9 @@ public class BatchStageTest extends PipelineTestSupport {
                 .map(formatFn)
                 .map(String::toUpperCase);
     }
+
     @Test
-    public void pipe() {
+    public void apply() {
         // Given
         List<Integer> input = sequence(itemCount);
 
