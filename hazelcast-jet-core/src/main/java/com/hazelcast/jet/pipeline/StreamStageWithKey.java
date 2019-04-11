@@ -110,10 +110,10 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
 
     /**
      * Applies provided {@param transformationFunction} to this stage and return enriched stage.
-     * @see BatchStage#pipe(FunctionEx)
+     * @see BatchStage#apply(FunctionEx)
      */
     @Nonnull
-    default <R, RK> StreamStageWithKey<R, RK> pipe(
+    default <R, RK> StreamStageWithKey<R, RK> apply(
             @Nonnull FunctionEx<StreamStageWithKey<T, K>, StreamStageWithKey<R, RK>> transformationFunction
     ) {
         return transformationFunction.apply(this);

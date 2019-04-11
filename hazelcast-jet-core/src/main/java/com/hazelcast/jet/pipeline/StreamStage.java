@@ -188,10 +188,10 @@ public interface StreamStage<T> extends GeneralStage<T> {
 
     /**
      * Applies provided {@param transformationFunction} to this stage and return enriched stage.
-     * @see BatchStage#pipe(FunctionEx)
+     * @see BatchStage#apply(FunctionEx)
      */
     @Nonnull
-    default <R> StreamStage<R> pipe(@Nonnull FunctionEx<StreamStage<T>, StreamStage<R>> transformationFunction) {
+    default <R> StreamStage<R> apply(@Nonnull FunctionEx<StreamStage<T>, StreamStage<R>> transformationFunction) {
         return transformationFunction.apply(this);
     }
 

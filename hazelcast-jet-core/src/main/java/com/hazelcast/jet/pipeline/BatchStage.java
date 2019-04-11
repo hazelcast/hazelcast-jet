@@ -492,7 +492,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * }</pre>
      */
     @Nonnull
-    default <R> BatchStage<R> pipe(@Nonnull FunctionEx<BatchStage<T>, BatchStage<R>> transformationFunction) {
+    default <R> BatchStage<R> apply(@Nonnull FunctionEx<BatchStage<T>, BatchStage<R>> transformationFunction) {
         return transformationFunction.apply(this);
     }
 

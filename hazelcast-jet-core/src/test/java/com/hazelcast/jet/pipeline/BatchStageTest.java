@@ -103,7 +103,6 @@ public class BatchStageTest extends PipelineTestSupport {
     public void map() {
         // Given
         List<Integer> input = sequence(itemCount);
-        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
 
         // When
         BatchStage<String> mapped = batchStageFromList(input).map(formatFn);
@@ -126,7 +125,7 @@ public class BatchStageTest extends PipelineTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        BatchStage<String> mapped = batchStageFromList(input).pipe(BatchStageTest::manipulationFunction);
+        BatchStage<String> mapped = batchStageFromList(input).apply(BatchStageTest::manipulationFunction);
 
         // Then
         mapped.drainTo(sink);

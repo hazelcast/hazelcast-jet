@@ -416,10 +416,10 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
 
     /**
      * Applies provided {@param transformationFunction} to this stage and return enriched stage.
-     * @see BatchStage#pipe(FunctionEx)
+     * @see BatchStage#apply(FunctionEx)
      */
     @Nonnull
-    default <R, RK> BatchStageWithKey<R, RK> pipe(
+    default <R, RK> BatchStageWithKey<R, RK> apply(
             @Nonnull FunctionEx<BatchStageWithKey<T, K>, BatchStageWithKey<R, RK>> transformationFunction
     ) {
         return transformationFunction.apply(this);
