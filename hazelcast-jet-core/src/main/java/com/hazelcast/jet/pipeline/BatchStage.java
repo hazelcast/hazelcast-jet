@@ -455,7 +455,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     /**
-     * Allows to extract common pipeline transformations to separate functions and then chain usage of those functions.
+     * Applies provided {@param transformationFunction} to this stage and return enriched stage.
+     *
+     * This allows to extract common pipeline transformations to separate functions
+     * and then chain usage of those functions.
      *
      * Instead of writing:
      * <pre>{@code
@@ -476,7 +479,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
      *       .drainTo(sink());
      * }</pre>
      *
-     * where {@code addSomeFieldsCalculationToStage} may be used commonly in application to add chain of steps to Pipeline, for example:
+     * where {@code addSomeFieldsCalculationToStage} may be used commonly in application
+     * to add chain of steps to Pipeline, for example:
      * <pre>{@code
      *     BatchStage<String> addSomeFieldsCalculationToStage(BatchStage<String> inputStage) {
      *          return inputStage

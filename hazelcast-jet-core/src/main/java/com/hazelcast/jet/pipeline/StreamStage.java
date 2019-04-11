@@ -186,6 +186,10 @@ public interface StreamStage<T> extends GeneralStage<T> {
         return (StreamStage<T>) GeneralStage.super.peek(toStringFn);
     }
 
+    /**
+     * Applies provided {@param transformationFunction} to this stage and return enriched stage.
+     * @see BatchStage#pipe(FunctionEx)
+     */
     @Nonnull
     default <R> StreamStage<R> pipe(@Nonnull FunctionEx<StreamStage<T>, StreamStage<R>> transformationFunction) {
         return transformationFunction.apply(this);

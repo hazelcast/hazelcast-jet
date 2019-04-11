@@ -55,6 +55,8 @@ import static org.junit.Assert.assertTrue;
 
 public class BatchStageTest extends PipelineTestSupport {
 
+    private static final FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
+
     @Test(expected = IllegalArgumentException.class)
     public void when_emptyPipelineToDag_then_exceptionInIterator() {
         Pipeline.create().toDag().iterator();
@@ -113,9 +115,7 @@ public class BatchStageTest extends PipelineTestSupport {
                 streamToString(sinkStreamOf(String.class), identity()));
     }
 
-    private static final FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
-    private  static BatchStage<String> ops(BatchStage<Integer> input) {
-        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
+    private static BatchStage<String> manipulationFunction(BatchStage<Integer> input) {
         return input
                 .map(formatFn)
                 .map(String::toUpperCase);
@@ -126,7 +126,7 @@ public class BatchStageTest extends PipelineTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        BatchStage<String> mapped = batchStageFromList(input).pipe(BatchStageTest::ops);
+        BatchStage<String> mapped = batchStageFromList(input).pipe(BatchStageTest::manipulationFunction);
 
         // Then
         mapped.drainTo(sink);

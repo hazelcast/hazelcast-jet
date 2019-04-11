@@ -22,7 +22,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.*;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.function.TriPredicate;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -104,8 +108,14 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     );
 
+    /**
+     * Applies provided {@param transformationFunction} to this stage and return enriched stage.
+     * @see BatchStage#pipe(FunctionEx)
+     */
     @Nonnull
-    default <R, RK> StreamStageWithKey<R, RK> pipe(@Nonnull FunctionEx<StreamStageWithKey<T, K>, StreamStageWithKey<R, RK>> transformationFunction) {
+    default <R, RK> StreamStageWithKey<R, RK> pipe(
+            @Nonnull FunctionEx<StreamStageWithKey<T, K>, StreamStageWithKey<R, RK>> transformationFunction
+    ) {
         return transformationFunction.apply(this);
     }
 
