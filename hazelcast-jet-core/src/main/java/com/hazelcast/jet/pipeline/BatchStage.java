@@ -474,8 +474,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
      *     Pipeline p = Pipeline.create();
      *
      *     p.drawFrom(source())
-     *       .pipe(this::addSomeFieldsCalculationToStage)
-     *       .pipe(this::addFiltersToStage)
+     *       .apply(this::addSomeFieldsCalculationToStage)
+     *       .apply(this::addFiltersToStage)
      *       .drainTo(sink());
      * }</pre>
      *
