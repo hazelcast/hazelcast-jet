@@ -29,6 +29,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BinaryOperatorEx;
+import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToDoubleFunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
@@ -378,6 +379,8 @@ public final class AggregateOperations {
      * <p>
      * If the {@code mapFn} returns {@code null}, the item won't be aggregated
      * at all. This allows applying a filter at the same time.
+     * <p>
+     * See also {@link #filtering filtering()}.
      *
      * @param <T> input item type
      * @param <U> input type of the downstream aggregate operation
@@ -399,6 +402,37 @@ public final class AggregateOperations {
                     U mapped = mapFn.apply(t);
                     if (mapped != null) {
                         downstreamAccumulateFn.accept(a, mapped);
+                    }
+                })
+                .andCombine(downstream.combineFn())
+                .andDeduct(downstream.deductFn())
+                .<R>andExport(downstream.exportFn())
+                .andFinish(downstream.finishFn());
+    }
+
+    /**
+     * Wraps an aggregate operation so that only items passing the {@code
+     * filterFn} will be accumulated; others will be ignored.
+     * <p>
+     * See also {@link #mapping mapping()}.
+     *
+     * @param <T> input item type
+     * @param <A> downstream operation's accumulator type
+     * @param <R> downstream operation's result type
+     * @param filterFn the function to apply to input items
+     * @param downstream the downstream aggregate operation
+     */
+    public static <T, A, R> AggregateOperation1<T, A, R> filtering(
+            @Nonnull PredicateEx<? super T> filterFn,
+            @Nonnull AggregateOperation1<? super T, A, ? extends R> downstream
+    ) {
+        checkSerializable(filterFn, "filterFn");
+        BiConsumerEx<? super A, ? super T> downstreamAccumulateFn = downstream.accumulateFn();
+        return AggregateOperation
+                .withCreate(downstream.createFn())
+                .andAccumulate((A a, T t) -> {
+                    if (filterFn.test(t)) {
+                        downstreamAccumulateFn.accept(a, t);
                     }
                 })
                 .andCombine(downstream.combineFn())

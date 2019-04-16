@@ -53,6 +53,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.averagingLong;
 import static com.hazelcast.jet.aggregate.AggregateOperations.bottomN;
 import static com.hazelcast.jet.aggregate.AggregateOperations.concatenating;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.aggregate.AggregateOperations.filtering;
 import static com.hazelcast.jet.aggregate.AggregateOperations.groupingBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
@@ -405,6 +406,19 @@ public class AggregateOperationsTest {
                 identity(),
                 entry("a", null),
                 entry("b", 2L),
+                new LongAccumulator(0),
+                new LongAccumulator(2),
+                2L
+        );
+    }
+
+    @Test
+    public void when_filtering() {
+        validateOp(
+                filtering(i -> i > 1L, summingLong(i -> i)),
+                identity(),
+                1L,
+                2L,
                 new LongAccumulator(0),
                 new LongAccumulator(2),
                 2L
