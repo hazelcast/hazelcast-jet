@@ -101,7 +101,7 @@ public class JetClassLoader extends ClassLoader {
 
     private void checkShutdown(String resource) {
         if (isShutdown) {
-            throw new RuntimeException("Classloader for job " + idToString(jobId) + " tried to load '" + resource
+            throw new IllegalStateException("Classloader for job " + idToString(jobId) + " tried to load '" + resource
                     + "' after the job was completed. The classloader used for jobs is disposed after job is completed");
         }
     }
