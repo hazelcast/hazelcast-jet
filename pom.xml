@@ -26,7 +26,7 @@
 
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet-root</artifactId>
-    <version>3.0-SNAPSHOT</version>
+    <version>3.1-SNAPSHOT</version>
 
     <modules>
         <module>hazelcast-jet-all</module>
@@ -78,7 +78,7 @@
         <target.dir>target</target.dir>
         <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
-        <hazelcast.version>3.12-SNAPSHOT</hazelcast.version>
+        <hazelcast.version>3.12</hazelcast.version>
         <hazelcast.protocol.version>1.8.0-5</hazelcast.protocol.version>
 
         <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
@@ -116,15 +116,16 @@
         <!-- test dependencies -->
         <junit.version>4.12</junit.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <mockito.version>1.10.19</mockito.version>
-        <powermock.version>1.6.3</powermock.version>
-        <bytebuddy.version>1.6.12</bytebuddy.version>
+        <mockito.version>2.22.0</mockito.version>
+        <powermock.version>2.0.0</powermock.version>
 
         <sonar.jacoco.jar>${basedir}/lib/jacocoagent.jar</sonar.jacoco.jar>
         <!--<sonar.phase>post-integration-test</sonar.phase>-->
         <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
         <sonar.language>java</sonar.language>
         <sonar.verbose>true</sonar.verbose>
+
+        <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     </properties>
 
     <licenses>
@@ -208,7 +209,7 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
+            <artifactId>mockito-core</artifactId>
             <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
@@ -225,21 +226,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito</artifactId>
-            <version>${powermock.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
-            <version>${bytebuddy.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency> <!-- required for mockito -->
@@ -349,10 +338,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <runOrder>failedfirst</runOrder>
                     <forkCount>4</forkCount>
-                    <failIfNoTests>false</failIfNoTests>
                     <trimStackTrace>false</trimStackTrace>
                     <argLine>
                         ${argLine}
@@ -417,7 +404,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.10.1</version>
+                        <version>8.18</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -472,8 +459,12 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <forkCount>1</forkCount>
-                            <excludedGroups></excludedGroups>
+                            <forkCount combine.self="override">1</forkCount>
+                            <groups combine.self="override">
+                                com.hazelcast.test.annotation.NightlyTest,
+                                com.hazelcast.test.annotation.SlowTest
+                            </groups>
+                            <excludedGroups combine.self="override" />
                         </configuration>
                     </plugin>
                 </plugins>
@@ -499,11 +490,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <testFailureIgnore>true</testFailureIgnore>
-                            <argLine>@{argLine}</argLine>
-                            <excludedGroups>
-                                com.hazelcast.test.annotation.SlowTest,
-                                com.hazelcast.test.annotation.NightlyTest,
+                            <excludedGroups combine.self="override">
                                 com.hazelcast.jet.test.IgnoredForCoverage
                             </excludedGroups>
                         </configuration>
