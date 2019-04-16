@@ -17,6 +17,7 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -91,8 +92,9 @@ public class JetConfig {
      * {@code hazelcast.config} system property.
      */
     @Nonnull
+    @Deprecated
     public static JetConfig loadDefault() {
-        return XmlJetConfigBuilder.loadConfig(null, null);
+        return ConfigProvider.locateAndGetJetConfig();
     }
 
     /**
@@ -100,17 +102,18 @@ public class JetConfig {
      * to locate the configuration file. Loads the nested {@linkplain
      * #getHazelcastConfig() Hazelcast config} also by using the lookup
      * mechanism. Uses the given {@code properties} to resolve the variables in
-     * the XML.
+     * the XML or Yaml.
      */
     @Nonnull
+    @Deprecated
     public static JetConfig loadDefault(@Nonnull Properties properties) {
-        return XmlJetConfigBuilder.loadConfig(null, properties);
+        return ConfigProvider.locateAndGetJetConfig(properties);
     }
 
     /**
      * Uses the thread's context class loader to load JetConfig from the
      * classpath resource named by the argument. Uses {@code
-     * System.getProperties()} to resolve the variables in the XML.
+     * System.getProperties()} to resolve the variables in the XML or Yaml.
      * <p>
      * This method loads the nested {@linkplain #getHazelcastConfig() Hazelcast
      * config} using the built-in {@link #loadDefault lookup mechanism}, but
@@ -119,12 +122,15 @@ public class JetConfig {
      * com.hazelcast.config.ClasspathXmlConfig ClasspathXmlConfig} or {@link
      * com.hazelcast.config.FileSystemXmlConfig FileSystemXmlConfig}.
      *
-     * @param resource names the classpath resource containing the XML configuration file
+     * @param resource names the classpath resource containing the XML or Yaml configuration file
      *
-     * @throws com.hazelcast.core.HazelcastException if the XML content is invalid
+     * @throws com.hazelcast.core.HazelcastException if the XML or Yaml content is invalid
      * @throws IllegalArgumentException if classpath resource is not found
+     *
+     * @deprecated see {@link ClasspathXmlJetConfig}
      */
     @Nonnull
+    @Deprecated
     public static JetConfig loadFromClasspath(@Nonnull String resource) {
         return loadFromClasspath(resource, System.getProperties());
     }
@@ -146,8 +152,11 @@ public class JetConfig {
      *
      * @throws com.hazelcast.core.HazelcastException if the XML content is invalid
      * @throws IllegalArgumentException if classpath resource is not found
+     *
+     * @deprecated see {@link ClasspathXmlJetConfig}
      */
     @Nonnull
+    @Deprecated
     public static JetConfig loadFromClasspath(@Nonnull String resource, @Nonnull Properties properties) {
         LOGGER.info("Configuring Hazelcast Jet from '" + resource + "' on classpath");
         InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resource);
@@ -171,8 +180,11 @@ public class JetConfig {
      * @param configStream the InputStream to load the config from
      *
      * @throws com.hazelcast.core.HazelcastException if the XML content is invalid
+     *
+     * @deprecated see {@link ClasspathXmlJetConfig}
      */
     @Nonnull
+    @Deprecated
     public static JetConfig loadFromStream(@Nonnull InputStream configStream) {
         return loadFromStream(configStream, System.getProperties());
     }
@@ -192,8 +204,11 @@ public class JetConfig {
      * @param properties the properties to resolve variables in the XML
      *
      * @throws com.hazelcast.core.HazelcastException if the XML content is invalid
+     *
+     * @deprecated see {@link ClasspathXmlJetConfig}
      */
     @Nonnull
+    @Deprecated
     public static JetConfig loadFromStream(@Nonnull InputStream configStream, @Nonnull Properties properties) {
         return XmlJetConfigBuilder.loadConfig(configStream, properties);
     }
