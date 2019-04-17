@@ -42,7 +42,8 @@ import static org.junit.Assert.assertTrue;
  *
  * @see XmlJetConfigWithSystemPropertyTest
  * @see YamlJetConfigWithSystemPropertyTest
- * @see YamlClientConfigWithSystemPropertyTest
+ * @see XmlJetClientConfigWithSystemPropertyTest
+ * @see YamlJetClientConfigWithSystemPropertyTest
  */
 @RunWith(HazelcastSerialClassRunner.class)
 public abstract class AbstractJetConfigWithSystemPropertyTest {

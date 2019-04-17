@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(HazelcastSerialClassRunner.class)
 public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigWithSystemPropertyTest {
 
-    private static final String JET_CLIENT_XML = "hazelcast-client.xml";
+    private static final String JET_CLIENT_XML = "hazelcast-client-test.xml";
     private static final String JET_CLIENT_WITH_VARIABLES_XML = "hazelcast-jet-client-with-variables.xml";
 
     @Test
@@ -102,6 +102,9 @@ public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigW
     @Override
     @Test
     public void when_classpathSpecified_usesSpecifiedResource() {
+        // Given
+        System.setProperty(HAZELCAST_CLIENT_CONFIG_PROPERTY, "classpath:" + JET_CLIENT_XML);
+
         //When
         XmlJetClientConfigLocator locator = new XmlJetClientConfigLocator();
         locator.locateEverywhere();
