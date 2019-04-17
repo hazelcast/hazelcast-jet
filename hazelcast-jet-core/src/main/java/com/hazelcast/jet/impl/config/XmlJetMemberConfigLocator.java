@@ -41,7 +41,8 @@ public final class XmlJetMemberConfigLocator extends AbstractConfigLocator {
 
     @Override
     protected boolean locateOnClasspath() {
-        return loadConfigurationFromClasspath(HAZELCAST_MEMBER_XML) || loadConfigurationFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_XML);
+        return loadConfigurationFromClasspath(HAZELCAST_MEMBER_XML)
+                || loadConfigurationFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_XML);
     }
 
     @Override

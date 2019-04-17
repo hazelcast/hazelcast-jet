@@ -26,7 +26,6 @@ import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.internal.yaml.YamlNode;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JetConfigBuilder;
-import com.hazelcast.jet.config.JetConfigSections;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import org.w3c.dom.Node;
 
@@ -88,7 +87,8 @@ public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder implements J
 
         YamlNode jetRoot = yamlRootNode.childAsMapping(JetConfigSections.HAZELCAST_JET.name);
         if (jetRoot == null) {
-            throw new InvalidConfigurationException("No mapping with hazelcast-jet key is found in the provided configuration");
+            throw new InvalidConfigurationException("No mapping with hazelcast-jet key is" +
+                    " found in the provided configuration");
         }
 
         YamlDomChecker.check(jetRoot);

@@ -32,8 +32,8 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastParallelClassRunner.class)
 public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
 
-    public static final String HAZELCAST_JET_START_TAG = "<hazelcast-jet xmlns=\"http://www.hazelcast.com/schema/jet-config\">\n";
-    public static final String HAZELCAST_JET_END_TAG = "</hazelcast-jet>\n";
+    public static final String JET_START_TAG = "<hazelcast-jet xmlns=\"http://www.hazelcast.com/schema/jet-config\">\n";
+    public static final String JET_END_TAG = "</hazelcast-jet>\n";
 
     @Test(expected = IllegalArgumentException.class)
     public void testConfiguration_withNullInputStream() {
@@ -49,23 +49,23 @@ public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
 
     @Test(expected = InvalidConfigurationException.class)
     public void testHazelcastJetTagAppearsTwice() {
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <hazelcast-jet>\n"
                 + "    </hazelcast-jet>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         buildConfig(xml);
     }
 
     @Test
     public void readMetricsConfig() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "   <metrics enabled=\"false\" jmxEnabled=\"false\">\n" +
                 "        <collection-interval-seconds>123</collection-interval-seconds>\n" +
                 "        <retention-seconds>124</retention-seconds>\n" +
                 "        <metrics-for-data-structures>true</metrics-for-data-structures>\n" +
                 "    </metrics>\n\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         //When
         JetConfig jetConfig = buildConfig(xml);
@@ -82,7 +82,7 @@ public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
     @Test
     public void readInstanceConfig() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "    <instance>\n" +
                 "        <cooperative-thread-count>66</cooperative-thread-count>\n" +
                 "        <flow-control-period>51</flow-control-period>\n" +
@@ -90,7 +90,7 @@ public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
                 "        <scale-up-delay-millis>1234</scale-up-delay-millis>\n" +
                 "        <lossless-restart-enabled>true</lossless-restart-enabled>\n" +
                 "    </instance>\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         //When
         JetConfig jetConfig = buildConfig(xml);
@@ -106,13 +106,13 @@ public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
     @Test
     public void readEdgeDefaults() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "    <edge-defaults>\n" +
                 "       <queue-size>111</queue-size>\n" +
                 "       <packet-size-limit>222</packet-size-limit>\n" +
                 "       <receive-window-multiplier>333</receive-window-multiplier>\n" +
                 "    </edge-defaults>\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         //When
         JetConfig jetConfig = buildConfig(xml);
@@ -127,12 +127,12 @@ public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
     @Test
     public void readProperties() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "    <properties>\n" +
                 "       <property name=\"property1\">value1</property>\n" +
                 "       <property name=\"property2\">value2</property>\n" +
                 "    </properties>\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         //When
         JetConfig jetConfig = buildConfig(xml);

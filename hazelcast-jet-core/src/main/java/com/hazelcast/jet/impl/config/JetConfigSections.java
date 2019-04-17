@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.config;
+package com.hazelcast.jet.impl.config;
 
 /**
  * Configuration sections for Hazelcast Jet shared by XML and YAML based
  * configurations
  */
-public enum JetConfigSections {
+enum JetConfigSections {
     HAZELCAST_JET("hazelcast-jet", false),
     INSTANCE("instance", false),
     IMPORT("import", true),
@@ -28,8 +28,8 @@ public enum JetConfigSections {
     EDGE_DEFAULTS("edge-defaults", false),
     METRICS("metrics", false);
 
-    public final String name;
-    public final boolean multipleOccurrence;
+    final String name;
+    final boolean multipleOccurrence;
 
     JetConfigSections(String name, boolean multipleOccurrence) {
         this.name = name;
@@ -37,7 +37,7 @@ public enum JetConfigSections {
 
     }
 
-    public static boolean canOccurMultipleTimes(String name) {
+    static boolean canOccurMultipleTimes(String name) {
         for (JetConfigSections element : values()) {
             if (name.equals(element.name)) {
                 return element.multipleOccurrence;
@@ -46,7 +46,7 @@ public enum JetConfigSections {
         return false;
     }
 
-    public boolean isEqual(String name) {
+    boolean isEqual(String name) {
         return this.name.equals(name);
     }
 

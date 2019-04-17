@@ -32,12 +32,12 @@ import static com.hazelcast.config.DomConfigHelper.cleanNodeName;
 import static com.hazelcast.config.DomConfigHelper.getBooleanValue;
 import static com.hazelcast.config.DomConfigHelper.getIntegerValue;
 import static com.hazelcast.config.DomConfigHelper.getLongValue;
-import static com.hazelcast.jet.config.JetConfigSections.EDGE_DEFAULTS;
-import static com.hazelcast.jet.config.JetConfigSections.IMPORT;
-import static com.hazelcast.jet.config.JetConfigSections.INSTANCE;
-import static com.hazelcast.jet.config.JetConfigSections.METRICS;
-import static com.hazelcast.jet.config.JetConfigSections.PROPERTIES;
-import static com.hazelcast.jet.config.JetConfigSections.canOccurMultipleTimes;
+import static com.hazelcast.jet.impl.config.JetConfigSections.EDGE_DEFAULTS;
+import static com.hazelcast.jet.impl.config.JetConfigSections.IMPORT;
+import static com.hazelcast.jet.impl.config.JetConfigSections.INSTANCE;
+import static com.hazelcast.jet.impl.config.JetConfigSections.METRICS;
+import static com.hazelcast.jet.impl.config.JetConfigSections.PROPERTIES;
+import static com.hazelcast.jet.impl.config.JetConfigSections.canOccurMultipleTimes;
 
 public class JetDomConfigProcessor extends AbstractDomConfigProcessor {
 

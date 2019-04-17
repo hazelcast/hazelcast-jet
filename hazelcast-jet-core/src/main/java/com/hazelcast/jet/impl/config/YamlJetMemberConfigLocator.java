@@ -42,7 +42,8 @@ public final class YamlJetMemberConfigLocator extends AbstractConfigLocator {
 
     @Override
     protected boolean locateOnClasspath() {
-        return loadConfigurationFromClasspath(HAZELCAST_MEMBER_YAML) || loadConfigurationFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_YAML);
+        return loadConfigurationFromClasspath(HAZELCAST_MEMBER_YAML)
+                || loadConfigurationFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_YAML);
     }
 
     @Override

@@ -41,10 +41,10 @@ public class YamlJetDomConfigProcessor extends JetDomConfigProcessor {
     protected void parseMetrics(Node node, JetConfig config) {
         MetricsConfig metricsConfig = config.getMetricsConfig();
         for (Node metricsNode : childElements(node)) {
-            if (metricsNode.getNodeName().equals("enabled")){
+            if (metricsNode.getNodeName().equals("enabled")) {
                 metricsConfig.setEnabled(getBooleanValue(metricsNode.getNodeValue()));
             }
-            if (metricsNode.getNodeName().equals("jmx-enabled")){
+            if (metricsNode.getNodeName().equals("jmx-enabled")) {
                 metricsConfig.setJmxEnabled(getBooleanValue(metricsNode.getNodeValue()));
             }
         }

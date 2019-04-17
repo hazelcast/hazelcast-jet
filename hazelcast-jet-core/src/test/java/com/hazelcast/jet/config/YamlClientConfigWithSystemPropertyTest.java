@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class YamlClientConfigWithSystemPropertyTest extends AbstractJetConfigWithSystemPropertyTest {
-    
+
     private static final String JET_CLIENT_YAML = "hazelcast-client.yaml";
     private static final String JET_CLIENT_WITH_VARIABLES_YAML = "hazelcast-jet-client-with-variables.yaml";
 

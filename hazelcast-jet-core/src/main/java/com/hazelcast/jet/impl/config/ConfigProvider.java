@@ -31,7 +31,7 @@ import java.util.Properties;
  * @see XmlJetConfigLocator
  * @see YamlJetConfigLocator
  */
-public class ConfigProvider {
+public final class ConfigProvider {
 
     private ConfigProvider() {
     }

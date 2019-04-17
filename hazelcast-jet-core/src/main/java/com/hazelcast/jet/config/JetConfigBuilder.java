@@ -16,7 +16,18 @@
 
 package com.hazelcast.jet.config;
 
+/**
+ * Interface for all config builders.
+ *
+ * @see com.hazelcast.jet.impl.config.XmlJetConfigBuilder
+ * @see com.hazelcast.jet.impl.config.YamlJetConfigBuilder
+ */
 public interface JetConfigBuilder {
 
+    /**
+     * Builds JetConfig object.
+     *
+     * @return Built JetConfig object
+     */
     JetConfig build();
 }

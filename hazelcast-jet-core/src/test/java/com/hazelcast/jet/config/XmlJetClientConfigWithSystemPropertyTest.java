@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigWithSystemPropertyTest {
-    
+
     private static final String JET_CLIENT_XML = "hazelcast-client.xml";
     private static final String JET_CLIENT_WITH_VARIABLES_XML = "hazelcast-jet-client-with-variables.xml";
 
@@ -128,7 +128,6 @@ public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigW
         XmlClientConfigBuilder builder = new XmlClientConfigBuilder(locator.getIn());
         builder.setProperties(properties);
         ClientConfig config = builder.build();
-
 
         // Then
         assertEquals("group.name", "test", config.getGroupConfig().getName());

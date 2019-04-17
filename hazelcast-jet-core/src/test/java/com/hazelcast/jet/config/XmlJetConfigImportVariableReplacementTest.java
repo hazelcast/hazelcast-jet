@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.IdentityReplacer;
@@ -20,8 +36,8 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.Properties;
 
-import static com.hazelcast.jet.config.XmlJetConfigBuilderTest.HAZELCAST_JET_END_TAG;
-import static com.hazelcast.jet.config.XmlJetConfigBuilderTest.HAZELCAST_JET_START_TAG;
+import static com.hazelcast.jet.config.XmlJetConfigBuilderTest.JET_END_TAG;
+import static com.hazelcast.jet.config.XmlJetConfigBuilderTest.JET_START_TAG;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -33,32 +49,32 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
 
     @Test(expected = InvalidConfigurationException.class)
     public void testImportElementOnlyAppearsInTopLevel() {
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "   <properties>"
                 + "        <import resource=\"\"/>\n"
                 + "   </properties>"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         buildConfig(xml);
     }
 
     @Override
     @Test(expected = InvalidConfigurationException.class)
     public void testHazelcastJetElementOnlyAppearsOnce() {
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "   <hazelcast-jet>"
                 + "   </hazelcast-jet>"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         buildConfig(xml);
     }
 
     @Override
     public void readVariables() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "   <metrics enabled=\"${metrics.enabled}\" jmxEnabled=\"${jmx.enabled}\">\n" +
                 "        <collection-interval-seconds>${metrics.collection}</collection-interval-seconds>\n" +
                 "    </metrics>\n\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         Properties properties = new Properties();
         properties.setProperty("metrics.enabled", "false");
@@ -80,16 +96,16 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigXml = HAZELCAST_JET_START_TAG +
+        String metricsConfigXml = JET_START_TAG +
                 "   <metrics enabled=\"true\" jmxEnabled=\"false\">\n" +
                 "        <collection-interval-seconds>122</collection-interval-seconds>\n" +
                 "    </metrics>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, metricsConfigXml);
 
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"${config.location}\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         JetConfig jetConfig = buildConfig(xml, "config.location", file.getAbsolutePath());
 
@@ -106,16 +122,16 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigXml = HAZELCAST_JET_START_TAG +
+        String metricsConfigXml = JET_START_TAG +
                 "   <metrics enabled=\"true\" jmxEnabled=\"false\">\n" +
                 "        <collection-interval-seconds>${metrics.collection}</collection-interval-seconds>\n" +
                 "    </metrics>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, metricsConfigXml);
 
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"${config.location}\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         Properties properties = new Properties();
         properties.setProperty("config.location", file.getAbsolutePath());
@@ -137,12 +153,12 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         File config2 = createConfigFile("jet2", "xml");
         FileOutputStream os1 = new FileOutputStream(config1);
         FileOutputStream os2 = new FileOutputStream(config2);
-        String config1Xml = HAZELCAST_JET_START_TAG
+        String config1Xml = JET_START_TAG
                 + "    <import resource=\"file:///" + config2.getAbsolutePath() + "\"/>\n"
-                + HAZELCAST_JET_END_TAG;
-        String config2Xml = HAZELCAST_JET_START_TAG
+                + JET_END_TAG;
+        String config2Xml = JET_START_TAG
                 + "    <import resource=\"file:///" + config1.getAbsolutePath() + "\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os1, config1Xml);
         writeStringToStreamAndClose(os2, config2Xml);
         buildConfig(config1Xml);
@@ -151,9 +167,9 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     @Test(expected = InvalidConfigurationException.class)
     public void testThreeResourceCyclicImportThrowsException() throws Exception {
-        String template = HAZELCAST_JET_START_TAG
+        String template = JET_START_TAG
                 + "    <import resource=\"file:///%s\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         File config1 = createConfigFile("jet1", "xml");
         File config2 = createConfigFile("jet2", "xml");
         File config3 = createConfigFile("jet3", "xml");
@@ -171,9 +187,9 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     public void testImportEmptyResourceContent() throws Exception {
         File config1 = createConfigFile("jet1", "xml");
         FileOutputStream os1 = new FileOutputStream(config1);
-        String config1Xml = HAZELCAST_JET_START_TAG
+        String config1Xml = JET_START_TAG
                 + "    <import resource='file:///" + config1.getAbsolutePath() + "'/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os1, "");
         buildConfig(config1Xml);
     }
@@ -181,18 +197,18 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     @Test(expected = InvalidConfigurationException.class)
     public void testImportEmptyResourceThrowsException() {
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         buildConfig(xml);
     }
 
     @Override
     @Test(expected = InvalidConfigurationException.class)
     public void testImportNotExistingResourceThrowsException() {
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"notexisting.xml\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         buildConfig(xml);
     }
 
@@ -202,10 +218,10 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigXml = HAZELCAST_JET_START_TAG +
+        String metricsConfigXml = JET_START_TAG +
                 "   <metrics enabled=\"true\" jmxEnabled=\"false\">\n" +
                 "    </metrics>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, metricsConfigXml);
 
         String xml = "<non-hazelcast-jet>"
@@ -220,18 +236,18 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigXml = HAZELCAST_JET_START_TAG +
+        String metricsConfigXml = JET_START_TAG +
                 "   <metrics enabled=\"false\" jmxEnabled=\"false\">\n" +
                 "        <collection-interval-seconds>123</collection-interval-seconds>\n" +
                 "        <retention-seconds>124</retention-seconds>\n" +
                 "        <metrics-for-data-structures>true</metrics-for-data-structures>\n" +
                 "    </metrics>\n\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, metricsConfigXml);
 
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         JetConfig jetConfig = buildConfig(xml);
 
@@ -249,7 +265,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String instanceConfigXml = HAZELCAST_JET_START_TAG +
+        String instanceConfigXml = JET_START_TAG +
                 "    <instance>\n" +
                 "        <cooperative-thread-count>66</cooperative-thread-count>\n" +
                 "        <flow-control-period>51</flow-control-period>\n" +
@@ -257,15 +273,15 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 "        <scale-up-delay-millis>1234</scale-up-delay-millis>\n" +
                 "        <lossless-restart-enabled>true</lossless-restart-enabled>\n" +
                 "    </instance>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, instanceConfigXml);
 
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         JetConfig jetConfig = buildConfig(xml);
-        
+
         //Then
         InstanceConfig instanceConfig = jetConfig.getInstanceConfig();
         assertEquals("cooperativeThreadCount", 66, instanceConfig.getCooperativeThreadCount());
@@ -281,18 +297,18 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String edgeConfigXml = HAZELCAST_JET_START_TAG +
+        String edgeConfigXml = JET_START_TAG +
                 "    <edge-defaults>\n" +
                 "       <queue-size>111</queue-size>\n" +
                 "       <packet-size-limit>222</packet-size-limit>\n" +
                 "       <receive-window-multiplier>333</receive-window-multiplier>\n" +
                 "    </edge-defaults>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, edgeConfigXml);
 
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         JetConfig jetConfig = buildConfig(xml);
 
@@ -313,7 +329,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         } finally {
             IOUtil.closeResource(out);
         }
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <config-replacers>\n"
                 + "        <replacer class-name='" + EncryptionReplacer.class.getName() + "'>\n"
                 + "            <properties>\n"
@@ -332,7 +348,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "        <property name=\"test\">${java.version} $ID{dev}</property>\n"
                 + "        <property name=\"pw\">$ENC{7JX2r/8qVVw=:10000:Jk4IPtor5n/vCb+H8lYS6tPZOlCZMtZv}</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         Properties properties = buildConfig(xml, System.getProperties()).getProperties();
 
@@ -344,25 +360,25 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     @Test(expected = ConfigurationException.class)
     public void testMissingReplacement() throws Exception {
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <config-replacers>\n"
                 + "        <replacer class-name='" + EncryptionReplacer.class.getName() + "'/>\n"
                 + "    </config-replacers>\n"
                 + "    <properties>\n"
                 + "        <property name=\"pw\">$ENC{7JX2r/8qVVw=:10000:Jk4IPtor5n/vCb+H8lYS6tPZOlCZMtZv}</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         buildConfig(xml, System.getProperties());
     }
 
     @Override
     public void testBadVariableSyntaxIsIgnored() throws Exception {
         //Given
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <properties>\n"
                 + "        <property name=\"pw\">${noSuchPropertyAvailable]</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
 
         //When
         Properties properties = buildConfig(xml, System.getProperties()).getProperties();
@@ -374,7 +390,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     public void testReplacerProperties() throws Exception {
         //Given
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <config-replacers fail-if-value-missing='false'>\n"
                 + "        <replacer class-name='" + TestReplacer.class.getName() + "'>\n"
                 + "            <properties>\n"
@@ -388,7 +404,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    <properties>\n"
                 + "        <property name=\"pw\">$T{p1} $T{p2} $T{p3} $T{p4} $T{p5}</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         Properties properties = buildConfig(xml, System.getProperties()).getProperties();
 
@@ -400,11 +416,11 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     public void testNoConfigReplacersMissingProperties() throws Exception {
         //Given
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <properties>\n"
                 + "        <property name=\"pw\">${noSuchPropertyAvailable]</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
 
         //When
         Properties properties = buildConfig(xml, System.getProperties()).getProperties();
@@ -416,12 +432,12 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     public void testVariableReplacementAsSubstring() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <properties>\n"
                 + "        <property name=\"${env}-with-suffix\">local-with-suffix</property>\n"
                 + "        <property name=\"with-prefix-${env}\">with-prefix-local</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
 
         //When
         Properties properties = buildConfig(xml, "env", "local").getProperties();
@@ -436,17 +452,17 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String edgeConfigXml = HAZELCAST_JET_START_TAG
+        String edgeConfigXml = JET_START_TAG
                 + "    <properties>\n"
                 + "        <property name=\"${env}-with-suffix\">local-with-suffix</property>\n"
                 + "        <property name=\"with-prefix-${env}\">with-prefix-local</property>\n"
                 + "    </properties>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         writeStringToStreamAndClose(os, edgeConfigXml);
 
-        String xml = HAZELCAST_JET_START_TAG
+        String xml = JET_START_TAG
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
-                + HAZELCAST_JET_END_TAG;
+                + JET_END_TAG;
         //When
         Properties properties = buildConfig(xml, "env", "local").getProperties();
 
@@ -475,11 +491,11 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     public void testReplaceVariablesWithInMemoryConfig() {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "    <properties>\n" +
                 "       <property name=\"property\">${prop.value}</property>\n" +
                 "    </properties>\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         //When
         Properties properties = new Properties();
@@ -522,11 +538,11 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     @Override
     public void testReplaceVariablesUseSystemProperties() throws Exception {
         //Given
-        String xml = HAZELCAST_JET_START_TAG +
+        String xml = JET_START_TAG +
                 "    <properties>\n" +
                 "       <property name=\"property\">${prop.value}</property>\n" +
                 "    </properties>\n" +
-                HAZELCAST_JET_END_TAG;
+                JET_END_TAG;
 
         //When
         System.setProperty("prop.value", "foobar");
