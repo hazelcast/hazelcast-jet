@@ -18,6 +18,7 @@ package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -54,6 +55,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.bottomN;
 import static com.hazelcast.jet.aggregate.AggregateOperations.concatenating;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.filtering;
+import static com.hazelcast.jet.aggregate.AggregateOperations.flatMapping;
 import static com.hazelcast.jet.aggregate.AggregateOperations.groupingBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.linearTrend;
 import static com.hazelcast.jet.aggregate.AggregateOperations.mapping;
@@ -422,6 +424,19 @@ public class AggregateOperationsTest {
                 new LongAccumulator(0),
                 new LongAccumulator(2),
                 2L
+        );
+    }
+
+    @Test
+    public void when_flatMapping() {
+        validateOp(
+                flatMapping(i -> Traversers.traverseItems(i + 10, i + 20), summingLong(i -> i)),
+                identity(),
+                1L,
+                2L,
+                new LongAccumulator(32), // 11 + 21
+                new LongAccumulator(66), // 11 + 21 + 12 + 22
+                66L
         );
     }
 

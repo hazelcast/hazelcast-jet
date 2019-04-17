@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.aggregate;
 
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -24,11 +25,11 @@ import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.ComparatorEx;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BinaryOperatorEx;
+import com.hazelcast.jet.function.ComparatorEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToDoubleFunctionEx;
@@ -377,10 +378,26 @@ public final class AggregateOperations {
      * U} to one accepting items of type {@code T} by applying a mapping
      * function to each item before accumulation.
      * <p>
+     * Operation is es
+     * <p>
      * If the {@code mapFn} returns {@code null}, the item won't be aggregated
      * at all. This allows applying a filter at the same time.
+     *
+     * <h4>Example</h4>
+     *
+     * <pre>{@code
+     *     // calculate set of surnames in each city
+     *     p.drawFrom(...)
+     *      .aggregate(AggregateOperations.groupingBy(
+     *          Person::getCity,
+     *          mapping(Person::getSurname, toSet())
+     *      ))
+     *      .drainTo(...);
+     * }</pre>
+     *
      * <p>
-     * See also {@link #filtering filtering()}.
+     * See also {@link #filtering filtering()} and {@link #flatMapping
+     * flatMapping()}.
      *
      * @param <T> input item type
      * @param <U> input type of the downstream aggregate operation
@@ -389,8 +406,7 @@ public final class AggregateOperations {
      * @param mapFn the function to apply to input items
      * @param downstream the downstream aggregate operation
      */
-    public static <T, U, A, R>
-    AggregateOperation1<T, A, R> mapping(
+    public static <T, U, A, R> AggregateOperation1<T, A, R> mapping(
             @Nonnull FunctionEx<? super T, ? extends U> mapFn,
             @Nonnull AggregateOperation1<? super U, A, ? extends R> downstream
     ) {
@@ -413,8 +429,23 @@ public final class AggregateOperations {
     /**
      * Wraps an aggregate operation so that only items passing the {@code
      * filterFn} will be accumulated; others will be ignored.
-     * <p>
-     * See also {@link #mapping mapping()}.
+     *
+     * <h3>Example</h3>
+     *
+     * <pre>{@code
+     *     // calculate total and conditional count in one step
+     *     p.drawFrom(...)
+     *      .aggregate(AggregateOperations.allOf(
+     *          // total count
+     *          AggregateOperations.counting(),
+     *          // successful count
+     *          filtering(Trade::isSuccessful, AggregateOperations.counting())
+     *      ))
+     *      .drainTo(...);
+     * }</pre>
+     *
+     * See also {@link #mapping mapping()} and {@link #flatMapping
+     * flatMapping()}.
      *
      * @param <T> input item type
      * @param <A> downstream operation's accumulator type
@@ -433,6 +464,58 @@ public final class AggregateOperations {
                 .andAccumulate((A a, T t) -> {
                     if (filterFn.test(t)) {
                         downstreamAccumulateFn.accept(a, t);
+                    }
+                })
+                .andCombine(downstream.combineFn())
+                .andDeduct(downstream.deductFn())
+                .<R>andExport(downstream.exportFn())
+                .andFinish(downstream.finishFn());
+    }
+
+    /**
+     * Adapts an aggregate operation accepting items of type {@code U} to one
+     * accepting items of type {@code T} by applying a flat-mapping function to
+     * each item before accumulation - for one {@code T} item there will be
+     * <em>n</em> {@code U} items accumulated.
+     * <p>
+     * The returned traverser must be non-null and <em>null-terminated</em>.
+     *
+     * <h3>Example</h3>
+     *
+     * <pre>{@code
+     *     // calculate the number of trades and set of the involved parties
+     *     // in one step
+     *     p.drawFrom(...)
+     *      .aggregate(AggregateOperations.allOf(
+     *          AggregateOperations.counting(),
+     *          AggregateOperations.flatMapping(
+     *              trade -> traverseItems(trade.getBuyer(), trade.getSeller()),
+     *              toSet())
+     *      ))
+     *      .drainTo(...);
+     * }</pre>
+     *
+     * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
+     *
+     * @param <T> input item type
+     * @param <U> input type of the downstream aggregate operation
+     * @param <A> downstream operation's accumulator type
+     * @param <R> downstream operation's result type
+     * @param flatMapFn the function to apply to input items
+     * @param downstream the downstream aggregate operation
+     */
+    public static <T, U, A, R> AggregateOperation1<T, A, R> flatMapping(
+            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends U>> flatMapFn,
+            @Nonnull AggregateOperation1<? super U, A, ? extends R> downstream
+    ) {
+        checkSerializable(flatMapFn, "flatMapFn");
+        BiConsumerEx<? super A, ? super U> downstreamAccumulateFn = downstream.accumulateFn();
+        return AggregateOperation
+                .withCreate(downstream.createFn())
+                .andAccumulate((A a, T t) -> {
+                    Traverser<? extends U> trav = flatMapFn.apply(t);
+                    for (U u; (u = trav.next()) != null; ) {
+                        downstreamAccumulateFn.accept(a, u);
                     }
                 })
                 .andCombine(downstream.combineFn())
