@@ -378,8 +378,6 @@ public final class AggregateOperations {
      * U} to one accepting items of type {@code T} by applying a mapping
      * function to each item before accumulation.
      * <p>
-     * Operation is es
-     * <p>
      * If the {@code mapFn} returns {@code null}, the item won't be aggregated
      * at all. This allows applying a filter at the same time.
      *
