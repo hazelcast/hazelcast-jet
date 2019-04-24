@@ -146,7 +146,7 @@ public class JetConfigXmlGeneratorTest {
             try (FileOutputStream os = new FileOutputStream(tempFile)) {
                 os.write(Util.readFully(new ByteArrayInputStream(xml.getBytes())));
             }
-            return new FileSystemXmlJetConfig(tempFile);
+            return JetConfig.loadFromFileSystem(tempFile);
         } catch (IOException e) {
             ExceptionUtil.sneakyThrow(e);
         }

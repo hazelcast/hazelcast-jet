@@ -35,19 +35,19 @@ public class XmlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetCo
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_fileSystemNullFile_thenThrowsException() throws Exception {
-        new FileSystemXmlJetConfig((File) null);
+        JetConfig.loadFromFileSystem((File) null);
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_fileSystemNullProperties_thenThrowsException() throws Exception {
-        new FileSystemXmlJetConfig("test", null);
+        JetConfig.loadFromFileSystem(new File("test"), null);
     }
 
     @Override
     @Test(expected = FileNotFoundException.class)
     public void when_fileSystemPathSpecifiedNonExistingFile_thenThrowsException() throws Exception {
-        new FileSystemXmlJetConfig("non-existent.xml");
+        JetConfig.loadFromFileSystem(new File("non-existent.xml"));
     }
 
     @Override
@@ -60,7 +60,7 @@ public class XmlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetCo
         }
 
         // When
-        JetConfig jetConfig = new FileSystemXmlJetConfig(tempFile);
+        JetConfig jetConfig = JetConfig.loadFromFileSystem(tempFile);
 
         // Then
         assertConfig(jetConfig);
@@ -78,7 +78,7 @@ public class XmlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetCo
         }
 
         // When
-        JetConfig jetConfig = new FileSystemXmlJetConfig(tempFile.getAbsolutePath());
+        JetConfig jetConfig = JetConfig.loadFromFileSystem(tempFile);
 
         // Then
         assertConfig(jetConfig);
@@ -88,32 +88,32 @@ public class XmlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetCo
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classpathSpecifiedNonExistingFile_thenThrowsException() {
-        new ClasspathXmlJetConfig("non-existent.xml");
+        JetConfig.loadFromClasspath(getClass().getClassLoader(), "non-existent.xml");
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classPathNullResource_thenThrowsException() throws Exception {
-        new ClasspathXmlJetConfig(null, System.getProperties());
+        JetConfig.loadFromClasspath(getClass().getClassLoader(), null, System.getProperties());
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classPathNullProperties_thenThrowsException() throws Exception {
-        new ClasspathXmlJetConfig("test", null);
+        JetConfig.loadFromClasspath(getClass().getClassLoader(), "test", null);
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classPathNullClassloader_thenThrowsException() throws Exception {
-        new ClasspathXmlJetConfig(null, "test");
+        JetConfig.loadFromClasspath(null, "test");
     }
 
     @Override
     @Test
     public void when_classpathSpecified_usesSpecifiedResource() {
         // When
-        JetConfig jetConfig = new ClasspathXmlJetConfig(TEST_XML_JET);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(), TEST_XML_JET);
 
         // Then
         assertConfig(jetConfig);
@@ -123,7 +123,7 @@ public class XmlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetCo
     @Override
     public void when_classpathSpecifiedWithClassloader_usesSpecifiedResource() {
         // When
-        JetConfig jetConfig = new ClasspathXmlJetConfig(this.getClass().getClassLoader(), TEST_XML_JET);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(), TEST_XML_JET);
 
         // Then
         assertConfig(jetConfig);

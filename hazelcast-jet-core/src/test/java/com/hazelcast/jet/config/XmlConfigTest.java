@@ -76,7 +76,7 @@ public class XmlConfigTest {
         }
 
         // When
-        JetConfig jetConfig = new FileSystemXmlJetConfig(tempFile.getAbsolutePath());
+        JetConfig jetConfig = JetConfig.loadFromFileSystem(tempFile);
 
         // Then
         assertConfig(jetConfig);
@@ -85,7 +85,7 @@ public class XmlConfigTest {
 
     @Test
     public void when_classpathSpecified_usesSpecifiedResource() {
-        JetConfig jetConfig = new ClasspathXmlJetConfig(TEST_XML_1);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(), TEST_XML_1);
 
         // Then
         assertConfig(jetConfig);
@@ -108,7 +108,8 @@ public class XmlConfigTest {
         properties.put("metrics.enabled-for-data-structures", "true");
 
         // When
-        JetConfig jetConfig = new ClasspathXmlJetConfig("hazelcast-jet-with-variables.xml", properties);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(),
+                "hazelcast-jet-with-variables.xml", properties);
 
         // Then
         assertConfig(jetConfig);
@@ -117,7 +118,7 @@ public class XmlConfigTest {
     @Test
     public void when_edgeDefaultsSpecified_usesSpecified() {
         // When
-        JetConfig jetConfig = new ClasspathXmlJetConfig(TEST_XML_1);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(), TEST_XML_1);
 
         // Then
         EdgeConfig edgeConfig = jetConfig.getDefaultEdgeConfig();

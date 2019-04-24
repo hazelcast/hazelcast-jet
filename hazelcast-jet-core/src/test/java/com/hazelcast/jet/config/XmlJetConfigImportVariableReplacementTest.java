@@ -22,18 +22,17 @@ import com.hazelcast.config.ConfigurationException;
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.core.HazelcastException;
-import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.util.Properties;
 
 import static com.hazelcast.jet.config.XmlJetConfigBuilderTest.JET_END_TAG;
@@ -54,7 +53,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "        <import resource=\"\"/>\n"
                 + "   </properties>"
                 + JET_END_TAG;
-        buildConfig(xml);
+        JetConfig.loadXmlFromString(xml);
     }
 
     @Override
@@ -64,7 +63,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "   <hazelcast-jet>"
                 + "   </hazelcast-jet>"
                 + JET_END_TAG;
-        buildConfig(xml);
+        JetConfig.loadXmlFromString(xml);
     }
 
     @Override
@@ -82,7 +81,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         properties.setProperty("metrics.collection", "6");
 
         //When
-        JetConfig jetConfig = buildConfig(xml, properties);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml, properties);
 
         //Then
         MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
@@ -137,7 +136,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         properties.setProperty("config.location", file.getAbsolutePath());
         properties.setProperty("metrics.collection", "222");
 
-        JetConfig jetConfig = buildConfig(xml, properties);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml, properties);
 
         //Then
         MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
@@ -161,7 +160,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + JET_END_TAG;
         writeStringToStreamAndClose(os1, config1Xml);
         writeStringToStreamAndClose(os2, config2Xml);
-        buildConfig(config1Xml);
+        JetConfig.loadXmlFromString(config1Xml);
     }
 
     @Override
@@ -179,7 +178,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         writeStringToStreamAndClose(new FileOutputStream(config1), config1Xml);
         writeStringToStreamAndClose(new FileOutputStream(config2), config2Xml);
         writeStringToStreamAndClose(new FileOutputStream(config3), config3Xml);
-        buildConfig(config1Xml);
+        JetConfig.loadXmlFromString(config1Xml);
     }
 
     @Override
@@ -191,7 +190,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    <import resource='file:///" + config1.getAbsolutePath() + "'/>\n"
                 + JET_END_TAG;
         writeStringToStreamAndClose(os1, "");
-        buildConfig(config1Xml);
+        JetConfig.loadXmlFromString(config1Xml);
     }
 
     @Override
@@ -200,7 +199,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         String xml = JET_START_TAG
                 + "    <import resource=\"\"/>\n"
                 + JET_END_TAG;
-        buildConfig(xml);
+        JetConfig.loadXmlFromString(xml);
     }
 
     @Override
@@ -209,7 +208,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         String xml = JET_START_TAG
                 + "    <import resource=\"notexisting.xml\"/>\n"
                 + JET_END_TAG;
-        buildConfig(xml);
+        JetConfig.loadXmlFromString(xml);
     }
 
     @Override
@@ -228,7 +227,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    <import resource=\"${config.location}\"/>\n"
                 + "</non-hazelcast-jet>";
         //When
-        buildConfig(xml);
+        JetConfig.loadXmlFromString(xml);
     }
 
     @Override
@@ -249,7 +248,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
                 + JET_END_TAG;
         //When
-        JetConfig jetConfig = buildConfig(xml);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml);
 
         //Then
         MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
@@ -280,7 +279,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
                 + JET_END_TAG;
         //When
-        JetConfig jetConfig = buildConfig(xml);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml);
 
         //Then
         InstanceConfig instanceConfig = jetConfig.getInstanceConfig();
@@ -310,7 +309,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    <import resource=\"file:///" + file.getAbsolutePath() + "\"/>\n"
                 + JET_END_TAG;
         //When
-        JetConfig jetConfig = buildConfig(xml);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml);
 
         //Then
         EdgeConfig edgeConfig = jetConfig.getDefaultEdgeConfig();
@@ -350,7 +349,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    </properties>\n"
                 + JET_END_TAG;
         //When
-        Properties properties = buildConfig(xml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadXmlFromString(xml, System.getProperties()).getProperties();
 
         //Then
         assertEquals(System.getProperty("java.version") + " dev", properties.getProperty("test"));
@@ -368,7 +367,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "        <property name=\"pw\">$ENC{7JX2r/8qVVw=:10000:Jk4IPtor5n/vCb+H8lYS6tPZOlCZMtZv}</property>\n"
                 + "    </properties>\n"
                 + JET_END_TAG;
-        buildConfig(xml, System.getProperties());
+        JetConfig.loadXmlFromString(xml, System.getProperties());
     }
 
     @Override
@@ -381,7 +380,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + JET_END_TAG;
 
         //When
-        Properties properties = buildConfig(xml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadXmlFromString(xml, System.getProperties()).getProperties();
 
         //Then
         assertEquals("${noSuchPropertyAvailable]", properties.getProperty("pw"));
@@ -406,7 +405,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + "    </properties>\n"
                 + JET_END_TAG;
         //When
-        Properties properties = buildConfig(xml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadXmlFromString(xml, System.getProperties()).getProperties();
 
         //Then
         assertEquals("a property  another property <test/> $T{p5}", properties.getProperty("pw"));
@@ -423,7 +422,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
                 + JET_END_TAG;
 
         //When
-        Properties properties = buildConfig(xml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadXmlFromString(xml, System.getProperties()).getProperties();
 
         //Then
         assertEquals("${noSuchPropertyAvailable]", properties.getProperty("pw"));
@@ -482,7 +481,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         }
 
         //When
-        JetConfig config = new FileSystemXmlJetConfig(tempFile.getAbsolutePath(), properties);
+        JetConfig config = JetConfig.loadFromFileSystem(tempFile, properties);
 
         //Then
         assertPropertiesOnConfig(config);
@@ -500,7 +499,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         //When
         Properties properties = new Properties();
         properties.put("prop.value", "foobar");
-        JetConfig jetConfig = new InMemoryXmlJetConfig(xml, properties);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml, properties);
 
         //Then
         assertEquals("foobar", jetConfig.getProperties().getProperty("property"));
@@ -512,7 +511,8 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         Properties properties = getProperties();
 
         //When
-        JetConfig config = new ClasspathXmlJetConfig(TEST_XML_JET_WITH_VARIABLES, properties);
+        JetConfig config = JetConfig.loadFromClasspath(getClass().getClassLoader(),
+                TEST_XML_JET_WITH_VARIABLES, properties);
 
         //Then
         assertPropertiesOnConfig(config);
@@ -529,7 +529,8 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         }
 
         //When
-        JetConfig config = new UrlXmlJetConfig("file:///" + tempFile.getPath(), properties);
+        InputStream inputStream = new URL("file:///" + tempFile.getPath()).openStream();
+        JetConfig config = JetConfig.loadXmlFromStream(inputStream, properties);
 
         //Then
         assertPropertiesOnConfig(config);
@@ -546,29 +547,16 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
 
         //When
         System.setProperty("prop.value", "foobar");
-        JetConfig jetConfig = buildConfig(xml);
+        JetConfig jetConfig = JetConfig.loadXmlFromString(xml);
 
         //Then
         assertEquals("foobar", jetConfig.getProperties().getProperty("property"));
     }
 
-    private static JetConfig buildConfig(String yaml) {
-        ByteArrayInputStream bis = new ByteArrayInputStream(yaml.getBytes());
-        XmlJetConfigBuilder configBuilder = new XmlJetConfigBuilder(bis);
-        return configBuilder.build();
-    }
-
-    private static JetConfig buildConfig(String yaml, Properties properties) {
-        ByteArrayInputStream bis = new ByteArrayInputStream(yaml.getBytes());
-        XmlJetConfigBuilder configBuilder = new XmlJetConfigBuilder(bis);
-        configBuilder.setProperties(properties);
-        return configBuilder.build();
-    }
-
     private static JetConfig buildConfig(String yaml, String key, String value) {
         Properties properties = new Properties();
         properties.setProperty(key, value);
-        return buildConfig(yaml, properties);
+        return JetConfig.loadXmlFromString(yaml, properties);
     }
 
 }

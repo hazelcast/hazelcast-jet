@@ -22,18 +22,17 @@ import com.hazelcast.config.ConfigurationException;
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.core.HazelcastException;
-import com.hazelcast.jet.impl.config.YamlJetConfigBuilder;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
@@ -53,7 +52,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "hazelcast-jet:";
 
         rule.expect(InvalidConfigurationException.class);
-        buildConfig(yaml);
+        JetConfig.loadYamlFromString(yaml);
     }
 
     @Override
@@ -68,7 +67,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         properties.setProperty("interval", "100");
 
         // When
-        JetConfig config = buildConfig(yaml, properties);
+        JetConfig config = JetConfig.loadYamlFromString(yaml, properties);
 
         // Then
         MetricsConfig metricsConfig = config.getMetricsConfig();
@@ -125,7 +124,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         properties.setProperty("metrics.interval", "505");
 
         //When
-        JetConfig config = buildConfig(yaml, properties);
+        JetConfig config = JetConfig.loadYamlFromString(yaml, properties);
 
         //Then
         MetricsConfig metricsConfig = config.getMetricsConfig();
@@ -152,7 +151,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         writeStringToStreamAndClose(os2, config2Yaml);
         rule.expect(InvalidConfigurationException.class);
 
-        buildConfig(config1Yaml);
+        JetConfig.loadYamlFromString(config1Yaml);
     }
 
     @Override
@@ -172,7 +171,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         writeStringToStreamAndClose(new FileOutputStream(config3), config3Yaml);
         rule.expect(InvalidConfigurationException.class);
 
-        buildConfig(config1Yaml);
+        JetConfig.loadYamlFromString(config1Yaml);
     }
 
     @Override
@@ -186,7 +185,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         writeStringToStreamAndClose(os1, "%invalid-yaml");
         rule.expect(InvalidConfigurationException.class);
 
-        buildConfig(config1Yaml);
+        JetConfig.loadYamlFromString(config1Yaml);
 
     }
 
@@ -198,7 +197,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "    - \"\"";
         rule.expect(InvalidConfigurationException.class);
 
-        buildConfig(yaml, null);
+        JetConfig.loadYamlFromString(yaml);
     }
 
     @Override
@@ -209,7 +208,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "    - notexisting.yaml";
         rule.expect(InvalidConfigurationException.class);
 
-        buildConfig(yaml);
+        JetConfig.loadYamlFromString(yaml);
     }
 
     @Test(expected = HazelcastException.class)
@@ -229,7 +228,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "  import:\n"
                 + "    - file:///" + file.getAbsolutePath();
 
-        JetConfig config = buildConfig(yaml);
+        JetConfig config = JetConfig.loadYamlFromString(yaml);
         assertTrue(config.getMetricsConfig().isEnabled());
         assertTrue(config.getMetricsConfig().isJmxEnabled());
     }
@@ -251,7 +250,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "  import:\n"
                 + "    - file:///" + file.getAbsolutePath();
 
-        JetConfig config = buildConfig(yaml);
+        JetConfig config = JetConfig.loadYamlFromString(yaml);
         assertFalse(config.getMetricsConfig().isEnabled());
         assertFalse(config.getMetricsConfig().isJmxEnabled());
     }
@@ -275,7 +274,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "  import:\n"
                 + "    - file:///" + file.getAbsolutePath();
 
-        JetConfig jetConfig = buildConfig(yaml);
+        JetConfig jetConfig = JetConfig.loadYamlFromString(yaml);
         InstanceConfig instanceConfig = jetConfig.getInstanceConfig();
         assertEquals("cooperativeThreadCount", 55, instanceConfig.getCooperativeThreadCount());
         assertEquals("backupCount", 2, instanceConfig.getBackupCount());
@@ -301,7 +300,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "  import:\n"
                 + "    - file:///" + file.getAbsolutePath();
 
-        JetConfig config = buildConfig(yaml);
+        JetConfig config = JetConfig.loadYamlFromString(yaml);
         EdgeConfig edgeConfig = config.getDefaultEdgeConfig();
         assertEquals(999, edgeConfig.getQueueSize());
         assertEquals(997, edgeConfig.getPacketSizeLimit());
@@ -334,7 +333,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "  properties:\n"
                 + "    test: ${java.version} $ID{dev}\n"
                 + "    pw: $ENC{7JX2r/8qVVw=:10000:Jk4IPtor5n/vCb+H8lYS6tPZOlCZMtZv}\n";
-        Properties properties = buildConfig(yaml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadYamlFromString(yaml, System.getProperties()).getProperties();
         assertEquals(System.getProperty("java.version") + " dev", properties.getProperty("test"));
         assertEquals("My very secret secret", properties.getProperty("pw"));
 
@@ -350,7 +349,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "      - class-name: " + EncryptionReplacer.class.getName() + "\n"
                 + "  properties:\n"
                 + "    name: $ENC{7JX2r/8qVVw=:10000:Jk4IPtor5n/vCb+H8lYS6tPZOlCZMtZv}";
-        buildConfig(yaml);
+        JetConfig.loadYamlFromString(yaml);
     }
 
     @Override
@@ -359,7 +358,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "hazelcast-jet:\n"
                 + "  properties:\n"
                 + "    name: ${noSuchPropertyAvailable]";
-        Properties properties = buildConfig(yaml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadYamlFromString(yaml, System.getProperties()).getProperties();
         assertEquals("${noSuchPropertyAvailable]", properties.getProperty("name"));
     }
 
@@ -378,7 +377,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "          p4: <test/>\n"
                 + "  properties:\n"
                 + "    name: $T{p1} $T{p2} $T{p3} $T{p4} $T{p5}\n";
-        Properties properties = buildConfig(yaml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadYamlFromString(yaml, System.getProperties()).getProperties();
         assertEquals("a property  another property <test/> $T{p5}", properties.getProperty("name"));
     }
 
@@ -388,7 +387,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "hazelcast-jet:\n"
                 + "  properties:\n"
                 + "    name: ${noSuchPropertyAvailable]";
-        Properties properties = buildConfig(yaml, System.getProperties()).getProperties();
+        Properties properties = JetConfig.loadYamlFromString(yaml, System.getProperties()).getProperties();
         assertEquals("${noSuchPropertyAvailable]", properties.getProperty("name"));
     }
 
@@ -435,7 +434,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         }
 
         //When
-        JetConfig config = new FileSystemYamlJetConfig(tempFile.getAbsolutePath(), properties);
+        JetConfig config = JetConfig.loadFromFileSystem(tempFile, properties);
 
         //Then
         assertPropertiesOnConfig(config);
@@ -450,7 +449,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
 
         Properties properties = new Properties();
         properties.put("variable", "foobar");
-        JetConfig config = new InMemoryYamlJetConfig(configYaml, properties);
+        JetConfig config = JetConfig.loadYamlFromString(configYaml, properties);
 
         assertEquals("foobar", config.getProperties().getProperty("prop"));
     }
@@ -461,7 +460,8 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         Properties properties = getProperties();
 
         //When
-        JetConfig config = new ClasspathYamlJetConfig(TEST_YAML_JET_WITH_VARIABLES, properties);
+        JetConfig config = JetConfig.loadFromClasspath(getClass().getClassLoader(),
+                TEST_YAML_JET_WITH_VARIABLES, properties);
 
         //Then
         assertPropertiesOnConfig(config);
@@ -478,7 +478,8 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         }
 
         //When
-        JetConfig config = new UrlYamlJetConfig("file:///" + tempFile.getPath(), properties);
+        InputStream inputStream = new URL("file:///" + tempFile.getPath()).openStream();
+        JetConfig config = JetConfig.loadYamlFromStream(inputStream, properties);
 
         //Then
         assertPropertiesOnConfig(config);
@@ -492,28 +493,15 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "    prop: ${variable}";
 
         System.setProperty("variable", "foobar");
-        JetConfig config = buildConfig(configYaml);
+        JetConfig config = JetConfig.loadYamlFromString(configYaml);
 
         assertEquals("foobar", config.getProperties().getProperty("prop"));
-    }
-
-    private static JetConfig buildConfig(String yaml) {
-        ByteArrayInputStream bis = new ByteArrayInputStream(yaml.getBytes());
-        YamlJetConfigBuilder configBuilder = new YamlJetConfigBuilder(bis);
-        return configBuilder.build();
-    }
-
-    private static JetConfig buildConfig(String yaml, Properties properties) {
-        ByteArrayInputStream bis = new ByteArrayInputStream(yaml.getBytes());
-        YamlJetConfigBuilder configBuilder = new YamlJetConfigBuilder(bis);
-        configBuilder.setProperties(properties);
-        return configBuilder.build();
     }
 
     private static JetConfig buildConfig(String yaml, String key, String value) {
         Properties properties = new Properties();
         properties.setProperty(key, value);
-        return buildConfig(yaml, properties);
+        return JetConfig.loadYamlFromString(yaml, properties);
     }
 
 }

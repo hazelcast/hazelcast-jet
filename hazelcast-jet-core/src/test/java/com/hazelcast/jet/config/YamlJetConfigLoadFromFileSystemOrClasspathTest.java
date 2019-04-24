@@ -35,19 +35,19 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_fileSystemNullFile_thenThrowsException() throws Exception {
-        new FileSystemYamlJetConfig((File) null);
+        JetConfig.loadFromFileSystem((File) null);
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_fileSystemNullProperties_thenThrowsException() throws Exception {
-        new FileSystemYamlJetConfig("test", null);
+        JetConfig.loadFromFileSystem(new File("test"), null);
     }
 
     @Override
     @Test(expected = FileNotFoundException.class)
     public void when_fileSystemPathSpecifiedNonExistingFile_thenThrowsException() throws Exception {
-        new FileSystemYamlJetConfig("non-existent.yaml");
+        JetConfig.loadFromFileSystem(new File("non-existent.yaml"));
     }
 
     @Override
@@ -60,7 +60,7 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
         }
 
         // When
-        JetConfig jetConfig = new FileSystemYamlJetConfig(tempFile);
+        JetConfig jetConfig = JetConfig.loadFromFileSystem(tempFile);
 
         // Then
         assertConfig(jetConfig);
@@ -78,7 +78,7 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
         }
 
         // When
-        JetConfig jetConfig = new FileSystemYamlJetConfig(tempFile.getAbsolutePath());
+        JetConfig jetConfig = JetConfig.loadFromFileSystem(tempFile);
 
         // Then
         assertConfig(jetConfig);
@@ -88,32 +88,32 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classpathSpecifiedNonExistingFile_thenThrowsException() {
-        new ClasspathYamlJetConfig("non-existent.yaml");
+        JetConfig.loadFromClasspath(getClass().getClassLoader(), "non-existent.yaml");
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classPathNullResource_thenThrowsException() throws Exception {
-        new ClasspathYamlJetConfig(null, System.getProperties());
+        JetConfig.loadFromClasspath(getClass().getClassLoader(), null, System.getProperties());
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classPathNullProperties_thenThrowsException() throws Exception {
-        new ClasspathYamlJetConfig("test", null);
+        JetConfig.loadFromClasspath(getClass().getClassLoader(), "test", null);
     }
 
     @Override
     @Test(expected = IllegalArgumentException.class)
     public void when_classPathNullClassloader_thenThrowsException() throws Exception {
-        new ClasspathYamlJetConfig(null, "test");
+        JetConfig.loadFromClasspath(null, "test");
     }
 
     @Override
     @Test
     public void when_classpathSpecified_usesSpecifiedResource() {
         // When
-        JetConfig jetConfig = new ClasspathYamlJetConfig(TEST_YAML_JET);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(), TEST_YAML_JET);
 
         // Then
         assertConfig(jetConfig);
@@ -123,7 +123,7 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
     @Override
     public void when_classpathSpecifiedWithClassloader_usesSpecifiedResource() {
         // When
-        JetConfig jetConfig = new ClasspathYamlJetConfig(this.getClass().getClassLoader(), TEST_YAML_JET);
+        JetConfig jetConfig = JetConfig.loadFromClasspath(getClass().getClassLoader(), TEST_YAML_JET);
 
         // Then
         assertConfig(jetConfig);
