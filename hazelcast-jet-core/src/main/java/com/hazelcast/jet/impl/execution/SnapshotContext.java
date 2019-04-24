@@ -155,8 +155,12 @@ public class SnapshotContext {
      */
     synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(
             long snapshotId, String mapName, boolean isTerminal) {
-        assert snapshotId == currentSnapshotId + 1
-                : "new snapshotId not incremented by 1. Previous=" + currentSnapshotId + ", new=" + snapshotId;
+        if (snapshotId != currentSnapshotId + 1) {
+            // this can be a result of a lost SnapshotOperation,
+            // see OperationLossTest.when_snapshotOperationLost_then_ignored()
+            logger.warning("New snapshotId for job " + jobNameAndExecutionId + " not incremented by 1. " +
+                    "Previous=" + currentSnapshotId + ", new=" + snapshotId + "; ignoring it");
+        }
         assert currentSnapshotId == activeSnapshotId : "last snapshot was postponed but not started";
         assert numTasklets >= 0 : "numTasklets=" + numTasklets;
         if (isCancelled) {

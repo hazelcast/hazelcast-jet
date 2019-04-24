@@ -34,7 +34,7 @@ import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.REACHE
 
 public class StoreSnapshotTasklet implements Tasklet {
 
-    long pendingSnapshotId;
+    long lastSnapshotId;
 
     private final SnapshotContext snapshotContext;
     private final InboundEdgeStream inboundEdgeStream;
@@ -64,7 +64,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         this.isHigherPrioritySource = isHigherPrioritySource;
 
         this.ssWriter = ssWriter;
-        this.pendingSnapshotId = snapshotContext.activeSnapshotId() + 1;
+        this.lastSnapshotId = snapshotContext.activeSnapshotId();
         addToInboxFunction = this::addToInbox;
     }
 
@@ -89,7 +89,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 ProgressState result = inboundEdgeStream.drainTo(addToInboxFunction);
                 if (result.isDone()) {
                     assert ssWriter.isEmpty() : "input is done, but we had some entries and not the barrier";
-                    snapshotContext.taskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
+                    snapshotContext.taskletDone(lastSnapshotId, isHigherPrioritySource);
                     state = DONE;
                     progTracker.reset();
                 }
@@ -123,7 +123,6 @@ public class StoreSnapshotTasklet implements Tasklet {
                 snapshotContext.snapshotDoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
                         ssWriter.getTotalChunks());
                 ssWriter.resetStats();
-                pendingSnapshotId++;
                 hasReachedBarrier = false;
                 state = DRAIN;
                 progTracker.notDone();
@@ -138,9 +137,10 @@ public class StoreSnapshotTasklet implements Tasklet {
     private boolean addToInbox(Object o) {
         if (o instanceof SnapshotBarrier) {
             SnapshotBarrier barrier = (SnapshotBarrier) o;
-            assert pendingSnapshotId == barrier.snapshotId() : "Unexpected barrier, expected was " +
-                    pendingSnapshotId + ", but barrier was " + barrier.snapshotId() + ", this=" + this;
+            assert lastSnapshotId < barrier.snapshotId() : "Unexpected barrier, expected was mor than " +
+                    lastSnapshotId + ", but barrier was " + barrier.snapshotId() + ", this=" + this;
             hasReachedBarrier = true;
+            lastSnapshotId = barrier.snapshotId();
         } else {
             if (!ssWriter.offer((Entry<Data, Data>) o)) {
                 pendingEntry = (Entry<Data, Data>) o;

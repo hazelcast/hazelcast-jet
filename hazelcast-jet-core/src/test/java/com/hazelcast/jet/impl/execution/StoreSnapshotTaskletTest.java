@@ -124,7 +124,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         assertEquals(MADE_PROGRESS, sst.call());
 
         // Then
-        assertEquals(3, sst.pendingSnapshotId);
+        assertEquals(2, sst.lastSnapshotId);
     }
 
     @Test
@@ -133,13 +133,13 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         Entry<String, String> entry = entry("k", "v");
         init(asList(entry, new SnapshotBarrier(2, false)));
         ssContext.startNewSnapshot(2, "map", false);
-        assertEquals(2, sst.pendingSnapshotId);
+        assertEquals(1, sst.lastSnapshotId);
         assertEquals(MADE_PROGRESS, sst.call());
         mockSsWriter.hasPendingFlushes = false;
         assertEquals(MADE_PROGRESS, sst.call());
 
         // Then
-        assertEquals(3, sst.pendingSnapshotId);
+        assertEquals(2, sst.lastSnapshotId);
         assertEquals(entry(serialize("k"), serialize("v")), mockSsWriter.poll());
     }
 
@@ -158,7 +158,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         assertEquals(MADE_PROGRESS, sst.call());
         assertEquals(MADE_PROGRESS, sst.call());
         assertEquals(NO_PROGRESS, sst.call());
-        assertEquals(3, sst.pendingSnapshotId);
+        assertEquals(2, sst.lastSnapshotId);
     }
 
     @Test
@@ -175,7 +175,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         mockSsWriter.hasPendingFlushes = false;
         assertEquals(MADE_PROGRESS, sst.call());
         assertEquals(NO_PROGRESS, sst.call());
-        assertEquals(3, sst.pendingSnapshotId);
+        assertEquals(2, sst.lastSnapshotId);
     }
 
     @Test
@@ -192,7 +192,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         // Then
         assertTrue(future.isDone());
         assertEquals(mockFailure.toString(), future.get().getError());
-        assertEquals(3, sst.pendingSnapshotId);
+        assertEquals(2, sst.lastSnapshotId);
     }
 
     private HeapData serialize(String o) {
