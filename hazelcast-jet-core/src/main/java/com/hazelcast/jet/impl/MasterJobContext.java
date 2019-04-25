@@ -544,7 +544,14 @@ public class MasterJobContext {
 
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new CompleteExecutionOperation(mc.executionId(), finalError);
-        mc.invokeOnParticipants(operationCtor, responses -> onCompleteExecutionCompleted(error), null, true);
+        mc.invokeOnParticipants(operationCtor, responses -> {
+            if (responses.stream().anyMatch(Objects::nonNull)) {
+                // log errors
+                logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
+                        "resources might leak: " + responses);
+            }
+            onCompleteExecutionCompleted(error);
+        }, null, true);
     }
 
     private void logCannotComplete(Throwable error) {
@@ -574,8 +581,8 @@ public class MasterJobContext {
                         responses -> {
                             if (responses.stream().anyMatch(Objects::nonNull)) {
                                 // log errors
-                                logger.severe("Some TerminateExecutionOperation invocations failed, execution will " +
-                                        "likely get stuck: " + responses);
+                                logger.severe(mc.jobIdString() + ": some TerminateExecutionOperation invocations " +
+                                        "failed, execution might remain stuck: " + responses);
                             }
                         }, null, true));
     }
