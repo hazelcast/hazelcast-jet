@@ -82,8 +82,7 @@ public final class ExceptionUtil {
                 || t instanceof EnteringPassiveClusterStateException
                 || t instanceof OperationTimeoutException
                     && (t.getMessage().contains(InitExecutionOperation.class.getSimpleName())
-                        || t.getMessage().contains(StartExecutionOperation.class.getSimpleName())
-                        /*|| t.getMessage().contains(CompleteExecutionOperation.class.getSimpleName())*/);
+                        || t.getMessage().contains(StartExecutionOperation.class.getSimpleName()));
     }
 
     /**

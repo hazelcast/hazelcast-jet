@@ -492,14 +492,14 @@ public class MasterJobContext {
         }
 
         Map<Boolean, List<Object>> grouped = groupResponses(responses);
-        int successfulCountMembers = grouped.get(false).size();
+        int successfulMembersCount = grouped.get(false).size();
 
         List<Object> failures = grouped.get(true);
         if (!failures.isEmpty()) {
             logger.fine(opName + " of " + mc.jobIdString() + " has failures: " + failures);
         }
 
-        if (successfulCountMembers == mc.executionPlanMap().size()) {
+        if (successfulMembersCount == mc.executionPlanMap().size()) {
             logger.fine(opName + " of " + mc.jobIdString() + " was successful");
             return null;
         }
@@ -791,8 +791,8 @@ public class MasterJobContext {
     }
 
     /**
-     * Registered to {@link StartExecutionOperation} invocations to cancel
-     * invocations in case of a failure or restart.
+     * Attached to {@link StartExecutionOperation} invocations to cancel
+     * invocations in case of a failure.
      */
     private class ExecutionFailureCallback implements Consumer<Throwable> {
 

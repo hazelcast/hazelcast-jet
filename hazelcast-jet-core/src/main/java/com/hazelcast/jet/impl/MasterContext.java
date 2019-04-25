@@ -215,26 +215,29 @@ public class MasterContext {
     }
 
     /**
-     * @param completionCallback a consumer that will receive a map of responses, one for each member,
-     *                           after all have been received. The value will be either the response or
-     *                           an exception thrown from the operation
-     * @param throwableCallback A callback that will be called after each individual operation
-     *                          when it fails
-     * @param retryTimedOut if true, operations that throw {@link
-     *      com.hazelcast.core.OperationTimeoutException} will be retried.
+     * @param completionCallback a consumer that will receive a list of
+     *                           responses, one for each member, after all have
+     *                           been received. The value will be either the
+     *                           response (including a null response) or an
+     *                           exception thrown from the operation; size will
+     *                           be equal to participant count
+     * @param errorCallback A callback that will be called after each a
+     *                     failure of each individual operation
+     * @param retryOnTimeoutException if true, operations that threw {@link
+     *      com.hazelcast.core.OperationTimeoutException} will be retried
      */
     void invokeOnParticipants(
             Function<ExecutionPlan, Operation> operationCtor,
             @Nullable Consumer<Collection<Object>> completionCallback,
-            @Nullable Consumer<Throwable> throwableCallback,
-            boolean retryTimedOut
+            @Nullable Consumer<Throwable> errorCallback,
+            boolean retryOnTimeoutException
     ) {
         ConcurrentMap<Address, Object> responses = new ConcurrentHashMap<>();
         AtomicInteger remainingCount = new AtomicInteger(executionPlanMap.size());
         for (Entry<MemberInfo, ExecutionPlan> entry : executionPlanMap.entrySet()) {
             Address address = entry.getKey().getAddress();
             Operation op = operationCtor.apply(entry.getValue());
-            invokeOnParticipant(address, op, completionCallback, throwableCallback, retryTimedOut, responses,
+            invokeOnParticipant(address, op, completionCallback, errorCallback, retryOnTimeoutException, responses,
                     remainingCount);
         }
     }
@@ -243,8 +246,8 @@ public class MasterContext {
             Address address,
             Operation op,
             @Nullable Consumer<Collection<Object>> completionCallback,
-            @Nullable Consumer<Throwable> throwableCallback,
-            boolean retryTimedOut,
+            @Nullable Consumer<Throwable> errorCallback,
+            boolean retryOnTimeoutException,
             ConcurrentMap<Address, Object> collectedResponses,
             AtomicInteger remainingCount
     ) {
@@ -254,15 +257,15 @@ public class MasterContext {
 
         future.andThen(callbackOf((r, throwable) -> {
             Object response = r != null ? r : throwable != null ? peel(throwable) : NULL_OBJECT;
-            if (retryTimedOut && throwable instanceof OperationTimeoutException) {
+            if (retryOnTimeoutException && throwable instanceof OperationTimeoutException) {
                 logger.warning("Retrying " + op.getClass().getSimpleName() + " that failed with "
                         + OperationTimeoutException.class.getSimpleName() + " in " + jobIdString());
-                invokeOnParticipant(address, op, completionCallback, throwableCallback, retryTimedOut, collectedResponses,
-                        remainingCount);
+                invokeOnParticipant(address, op, completionCallback, errorCallback, retryOnTimeoutException,
+                        collectedResponses, remainingCount);
                 return;
             }
-            if (throwableCallback != null && throwable != null) {
-                throwableCallback.accept(throwable);
+            if (errorCallback != null && throwable != null) {
+                errorCallback.accept(throwable);
             }
             Object oldResponse = collectedResponses.put(address, response);
             assert oldResponse == null :

@@ -350,8 +350,8 @@ public class ProcessorTasklet implements Tasklet {
                 progTracker.notDone();
                 // check ssContext to see if a barrier should be emitted
                 long currSnapshotId = ssContext.activeSnapshotId();
-                assert currSnapshotId >= pendingSnapshotId - 1 : "Unexpected new snapshot id " + currSnapshotId
-                        + ", current was" + pendingSnapshotId;
+                assert currSnapshotId >= pendingSnapshotId - 1 : "Unexpected new snapshot id: " + currSnapshotId
+                        + ", expected was " + (pendingSnapshotId - 1) + " or more";
                 if (currSnapshotId >= pendingSnapshotId) {
                     pendingSnapshotId = currSnapshotId;
                     if (outbox.hasUnfinishedItem()) {
