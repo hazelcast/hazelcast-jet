@@ -70,31 +70,13 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
     public abstract void when_filePathSpecified_usesSpecifiedFile() throws IOException;
 
     @Test(expected = HazelcastException.class)
-    public abstract void when_filePathMemberSpecifiedNonExistingFile_thenThrowsException() throws Exception;
-
-    @Test
-    public abstract void when_filePathMemberSpecified_usesSpecifiedFile() throws IOException;
-
-    @Test(expected = HazelcastException.class)
     public abstract void when_classpathSpecifiedNonExistingFile_thenThrowsException();
 
     @Test
     public abstract void when_classpathSpecified_usesSpecifiedResource();
 
-    @Test(expected = HazelcastException.class)
-    public abstract void when_classpathMemberSpecifiedNonExistingFile_thenThrowsException();
-
-    @Test
-    public abstract void when_classpathMemberSpecified_usesSpecifiedResource();
-
     @Test
     public abstract void when_configHasVariable_variablesAreReplaced();
-
-    @Test
-    public abstract void when_configMemberHasVariable_variablesAreReplaced();
-
-    @Test
-    public abstract void when_edgeDefaultsSpecified_usesSpecified();
 
     protected static void assertConfig(JetConfig jetConfig) {
         assertEquals("cooperativeThreadCount", 55, jetConfig.getInstanceConfig().getCooperativeThreadCount());
@@ -136,7 +118,5 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
         assertThat(config, not(nullValue()));
         assertThat(config.getGroupConfig().getName(), equalTo("jet"));
     }
-
-
 
 }

@@ -35,7 +35,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 @RunWith(HazelcastSerialClassRunner.class)
-public class XmlJetConfigWithSystemPropertyTest extends AbstractJetConfigWithSystemPropertyTest {
+public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigWithSystemPropertyTest {
 
     private static final String TEST_XML_1 = "hazelcast-jet-test.xml";
     private static final String TEST_XML_2 = "hazelcast-jet-member-test.xml";

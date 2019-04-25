@@ -96,7 +96,7 @@ public abstract class AbstractJetConfigImportVariableReplacementTest {
     @Test
     public abstract void testImportEdgeConfigFromFile() throws Exception;
 
-       @Test
+    @Test
     public abstract void testReplacers() throws Exception;
 
     @Test(expected = ConfigurationException.class)

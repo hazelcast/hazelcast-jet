@@ -22,7 +22,6 @@ import com.hazelcast.core.HazelcastException;
 import com.hazelcast.jet.impl.config.XmlJetClientConfigLocator;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -68,7 +67,6 @@ public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigW
 
     @Override
     @Test
-    @Ignore
     public void when_filePathSpecified_usesSpecifiedFile() throws IOException {
         //Given
         File tempFile = File.createTempFile("jet", ".xml");
@@ -80,6 +78,7 @@ public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigW
 
         //When
         XmlJetClientConfigLocator locator = new XmlJetClientConfigLocator();
+        locator.locateEverywhere();
         ClientConfig config = new XmlClientConfigBuilder(locator.getIn()).build();
 
 
@@ -138,39 +137,4 @@ public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigW
         assertEquals("member", "19.0.0.2:5670", config.getNetworkConfig().getAddresses().iterator().next());
     }
 
-    @Override
-    @Ignore
-    @Test
-    public void when_classpathMemberSpecified_usesSpecifiedResource() {
-    }
-
-    @Override
-    @Ignore
-    @Test(expected = HazelcastException.class)
-    public void when_classpathMemberSpecifiedNonExistingFile_thenThrowsException() {
-    }
-
-    @Override
-    @Ignore
-    @Test(expected = HazelcastException.class)
-    public void when_filePathMemberSpecifiedNonExistingFile_thenThrowsException() {
-    }
-
-    @Override
-    @Ignore
-    @Test
-    public void when_filePathMemberSpecified_usesSpecifiedFile() {
-    }
-
-    @Override
-    @Ignore
-    @Test
-    public void when_configMemberHasVariable_variablesAreReplaced() {
-    }
-
-    @Override
-    @Test
-    @Ignore
-    public void when_edgeDefaultsSpecified_usesSpecified() {
-    }
 }

@@ -80,11 +80,12 @@ public final class XmlJetConfigBuilder extends AbstractXmlConfigBuilder implemen
     }
 
     /**
-     * Sets the used properties. Can be null if no properties should be used.
-     * <p>
-     * Properties are used to resolve ${variable} occurrences in the XML file.
+     * Sets properties to be used in variable resolution.
      *
-     * @param properties the new properties
+     * If null properties supplied, System.properties will be used.
+     *
+     * @param properties the properties to be used to resolve ${variable}
+     *                   occurrences in the XML file
      * @return the XmlJetConfigBuilder
      */
     public XmlJetConfigBuilder setProperties(@Nullable Properties properties) {
