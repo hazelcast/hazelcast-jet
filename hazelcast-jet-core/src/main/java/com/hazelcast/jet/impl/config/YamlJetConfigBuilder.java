@@ -25,7 +25,6 @@ import com.hazelcast.internal.yaml.YamlLoader;
 import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.internal.yaml.YamlNode;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.JetConfigBuilder;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import org.w3c.dom.Node;
 
@@ -36,7 +35,7 @@ import java.util.Properties;
 import static com.hazelcast.config.yaml.W3cDomUtil.asW3cNode;
 import static com.hazelcast.util.Preconditions.checkTrue;
 
-public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder implements JetConfigBuilder {
+public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder {
 
     private final InputStream in;
 
@@ -62,7 +61,6 @@ public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder implements J
         return JetConfigSections.HAZELCAST_JET.name;
     }
 
-    @Override
     public JetConfig build() {
         return build(new JetConfig());
     }

@@ -24,7 +24,6 @@ import com.hazelcast.instance.BuildInfo;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.JetConfigBuilder;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.nio.IOUtil;
@@ -44,7 +43,7 @@ import static com.hazelcast.util.StringUtil.LINE_SEPARATOR;
 /**
  * Loads the {@link JetConfig} using XML.
  */
-public final class XmlJetConfigBuilder extends AbstractXmlConfigBuilder implements JetConfigBuilder {
+public final class XmlJetConfigBuilder extends AbstractXmlConfigBuilder {
 
     private static final ILogger LOGGER = Logger.getLogger(XmlJetConfigBuilder.class);
 
@@ -144,7 +143,6 @@ public final class XmlJetConfigBuilder extends AbstractXmlConfigBuilder implemen
         return jetBuildInfo.getVersion().substring(0, 3);
     }
 
-    @Override
     public JetConfig build() {
         return build(new JetConfig());
     }

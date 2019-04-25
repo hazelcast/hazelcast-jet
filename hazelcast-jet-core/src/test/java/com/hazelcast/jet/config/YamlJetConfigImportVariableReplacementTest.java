@@ -434,7 +434,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         }
 
         //When
-        JetConfig config = JetConfig.loadFromFileSystem(tempFile, properties);
+        JetConfig config = JetConfig.loadFromFile(tempFile, properties);
 
         //Then
         assertPropertiesOnConfig(config);

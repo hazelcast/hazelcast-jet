@@ -175,8 +175,8 @@ public class JetConfig {
      * @throws InvalidConfigurationException if the file content is invalid
      */
     @Nonnull
-    public static JetConfig loadFromFileSystem(File configFile) throws FileNotFoundException {
-        return loadFromFileSystem(configFile, System.getProperties());
+    public static JetConfig loadFromFile(File configFile) throws FileNotFoundException {
+        return loadFromFile(configFile, System.getProperties());
     }
 
     /**
@@ -190,7 +190,7 @@ public class JetConfig {
      * @throws InvalidConfigurationException if the file content is invalid
      */
     @Nonnull
-    public static JetConfig loadFromFileSystem(File configFile, Properties properties) throws FileNotFoundException {
+    public static JetConfig loadFromFile(File configFile, Properties properties) throws FileNotFoundException {
         checkTrue(configFile != null, "configFile can't be null");
         checkTrue(properties != null, "properties can't be null");
 

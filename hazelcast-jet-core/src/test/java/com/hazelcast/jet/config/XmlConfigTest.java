@@ -76,7 +76,7 @@ public class XmlConfigTest {
         }
 
         // When
-        JetConfig jetConfig = JetConfig.loadFromFileSystem(tempFile);
+        JetConfig jetConfig = JetConfig.loadFromFile(tempFile);
 
         // Then
         assertConfig(jetConfig);
