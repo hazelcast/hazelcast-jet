@@ -93,7 +93,7 @@ public class ProcessorTasklet implements Tasklet {
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
     private ProcessorState state;
-    private long lastSnapshotId;
+    private long pendingSnapshotId;
     private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
     private boolean processorClosed;
@@ -143,7 +143,7 @@ public class ProcessorTasklet implements Tasklet {
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
         state = initialProcessingState();
-        lastSnapshotId = ssContext.activeSnapshotId();
+        pendingSnapshotId = ssContext.activeSnapshotId() + 1;
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
@@ -339,6 +339,7 @@ public class ProcessorTasklet implements Tasklet {
                     } else {
                         currentBarrier = null;
                         receivedBarriers.clear();
+                        pendingSnapshotId++;
                         state = initialProcessingState();
                     }
                 }
@@ -349,10 +350,10 @@ public class ProcessorTasklet implements Tasklet {
                 progTracker.notDone();
                 // check ssContext to see if a barrier should be emitted
                 long currSnapshotId = ssContext.activeSnapshotId();
-                assert currSnapshotId >= lastSnapshotId : "Unexpected new snapshot id " + currSnapshotId
-                        + ", last was" + lastSnapshotId;
-                if (currSnapshotId > lastSnapshotId) {
-                    lastSnapshotId = currSnapshotId;
+                assert currSnapshotId >= pendingSnapshotId - 1 : "Unexpected new snapshot id " + currSnapshotId
+                        + ", current was" + pendingSnapshotId;
+                if (currSnapshotId >= pendingSnapshotId) {
+                    pendingSnapshotId = currSnapshotId;
                     if (outbox.hasUnfinishedItem()) {
                         outbox.block();
                     } else {
@@ -462,9 +463,9 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     private void observeBarrier(int ordinal, SnapshotBarrier barrier) {
-        if (barrier.snapshotId() <= lastSnapshotId) {
+        if (barrier.snapshotId() < pendingSnapshotId) {
             throw new JetException("Unexpected snapshot barrier ID " + barrier.snapshotId() + " from ordinal " + ordinal +
-                    " expected a value strictly larger than " + lastSnapshotId);
+                    " expected " + pendingSnapshotId);
         }
         currentBarrier = barrier;
         if (barrier.isTerminal()) {

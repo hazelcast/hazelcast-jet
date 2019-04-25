@@ -251,11 +251,13 @@ class MasterSnapshotContext {
             assert snapshotInProgress : "snapshot not in progress";
             snapshotInProgress = false;
             if (wasTerminal) {
-                // after a successful terminal snapshot, no more snapshots are scheduled in this execution
+                // after a terminal snapshot, no more snapshots are scheduled in this execution
                 boolean completedNow = terminalSnapshotFuture.complete(null);
                 assert completedNow : "terminalSnapshotFuture was already completed";
                 if (!isSuccess) {
-                    // If the terminal snapshot failed, the executions might not terminate on some members.
+                    // If the terminal snapshot failed, the executions might not terminate on some members
+                    // normally and we don't care if it does - the snapshot is done, though unsuccessfully, and
+                    // we have to bring the execution down.
                     // Let's execute the CompleteExecutionOperation to terminate them.
                     mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null);
                 }

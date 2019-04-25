@@ -195,19 +195,19 @@ public class OperationLossTest extends JetTestSupport {
     }
 
     @Test
-    public void when_terminalSnapshotOperationLost_then_jobSuspends() {
+    public void when_terminalSnapshotOperationLost_then_jobRestarts() {
         PacketFiltersUtil.dropOperationsFrom(instance1.getHazelcastInstance(), JetInitDataSerializerHook.FACTORY_ID,
                 singletonList(JetInitDataSerializerHook.SNAPSHOT_OPERATION));
         DAG dag = new DAG().vertex(new Vertex("v", () -> new NoOutputSourceP()).localParallelism(1));
         Job job = instance1.newJob(dag, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
         assertJobStatusEventually(job, RUNNING);
-        job.suspend();
+        job.restart();
         // sleep so that the SnapshotOperation is sent out, but lost
         sleepSeconds(1);
         // reset filters so that the situation can resolve
         PacketFiltersUtil.resetPacketFiltersFrom(instance1.getHazelcastInstance());
 
         // Then
-        assertJobStatusEventually(job, SUSPENDED);
+        assertTrueEventually(() -> assertEquals(4, NoOutputSourceP.initCount.get()));
     }
 }
