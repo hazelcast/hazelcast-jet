@@ -116,7 +116,8 @@ public class JetConfig {
      * the XML or YAML.
      */
     @Nonnull
-    public static JetConfig loadDefault(@Nonnull Properties properties) {
+    public static JetConfig loadDefault(Properties properties) {
+        checkTrue(properties != null, "properties can't be null");
         return ConfigProvider.locateAndGetJetConfig(properties);
     }
 

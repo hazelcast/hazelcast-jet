@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet.config;
 
-import com.hazelcast.core.HazelcastException;
 import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
@@ -28,34 +29,14 @@ import java.io.IOException;
  * @see XmlJetConfigLoadFromFileSystemOrClasspathTest
  * @see YamlJetConfigLoadFromFileSystemOrClasspathTest
  */
+@RunWith(Enclosed.class)
 public abstract class AbstractJetConfigLoadFromFileSystemOrClasspathTest {
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_fileSystemNullFile_thenThrowsException() throws Exception;
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_fileSystemNullProperties_thenThrowsException() throws Exception;
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_fileSystemPathSpecifiedNonExistingFile_thenThrowsException() throws Exception;
 
     @Test
     public abstract void when_fileSystemFileSpecified_usesSpecifiedFile() throws IOException;
 
     @Test
     public abstract void when_fileSystemPathSpecified_usesSpecifiedFile() throws IOException;
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_classpathSpecifiedNonExistingFile_thenThrowsException();
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_classPathNullResource_thenThrowsException() throws Exception;
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_classPathNullProperties_thenThrowsException() throws Exception;
-
-    @Test(expected = HazelcastException.class)
-    public abstract void when_classPathNullClassloader_thenThrowsException() throws Exception;
 
     @Test
     public abstract void when_classpathSpecified_usesSpecifiedResource();

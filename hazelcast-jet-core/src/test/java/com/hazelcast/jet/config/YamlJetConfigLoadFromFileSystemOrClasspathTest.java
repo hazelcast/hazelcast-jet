@@ -20,7 +20,6 @@ import com.hazelcast.jet.impl.util.Util;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,24 +30,6 @@ import static com.hazelcast.jet.config.AbstractJetConfigWithSystemPropertyTest.a
 public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetConfigLoadFromFileSystemOrClasspathTest {
 
     public static final String TEST_YAML_JET = "hazelcast-jet-test.yaml";
-
-    @Override
-    @Test(expected = IllegalArgumentException.class)
-    public void when_fileSystemNullFile_thenThrowsException() throws Exception {
-        JetConfig.loadFromFile((File) null);
-    }
-
-    @Override
-    @Test(expected = IllegalArgumentException.class)
-    public void when_fileSystemNullProperties_thenThrowsException() throws Exception {
-        JetConfig.loadFromFile(new File("test"), null);
-    }
-
-    @Override
-    @Test(expected = FileNotFoundException.class)
-    public void when_fileSystemPathSpecifiedNonExistingFile_thenThrowsException() throws Exception {
-        JetConfig.loadFromFile(new File("non-existent.yaml"));
-    }
 
     @Override
     public void when_fileSystemFileSpecified_usesSpecifiedFile() throws IOException {
@@ -83,30 +64,6 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
         // Then
         assertConfig(jetConfig);
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
-    }
-
-    @Override
-    @Test(expected = IllegalArgumentException.class)
-    public void when_classpathSpecifiedNonExistingFile_thenThrowsException() {
-        JetConfig.loadFromClasspath(getClass().getClassLoader(), "non-existent.yaml");
-    }
-
-    @Override
-    @Test(expected = IllegalArgumentException.class)
-    public void when_classPathNullResource_thenThrowsException() throws Exception {
-        JetConfig.loadFromClasspath(getClass().getClassLoader(), null, System.getProperties());
-    }
-
-    @Override
-    @Test(expected = IllegalArgumentException.class)
-    public void when_classPathNullProperties_thenThrowsException() throws Exception {
-        JetConfig.loadFromClasspath(getClass().getClassLoader(), "test", null);
-    }
-
-    @Override
-    @Test(expected = IllegalArgumentException.class)
-    public void when_classPathNullClassloader_thenThrowsException() throws Exception {
-        JetConfig.loadFromClasspath(null, "test");
     }
 
     @Override
