@@ -385,12 +385,10 @@ public final class AggregateOperations {
      *
      * <pre>{@code
      *     // calculate set of surnames in each city
-     *     p.drawFrom(...)
-     *      .aggregate(AggregateOperations.groupingBy(
-     *          Person::getCity,
-     *          mapping(Person::getSurname, toSet())
-     *      ))
-     *      .drainTo(...);
+     *     pipeline.aggregate(AggregateOperations.groupingBy(
+     *         Person::getCity,
+     *         mapping(Person::getSurname, toSet())
+     *     ));
      * }</pre>
      *
      * <p>
@@ -432,14 +430,12 @@ public final class AggregateOperations {
      *
      * <pre>{@code
      *     // calculate total and conditional count in one step
-     *     p.drawFrom(...)
-     *      .aggregate(AggregateOperations.allOf(
-     *          // total count
-     *          AggregateOperations.counting(),
-     *          // successful count
-     *          filtering(Trade::isSuccessful, AggregateOperations.counting())
-     *      ))
-     *      .drainTo(...);
+     *     pipeline.aggregate(AggregateOperations.allOf(
+     *         // total count
+     *         AggregateOperations.counting(),
+     *         // successful count
+     *         filtering(Trade::isSuccessful, AggregateOperations.counting())
+     *     ));
      * }</pre>
      *
      * See also {@link #mapping mapping()} and {@link #flatMapping
@@ -481,16 +477,13 @@ public final class AggregateOperations {
      * <h3>Example</h3>
      *
      * <pre>{@code
-     *     // calculate the number of trades and set of the involved parties
-     *     // in one step
-     *     p.drawFrom(...)
-     *      .aggregate(AggregateOperations.allOf(
-     *          AggregateOperations.counting(),
-     *          AggregateOperations.flatMapping(
-     *              trade -> traverseItems(trade.getBuyer(), trade.getSeller()),
-     *              toSet())
-     *      ))
-     *      .drainTo(...);
+     *     // calculate the number of trades and set of the involved parties in one step
+     *     pipeline.aggregate(AggregateOperations.allOf(
+     *         AggregateOperations.counting(),
+     *         AggregateOperations.flatMapping(
+     *             trade -> traverseItems(trade.getBuyer(), trade.getSeller()),
+     *             toSet())
+     *     ));
      * }</pre>
      *
      * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
