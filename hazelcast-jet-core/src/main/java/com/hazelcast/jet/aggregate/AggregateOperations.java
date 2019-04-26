@@ -178,6 +178,10 @@ public final class AggregateOperations {
      * calculated according to the given {@link ComparatorEx comparator}.
      * The returned list of elements is sorted in descending order.
      * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     AggregateOperations.topN(5, ComparatorEx.comparingInt(person -> person.getAge()))
+     * }</pre>
      * This aggregate operation does not implement the {@link
      * AggregateOperation1#deductFn() deduct} primitive.
      *
@@ -221,6 +225,10 @@ public final class AggregateOperations {
      * calculated according to the given {@link ComparatorEx comparator}.
      * The returned list of elements is sorted in ascending order.
      * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     AggregateOperations.bottomN(5, ComparatorEx.comparingInt(person -> person.getAge()))
+     * }</pre>
      * This aggregate operation does not implement the {@link
      * AggregateOperation1#deductFn() deduct} primitive.
      *
