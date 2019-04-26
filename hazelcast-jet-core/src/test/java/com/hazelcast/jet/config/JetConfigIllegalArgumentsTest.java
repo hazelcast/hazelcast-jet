@@ -52,7 +52,7 @@ public class JetConfigIllegalArgumentsTest {
         this.expectedExceptionClass = expectedExceptionClass;
     }
 
-    @Parameters(name = "{index}: expected={1}" )
+    @Parameters(name = "{index}: expected={1}")
     @SuppressWarnings("checkstyle:LineLength")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
