@@ -44,10 +44,10 @@ public class JetConfigIllegalArgumentsTest {
     public final ExpectedException exception = ExpectedException.none();
 
     private final SupplierEx<JetConfig> configSupplier;
-    private final Class expectedExceptionClass;
+    private final Class<? extends Throwable> expectedExceptionClass;
 
     public JetConfigIllegalArgumentsTest(SupplierEx<JetConfig> configSupplier,
-                                         Class<? extends Exception> expectedExceptionClass) {
+                                         Class<? extends Throwable> expectedExceptionClass) {
         this.configSupplier = configSupplier;
         this.expectedExceptionClass = expectedExceptionClass;
     }
