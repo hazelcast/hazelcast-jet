@@ -475,8 +475,10 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
-     * AggregateOperations.flatMapping(group -> group.getMembers()), AggregateOperations.counting())
-     * }</pre>
+     * AggregateOperations.flatMapping(
+     *   group -> Traversers.traverseIterable(group.getMembers()),
+     *   AggregateOperations.counting()
+     * )}</pre>
      *
      * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
      *
