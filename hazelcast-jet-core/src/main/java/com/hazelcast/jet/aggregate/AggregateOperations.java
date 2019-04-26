@@ -121,6 +121,11 @@ public final class AggregateOperations {
      * Returns an aggregate operation that computes the minimal item according
      * to the given {@code comparator}.
      * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     AggregateOperations.minBy(ComparatorEx.comparingInt(person -> person.getAge()))
+     * }</pre>
+     *
      * This aggregate operation does not implement the {@link
      * AggregateOperation1#deductFn() deduct} primitive.
      *
@@ -138,6 +143,11 @@ public final class AggregateOperations {
      * Returns an aggregate operation that computes the maximal item according
      * to the given {@code comparator}.
      * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     AggregateOperations.maxBy(ComparatorEx.comparingInt(person -> person.getAge()))
+     * }</pre>
+     *
      * This aggregate operation does not implement the {@link
      * AggregateOperation1#deductFn() deduct} primitive.
      *
@@ -380,17 +390,11 @@ public final class AggregateOperations {
      * <p>
      * If the {@code mapFn} returns {@code null}, the item won't be aggregated
      * at all. This allows applying a filter at the same time.
-     *
-     * <h4>Example</h4>
-     *
+     * <p>
+     * Sample usage:
      * <pre>{@code
-     *     // calculate set of surnames in each city
-     *     p.drawFrom(...)
-     *      .aggregate(AggregateOperations.groupingBy(
-     *          Person::getCity,
-     *          mapping(Person::getSurname, toSet())
-     *      ))
-     *      .drainTo(...);
+     * // calculate set of surnames in each city
+     * AggregateOperations.mapping(person -> person.getSurname(), AggregateOperations.toSet())
      * }</pre>
      *
      * <p>
@@ -427,19 +431,10 @@ public final class AggregateOperations {
     /**
      * Wraps an aggregate operation so that only items passing the {@code
      * filterFn} will be accumulated; others will be ignored.
-     *
-     * <h3>Example</h3>
-     *
+     * <p>
+     * Sample usage:
      * <pre>{@code
-     *     // calculate total and conditional count in one step
-     *     p.drawFrom(...)
-     *      .aggregate(AggregateOperations.allOf(
-     *          // total count
-     *          AggregateOperations.counting(),
-     *          // successful count
-     *          filtering(Trade::isSuccessful, AggregateOperations.counting())
-     *      ))
-     *      .drainTo(...);
+     * AggregateOperations.filtering(trade -> trade.getQuantity > 100, AggregateOperations.counting())
      * }</pre>
      *
      * See also {@link #mapping mapping()} and {@link #flatMapping
@@ -477,20 +472,10 @@ public final class AggregateOperations {
      * <em>n</em> {@code U} items accumulated.
      * <p>
      * The returned traverser must be non-null and <em>null-terminated</em>.
-     *
-     * <h3>Example</h3>
-     *
+     * <p>
+     * Sample usage:
      * <pre>{@code
-     *     // calculate the number of trades and set of the involved parties
-     *     // in one step
-     *     p.drawFrom(...)
-     *      .aggregate(AggregateOperations.allOf(
-     *          AggregateOperations.counting(),
-     *          AggregateOperations.flatMapping(
-     *              trade -> traverseItems(trade.getBuyer(), trade.getSeller()),
-     *              toSet())
-     *      ))
-     *      .drainTo(...);
+     * AggregateOperations.flatMapping(group -> group.getMembers()), AggregateOperations.counting())
      * }</pre>
      *
      * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
