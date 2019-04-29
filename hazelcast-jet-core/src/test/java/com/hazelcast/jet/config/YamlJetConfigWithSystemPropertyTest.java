@@ -40,12 +40,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @RunWith(HazelcastSerialClassRunner.class)
 public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigWithSystemPropertyTest {
 
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
-
     private static final String JET_TEST_YAML = "hazelcast-jet-test.yaml";
     private static final String JET_TEST_WITH_VARIABLES_YAML = "hazelcast-jet-with-variables.yaml";
     private static final String JET_MEMBER_TEST_YAML = "hazelcast-jet-member-test.yaml";
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Override
     @Test(expected = HazelcastException.class)

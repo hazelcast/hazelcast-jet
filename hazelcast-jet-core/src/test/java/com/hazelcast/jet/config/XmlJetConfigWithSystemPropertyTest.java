@@ -237,9 +237,9 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
         assertEquals("packetSizeLimit", 997, edgeConfig.getPacketSizeLimit());
         assertEquals("receiveWindowMultiplier", 996, edgeConfig.getReceiveWindowMultiplier());
     }
-    
+
     @Test
-    public void when_filePathSpecifiedNonXml_then_loadedAsXml() throws Exception{
+    public void when_filePathSpecifiedNonXml_then_loadedAsXml() throws Exception {
         File tempFile = File.createTempFile("jet", ".xml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("hazelcast-jet-foo.bar");
@@ -251,7 +251,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
         JetConfig config = configBuilder.build();
         assertEquals("bar", config.getProperties().getProperty("foo"));
     }
-    
+
     @Test
     public void when_classPathSpecifiedNonXml_then_loadedAsXml() {
         System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:hazelcast-jet-foo.bar");
