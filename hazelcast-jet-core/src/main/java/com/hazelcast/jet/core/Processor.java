@@ -295,9 +295,9 @@ public interface Processor {
          * <p>
          * The value is in the range {@code [0...totalParallelism-1]}. For
          * example if there are 2 members in the cluster and {@linkplain
-         * #localParallelism() local parallelism} is 4, the processors on 1st
-         * cluster member will have indexes 0..3 and on the second member they
-         * will have indexes 4..7.
+         * #localParallelism() local parallelism} is 4, the processors on the
+         * 1st cluster member will have indexes 0..3 and on the second member
+         * they will have indexes 4..7.
          */
         int globalProcessorIndex();
     }
