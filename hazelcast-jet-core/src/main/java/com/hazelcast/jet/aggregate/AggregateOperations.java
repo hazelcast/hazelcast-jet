@@ -123,6 +123,7 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
+     *     // the result will be the youngest Person
      *     AggregateOperations.minBy(ComparatorEx.comparingInt(person -> person.getAge()))
      * }</pre>
      *
@@ -145,6 +146,7 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
+     *     // the result will be the oldest Person
      *     AggregateOperations.maxBy(ComparatorEx.comparingInt(person -> person.getAge()))
      * }</pre>
      *
@@ -180,6 +182,7 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
+     *     // the result will be a List<Person> with up to 5 oldest persons
      *     AggregateOperations.topN(5, ComparatorEx.comparingInt(person -> person.getAge()))
      * }</pre>
      * This aggregate operation does not implement the {@link
@@ -227,6 +230,7 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
+     *     // the result will be a List<Person> with up to 5 youngest persons
      *     AggregateOperations.bottomN(5, ComparatorEx.comparingInt(person -> person.getAge()))
      * }</pre>
      * This aggregate operation does not implement the {@link
@@ -401,10 +405,13 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
-     * // calculate set of surnames in each city
-     * AggregateOperations.mapping(person -> person.getSurname(), AggregateOperations.toSet())
+     *     // calculate the set of surnames
+     *     AggregateOperations.mapping(person -> person.getSurname(), AggregateOperations.toSet())
      * }</pre>
      *
+     * This operation is mostly useful in conjunction with {@link #allOf},
+     * otherwise it's simpler to use {@code stage.map()} before the
+     * aggregation.
      * <p>
      * See also {@link #filtering filtering()} and {@link #flatMapping
      * flatMapping()}.
@@ -442,9 +449,14 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
-     * AggregateOperations.filtering(trade -> trade.getQuantity > 100, AggregateOperations.counting())
+     *     // the result will be the count of trades with quantity of 100 or more (as a Long)
+     *     AggregateOperations.filtering(trade -> trade.getQuantity >= 100, AggregateOperations.counting())
      * }</pre>
      *
+     * This operation is mostly useful in conjunction with {@link #allOf},
+     * otherwise it's simpler to use {@code stage.filter()} before the
+     * aggregation.
+     * <p>
      * See also {@link #mapping mapping()} and {@link #flatMapping
      * flatMapping()}.
      *
@@ -483,11 +495,17 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
-     * AggregateOperations.flatMapping(
-     *   group -> Traversers.traverseIterable(group.getMembers()),
-     *   AggregateOperations.counting()
-     * )}</pre>
+     *     // the result will be the total count of members in all groups
+     *     AggregateOperations.flatMapping(
+     *       group -> Traversers.traverseIterable(group.getMembers()),
+     *       AggregateOperations.counting()
+     *     )
+     * }</pre>
      *
+     * This operation is mostly useful in conjunction with {@link #allOf},
+     * otherwise it's simpler to use {@code stage.flatMap()} before the
+     * aggregation.
+     * <p>
      * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
      *
      * @param <T> input item type
