@@ -78,7 +78,7 @@
         <target.dir>target</target.dir>
         <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
-        <hazelcast.version>3.12-BETA-2</hazelcast.version>
+        <hazelcast.version>3.12.1-SNAPSHOT</hazelcast.version>
         <hazelcast.protocol.version>1.8.0-5</hazelcast.protocol.version>
 
         <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
@@ -108,7 +108,7 @@
         <slf4j.api.version>1.6.6</slf4j.api.version>
         <guava.version>15.0</guava.version>
         <reflections.version>0.9.10</reflections.version>
-        <hazelcast.aws.version>2.0.0</hazelcast.aws.version>
+        <hazelcast.aws.version>2.4</hazelcast.aws.version>
         <osgi.version>4.2.0</osgi.version>
         <hadoop.version>2.8.3</hadoop.version>
         <spring.version>4.3.0.RELEASE</spring.version>
@@ -124,6 +124,8 @@
         <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
         <sonar.language>java</sonar.language>
         <sonar.verbose>true</sonar.verbose>
+
+        <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     </properties>
 
     <licenses>
@@ -336,10 +338,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <runOrder>failedfirst</runOrder>
                     <forkCount>4</forkCount>
-                    <failIfNoTests>false</failIfNoTests>
                     <trimStackTrace>false</trimStackTrace>
                     <argLine>
                         ${argLine}
@@ -386,6 +386,7 @@
                     <!-- see https://bugs.openjdk.java.net/browse/JDK-8212233
                              https://issues.apache.org/jira/browse/MJAVADOC-555 -->
                     <source>${jdk.version}</source>
+                    <quiet>true</quiet>
                 </configuration>
                 <executions>
                     <execution>
@@ -459,8 +460,12 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <forkCount>1</forkCount>
-                            <excludedGroups></excludedGroups>
+                            <forkCount combine.self="override">1</forkCount>
+                            <groups combine.self="override">
+                                com.hazelcast.test.annotation.NightlyTest,
+                                com.hazelcast.test.annotation.SlowTest
+                            </groups>
+                            <excludedGroups combine.self="override" />
                         </configuration>
                     </plugin>
                 </plugins>
@@ -486,11 +491,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <testFailureIgnore>true</testFailureIgnore>
-                            <argLine>@{argLine}</argLine>
-                            <excludedGroups>
-                                com.hazelcast.test.annotation.SlowTest,
-                                com.hazelcast.test.annotation.NightlyTest,
+                            <excludedGroups combine.self="override">
                                 com.hazelcast.jet.test.IgnoredForCoverage
                             </excludedGroups>
                         </configuration>
