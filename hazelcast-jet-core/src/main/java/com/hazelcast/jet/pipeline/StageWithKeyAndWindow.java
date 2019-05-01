@@ -385,4 +385,53 @@ public interface StageWithKeyAndWindow<T, K> {
     default WindowGroupAggregateBuilder1<T, K> aggregateBuilder() {
         return new WindowGroupAggregateBuilder1<>(this);
     }
+
+    /**
+     * Transforms {@code this} stage using the provided {@code transformFn} and
+     * returns the transformed stage. It allows you to extract common pipeline
+     * transformations to a separate function and then chain usage of those
+     * functions.
+     * <p>
+     * For example say you have this pipeline:
+     *
+     * <pre>{@code
+     *     p.drawFrom(...)
+     *      .groupingKey(...)
+     *      .window(...)
+     *      .aggregate(...)
+     *      .mapUsingContext(...) // enrich the result
+     *      ...
+     * }</pre>
+     *
+     * You can extract the {@code aggregate} and {@code mapUsingContext} stages
+     * to a function:
+     *
+     * <pre>{@code
+     *     StreamStage<String> addAggregation(StageWithKeyAndWindow<String> inputStage) {
+     *          return inputStage
+     *              .aggregate(...)
+     *              .mapUsingContext(...); // enrich the result
+     *     }
+     * }</pre>
+     *
+     * And then use it in the following way:
+     *
+     * <pre>{@code
+     *     p.drawFrom(...)
+     *      .groupingKey(...)
+     *      .window(...)
+     *      .apply(this::addAggregation)
+     *       ...
+     * }</pre>
+     *
+     * The {@code addAggregation} method can then be reused in multiple
+     * pipelines.
+     *
+     * @param transformFn a function to transform this stage to another stage
+     * @param <R> type of the returned stage
+     */
+    @Nonnull
+    default <R> R apply(@Nonnull FunctionEx<StageWithKeyAndWindow<T, K>, ? extends R> transformFn) {
+        return transformFn.apply(this);
+    }
 }

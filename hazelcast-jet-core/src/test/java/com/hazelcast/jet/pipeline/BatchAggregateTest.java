@@ -326,7 +326,7 @@ public class BatchAggregateTest extends PipelineTestSupport {
     }
 
     @Test
-    public void groupAggregateWithAppliedExtensionFunction() {
+    public void groupAggregate_appliedInExtensionFunction() {
         // Given
         FunctionEx<Integer, Integer> keyFn = i -> i % 5;
 

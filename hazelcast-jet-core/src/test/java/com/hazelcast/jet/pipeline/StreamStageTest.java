@@ -564,7 +564,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         List<Integer> input = sequence(itemCount);
 
         // When
-        StreamStage<String> mapped = streamStageFromList(input).apply(s -> s.map(i -> i + 1).map(String::valueOf));
+        StreamStage<String> mapped = streamStageFromList(input)
+                .apply(s -> s.map(i -> i + 1)
+                             .map(String::valueOf));
 
         // Then
         mapped.drainTo(sink);

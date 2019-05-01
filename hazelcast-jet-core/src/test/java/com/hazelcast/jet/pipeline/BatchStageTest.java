@@ -59,8 +59,6 @@ import static org.junit.Assert.assertTrue;
 
 public class BatchStageTest extends PipelineTestSupport {
 
-    private static final FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
-
     @Test(expected = IllegalArgumentException.class)
     public void when_emptyPipelineToDag_then_exceptionInIterator() {
         Pipeline.create().toDag().iterator();
@@ -107,6 +105,7 @@ public class BatchStageTest extends PipelineTestSupport {
     public void map() {
         // Given
         List<Integer> input = sequence(itemCount);
+        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
 
         // When
         BatchStage<String> mapped = batchStageFromList(input).map(formatFn);
@@ -118,19 +117,19 @@ public class BatchStageTest extends PipelineTestSupport {
                 streamToString(sinkStreamOf(String.class), identity()));
     }
 
-    private static BatchStage<String> manipulationFunction(BatchStage<Integer> input) {
-        return input
-                .map(formatFn)
-                .map(String::toUpperCase);
-    }
-
     @Test
     public void apply() {
+        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
+
         // Given
         List<Integer> input = sequence(itemCount);
+        FunctionEx<BatchStage<Integer>, BatchStage<String>> transformFn = stage ->
+                stage.map(formatFn)
+                     .map(String::toUpperCase);
 
         // When
-        BatchStage<String> mapped = batchStageFromList(input).apply(BatchStageTest::manipulationFunction);
+        BatchStage<String> mapped = batchStageFromList(input)
+                .apply(transformFn);
 
         // Then
         mapped.drainTo(sink);

@@ -186,15 +186,6 @@ public interface StreamStage<T> extends GeneralStage<T> {
         return (StreamStage<T>) GeneralStage.super.peek(toStringFn);
     }
 
-    /**
-     * Applies provided {@param transformationFunction} to this stage and return enriched stage.
-     * @see BatchStage#apply(FunctionEx)
-     */
-    @Nonnull
-    default <R> StreamStage<R> apply(@Nonnull FunctionEx<StreamStage<T>, StreamStage<R>> transformationFunction) {
-        return transformationFunction.apply(this);
-    }
-
     @Nonnull @Override
     default <R> StreamStage<R> customTransform(@Nonnull String stageName,
                                                @Nonnull SupplierEx<Processor> procSupplier) {
@@ -208,6 +199,51 @@ public interface StreamStage<T> extends GeneralStage<T> {
 
     @Nonnull @Override
     <R> StreamStage<R> customTransform(@Nonnull String stageName, @Nonnull ProcessorMetaSupplier procSupplier);
+
+    /**
+     * Transforms {@code this} stage using the provided {@code transformFn} and
+     * returns the transformed stage. It allows you to extract common pipeline
+     * transformations to a separate function and then chain usage of those
+     * functions.
+     * <p>
+     * For example say you have this pipeline:
+     *
+     * <pre>{@code
+     *     p.drawFrom(...)
+     *       .map(... some mapping)
+     *       .flatMap(... some mapping)
+     *       ...
+     * }</pre>
+     *
+     * You can extract the {@code map} and {@code flatMap} stages to a
+     * function:
+     *
+     * <pre>{@code
+     *     StreamStage<String> addSpecialMapping(StreamStage<String> inputStage) {
+     *          return inputStage
+     *              .map(... some mapping)
+     *              .flatMap(... some mapping);
+     *     }
+     * }</pre>
+     *
+     * And then use it in the following way:
+     *
+     * <pre>{@code
+     *     p.drawFrom(...)
+     *       .apply(this::addSpecialMapping)
+     *       ...
+     * }</pre>
+     *
+     * The {@code addSpecialMapping} method can then be re-used in multiple
+     * pipelines.
+     *
+     * @param transformFn a function to transform this stage to another stage
+     * @param <R> type of the returned stage
+     */
+    @Nonnull
+    default <R> R apply(@Nonnull FunctionEx<StreamStage<T>, ? extends R> transformFn) {
+        return transformFn.apply(this);
+    }
 
     @Nonnull @Override
     StreamStage<T> setLocalParallelism(int localParallelism);
