@@ -509,7 +509,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * @param <R> type of the returned stage
      */
     @Nonnull
-    default <R extends Stage> R apply(@Nonnull FunctionEx<BatchStage<T>, ? extends R> transformFn) {
+    default <R extends Stage> R apply(@Nonnull FunctionEx<? super BatchStage<T>, ? extends R> transformFn) {
         return transformFn.apply(this);
     }
 
