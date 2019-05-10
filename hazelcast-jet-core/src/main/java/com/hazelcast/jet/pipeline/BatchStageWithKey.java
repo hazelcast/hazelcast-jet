@@ -469,7 +469,7 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <R> type of the returned stage
      */
     @Nonnull
-    default <R> R apply(@Nonnull FunctionEx<BatchStageWithKey<T, K>, ? extends R> transformFn) {
+    default <R> R apply(@Nonnull FunctionEx<? super BatchStageWithKey<T, K>, ? extends R> transformFn) {
         return transformFn.apply(this);
     }
 

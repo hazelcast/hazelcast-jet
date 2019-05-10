@@ -241,7 +241,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      * @param <R> type of the returned stage
      */
     @Nonnull
-    default <R> R apply(@Nonnull FunctionEx<StreamStage<T>, ? extends R> transformFn) {
+    default <R> R apply(@Nonnull FunctionEx<? super StreamStage<T>, ? extends R> transformFn) {
         return transformFn.apply(this);
     }
 

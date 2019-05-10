@@ -423,7 +423,7 @@ public interface StageWithWindow<T> {
      * @param <R> type of the returned stage
      */
     @Nonnull
-    default <R> R apply(@Nonnull FunctionEx<StageWithWindow<T>, ? extends R> transformFn) {
+    default <R> R apply(@Nonnull FunctionEx<? super StageWithWindow<T>, ? extends R> transformFn) {
         return transformFn.apply(this);
     }
 }

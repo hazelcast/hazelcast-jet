@@ -166,7 +166,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <R> type of the returned stage
      */
     @Nonnull
-    default <R> R apply(@Nonnull FunctionEx<StreamStageWithKey<T, K>, ? extends R> transformFn) {
+    default <R> R apply(@Nonnull FunctionEx<? super StreamStageWithKey<T, K>, ? extends R> transformFn) {
         return transformFn.apply(this);
     }
 }
