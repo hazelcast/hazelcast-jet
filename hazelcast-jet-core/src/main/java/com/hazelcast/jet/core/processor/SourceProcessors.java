@@ -463,9 +463,11 @@ public final class SourceProcessors {
         checkSerializable(destroyFn, "destroyFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
-                () -> new ConvenientSourceP<S, T>(
+                () -> new ConvenientSourceP<>(
                         createFn,
                         (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
+                        src -> null,
+                        (src, states) -> { },
                         destroyFn,
                         new SourceBufferImpl.Plain<>(),
                         null));
@@ -507,6 +509,8 @@ public final class SourceProcessors {
                 () -> new ConvenientSourceP<>(
                         createFn,
                         (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
+                        src -> null,
+                        (src, states) -> { },
                         destroyFn,
                         new SourceBufferImpl.Timestamped<>(),
                         eventTimePolicy
