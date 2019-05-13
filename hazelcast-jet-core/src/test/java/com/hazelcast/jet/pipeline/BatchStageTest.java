@@ -119,11 +119,11 @@ public class BatchStageTest extends PipelineTestSupport {
 
     @Test
     public void apply() {
-        FunctionEx<Integer, String> formatFn = i -> String.format("%04d-string", i);
+        FunctionEx<Number, String> formatFn = i -> String.format("%04d-string", i);
 
         // Given
         List<Integer> input = sequence(itemCount);
-        FunctionEx<BatchStage<Integer>, BatchStage<String>> transformFn = stage ->
+        FunctionEx<BatchStage<? extends Number>, BatchStage<String>> transformFn = stage ->
                 stage.map(formatFn)
                      .map(String::toUpperCase);
 
