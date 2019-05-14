@@ -165,10 +165,10 @@ public final class SourceBuilder<S> {
      * @param <S>      type of the state object
      */
     @Nonnull
-    public static <S> SourceBuilder<S>.Batch<Void> batch(
+    public static <S> SourceBuilder<S>.Batch<Void, Void> batch(
             @Nonnull String name, @Nonnull FunctionEx<? super Context, ? extends S> createFn
     ) {
-        return new SourceBuilder<S>(name, createFn).new Batch<Void>();
+        return new SourceBuilder<S>(name, createFn).new Batch<Void, Void>();
     }
 
     /**
@@ -226,10 +226,10 @@ public final class SourceBuilder<S> {
      * @param <S>      type of the state object
      */
     @Nonnull
-    public static <S> SourceBuilder<S>.Stream<Void> stream(
+    public static <S> SourceBuilder<S>.Stream<Void, Void> stream(
             @Nonnull String name, @Nonnull FunctionEx<? super Context, ? extends S> createFn
     ) {
-        return new SourceBuilder<S>(name, createFn).new Stream<Void>();
+        return new SourceBuilder<S>(name, createFn).new Stream<Void, Void>();
     }
 
     /**
@@ -309,14 +309,17 @@ public final class SourceBuilder<S> {
      * @param <S> type of the state object
      */
     @Nonnull
-    public static <S> SourceBuilder<S>.TimestampedStream<Void> timestampedStream(
+    public static <S> SourceBuilder<S>.TimestampedStream<Void, Void> timestampedStream(
             @Nonnull String name,
             @Nonnull FunctionEx<? super Context, ? extends S> createFn
     ) {
-        return new SourceBuilder<S>(name, createFn).new TimestampedStream<Void>();
+        return new SourceBuilder<S>(name, createFn).new TimestampedStream<Void, Void>();
     }
 
-    private abstract class Base<T> {
+    private abstract class Base<T, N> {
+        private FunctionEx<? super S, ?> createSnapshotFn;
+        private BiConsumerEx<? super S, ? super N> restoreFromSnapshotFn;
+
         private Base() {
         }
 
@@ -326,7 +329,7 @@ public final class SourceBuilder<S> {
          * state object.
          */
         @Nonnull
-        public Base<T> destroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
+        public Base<T, N> destroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
             mDestroyFn = destroyFn;
             return this;
         }
@@ -346,14 +349,28 @@ public final class SourceBuilder<S> {
          * @param preferredLocalParallelism requested number of processors on each cluster member
          */
         @Nonnull
-        public Base<T> distributed(int preferredLocalParallelism) {
+        public Base<T, N> distributed(int preferredLocalParallelism) {
             checkPositive(preferredLocalParallelism, "Preferred local parallelism must be positive");
             mPreferredLocalParallelism = preferredLocalParallelism;
             return this;
         }
+
+        @Nonnull
+        public <N_NEW> Base<T, N_NEW> createSnapshotFn(@Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn) {
+            @SuppressWarnings("unchecked")
+            Base<T, N_NEW> newThis = (Base<T, N_NEW>) this;
+            newThis.createSnapshotFn = createSnapshotFn;
+            return newThis;
+        }
+
+        @Nonnull
+        public Base<T, N> restoreFromSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super N> restoreFromSnapshotFn) {
+            this.restoreFromSnapshotFn = restoreFromSnapshotFn;
+            return this;
+        }
     }
 
-    private abstract class BaseNoTimestamps<T> extends Base<T> {
+    private abstract class BaseNoTimestamps<T, N> extends Base<T, N> {
         BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn;
 
         private BaseNoTimestamps() {
@@ -376,10 +393,10 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         @SuppressWarnings("unchecked")
-        public <T_NEW> BaseNoTimestamps<T_NEW> fillBufferFn(
+        public <T_NEW> BaseNoTimestamps<T_NEW, N> fillBufferFn(
                 @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
-            BaseNoTimestamps<T_NEW> newThis = (BaseNoTimestamps<T_NEW>) this;
+            BaseNoTimestamps<T_NEW, N> newThis = (BaseNoTimestamps<T_NEW, N>) this;
             newThis.fillBufferFn = fillBufferFn;
             return newThis;
         }
@@ -391,7 +408,7 @@ public final class SourceBuilder<S> {
      *
      * @param <T> type of emitted objects
      */
-    public final class Batch<T> extends BaseNoTimestamps<T> {
+    public final class Batch<T, N> extends BaseNoTimestamps<T, N> {
         private Batch() {
         }
 
@@ -402,20 +419,25 @@ public final class SourceBuilder<S> {
          * SourceBuffer#close}.
          */
         @Override @Nonnull
-        public <T_NEW> SourceBuilder<S>.Batch<T_NEW> fillBufferFn(
+        public <T_NEW> SourceBuilder<S>.Batch<T_NEW, N> fillBufferFn(
                 @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
-            return (Batch<T_NEW>) super.fillBufferFn(fillBufferFn);
+            return (Batch<T_NEW, N>) super.fillBufferFn(fillBufferFn);
         }
 
         @Override @Nonnull
-        public Batch<T> destroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
-            return (Batch<T>) super.destroyFn(destroyFn);
+        public Batch<T, N> destroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
+            return (Batch<T, N>) super.destroyFn(destroyFn);
         }
 
         @Override @Nonnull
-        public Batch<T> distributed(int preferredLocalParallelism) {
-            return (Batch<T>) super.distributed(preferredLocalParallelism);
+        public Batch<T, N> distributed(int preferredLocalParallelism) {
+            return (Batch<T, N>) super.distributed(preferredLocalParallelism);
+        }
+
+        @Override @Nonnull
+        public <N_NEW> Batch<T, N_NEW> createSnapshotFn(@Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn) {
+            return (Batch<T, N_NEW>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -435,25 +457,30 @@ public final class SourceBuilder<S> {
      *
      * @param <T> type of emitted objects
      */
-    public final class Stream<T> extends BaseNoTimestamps<T> {
+    public final class Stream<T, N> extends BaseNoTimestamps<T, N> {
         private Stream() {
         }
 
         @Override @Nonnull
-        public <T_NEW> Stream<T_NEW> fillBufferFn(
+        public <T_NEW> Stream<T_NEW, N> fillBufferFn(
                 @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
-            return (Stream<T_NEW>) super.fillBufferFn(fillBufferFn);
+            return (Stream<T_NEW, N>) super.fillBufferFn(fillBufferFn);
         }
 
         @Override @Nonnull
-        public Stream<T> destroyFn(@Nonnull ConsumerEx<? super S> pDestroyFn) {
-            return (Stream<T>) super.destroyFn(pDestroyFn);
+        public Stream<T, N> destroyFn(@Nonnull ConsumerEx<? super S> pDestroyFn) {
+            return (Stream<T, N>) super.destroyFn(pDestroyFn);
         }
 
         @Override @Nonnull
-        public Stream<T> distributed(int preferredLocalParallelism) {
-            return (Stream<T>) super.distributed(preferredLocalParallelism);
+        public Stream<T, N> distributed(int preferredLocalParallelism) {
+            return (Stream<T, N>) super.distributed(preferredLocalParallelism);
+        }
+
+        @Override @Nonnull
+        public <N_NEW> Stream<T, N_NEW> createSnapshotFn(@Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn) {
+            return (Stream<T, N_NEW>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -475,7 +502,7 @@ public final class SourceBuilder<S> {
      *
      * @param <T> type of emitted objects
      */
-    public final class TimestampedStream<T> extends Base<T> {
+    public final class TimestampedStream<T, N> extends Base<T, N> {
         private BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn;
 
         private TimestampedStream() {
@@ -501,22 +528,29 @@ public final class SourceBuilder<S> {
          */
         @Nonnull
         @SuppressWarnings("unchecked")
-        public <T_NEW> TimestampedStream<T_NEW> fillBufferFn(
+        public <T_NEW> TimestampedStream<T_NEW, N> fillBufferFn(
                 @Nonnull BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T_NEW>> fillBufferFn
         ) {
-            TimestampedStream<T_NEW> newThis = (TimestampedStream<T_NEW>) this;
+            TimestampedStream<T_NEW, N> newThis = (TimestampedStream<T_NEW, N>) this;
             newThis.fillBufferFn = fillBufferFn;
             return newThis;
         }
 
         @Override @Nonnull
-        public TimestampedStream<T> destroyFn(@Nonnull ConsumerEx<? super S> pDestroyFn) {
-            return (TimestampedStream<T>) super.destroyFn(pDestroyFn);
+        public TimestampedStream<T, N> destroyFn(@Nonnull ConsumerEx<? super S> pDestroyFn) {
+            return (TimestampedStream<T, N>) super.destroyFn(pDestroyFn);
         }
 
         @Override @Nonnull
-        public TimestampedStream<T> distributed(int preferredLocalParallelism) {
-            return (TimestampedStream<T>) super.distributed(preferredLocalParallelism);
+        public TimestampedStream<T, N> distributed(int preferredLocalParallelism) {
+            return (TimestampedStream<T, N>) super.distributed(preferredLocalParallelism);
+        }
+
+        @Override @Nonnull
+        public <N_NEW> TimestampedStream<T, N_NEW> createSnapshotFn(
+                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+        ) {
+            return (TimestampedStream<T, N_NEW>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
