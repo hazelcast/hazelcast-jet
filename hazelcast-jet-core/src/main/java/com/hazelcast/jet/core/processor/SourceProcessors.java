@@ -23,10 +23,10 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.ConsumerEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToResultSetFunction;
@@ -59,6 +59,7 @@ import javax.jms.Session;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.sql.ResultSet;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 
@@ -449,11 +450,14 @@ public final class SourceProcessors {
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
+     * @param <N> type of object saved to state snapshot
      */
     @Nonnull
     @SuppressWarnings("unchecked")
-    public static <S, T> ProcessorMetaSupplier convenientSourceP(
+    public static <S, T, N> ProcessorMetaSupplier convenientSourceP(
             @Nonnull FunctionEx<? super Context, ? extends S> createFn,
+            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
             @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn,
             @Nonnull ConsumerEx<? super S> destroyFn,
             int preferredLocalParallelism
@@ -466,8 +470,8 @@ public final class SourceProcessors {
                 () -> new ConvenientSourceP<>(
                         createFn,
                         (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
-                        src -> null,
-                        (src, states) -> { },
+                        createSnapshotFn,
+                        restoreSnapshotFn,
                         destroyFn,
                         new SourceBufferImpl.Plain<>(),
                         null));
@@ -491,11 +495,14 @@ public final class SourceProcessors {
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
+     * @param <N> type of object saved to state snapshot
      */
     @Nonnull
     @SuppressWarnings("unchecked")
-    public static <S, T> ProcessorMetaSupplier convenientTimestampedSourceP(
+    public static <S, T, N> ProcessorMetaSupplier convenientTimestampedSourceP(
             @Nonnull FunctionEx<? super Context, ? extends S> createFn,
+            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
             @Nonnull BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy,
             @Nonnull ConsumerEx<? super S> destroyFn,
@@ -506,11 +513,11 @@ public final class SourceProcessors {
         checkSerializable(destroyFn, "destroyFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
-                () -> new ConvenientSourceP<>(
+                () -> new ConvenientSourceP<S, T, N>(
                         createFn,
                         (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
-                        src -> null,
-                        (src, states) -> { },
+                        createSnapshotFn,
+                        restoreSnapshotFn,
                         destroyFn,
                         new SourceBufferImpl.Timestamped<>(),
                         eventTimePolicy
