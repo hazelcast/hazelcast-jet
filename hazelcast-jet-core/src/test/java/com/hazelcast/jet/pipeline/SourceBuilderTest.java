@@ -307,6 +307,23 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
         }
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void when_onlyCreateFnSpecified_then_fail() {
+        SourceBuilder
+                .batch("name", ctx -> null)
+                .createSnapshotFn(src -> null)
+                .fillBufferFn((src, buffer) -> { })
+                .build();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void when_onlyRestoreFnSpecified_then_fail() {
+        SourceBuilder
+                .batch("name", ctx -> null)
+                .restoreSnapshotFn((src, states) -> { })
+                .fillBufferFn((src, buffer) -> { })
+                .build();
+    }
 
     private void startServer(ServerSocket serverSocket) {
         spawnSafe(() -> {
