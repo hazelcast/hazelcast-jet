@@ -443,6 +443,8 @@ public final class SourceProcessors {
      *
      * @param createFn function that creates the source's state object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
+     * @param createSnapshotFn function to save state snapshot of the source
+     * @param restoreSnapshotFn function to apply saved state to the source
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
@@ -456,9 +458,8 @@ public final class SourceProcessors {
     @SuppressWarnings("unchecked")
     public static <S, T, N> ProcessorMetaSupplier convenientSourceP(
             @Nonnull FunctionEx<? super Context, ? extends S> createFn,
-            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn, @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
             @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
-            @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn,
             @Nonnull ConsumerEx<? super S> destroyFn,
             int preferredLocalParallelism
     ) {
@@ -488,6 +489,8 @@ public final class SourceProcessors {
      * @param createFn function that creates the source's state object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param eventTimePolicy parameters for watermark generation
+     * @param createSnapshotFn function to save state snapshot of the source
+     * @param restoreSnapshotFn function to apply saved state to the source
      * @param destroyFn function that cleans up the resources held by the state object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
@@ -501,10 +504,10 @@ public final class SourceProcessors {
     @SuppressWarnings("unchecked")
     public static <S, T, N> ProcessorMetaSupplier convenientTimestampedSourceP(
             @Nonnull FunctionEx<? super Context, ? extends S> createFn,
-            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
-            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
             @Nonnull BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy,
+            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
             @Nonnull ConsumerEx<? super S> destroyFn,
             int preferredLocalParallelism
     ) {

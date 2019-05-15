@@ -296,6 +296,12 @@ public interface ProcessorMetaSupplier extends Serializable {
                                                 + " Unexpected input received from ordinal " + ordinal + ": " + item
                                 );
                             }
+
+                            @Override
+                            protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+                                // state is broadcast to all custom source instances - ignore it
+                                // in the no-op instances
+                            }
                         });
             }
 

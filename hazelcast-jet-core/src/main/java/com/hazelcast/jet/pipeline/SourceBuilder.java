@@ -383,14 +383,14 @@ public final class SourceBuilder<S, N> {
          *
          * @param createSnapshotFn a function to create state snapshot
          */
+        @SuppressWarnings("unchecked")
         @Nonnull
         public <N_NEW> SourceBuilder<S, N_NEW>.Base<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
         ) {
-            SourceBuilder.this.createSnapshotFn = createSnapshotFn;
-            @SuppressWarnings("unchecked")
-            SourceBuilder<S, N_NEW>.Base<T> newThis = (SourceBuilder<S, N_NEW>.Base<T>) this;
-            return newThis;
+            SourceBuilder<S, N_NEW> newOuterThis = (SourceBuilder<S, N_NEW>) SourceBuilder.this;
+            newOuterThis.createSnapshotFn = createSnapshotFn;
+            return (SourceBuilder<S, N_NEW>.Base<T>) this;
         }
 
         /**
@@ -486,9 +486,10 @@ public final class SourceBuilder<S, N> {
             return (Batch<T>) super.distributed(preferredLocalParallelism);
         }
 
+        @SuppressWarnings("unchecked")
         @Override @Nonnull
         public <N_NEW> SourceBuilder<S, N_NEW>.Batch<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
         ) {
             return (SourceBuilder<S, N_NEW>.Batch<T>) super.createSnapshotFn(createSnapshotFn);
         }
@@ -504,8 +505,8 @@ public final class SourceBuilder<S, N> {
         @Nonnull
         public BatchSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
-            return new BatchSourceTransform<>(name, convenientSourceP(createFn, createSnapshotFnInt(),
-                    restoreSnapshotFnInt(), fillBufferFn, destroyFn, preferredLocalParallelism));
+            return new BatchSourceTransform<>(name, convenientSourceP(createFn, fillBufferFn, createSnapshotFnInt(),
+                    restoreSnapshotFnInt(), destroyFn, preferredLocalParallelism));
         }
     }
 
@@ -538,7 +539,7 @@ public final class SourceBuilder<S, N> {
 
         @Override @Nonnull
         public <N_NEW> SourceBuilder<S, N_NEW>.Stream<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
         ) {
             return (SourceBuilder<S, N_NEW>.Stream<T>) super.createSnapshotFn(createSnapshotFn);
         }
@@ -555,8 +556,8 @@ public final class SourceBuilder<S, N> {
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn() wasn't called");
             return new StreamSourceTransform<>(
-                    name, eventTimePolicy -> convenientSourceP(createFn, createSnapshotFnInt(), restoreSnapshotFnInt(),
-                    fillBufferFn, destroyFn, preferredLocalParallelism),
+                    name, eventTimePolicy -> convenientSourceP(createFn, fillBufferFn, createSnapshotFnInt(), restoreSnapshotFnInt(),
+                    destroyFn, preferredLocalParallelism),
                     false, false);
         }
     }
@@ -611,9 +612,10 @@ public final class SourceBuilder<S, N> {
             return (TimestampedStream<T>) super.distributed(preferredLocalParallelism);
         }
 
+        @SuppressWarnings("unchecked")
         @Override @Nonnull
         public <N_NEW> SourceBuilder<S, N_NEW>.TimestampedStream<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
         ) {
             return (SourceBuilder<S, N_NEW>.TimestampedStream<T>) super.createSnapshotFn(createSnapshotFn);
         }
@@ -632,8 +634,8 @@ public final class SourceBuilder<S, N> {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be set");
             return new StreamSourceTransform<>(
                     name,
-                    eventTimePolicy -> convenientTimestampedSourceP(createFn, createSnapshotFnInt(),
-                            restoreSnapshotFnInt(), fillBufferFn, eventTimePolicy, destroyFn, preferredLocalParallelism),
+                    eventTimePolicy -> convenientTimestampedSourceP(createFn, fillBufferFn, eventTimePolicy,
+                            createSnapshotFnInt(), restoreSnapshotFnInt(), destroyFn, preferredLocalParallelism),
                     true, true);
         }
     }

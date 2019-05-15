@@ -28,6 +28,7 @@ import com.hazelcast.jet.impl.JetEvent;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -126,11 +127,11 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
                         return eventTimeMapper.flatMapEvent(je.payload(), 0, je.timestamp());
                     });
         }
-        boolean bufferEmpty = emitFromTraverser(traverser);
-        if (bufferEmpty) {
+        boolean bufferEmitted = emitFromTraverser(traverser);
+        if (bufferEmitted) {
             traverser = null;
         }
-        return bufferEmpty && buffer.isClosed();
+        return bufferEmitted && buffer.isClosed();
     }
 
     @Override
@@ -138,6 +139,10 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
         // finish current traverser
         if (traverser != null && !emitFromTraverser(traverser)) {
             return false;
+        }
+        if (buffer.isClosed()) {
+            // don't call createSnapshotFn after the buffer is closed
+            return true;
         }
         traverser = null;
         if (pendingState == null) {
@@ -153,12 +158,15 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
     @Override
     @SuppressWarnings("unchecked")
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        if (restoredStates == null) {
+            restoredStates = new ArrayList<>();
+        }
         restoredStates.add((N) value);
     }
 
     @Override
     public boolean finishSnapshotRestore() {
-        if (restoredStates.size() > 0) {
+        if (restoredStates != null) {
             restoreSnapshotFn.accept(src, restoredStates);
         }
         restoredStates = null;

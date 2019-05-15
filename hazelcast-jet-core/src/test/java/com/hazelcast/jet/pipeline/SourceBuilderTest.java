@@ -16,7 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import org.junit.Test;
@@ -30,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -39,7 +43,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 
@@ -304,6 +310,57 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
                     .collect(toList());
 
             assertEquals(expected, new ArrayList<>(sinkList));
+        }
+    }
+
+    @Test
+    public void test_faultTolerance() {
+        long totalCount = 3000L;
+        StreamSource<Integer> source = SourceBuilder
+                .timestampedStream("src", ctx -> new NumberGeneratorContext())
+                .<Integer>fillBufferFn((src, buffer) -> {
+                    long expectedCount = NANOSECONDS.toMillis(System.nanoTime() - src.startTime);
+                    expectedCount = Math.min(expectedCount, src.current + 100);
+                    while (src.current < expectedCount) {
+                        buffer.add(src.current, 0);
+                        src.current++;
+                        if (src.current == totalCount) {
+                            buffer.close();
+                            break;
+                        }
+                    }
+                })
+                .createSnapshotFn(src -> src)
+                .restoreSnapshotFn((src, states) -> {
+                    assert states.size() == 1;
+                    src.restore(states.get(0));
+                })
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.drawFrom(source)
+         .withNativeTimestamps(0)
+         .window(tumbling(1))
+         .aggregate(AggregateOperations.counting())
+         .map(WindowResult::result)
+         .drainTo(Sinks.list("result"));
+
+        Job job = jet().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+        job.restart();
+        job.join();
+
+        List<Long> result = jet().getList("result");
+        assertEquals((Long) totalCount, result.get(0));
+    }
+
+    private static final class NumberGeneratorContext implements Serializable {
+        long startTime = System.nanoTime();
+        int current;
+
+        void restore(NumberGeneratorContext other) {
+            this.startTime = other.startTime;
+            this.current = other.current;
         }
     }
 
