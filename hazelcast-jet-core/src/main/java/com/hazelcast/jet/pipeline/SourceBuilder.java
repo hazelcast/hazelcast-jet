@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -67,9 +68,12 @@ public final class SourceBuilder<S, N> {
         int size();
 
         /**
-         * Closes the buffer, signaling that all items have been emitted.
+         * Closes the buffer, signaling that all items have been emitted. Only
+         * {@linkplain #batch} sources are allowed to call this method.
+         *
+         * @throws JetException if the source is a streaming source
          */
-        void close();
+        void close() throws JetException;
 
         /**
          * Adds an item to the buffer.
@@ -486,19 +490,6 @@ public final class SourceBuilder<S, N> {
             return (Batch<T>) super.distributed(preferredLocalParallelism);
         }
 
-        @SuppressWarnings("unchecked")
-        @Override @Nonnull
-        public <N_NEW> SourceBuilder<S, N_NEW>.Batch<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
-        ) {
-            return (SourceBuilder<S, N_NEW>.Batch<T>) super.createSnapshotFn(createSnapshotFn);
-        }
-
-        @Override @Nonnull
-        public Batch<T> restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
-            return (Batch<T>) super.restoreSnapshotFn(restoreSnapshotFn);
-        }
-
         /**
          * Builds and returns the batch source.
          */
@@ -506,7 +497,7 @@ public final class SourceBuilder<S, N> {
         public BatchSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
             return new BatchSourceTransform<>(name, convenientSourceP(createFn, fillBufferFn, createSnapshotFnInt(),
-                    restoreSnapshotFnInt(), destroyFn, preferredLocalParallelism));
+                    restoreSnapshotFnInt(), destroyFn, preferredLocalParallelism, true));
         }
     }
 
@@ -555,9 +546,11 @@ public final class SourceBuilder<S, N> {
         @Nonnull
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn() wasn't called");
+            FunctionEx<? super S, ? extends N> createSnapshotFn = createSnapshotFnInt();
+            BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn = restoreSnapshotFnInt();
             return new StreamSourceTransform<>(
-                    name, eventTimePolicy -> convenientSourceP(createFn, fillBufferFn, createSnapshotFnInt(), restoreSnapshotFnInt(),
-                    destroyFn, preferredLocalParallelism),
+                    name, eventTimePolicy -> convenientSourceP(createFn, fillBufferFn, createSnapshotFn, restoreSnapshotFn,
+                    destroyFn, preferredLocalParallelism, false),
                     false, false);
         }
     }

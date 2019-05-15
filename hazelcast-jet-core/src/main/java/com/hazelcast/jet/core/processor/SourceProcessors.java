@@ -450,6 +450,9 @@ public final class SourceProcessors {
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
      *                                  use the cluster's default local parallelism;
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
+     * @param isBatch true, if the fillBufferFn will call {@code buffer.close()}, that is whether
+     *                the source reads a bounded or unbounded set of data
+     *
      * @param <S> type of the source's state object
      * @param <T> type of items the source emits
      * @param <N> type of object saved to state snapshot
@@ -458,10 +461,12 @@ public final class SourceProcessors {
     @SuppressWarnings("unchecked")
     public static <S, T, N> ProcessorMetaSupplier convenientSourceP(
             @Nonnull FunctionEx<? super Context, ? extends S> createFn,
-            @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn, @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn,
+            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
             @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
             @Nonnull ConsumerEx<? super S> destroyFn,
-            int preferredLocalParallelism
+            int preferredLocalParallelism,
+            boolean isBatch
     ) {
         checkSerializable(createFn, "createFn");
         checkSerializable(fillBufferFn, "fillBufferFn");
@@ -474,7 +479,7 @@ public final class SourceProcessors {
                         createSnapshotFn,
                         restoreSnapshotFn,
                         destroyFn,
-                        new SourceBufferImpl.Plain<>(),
+                        new SourceBufferImpl.Plain<>(isBatch),
                         null));
         return preferredLocalParallelism != 0
                 ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)

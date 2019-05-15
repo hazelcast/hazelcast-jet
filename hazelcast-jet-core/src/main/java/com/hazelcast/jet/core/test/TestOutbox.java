@@ -44,7 +44,7 @@ import static java.util.function.Function.identity;
 /**
  * {@code Outbox} implementation suitable to be used in tests.
  */
-public final class TestOutbox implements OutboxInternal {
+public class TestOutbox implements OutboxInternal {
 
     private final Queue<Object>[] buckets;
     private final Queue<Entry<Data, Data>> snapshotQueue = new ArrayDeque<>();
