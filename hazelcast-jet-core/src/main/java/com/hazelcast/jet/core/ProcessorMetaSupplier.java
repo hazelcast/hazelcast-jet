@@ -299,8 +299,7 @@ public interface ProcessorMetaSupplier extends Serializable {
 
                             @Override
                             protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-                                // state is broadcast to all custom source instances - ignore it
-                                // in the no-op instances
+                                // state might be broadcast to all instances - ignore it in the no-op instances
                             }
                         });
             }

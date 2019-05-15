@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.util.UuidUtil;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -48,7 +49,6 @@ import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
-import static java.util.UUID.randomUUID;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
@@ -341,7 +341,7 @@ public class SourceBuilder_IntegrationTest extends PipelineStreamTestSupport {
                 .build();
 
         long windowSize = 100;
-        IList<WindowResult<Long>> result = jet().getList("result-" + randomUUID());
+        IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
 
         Pipeline p = Pipeline.create();
         p.drawFrom(source)

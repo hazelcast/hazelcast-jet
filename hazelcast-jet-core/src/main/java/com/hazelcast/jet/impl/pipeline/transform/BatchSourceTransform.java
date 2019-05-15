@@ -25,7 +25,8 @@ import javax.annotation.Nonnull;
 import static java.util.Collections.emptyList;
 
 public class BatchSourceTransform<T> extends AbstractTransform implements BatchSource<T> {
-    private final ProcessorMetaSupplier metaSupplier;
+    @Nonnull
+    public final ProcessorMetaSupplier metaSupplier;
     private boolean isAssignedToStage;
 
     public BatchSourceTransform(
