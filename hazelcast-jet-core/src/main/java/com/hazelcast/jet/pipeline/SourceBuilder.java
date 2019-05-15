@@ -45,13 +45,12 @@ import static com.hazelcast.util.Preconditions.checkTrue;
  * @see #stream(String, FunctionEx)
  *
  * @param <S> type of the source state object
- * @param <N> type of object saved to state snapshot
  */
-public final class SourceBuilder<S, N> {
+public final class SourceBuilder<S> {
     private final String name;
     private final FunctionEx<? super Context, ? extends S> createFn;
-    private FunctionEx<? super S, ? extends N> createSnapshotFn;
-    private BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn;
+    private FunctionEx<? super S, Object> createSnapshotFn;
+    private BiConsumerEx<? super S, ? super List<Object>> restoreSnapshotFn;
     private ConsumerEx<? super S> destroyFn = ConsumerEx.noop();
     private int preferredLocalParallelism;
 
@@ -173,10 +172,10 @@ public final class SourceBuilder<S, N> {
      * @param <S>      type of the state object
      */
     @Nonnull
-    public static <S> SourceBuilder<S, Void>.Batch<Void> batch(
+    public static <S> SourceBuilder<S>.Batch<Void> batch(
             @Nonnull String name, @Nonnull FunctionEx<? super Context, ? extends S> createFn
     ) {
-        return new SourceBuilder<S, Void>(name, createFn).new Batch<Void>();
+        return new SourceBuilder<S>(name, createFn).new Batch<Void>();
     }
 
     /**
@@ -234,10 +233,10 @@ public final class SourceBuilder<S, N> {
      * @param <S>      type of the state object
      */
     @Nonnull
-    public static <S> SourceBuilder<S, Void>.Stream<Void> stream(
+    public static <S> SourceBuilder<S>.Stream<Void> stream(
             @Nonnull String name, @Nonnull FunctionEx<? super Context, ? extends S> createFn
     ) {
-        return new SourceBuilder<S, Void>(name, createFn).new Stream<Void>();
+        return new SourceBuilder<S>(name, createFn).new Stream<Void>();
     }
 
     /**
@@ -317,20 +316,20 @@ public final class SourceBuilder<S, N> {
      * @param <S> type of the state object
      */
     @Nonnull
-    public static <S> SourceBuilder<S, Void>.TimestampedStream<Void> timestampedStream(
+    public static <S> SourceBuilder<S>.TimestampedStream<Void> timestampedStream(
             @Nonnull String name,
             @Nonnull FunctionEx<? super Context, ? extends S> createFn
     ) {
-        return new SourceBuilder<S, Void>(name, createFn).new TimestampedStream<Void>();
+        return new SourceBuilder<S>(name, createFn).new TimestampedStream<Void>();
     }
 
-    private FunctionEx<? super S, ? extends N> createSnapshotFnInt() {
+    private FunctionEx<? super S, Object> createSnapshotFnInt() {
         checkTrue(createSnapshotFn == null == (restoreSnapshotFn == null),
                 "One of createSnapshotFn/restoreSnapshotFn specified, but not both");
         return createSnapshotFn == null ? src -> null : createSnapshotFn;
     }
 
-    private BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFnInt() {
+    private BiConsumerEx<? super S, ? super List<Object>> restoreSnapshotFnInt() {
         return restoreSnapshotFn == null ? (src, states) -> { } : restoreSnapshotFn;
     }
 
@@ -377,51 +376,64 @@ public final class SourceBuilder<S, N> {
          * guarantee} set. Jet will call the function once per snapshot (on
          * each processor, if the source is distributed). Later, if the job
          * needs to restart from the state, the returned object will be passed
-         * to {@link #restoreSnapshotFn(BiConsumerEx)} when the job is
-         * restarted. It can be any serializable object.
+         * to {@link FaultTolerance#restoreSnapshotFn(BiConsumerEx)}
+         * when the job is restarted. It can be any serializable object.
          *
-         * <p>If this function is set, {@link #restoreSnapshotFn(BiConsumerEx)}
-         * must be also set.
+         * <p>If this function is set, {@link
+         * FaultTolerance#restoreSnapshotFn(BiConsumerEx)} must be also
+         * set.
          *
          * <p>The function is allowed to return {@code null} to save no state.
          *
          * @param createSnapshotFn a function to create state snapshot
          */
-        @SuppressWarnings("unchecked")
         @Nonnull
-        public <N_NEW> SourceBuilder<S, N_NEW>.Base<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
+        public <N> FaultTolerance<? extends Base<T>, N> createSnapshotFn(
+                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
         ) {
-            SourceBuilder<S, N_NEW> newOuterThis = (SourceBuilder<S, N_NEW>) SourceBuilder.this;
-            newOuterThis.createSnapshotFn = createSnapshotFn;
-            return (SourceBuilder<S, N_NEW>.Base<T>) this;
+            return new FaultTolerance<>(createSnapshotFn);
         }
 
         /**
-         * Sets the function that Jet will call if it needs to restore the
-         * processor state from a snapshot. The function will be called once,
-         * before the {@code fillBufferFn} was ever called.
+         * A sub-builder to add the {@link #restoreSnapshotFn} after a {@link
+         * #createSnapshotFn} was added.
          *
-         * <p>If the source was not distributed, the list will contain exactly
-         * one element. If it was, the function will receive a list of all
-         * state objects saved by all parallel instances of the source. In that
-         * case it needs to use only the part of all state objects that pertain
-         * to each instance, see {@link #distributed(int)}.
-         *
-         * <p>If this function is set, {@link #createSnapshotFn(FunctionEx)}
-         * must be also set.
-         *
-         * <p>The list of state objects won't contain possible nulls returned
-         * by the {@link #createSnapshotFn(FunctionEx)} and will never be
-         * empty.
-         *
-         * @param restoreSnapshotFn a function to apply saved state object to
-         *                         the source
+         * @param <N> type of object saved to state snapshot
          */
-        @Nonnull
-        public Base<T> restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
-            SourceBuilder.this.restoreSnapshotFn = restoreSnapshotFn;
-            return this;
+        public final class FaultTolerance<X extends Base<T>, N> {
+            @SuppressWarnings("unchecked")
+            private FaultTolerance(FunctionEx<? super S, ? extends N> createSnapshotFn) {
+                SourceBuilder.this.createSnapshotFn = (FunctionEx<? super S, Object>) createSnapshotFn;
+            }
+
+
+            /**
+             * Sets the function that Jet will call if it needs to restore the
+             * processor state from a snapshot. The function will be called once,
+             * before the {@code fillBufferFn} was ever called.
+             *
+             * <p>If the source was not distributed, the list will contain exactly
+             * one element. If it was, the function will receive a list of all
+             * state objects saved by all parallel instances of the source. In that
+             * case it needs to use only the part of all state objects that pertain
+             * to each instance, see {@link #distributed(int)}.
+             *
+             * <p>If this function is set, {@link #createSnapshotFn(FunctionEx)}
+             * must be also set.
+             *
+             * <p>The list of state objects won't contain possible nulls returned
+             * by the {@link #createSnapshotFn(FunctionEx)} and will never be
+             * empty.
+             *
+             * @param restoreSnapshotFn a function to apply saved state object to
+             *                         the source
+             */
+            @SuppressWarnings("unchecked")
+            @Nonnull
+            public X restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
+                SourceBuilder.this.restoreSnapshotFn = (BiConsumerEx<? super S, ? super List<Object>>) restoreSnapshotFn;
+                return (X) Base.this;
+            }
         }
     }
 
@@ -474,7 +486,7 @@ public final class SourceBuilder<S, N> {
          * SourceBuffer#close}.
          */
         @Override @Nonnull
-        public <T_NEW> SourceBuilder<S, N>.Batch<T_NEW> fillBufferFn(
+        public <T_NEW> SourceBuilder<S>.Batch<T_NEW> fillBufferFn(
                 @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
             return (Batch<T_NEW>) super.fillBufferFn(fillBufferFn);
@@ -528,16 +540,12 @@ public final class SourceBuilder<S, N> {
             return (Stream<T>) super.distributed(preferredLocalParallelism);
         }
 
+        @SuppressWarnings("unchecked")
         @Override @Nonnull
-        public <N_NEW> SourceBuilder<S, N_NEW>.Stream<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
+        public <N> FaultTolerance<Stream<T>, N> createSnapshotFn(
+                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
         ) {
-            return (SourceBuilder<S, N_NEW>.Stream<T>) super.createSnapshotFn(createSnapshotFn);
-        }
-
-        @Override @Nonnull
-        public Stream<T> restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
-            return (Stream<T>) super.restoreSnapshotFn(restoreSnapshotFn);
+            return (FaultTolerance<Stream<T>, N>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -546,8 +554,8 @@ public final class SourceBuilder<S, N> {
         @Nonnull
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn() wasn't called");
-            FunctionEx<? super S, ? extends N> createSnapshotFn = createSnapshotFnInt();
-            BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn = restoreSnapshotFnInt();
+            FunctionEx<? super S, Object> createSnapshotFn = createSnapshotFnInt();
+            BiConsumerEx<? super S, ? super List<Object>> restoreSnapshotFn = restoreSnapshotFnInt();
             return new StreamSourceTransform<>(
                     name, eventTimePolicy -> convenientSourceP(createFn, fillBufferFn, createSnapshotFn, restoreSnapshotFn,
                     destroyFn, preferredLocalParallelism, false),
@@ -607,16 +615,10 @@ public final class SourceBuilder<S, N> {
 
         @SuppressWarnings("unchecked")
         @Override @Nonnull
-        public <N_NEW> SourceBuilder<S, N_NEW>.TimestampedStream<T> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N_NEW> createSnapshotFn
+        public <N> FaultTolerance<TimestampedStream<T>, N> createSnapshotFn(
+                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
         ) {
-            return (SourceBuilder<S, N_NEW>.TimestampedStream<T>) super.createSnapshotFn(createSnapshotFn);
-        }
-
-        @Override @Nonnull
-        public TimestampedStream<T> restoreSnapshotFn(
-                @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
-            return (TimestampedStream<T>) super.restoreSnapshotFn(restoreSnapshotFn);
+            return (FaultTolerance<TimestampedStream<T>, N>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
