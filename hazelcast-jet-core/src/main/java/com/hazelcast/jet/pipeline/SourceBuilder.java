@@ -34,33 +34,34 @@ import java.util.List;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
 import static com.hazelcast.util.Preconditions.checkPositive;
-import static com.hazelcast.util.Preconditions.checkTrue;
 
 /**
- * Top-level class for Jet source builders. Refer to the builder
- * factory methods listed below.
+ * Top-level class for Jet custom source builders. Refer to the factory
+ * methods:
+ * <ul>
+ *     <li>{@link #batch(String, FunctionEx)}
+ *     <li>{@link #timestampedStream(String, FunctionEx)}
+ *     <li>{@link #stream(String, FunctionEx)}
+ * </ul>
  *
- * @see #batch(String, FunctionEx)
- * @see #timestampedStream(String, FunctionEx)
- * @see #stream(String, FunctionEx)
- *
- * @param <S> type of the source state object
+ * @param <C> type of the context object
  */
-public final class SourceBuilder<S> {
+public final class SourceBuilder<C> {
     private final String name;
-    private final FunctionEx<? super Context, ? extends S> createFn;
-    private FunctionEx<? super S, Object> createSnapshotFn;
-    private BiConsumerEx<? super S, ? super List<Object>> restoreSnapshotFn;
-    private ConsumerEx<? super S> destroyFn = ConsumerEx.noop();
+    private final FunctionEx<? super Context, ? extends C> createFn;
+    private FunctionEx<? super C, Object> createSnapshotFn;
+    private BiConsumerEx<? super C, ? super List<Object>> restoreSnapshotFn;
+    private ConsumerEx<? super C> destroyFn = ConsumerEx.noop();
     private int preferredLocalParallelism;
 
     /**
      * The buffer object that the {@code fillBufferFn} gets on each call. Used
      * in sources that emit items without a timestamp.
      *
-     * @param <T> type of the buffer item
+     * @param <T> type of the emitted item
      */
     public interface SourceBuffer<T> {
+
         /**
          * Returns the number of items the buffer holds.
          */
@@ -84,9 +85,10 @@ public final class SourceBuilder<S> {
      * The buffer object that the {@code fillBufferFn} gets on each call. Used
      * in sources that emit timestamped items.
      *
-     * @param <T> type of the buffer item
+     * @param <T> type of the emitted item
      */
     public interface TimestampedSourceBuffer<T> extends SourceBuffer<T> {
+
         /**
          * Adds an item to the buffer, assigning a timestamp to it. The timestamp
          * is in milliseconds.
@@ -105,7 +107,7 @@ public final class SourceBuilder<S> {
 
     private SourceBuilder(
             @Nonnull String name,
-            @Nonnull FunctionEx<? super Context, ? extends S> createFn
+            @Nonnull FunctionEx<? super Context, ? extends C> createFn
     ) {
         this.name = name;
         this.createFn = createFn;
@@ -117,9 +119,9 @@ public final class SourceBuilder<S> {
      * {@linkplain Processor#isCooperative() non-cooperative} processors.
      * <p>
      * Each parallel processor that drives your source has its private instance
-     * of a state object it gets from your {@code createFn}. To get the data
-     * items to emit to the pipeline, the processor repeatedly calls your {@code
-     * fillBufferFn} with the state object and a buffer object.
+     * of a <i>context object</i> it gets from your {@code createFn}. To get
+     * the data items to emit to the pipeline, the processor repeatedly calls
+     * your {@code fillBufferFn} with the context object and a buffer object.
      * <p>
      * Your function should add some items to the buffer, ideally those it has
      * ready without having to block. A hundred items at a time is enough to
@@ -132,7 +134,7 @@ public final class SourceBuilder<S> {
      * Once it has emitted all the data, {@code fillBufferFn} must call {@link
      * SourceBuffer#close() buffer.close()}. This signals Jet to not call {@code
      * fillBufferFn} again and at some later point it will call the {@code
-     * destroyFn} on the state object.
+     * destroyFn} with the context object.
      * <p>
      * Unless you call {@link SourceBuilder.Batch#distributed(int) builder.distributed()},
      * Jet will create just a single processor that should emit all the data.
@@ -141,7 +143,7 @@ public final class SourceBuilder<S> {
      * consult {@link Context#totalParallelism() procContext.totalParallelism()}
      * and {@link Context#globalProcessorIndex() procContext.globalProcessorIndex()}.
      * Jet calls it exactly once with each {@code globalProcessorIndex} from 0
-     * to {@code totalParallelism - 1} and each of the resulting state objects
+     * to {@code totalParallelism - 1} and each of the resulting context objects
      * must emit its distinct slice of the total source data.
      * <p>
      * Here's an example that builds a simple, non-distributed source that
@@ -168,14 +170,14 @@ public final class SourceBuilder<S> {
      * }</pre>
      *
      * @param name     a descriptive name for the source (for diagnostic purposes)
-     * @param createFn a function that creates the state object
-     * @param <S>      type of the state object
+     * @param createFn a function that creates the source's context object
+     * @param <C>      type of the context object
      */
     @Nonnull
-    public static <S> SourceBuilder<S>.Batch<Void> batch(
-            @Nonnull String name, @Nonnull FunctionEx<? super Context, ? extends S> createFn
+    public static <C> SourceBuilder<C>.Batch<Void> batch(
+            @Nonnull String name, @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<S>(name, createFn).new Batch<Void>();
+        return new SourceBuilder<C>(name, createFn).new Batch<Void>();
     }
 
     /**
@@ -184,9 +186,9 @@ public final class SourceBuilder<S> {
      * use {@linkplain Processor#isCooperative() non-cooperative} processors.
      * <p>
      * Each parallel processor that drives your source has its private instance
-     * of a state object it gets from your {@code createFn}. To get the data
-     * items to emit to the pipeline, the processor repeatedly calls your {@code
-     * fillBufferFn} with the state object and a buffer object.
+     * of a <i>context object</i> it gets from your {@code createFn}. To get
+     * the data items to emit to the pipeline, the processor repeatedly calls
+     * your {@code fillBufferFn} with the state object and a buffer object.
      * <p>
      * Your function should add some items to the buffer, ideally those it has
      * ready without having to block. A hundred items at a time is enough to
@@ -203,8 +205,8 @@ public final class SourceBuilder<S> {
      * consult {@link Context#totalParallelism() procContext.totalParallelism()}
      * and {@link Context#globalProcessorIndex() procContext.globalProcessorIndex()}.
      * Jet calls it exactly once with each {@code globalProcessorIndex} from 0
-     * to {@code totalParallelism - 1} and each of the resulting state objects
-     * must emit its unique slice of the total source data.
+     * to {@code totalParallelism - 1} and each of the resulting context objects
+     * must emit its distinct slice of the total source data.
      * <p>
      * Here's an example that builds a simple, non-distributed source that
      * polls an URL and emits all the lines it gets in the response:
@@ -229,14 +231,14 @@ public final class SourceBuilder<S> {
      * guarantee.
      *
      * @param name     a descriptive name for the source (for diagnostic purposes)
-     * @param createFn a function that creates the state object
-     * @param <S>      type of the state object
+     * @param createFn a function that creates the source's context object
+     * @param <C>      type of the context object
      */
     @Nonnull
-    public static <S> SourceBuilder<S>.Stream<Void> stream(
-            @Nonnull String name, @Nonnull FunctionEx<? super Context, ? extends S> createFn
+    public static <C> SourceBuilder<C>.Stream<Void> stream(
+            @Nonnull String name, @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<S>(name, createFn).new Stream<Void>();
+        return new SourceBuilder<C>(name, createFn).new Stream<Void>();
     }
 
     /**
@@ -248,9 +250,9 @@ public final class SourceBuilder<S> {
      * Processor#isCooperative() non-cooperative} processors.
      * <p>
      * Each parallel processor that drives your source has its private instance
-     * of a state object it gets from the given {@code createFn}. To get the
-     * data items to emit to the pipeline, the processor repeatedly calls your
-     * {@code fillBufferFn} with the state object and a buffer object. The
+     * of a <i>context object</i> it gets from the given {@code createFn}. To get
+     * the data items to emit to the pipeline, the processor repeatedly calls
+     * your {@code fillBufferFn} with the context object and a buffer object. The
      * buffer's {@link SourceBuilder.TimestampedSourceBuffer#add add()} method
      * takes two arguments: the item and the timestamp in milliseconds.
      * <p>
@@ -270,7 +272,7 @@ public final class SourceBuilder<S> {
      * procContext.totalParallelism()} and {@link Context#globalProcessorIndex()
      * procContext.globalProcessorIndex()}. Jet calls it exactly once with each
      * {@code globalProcessorIndex} from 0 to {@code totalParallelism - 1} and
-     * each of the resulting state objects must emit its unique slice of the
+     * each of the resulting context objects must emit its distinct slice of the
      * total source data.
      * <p>
      * Here's an example that builds a simple, non-distributed source that
@@ -296,41 +298,26 @@ public final class SourceBuilder<S> {
      *         .withNativeTimestamps(SECONDS.toMillis(5));
      * }</pre>
      * <p>
-     * <strong>NOTE 1:</strong> the source you build with this builder is not
-     * fault-tolerant. You shouldn't use it in jobs that require a processing
-     * guarantee. Use a {@linkplain Sources#streamFromProcessorWithWatermarks
-     * custom processor} if you need fault tolerance.
-     * <p>
-     * <strong>NOTE 2:</strong> if the data source you're adapting to Jet is
+     * <strong>NOTE:</strong> if the data source you're adapting to Jet is
      * partitioned, you may run into issues with event skew between partitions
      * assigned to single parallel processor. The timestamp you get from one
      * partition may be significantly behind the timestamp you already got from
-     * another partition. If the skew is more than the allowed lag you
+     * another partition. If the skew is more than the allowed lag you have
      * {@linkplain StreamSourceStage#withNativeTimestamps(long) configured},
-     * you risk that the events will be dropped. Use a {@linkplain
+     * you risk that the events will be late. Use a {@linkplain
      * Sources#streamFromProcessorWithWatermarks custom processor} if you need
      * to coalesce watermarks from multiple partitions.
      *
      * @param name a descriptive name for the source (for diagnostic purposes)
-     * @param createFn a function that creates the state object
-     * @param <S> type of the state object
+     * @param createFn a function that creates the source's context object
+     * @param <C> type of the context object
      */
     @Nonnull
-    public static <S> SourceBuilder<S>.TimestampedStream<Void> timestampedStream(
+    public static <C> SourceBuilder<C>.TimestampedStream<Void> timestampedStream(
             @Nonnull String name,
-            @Nonnull FunctionEx<? super Context, ? extends S> createFn
+            @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<S>(name, createFn).new TimestampedStream<Void>();
-    }
-
-    private FunctionEx<? super S, Object> createSnapshotFnInt() {
-        checkTrue(createSnapshotFn == null == (restoreSnapshotFn == null),
-                "One of createSnapshotFn/restoreSnapshotFn specified, but not both");
-        return createSnapshotFn == null ? src -> null : createSnapshotFn;
-    }
-
-    private BiConsumerEx<? super S, ? super List<Object>> restoreSnapshotFnInt() {
-        return restoreSnapshotFn == null ? (src, states) -> { } : restoreSnapshotFn;
+        return new SourceBuilder<C>(name, createFn).new TimestampedStream<Void>();
     }
 
     private abstract class Base<T> {
@@ -338,12 +325,13 @@ public final class SourceBuilder<S> {
         }
 
         /**
-         * Sets the function that Jet will call when cleaning up after a job has
+         * Sets the function that Jet will call when cleaning up after an execution has
          * ended. It gives you the opportunity to release any resources held by the
-         * state object.
+         * context object. This function is also called when the job is cancelled or
+         * restarted.
          */
         @Nonnull
-        public Base<T> destroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
+        public Base<T> destroyFn(@Nonnull ConsumerEx<? super C> destroyFn) {
             SourceBuilder.this.destroyFn = destroyFn;
             return this;
         }
@@ -359,6 +347,9 @@ public final class SourceBuilder<S> {
          * once with each {@code globalProcessorIndex} from 0 to {@code
          * totalParallelism - 1}, this can help all the instances agree on which
          * part of the data to emit.
+         * <p>
+         * If you don't call this method, there will be only one processor instance
+         * running on an arbitrary member.
          *
          * @param preferredLocalParallelism requested number of processors on each cluster member
          */
@@ -370,46 +361,46 @@ public final class SourceBuilder<S> {
         }
 
         /**
-         * Sets the function that Jet will call when it needs to save the state
-         * to the snapshot, if the job has a {@linkplain
+         * Sets the function that Jet will call when it needs to save the
+         * context's state to the snapshot, if the job has a {@linkplain
          * JobConfig#setProcessingGuarantee(ProcessingGuarantee) processing
-         * guarantee} set. Jet will call the function once per snapshot (on
-         * each processor, if the source is distributed). Later, if the job
-         * needs to restart from the state, the returned object will be passed
-         * to {@link FaultTolerant#restoreSnapshotFn(BiConsumerEx)}
-         * when the job is restarted. It can be any serializable object.
-         *
-         * <p>If this function is set, {@link
-         * FaultTolerant#restoreSnapshotFn(BiConsumerEx)} must be also
-         * set.
+         * guarantee} set. Jet will call the function once per snapshot. Later,
+         * if the job needs to restart from the snapshot, the returned object
+         * will be passed to {@link
+         * FaultTolerant#restoreSnapshotFn(BiConsumerEx) restoreSnapshotFn()}.
+         * It can be any serializable object.
          *
          * <p>The function is allowed to return {@code null} to save no state.
+         * In this case the {@code restoreSnapshotFn()} will not be called when
+         * the job is restarted.
          *
-         * @param createSnapshotFn a function to create state snapshot
+         * @param createSnapshotFn a function to create state snapshot of the
+         *                        context
+         * @param <S> type of the object saved to state snapshot
          */
         @Nonnull
-        public <N> FaultTolerant<N, ? extends Base<T>> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+        public <S> FaultTolerant<S, ? extends Base<T>> createSnapshotFn(
+                @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn
         ) {
             return new FaultTolerant<>(this, createSnapshotFn);
         }
     }
 
     private abstract class BaseNoTimestamps<T> extends Base<T> {
-        BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn;
+        BiConsumerEx<? super C, ? super SourceBuffer<T>> fillBufferFn;
 
         private BaseNoTimestamps() {
         }
 
         /**
          * Sets the function that Jet will call whenever it needs more data from
-         * your source. The function receives the state object obtained from
+         * your source. The function receives the context object obtained from
          * {@code createFn} and Jet's buffer object. It should add some items
          * to the buffer, ideally those it can produce without making any blocking
          * calls. On any given invocation the function may also choose not to add
          * any items. Jet will automatically employ an exponential backoff strategy
-         * to avoid calling your function in a tight loop during a period when
-         * there's no data ready to be emitted.
+         * to avoid calling your function in a tight loop, if the previous call didn't
+         * add any items to the buffer.
          *
          * @param fillBufferFn function that fills the buffer with source data
          * @param <T_NEW> type of the emitted items
@@ -419,7 +410,7 @@ public final class SourceBuilder<S> {
         @Nonnull
         @SuppressWarnings("unchecked")
         public <T_NEW> BaseNoTimestamps<T_NEW> fillBufferFn(
-                @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
+                @Nonnull BiConsumerEx<? super C, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
             BaseNoTimestamps<T_NEW> newThis = (BaseNoTimestamps<T_NEW>) this;
             newThis.fillBufferFn = fillBufferFn;
@@ -428,8 +419,7 @@ public final class SourceBuilder<S> {
     }
 
     /**
-     * A builder of a batch stream source.
-     * @see SourceBuilder#batch(String, FunctionEx)
+     * See {@link SourceBuilder#batch(String, FunctionEx)}.
      *
      * @param <T> type of emitted objects
      */
@@ -444,14 +434,14 @@ public final class SourceBuilder<S> {
          * SourceBuffer#close}.
          */
         @Override @Nonnull
-        public <T_NEW> SourceBuilder<S>.Batch<T_NEW> fillBufferFn(
-                @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
+        public <T_NEW> SourceBuilder<C>.Batch<T_NEW> fillBufferFn(
+                @Nonnull BiConsumerEx<? super C, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
             return (Batch<T_NEW>) super.fillBufferFn(fillBufferFn);
         }
 
         @Override @Nonnull
-        public Batch<T> destroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
+        public Batch<T> destroyFn(@Nonnull ConsumerEx<? super C> destroyFn) {
             return (Batch<T>) super.destroyFn(destroyFn);
         }
 
@@ -466,14 +456,13 @@ public final class SourceBuilder<S> {
         @Nonnull
         public BatchSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn must be non-null");
-            return new BatchSourceTransform<>(name, convenientSourceP(createFn, fillBufferFn, createSnapshotFnInt(),
-                    restoreSnapshotFnInt(), destroyFn, preferredLocalParallelism, true));
+            return new BatchSourceTransform<>(name, convenientSourceP(createFn, fillBufferFn, createSnapshotFn,
+                    restoreSnapshotFn, destroyFn, preferredLocalParallelism, true));
         }
     }
 
     /**
-     * A builder of an unbounded stream source.
-     * @see SourceBuilder#stream(String, FunctionEx)
+     * See {@link SourceBuilder#stream(String, FunctionEx)}.
      *
      * @param <T> type of emitted objects
      */
@@ -483,13 +472,13 @@ public final class SourceBuilder<S> {
 
         @Override @Nonnull
         public <T_NEW> Stream<T_NEW> fillBufferFn(
-                @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T_NEW>> fillBufferFn
+                @Nonnull BiConsumerEx<? super C, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
             return (Stream<T_NEW>) super.fillBufferFn(fillBufferFn);
         }
 
         @Override @Nonnull
-        public Stream<T> destroyFn(@Nonnull ConsumerEx<? super S> pDestroyFn) {
+        public Stream<T> destroyFn(@Nonnull ConsumerEx<? super C> pDestroyFn) {
             return (Stream<T>) super.destroyFn(pDestroyFn);
         }
 
@@ -500,10 +489,10 @@ public final class SourceBuilder<S> {
 
         @SuppressWarnings("unchecked")
         @Override @Nonnull
-        public <N> FaultTolerant<N, Stream<T>> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+        public <S> FaultTolerant<S, Stream<T>> createSnapshotFn(
+                @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn
         ) {
-            return (FaultTolerant<N, Stream<T>>) super.createSnapshotFn(createSnapshotFn);
+            return (FaultTolerant<S, Stream<T>>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -512,8 +501,6 @@ public final class SourceBuilder<S> {
         @Nonnull
         public StreamSource<T> build() {
             Preconditions.checkNotNull(fillBufferFn, "fillBufferFn() wasn't called");
-            FunctionEx<? super S, Object> createSnapshotFn = createSnapshotFnInt();
-            BiConsumerEx<? super S, ? super List<Object>> restoreSnapshotFn = restoreSnapshotFnInt();
             return new StreamSourceTransform<>(
                     name, eventTimePolicy -> convenientSourceP(createFn, fillBufferFn, createSnapshotFn, restoreSnapshotFn,
                     destroyFn, preferredLocalParallelism, false),
@@ -522,20 +509,19 @@ public final class SourceBuilder<S> {
     }
 
     /**
-     * A builder of an unbounded stream source with timestamps.
-     * @see SourceBuilder#timestampedStream(String, FunctionEx)
+     * See {@link SourceBuilder#timestampedStream(String, FunctionEx)}.
      *
      * @param <T> type of emitted objects
      */
     public final class TimestampedStream<T> extends Base<T> {
-        private BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn;
+        private BiConsumerEx<? super C, ? super TimestampedSourceBuffer<T>> fillBufferFn;
 
         private TimestampedStream() {
         }
 
         /**
          * Sets the function that Jet will call whenever it needs more data from
-         * your source. The function receives the state object obtained from
+         * your source. The function receives the context object obtained from
          * {@code createFn} and Jet's buffer object. It should add some items
          * to the buffer, ideally those it can produce without making any blocking
          * calls. The buffer's {@link SourceBuilder.TimestampedSourceBuffer#add add()}
@@ -543,8 +529,8 @@ public final class SourceBuilder<S> {
          * <p>
          * On any given invocation the function may also choose not to add
          * any items. Jet will automatically employ an exponential backoff strategy
-         * to avoid calling your function in a tight loop during a period when
-         * there's no data ready to be emitted.
+         * to avoid calling your function in a tight loop, if the previous call didn't
+         * add any items to the buffer.
          *
          * @param fillBufferFn function that fills the buffer with source data
          * @param <T_NEW> type of the emitted items
@@ -554,7 +540,7 @@ public final class SourceBuilder<S> {
         @Nonnull
         @SuppressWarnings("unchecked")
         public <T_NEW> TimestampedStream<T_NEW> fillBufferFn(
-                @Nonnull BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T_NEW>> fillBufferFn
+                @Nonnull BiConsumerEx<? super C, ? super TimestampedSourceBuffer<T_NEW>> fillBufferFn
         ) {
             TimestampedStream<T_NEW> newThis = (TimestampedStream<T_NEW>) this;
             newThis.fillBufferFn = fillBufferFn;
@@ -562,7 +548,7 @@ public final class SourceBuilder<S> {
         }
 
         @Override @Nonnull
-        public TimestampedStream<T> destroyFn(@Nonnull ConsumerEx<? super S> pDestroyFn) {
+        public TimestampedStream<T> destroyFn(@Nonnull ConsumerEx<? super C> pDestroyFn) {
             return (TimestampedStream<T>) super.destroyFn(pDestroyFn);
         }
 
@@ -573,10 +559,10 @@ public final class SourceBuilder<S> {
 
         @SuppressWarnings("unchecked")
         @Override @Nonnull
-        public <N> FaultTolerant<N, TimestampedStream<T>> createSnapshotFn(
-                @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
+        public <S> FaultTolerant<S, TimestampedStream<T>> createSnapshotFn(
+                @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn
         ) {
-            return (FaultTolerant<N, TimestampedStream<T>>) super.createSnapshotFn(createSnapshotFn);
+            return (FaultTolerant<S, TimestampedStream<T>>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -588,52 +574,49 @@ public final class SourceBuilder<S> {
             return new StreamSourceTransform<>(
                     name,
                     eventTimePolicy -> convenientTimestampedSourceP(createFn, fillBufferFn, eventTimePolicy,
-                            createSnapshotFnInt(), restoreSnapshotFnInt(), destroyFn, preferredLocalParallelism),
+                            createSnapshotFn, restoreSnapshotFn, destroyFn, preferredLocalParallelism),
                     true, true);
         }
     }
 
     /**
      * A sub-builder to add the {@link #restoreSnapshotFn} after a {@link
-     * #createSnapshotFn} was added.
+     * Base#createSnapshotFn} was added.
      *
-     * @param <N> type of object saved to state snapshot
+     * @param <S> type of the object saved to state snapshot
      * @param <B> type of the builder this sub-builder was created from
      */
-    public final class FaultTolerant<N, B> {
+    public final class FaultTolerant<S, B> {
         private final B parentBuilder;
 
         @SuppressWarnings("unchecked")
-        private FaultTolerant(B parentBuilder, FunctionEx<? super S, ? extends N> createSnapshotFn) {
+        private FaultTolerant(B parentBuilder, FunctionEx<? super C, ? extends S> createSnapshotFn) {
             this.parentBuilder = parentBuilder;
-            SourceBuilder.this.createSnapshotFn = (FunctionEx<? super S, Object>) createSnapshotFn;
+            SourceBuilder.this.createSnapshotFn = (FunctionEx<? super C, Object>) createSnapshotFn;
         }
 
         /**
          * Sets the function that Jet will call if it needs to restore the
-         * processor state from a snapshot. The function will be called once,
+         * context state from a snapshot. The function will be called once,
          * before the {@code fillBufferFn} was ever called.
          *
          * <p>If the source was not distributed, the list will contain exactly
          * one element. If it was, the function will receive a list of all
          * state objects saved by all parallel instances of the source. In that
-         * case it needs to use only the part of all state objects that pertain
-         * to each instance, see {@link Base#distributed(int)}.
-         *
-         * <p>If this function is set, {@link
-         * Base#createSnapshotFn(FunctionEx)} must be also set.
+         * case it needs to use only the part of all state objects that
+         * pertains to each instance, see {@link Base#distributed(int)}.
          *
          * <p>The list of state objects won't contain possible nulls returned
          * by the {@link Base#createSnapshotFn(FunctionEx)} and will never be
          * empty.
          *
          * @param restoreSnapshotFn a function to apply saved state object to
-         *                         the source
+         *                         the source context
          */
         @SuppressWarnings("unchecked")
         @Nonnull
-        public B restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
-            SourceBuilder.this.restoreSnapshotFn = (BiConsumerEx<? super S, ? super List<Object>>) restoreSnapshotFn;
+        public B restoreSnapshotFn(@Nonnull BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn) {
+            SourceBuilder.this.restoreSnapshotFn = (BiConsumerEx<? super C, ? super List<Object>>) restoreSnapshotFn;
             return parentBuilder;
         }
     }

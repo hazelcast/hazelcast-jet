@@ -41,12 +41,8 @@ import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
  *
  * @see SourceProcessors#convenientSourceP
  * @see SourceProcessors#convenientTimestampedSourceP
- *
- * @param <S> source context type (the connection)
- * @param <T> output item type
- * @param <N> state snapshot object type
  */
-public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
+public class ConvenientSourceP<C, T, S> extends AbstractProcessor {
 
     /**
      * This processor's view of the buffer accessible to the user. Abstracts
@@ -62,27 +58,27 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
         boolean isClosed();
     }
 
-    private final Function<? super Context, ? extends S> createFn;
-    private final BiConsumer<? super S, ? super SourceBufferConsumerSide<?>> fillBufferFn;
-    private final FunctionEx<? super S, ? extends N> createSnapshotFn;
-    private final BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn;
-    private final Consumer<? super S> destroyFn;
+    private final Function<? super Context, ? extends C> createFn;
+    private final BiConsumer<? super C, ? super SourceBufferConsumerSide<?>> fillBufferFn;
+    private final FunctionEx<? super C, ? extends S> createSnapshotFn;
+    private final BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn;
+    private final Consumer<? super C> destroyFn;
     private final SourceBufferConsumerSide<?> buffer;
     private final EventTimeMapper<T> eventTimeMapper;
     private BroadcastKey<Integer> snapshotKey;
 
     private boolean initialized;
-    private S src;
+    private C ctx;
     private Traverser<?> traverser;
-    private N pendingState;
-    private List<N> restoredStates;
+    private S pendingState;
+    private List<S> restoredStates;
 
     public ConvenientSourceP(
-            @Nonnull Function<? super Context, ? extends S> createFn,
-            @Nonnull BiConsumer<? super S, ? super SourceBufferConsumerSide<?>> fillBufferFn,
-            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
-            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
-            @Nonnull Consumer<? super S> destroyFn,
+            @Nonnull Function<? super Context, ? extends C> createFn,
+            @Nonnull BiConsumer<? super C, ? super SourceBufferConsumerSide<?>> fillBufferFn,
+            @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn,
+            @Nonnull Consumer<? super C> destroyFn,
             @Nonnull SourceBufferConsumerSide<?> buffer,
             @Nullable EventTimePolicy<? super T> eventTimePolicy
     ) {
@@ -107,16 +103,16 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        src = createFn.apply(context);
+        ctx = createFn.apply(context);
         snapshotKey = broadcastKey(context.globalProcessorIndex());
-        // createFn is allowed to return null, we'll call `destroyFn` even for null `src`
+        // createFn is allowed to return null, we'll call `destroyFn` even for null `ctx`
         initialized = true;
     }
 
     @Override
     public boolean complete() {
         if (traverser == null) {
-            fillBufferFn.accept(src, buffer);
+            fillBufferFn.accept(ctx, buffer);
             traverser =
                     eventTimeMapper == null ? buffer.traverse()
                     : buffer.isEmpty() ? eventTimeMapper.flatMapIdle()
@@ -146,7 +142,7 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
         }
         traverser = null;
         if (pendingState == null) {
-            pendingState = createSnapshotFn.apply(src);
+            pendingState = createSnapshotFn.apply(ctx);
         }
         if (pendingState == null || tryEmitToSnapshot(snapshotKey, pendingState)) {
             pendingState = null;
@@ -161,13 +157,13 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
         if (restoredStates == null) {
             restoredStates = new ArrayList<>();
         }
-        restoredStates.add((N) value);
+        restoredStates.add((S) value);
     }
 
     @Override
     public boolean finishSnapshotRestore() {
         if (restoredStates != null) {
-            restoreSnapshotFn.accept(src, restoredStates);
+            restoreSnapshotFn.accept(ctx, restoredStates);
         }
         restoredStates = null;
         return true;
@@ -176,7 +172,7 @@ public class ConvenientSourceP<S, T, N> extends AbstractProcessor {
     @Override
     public void close() {
         if (initialized) {
-            destroyFn.accept(src);
+            destroyFn.accept(ctx);
         }
     }
 }

@@ -441,11 +441,11 @@ public final class SourceProcessors {
      * using the {@link SourceBuilder}. This variant creates a source that
      * emits items without timestamps.
      *
-     * @param createFn function that creates the source's state object
+     * @param createFn function that creates the source's context object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
-     * @param createSnapshotFn function to save state snapshot of the source
-     * @param restoreSnapshotFn function to apply saved state to the source
-     * @param destroyFn function that cleans up the resources held by the state object
+     * @param createSnapshotFn function to save state snapshot of the context object
+     * @param restoreSnapshotFn function to apply saved state to the context object
+     * @param destroyFn function that cleans up the resources held by the context object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
      *                                  use the cluster's default local parallelism;
@@ -453,18 +453,18 @@ public final class SourceProcessors {
      * @param isBatch true, if the fillBufferFn will call {@code buffer.close()}, that is whether
      *                the source reads a bounded or unbounded set of data
      *
-     * @param <S> type of the source's state object
+     * @param <C> type of the source's context object
      * @param <T> type of items the source emits
-     * @param <N> type of object saved to state snapshot
+     * @param <S> type of object saved to state snapshot
      */
     @Nonnull
     @SuppressWarnings("unchecked")
-    public static <S, T, N> ProcessorMetaSupplier convenientSourceP(
-            @Nonnull FunctionEx<? super Context, ? extends S> createFn,
-            @Nonnull BiConsumerEx<? super S, ? super SourceBuffer<T>> fillBufferFn,
-            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
-            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
-            @Nonnull ConsumerEx<? super S> destroyFn,
+    public static <C, T, S> ProcessorMetaSupplier convenientSourceP(
+            @Nonnull FunctionEx<? super Context, ? extends C> createFn,
+            @Nonnull BiConsumerEx<? super C, ? super SourceBuffer<T>> fillBufferFn,
+            @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn,
+            @Nonnull ConsumerEx<? super C> destroyFn,
             int preferredLocalParallelism,
             boolean isBatch
     ) {
@@ -475,7 +475,7 @@ public final class SourceProcessors {
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<>(
                         createFn,
-                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
+                        (BiConsumer<? super C, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
                         createSnapshotFn,
                         restoreSnapshotFn,
                         destroyFn,
@@ -491,29 +491,30 @@ public final class SourceProcessors {
      * using the {@link SourceBuilder}. This variant creates a source that
      * emits timestamped events.
      *
-     * @param createFn function that creates the source's state object
+     * @param createFn function that creates the source's context object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param eventTimePolicy parameters for watermark generation
-     * @param createSnapshotFn function to save state snapshot of the source
-     * @param restoreSnapshotFn function to apply saved state to the source
-     * @param destroyFn function that cleans up the resources held by the state object
+     * @param createSnapshotFn function to save state snapshot of the context object
+     * @param restoreSnapshotFn function to apply saved state to the context object
+     * @param destroyFn function that cleans up the resources held by the context object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
      *                                  use the cluster's default local parallelism;
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
-     * @param <S> type of the source's state object
+     *
+     * @param <C> type of the context object
      * @param <T> type of items the source emits
-     * @param <N> type of object saved to state snapshot
+     * @param <S> type of the object saved to state snapshot
      */
     @Nonnull
     @SuppressWarnings("unchecked")
-    public static <S, T, N> ProcessorMetaSupplier convenientTimestampedSourceP(
-            @Nonnull FunctionEx<? super Context, ? extends S> createFn,
-            @Nonnull BiConsumerEx<? super S, ? super TimestampedSourceBuffer<T>> fillBufferFn,
+    public static <C, T, S> ProcessorMetaSupplier convenientTimestampedSourceP(
+            @Nonnull FunctionEx<? super Context, ? extends C> createFn,
+            @Nonnull BiConsumerEx<? super C, ? super TimestampedSourceBuffer<T>> fillBufferFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy,
-            @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn,
-            @Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn,
-            @Nonnull ConsumerEx<? super S> destroyFn,
+            @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn,
+            @Nonnull BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn,
+            @Nonnull ConsumerEx<? super C> destroyFn,
             int preferredLocalParallelism
     ) {
         checkSerializable(createFn, "createFn");
@@ -521,9 +522,9 @@ public final class SourceProcessors {
         checkSerializable(destroyFn, "destroyFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
-                () -> new ConvenientSourceP<S, T, N>(
+                () -> new ConvenientSourceP<C, T, S>(
                         createFn,
-                        (BiConsumer<? super S, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
+                        (BiConsumer<? super C, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
                         createSnapshotFn,
                         restoreSnapshotFn,
                         destroyFn,
