@@ -376,11 +376,11 @@ public final class SourceBuilder<S> {
          * guarantee} set. Jet will call the function once per snapshot (on
          * each processor, if the source is distributed). Later, if the job
          * needs to restart from the state, the returned object will be passed
-         * to {@link FaultTolerance#restoreSnapshotFn(BiConsumerEx)}
+         * to {@link FaultTolerant#restoreSnapshotFn(BiConsumerEx)}
          * when the job is restarted. It can be any serializable object.
          *
          * <p>If this function is set, {@link
-         * FaultTolerance#restoreSnapshotFn(BiConsumerEx)} must be also
+         * FaultTolerant#restoreSnapshotFn(BiConsumerEx)} must be also
          * set.
          *
          * <p>The function is allowed to return {@code null} to save no state.
@@ -388,10 +388,10 @@ public final class SourceBuilder<S> {
          * @param createSnapshotFn a function to create state snapshot
          */
         @Nonnull
-        public <N> FaultTolerance<T, ? extends Base<T>, N> createSnapshotFn(
+        public <N> FaultTolerant<N, ? extends Base<T>> createSnapshotFn(
                 @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
         ) {
-            return new FaultTolerance<>(this, createSnapshotFn);
+            return new FaultTolerant<>(this, createSnapshotFn);
         }
     }
 
@@ -500,10 +500,10 @@ public final class SourceBuilder<S> {
 
         @SuppressWarnings("unchecked")
         @Override @Nonnull
-        public <N> FaultTolerance<T, Stream<T>, N> createSnapshotFn(
+        public <N> FaultTolerant<N, Stream<T>> createSnapshotFn(
                 @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
         ) {
-            return (FaultTolerance<T, Stream<T>, N>) super.createSnapshotFn(createSnapshotFn);
+            return (FaultTolerant<N, Stream<T>>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -573,10 +573,10 @@ public final class SourceBuilder<S> {
 
         @SuppressWarnings("unchecked")
         @Override @Nonnull
-        public <N> FaultTolerance<T, TimestampedStream<T>, N> createSnapshotFn(
+        public <N> FaultTolerant<N, TimestampedStream<T>> createSnapshotFn(
                 @Nonnull FunctionEx<? super S, ? extends N> createSnapshotFn
         ) {
-            return (FaultTolerance<T, TimestampedStream<T>, N>) super.createSnapshotFn(createSnapshotFn);
+            return (FaultTolerant<N, TimestampedStream<T>>) super.createSnapshotFn(createSnapshotFn);
         }
 
         /**
@@ -597,15 +597,14 @@ public final class SourceBuilder<S> {
      * A sub-builder to add the {@link #restoreSnapshotFn} after a {@link
      * #createSnapshotFn} was added.
      *
-     * @param <T> type of the buffer item
-     * @param <X> type of the builder this sub-builder was created from
      * @param <N> type of object saved to state snapshot
+     * @param <B> type of the builder this sub-builder was created from
      */
-    public final class FaultTolerance<T, X extends Base<T>, N> {
-        private final X parentBuilder;
+    public final class FaultTolerant<N, B> {
+        private final B parentBuilder;
 
         @SuppressWarnings("unchecked")
-        private FaultTolerance(X parentBuilder, FunctionEx<? super S, ? extends N> createSnapshotFn) {
+        private FaultTolerant(B parentBuilder, FunctionEx<? super S, ? extends N> createSnapshotFn) {
             this.parentBuilder = parentBuilder;
             SourceBuilder.this.createSnapshotFn = (FunctionEx<? super S, Object>) createSnapshotFn;
         }
@@ -633,7 +632,7 @@ public final class SourceBuilder<S> {
          */
         @SuppressWarnings("unchecked")
         @Nonnull
-        public X restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
+        public B restoreSnapshotFn(@Nonnull BiConsumerEx<? super S, ? super List<N>> restoreSnapshotFn) {
             SourceBuilder.this.restoreSnapshotFn = (BiConsumerEx<? super S, ? super List<Object>>) restoreSnapshotFn;
             return parentBuilder;
         }
