@@ -177,7 +177,7 @@ public final class SourceBuilder<C> {
     public static <C> SourceBuilder<C>.Batch<Void> batch(
             @Nonnull String name, @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<C>(name, createFn).new Batch();
+        return new SourceBuilder<C>(name, createFn).new Batch<Void>();
     }
 
     /**
@@ -317,7 +317,7 @@ public final class SourceBuilder<C> {
             @Nonnull String name,
             @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<C>(name, createFn).new TimestampedStream();
+        return new SourceBuilder<C>(name, createFn).new TimestampedStream<Void>();
     }
 
     private abstract class Base<T> {
@@ -395,7 +395,7 @@ public final class SourceBuilder<C> {
          * @param <S> type of the object saved to state snapshot
          */
         @Nonnull
-        public <S> FaultTolerant<S, ? extends Base<T>> createSnapshotFn(
+        <S> FaultTolerant<S, ? extends Base<T>> createSnapshotFn(
                 @Nonnull FunctionEx<? super C, ? extends S> createSnapshotFn
         ) {
             return new FaultTolerant<>(this, createSnapshotFn);
