@@ -443,12 +443,12 @@ public final class SourceProcessors {
      *
      * @param createFn function that creates the source's context object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
-     * @param createSnapshotFn function to save state snapshot of the context object
-     * @param restoreSnapshotFn function to apply saved state to the context object
+     * @param createSnapshotFn function that returns a snapshot of the context object's state
+     * @param restoreSnapshotFn function that restores the context object's state from a snapshot
      * @param destroyFn function that cleans up the resources held by the context object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
-     *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
-     *                                  use the cluster's default local parallelism;
+     *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} -> use the cluster's
+     *                                  default local parallelism;
      *                                  0 -> create a single processor for the entire cluster (total parallelism = 1)
      * @param isBatch true, if the fillBufferFn will call {@code buffer.close()}, that is whether
      *                the source reads a bounded or unbounded set of data

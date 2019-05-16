@@ -52,7 +52,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
                     buf.close();
                 })
                 .build();
-        return p.drawFrom(source).addTimestamps(i -> i, 0);
+        return p.drawFrom(source).addTimestamps(ts -> ts, 0);
     }
 
     /**
