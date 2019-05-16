@@ -177,7 +177,7 @@ public final class SourceBuilder<C> {
     public static <C> SourceBuilder<C>.Batch<Void> batch(
             @Nonnull String name, @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<C>(name, createFn).new Batch<Void>();
+        return new SourceBuilder<C>(name, createFn).new Batch();
     }
 
     /**
@@ -317,7 +317,7 @@ public final class SourceBuilder<C> {
             @Nonnull String name,
             @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
-        return new SourceBuilder<C>(name, createFn).new TimestampedStream<Void>();
+        return new SourceBuilder<C>(name, createFn).new TimestampedStream();
     }
 
     private abstract class Base<T> {
@@ -373,6 +373,22 @@ public final class SourceBuilder<C> {
          * <p>The function is allowed to return {@code null} to save no state.
          * In this case the {@code restoreSnapshotFn()} will not be called when
          * the job is restarted.
+         *
+         * <p>Example of a fault-tolerant generator of an infinite sequence of
+         * integers (well, it will overflow at 2^31):
+         *
+         * <pre>{@code
+         * StreamSource<Integer> source = SourceBuilder
+         *         .stream("name", procCtx -> new MutableInteger())
+         *         .<Integer>fillBufferFn((ctx, buffer) -> {
+         *             for (int i = 0; i < 100; i++) {
+         *                 buffer.add(ctx.getAndInc());
+         *             }
+         *         })
+         *         .createSnapshotFn(ctx -> ctx.value)
+         *         .restoreSnapshotFn((ctx, states) -> ctx.value = states.get(0))
+         *         .build();
+         * }</pre>
          *
          * @param createSnapshotFn a function to create state snapshot of the
          *                        context
