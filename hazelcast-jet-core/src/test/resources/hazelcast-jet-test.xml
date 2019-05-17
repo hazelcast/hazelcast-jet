@@ -15,7 +15,7 @@
   ~ limitations under the License.
   -->
 
-<hazelcast-jet xsi:schemaLocation="http://www.hazelcast.com/schema/jet-config hazelcast-jet-config-3.0.xsd"
+<hazelcast-jet xsi:schemaLocation="http://www.hazelcast.com/schema/jet-config hazelcast-jet-config-3.1.xsd"
                xmlns="http://www.hazelcast.com/schema/jet-config"
                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <instance>
@@ -23,7 +23,7 @@
         <flow-control-period>50</flow-control-period>
         <backup-count>2</backup-count>
         <scale-up-delay-millis>1234</scale-up-delay-millis>
-        <lossless-restart-enabled>true</lossless-restart-enabled>
+        <lossless-restart-enabled>false</lossless-restart-enabled>
     </instance>
 
     <properties>

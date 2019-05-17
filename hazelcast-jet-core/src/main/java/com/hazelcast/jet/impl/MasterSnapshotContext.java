@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.IMap;
-import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
@@ -29,8 +28,8 @@ import com.hazelcast.spi.Operation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -162,13 +161,16 @@ class MasterSnapshotContext {
         // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
         // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
         long localExecutionId = mc.executionId();
-        mc.invokeOnParticipants(factory, responses -> onSnapshotCompleted(
-                responses, localExecutionId, newSnapshotId, finalMapName, isExport, isTerminal, future),
-                null);
+        mc.invokeOnParticipants(
+                factory,
+                responses -> mc.coordinationService().submitToCoordinatorThread(() ->
+                        onSnapshotCompleted(responses, localExecutionId, newSnapshotId, finalMapName, isExport, isTerminal,
+                                future)),
+                null, false);
     }
 
     private void onSnapshotCompleted(
-            Map<MemberInfo, Object> responses,
+            Collection<Object> responses,
             long executionId,
             long snapshotId,
             String snapshotMapName,
@@ -180,7 +182,7 @@ class MasterSnapshotContext {
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
-        for (Object response : responses.values()) {
+        for (Object response : responses) {
             // the response is either SnapshotOperationResult or an exception, see #invokeOnParticipants() method
             if (response instanceof Throwable) {
                 response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
@@ -228,7 +230,9 @@ class MasterSnapshotContext {
                 stats.duration(), stats.numBytes(),
                 stats.numKeys(), stats.numChunks(),
                 snapshotMapName));
-        mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
+        if (!wasExport) {
+            mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
+        }
         if (future != null) {
             if (isSuccess) {
                 future.complete(null);
@@ -250,6 +254,13 @@ class MasterSnapshotContext {
                 // after a terminal snapshot, no more snapshots are scheduled in this execution
                 boolean completedNow = terminalSnapshotFuture.complete(null);
                 assert completedNow : "terminalSnapshotFuture was already completed";
+                if (!isSuccess) {
+                    // If the terminal snapshot failed, the executions might not terminate on some members
+                    // normally and we don't care if it does - the snapshot is done, though unsuccessfully, and
+                    // we have to bring the execution down.
+                    // Let's execute the CompleteExecutionOperation to terminate them.
+                    mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null);
+                }
             } else if (!wasExport) {
                 // if this snapshot was an automatic snapshot, schedule the next one
                 mc.coordinationService().scheduleSnapshot(mc, executionId);

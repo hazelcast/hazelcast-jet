@@ -139,7 +139,8 @@ public final class Util {
      * @param <T> type of the response
      * @return {@link ExecutionCallback}
      */
-    public static <T> ExecutionCallback<T> callbackOf(Consumer<T> onResponse, Consumer<Throwable> onError) {
+    public static <T> ExecutionCallback<T> callbackOf(@Nonnull Consumer<T> onResponse,
+                                                      @Nonnull Consumer<Throwable> onError) {
         return new ExecutionCallback<T>() {
             @Override
             public void onResponse(T o) {
@@ -415,6 +416,7 @@ public final class Util {
     /**
      * Returns a future which is already completed with the supplied exception.
      */
+    // replace with CompletableFuture.failedFuture(e) once we depend on java9+
     public static <T> CompletableFuture<T> exceptionallyCompletedFuture(@Nonnull Throwable exception) {
         CompletableFuture<T> future = new CompletableFuture<>();
         future.completeExceptionally(exception);
@@ -610,5 +612,9 @@ public final class Util {
         public R applyEx(T t) {
             return wrapped.apply(t);
         }
+    }
+
+    public static String sanitizeLoggerNamePart(String name) {
+        return name.replace('.', '_');
     }
 }
