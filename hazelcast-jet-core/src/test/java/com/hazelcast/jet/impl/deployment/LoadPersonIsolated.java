@@ -23,7 +23,7 @@ import javax.annotation.Nonnull;
 import static org.junit.Assert.fail;
 
 class LoadPersonIsolated extends AbstractProcessor {
-    volatile static AssertionError assertionErrorInClose;
+    static volatile AssertionError assertionErrorInClose;
     private final boolean shouldComplete;
 
     LoadPersonIsolated(boolean shouldComplete) {
