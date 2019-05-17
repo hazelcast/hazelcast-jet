@@ -233,7 +233,7 @@ public class JetService
     }
 
     public ClassLoader getClassLoader(long jobId) {
-        return getJobExecutionService().getClassLoader(nodeEngine, getJobConfig(jobId), jobId);
+        return getJobExecutionService().getClassLoader(getJobConfig(jobId), jobId);
     }
 
     void handlePacket(Packet packet) {

@@ -728,7 +728,7 @@ public class JobCoordinationService {
     }
 
     private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {
-        ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(nodeEngine, jobConfig, jobId);
+        ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
         DAG dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
         int coopThreadCount = getJetInstance(nodeEngine).getConfig().getInstanceConfig().getCooperativeThreadCount();
         return dag.toJson(coopThreadCount).toString();

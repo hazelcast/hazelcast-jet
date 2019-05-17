@@ -31,7 +31,6 @@ import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
-import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
@@ -83,12 +82,12 @@ public class JobExecutionService {
         this.jobRepository = jobRepository;
     }
 
-    public ClassLoader getClassLoader(NodeEngine nodeEngine, JobConfig jobConfig, long jobId) {
+    public ClassLoader getClassLoader(JobConfig config, long jobId) {
         return classLoaders.computeIfAbsent(jobId,
                 k -> AccessController.doPrivileged(
                         (PrivilegedAction<JetClassLoader>) () -> {
-                            ClassLoader parent = jobConfig.getClassLoaderFactory() != null
-                                    ? jobConfig.getClassLoaderFactory().getJobClassLoader()
+                            ClassLoader parent = config.getClassLoaderFactory() != null
+                                    ? config.getClassLoaderFactory().getJobClassLoader()
                                     : nodeEngine.getConfigClassLoader();
                             return new JetClassLoader(parent, jobId, jobRepository.getJobResources(jobId));
                         }));
