@@ -132,7 +132,7 @@ public class ExecutionContext {
             } else {
                 // begin job execution
                 JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
-                ClassLoader cl = service.getJobExecutionService().getClassLoader(jobConfig, jobId);
+                ClassLoader cl = service.getJobExecutionService().getClassLoader(nodeEngine, jobConfig, jobId);
                 executionFuture = taskletExecService.beginExecute(tasklets, cancellationFuture, cl)
                         .thenApply(res -> {
                             // There's a race here: a snapshot could be requested after the job just completed
