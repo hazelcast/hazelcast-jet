@@ -494,8 +494,8 @@ public final class SourceProcessors {
      * @param createFn function that creates the source's context object
      * @param fillBufferFn function that fills Jet's buffer with items to emit
      * @param eventTimePolicy parameters for watermark generation
-     * @param createSnapshotFn function to save state snapshot of the context object
-     * @param restoreSnapshotFn function to apply saved state to the context object
+     * @param createSnapshotFn function that returns a snapshot of the context object's state
+     * @param restoreSnapshotFn function that restores the context object's state from a snapshot
      * @param destroyFn function that cleans up the resources held by the context object
      * @param preferredLocalParallelism preferred local parallelism of the source vertex. Special values:
      *                                  {@value Vertex#LOCAL_PARALLELISM_USE_DEFAULT} ->
