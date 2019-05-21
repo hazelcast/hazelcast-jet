@@ -175,28 +175,6 @@ public class WindowGroupAggregateTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void tumblingWindow_appliedInExtensionFunction() {
-        // Given
-        final int winSize = 4;
-        WindowTestFixture fx = new WindowTestFixture(false);
-
-        // When
-        SlidingWindowDefinition wDef = tumbling(winSize);
-        StageWithKeyAndWindow<Entry<String, Integer>, String> windowed = fx.newSourceStage().window(wDef);
-
-        // Then
-        windowed.apply(s -> s.aggregate(SUMMING))
-                .drainTo(sink);
-        execute();
-        assertEquals(
-                new SlidingWindowSimulator(wDef)
-                        .acceptStream(fx.input.stream())
-                        .stringResults(MOCK_FORMAT_FN),
-                streamToString(sinkStreamOfKeyedWinResult(), KWR_WIN_END_FORMAT_FN, TS_ENTRY_DISTINCT_FN)
-        );
-    }
-
-    @Test
     public void tumblingWindow_withEarlyResults() {
         // Given
         final int winSize = 4;

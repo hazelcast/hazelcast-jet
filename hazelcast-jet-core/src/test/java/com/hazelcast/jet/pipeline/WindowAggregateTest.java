@@ -128,33 +128,6 @@ public class WindowAggregateTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void tumblingWindow_appliedInExtensionFunction() {
-        // Given
-        int winSize = 4;
-        BiFunction<Long, Long, String> formatFn =
-                (timestamp, item) -> String.format("(%04d, %04d)", timestamp, item);
-
-        List<Integer> input = sequence(itemCount);
-        StreamStage<Integer> stage = streamStageFromList(input);
-
-        // When
-        SlidingWindowDefinition wDef = tumbling(winSize);
-        StageWithWindow<Integer> windowed = stage.window(wDef);
-
-        // Then
-        windowed.apply(s -> s.aggregate(summingLong(i -> i)))
-                .drainTo(sink);
-        execute();
-        assertEquals(
-                new SlidingWindowSimulator(wDef)
-                        .acceptStream(input.stream())
-                        .stringResults(e -> formatFn.apply(e.getKey(), e.getValue())),
-                streamToString(this.<Long>sinkStreamOfWinResult(),
-                        wr -> formatFn.apply(wr.end(), wr.result()))
-        );
-    }
-
-    @Test
     public void tumblingWindow_withEarlyResults() {
         // Given
         int winSize = 4;
