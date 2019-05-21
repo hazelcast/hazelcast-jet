@@ -471,45 +471,43 @@ public interface BatchStage<T> extends GeneralStage<T> {
     /**
      * Transforms {@code this} stage using the provided {@code transformFn} and
      * returns the transformed stage. It allows you to extract common pipeline
-     * transformations to a separate function and then chain usage of those
-     * functions.
+     * transformations into a method and then call that method without
+     * interrupting the chained pipeline expression.
      * <p>
-     * For example say you have this pipeline:
+     * For example, say you have this code:
      *
      * <pre>{@code
-     *     p.drawFrom(...)
-     *       .map(... some mapping)
-     *       .flatMap(... some mapping)
-     *       ...
+     * BatchStage<String> input = pipeline.drawFrom(textSource);
+     * BatchStage<String> cleanedUp = input
+     *         .map(String::toLowerCase)
+     *         .filter(s -> s.startsWith("success");
      * }</pre>
      *
-     * You can extract the {@code map} and {@code flatMap} stages to a
-     * function:
+     * You can capture the {@code map} and {@code filter} steps into a common
+     * "cleanup" transformation:
      *
      * <pre>{@code
-     *     BatchStage<String> addSpecialMapping(BatchStage<String> inputStage) {
-     *          return inputStage
-     *              .map(... some mapping)
-     *              .flatMap(... some mapping);
-     *     }
+     * BatchStage<String> cleanUp(BatchStage<String> input) {
+     *      return input.map(String::toLowerCase)
+     *                  .filter(s -> s.startsWith("success");
+     * }
      * }</pre>
      *
-     * And then use it in the following way:
+     * Now you can insert this transformation as just another step in your
+     * pipeline:
      *
      * <pre>{@code
-     *     p.drawFrom(...)
-     *       .apply(this::addSpecialMapping)
-     *       ...
+     * BatchStage<String> tokens = pipeline
+     *     .drawFrom(textSource)
+     *     .apply(this::cleanUp)
+     *     .flatMap(line -> traverseArray(line.split("\\W+")));
      * }</pre>
      *
-     * The {@code addSpecialMapping} method can then be re-used in multiple
-     * pipelines.
-     *
-     * @param transformFn a function to transform this stage to another stage
+     * @param transformFn function to transform this stage into another stage
      * @param <R> type of the returned stage
      */
     @Nonnull
-    default <R extends Stage> R apply(@Nonnull FunctionEx<? super BatchStage<T>, ? extends R> transformFn) {
+    default <R> BatchStage<R> apply(@Nonnull FunctionEx<? super BatchStage<T>, ? extends BatchStage<R>> transformFn) {
         return transformFn.apply(this);
     }
 
