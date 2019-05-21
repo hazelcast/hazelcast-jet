@@ -212,7 +212,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      * StreamStage<String> input = pipeline.drawFrom(textSource);
      * StreamStage<String> cleanedUp = input
      *         .map(String::toLowerCase)
-     *         .filter(s -> s.startsWith("success");
+     *         .filter(s -> s.startsWith("success"));
      * }</pre>
      *
      * You can capture the {@code map} and {@code filter} steps into a common
@@ -221,7 +221,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      * <pre>{@code
      * StreamStage<String> cleanUp(StreamStage<String> input) {
      *      return input.map(String::toLowerCase)
-     *                  .filter(s -> s.startsWith("success");
+     *                  .filter(s -> s.startsWith("success"));
      * }
      * }</pre>
      *

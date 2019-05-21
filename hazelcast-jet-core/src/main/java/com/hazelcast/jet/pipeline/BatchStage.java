@@ -480,7 +480,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * BatchStage<String> input = pipeline.drawFrom(textSource);
      * BatchStage<String> cleanedUp = input
      *         .map(String::toLowerCase)
-     *         .filter(s -> s.startsWith("success");
+     *         .filter(s -> s.startsWith("success"));
      * }</pre>
      *
      * You can capture the {@code map} and {@code filter} steps into a common
@@ -489,7 +489,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * <pre>{@code
      * BatchStage<String> cleanUp(BatchStage<String> input) {
      *      return input.map(String::toLowerCase)
-     *                  .filter(s -> s.startsWith("success");
+     *                  .filter(s -> s.startsWith("success"));
      * }
      * }</pre>
      *
