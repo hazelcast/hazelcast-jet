@@ -23,6 +23,7 @@ import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.accumulator.LongDoubleAccumulator;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.accumulator.MutableReference;
+import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.BiConsumerEx;
@@ -35,6 +36,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToDoubleFunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 
 import javax.annotation.Nonnull;
@@ -70,6 +72,17 @@ public final class AggregateOperations {
 
     /**
      * Returns an aggregate operation that computes the number of items.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *    AggregateOperations.counting();
+     * }</pre>
+     *
+     * The result will be the total number of accumulated items, represented as
+     * a {@code Long} value.
+     * <p>
+     * <em>Note:</em> if the total count overflows, the job will fail with an
+     * {@link ArithmeticException}.
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LongAccumulator, Long> counting() {
@@ -84,7 +97,21 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that computes the sum of the {@code long}
      * values it obtains by applying {@code getLongValueFn} to each item.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be the total amount of all orders or 0 if there are no orders
+     *     AggregateOperations.summingLong(Order::getAmount);
+     * }</pre>
      *
+     * <em>Note 1:</em> make sure that the value returned from the function is
+     * non-null or the job will fail.
+     * <p>
+     * <em>Note 2:</em> if the total sum overflows, the job will fail with an
+     * {@link ArithmeticException}.
+     *
+     * @param getLongValueFn function to extract a {@code long} value to sum
+     *                       from the item
      * @param <T> input item type
      */
     @Nonnull
@@ -103,7 +130,19 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that computes the sum of the {@code double}
      * values it obtains by applying {@code getDoubleValueFn} to each item.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be the total amount of all orders or 0 if there are no orders
+     *     orders.aggregate(AggregateOperations.summingDouble(
+     *         Order::getAmount))
+     * }</pre>
      *
+     * <em>Note:</em> make sure that the value returned from the function is
+     * non-null or the job will fail.
+     *
+     * @param getDoubleValueFn function to extract a {@code double} value to
+     *                         sum from the item
      * @param <T> input item type
      */
     @Nonnull
@@ -129,9 +168,13 @@ public final class AggregateOperations {
      *     AggregateOperations.minBy(ComparatorEx.comparingInt(person -> person.getAge()))
      * }</pre>
      *
+     * If no persons are accumulated, the result is {@code null}. If multiple
+     * persons had the lowest age, any will be chosen.
+     * <p>
      * This aggregate operation does not implement the {@link
      * AggregateOperation1#deductFn() deduct} primitive.
      *
+     * @param comparator comparator to compare the items
      * @param <T> input item type
      */
     @Nonnull
@@ -151,10 +194,14 @@ public final class AggregateOperations {
      *     // the result will be the oldest Person
      *     AggregateOperations.maxBy(ComparatorEx.comparingInt(person -> person.getAge()))
      * }</pre>
-     *
+
+     * If no persons are accumulated, the result is {@code null}. If multiple
+     * persons had the highest age, any will be chosen.
+     * <p>
      * This aggregate operation does not implement the {@link
      * AggregateOperation1#deductFn() deduct} primitive.
      *
+     * @param comparator comparator to compare the items
      * @param <T> input item type
      */
     @Nonnull
@@ -253,7 +300,14 @@ public final class AggregateOperations {
      * Returns an aggregate operation that computes the arithmetic mean of the
      * {@code long} values it obtains by applying {@code getLongValueFn} to
      * each item.
+     * <p>
+     * <em>Note 1:</em> make sure that the value returned from the function is
+     * non-null or the job will fail.
+     * <em>Note 2:</em> if the total sum or count overflows, the job will fail
+     * with an {@link ArithmeticException}.
      *
+     * @param getLongValueFn function to extract a {@code long} value to
+     *                       average from the item
      * @param <T> input item type
      */
     @Nonnull
@@ -288,7 +342,12 @@ public final class AggregateOperations {
      * Returns an aggregate operation that computes the arithmetic mean of the
      * {@code double} values it obtains by applying {@code getDoubleValueFn} to
      * each item.
+     * <p>
+     * <em>Note:</em> make sure that the value returned from the function is
+     * non-null or the job will fail.
      *
+     * @param getDoubleValueFn function to extract a {@code double} value to
+     *                        average from the item
      * @param <T> input item type
      */
     @Nonnull
@@ -325,6 +384,13 @@ public final class AggregateOperations {
      * approximates the rate of change of {@code y} as a function of {@code x},
      * where {@code x} and {@code y} are {@code long} quantities obtained
      * by applying the two provided functions to each item.
+     * <p>
+     * <em>Note:</em> make sure that the value returned from the functions is
+     * non-null or the job will fail.
+     *
+     * @param getXFn a function to extract <em>x</em> from the input
+     * @param getYFn a function to extract <em>y</em> from the input
+     * @param <T> input item type
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LinTrendAccumulator, Double> linearTrend(
@@ -418,12 +484,12 @@ public final class AggregateOperations {
      * See also {@link #filtering filtering()} and {@link #flatMapping
      * flatMapping()}.
      *
+     * @param mapFn the function to apply to input items
+     * @param downstream the downstream aggregate operation
      * @param <T> input item type
      * @param <U> input type of the downstream aggregate operation
      * @param <A> downstream operation's accumulator type
      * @param <R> downstream operation's result type
-     * @param mapFn the function to apply to input items
-     * @param downstream the downstream aggregate operation
      */
     public static <T, U, A, R> AggregateOperation1<T, A, R> mapping(
             @Nonnull FunctionEx<? super T, ? extends U> mapFn,
@@ -462,11 +528,11 @@ public final class AggregateOperations {
      * See also {@link #mapping mapping()} and {@link #flatMapping
      * flatMapping()}.
      *
+     * @param filterFn the function to apply to input items
+     * @param downstream the downstream aggregate operation
      * @param <T> input item type
      * @param <A> downstream operation's accumulator type
      * @param <R> downstream operation's result type
-     * @param filterFn the function to apply to input items
-     * @param downstream the downstream aggregate operation
      *
      * @since 3.1
      */
@@ -512,12 +578,12 @@ public final class AggregateOperations {
      * <p>
      * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
      *
+     * @param flatMapFn the function to apply to input items
+     * @param downstream the downstream aggregate operation
      * @param <T> input item type
      * @param <U> input type of the downstream aggregate operation
      * @param <A> downstream operation's accumulator type
      * @param <R> downstream operation's result type
-     * @param flatMapFn the function to apply to input items
-     * @param downstream the downstream aggregate operation
      *
      * @since 3.1
      */
@@ -548,14 +614,20 @@ public final class AggregateOperations {
      * <p>
      * If you use a collection that preserves the insertion order, keep in mind
      * that there is no specified order in which the items are aggregated.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // accumulate the items into a LinkedList
+     *     AggregateOperations.toCollection(LinkedList::new)
+     * }</pre>
      *
-     * @param <T> input item type
-     * @param <C> the type of the collection
      * @param createCollectionFn a {@code Supplier} which returns a new, empty {@code Collection} of the
      *                           appropriate type
+     * @param <T> input item type
+     * @param <C> the type of the collection
      */
     public static <T, C extends Collection<T>> AggregateOperation1<T, C, C> toCollection(
-            SupplierEx<C> createCollectionFn
+            @Nonnull SupplierEx<C> createCollectionFn
     ) {
         checkSerializable(createCollectionFn, "createCollectionFn");
         return AggregateOperation
@@ -573,6 +645,15 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that accumulates the items into an {@code
      * ArrayList}.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result of this pipeline will be a single ArrayList instance
+     *     // with all the persons
+     *     Pipeline p = Pipeline.create();
+     *     p.<Person>drawFrom(list("persons"))
+     *      .aggregate(AggregateOperations.toList())
+     * }</pre>
      *
      * @param <T> input item type
      */
@@ -583,6 +664,16 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that accumulates the items into a {@code
      * HashSet}.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // The result of this pipeline will be a single HashSet instance with
+     *     // all the distinct cities
+     *     Pipeline p = Pipeline.create();
+     *     p.<Person>drawFrom(list("persons"))
+     *      .map(Person::getCity)
+     *      .aggregate(AggregateOperations.toSet())
+     * }</pre>
      *
      * @param <T> input item type
      */
@@ -600,15 +691,24 @@ public final class AggregateOperations {
      * data contains duplicates, use the {@link #toMap(FunctionEx,
      * FunctionEx, BinaryOperatorEx) toMap()} overload
      * that can resolve them.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be a single HashMap instance mapping sensorIds
+     *     // to values
+     *     AggregateOperations.toMap(Measurement::getSensorId,
+     *         Measurement::getValue)
+     * }</pre>
      *
+     * @param keyFn a function to extract the key from the input item
+     * @param valueFn a function to extract the value from the input item
      * @param <T> input item type
      * @param <K> type of the key
      * @param <U> type of the value
-     * @param keyFn a function to extract the key from the input item
-     * @param valueFn a function to extract the value from the input item
      *
      * @see #toMap(FunctionEx, FunctionEx, BinaryOperatorEx)
      * @see #toMap(FunctionEx, FunctionEx, BinaryOperatorEx, SupplierEx)
+     * @see #groupingBy(FunctionEx)
      */
     public static <T, K, U> AggregateOperation1<T, Map<K, U>, Map<K, U>> toMap(
             FunctionEx<? super T, ? extends K> keyFn,
@@ -631,16 +731,25 @@ public final class AggregateOperations {
      * This aggregate operation resolves duplicate keys by applying {@code
      * mergeFn} to the conflicting values. {@code mergeFn} will act upon the
      * values after {@code valueFn} has already been applied.
-     *
-     * @param <T> input item type
-     * @param <K> the type of key
-     * @param <U> the output type of the value mapping function
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // The result will be a single HashMap instance mapping sensorIds
+     *     // to values. If there are two measurements from the same sensor,
+     *     // they will be added.
+     *     AggregateOperations.toMap(Measurement::getSensorId,
+     *         Measurement::getValue, Long::sum)
+     * }</pre>
+
      * @param keyFn a function to extract the key from input item
      * @param valueFn a function to extract value from input item
      * @param mergeFn a merge function, used to resolve collisions between
      *                      values associated with the same key, as supplied
      *                      to {@link Map#merge(Object, Object,
      *                      java.util.function.BiFunction)}
+     * @param <T> input item type
+     * @param <K> the type of key
+     * @param <U> the output type of the value mapping function
      *
      * @see #toMap(FunctionEx, FunctionEx)
      * @see #toMap(FunctionEx, FunctionEx, BinaryOperatorEx, SupplierEx)
@@ -660,16 +769,19 @@ public final class AggregateOperations {
      * into a {@code Map} whose keys and values are the result of applying the
      * provided mapping functions to the input elements.
      * <p>
-     * If the mapped keys contain duplicates (according to {@link
-     * Object#equals(Object)}), the value mapping function is applied to each
-     * equal element, and the results are merged using the provided merging
-     * function. The {@code Map} is created by a provided {@code createMapFn}
-     * function.
+     * This aggregate operation resolves duplicate keys by applying {@code
+     * mergeFn} to the conflicting values. {@code mergeFn} will act upon the
+     * values after {@code valueFn} has already been applied.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // The result will be a single ObjectToLongHashMap instance mapping
+     *     // sensorIds to values. If there are two measurements from the same
+     *     // sensor, they will be added.
+     *     AggregateOperations.toMap(Measurement::getSensorId,
+     *         Measurement::getValue, Long::sum, ObjectToLongHashMap::new)
+     * }</pre>
      *
-     * @param <T> input item type
-     * @param <K> the output type of the key mapping function
-     * @param <U> the output type of the value mapping function
-     * @param <M> the type of the resulting {@code Map}
      * @param keyFn a function to extract the key from input item
      * @param valueFn a function to extract value from input item
      * @param mergeFn a merge function, used to resolve collisions between
@@ -678,6 +790,10 @@ public final class AggregateOperations {
      *                      java.util.function.BiFunction)}
      * @param createMapFn a function which returns a new, empty {@code Map} into
      *                    which the results will be inserted
+     * @param <T> input item type
+     * @param <K> the output type of the key mapping function
+     * @param <U> the output type of the value mapping function
+     * @param <M> the type of the resulting {@code Map}
      *
      * @see #toMap(FunctionEx, FunctionEx)
      * @see #toMap(FunctionEx, FunctionEx, BinaryOperatorEx)
@@ -711,8 +827,20 @@ public final class AggregateOperations {
      * {@code HashMap} where the key is the result of applying {@code keyFn}
      * and the value is a list of the items with that key.
      * <p>
-     * This operation achieves the effect of a cascaded group-by where the
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be a single instance of HashMap<SensorId, List<Measurement>>
+     *     AggregateOperations.groupingBy(Measurement::getSensorId)
+     * }</pre>
+     * <p>
+     * You can use this aggregation to achieve a cascaded group-by where the
      * members of each group are further classified by a secondary key.
+     * <pre>{@code
+     *     p.drawFrom(personsSource)
+     *      .groupingKey(Person::getCountry)
+     *      .aggregate(AggregateOperations.groupingBy(Person::getCity))
+     *      // the output will be of type Map.Entry<Country, Map<City, List<Person>>>
+     * }</pre>
      *
      * @param keyFn a function to extract the key from input item
      * @param <T> input item type
@@ -720,6 +848,7 @@ public final class AggregateOperations {
      *
      * @see #groupingBy(FunctionEx, AggregateOperation1)
      * @see #groupingBy(FunctionEx, SupplierEx, AggregateOperation1)
+     * @see #toMap(FunctionEx, FunctionEx)
      */
     public static <T, K> AggregateOperation1<T, Map<K, List<T>>, Map<K, List<T>>> groupingBy(
             FunctionEx<? super T, ? extends K> keyFn
@@ -734,8 +863,19 @@ public final class AggregateOperations {
      * and the value is the result of applying the downstream aggregate
      * operation to the items with that key.
      * <p>
-     * This operation achieves the effect of a cascaded group-by where the
-     * members of each group are further classified by a secondary key.
+     * Sample usage:
+     * <pre>{@code
+     *     // The result will be a single instance of HashMap<SensorId, Long>.
+     *     // The value in the map is the sum of measurement values for that sensor.
+     *     AggregateOperations.groupingBy(
+     *         Measurement::getSensorId,
+     *         AggregateOperations.summingLong(Measurement::getValue)
+     *     )
+     * }</pre>
+     * <p>
+     * You can use this aggregation to achieve a cascaded group-by where the
+     * members of each group are further classified by a secondary key, see
+     * sample in {@link #groupingBy(FunctionEx)}.
      *
      * @param keyFn a function to extract the key from input item
      * @param downstream the downstream aggregate operation
@@ -746,6 +886,7 @@ public final class AggregateOperations {
      *
      * @see #groupingBy(FunctionEx)
      * @see #groupingBy(FunctionEx, SupplierEx, AggregateOperation1)
+     * @see #toMap(FunctionEx, FunctionEx)
      */
     public static <T, K, A, R> AggregateOperation1<T, Map<K, A>, Map<K, R>> groupingBy(
             FunctionEx<? super T, ? extends K> keyFn,
@@ -762,8 +903,20 @@ public final class AggregateOperations {
      * result of applying {@code keyFn} and the value is the result of
      * applying the downstream aggregate operation to the items with that key.
      * <p>
-     * This operation achieves the effect of a cascaded group-by where the
-     * members of each group are further classified by a secondary key.
+     * Sample usage:
+     * <pre>{@code
+     *     // The result will be a single instance of TreeMap<SensorId, Long>.
+     *     // The value in the map is the sum of measurement values for that sensor.
+     *     AggregateOperations.groupingBy(
+     *         Measurement::getSensorId,
+     *         TreeMap::new,
+     *         AggregateOperations.summingLong(Measurement::getValue)
+     *     )
+     * }</pre>
+     * <p>
+     * You can use this aggregation to achieve a cascaded group-by where the
+     * members of each group are further classified by a secondary key, see
+     * sample in {@link #groupingBy(FunctionEx)}.
      *
      * @param keyFn a function to extract the key from input item
      * @param createMapFn a function which returns a new, empty {@code Map} into
@@ -777,6 +930,7 @@ public final class AggregateOperations {
      *
      * @see #groupingBy(FunctionEx)
      * @see #groupingBy(FunctionEx, AggregateOperation1)
+     * @see #toMap(FunctionEx, FunctionEx)
      */
     @SuppressWarnings("unchecked")
     public static <T, K, R, A, M extends Map<K, R>> AggregateOperation1<T, Map<K, A>, M> groupingBy(
@@ -835,12 +989,24 @@ public final class AggregateOperations {
      * window in O(1) time. It must undo the effects of a previous {@code
      * combineAccValuesFn} call:
      * <pre>
-     *     A accVal;  (has some pre-existing value)
+     *     A accVal;  // has some pre-existing value
      *     A itemAccVal = toAccValueFn.apply(item);
      *     A combined = combineAccValuesFn.apply(accVal, itemAccVal);
      *     A deducted = deductAccValueFn.apply(combined, itemAccVal);
      *     assert deducted.equals(accVal);
      * </pre>
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // This operation will add order amounts to calculate total amount.
+     *     // It's equivalent to `summingLong`
+     *     AggregateOperations.reducing(
+     *         0L,     // the initial value
+     *         Order::getAmount,
+     *         Math::addExact,
+     *         Math::subtractExact
+     *     )
+     * }</pre>
      *
      * @param emptyAccValue the reducing operation's emptyAccValue element
      * @param toAccValueFn transforms the stream item into its accumulated value
@@ -881,16 +1047,19 @@ public final class AggregateOperations {
      * <p>
      * The implementation of {@link StageWithWindow#distinct()} uses this
      * operation and, if needed, you can use it directly for the same purpose.
-     * For example, in a stream of Person objects you can specify the last name
-     * as the key. The result will be a stream of Person objects, one for each
-     * distinct last name:
-     * <pre>
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // The result of this pipeline will be a stream of Person objects, arbitrary
+     *     // one for each distinct last name
      *     Pipeline p = Pipeline.create();
-     *     p.&lt;Person>drawFrom(list("persons"))
+     *     p.<Person>drawFrom(list("persons"))
      *      .groupingKey(Person::getLastName)
      *      .aggregate(pickAny())
      *      .drainTo(...);
-     * </pre>
+     * }</pre>
+     *
+     * @param <T> input item type
      */
     @Nonnull
     @SuppressWarnings("checkstyle:needbraces")
@@ -913,6 +1082,17 @@ public final class AggregateOperations {
      * {@code ArrayList} and sorts it with the given comparator. Use {@link
      * ComparatorEx#naturalOrder()} if you want to sort {@code
      * Comparable} items by their natural order.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // The result of this pipeline will be a List<Person> instance that is sorted
+     *     // by surname
+     *     Pipeline p = Pipeline.create();
+     *     p.<Person>drawFrom(list("persons"))
+     *      .aggregate(AggregateOperations.sorting(
+     *          ComparatorEx.comparing(Person::getSurname)
+     *      ))
+     * }</pre>
      *
      * @param comparator the comparator to use for sorting
      * @param <T> the type of input items
@@ -940,6 +1120,16 @@ public final class AggregateOperations {
      * Returns an aggregate operation that is a composite of two aggregate
      * operations. It allows you to calculate multiple aggregations over the
      * same items at once.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result of this aggregation will be a Tuple2{totalAmount, averageAmount}
+     *     AggregateOperations.allOf(
+     *         AggregateOperations.summingLong(Order::getAmount),
+     *         AggregateOperations.averagingLong(Order::getAmount),
+     *         Tuple2::tuple2
+     *     )
+     * }</pre>
      *
      * @param op0 1st operation
      * @param op1 2nd operation
@@ -989,7 +1179,7 @@ public final class AggregateOperations {
 
     /**
      * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
-     * BiFunctionEx)} with identity finish.
+     * BiFunctionEx)} wrapping the two results in a {@link Tuple2}.
      */
     @Nonnull
     public static <T, A0, A1, R0, R1> AggregateOperation1<T, Tuple2<A0, A1>, Tuple2<R0, R1>> allOf(
@@ -1003,6 +1193,18 @@ public final class AggregateOperations {
      * Returns an aggregate operation that is a composite of three aggregate
      * operations. It allows you to calculate multiple aggregations over the
      * same items at once.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result of this aggregation will be a
+     *     // Tuple3{totalAmount, averageAmount, amountTrend}
+     *     AggregateOperations.allOf(
+     *         AggregateOperations.summingLong(Order::getAmount),
+     *         AggregateOperations.averagingLong(Order::getAmount),
+     *         AggregateOperations.linearTrend(Order::getTime, Order::getAmount),
+     *         Tuple3::tuple3
+     *     )
+     * }</pre>
      *
      * @param op0 1st operation
      * @param op1 2nd operation
@@ -1065,7 +1267,8 @@ public final class AggregateOperations {
 
     /**
      * Convenience for {@link #allOf(AggregateOperation1, AggregateOperation1,
-     * AggregateOperation1, TriFunction)} with identity finisher.
+     * AggregateOperation1, TriFunction)} wrapping the three results in a
+     * {@link Tuple3}.
      */
     @Nonnull
     public static <T, A0, A1, A2, R0, R1, R2>
@@ -1081,26 +1284,27 @@ public final class AggregateOperations {
     /**
      * Returns a builder object that helps you create a composite of multiple
      * aggregate operations. The resulting aggregate operation will perform all
-     * of the constituent operations at the same time and you can retrieve each
-     * result from the {@link com.hazelcast.jet.datamodel.ItemsByTag} object
-     * you'll get in the output.
+     * of the constituent operations at the same time and you can retrieve
+     * individual results from the {@link ItemsByTag} object you'll get in the
+     * output.
      * <p>
      * The builder object is primarily intended to build a composite of four or more
-     * aggregate operations. For up to three operations, prefer the explicit, more
-     * type-safe variants {@link #allOf(AggregateOperation1, AggregateOperation1) allOf(op1, op2)}
-     * and {@link #allOf(AggregateOperation1, AggregateOperation1,
-     * AggregateOperation1) allOf(op1, op2, op3)}.
+     * aggregate operations. For up to three operations, prefer the simpler and
+     * more type-safe variants {@link #allOf(AggregateOperation1,
+     * AggregateOperation1) allOf(op1, op2)} and {@link
+     * #allOf(AggregateOperation1, AggregateOperation1, AggregateOperation1)
+     * allOf(op1, op2, op3)}.
      * <p>
-     * Example that calculates the count and the sum of the items:
+     * Sample usage:
      * <pre>{@code
-     * AllOfAggregationBuilder<Long> builder = allOfBuilder();
-     * Tag<Long> tagSum = builder.add(summingLong(Long::longValue));
-     * Tag<Long> tagCount = builder.add(counting());
-     * AggregateOperation1<Long, ?, ItemsByTag> compositeAggrOp = builder.build();
+     *     AllOfAggregationBuilder<Long> builder = allOfBuilder();
+     *     Tag<Long> tagSum = builder.add(summingLong(Long::longValue));
+     *     Tag<Long> tagCount = builder.add(counting());
+     *     AggregateOperation1<Long, ?, ItemsByTag> compositeAggrOp = builder.build();
      * }</pre>
      *
-     * When you receive the resulting {@link com.hazelcast.jet.datamodel.ItemsByTag
-     * ItemsByTag}, fetch the individual results using the tags as keys, for example:
+     * When you receive the resulting {@link ItemsByTag}, fetch the individual
+     * results using the tags as keys, for example:
      * <pre>{@code
      * batchStage.aggregate(compositeAggrOp).map((ItemsByTag result) -> {
      *     Long sum = result.get(tagSum);
@@ -1120,8 +1324,7 @@ public final class AggregateOperations {
      * Returns an aggregate operation that is a composite of two independent
      * aggregate operations, each one accepting its own input. You need this
      * kind of operation for a two-way co-aggregating pipeline stage:
-     * {@link com.hazelcast.jet.pipeline.StageWithWindow#aggregate2
-     * stage.aggregate2()}.
+     * {@link StageWithWindow#aggregate2 stage.aggregate2()}.
      * <p>
      * This method is suitable when you can express your computation as two
      * independent aggregate operations where you combine only their final
@@ -1129,6 +1332,31 @@ public final class AggregateOperations {
      * accumulation phase, you can create an aggregate operation by specifying
      * each primitive using the {@linkplain AggregateOperation#withCreate
      * aggregate operation builder}.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     * AggregateOperation2<PageVisit, Payment, ?, Tuple2<List<PageVisit>, List<Payment>>> aggrOp =
+     *     AggregateOperations.aggregateOperation2(
+     *         AggregateOperations.toList(),
+     *         AggregateOperations.toList()
+     *     );
+     * }</pre>
+     *
+     * Then, use the operation like this:
+     * <pre>{@code
+     *     BatchStageWithKey<PageVisit, Integer> pageVisits =
+     *             p.drawFrom(Sources.<PageVisit>list("pageVisit"))
+     *              .groupingKey(pageVisit -> pageVisit.userId());
+     *     BatchStageWithKey<Payment, Integer> payments =
+     *             p.drawFrom(Sources.<Payment>list("payment"))
+     *              .groupingKey(payment -> payment.userId());
+     *
+     *     // The result of the following stage will be:
+     *     //   Map.Entry<Integer, Tuple2<List<PageVisit>, List<Payment>>>
+     *     // For each userId there will be a tuple with two lists: a list of page
+     *     // visits and a list of payments.
+     *     joined = pageVisits.aggregate2(payments, aggrOp);
+     * }</pre>
      *
      * @param op0 the aggregate operation that will receive the first stage's input
      * @param op1 the aggregate operation that will receive the second stage's input
@@ -1200,8 +1428,7 @@ public final class AggregateOperations {
      * Returns an aggregate operation that is a composite of three independent
      * aggregate operations, each one accepting its own input. You need this
      * kind of operation for a three-way co-aggregating pipeline stage:
-     * {@link com.hazelcast.jet.pipeline.StageWithWindow#aggregate3
-     * stage.aggregate3()}.
+     * {@link StageWithWindow#aggregate3 stage.aggregate3()}.
      * <p>
      * This method is suitable when you can express your computation as three
      * independent aggregate operations where you combine only their final
@@ -1209,6 +1436,10 @@ public final class AggregateOperations {
      * accumulation phase, you can create an aggregate operation by specifying
      * each primitive using the {@linkplain AggregateOperation#withCreate
      * aggregate operation builder}.
+     * <p>
+     * For a sample usage see {@linkplain
+     * #aggregateOperation2(AggregateOperation1, AggregateOperation1,
+     * BiFunctionEx) here}.
      *
      * @param op0 the aggregate operation that will receive the first stage's input
      * @param op1 the aggregate operation that will receive the second stage's input
@@ -1301,9 +1532,10 @@ public final class AggregateOperations {
      * an aggregate operation that accepts multiple inputs. You must supply
      * this kind of operation to a co-aggregating pipeline stage. Most typically
      * you'll need this builder if you're using the {@link
-     * com.hazelcast.jet.pipeline.StageWithWindow#aggregateBuilder()}. For
-     * two-way or three-way co-aggregation you can use {@link
-     * AggregateOperations#aggregateOperation2} and {@link AggregateOperations#aggregateOperation3}.
+     * StageWithKeyAndWindow#aggregateBuilder()}. For two-way or three-way
+     * co-aggregation you can use the simpler variants: {@link
+     * AggregateOperations#aggregateOperation2} and {@link
+     * AggregateOperations#aggregateOperation3}.
      * <p>
      * This builder is suitable when you can express your computation as
      * independent aggregate operations on each input where you combine only
@@ -1311,6 +1543,40 @@ public final class AggregateOperations {
      * in the accumulation phase, you can create an aggregate operation by
      * specifying each primitive using the {@linkplain AggregateOperation#withCreate
      * aggregate operation builder}.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // create two input stages that we'll later join
+     *     BatchStageWithKey<PageVisit, Integer> pageVisits =
+     *             p.drawFrom(Sources.<PageVisit>list("pageVisit"))
+     *              .groupingKey(pageVisit -> pageVisit.userId());
+     *     BatchStageWithKey<Payment, Integer> payments =
+     *             p.drawFrom(Sources.<Payment>list("payment"))
+     *              .groupingKey(payment -> payment.userId());
+     *
+     *     // create the input tags
+     *     GroupAggregateBuilder1<PageVisit, Integer> b = pageVisits.aggregateBuilder();
+     *     Tag<PageVisit> tag0_in = b.tag0();
+     *     Tag<Payment> tag1_in = b.add(payments);
+     *
+     *     // create the aggregate operation
+     *     CoAggregateOperationBuilder agb = AggregateOperations.coAggregateOperationBuilder();
+     *     Tag<List<PageVisit>> tag0 = agb.add(tag0_in, toList());
+     *     Tag<List<Payment>> tag1 = agb.add(tag1_in, toList());
+     *     AggregateOperation<?, ItemsByTag> aggrOp = agb.build();
+     *
+     *     // join the input stages to output stage
+     *     BatchStage<Entry<Integer, ItemsByTag>> outputStage = b.build(aggrOp);
+     *
+     *     // to access the results, use:
+     *     outputStage.map(entry -> {
+     *         int userId = entry.getKey();
+     *         ItemsByTag value = entry.getValue();
+     *         List<PageVisit> pageVisits1 = value.get(tag0);
+     *         List<Payment> payments1 = value.get(tag1);
+     *         ...
+     *     });
+     * }</pre>
      */
     @Nonnull
     public static CoAggregateOperationBuilder coAggregateOperationBuilder() {
