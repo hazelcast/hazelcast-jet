@@ -31,8 +31,8 @@ final class SnapshotValidator {
     /**
      * Validates a snapshot with the given id.
      *
-     * @param snapshotId snapshot ID or {@link JobExecutionRecord#NO_SNAPSHOT},
-     *      if snapshot id is not known
+     * @param snapshotId snapshot ID or {@link JobExecutionRecord#NO_SNAPSHOT}, if snapshot id is
+     *                  not known
      * @param jobIdString name and id of the job (for debug output)
      * @param map snapshot map to validate
      * @return the snapshot id of the snapshot being validated
@@ -40,21 +40,24 @@ final class SnapshotValidator {
     static long validateSnapshot(long snapshotId, String jobIdString, IMap<Object, Object> map) {
         SnapshotValidationRecord validationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
         if (validationRecord == null) {
-            throw new JetException("State for " + jobIdString + " was supposed to be restored from '" + map.getName()
-                    + "', but that map doesn't contain the validation record: not an IMap with Jet snapshot or corrupted");
+            throw new JetException(String.format(
+                    "snapshot-%d doesn't exist or is damaged. Unable to restore the state for %s.",
+                    snapshotId, jobIdString));
         }
         if (validationRecord.numChunks() != map.size() - 1) {
             // fallback validation that counts using aggregate(), ignoring different snapshot IDs
             Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
                     && ((SnapshotDataKey) e.getKey()).snapshotId() == snapshotId);
             if (validationRecord.numChunks() != filteredCount) {
-                throw new JetException("State for " + jobIdString + " in '" + map.getName() + "' corrupted: it should " +
-                        "have " + validationRecord.numChunks() + " entries, but has " + (map.size() - 1));
+                throw new JetException(String.format(
+                        "State for %s in IMap '%s' corrupted: it should have %,d entries, but has %,d",
+                        jobIdString, map.getName(), validationRecord.numChunks(), map.size() - 1));
             }
         }
         if (snapshotId != NO_SNAPSHOT && snapshotId != validationRecord.snapshotId()) {
-            throw new JetException(jobIdString + ": '" + map.getName() + "' was supposed to contain snapshotId="
-                    + snapshotId + ", but it contains snapshotId=" + validationRecord.snapshotId());
+            throw new JetException(String.format(
+                    "%s: IMap '%s' was supposed to contain snapshotId %d, but it contains snapshotId %d",
+                    jobIdString, map.getName(), snapshotId, validationRecord.snapshotId()));
         }
         return validationRecord.snapshotId();
     }
