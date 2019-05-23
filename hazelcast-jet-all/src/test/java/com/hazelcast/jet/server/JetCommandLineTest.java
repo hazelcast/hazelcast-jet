@@ -51,6 +51,7 @@ import java.util.stream.IntStream;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.server.JetCommandLine.runCommandLine;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -61,7 +62,6 @@ public class JetCommandLineTest extends JetTestSupport {
     private static final String SINK_NAME = "sink";
     private static final int ITEM_COUNT = 1000;
 
-    private static final Object SERIAL_TESTS_LOCK = new Object();
     private static Path testJobJarFile;
 
     @Rule
@@ -75,6 +75,7 @@ public class JetCommandLineTest extends JetTestSupport {
     private JetInstance jet;
     private IMapJet<Integer, Integer> sourceMap;
     private IListJet<Integer> sinkList;
+    private JetInstance client;
 
     @BeforeClass
     public static void beforeClass() throws IOException {
@@ -92,6 +93,7 @@ public class JetCommandLineTest extends JetTestSupport {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
         jet = createJetMember(cfg);
+        client = createJetClient();
         resetOut();
 
         sourceMap = jet.getMap(SOURCE_NAME);
@@ -391,36 +393,36 @@ public class JetCommandLineTest extends JetTestSupport {
 
     @Test
     public void test_submit() {
-        synchronized (SERIAL_TESTS_LOCK) {
-            JetBootstrap.setTestClient(createJetClient());
-            run("submit", testJobJarFile.toString());
-            assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()));
-            Job job = jet.getJobs().get(0);
-            assertJobStatusEventually(job, JobStatus.RUNNING);
-            assertNull(job.getName());
-        }
+        run("submit", testJobJarFile.toString());
+        assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()));
+        Job job = jet.getJobs().get(0);
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+        assertNull(job.getName());
+    }
+
+    @Test
+    public void test_submit_clientShutdownWhenDone() {
+        run("submit", testJobJarFile.toString());
+        assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()));
+        Job job = jet.getJobs().get(0);
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+        assertFalse("Instance should be shut down", client.getHazelcastInstance().getLifecycleService().isRunning());
     }
 
     @Test
     public void test_submit_nameUsed() {
-        synchronized (SERIAL_TESTS_LOCK) {
-            JetBootstrap.setTestClient(createJetClient());
-            run("submit", "-n", "fooName", testJobJarFile.toString());
-            assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()), 5);
-            Job job = jet.getJobs().get(0);
-            assertEquals("fooName", job.getName());
-        }
+        run("submit", "-n", "fooName", testJobJarFile.toString());
+        assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()), 5);
+        Job job = jet.getJobs().get(0);
+        assertEquals("fooName", job.getName());
     }
 
     @Test
     public void test_submit_argsPassing() {
-        synchronized (SERIAL_TESTS_LOCK) {
-            JetBootstrap.setTestClient(createJetClient());
-            run("submit", testJobJarFile.toString(), "--jobOption", "fooValue");
-            // this list is created by the job in testjob.jar
-            IList<String> args = jet.getList("args");
-            assertTrueEventually(() -> assertContains(captureOut(), " with arguments [--jobOption, fooValue]"));
-        }
+        run("submit", testJobJarFile.toString(), "--jobOption", "fooValue");
+        // this list is created by the job in testjob.jar
+        IList<String> args = jet.getList("args");
+        assertTrueEventually(() -> assertContains(captureOut(), " with arguments [--jobOption, fooValue]"));
     }
 
     private void testVerbosity(String... args) {
@@ -444,7 +446,7 @@ public class JetCommandLineTest extends JetTestSupport {
     }
 
     private void run(String... args) {
-        runCommandLine(cfg -> createJetClient(), out, err, false, args);
+        runCommandLine(cfg -> client, out, err, false, args);
     }
 
     private void resetOut() {

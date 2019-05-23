@@ -63,6 +63,7 @@ import java.util.logging.LogManager;
 import static com.hazelcast.instance.BuildInfoProvider.getBuildInfo;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 
 @Command(
@@ -193,7 +194,7 @@ public class JetCommandLine implements Runnable {
             throw new Exception("File " + file + " could not be found.");
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
-        JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
+        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
     }
 
     @Command(
@@ -408,12 +409,16 @@ public class JetCommandLine implements Runnable {
     private void runWithJet(Verbosity verbosity, Consumer<JetInstance> consumer) throws IOException {
         this.verbosity.merge(verbosity);
         configureLogging();
-        JetInstance jet = jetClientFn.apply(getClientConfig());
+        JetInstance jet = getJetClient();
         try {
             consumer.accept(jet);
         } finally {
             jet.shutdown();
         }
+    }
+
+    private JetInstance getJetClient() {
+        return uncheckCall(() -> jetClientFn.apply(getClientConfig()));
     }
 
     private ClientConfig getClientConfig() throws IOException {
