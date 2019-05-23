@@ -17,6 +17,7 @@
 package com.hazelcast.jet.server;
 
 import com.hazelcast.config.EventJournalConfig;
+import com.hazelcast.core.IList;
 import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
@@ -28,21 +29,29 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.server.JetCommandLine.runCommandLine;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -51,6 +60,9 @@ public class JetCommandLineTest extends JetTestSupport {
     private static final String SOURCE_NAME = "source";
     private static final String SINK_NAME = "sink";
     private static final int ITEM_COUNT = 1000;
+
+    private static final Object SERIAL_TESTS_LOCK = new Object();
+    private static Path testJobJarFile;
 
     @Rule
     public ExpectedException exception = ExpectedException.none();
@@ -64,8 +76,19 @@ public class JetCommandLineTest extends JetTestSupport {
     private IMapJet<Integer, Integer> sourceMap;
     private IListJet<Integer> sinkList;
 
+    @BeforeClass
+    public static void beforeClass() throws IOException {
+        testJobJarFile = Files.createTempFile("testjob-", ".jar");
+        IOUtil.copy(JetCommandLineTest.class.getResourceAsStream("testjob.jar"), testJobJarFile.toFile());
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        IOUtil.deleteQuietly(testJobJarFile.toFile());
+    }
+
     @Before
-    public void setup() {
+    public void before() {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
         jet = createJetMember(cfg);
@@ -74,6 +97,22 @@ public class JetCommandLineTest extends JetTestSupport {
         sourceMap = jet.getMap(SOURCE_NAME);
         IntStream.range(0, ITEM_COUNT).forEach(i -> sourceMap.put(i, i));
         sinkList = jet.getList(SINK_NAME);
+    }
+
+    @After
+    public void after() {
+        String stdOutput = captureOut();
+        if (stdOutput.length() > 0) {
+            System.out.println("--- Captured standard output");
+            System.out.println(stdOutput);
+            System.out.println("--- End of captured standard output");
+        }
+        String errOutput = captureErr();
+        if (errOutput.length() > 0) {
+            System.out.println("--- Captured error output");
+            System.out.println(errOutput);
+            System.out.println("--- End of captured error output");
+        }
     }
 
     @Test
@@ -348,6 +387,40 @@ public class JetCommandLineTest extends JetTestSupport {
         testVerbosity("-v", "submit", "job.jar");
         testVerbosity("suspend", "jobName", "-v");
         testVerbosity("-v", "suspend", "jobName");
+    }
+
+    @Test
+    public void test_submit() {
+        synchronized (SERIAL_TESTS_LOCK) {
+            JetBootstrap.setTestClient(createJetClient());
+            run("submit", testJobJarFile.toString());
+            assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()));
+            Job job = jet.getJobs().get(0);
+            assertJobStatusEventually(job, JobStatus.RUNNING);
+            assertNull(job.getName());
+        }
+    }
+
+    @Test
+    public void test_submit_nameUsed() {
+        synchronized (SERIAL_TESTS_LOCK) {
+            JetBootstrap.setTestClient(createJetClient());
+            run("submit", "-n", "fooName", testJobJarFile.toString());
+            assertTrueEventually(() -> assertEquals(1, jet.getJobs().size()), 5);
+            Job job = jet.getJobs().get(0);
+            assertEquals("fooName", job.getName());
+        }
+    }
+
+    @Test
+    public void test_submit_argsPassing() {
+        synchronized (SERIAL_TESTS_LOCK) {
+            JetBootstrap.setTestClient(createJetClient());
+            run("submit", testJobJarFile.toString(), "--jobOption", "fooValue");
+            // this list is created by the job in testjob.jar
+            IList<String> args = jet.getList("args");
+            assertTrueEventually(() -> assertContains(captureOut(), " with arguments [--jobOption, fooValue]"));
+        }
     }
 
     private void testVerbosity(String... args) {

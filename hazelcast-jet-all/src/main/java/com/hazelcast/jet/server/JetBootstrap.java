@@ -43,6 +43,7 @@ import java.net.URLClassLoader;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.jar.JarFile;
 
 /**
@@ -101,14 +102,10 @@ public final class JetBootstrap {
     private static String snapshotName;
     private static String jobName;
 
-    private static final ConcurrentMemoizingSupplier<JetBootstrap> SUPPLIER =
-            new ConcurrentMemoizingSupplier<>(() -> new JetBootstrap(Jet.newJetClient(config)));
+    private static volatile Supplier<JetInstance> supplier = new ConcurrentMemoizingSupplier<>(
+            () -> new InstanceProxy((AbstractJetInstance) Jet.newJetClient(config)));
 
-    private final JetInstance instance;
-
-    private JetBootstrap(JetInstance instance) {
-        this.instance = new InstanceProxy((AbstractJetInstance) instance);
-    }
+    private JetBootstrap() { }
 
     static void executeJar(
             @Nonnull ClientConfig clientConfig, @Nonnull String jar, @Nullable String snapshotName,
@@ -145,11 +142,18 @@ public final class JetBootstrap {
             // upcast args to Object so it's passed as a single array-typed argument
             main.invoke(null, (Object) jobArgs);
         } finally {
-            JetBootstrap remembered = SUPPLIER.remembered();
-            if (remembered != null) {
-                remembered.instance.shutdown();
+            if (supplier instanceof ConcurrentMemoizingSupplier) {
+                JetInstance remembered = ((ConcurrentMemoizingSupplier<JetInstance>) supplier).remembered();
+                if (remembered != null) {
+                    remembered.shutdown();
+                }
             }
         }
+    }
+
+    // for test - replace the supplier with one that will return the given client
+    static void setTestClient(JetInstance client) {
+        supplier = () -> new InstanceProxy((AbstractJetInstance) client);
     }
 
     private static void error(String msg) {
@@ -167,7 +171,7 @@ public final class JetBootstrap {
                     "JetBootstrap.getInstance() should be used in conjunction with the jet.sh submit command"
             );
         }
-        return SUPPLIER.get().instance;
+        return supplier.get();
     }
 
     private static class InstanceProxy extends AbstractJetInstance {
@@ -197,11 +201,6 @@ public final class JetBootstrap {
         @Nonnull @Override
         public JetConfig getConfig() {
             return instance.getConfig();
-        }
-
-        @Nonnull @Override
-        public Job newJob(@Nonnull DAG dag) {
-            return newJob(dag, new JobConfig());
         }
 
         @Nonnull @Override

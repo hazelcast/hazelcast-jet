@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.server;
 
-
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
 import com.hazelcast.core.Cluster;
@@ -54,7 +53,6 @@ import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -81,7 +79,7 @@ import static java.util.Collections.emptyList;
         sortOptions = false,
         subcommands = {HelpCommand.class}
 )
-public class JetCommandLine implements Callable<Void> {
+public class JetCommandLine implements Runnable {
 
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
@@ -138,6 +136,7 @@ public class JetCommandLine implements Callable<Void> {
             String[] args
     ) {
         CommandLine cmd = new CommandLine(new JetCommandLine(jetClientFn, out, err));
+        cmd.getSubcommands().get("submit").setStopAtPositional(true);
 
         String jetVersion = getBuildInfo().getJetBuildInfo().getVersion();
         cmd.getCommandSpec().usageMessage().header("Hazelcast Jet " + jetVersion);
@@ -159,8 +158,8 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Override
-    public Void call() {
-        return null;
+    public void run() {
+        // top-level command, do nothing
     }
 
     @Command(description = "Submits a job to the cluster",
