@@ -137,7 +137,7 @@ public final class Jet {
      */
     private static void assertHazelcastVersion() {
         String hzVersion = BuildInfoProvider.getBuildInfo().getVersion();
-        try (InputStream resource = Jet.class.getClassLoader().getResourceAsStream("jet-runtime.properties")){
+        try (InputStream resource = Jet.class.getClassLoader().getResourceAsStream("jet-runtime.properties")) {
             Properties p = new Properties();
             p.load(resource);
             String jetHzVersion = p.getProperty("jet.hazelcast.version");
