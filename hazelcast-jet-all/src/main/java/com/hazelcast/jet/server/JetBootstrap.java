@@ -104,7 +104,7 @@ public final class JetBootstrap {
     private JetBootstrap() {
     }
 
-    static void executeJar(@Nonnull Supplier<JetInstance> supplier,
+    static synchronized void executeJar(@Nonnull Supplier<JetInstance> supplier,
                            @Nonnull String jar, @Nullable String snapshotName,
                            @Nullable String jobName, @Nonnull List<String> args
     ) throws Exception {
