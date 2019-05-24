@@ -194,6 +194,12 @@ public class JetCommandLine implements Runnable {
             throw new Exception("File " + file + " could not be found.");
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
+        if (name != null) {
+            printf("Using job name '%s'%n", name);
+        }
+        if (snapshotName != null) {
+            printf("Job will be restored from snapshot with name '%s'%n", snapshotName);
+        }
         JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
     }
 
