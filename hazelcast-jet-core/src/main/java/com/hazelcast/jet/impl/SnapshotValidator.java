@@ -31,33 +31,41 @@ final class SnapshotValidator {
     /**
      * Validates a snapshot with the given id.
      *
-     * @param snapshotId snapshot ID or {@link JobExecutionRecord#NO_SNAPSHOT}, if snapshot id is
-     *                  not known
-     * @param jobIdString name and id of the job (for debug output)
-     * @param map snapshot map to validate
-     * @return the snapshot id of the snapshot being validated
+     * @param snapshotId snapshot ID or {@link JobExecutionRecord#NO_SNAPSHOT}
+     *                   if snapshot ID is not known
+     * @param snapshotMap snapshot map to validate
+     * @param jobIdString name and ID of the job, for debug output
+     * @param snapshotName user-supplied snapshot name for debug output,
+     *                     null if it's not an exported snapshot
+     * @return the snapshot ID of the snapshot being validated
      */
-    static long validateSnapshot(long snapshotId, String jobIdString, IMap<Object, Object> map) {
-        SnapshotValidationRecord validationRecord = (SnapshotValidationRecord) map.get(SnapshotValidationRecord.KEY);
+    static long validateSnapshot(
+            long snapshotId, IMap<Object, Object> snapshotMap, String jobIdString, String snapshotName
+    ) {
+        SnapshotValidationRecord validationRecord =
+                (SnapshotValidationRecord) snapshotMap.get(SnapshotValidationRecord.KEY);
         if (validationRecord == null) {
+            String nameOrId = snapshotName != null ? '"' + snapshotName + '"' : "with ID " + snapshotId;
             throw new JetException(String.format(
-                    "snapshot-%d doesn't exist or is damaged. Unable to restore the state for %s.",
-                    snapshotId, jobIdString));
+                    "snapshot %s doesn't exist or is damaged. Unable to restore the state for %s.",
+                    nameOrId, jobIdString));
         }
-        if (validationRecord.numChunks() != map.size() - 1) {
+        if (validationRecord.numChunks() != snapshotMap.size() - 1) {
             // fallback validation that counts using aggregate(), ignoring different snapshot IDs
-            Long filteredCount = map.aggregate(Aggregators.count(), e -> e.getKey() instanceof SnapshotDataKey
-                    && ((SnapshotDataKey) e.getKey()).snapshotId() == snapshotId);
+            long filteredCount = snapshotMap.aggregate(
+                    Aggregators.count(),
+                    e -> e.getKey() instanceof SnapshotDataKey
+                            && ((SnapshotDataKey) e.getKey()).snapshotId() == snapshotId);
             if (validationRecord.numChunks() != filteredCount) {
                 throw new JetException(String.format(
-                        "State for %s in IMap '%s' corrupted: it should have %,d entries, but has %,d",
-                        jobIdString, map.getName(), validationRecord.numChunks(), map.size() - 1));
+                        "State for %s in IMap '%s' is corrupted: it should have %,d entries, but has %,d",
+                        jobIdString, snapshotMap.getName(), validationRecord.numChunks(), snapshotMap.size() - 1));
             }
         }
         if (snapshotId != NO_SNAPSHOT && snapshotId != validationRecord.snapshotId()) {
             throw new JetException(String.format(
                     "%s: IMap '%s' was supposed to contain snapshotId %d, but it contains snapshotId %d",
-                    jobIdString, map.getName(), snapshotId, validationRecord.snapshotId()));
+                    jobIdString, snapshotMap.getName(), snapshotId, validationRecord.snapshotId()));
         }
         return validationRecord.snapshotId();
     }
