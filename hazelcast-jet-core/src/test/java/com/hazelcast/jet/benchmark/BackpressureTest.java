@@ -47,6 +47,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.function.Functions.wholeItem;
+import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.junit.Assert.assertEquals;
@@ -57,7 +58,7 @@ import static org.junit.Assert.assertNotNull;
 public class BackpressureTest extends JetTestSupport {
 
     private static final int CLUSTER_SIZE = 2;
-    private static final int TOTAL_PARALLELISM = Runtime.getRuntime().availableProcessors();
+    private static final int TOTAL_PARALLELISM = min(8, Runtime.getRuntime().availableProcessors());
     private static final int PARALLELISM_PER_MEMBER = TOTAL_PARALLELISM / CLUSTER_SIZE;
     private static final int DISTINCT = 1000;
     private static final int COUNT_PER_DISTINCT_AND_SLICE = 10_000;
