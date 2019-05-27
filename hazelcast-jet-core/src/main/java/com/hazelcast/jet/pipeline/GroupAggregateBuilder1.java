@@ -77,11 +77,16 @@ public class GroupAggregateBuilder1<T0, K> {
      * the key and the corresponding result of the aggregate operation to
      * obtain the final output of the stage.
      *
+     * @deprecated This is a leftover from an earlier development cycle of the
+     * Pipeline API. Use {@link #build(AggregateOperation)} instead and add
+     * a separate mapping stage with {@code mapToOutputFn}.
+     *
      * @param aggrOp the aggregate operation to perform
      * @param <R> result type of the aggregate operation
      * @param <OUT> output type of the returned stage
      * @return a new stage representing the co-group-and-aggregate operation
      */
+    @Deprecated
     @Nonnull
     public <R, OUT> BatchStage<OUT> build(
             @Nonnull AggregateOperation<?, R> aggrOp,
