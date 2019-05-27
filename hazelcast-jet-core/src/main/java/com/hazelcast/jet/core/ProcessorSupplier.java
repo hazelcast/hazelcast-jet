@@ -87,6 +87,8 @@ public interface ProcessorSupplier extends Serializable {
 
     /**
      * Context passed to the supplier in the {@link #init(Context) init()} call.
+     *
+     * @since 3.0
      */
     interface Context extends ProcessorMetaSupplier.Context {
 

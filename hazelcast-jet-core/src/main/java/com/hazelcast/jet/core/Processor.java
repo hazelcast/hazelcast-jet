@@ -278,6 +278,8 @@ public interface Processor {
     /**
      * Context passed to the processor in the
      * {@link #init(Outbox, Context) init()} call.
+     *
+     * @since 3.0
      */
     interface Context extends ProcessorSupplier.Context {
 

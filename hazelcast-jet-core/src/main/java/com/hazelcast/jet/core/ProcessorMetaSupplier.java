@@ -316,6 +316,8 @@ public interface ProcessorMetaSupplier extends Serializable {
     /**
      * Context passed to the meta-supplier at init time on the member that
      * received a job request from the client.
+     *
+     * @since 3.0
      */
     interface Context {
 
