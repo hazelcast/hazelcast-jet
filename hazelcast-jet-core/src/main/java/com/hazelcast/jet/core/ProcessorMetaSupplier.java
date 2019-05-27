@@ -57,6 +57,8 @@ import static java.util.Collections.singletonList;
  * and partitioning services. It can use the information from these services to
  * precisely parameterize each {@code Processor} instance that will be created on
  * each member.
+ *
+ * @since 3.0
  */
 @FunctionalInterface
 public interface ProcessorMetaSupplier extends Serializable {
