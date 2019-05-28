@@ -36,6 +36,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToDoubleFunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 
@@ -299,7 +300,13 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that computes the arithmetic mean of the
      * {@code long} values it obtains by applying {@code getLongValueFn} to
-     * each item.
+     * each item. The average value is calculated as a {@code double} type.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be the average age of persons represented as a Double
+     *     AggregateOperations.averagingLong(person -> person.getAge())
+     * }</pre>
      * <p>
      * <em>Note 1:</em> make sure that the value returned from the function is
      * non-null or the job will fail.
@@ -341,7 +348,13 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that computes the arithmetic mean of the
      * {@code double} values it obtains by applying {@code getDoubleValueFn} to
-     * each item.
+     * each item. The average value is calculated as a {@code double} type.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be the average age of persons represented as a Double
+     *     AggregateOperations.averagingDouble(person -> person.getAge())
+     * }</pre>
      * <p>
      * <em>Note:</em> make sure that the value returned from the function is
      * non-null or the job will fail.
@@ -384,6 +397,14 @@ public final class AggregateOperations {
      * approximates the rate of change of {@code y} as a function of {@code x},
      * where {@code x} and {@code y} are {@code long} quantities obtained
      * by applying the two provided functions to each item.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     *     // the result will be the linear trend for the stock unit price over time,
+     *     // represented as a Double
+     *     AggregateOperations.linearTrend(
+     *         StockTrade::getTimestamp, StockTrade::getUnitPrice)
+     * }</pre>
      * <p>
      * <em>Note:</em> make sure that the value returned from the functions is
      * non-null or the job will fail.
@@ -473,7 +494,7 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
-     *     // calculate the set of surnames
+     *     // calculate the set of surnames from a set of Persons
      *     AggregateOperations.mapping(person -> person.getSurname(), AggregateOperations.toSet())
      * }</pre>
      *
@@ -841,6 +862,29 @@ public final class AggregateOperations {
      *      .aggregate(AggregateOperations.groupingBy(Person::getCity))
      *      // the output will be of type Map.Entry<Country, Map<City, List<Person>>>
      * }</pre>
+     * <p>
+     * A confusing point might be the difference between {@link
+     * GeneralStage#groupingKey(FunctionEx)} and this aggregation. Compare this
+     * two samples:
+     * <pre>{@code
+     * // sample 1
+     * p.drawFrom(personsSource)
+     *  .groupingKey(Person::getCountry)
+     *  .aggregate(AggregateOperations.counting());
+     *
+     * // sample 2
+     * p.drawFrom(personsSource)
+     *  .aggregate(AggregateOperations.groupingBy(
+     *      Person::getCountry, AggregateOperations.counting()));
+     * }</pre>
+     *
+     * They look similar. However, the first sample results a stream of
+     * multiple {@code Map.Entry<Country, Long>} items. The second will result
+     * into a single {@code Map<Country, Long>} item. Also, the stream in the
+     * first sample will be divided into parallel substreams based on the
+     * country and will be executed in parallel on all members. On the other
+     * hand, the second sample is a global aggregation, that is processed on a
+     * single member.
      *
      * @param keyFn a function to extract the key from input item
      * @param <T> input item type
