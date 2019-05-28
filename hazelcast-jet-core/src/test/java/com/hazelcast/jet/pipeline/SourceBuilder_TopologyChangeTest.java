@@ -20,23 +20,24 @@ import com.hazelcast.core.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.util.UuidUtil;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.concurrent.CancellationException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.core.JetTestSupport.assertJobStatusEventually;
-import static com.hazelcast.jet.core.JetTestSupport.assertTrueEventually;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.junit.Assert.assertEquals;
@@ -46,20 +47,29 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastSerialClassRunner.class)
 public class SourceBuilder_TopologyChangeTest extends JetTestSupport {
 
-    private static boolean jobRestarted;
+    private static volatile boolean stateRestored;
 
     @Test
-    public void testRestartJobWhenNodeWasRemoved() {
-        testTopologyChange(() -> createJetMember(), node -> node.shutdown());
+    public void test_restartJob_nodeShutDown() {
+        testTopologyChange(() -> createJetMember(), node -> node.shutdown(), true);
     }
 
     @Test
-    public void testRestartJobWhenNodeWasAdded() {
-        testTopologyChange(() -> null, ignore -> createJetMember());
+    public void test_restartJob_nodeTerminated() {
+        testTopologyChange(() -> createJetMember(), node -> node.getHazelcastInstance().getLifecycleService().terminate(),
+                false);
     }
 
-    private void testTopologyChange(Supplier<JetInstance> initializeSecondMember, Consumer<JetInstance> changeTopology) {
-        jobRestarted = false;
+    @Test
+    public void test_restartJob_nodeAdded() {
+        testTopologyChange(() -> null, ignore -> createJetMember(), true);
+    }
+
+    private void testTopologyChange(
+            Supplier<JetInstance> secondMemberSupplier,
+            Consumer<JetInstance> changeTopologyFn,
+            boolean assertMonotonicity) {
+        stateRestored = false;
         StreamSource<Integer> source = SourceBuilder
                 .timestampedStream("src", ctx -> new NumberGeneratorContext())
                 .<Integer>fillBufferFn((src, buffer) -> {
@@ -75,15 +85,17 @@ public class SourceBuilder_TopologyChangeTest extends JetTestSupport {
                     return src;
                 })
                 .restoreSnapshotFn((src, states) -> {
-                    jobRestarted = true;
+                    stateRestored = true;
                     assert states.size() == 1;
                     src.restore(states.get(0));
                     System.out.println("Restored " + src.current + " from snapshot");
                 })
                 .build();
 
-        JetInstance jet = createJetMember();
-        JetInstance possibleSecondNode = initializeSecondMember.get();
+        JetConfig jetConfig = new JetConfig();
+        jetConfig.getInstanceConfig().setScaleUpDelayMillis(1000); // restart sooner after member add
+        JetInstance jet = createJetMember(jetConfig);
+        JetInstance possibleSecondNode = secondMemberSupplier.get();
 
         long windowSize = 100;
         IList<WindowResult<Long>> result = jet.getList("result-" + UuidUtil.newUnsecureUuidString());
@@ -96,13 +108,15 @@ public class SourceBuilder_TopologyChangeTest extends JetTestSupport {
                 .peek()
                 .drainTo(Sinks.list(result));
 
-        Job job = jet.newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
+        Job job = jet.newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(500));
         assertTrueEventually(() -> assertFalse("result list is still empty", result.isEmpty()));
         assertJobStatusEventually(job, JobStatus.RUNNING);
+        JobRepository jr = new JobRepository(jet);
+        waitForFirstSnapshot(jr, job.getId(), 10, false);
 
-        assertFalse(jobRestarted);
-        changeTopology.accept(possibleSecondNode);
-        assertTrueEventually(() -> assertTrue("restoreSnapshotFn was not called", jobRestarted));
+        assertFalse(stateRestored);
+        changeTopologyFn.accept(possibleSecondNode);
+        assertTrueEventually(() -> assertTrue("restoreSnapshotFn was not called", stateRestored));
 
         // wait until more results are added
         int oldSize = result.size();
@@ -114,12 +128,15 @@ public class SourceBuilder_TopologyChangeTest extends JetTestSupport {
         } catch (CancellationException ignored) {
         }
 
-        // results should contain a monotonic sequence of results, each with count=windowSize
+        // results should contain sequence of results, each with count=windowSize, monotonic, if job was
+        // allowed to terminate gracefully
         Iterator<WindowResult<Long>> iterator = result.iterator();
         for (int i = 0; i < result.size(); i++) {
             WindowResult<Long> next = iterator.next();
             assertEquals(windowSize, (long) next.result());
-            assertEquals(i * windowSize, next.start());
+            if (assertMonotonicity) {
+                assertEquals(i * windowSize, next.start());
+            }
         }
     }
 

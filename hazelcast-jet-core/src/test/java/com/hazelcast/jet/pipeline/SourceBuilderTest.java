@@ -321,41 +321,20 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
     @Test
     public void test_faultTolerance() {
-        StreamSource<Integer> source = SourceBuilder
-                .timestampedStream("src", ctx -> new NumberGeneratorContext())
-                .<Integer>fillBufferFn((src, buffer) -> {
-                    long expectedCount = NANOSECONDS.toMillis(System.nanoTime() - src.startTime);
-                    expectedCount = Math.min(expectedCount, src.current + 100);
-                    while (src.current < expectedCount) {
-                        buffer.add(src.current, src.current);
-                        src.current++;
-                    }
-                })
-                .createSnapshotFn(src -> {
-                    System.out.println("Will save " + src.current + " to snapshot");
-                    return src;
-                })
-                .restoreSnapshotFn((src, states) -> {
-                    assert states.size() == 1;
-                    src.restore(states.get(0));
-                    System.out.println("Restored " + src.current + " from snapshot");
-                })
-                .build();
-
+        StreamSource<Integer> source = integerSequenceSource(true);
         testFaultTolerance(source);
     }
 
     @Test
-    public void test_faultTolerance_snapshotByUserDefinedObject() {
+    public void test_faultTolerance_snapshotWithUserDefinedObject() {
         StreamSource<WrappedInt> source = SourceBuilder
                 .timestampedStream("src", ctx -> new WrappedNumberGeneratorContext())
                 .<WrappedInt>fillBufferFn((src, buffer) -> {
-                    long expectedCount = NANOSECONDS.toMillis(System.nanoTime() - src.startTime);
-                    expectedCount = Math.min(expectedCount, src.current.value + 100);
-                    while (src.current.value < expectedCount) {
+                    for (int i = 0; i < 100; i++) {
                         buffer.add(src.current, src.current.value);
                         src.current = new WrappedInt(src.current.value + 1);
                     }
+                    Thread.sleep(100);
                 })
                 .createSnapshotFn(src -> {
                     System.out.println("Will save " + src.current.value + " to snapshot");
@@ -371,7 +350,7 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
         testFaultTolerance(source);
     }
 
-    private void testFaultTolerance(StreamSource source) {
+    private void testFaultTolerance(StreamSource<?> source) {
         long windowSize = 100;
         IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
 
@@ -409,26 +388,7 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
     @Test
     public void test_faultTolerance_restartTwice() {
-        StreamSource<Integer> source = SourceBuilder
-                .timestampedStream("src", ctx -> new NumberGeneratorContext())
-                .<Integer>fillBufferFn((src, buffer) -> {
-                    long expectedCount = NANOSECONDS.toMillis(System.nanoTime() - src.startTime);
-                    expectedCount = Math.min(expectedCount, src.current + 100);
-                    while (src.current < expectedCount) {
-                        buffer.add(src.current, src.current);
-                        src.current++;
-                    }
-                })
-                .createSnapshotFn(src -> {
-                    System.out.println("Will save " + src.current + " to snapshot");
-                    return src;
-                })
-                .restoreSnapshotFn((src, states) -> {
-                    assert states.size() == 1;
-                    src.restore(states.get(0));
-                    System.out.println("Restored " + src.current + " from snapshot");
-                })
-                .build();
+        StreamSource<Integer> source = integerSequenceSource(true);
 
         long windowSize = 100;
         IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
@@ -476,18 +436,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void test_faultToleranceDisabled() {
-        StreamSource<Integer> source = SourceBuilder
-                .timestampedStream("src", ctx -> new NumberGeneratorContext())
-                .<Integer>fillBufferFn((src, buffer) -> {
-                    long expectedCount = NANOSECONDS.toMillis(System.nanoTime() - src.startTime);
-                    expectedCount = Math.min(expectedCount, src.current + 100);
-                    while (src.current < expectedCount) {
-                        buffer.add(src.current, src.current);
-                        src.current++;
-                    }
-                })
-                .build();
+    public void test_nonFaultTolerantSource_processingGuaranteeNone() {
+        StreamSource<Integer> source = integerSequenceSource(false);
 
         long windowSize = 100;
         IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
@@ -536,7 +486,7 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void test_faultToleranceUnspecified_and_snapshotsOn() {
+    public void test_nonFaultTolerantSource_processingGuaranteeOn() {
         StreamSource<Integer> source = SourceBuilder
                 .stream("src", procCtx -> "foo")
                 .<Integer>fillBufferFn((ctx, buffer) -> {
@@ -559,6 +509,32 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
         assertJobStatusEventually(job, JobStatus.RUNNING);
         int currentSize = result.size();
         assertTrueEventually(() -> assertTrue(result.size() > currentSize), 5);
+    }
+
+    private StreamSource<Integer> integerSequenceSource(boolean addFaultTolerance) {
+        SourceBuilder<NumberGeneratorContext>.TimestampedStream<Integer> builder = SourceBuilder
+                .timestampedStream("src", ctx -> new NumberGeneratorContext())
+                .fillBufferFn((src, buffer) -> {
+                    long expectedCount = NANOSECONDS.toMillis(System.nanoTime() - src.startTime);
+                    expectedCount = Math.min(expectedCount, src.current + 100);
+                    while (src.current < expectedCount) {
+                        buffer.add(src.current, src.current);
+                        src.current++;
+                    }
+                });
+        if (addFaultTolerance) {
+            builder = builder
+                    .createSnapshotFn(src -> {
+                        System.out.println("Will save " + src.current + " to snapshot");
+                        return src;
+                    })
+                    .restoreSnapshotFn((src, states) -> {
+                        assert states.size() == 1;
+                        src.restore(states.get(0));
+                        System.out.println("Restored " + src.current + " from snapshot");
+                    });
+        }
+        return builder.build();
     }
 
     private static final class NumberGeneratorContext implements Serializable {
@@ -584,12 +560,11 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
     private static final class WrappedInt implements Serializable {
 
-        int value;
+        final int value;
 
         WrappedInt(int value) {
             this.value = value;
         }
-
     }
 
     private void startServer(ServerSocket serverSocket) {
@@ -628,5 +603,4 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
     private static BufferedReader fileReader(File textFile) throws FileNotFoundException {
         return new BufferedReader(new FileReader(textFile));
     }
-
 }
