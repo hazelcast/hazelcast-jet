@@ -72,18 +72,18 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the number of items.
+     * Returns an aggregate operation that counts the items it observes. The
+     * result is of type {@code long}.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *    AggregateOperations.counting();
+     * BatchStage<String> words = pipeline.drawFrom(wordSource);
+     * BatchStage<Entry<String, Long>> wordFrequencies =
+     *         words.groupingKey(wholeItem()).aggregate(counting());
      * }</pre>
-     *
-     * The result will be the total number of accumulated items, represented as
-     * a {@code Long} value.
-     * <p>
-     * <em>Note:</em> if the total count overflows, the job will fail with an
-     * {@link ArithmeticException}.
+     * <strong>Note:</strong> if the number of counted items exceeds
+     * {@code Long.MAX_VALUE}, the job will fail with an {@code
+     * ArithmeticException}.
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LongAccumulator, Long> counting() {
@@ -99,21 +99,22 @@ public final class AggregateOperations {
      * Returns an aggregate operation that computes the sum of the {@code long}
      * values it obtains by applying {@code getLongValueFn} to each item.
      * <p>
-     * Sample usage:
+     * Here's a quick sample that finds the total number of words in a stream
+     * of lines of text. The resulting stage will emit a single {@code Long}
+     * number:
      * <pre>{@code
-     *     // the result will be the total amount of all orders or 0 if there are no orders
-     *     AggregateOperations.summingLong(Order::getAmount);
+     * BatchStage<String> linesOfText = pipeline.drawFrom(textSource);
+     * BatchStage<Long> numberOfWordsInText =
+     *         linesOfText
+     *                 .map(line -> line.split("\\W+"))
+     *                 .aggregate(summingLong(wordsInLine -> wordsInLine.length));
      * }</pre>
      *
-     * <em>Note 1:</em> make sure that the value returned from the function is
-     * non-null or the job will fail.
-     * <p>
-     * <em>Note 2:</em> if the total sum overflows, the job will fail with an
-     * {@link ArithmeticException}.
+     * <strong>Note 2:</strong> if the sum exceeds {@code Long.MAX_VALUE}, the job
+     * will fail with an {@code ArithmeticException}.
      *
-     * @param getLongValueFn function to extract a {@code long} value to sum
-     *                       from the item
-     * @param <T> input item type
+     * @param getLongValueFn function that will extract the {@code long} values you want to sum
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LongAccumulator, Long> summingLong(
@@ -132,19 +133,16 @@ public final class AggregateOperations {
      * Returns an aggregate operation that computes the sum of the {@code double}
      * values it obtains by applying {@code getDoubleValueFn} to each item.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *     // the result will be the total amount of all orders or 0 if there are no orders
-     *     orders.aggregate(AggregateOperations.summingDouble(
-     *         Order::getAmount))
+     * BatchStage<Purchase> purchases = pipeline.drawFrom(purchaseSource);
+     * BatchStage<Double> purchaseVolume =
+     *         purchases.aggregate(summingDouble(Purchase::amount));
      * }</pre>
-     *
-     * <em>Note:</em> make sure that the value returned from the function is
-     * non-null or the job will fail.
      *
      * @param getDoubleValueFn function to extract a {@code double} value to
      *                         sum from the item
-     * @param <T> input item type
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, DoubleAccumulator, Double> summingDouble(
@@ -160,23 +158,24 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the minimal item according
-     * to the given {@code comparator}.
+     * Returns an aggregate operation that computes the least item according to
+     * the given {@code comparator}.
      * <p>
      * Sample usage:
      * <pre>{@code
-     *     // the result will be the youngest Person
-     *     AggregateOperations.minBy(ComparatorEx.comparingInt(person -> person.getAge()))
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<Person> youngestPerson =
+     *         people.aggregate(minBy(ComparatorEx.comparing(Person::age)));
      * }</pre>
-     *
-     * If no persons are accumulated, the result is {@code null}. If multiple
-     * persons had the lowest age, any will be chosen.
+     * If the aggregate operation doesn't observe any items, its result will
+     * be {@code null}. If several items tie for the least one, it will choose
+     * any one to return and may choose a different one each time.
      * <p>
-     * This aggregate operation does not implement the {@link
-     * AggregateOperation1#deductFn() deduct} primitive.
+     * <em>Implementation note:</em> this aggregate operation does not
+     * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
      *
      * @param comparator comparator to compare the items
-     * @param <T> input item type
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, MutableReference<T>, T> minBy(
@@ -187,23 +186,24 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the maximal item according
+     * Returns an aggregate operation that computes the greatest item according
      * to the given {@code comparator}.
      * <p>
      * Sample usage:
      * <pre>{@code
-     *     // the result will be the oldest Person
-     *     AggregateOperations.maxBy(ComparatorEx.comparingInt(person -> person.getAge()))
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<Person> oldestPerson =
+     *         people.aggregate(maxBy(ComparatorEx.comparing(Person::age)));
      * }</pre>
-
-     * If no persons are accumulated, the result is {@code null}. If multiple
-     * persons had the highest age, any will be chosen.
+     * If the aggregate operation doesn't observe any items, its result will
+     * be {@code null}. If several items tie for the greatest one, it will
+     * choose any one to return and may choose a different one each time.
      * <p>
-     * This aggregate operation does not implement the {@link
-     * AggregateOperation1#deductFn() deduct} primitive.
+     * <em>Implementation note:</em> this aggregate operation does not
+     * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
      *
      * @param comparator comparator to compare the items
-     * @param <T> input item type
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, MutableReference<T>, T> maxBy(
@@ -226,21 +226,22 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the top {@code n} items
-     * calculated according to the given {@link ComparatorEx comparator}.
-     * The returned list of elements is sorted in descending order.
+     * Returns an aggregate operation that finds the top {@code n} items
+     * according to the given {@link ComparatorEx comparator}. It outputs a
+     * sorted list with the top item in the first position.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *     // the result will be a List<Person> with up to 5 oldest persons
-     *     AggregateOperations.topN(5, ComparatorEx.comparingInt(person -> person.getAge()))
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<List<Person>> oldestDudes =
+     *         people.aggregate(topN(10, ComparatorEx.comparing(Person::age)));
      * }</pre>
-     * This aggregate operation does not implement the {@link
-     * AggregateOperation1#deductFn() deduct} primitive.
+     * <em>Implementation note:</em> this aggregate operation does not
+     * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
      *
-     * @param n number of items to return
-     * @param comparator the comparator to use
-     * @param <T> input item type
+     * @param n number of top items to find
+     * @param comparator compares the items
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, PriorityQueue<T>, List<T>> topN(
@@ -274,21 +275,22 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the bottom {@code n} items
-     * calculated according to the given {@link ComparatorEx comparator}.
-     * The returned list of elements is sorted in ascending order.
+     * Returns an aggregate operation that finds the bottom {@code n} items
+     * according to the given {@link ComparatorEx comparator}. It outputs a
+     * sorted list with the bottom item in the first position.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *     // the result will be a List<Person> with up to 5 youngest persons
-     *     AggregateOperations.bottomN(5, ComparatorEx.comparingInt(person -> person.getAge()))
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<List<Person>> youngestDudes =
+     *         people.aggregate(bottomN(10, ComparatorEx.comparing(Person::age)));
      * }</pre>
-     * This aggregate operation does not implement the {@link
-     * AggregateOperation1#deductFn() deduct} primitive.
+     * <em>Implementation note:</em> this aggregate operation does not
+     * implement the {@link AggregateOperation1#deductFn() deduct} primitive.
      *
-     * @param n number of items to return
-     * @param comparator the comparator to use
-     * @param <T> input item type
+     * @param n number of bottom items to find
+     * @param comparator compares the items
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, PriorityQueue<T>, List<T>> bottomN(
@@ -298,32 +300,31 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the arithmetic mean of the
-     * {@code long} values it obtains by applying {@code getLongValueFn} to
-     * each item. The average value is calculated as a {@code double} type.
+     * Returns an aggregate operation that finds the arithmetic mean (aka.
+     * average) of the {@code long} values it obtains by applying {@code
+     * getLongValueFn} to each item. It outputs the result as a {@code double}.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *     // the result will be the average age of persons represented as a Double
-     *     AggregateOperations.averagingLong(person -> person.getAge())
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<Double> meanAge = people.aggregate(averagingLong(Person::age));
      * }</pre>
      * <p>
-     * <em>Note 1:</em> make sure that the value returned from the function is
-     * non-null or the job will fail.
-     * <em>Note 2:</em> if the total sum or count overflows, the job will fail
-     * with an {@link ArithmeticException}.
+     * <strong>Note:</strong> this operation accumulates the sum and the
+     * count as separate {@code long} variables and combines them at the end
+     * into the mean value. If either of these variables exceeds {@code
+     * Long.MAX_VALUE}, the job will fail with an {@link ArithmeticException}.
      *
-     * @param getLongValueFn function to extract a {@code long} value to
-     *                       average from the item
-     * @param <T> input item type
+     * @param getLongValueFn function that extracts the {@code long} value from the item
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LongLongAccumulator, Double> averagingLong(
             @Nonnull ToLongFunctionEx<? super T> getLongValueFn
     ) {
         checkSerializable(getLongValueFn, "getLongValueFn");
-        // accumulator.value1 is count
-        // accumulator.value2 is sum
+        // count == accumulator.value1
+        // sum == accumulator.value2
         return AggregateOperation
                 .withCreate(LongLongAccumulator::new)
                 .andAccumulate((LongLongAccumulator a, T i) -> {
@@ -346,30 +347,26 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes the arithmetic mean of the
-     * {@code double} values it obtains by applying {@code getDoubleValueFn} to
-     * each item. The average value is calculated as a {@code double} type.
+     * Returns an aggregate operation that finds the arithmetic mean (aka.
+     * average) of the {@code double} values it obtains by applying {@code
+     * getDoubleValueFn} to each item. It outputs the result as a {@code double}.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *     // the result will be the average age of persons represented as a Double
-     *     AggregateOperations.averagingDouble(person -> person.getAge())
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<Double> meanAge = people.aggregate(averagingDouble(Person::age));
      * }</pre>
-     * <p>
-     * <em>Note:</em> make sure that the value returned from the function is
-     * non-null or the job will fail.
      *
-     * @param getDoubleValueFn function to extract a {@code double} value to
-     *                        average from the item
-     * @param <T> input item type
+     * @param getDoubleValueFn function that extracts the {@code double} value from the item
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LongDoubleAccumulator, Double> averagingDouble(
             @Nonnull ToDoubleFunctionEx<? super T> getDoubleValueFn
     ) {
         checkSerializable(getDoubleValueFn, "getDoubleValueFn");
-        // accumulator.value1 is count
-        // accumulator.value2 is sum
+        // count == accumulator.value1
+        // sum == accumulator.value2
         return AggregateOperation
                 .withCreate(LongDoubleAccumulator::new)
                 .andAccumulate((LongDoubleAccumulator a, T item) -> {
@@ -392,26 +389,30 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an aggregate operation that computes a linear trend on the items.
-     * The operation will produce a {@code double}-valued coefficient that
+     * Returns an aggregate operation that computes a linear trend over the
+     * items. It will produce a {@code double}-valued coefficient that
      * approximates the rate of change of {@code y} as a function of {@code x},
      * where {@code x} and {@code y} are {@code long} quantities obtained
      * by applying the two provided functions to each item.
      * <p>
-     * Sample usage:
+     * Quick sample:
      * <pre>{@code
-     *     // the result will be the linear trend for the stock unit price over time,
-     *     // represented as a Double
-     *     AggregateOperations.linearTrend(
-     *         StockTrade::getTimestamp, StockTrade::getUnitPrice)
+     * StreamStage<Trade> trades = pipeline
+     *         .drawFrom(tradeSource)
+     *         .withTimestamps(Trade::getTimestamp, SECONDS.toMillis(1));
+     * StreamStage<WindowResult<Double>> priceTrend = trades
+     *     .window(WindowDefinition.sliding(MINUTES.toMillis(5), SECONDS.toMillis(1)))
+     *     .aggregate(linearTrend(Trade::getTimestamp, Trade::getPrice));
      * }</pre>
-     * <p>
-     * <em>Note:</em> make sure that the value returned from the functions is
-     * non-null or the job will fail.
      *
-     * @param getXFn a function to extract <em>x</em> from the input
-     * @param getYFn a function to extract <em>y</em> from the input
-     * @param <T> input item type
+     * With the trade price given in cents and the timestamp in milliseconds,
+     * the output of the above pipeline will be the rate of change of the traded
+     * price in cents per millisecond. Make sure you apply a scaling factor if
+     * you want another, more natural unit of measure.
+     *
+     * @param getXFn a function to extract <strong>x</strong> from the input
+     * @param getYFn a function to extract <strong>y</strong> from the input
+     * @param <T> type of the input item
      */
     @Nonnull
     public static <T> AggregateOperation1<T, LinTrendAccumulator, Double> linearTrend(
@@ -432,6 +433,18 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that concatenates the input items into a
      * string.
+     * <p>
+     * This sample outputs a single string that you get by reading down the
+     * first column of the input text:
+     * <pre>{@code
+     * BatchStage<String> linesOfText = pipeline.drawFrom(textSource);
+     * BatchStage<String> lineStarters = linesOfText
+     *         .map(line -> line.charAt(0))
+     *         .map(Object::toString)
+     *         .aggregate(concatenating());
+     * }</pre>
+     *
+     * </p>
      */
     public static AggregateOperation1<CharSequence, StringBuilder, String> concatenating() {
         return AggregateOperation
@@ -444,6 +457,17 @@ public final class AggregateOperations {
     /**
      * Returns an aggregate operation that concatenates the input items into a
      * string with the given {@code delimiter}.
+     * <p>
+     * This sample outputs a single line of text that contains all the
+     * upper-cased and title-cased words of the input text:
+     * <pre>{@code
+     * BatchStage<String> linesOfText = pipeline.drawFrom(textSource);
+     * BatchStage<String> upcaseWords = linesOfText
+     *         .map(line -> line.split("\\W+"))
+     *         .flatMap(Traversers::traverseArray)
+     *         .filter(word -> word.matches("\\p{Lu}.*"))
+     *         .aggregate(concatenating(" "));
+     * }</pre>
      */
     public static AggregateOperation1<CharSequence, StringBuilder, String> concatenating(
             CharSequence delimiter
@@ -451,11 +475,21 @@ public final class AggregateOperations {
         return concatenating(delimiter, "", "");
     }
 
-
     /**
      * Returns an aggregate operation that concatenates the input items into a
      * string with the given {@code delimiter}. The resulting string will also
      * have the given {@code prefix} and {@code suffix}.
+     * <p>
+     * This sample outputs a single item, a JSON array of all the upper-cased
+     * and title-cased words of the input text:
+     * <pre>{@code
+     * BatchStage<String> linesOfText = pipeline.drawFrom(textSource);
+     * BatchStage<String> upcaseWords = linesOfText
+     *         .map(line -> line.split("\\W+"))
+     *         .flatMap(Traversers::traverseArray)
+     *         .filter(word -> word.matches("\\p{Lu}.*"))
+     *         .aggregate(concatenating("['", "', '", "']"));
+     * }</pre>
      **/
     public static AggregateOperation1<CharSequence, StringBuilder, String> concatenating(
             CharSequence delimiter, CharSequence prefix, CharSequence suffix
@@ -485,29 +519,31 @@ public final class AggregateOperations {
     }
 
     /**
-     * Adapts an aggregate operation accepting items of type {@code
-     * U} to one accepting items of type {@code T} by applying a mapping
-     * function to each item before accumulation.
+     * Adapts an aggregate operation accepting items of type {@code U} to one
+     * accepting items of type {@code T} by applying the given mapping function
+     * to each item. Normally you should just apply the mapping in a stage
+     * before the aggregation, but this adapter is useful when simultaneously
+     * performing several aggregate operations using {@link #allOf}.
      * <p>
-     * If the {@code mapFn} returns {@code null}, the item won't be aggregated
-     * at all. This allows applying a filter at the same time.
+     * If {@code mapFn} returns {@code null} for an item, it won't be aggregated
+     * at all. This allows you to filter the items as well.
      * <p>
-     * Sample usage:
+     * This sample builds sorted lists of names and surnames of all the
+     * people in the stream:
      * <pre>{@code
-     *     // calculate the set of surnames from a set of Persons
-     *     AggregateOperations.mapping(person -> person.getSurname(), AggregateOperations.toSet())
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<Tuple2<List<String>, List<String>>> sortedNames =
+     *     people.aggregate(allOf(
+     *         mapping(Person::getFirstName, sorting(ComparatorEx.naturalOrder())),
+     *         mapping(Person::getLastName, sorting(ComparatorEx.naturalOrder()))));
      * }</pre>
      *
-     * This operation is mostly useful in conjunction with {@link #allOf},
-     * otherwise it's simpler to use {@code stage.map()} before the
-     * aggregation.
-     * <p>
-     * See also {@link #filtering filtering()} and {@link #flatMapping
-     * flatMapping()}.
+     * @see #filtering
+     * @see #flatMapping
      *
-     * @param mapFn the function to apply to input items
+     * @param mapFn the function to apply to the input items
      * @param downstream the downstream aggregate operation
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <U> input type of the downstream aggregate operation
      * @param <A> downstream operation's accumulator type
      * @param <R> downstream operation's result type
@@ -533,25 +569,26 @@ public final class AggregateOperations {
     }
 
     /**
-     * Wraps an aggregate operation so that only items passing the {@code
-     * filterFn} will be accumulated; others will be ignored.
+     * Adapts an aggregate operation so that it accumulates only the items
+     * passing the {@code filterFn} and ignores others. Normally you should
+     * just apply the filter in a stage before the aggregation, but this
+     * adapter is useful when simultaneously performing several aggregate
+     * operations using {@link #allOf}.
      * <p>
-     * Sample usage:
+     * This sample outputs the average height of kids and grown-ups:
      * <pre>{@code
-     *     // the result will be the count of trades with quantity of 100 or more (as a Long)
-     *     AggregateOperations.filtering(trade -> trade.getQuantity >= 100, AggregateOperations.counting())
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * BatchStage<Tuple2<Double, Double>> avgHeightByAge = people.aggregate(allOf(
+     *     filtering((Person p) -> p.getAge() < 18, averagingLong(Person::getHeight)),
+     *     filtering((Person p) -> p.getAge() >= 18, averagingLong(Person::getHeight))
+     * ));
      * }</pre>
+     * @see #mapping
+     * @see #flatMapping
      *
-     * This operation is mostly useful in conjunction with {@link #allOf},
-     * otherwise it's simpler to use {@code stage.filter()} before the
-     * aggregation.
-     * <p>
-     * See also {@link #mapping mapping()} and {@link #flatMapping
-     * flatMapping()}.
-     *
-     * @param filterFn the function to apply to input items
+     * @param filterFn the filtering function
      * @param downstream the downstream aggregate operation
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <A> downstream operation's accumulator type
      * @param <R> downstream operation's result type
      *
@@ -578,30 +615,31 @@ public final class AggregateOperations {
 
     /**
      * Adapts an aggregate operation accepting items of type {@code U} to one
-     * accepting items of type {@code T} by applying a flat-mapping function to
-     * each item before accumulation - for one {@code T} item there will be
-     * <em>n</em> {@code U} items accumulated.
+     * accepting items of type {@code T}, by exploding each {@code T} into a
+     * sequence of {@code U}s and then accumulating all of them. Normally you
+     * should just apply the mapping in a stage before the aggregation, but this
+     * adapter is useful when simultaneously performing several aggregate
+     * operations using {@link #allOf}.
      * <p>
-     * The returned traverser must be non-null and <em>null-terminated</em>.
+     * The traverser your function returns must be non-null and
+     * <em>null-terminated</em>.
      * <p>
-     * Sample usage:
+     * This sample outputs the mean age of all the people and the mean age of
+     * people listed as someone's kid:
      * <pre>{@code
-     *     // the result will be the total count of members in all groups
-     *     AggregateOperations.flatMapping(
-     *       group -> Traversers.traverseIterable(group.getMembers()),
-     *       AggregateOperations.counting()
-     *     )
+     * BatchStage<Person> people = pipeline.drawFrom(peopleSource);
+     * people.aggregate(allOf(
+     *     averagingLong(Person::getAge),
+     *     flatMapping((Person p) -> traverseIterable(p.getChildren()),
+     *             averagingLong(Person::getAge))
+     * ));
      * }</pre>
+     * @see #mapping
+     * @see #filtering
      *
-     * This operation is mostly useful in conjunction with {@link #allOf},
-     * otherwise it's simpler to use {@code stage.flatMap()} before the
-     * aggregation.
-     * <p>
-     * See also {@link #mapping mapping()} and {@link #filtering filtering()}.
-     *
-     * @param flatMapFn the function to apply to input items
+     * @param flatMapFn the flat-mapping function to apply
      * @param downstream the downstream aggregate operation
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <U> input type of the downstream aggregate operation
      * @param <A> downstream operation's accumulator type
      * @param <R> downstream operation's result type
@@ -630,21 +668,23 @@ public final class AggregateOperations {
 
     /**
      * Returns an aggregate operation that accumulates the items into a {@code
-     * Collection}. It creates the collections as needed by calling the
-     * provided {@code createCollectionFn}.
+     * Collection}. It creates empty, mutable collections as needed by calling
+     * the provided {@code createCollectionFn}.
      * <p>
      * If you use a collection that preserves the insertion order, keep in mind
      * that there is no specified order in which the items are aggregated.
      * <p>
-     * Sample usage:
+     * This sample outputs a single sorted set of all the long words found in
+     * the input:
      * <pre>{@code
-     *     // accumulate the items into a LinkedList
-     *     AggregateOperations.toCollection(LinkedList::new)
+     * BatchStage<String> words = pipeline.drawFrom(wordSource);
+     * BatchStage<SortedSet<String>> sortedLongWords = words
+     *         .filter(w -> w.length() > 5)
+     *         .aggregate(toCollection(TreeSet::new));
      * }</pre>
      *
-     * @param createCollectionFn a {@code Supplier} which returns a new, empty {@code Collection} of the
-     *                           appropriate type
-     * @param <T> input item type
+     * @param createCollectionFn a {@code Supplier} of empty, mutable {@code Collection}s
+     * @param <T> type of the input item
      * @param <C> the type of the collection
      */
     public static <T, C extends Collection<T>> AggregateOperation1<T, C, C> toCollection(
@@ -667,16 +707,16 @@ public final class AggregateOperations {
      * Returns an aggregate operation that accumulates the items into an {@code
      * ArrayList}.
      * <p>
-     * Sample usage:
+     * This sample outputs a single list of all the long words found in the
+     * input:
      * <pre>{@code
-     *     // the result of this pipeline will be a single ArrayList instance
-     *     // with all the persons
-     *     Pipeline p = Pipeline.create();
-     *     p.<Person>drawFrom(list("persons"))
-     *      .aggregate(AggregateOperations.toList())
+     * BatchStage<String> words = pipeline.drawFrom(wordSource);
+     * BatchStage<List<String>> longWords = words
+     *         .filter(w -> w.length() > 5)
+     *         .aggregate(toList());
      * }</pre>
      *
-     * @param <T> input item type
+     * @param <T> type of the input item
      */
     public static <T> AggregateOperation1<T, List<T>, List<T>> toList() {
         return toCollection(ArrayList::new);
@@ -686,44 +726,43 @@ public final class AggregateOperations {
      * Returns an aggregate operation that accumulates the items into a {@code
      * HashSet}.
      * <p>
-     * Sample usage:
+     * This sample outputs a single set of all the distinct cities of residence
+     * of the people in the input:
      * <pre>{@code
-     *     // The result of this pipeline will be a single HashSet instance with
-     *     // all the distinct cities
-     *     Pipeline p = Pipeline.create();
-     *     p.<Person>drawFrom(list("persons"))
-     *      .map(Person::getCity)
-     *      .aggregate(AggregateOperations.toSet())
+     * pipeline.drawFrom(personSource)
+     *         .map(Person::getCity)
+     *         .aggregate(toSet());
      * }</pre>
      *
-     * @param <T> input item type
+     * @param <T> type of the input item
      */
     public static <T> AggregateOperation1<T, Set<T>, Set<T>> toSet() {
         return toCollection(HashSet::new);
     }
 
     /**
-     * Returns an aggregate operation that accumulates the items into a
-     * {@code HashMap} whose keys and values are the result of applying
-     * the provided mapping functions.
+     * Returns an aggregate operation that accumulates the items into a {@code
+     * HashMap} whose keys and values are the result of applying the provided
+     * mapping functions.
      * <p>
-     * This aggregate operation does not tolerate duplicate keys and will
-     * throw {@code IllegalStateException} if it detects them. If your
-     * data contains duplicates, use the {@link #toMap(FunctionEx,
-     * FunctionEx, BinaryOperatorEx) toMap()} overload
-     * that can resolve them.
+     * This aggregate operation does not tolerate duplicate keys and will throw
+     * an {@code IllegalStateException} if it detects them. If your data
+     * contains duplicates, use the {@link #toMap(FunctionEx, FunctionEx,
+     * BinaryOperatorEx) toMap()} overload that can resolve them.
      * <p>
-     * Sample usage:
+     * This sample outputs a single map of sensor IDs to the corresponding
+     * readings:
      * <pre>{@code
-     *     // the result will be a single HashMap instance mapping sensorIds
-     *     // to values
-     *     AggregateOperations.toMap(Measurement::getSensorId,
-     *         Measurement::getValue)
+     * BatchStage<Map<String, Double>> readings = pipeline
+     *         .drawFrom(sensorData)
+     *         .aggregate(toMap(
+     *                 SensorReading::getSensorId,
+     *                 SensorReading::getValue));
      * }</pre>
      *
      * @param keyFn a function to extract the key from the input item
      * @param valueFn a function to extract the value from the input item
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <K> type of the key
      * @param <U> type of the value
      *
@@ -753,22 +792,22 @@ public final class AggregateOperations {
      * mergeFn} to the conflicting values. {@code mergeFn} will act upon the
      * values after {@code valueFn} has already been applied.
      * <p>
-     * Sample usage:
+     * This sample outputs a single map of sensor IDs to the corresponding
+     * readings. Duplicate readings from the same sensor get summed up.
      * <pre>{@code
-     *     // The result will be a single HashMap instance mapping sensorIds
-     *     // to values. If there are two measurements from the same sensor,
-     *     // they will be added.
-     *     AggregateOperations.toMap(Measurement::getSensorId,
-     *         Measurement::getValue, Long::sum)
+     * BatchStage<Map<String, Double>> readings = pipeline
+     *         .drawFrom(sensorData)
+     *         .aggregate(toMap(
+     *                 SensorReading::getSensorId,
+     *                 SensorReading::getValue,
+     *                 Double::sum));
      * }</pre>
-
      * @param keyFn a function to extract the key from input item
      * @param valueFn a function to extract value from input item
-     * @param mergeFn a merge function, used to resolve collisions between
-     *                      values associated with the same key, as supplied
-     *                      to {@link Map#merge(Object, Object,
-     *                      java.util.function.BiFunction)}
-     * @param <T> input item type
+     * @param mergeFn the function used to resolve collisions between values associated
+     *                with the same key, will be passed to {@link Map#merge(Object, Object,
+     *                java.util.function.BiFunction)}
+     * @param <T> type of the input item
      * @param <K> the type of key
      * @param <U> the output type of the value mapping function
      *
@@ -786,21 +825,26 @@ public final class AggregateOperations {
     }
 
     /**
-     * Returns an {@code AggregateOperation1} that accumulates elements
-     * into a {@code Map} whose keys and values are the result of applying the
-     * provided mapping functions to the input elements.
+     * Returns an aggregate operation that accumulates elements into a
+     * user-supplied {@code Map} instance. The keys and values are the result
+     * of applying the provided mapping functions to the input elements.
      * <p>
      * This aggregate operation resolves duplicate keys by applying {@code
      * mergeFn} to the conflicting values. {@code mergeFn} will act upon the
      * values after {@code valueFn} has already been applied.
      * <p>
-     * Sample usage:
+     * This sample outputs a single {@code ObjectToLongHashMap} of sensor IDs to
+     * the corresponding readings. Duplicate readings from the same sensor get
+     * summed up.
      * <pre>{@code
-     *     // The result will be a single ObjectToLongHashMap instance mapping
-     *     // sensorIds to values. If there are two measurements from the same
-     *     // sensor, they will be added.
-     *     AggregateOperations.toMap(Measurement::getSensorId,
-     *         Measurement::getValue, Long::sum, ObjectToLongHashMap::new)
+     * BatchSource<SensorReading> sensorData = null;
+     * BatchStage<Map<String, Long>> readings = pipeline
+     *         .drawFrom(sensorData)
+     *         .aggregate(toMap(
+     *                 SensorReading::getSensorId,
+     *                 SensorReading::getValue,
+     *                 Long::sum,
+     *                 ObjectToLongHashMap::new));
      * }</pre>
      *
      * @param keyFn a function to extract the key from input item
@@ -811,7 +855,7 @@ public final class AggregateOperations {
      *                      java.util.function.BiFunction)}
      * @param createMapFn a function which returns a new, empty {@code Map} into
      *                    which the results will be inserted
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
      * @param <U> the output type of the value mapping function
      * @param <M> the type of the resulting {@code Map}
@@ -887,7 +931,7 @@ public final class AggregateOperations {
      * single member.
      *
      * @param keyFn a function to extract the key from input item
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
      *
      * @see #groupingBy(FunctionEx, AggregateOperation1)
@@ -909,12 +953,12 @@ public final class AggregateOperations {
      * <p>
      * Sample usage:
      * <pre>{@code
-     *     // The result will be a single instance of HashMap<SensorId, Long>.
-     *     // The value in the map is the sum of measurement values for that sensor.
-     *     AggregateOperations.groupingBy(
-     *         Measurement::getSensorId,
-     *         AggregateOperations.summingLong(Measurement::getValue)
-     *     )
+     * // The result will be a single instance of HashMap<SensorId, Long>.
+     * // The value in the map is the sum of measurement values for that sensor.
+     * AggregateOperations.groupingBy(
+     *     Measurement::getSensorId,
+     *     AggregateOperations.summingLong(Measurement::getValue)
+     * )
      * }</pre>
      * <p>
      * You can use this aggregation to achieve a cascaded group-by where the
@@ -923,7 +967,7 @@ public final class AggregateOperations {
      *
      * @param keyFn a function to extract the key from input item
      * @param downstream the downstream aggregate operation
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
      * @param <R> the type of the downstream aggregation result
      * @param <A> downstream aggregation's accumulator type
@@ -966,7 +1010,7 @@ public final class AggregateOperations {
      * @param createMapFn a function which returns a new, empty {@code Map} into
      *                    which the results will be inserted
      * @param downstream the downstream aggregate operation
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <K> the output type of the key mapping function
      * @param <R> the type of the downstream aggregation result
      * @param <A> downstream aggregation's accumulator type
@@ -1025,8 +1069,8 @@ public final class AggregateOperations {
      * {@code emptyAccValue} and is iteratively transformed by applying
      * {@code combineAccValuesFn} to it and each stream item's accumulated
      * value, as returned from {@code toAccValueFn}. {@code combineAccValuesFn}
-     * must be <em>associative</em> because it will also be used to combine
-     * partial results, as well as <em>commutative</em> because the encounter
+     * must be <strong>associative</strong> because it will also be used to combine
+     * partial results, as well as <strong>commutative</strong> because the encounter
      * order of items is unspecified.
      * <p>
      * The optional {@code deductAccValueFn} allows Jet to compute the sliding
@@ -1057,7 +1101,7 @@ public final class AggregateOperations {
      * @param combineAccValuesFn combines two accumulated values into one
      * @param deductAccValueFn deducts the right-hand accumulated value from the left-hand one
      *                        (optional)
-     * @param <T> input item type
+     * @param <T> type of the input item
      * @param <A> type of the accumulated value
      */
     @Nonnull
@@ -1103,7 +1147,7 @@ public final class AggregateOperations {
      *      .drainTo(...);
      * }</pre>
      *
-     * @param <T> input item type
+     * @param <T> type of the input item
      */
     @Nonnull
     @SuppressWarnings("checkstyle:needbraces")
