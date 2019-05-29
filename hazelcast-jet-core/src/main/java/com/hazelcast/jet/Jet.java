@@ -142,14 +142,13 @@ public final class Jet {
             p.load(resource);
             String jetHzVersion = p.getProperty("jet.hazelcast.version");
             if (!hzVersion.equals(jetHzVersion)) {
-                throw new JetException("Jet uses Hazelcast version " + jetHzVersion + " however " +
+                throw new JetException("Jet uses Hazelcast IMDG version " + jetHzVersion + " however " +
                         "version " + hzVersion + " was found in the classpath. " +
-                        " As Jet already shades hazelcast jars there is no need to explicitly " +
+                        " As Jet already shades Hazelcast jars there is no need to explicitly " +
                         "add a dependency to it.");
             }
         } catch (IOException e) {
-            // could not read properties
-            return;
+            LOGGER.warning("Could not read the file jet-runtime.properties", e);
         }
     }
 
