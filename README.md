@@ -36,11 +36,13 @@ need a folder with some text files in it.
 JetInstance jet = Jet.newJetInstance();
 JetInstance jet2 = Jet.newJetInstance();
 
+Pipeline p = Pipeline.create();
+
 p.drawFrom(Sources.files(path))
-        .flatMap(e -> traverseArray(e.getValue().toLowerCase().split("\\W+")))
+        .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
         .filter(word -> !word.isEmpty())
-        .groupingKey(wholeItem())
-        .aggregate(counting())
+        .groupingKey(word -> word)
+        .aggregate(AggregateOperations.counting())
         .drainTo(Sinks.logger());
 
 jet.newJob(p).join();
@@ -56,13 +58,15 @@ run your program and then start adding some files to the folder.
 JetInstance jet = Jet.newJetInstance();
 JetInstance jet2 = Jet.newJetInstance();
 
+Pipeline p = Pipeline.create();
+
 p.drawFrom(Sources.fileWatcher(path))
         .withIngestionTimestamps()
-        .flatMap(e -> traverseArray(e.getValue().toLowerCase().split("\\W+")))
+        .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
         .filter(word -> !word.isEmpty())
-        .groupingKey(wholeItem())
+        .groupingKey(word -> word)
         .window(WindowDefinition.tumbling(1000))
-        .aggregate(counting())
+        .aggregate(AggregateOperations.counting())
         .drainTo(Sinks.logger());
 
 jet.newJob(p).join();
