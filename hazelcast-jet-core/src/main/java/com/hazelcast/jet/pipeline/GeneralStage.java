@@ -510,7 +510,6 @@ public interface GeneralStage<T> extends Stage {
      *     (item, detail) -> item.setDetail(detail)
      * )
      * }</pre>
-     * On output, the items will have the {@code detail} field set.
      *
      * See also {@link GeneralStageWithKey#mapUsingIMap} for a partitioned version of
      * this operation.
@@ -617,8 +616,6 @@ public interface GeneralStage<T> extends Stage {
      *     (user, country, company) -> user.setCountry(country).setCompany(company)
      * )
      * }</pre>
-     * On output, the items will have the {@code country} and {@code company}
-     * fields set.
      *
      * @param stage1        the first stage to join
      * @param joinClause1   specifies how to join with {@code stage1}
