@@ -30,7 +30,7 @@ Use the following Maven snippet to start using the latest version of Jet:
 </dependency>
 ```
 
-### Process a Batch of Data
+### Batch Processing with Jet
 
 Once you have your project ready, you can use the following snippet
 to create a Jet node and start processing data. You'll 
@@ -51,7 +51,7 @@ p.drawFrom(Sources.files(path))
 jet.newJob(p).join();
 ```
 
-### Process a Stream of Events
+### Stream Processing with Jet
 
 For stream processing, you'll need a streaming data source. The simplest
 one we can use is to watch over a folder. Create an empty folder,
