@@ -33,12 +33,11 @@ Use the following Maven snippet to start using the latest version of Jet:
 ### Process a Batch of Data
 
 Once you have your project ready, you can use the following snippet
-to create a cluster of two nodes and start processing data. You'll 
+to create a Jet node and start processing data. You'll 
 need a folder with some text files in it.
 
 ```java
 JetInstance jet = Jet.newJetInstance();
-JetInstance jet2 = Jet.newJetInstance();
 
 Pipeline p = Pipeline.create();
 
@@ -60,12 +59,12 @@ run your program and then start adding some files to the folder.
 
 ```java
 JetInstance jet = Jet.newJetInstance();
-JetInstance jet2 = Jet.newJetInstance();
 
 Pipeline p = Pipeline.create();
 
 p.drawFrom(Sources.fileWatcher(path))
         .withIngestionTimestamps()
+        .setLocalParallelism(1)
         .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
         .filter(word -> !word.isEmpty())
         .groupingKey(word -> word)
