@@ -1,7 +1,25 @@
+/*
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.function.SupplierEx;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -11,16 +29,16 @@ import java.util.concurrent.atomic.AtomicLong;
  * behaviour when developing a streaming application.
  *
  */
-public final class DevelopmentSources {
+public final class DevSources {
     private static final AtomicLong COUNTER = new AtomicLong();
     private static final String NAME_PREFIX = "dev-source-";
 
-    private DevelopmentSources() {
+    private DevSources() {
 
     }
 
     /**
-     * Sources which emit with fixed rate. It attempts to compensate for various system hiccups so the rate
+     * Streaming source which emit with fixed rate. It attempts to compensate for various system hiccups so the rate
      * over a period of time is constant.
      *
      * Each item is a local wall-clock timestamp.
@@ -35,9 +53,10 @@ public final class DevelopmentSources {
     }
 
     /**
-     * Sources which emit with minimum delay. It won't emit unless elapsed time since last emit is at least
-     * the specified delay. There is no upper bound on the delay at that's partially driven by the Jet engine.
-     * In practice it will behave similar to fixedDelay.
+     * Streaming source which emits with specified minimum delay between items.
+     *
+     * It won't emit unless elapsed time since last emit is at least the specified delay. There is no upper bound
+     * on the delay at that's partially driven by the Jet engine. In practice it will behave similar to fixedDelay.
      *
      * The source is not distributed it means only a single Jet instance will emit items.
      *
@@ -50,8 +69,8 @@ public final class DevelopmentSources {
     }
 
     /**
-     * Sources which emit with fixed rate. It attempts to compensate for various system hiccups so the rate
-     * over a period of time is constant.
+     * Streaming source which emit items at fixed rate. It attempts to compensate for various system hiccups so
+     * the rate over a period of time is constant.
      *
      * You have to provide your own item supplier.
      * The source is not distributed it means only a single Jet instance will emit items.
@@ -63,13 +82,14 @@ public final class DevelopmentSources {
      * @return source emitting with a fixed rate
      */
     public static <T> StreamSource<T> fixedRate(long period, TimeUnit timeUnit, SupplierEx<T> itemSupplier) {
-        return triggerDrivenSource(() -> new FixedRateTrigger(period, timeUnit), itemSupplier);
+        return triggerDrivenStreamSource(() -> new FixedRateTrigger(period, timeUnit), itemSupplier);
     }
 
     /**
-     * Sources which emit with minimum delay. It won't emit unless elapsed time since last emit is at least
-     * the specified delay. There is no upper bound on the delay at that's partially driven by the Jet engine.
-     * In practice it will behave similar to fixedDelay.
+     * Streaming source which emits with specified minimum delay between items.
+     *
+     * It won't emit unless elapsed time since last emit is at least the specified delay. There is no upper bound
+     * on the delay at that's partially driven by the Jet engine. In practice it will behave similar to fixedDelay.
      *
      * You have to provide your own item supplier.
      * The source is not distributed it means only a single Jet instance will emit items.
@@ -81,14 +101,38 @@ public final class DevelopmentSources {
      * @return source emitting with a specified minimum delay
      */
     public static <T> StreamSource<T> minimumDelay(long delay, TimeUnit timeUnit, SupplierEx<T> itemSupplier) {
-        return triggerDrivenSource(() -> new MinDelayTrigger(delay, timeUnit), itemSupplier);
+        return triggerDrivenStreamSource(() -> new MinDelayTrigger(delay, timeUnit), itemSupplier);
     }
 
-    private static <T> StreamSource<T> triggerDrivenSource(SupplierEx<Trigger> triggerSupplier, SupplierEx<T> itemSupplier) {
+    /**
+     * Batch source producing specified elements.
+     *
+     * @param items values to emit
+     * @param <T> type of the element
+     * @return source emitting all specified items
+     */
+    public static <T> BatchSource<T> of(T... items) {
+        return fromIterator(() -> Arrays.asList(items).iterator());
+    }
+
+    private static <T> StreamSource<T> triggerDrivenStreamSource(SupplierEx<Trigger> triggerSupplier,
+                                                                 SupplierEx<T> itemSupplier) {
         return SourceBuilder.stream(newName(), c -> triggerSupplier.get())
-                .<T>fillBufferFn((c, b) -> {
-                    while (c.shouldEmit()) {
-                        b.add(itemSupplier.get());
+                .<T>fillBufferFn((trigger, buffer) -> {
+                    while (trigger.shouldEmit()) {
+                        buffer.add(itemSupplier.get());
+                    }
+                }).build();
+    }
+
+    private static <T> BatchSource<T> fromIterator(SupplierEx<Iterator<T>> iteratorSupplier) {
+        return SourceBuilder.batch(newName(), c -> iteratorSupplier.get())
+                .<T>fillBufferFn((i, b) -> {
+                    if (i.hasNext()) {
+                        T item = i.next();
+                        b.add(item);
+                    } else {
+                        b.close();
                     }
                 }).build();
     }
@@ -101,7 +145,7 @@ public final class DevelopmentSources {
         boolean shouldEmit();
     }
 
-    private static class MinDelayTrigger implements Trigger {
+    private static final class MinDelayTrigger implements Trigger {
         private long lastEmit;
         private final long delayNanos;
 
@@ -121,7 +165,7 @@ public final class DevelopmentSources {
         }
     }
 
-    private static class FixedRateTrigger implements Trigger {
+    private static final class FixedRateTrigger implements Trigger {
         private long lastEmit;
         private final long periodNanos;
 
