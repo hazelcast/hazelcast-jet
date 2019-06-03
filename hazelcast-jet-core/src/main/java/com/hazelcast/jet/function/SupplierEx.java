@@ -18,7 +18,9 @@ package com.hazelcast.jet.function;
 
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 
+import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
@@ -44,4 +46,33 @@ public interface SupplierEx<T> extends Supplier<T>, Serializable {
         }
     }
 
+    /**
+     * JavaDoc
+     *
+     * @param period
+     * @param timeUnit
+     * @param supplierEx
+     * @param <T>
+     * @return
+     */
+    @Nonnull
+    static <T> SupplierEx<T> fixedRateThrottle(
+            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> supplierEx) {
+        return new SuppliersEx.FixedRateThrottle<>(period, timeUnit, supplierEx);
+    }
+
+    /**
+     * JavaDoc
+     *
+     * @param period
+     * @param timeUnit
+     * @param supplierEx
+     * @param <T>
+     * @return
+     */
+    @Nonnull
+    static <T> SupplierEx<T> minDelayThrottle(
+            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> supplierEx) {
+        return new SuppliersEx.MinDelayThrottle<>(period, timeUnit, supplierEx);
+    }
 }

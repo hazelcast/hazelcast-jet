@@ -24,6 +24,9 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.hazelcast.jet.function.SupplierEx.fixedRateThrottle;
+import static com.hazelcast.jet.function.SupplierEx.minDelayThrottle;
+
 /**
  * Easy-to-use sources intended to be used during pipeline development.
  * It's often convenient to have easy-to-use sources with well defined
@@ -95,7 +98,7 @@ public final class DevSources {
     @Nonnull
     public static <T> StreamSource<T> fixedRate(
             long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> itemSupplier) {
-        return triggerDrivenStreamSource(() -> new FixedRateTrigger(period, timeUnit), itemSupplier);
+        return streamSource(() -> fixedRateThrottle(period, timeUnit, itemSupplier));
     }
 
     /**
@@ -119,7 +122,7 @@ public final class DevSources {
     @Nonnull
     public static <T> StreamSource<T> minimumDelay(
             long delay, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> itemSupplier) {
-        return triggerDrivenStreamSource(() -> new MinDelayTrigger(delay, timeUnit), itemSupplier);
+        return streamSource(() -> minDelayThrottle(delay, timeUnit, itemSupplier));
     }
 
     /**
@@ -131,27 +134,67 @@ public final class DevSources {
      */
     @Nonnull
     public static <T> BatchSource<T> of(@Nonnull T...items) {
-        return fromIterator(() -> Arrays.asList(items).iterator());
+        return fromSuppliedIterator(() -> Arrays.asList(items).iterator());
     }
 
+    /**
+     * TODO
+     *
+     * @param iteratorSupplier
+     * @param <T>
+     * @return
+     */
     @Nonnull
-    private static <T> StreamSource<T> triggerDrivenStreamSource(
-            @Nonnull SupplierEx<? extends Trigger> triggerSupplier, @Nonnull SupplierEx<? extends T> itemSupplier) {
-        return SourceBuilder.stream(newName(), c -> triggerSupplier.get())
-                .<T>fillBufferFn((trigger, buffer) -> {
-                    while (trigger.shouldEmit()) {
-                        buffer.add(itemSupplier.get());
+    public static <T> BatchSource<T> fromSuppliedIterator(@Nonnull SupplierEx<Iterator<? extends T>> iteratorSupplier) {
+        return batchSource(() -> {
+            Iterator<? extends T> iterator = iteratorSupplier.get();
+            return () -> {
+                if (!iterator.hasNext()) {
+                    return null;
+                } else {
+                    return iterator.next();
+                }
+            };
+        });
+
+    }
+
+    /**
+     * TODO
+     * Semantic: the inner supplier returns null to indicate no item is available at this time
+     *
+     * @param supplierOfSuppliers
+     * @param <T>
+     * @return
+     */
+    @Nonnull
+    private static <T> StreamSource<T> streamSource(@Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers) {
+        return SourceBuilder.stream(newName(), c -> supplierOfSuppliers.get())
+                .<T>fillBufferFn((p, b) -> {
+                    T t = p.get();
+                    while (t != null) {
+                        b.add(t);
+                        t = p.get();
                     }
                 }).build();
     }
 
+    /**
+     * TODO
+     * Semantic: the inner supplier returns null to indicate there are no more items available in the batch
+     *
+     *
+     * @param supplierOfSuppliers
+     * @param <T>
+     * @return
+     */
     @Nonnull
-    private static <T> BatchSource<T> fromIterator(@Nonnull SupplierEx<Iterator<? extends T>> iteratorSupplier) {
-        return SourceBuilder.batch(newName(), c -> iteratorSupplier.get())
-                .<T>fillBufferFn((i, b) -> {
-                    if (i.hasNext()) {
-                        T item = i.next();
-                        b.add(item);
+    private static <T> BatchSource<T> batchSource(@Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers) {
+        return SourceBuilder.batch(newName(), c -> supplierOfSuppliers.get())
+                .<T>fillBufferFn((p, b) -> {
+                    T t = p.get();
+                    if (t != null) {
+                        b.add(t);
                     } else {
                         b.close();
                     }
@@ -161,49 +204,5 @@ public final class DevSources {
     @Nonnull
     private static String newName() {
         return NAME_PREFIX + COUNTER.getAndIncrement();
-    }
-
-    private interface Trigger {
-        boolean shouldEmit();
-    }
-
-    private static final class MinDelayTrigger implements Trigger {
-        private long lastEmit;
-        private final long delayNanos;
-
-        private MinDelayTrigger(long period, @Nonnull TimeUnit timeUnit) {
-            this.lastEmit = System.nanoTime();
-            this.delayNanos = timeUnit.toNanos(period);
-        }
-
-        @Override
-        public boolean shouldEmit() {
-            long now = System.nanoTime();
-            if (now > lastEmit + delayNanos) {
-                lastEmit = now;
-                return true;
-            }
-            return false;
-        }
-    }
-
-    private static final class FixedRateTrigger implements Trigger {
-        private long lastEmit;
-        private final long periodNanos;
-
-        private FixedRateTrigger(long period, @Nonnull TimeUnit timeUnit) {
-            this.lastEmit = System.nanoTime();
-            this.periodNanos = timeUnit.toNanos(period);
-        }
-
-        @Override
-        public boolean shouldEmit() {
-            long now = System.nanoTime();
-            if (now > lastEmit + periodNanos) {
-                lastEmit += periodNanos;
-                return true;
-            }
-            return false;
-        }
     }
 }
