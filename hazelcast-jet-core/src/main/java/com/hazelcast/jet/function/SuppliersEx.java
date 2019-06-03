@@ -21,7 +21,8 @@ import javax.annotation.Nullable;
 import java.util.concurrent.TimeUnit;
 
 final class SuppliersEx {
-    final static class FixedRateThrottle<T> implements SupplierEx<T> {
+    static final class FixedRateThrottle<T> implements SupplierEx<T> {
+        private static final long serialVersionUID = 1L;
         private final SupplierEx<? extends T> delegate;
         private transient long lastEmit;
         private final long periodNanos;
@@ -51,7 +52,8 @@ final class SuppliersEx {
         }
     }
 
-    final static class MinDelayThrottle<T> implements SupplierEx<T> {
+    static final class MinDelayThrottle<T> implements SupplierEx<T> {
+        private static final long serialVersionUID = 1L;
         private final SupplierEx<? extends T> delegate;
         private transient long lastEmit;
         private final long delayNanos;
