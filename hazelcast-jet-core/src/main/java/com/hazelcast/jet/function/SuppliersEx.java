@@ -38,7 +38,7 @@ final class SuppliersEx {
             long now = System.nanoTime();
             if (lastEmit == 0) {
                 // first call -> we want to emit.
-                lastEmit = System.nanoTime() - lastEmit;
+                lastEmit = now - periodNanos;
             }
             if (now >= lastEmit + periodNanos) {
                 T item = delegate.getEx();
@@ -69,7 +69,7 @@ final class SuppliersEx {
             long now = System.nanoTime();
             if (lastEmit == 0) {
                 // first call -> we want to emit.
-                lastEmit = System.nanoTime() - lastEmit;
+                lastEmit = now - delayNanos;
             }
 
             if (now > lastEmit + delayNanos) {
