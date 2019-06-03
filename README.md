@@ -8,8 +8,8 @@
 
 ---
 
-[Hazelcast Jet] is an open-source, cloud-native, distributed processing
-stream processing engine.
+[Hazelcast Jet] is an open-source, cloud-native, distributed stream
+processing engine.
 
 It's simple to set up, embeddable with no further depednencies, and
 makes it easy to build fault-tolerant, elastic data processing pipelines.
@@ -41,7 +41,7 @@ Use this code to start an instance of Jet and tell it to perform some
 computation:
 
 ```java
-File path = new File(".")
+Path path = Paths.get(".");
 
 JetInstance jet = Jet.newJetInstance();
 
@@ -73,7 +73,7 @@ is watching a folder of text files for changes and processing each new
 appended line. Here's the code you can try out:
 
 ```java
-File path = new File(".")
+Path path = Paths.get(".");
 
 JetInstance jet = Jet.newJetInstance();
 
