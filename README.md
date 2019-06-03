@@ -19,13 +19,13 @@ can do the same locally, even on the same machine (your laptop, for
 example). This is great for quick testing.
 
 You can embed Jet as a part of your application, it's just a single JAR
-without dependencies. You can also deploy it stand-alone, as a
+without dependencies. You can also deploy it standalone, as a
 stream-processing cluster.
 
-Jet provides in-memory storage as well. You can cache your reference
-data and enrich the event stream with it, store the results of
-computation, or even store the input data you're about to process
-with Jet.
+You can store data directly in the Jet cluster as well. You can cache
+your reference data and enrich the event stream with it, store the
+results of computation, or even store the input data you're about to
+process with Jet.
 
 ---
 
@@ -68,7 +68,7 @@ jet.newJob(p).join();
 ```
 
 When you run this, point the `path` variable to some directory with text
-files in it. Jet will analyze all the files in it and give you the word
+files in it. Jet will analyze all the files and give you the word
 frequency distribution in the log output (for each word it will say how
 many times it appears in the files).
 
