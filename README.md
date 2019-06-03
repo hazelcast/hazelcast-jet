@@ -7,16 +7,26 @@
 <img src="https://github.com/hazelcast/hazelcast-jet/raw/master/logo/hazelcast-jet.png" width="100">
 
 ---
+[Hazelcast Jet] is an open-source, cloud native, distributed stream 
+and batch processing engine.
 
-[Hazelcast Jet] is an open-source, cloud-native, distributed stream
-processing engine.
+It's simple to set up and makes it easy to build fault-tolerant and 
+elastic data processing pipelines. The nodes you start will discover
+each other and form a cluster automatically. You can do the same 
+locally, even on the same machine (your laptop, for example). 
+This is great for quick testing. 
 
-It's simple to set up, embeddable with no further depednencies, and
-makes it easy to build fault-tolerant, elastic data processing pipelines.
+Jet keeps processing data without loss even if a node fails, and you can
+add more nodes that immediately start sharing the computation load.
+ 
+You can embed Jet as a part of your application, it's just a single JAR
+without dependencies. You can also deploy it standalone, as a
+stream-processing cluster.
 
-Jet also provides robust, distributed in-memory data storage for caching,
-stream enrichment and storing the results of processing.
-
+Jet also provides a highly available, distributed in memory store. 
+You can cache your reference data and enrich the event stream with it,
+store the results of a computation, or even store the input data you're
+about to process with Jet.
 ---
 
 ## Start using Jet
@@ -41,7 +51,7 @@ Use this code to start an instance of Jet and tell it to perform some
 computation:
 
 ```java
-Path path = Paths.get(".");
+String path = "books";
 
 JetInstance jet = Jet.newJetInstance();
 
@@ -73,7 +83,7 @@ is watching a folder of text files for changes and processing each new
 appended line. Here's the code you can try out:
 
 ```java
-Path path = Paths.get(".");
+String path = "books";
 
 JetInstance jet = Jet.newJetInstance();
 
