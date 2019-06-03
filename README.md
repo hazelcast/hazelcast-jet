@@ -11,20 +11,20 @@
 [Hazelcast Jet] is an open-source, cloud-native, distributed stream
 and batch processing engine.
 
-It's simple to set up and makes it easy to build fault-tolerant and
-elastic data processing pipelines. The nodes you start discover each
-other and form a cluster automatically. You can do the same locally,
-even on the same machine (your laptop, for example). This is great for
-quick testing.
+Jet is simple to set up. The nodes you start discover each other and
+form a cluster automatically. You can do the same locally, even on the
+same machine (your laptop, for example). This is great for quick testing.
 
-Jet keeps processing data without loss even if a node fails, and you can
-add more nodes that immediately start sharing the computation load.
+With Jet it's easy to build fault-tolerant and elastic data processing
+pipelines. Jet keeps processing data without loss even if a node fails,
+and you can add more nodes that immediately start sharing the
+computation load.
 
 You can embed Jet as a part of your application, it's just a single JAR
 without dependencies. You can also deploy it standalone, as a
 stream-processing cluster.
 
-Jet also provides a highly available, distributed in memory store.
+Jet also provides a highly available, distributed in-memory data store.
 You can cache your reference data and enrich the event stream with it,
 store the results of a computation, or even store the input data you're
 about to process with Jet.
