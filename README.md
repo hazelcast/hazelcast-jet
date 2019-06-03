@@ -14,8 +14,8 @@ stream processing engine.
 It's simple to set up, embeddable with no further depednencies, and
 makes it easy to build fault-tolerant, elastic data processing pipelines.
 
-Additionally, Jet provides robust distribiuted in-memory data storage
-for caching, stream enrichment and storing the results of processing.
+Jet also provides robust, distributed in-memory data storage for caching,
+stream enrichment and storing the results of processing.
 
 ---
 
