@@ -8,19 +8,31 @@
 
 ---
 
-[Hazelcast Jet] is an open source, cloud native, distributed stream 
-and batch processing engine.
+[Hazelcast Jet] is an open-source engine that processes distributed
+event streams in real time. It keeps processing without loss even if a
+node fails, and you can add more nodes that immediately start sharing
+the computation load.
 
-It's simple to set up, embeddable, has no other dependencies and makes it easy to 
-build fault-tolerant, elastic data processing pipelines. It additionally provides 
-robust, distributed in-memory storage for caching, enrichment and storing
-processing results.
+You can deploy Jet to a variety of cloud environments. The nodes you
+start will discover each other and form a cluster automatically. You
+can do the same locally, even on the same machine (your laptop, for
+example). This is great for quick testing.
+
+You can embed Jet as a part of your application, it's just a single JAR
+without dependencies. You can also deploy it stand-alone, as a
+stream-processing cluster.
+
+Jet provides in-memory storage as well. You can cache your reference
+data and enrich the event stream with it, store the results of
+computation, or even store the input data you're about to process
+with Jet.
 
 ---
 
 ## Start using Jet
 
-Use the following Maven snippet to start using the latest version of Jet:
+Add this to your `pom.xml` to get the latest Jet as your project
+dependency:
 
 ```xml
 <dependency>
@@ -30,13 +42,17 @@ Use the following Maven snippet to start using the latest version of Jet:
 </dependency>
 ```
 
+Since Jet is embeddable, this is all you need to start your first Jet
+instance! Read on for a quick example of your first Jet program.
+
 ### Batch Processing with Jet
 
-Once you have your project ready, you can use the following snippet
-to create a Jet node and start processing data. You'll 
-need a folder with some text files in it.
+Use this code to start an instance of Jet and tell it to perform some
+computation:
 
 ```java
+File path = new File(".")
+
 JetInstance jet = Jet.newJetInstance();
 
 Pipeline p = Pipeline.create();
@@ -51,13 +67,24 @@ p.drawFrom(Sources.files(path))
 jet.newJob(p).join();
 ```
 
+When you run this, point the `path` variable to some directory with text
+files in it. Jet will analyze all the files in it and give you the word
+frequency distribution in the log output (for each word it will say how
+many times it appears in the files).
+
+The above was an example of processing data at rest (i.e., _batch
+processing_). It's conceptually simpler than stream processing so we
+used it as our first example.
+
 ### Stream Processing with Jet
 
-For stream processing, you'll need a streaming data source. The simplest
-one we can use is to watch over a folder. Create an empty folder,
-run your program and then start adding some files to the folder. 
+For stream processing you need a streaming data source. A simple example
+is watching a folder of text files for changes and processing each new
+appended line. Here's the code you can try out:
 
 ```java
+File path = new File(".")
+
 JetInstance jet = Jet.newJetInstance();
 
 Pipeline p = Pipeline.create();
@@ -75,26 +102,30 @@ p.drawFrom(Sources.fileWatcher(path))
 jet.newJob(p).join();
 ```
 
+Before running this make an empty directory and point the `path`
+variable to it. While the job is running copy some text files into it
+and Jet will process them right away.
+
 ## Features:
 
 * Constant low-latency - predictable latency is a design goal
 * Zero dependencies - single JAR which is embeddable (minimum JDK 8)
+* Cloud Native - with [Docker images](https://hub.docker.com/r/hazelcast/hazelcast-jet/)
+and [Kubernetes support](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/master/integration/kubernetes)
+including Helm Charts.
 * Elastic - Jet can scale jobs up and down while running
 * Fault Tolerant - At-least-once and exactly-once processing guarantees
-* In memory storage - Jet provides robust distributed in memory storage 
+* In memory storage - Jet provides robust distributed in memory storage
 for caching, enrichment or storing job results
 * Sources and sinks for Apache Kafka, Hadoop, Hazelcast IMDG, sockets, files
 * Dynamic node discovery for both on-premise and cloud deployments.
-* Cloud Native - with [Docker images](https://hub.docker.com/r/hazelcast/hazelcast-jet/) 
-and [Kubernetes support](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/master/integration/kubernetes)
-including Helm Charts.
 
 ## Distribution
 
-You can also download the distribution package which includes command line tools
-from [jet.hazelcast.org](http://jet.hazelcast.org/download/).
+You can download the distribution package which includes command-line
+tools from [jet.hazelcast.org](http://jet.hazelcast.org/download/).
 
-## Documentation 
+## Documentation
 
 See the [Hazelcast Jet Reference Manual].
 
@@ -104,13 +135,13 @@ See [Hazelcast Jet Code Samples] for some examples.
 
 ## Additional Connectors
 
-See [hazelcast-jet-contrib](github.com/hazelcast/hazelcast-jet-contrib) repository for community supported 
+See [hazelcast-jet-contrib](github.com/hazelcast/hazelcast-jet-contrib) repository for community supported
 connectors and tools.
 
 ## Architecture
 
-See the [architecture](https://jet.hazelcast.org/architecture/) and 
-[performance](https://jet.hazelcast.org/performance/) pages for 
+See the [architecture](https://jet.hazelcast.org/architecture/) and
+[performance](https://jet.hazelcast.org/performance/) pages for
 more details about Jet's internals and design.
 
 ## Start Developing Hazelcast Jet
@@ -118,7 +149,7 @@ more details about Jet's internals and design.
 ### Use Latest Snapshot Release
 
 You can always use the latest snapshot release if you want to try the features
-currently under development. 
+currently under development.
 
 Maven snippet:
 
