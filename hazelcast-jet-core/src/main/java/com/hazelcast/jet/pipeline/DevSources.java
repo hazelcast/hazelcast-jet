@@ -135,6 +135,18 @@ public final class DevSources {
     /**
      * TODO
      *
+     * @param supplier
+     * @param <T>
+     * @return
+     */
+    @Nonnull
+    public static <T> StreamSource<T> fromSupplier(@Nonnull SupplierEx<? extends T> supplier) {
+        return streamSource(() -> supplier);
+    }
+
+    /**
+     * TODO
+     *
      * @param iteratorSupplier
      * @param <T>
      * @return
