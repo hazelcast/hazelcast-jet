@@ -92,7 +92,8 @@ public final class DevSources {
      */
     @Nonnull
     public static <T> StreamSource<T> fixedRate(
-            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> itemSupplier) {
+            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> itemSupplier
+    ) {
         return streamSource(() -> fixedRateThrottle(period, timeUnit, itemSupplier));
     }
 
@@ -114,7 +115,8 @@ public final class DevSources {
      */
     @Nonnull
     public static <T> StreamSource<T> minimumDelay(
-            long delay, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> itemSupplier) {
+            long delay, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> itemSupplier
+    ) {
         return streamSource(() -> minDelayThrottle(delay, timeUnit, itemSupplier));
     }
 
@@ -156,7 +158,8 @@ public final class DevSources {
 
     /**
      * TODO
-     * Semantic: the inner supplier returns null to indicate no item is available at this time
+     * Semantic: the inner supplier returns null to indicate no item is
+     * available at this time
      *
      * @param supplierOfSuppliers
      * @param <T>
@@ -178,7 +181,8 @@ public final class DevSources {
 
     /**
      * TODO
-     * Semantic: the inner supplier returns null to indicate there are no more items available in the batch
+     * Semantic: the inner supplier returns null to indicate there are no more
+     * items available in the batch
      *
      *
      * @param supplierOfSuppliers
