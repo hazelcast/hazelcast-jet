@@ -37,6 +37,7 @@ import static com.hazelcast.jet.function.SupplierEx.minDelayThrottle;
 public final class DevSources {
     private static final AtomicLong COUNTER = new AtomicLong();
     private static final String NAME_PREFIX = "dev-source-";
+    private static final int MAXIMUM_BUFFER_BATCH_SIZE = 10_000;
 
     private DevSources() {
 
@@ -82,6 +83,9 @@ public final class DevSources {
      * <p>
      * The source asks your supplier function for the next item to emit. It is
      * not distributed, only a single Jet instance will emit items.
+     * The supplier can return <code>null</code> to indicate no item is
+     * available at the moment. Jet will call the supplier again at some
+     * later time.
      *
      * @param period period which to emit
      * @param timeUnit units for period
@@ -98,13 +102,15 @@ public final class DevSources {
     }
 
     /**
-     * Streaming source which emits local wall-clock timestamps with the
-     * specified minimum delay between items. The delay has no upper bound, but
-     * in practice it will be close to the specified delay unless there's a
-     * hiccup.
+     * Streaming source which emits items with the specified minimum delay
+     * between items. The delay has no upper bound, but in practice it will
+     * be close to the specified delay unless there's a hiccup.
      * <p>
      * The source asks your supplier function for the next item to emit. It is
      * not distributed, only a single Jet instance will emit items.
+     * The supplier can return <code>null</code> to indicate no item is
+     * available at the moment. Jet will call the supplier again at some
+     * later time.
      *
      * @param delay delay minimum delay between emitting
      * @param timeUnit units of the delay
@@ -121,11 +127,32 @@ public final class DevSources {
     }
 
     /**
-     * Batch source producing specified elements.
+     * Streaming source which emits items provided by the supplier.
+     * <p>
+     * The source asks your supplier function for the next item to emit. It is
+     * not distributed, only a single Jet instance will emit items.
+     * The supplier can return <code>null</code> to indicate no item is
+     * available at the moment. Jet will call the supplier again at some
+     * later time.
+     *
+     * @param supplier supplier providing items to be emitted by the source
+     * @param <T> type of emitted items
+     * @return source emitting items provided by the supplier
+     */
+    @Nonnull
+    public static <T> StreamSource<T> asStreamSource(@Nonnull SupplierEx<? extends T> supplier) {
+        return streamSource(() -> supplier);
+    }
+
+    /**
+     * Batch source producing specified items.
+     * <p>
+     * It iterates over provided items and it finished when it reach
+     * the last item or when the current item is null.
      *
      * @param items values to emit
-     * @param <T> type of the element
-     * @return source emitting all specified items
+     * @param <T> type of emitted items
+     * @return source emitting specified items
      */
     @Nonnull
     public static <T> BatchSource<T> of(@Nonnull T...items) {
@@ -133,23 +160,18 @@ public final class DevSources {
     }
 
     /**
-     * TODO
+     * Batch source which emits items provided by iterator created
+     * by the supplier
+     * <p>
+     * The source asks the provided supplier to create an iterator.
+     * Then it uses the iterator to produce items. It is not distributed,
+     * only a single Jet instance will emit items. The batch is completed
+     * when the {@link Iterator#hasNext()} returns <code>false</code>
+     * or when {@link Iterator#next()} returns <code>null</code>.
      *
-     * @param supplier
-     * @param <T>
-     * @return
-     */
-    @Nonnull
-    public static <T> StreamSource<T> fromSupplier(@Nonnull SupplierEx<? extends T> supplier) {
-        return streamSource(() -> supplier);
-    }
-
-    /**
-     * TODO
-     *
-     * @param iteratorSupplier
-     * @param <T>
-     * @return
+     * @param iteratorSupplier supplier to create iterator
+     * @param <T> type of emitted items
+     * @return source emitting items provided by the iterator
      */
     @Nonnull
     public static <T> BatchSource<T> fromSuppliedIterator(
@@ -169,14 +191,22 @@ public final class DevSources {
     }
 
     /**
-     * TODO
-     * Semantic: the inner supplier returns null to indicate no item is
-     * available at this time
+     * Batch source which emits items provided by the supplier.
+     * <p>
+     * The source asks the supplier function for the next item to emit. It is
+     * not distributed, only a single Jet instance will emit items.
+     * The supplier can return <code>null</code> to indicate the batch
+     * is completed.
      *
-     * @param supplierOfSuppliers
-     * @param <T>
-     * @return
+     * @param supplier supplier providing items to be emitted by the source
+     * @param <T> type of emitted items
+     * @return source emitting items provided by the supplier
      */
+    @Nonnull
+    public static <T> BatchSource<T> asBatchSource(@Nonnull SupplierEx<? extends T> supplier) {
+        return batchSource(() -> supplier);
+    }
+
     @Nonnull
     private static <T> StreamSource<T> streamSource(
             @Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers
@@ -184,23 +214,13 @@ public final class DevSources {
         return SourceBuilder.stream(newName(), c -> supplierOfSuppliers.get())
                 .<T>fillBufferFn((p, b) -> {
                     T t = p.get();
-                    while (t != null) {
+                    for (int i = 0; i < MAXIMUM_BUFFER_BATCH_SIZE && t != null; i++) {
                         b.add(t);
                         t = p.get();
                     }
                 }).build();
     }
 
-    /**
-     * TODO
-     * Semantic: the inner supplier returns null to indicate there are no more
-     * items available in the batch
-     *
-     *
-     * @param supplierOfSuppliers
-     * @param <T>
-     * @return
-     */
     @Nonnull
     private static <T> BatchSource<T> batchSource(
             @Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers
@@ -208,9 +228,11 @@ public final class DevSources {
         return SourceBuilder.batch(newName(), c -> supplierOfSuppliers.get())
                 .<T>fillBufferFn((p, b) -> {
                     T t = p.get();
-                    if (t != null) {
+                    for (int i = 0; i < MAXIMUM_BUFFER_BATCH_SIZE && t != null; i++) {
                         b.add(t);
-                    } else {
+                        t = p.get();
+                    }
+                    if (t == null) {
                         b.close();
                     }
                 }).build();
