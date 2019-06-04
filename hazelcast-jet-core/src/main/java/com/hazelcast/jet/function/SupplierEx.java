@@ -25,7 +25,7 @@ import java.util.function.Supplier;
 
 /**
  * {@code Serializable} variant of {@link Supplier java.util.function.Supplier}
- * which declares checked exception.
+ * which declares a checked exception.
  *
  * @since 3.0
  */
@@ -57,7 +57,8 @@ public interface SupplierEx<T> extends Supplier<T>, Serializable {
      */
     @Nonnull
     static <T> SupplierEx<T> fixedRateThrottle(
-            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> supplierEx) {
+            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> supplierEx
+    ) {
         return new SuppliersEx.FixedRateThrottle<>(period, timeUnit, supplierEx);
     }
 
@@ -72,7 +73,8 @@ public interface SupplierEx<T> extends Supplier<T>, Serializable {
      */
     @Nonnull
     static <T> SupplierEx<T> minDelayThrottle(
-            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> supplierEx) {
+            long period, @Nonnull TimeUnit timeUnit, @Nonnull SupplierEx<? extends T> supplierEx
+    ) {
         return new SuppliersEx.MinDelayThrottle<>(period, timeUnit, supplierEx);
     }
 }

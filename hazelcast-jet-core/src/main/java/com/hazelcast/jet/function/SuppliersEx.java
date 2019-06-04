@@ -32,8 +32,7 @@ final class SuppliersEx {
             this.delegate = delegate;
         }
 
-        @Override
-        @Nullable
+        @Nullable @Override
         public T getEx() throws Exception {
             long now = System.nanoTime();
             if (lastEmit == 0) {
@@ -63,8 +62,7 @@ final class SuppliersEx {
             this.delegate = delegate;
         }
 
-        @Override
-        @Nullable
+        @Nullable @Override
         public T getEx() throws Exception {
             long now = System.nanoTime();
             if (lastEmit == 0) {

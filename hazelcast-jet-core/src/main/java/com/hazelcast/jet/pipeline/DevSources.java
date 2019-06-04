@@ -32,7 +32,7 @@ import static com.hazelcast.jet.function.SupplierEx.minDelayThrottle;
  * It's often convenient to have easy-to-use sources with well defined
  * behaviour when developing a streaming application.
  *
- * @since 3.1
+ * @since 3.2
  */
 public final class DevSources {
     private static final AtomicLong COUNTER = new AtomicLong();
@@ -43,12 +43,11 @@ public final class DevSources {
     }
 
     /**
-     * Streaming source which emits local wall-clock timestamps with specified
-     * minimum delay between items. It attempts to compensate for various
-     * system hiccups so the rate over a period of time is constant.
+     * Streaming source which emits local wall-clock timestamps with the
+     * specified period between items. If, due to a hiccup, it can't emit an
+     * item at the scheduled time, it will speed up the emission to catch up.
      * <p>
-     * Each item is a local wall-clock timestamp. The source is not distributed
-     * it means only a single Jet instance will emit items.
+     * The source is not distributed, only a single Jet instance will emit items.
      *
      * @param period   period which to emit
      * @param timeUnit units for period
@@ -60,16 +59,12 @@ public final class DevSources {
     }
 
     /**
-     * Streaming source which emits local wall-clock timestamps with specified
-     * minimum delay between items.
+     * Streaming source which emits local wall-clock timestamps with the
+     * specified minimum delay between items. The delay has no upper bound, but
+     * in practice it will be close to the specified delay unless there's a
+     * hiccup.
      * <p>
-     * It won't emit unless elapsed time since last emit is at least the
-     * specified delay. There is no upper bound on the delay at that's partially
-     * driven by the Jet engine. In practice it will behave similar to
-     * fixedDelay.
-     * <p>
-     * The source is not distributed it means only a single Jet instance
-     * will emit items.
+     * The source is not distributed, only a single Jet instance will emit items.
      *
      * @param delay minimum delay between emitting
      * @param timeUnit units of the delay
@@ -81,13 +76,13 @@ public final class DevSources {
     }
 
     /**
-     * Streaming source which emit items at fixed rate. It attempts to compensate
-     * for various system hiccups so the rate over a period of time is constant.
+     * Streaming source which emits items with the specified period between
+     * them. If, due to a hiccup, it can't emit an item at the scheduled time,
+     * it will speed up the emission to catch up.
      * <p>
-     * You have to provide your own item supplier.
-     * The source is not distributed it means only a single Jet instance will
-     * emit items.
-     * <p>
+     * The source asks your supplier function for the next item to emit. It is
+     * not distributed, only a single Jet instance will emit items.
+     *
      * @param period period which to emit
      * @param timeUnit units for period
      * @param itemSupplier supplier of items to be emitted. It's called
@@ -102,15 +97,13 @@ public final class DevSources {
     }
 
     /**
-     * Streaming source which emits with specified minimum delay between items.
+     * Streaming source which emits local wall-clock timestamps with the
+     * specified minimum delay between items. The delay has no upper bound, but
+     * in practice it will be close to the specified delay unless there's a
+     * hiccup.
      * <p>
-     * It won't emit unless elapsed time since last emit is at least the
-     * specified delay. There is no upper bound on the delay at that's
-     * partially driven by the Jet engine. In practice it will behave similar
-     * to fixedDelay.
-     * <p>
-     * You have to provide your own item supplier.
-     * The source is not distributed it means only a single Jet instance will emit items.
+     * The source asks your supplier function for the next item to emit. It is
+     * not distributed, only a single Jet instance will emit items.
      *
      * @param delay delay minimum delay between emitting
      * @param timeUnit units of the delay
@@ -145,7 +138,9 @@ public final class DevSources {
      * @return
      */
     @Nonnull
-    public static <T> BatchSource<T> fromSuppliedIterator(@Nonnull SupplierEx<Iterator<? extends T>> iteratorSupplier) {
+    public static <T> BatchSource<T> fromSuppliedIterator(
+            @Nonnull SupplierEx<Iterator<? extends T>> iteratorSupplier
+    ) {
         return batchSource(() -> {
             Iterator<? extends T> iterator = iteratorSupplier.get();
             return () -> {
@@ -168,7 +163,9 @@ public final class DevSources {
      * @return
      */
     @Nonnull
-    private static <T> StreamSource<T> streamSource(@Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers) {
+    private static <T> StreamSource<T> streamSource(
+            @Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers
+    ) {
         return SourceBuilder.stream(newName(), c -> supplierOfSuppliers.get())
                 .<T>fillBufferFn((p, b) -> {
                     T t = p.get();
@@ -189,7 +186,9 @@ public final class DevSources {
      * @return
      */
     @Nonnull
-    private static <T> BatchSource<T> batchSource(@Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers) {
+    private static <T> BatchSource<T> batchSource(
+            @Nonnull SupplierEx<SupplierEx<? extends T>> supplierOfSuppliers
+    ) {
         return SourceBuilder.batch(newName(), c -> supplierOfSuppliers.get())
                 .<T>fillBufferFn((p, b) -> {
                     T t = p.get();
