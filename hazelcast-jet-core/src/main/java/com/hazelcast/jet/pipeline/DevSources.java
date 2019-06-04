@@ -24,8 +24,8 @@ import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.hazelcast.jet.function.SupplierEx.fixedRateThrottle;
-import static com.hazelcast.jet.function.SupplierEx.minDelayThrottle;
+import static com.hazelcast.jet.function.Suppliers.fixedRateThrottle;
+import static com.hazelcast.jet.function.Suppliers.minDelayThrottle;
 
 /**
  * Easy-to-use sources intended to be used during pipeline development.
@@ -182,9 +182,8 @@ public final class DevSources {
             return () -> {
                 if (!iterator.hasNext()) {
                     return null;
-                } else {
-                    return iterator.next();
                 }
+                return iterator.next();
             };
         });
 
