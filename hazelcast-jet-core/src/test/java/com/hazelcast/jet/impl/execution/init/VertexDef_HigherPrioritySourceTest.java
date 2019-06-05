@@ -51,7 +51,8 @@ import static org.mockito.Mockito.mock;
 
 public class VertexDef_HigherPrioritySourceTest {
 
-    private static final ProcessorMetaSupplier MOCK_PMS = addresses -> address -> count -> nCopies(count, new DummyProcessor());
+    private static final ProcessorMetaSupplier MOCK_PMS =
+            addresses -> address -> count -> nCopies(count, new DummyProcessor());
     private static final JetTestInstanceFactory factory = new JetTestInstanceFactory();
     private static NodeEngineImpl nodeEngineImpl;
     private static MembersView membersView;
