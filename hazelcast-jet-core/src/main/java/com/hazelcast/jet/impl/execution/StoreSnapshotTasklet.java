@@ -64,7 +64,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         this.isHigherPrioritySource = isHigherPrioritySource;
 
         this.ssWriter = ssWriter;
-        this.pendingSnapshotId = snapshotContext.activeSnapshotId() + 1;
+        this.pendingSnapshotId = snapshotContext.activeSnapshotId1stPhase() + 1;
         addToInboxFunction = this::addToInbox;
     }
 
@@ -120,7 +120,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                     snapshotContext.reportError(error);
                 }
                 progTracker.madeProgress();
-                snapshotContext.snapshotDoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
+                snapshotContext.firstPhaseDoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
                         ssWriter.getTotalChunks());
                 ssWriter.resetStats();
                 pendingSnapshotId++;

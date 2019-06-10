@@ -60,6 +60,25 @@ enum ProcessorState {
     EMIT_BARRIER,
 
     /**
+     * Making calls to {@link Processor#onSnapshotCompleted(boolean)} until it
+     * returns {@code true}.
+     */
+    ON_SNAPSHOT_COMPLETED,
+
+    /**
+     * Processor is not doing anything, it cannot terminate until the 2nd phase
+     * arrives.
+     */
+    WAITING_FOR_SNAPSHOT_COMPLETED,
+
+    /**
+     * Making calls to {@link Processor#onSnapshotCompleted(boolean)} until it
+     * returns {@code true}, after the processor completed, i.e. after {@link
+     * #WAITING_FOR_SNAPSHOT_COMPLETED}.
+     */
+    FINAL_ON_SNAPSHOT_COMPLETED,
+
+    /**
      * Waiting for the outbox to accept the {@code DONE_ITEM}.
      */
     EMIT_DONE_ITEM,

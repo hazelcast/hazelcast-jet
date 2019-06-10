@@ -81,21 +81,21 @@ public class SnapshotContextTest {
         ssContext.initTaskletCount(taskletCount, numHigherPriority);
         CompletableFuture<SnapshotOperationResult> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
-            future = ssContext.startNewSnapshot(10, "map", false);
-            assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
+            future = ssContext.startNewSnapshot1stPhase(10, "map", false);
+            assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId1stPhase());
         }
 
         if (taskletDone == TaskletDone.NOT_DONE) {
-            ssContext.snapshotDoneForTasklet(0, 0, 0);
+            ssContext.firstPhaseDoneForTasklet(0, 0, 0);
         } else if (taskletDone == TaskletDone.DONE_BEFORE_CURRENT_SNAPSHOT) {
             ssContext.taskletDone(9, numHigherPriority > 0);
         } else if (taskletDone == TaskletDone.DONE_AFTER_CURRENT_SNAPSHOT) {
-            ssContext.snapshotDoneForTasklet(0, 0, 0);
+            ssContext.firstPhaseDoneForTasklet(0, 0, 0);
             ssContext.taskletDone(10, numHigherPriority > 0);
         }
 
         if (snapshotStarted == SnapshotStarted.AFTER) {
-            future = ssContext.startNewSnapshot(10, "map", false);
+            future = ssContext.startNewSnapshot1stPhase(10, "map", false);
         }
 
         assertNotNull("future == null", future);
@@ -103,7 +103,7 @@ public class SnapshotContextTest {
                 future.isDone() == (taskletCount == 1));
         assertEquals("numRemainingTasklets", taskletCount - 1, ssContext.getNumRemainingTasklets().get());
         assertEquals("activeSnapshotId at the end",
-                taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId());
+                taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0 ? 9 : 10, ssContext.activeSnapshotId1stPhase());
     }
 
     private enum SnapshotStarted {

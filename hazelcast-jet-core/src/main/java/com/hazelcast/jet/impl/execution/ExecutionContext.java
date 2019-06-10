@@ -215,7 +215,7 @@ public class ExecutionContext {
                 // if execution is done, there are 0 processors to take snapshots. Therefore we're done now.
                 return CompletableFuture.completedFuture(new SnapshotOperationResult(0, 0, 0, null));
             }
-            return snapshotContext.startNewSnapshot(snapshotId, mapName, isTerminal);
+            return snapshotContext.startNewSnapshot1stPhase(snapshotId, mapName, isTerminal);
         }
     }
 

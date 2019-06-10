@@ -209,10 +209,10 @@ public interface Processor {
     }
 
     /**
-     * Stores its snapshotted state by adding items to the outbox's {@linkplain
-     * Outbox#offerToSnapshot(Object, Object) snapshot bucket}. If this method
-     * returns {@code false}, it will be called again before proceeding to call
-     * any other method.
+     * Stores processor's state to a state snapshot by adding items to the
+     * outbox's {@linkplain Outbox#offerToSnapshot(Object, Object) snapshot
+     * bucket}. If this method returns {@code false}, it will be called again
+     * before proceeding to call any other method.
      * <p>
      * This method will only be called after a call to {@link #process(int,
      * Inbox) process()} returns with an empty inbox. After all the input is
@@ -220,22 +220,88 @@ public interface Processor {
      * {@code complete()} returns {@code true}, this method won't be called
      * anymore.
      * <p>
+     * If this processor communicates with an external transactional store, it
+     * should do few more things:
+     * <ul>
+     *     <li>mark current active transaction with the external system as
+     *     <em>pending</em> and stop using it. The pending transaction will be
+     *     completed when {@link #onSnapshotCompleted} with {@code success ==
+     *     true} is called.
+     *
+     *     <li>store IDs of the pending transaction(s) to she snapshot. Note
+     *     that there can be multiple pending transactions if the previous
+     *     snapshot completed with {@code success == false}
+     *
+     *     <li>optionally, start a new active transaction that will be used to
+     *     handle input or produce output until {@code onSnapshotCompleted()}
+     *     is called. If the implementation doesn't start a new active
+     *     transaction, it can opt to not process more input or emit any output
+     *     (in case of a source processor).
+     * </ul>
+     *
+     * <p>
      * The default implementation takes no action and returns {@code true}.
+     *
+     * @return {@code true} if the saving to snapshot step is now done,
+     *      {@code false} otherwise
      */
     default boolean saveToSnapshot() {
         return true;
     }
 
     /**
+     * This is the 2nd phase of a two-phase commit. It is called after the
+     * snapshot was successfully stored on all other processors in the job on
+     * all cluster members.
+     * <p>
+     * This method can be called even if the {@link #process(int, Inbox)
+     * process()} method didn't process the items in the inbox. After all the
+     * input is exhausted, it is also called between {@link #complete()} calls.
+     * Once {@code complete()} returns {@code true}, this method can still be
+     * called to finish the snapshot that was started before this processor
+     * completed.
+     * <p>
+     * If this processor communicates with an external transactional store, it
+     * should do the following:
+     * <ul>
+     *     <li>if {@code success == true}, it should commit the pending
+     *     transactions
+     *
+     *     <li>if {@code success == false}, it should do nothing to pending
+     *     transactions. If it didn't create new active transaction in {@link
+     *     #saveToSnapshot}, it can continue using the last active transaction
+     *     as active.
+     * </ul>
+     *
+     * <p>
+     * The method is called repeatedly until it eventually returns {@code
+     * true}. No other method on this processor will be called before it
+     * returns {@code true}.
+     * <p>
+     * The default implementation takes no action and returns {@code true}.
+     *
+     * @param success true, if all members were successful in the {@link
+     *         #saveToSnapshot()}
+     * @return {@code true} if this step is now done, {@code false} otherwise
+     */
+    default boolean onSnapshotCompleted(@SuppressWarnings("unused") boolean success) {
+        return true;
+    }
+
+    /**
      * Called when a batch of items is received during the "restore from
      * snapshot" operation. The type of items in the inbox is {@code
-     * Map.Entry}. May emit items to the outbox.
+     * Map.Entry}, exactly as they were saved in {@link #saveToSnapshot()}.
+     * This method may emit items to the outbox.
      * <p>
-     * If it returns with items still present in the inbox, it will be
-     * called again before proceeding to call any other methods. It is
-     * never called with an empty inbox.
+     * If this method returns with items still present in the inbox, it will be
+     * called again before proceeding to call any other methods. It is never
+     * called with an empty inbox.
      * <p>
-     * The default implementation throws an exception.
+     * The default implementation throws an exception - if you emit something
+     * in {@link #saveToSnapshot()}, you must be able to handle it here. If you
+     * don't override {@link #saveToSnapshot()}, throwing an exception here
+     * will never happen.
      */
     default void restoreFromSnapshot(@Nonnull Inbox inbox) {
         throw new JetException("Processor " + getClass().getName()
@@ -245,6 +311,34 @@ public interface Processor {
     /**
      * Called after a job was restarted from a snapshot and the processor
      * has consumed all the snapshot data.
+     * <p>
+     * If this processor communicates with an external transactional store, it
+     * should do the following:
+     * <ul>
+     *     <li>commit transactions with IDs that were stored in the snapshot,
+     *     if the are not already committed. If the processor is unable to
+     *     commit those transactions, data loss might occur. The processor might
+     *     also commit these transactions in {@link #restoreFromSnapshot} as
+     *     soon as transaction ID is received
+     *
+     *     <li>rollback/abort all other transactions that this processor
+     *     created after the transactions stored in the snapshot
+     * </ul>
+     *
+     * <h4>Determining the list of transactions to rollback</h4>
+     *
+     * There are multiple ways to determine it:
+     * <ul>
+     *     <li>enumerate all pending transactions in the system and rollback
+     *     those that were created by this processor. For example, a file sink
+     *     can list files in the directory
+     *
+     *     <li>if the remote system doesn't allow us to enumerate transactions,
+     *     we can use deterministic scheme for transaction ID and probe all IDs
+     *     that could be used by this processor. For example: {@code jobId +
+     *     vertexId + globalProcessorIndex + sequence}.
+     * </ul>
+     *
      * <p>
      * If it returns {@code false}, it will be called again before proceeding
      * to call any other methods.

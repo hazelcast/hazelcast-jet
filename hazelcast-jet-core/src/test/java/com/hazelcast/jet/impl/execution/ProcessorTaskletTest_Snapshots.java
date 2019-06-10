@@ -44,12 +44,14 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.impl.MasterJobContext.SNAPSHOT_RESTORE_EDGE_PRIORITY;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -98,7 +100,7 @@ public class ProcessorTaskletTest_Snapshots {
         instreams.add(instream1);
         outstreams.add(outstream1);
 
-        Tasklet tasklet = createTasklet(ProcessingGuarantee.AT_LEAST_ONCE);
+        ProcessorTasklet tasklet = createTasklet(ProcessingGuarantee.AT_LEAST_ONCE);
 
         // When
         callUntil(tasklet, NO_PROGRESS);
@@ -126,7 +128,7 @@ public class ProcessorTaskletTest_Snapshots {
         instreams.add(instream2);
         outstreams.add(outstream1);
 
-        Tasklet tasklet = createTasklet(EXACTLY_ONCE);
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
 
         // When
         callUntil(tasklet, NO_PROGRESS);
@@ -147,7 +149,7 @@ public class ProcessorTaskletTest_Snapshots {
         // Given
         MockOutboundStream outstream1 = new MockOutboundStream(0, 2);
         outstreams.add(outstream1);
-        Tasklet tasklet = createTasklet(EXACTLY_ONCE);
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
         processor.itemsToEmitInComplete = 4;
 
         // When
@@ -158,7 +160,7 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
-        snapshotContext.startNewSnapshot(0, "map", false);
+        snapshotContext.startNewSnapshot1stPhase(0, "map", false);
         outstream1.flush();
 
         callUntil(tasklet, NO_PROGRESS);
@@ -173,23 +175,22 @@ public class ProcessorTaskletTest_Snapshots {
         Entry<String, String> ssEntry1 = entry("k1", "v1");
         Entry<String, String> ssEntry2 = entry("k2", "v2");
         List<Object> restoredSnapshot = asList(ssEntry1, ssEntry2, DONE_ITEM);
-        MockInboundStream instream1 = new MockInboundStream(Integer.MIN_VALUE, restoredSnapshot, 1024);
-        MockInboundStream instream2 = new MockInboundStream(0, asList(barrier(0), DONE_ITEM), 1024);
+        MockInboundStream instream1 = new MockInboundStream(SNAPSHOT_RESTORE_EDGE_PRIORITY, restoredSnapshot, 1024);
+        MockInboundStream instream2 = new MockInboundStream(0, singletonList(DONE_ITEM), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
 
         instreams.add(instream1);
         instreams.add(instream2);
         outstreams.add(outstream1);
 
-        Tasklet tasklet = createTasklet(EXACTLY_ONCE);
-        snapshotContext.startNewSnapshot(0, null, false);
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
 
         // When
         callUntil(tasklet, DONE);
 
         // Then
-        assertEquals(asList("finishRestore", barrier(0), DONE_ITEM), outstream1.getBuffer());
-        assertEquals(asList(ssEntry1.getValue(), ssEntry2.getValue(), barrier(0), DONE_ITEM), getSnapshotBufferValues());
+        assertEquals(asList("finishRestore", DONE_ITEM), outstream1.getBuffer());
+        assertEquals(singletonList(DONE_ITEM), getSnapshotBufferValues());
     }
 
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
@@ -214,10 +215,11 @@ public class ProcessorTaskletTest_Snapshots {
         return serializationService.toObject(e.getValue());
     }
 
-    private static void callUntil(Tasklet tasklet, ProgressState expectedState) {
+    private static void callUntil(ProcessorTasklet tasklet, ProgressState expectedState) {
         int iterCount = 0;
         for (ProgressState r; (r = tasklet.call()) != expectedState; ) {
-            assertEquals("Failed to make progress", MADE_PROGRESS, r);
+            assertEquals("Failed to make progress after " + iterCount + " iterations, tasklet in state " + tasklet.state(),
+                    MADE_PROGRESS, r);
             assertTrue(String.format(
                     "tasklet.call() invoked %d times without reaching %s. Last state was %s",
                     CALL_COUNT_LIMIT, expectedState, r),
