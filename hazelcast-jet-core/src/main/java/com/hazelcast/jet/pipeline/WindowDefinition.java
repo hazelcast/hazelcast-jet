@@ -77,7 +77,7 @@ public abstract class WindowDefinition {
      * the timestamps would be grouped into the following windows:
      *
      * <pre>
-     *     [0, 1], [0, 1, 2, 3], [3, 4, 5, 6], [5, 6]
+     *     [0, 1], [0, 1, 2, 3], [2, 3, 4, 5], [4, 5, 6], [6]
      * </pre>
      *
      * A sliding window where window size and slide by are the same is equivalent to a
