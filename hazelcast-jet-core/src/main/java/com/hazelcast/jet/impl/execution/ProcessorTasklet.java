@@ -407,10 +407,12 @@ public class ProcessorTasklet implements Tasklet {
         // check ssContext to see if a barrier should be emitted
         long currSnapshotId1 = ssContext.activeSnapshotId1stPhase();
         long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
-        assert currSnapshotId1 >= pendingSnapshotId1 - 1 : "Unexpected new snapshot id: " + currSnapshotId1
-                + ", expected was " + (pendingSnapshotId1 - 1) + " or more";
-        assert currSnapshotId2 >= pendingSnapshotId2 - 1 : "Unexpected new snapshot id: " + currSnapshotId2
-                + ", expected was " + (pendingSnapshotId2 - 1) + " or more";
+        assert currSnapshotId1 + 1 == pendingSnapshotId1 || currSnapshotId1 == pendingSnapshotId1
+                : "Unexpected new 1st phase snapshot id: " + currSnapshotId1 + ", expected was "
+                + (pendingSnapshotId1 - 1) + " or " + pendingSnapshotId1;
+        assert currSnapshotId2 + 1 == pendingSnapshotId2 || currSnapshotId2 == pendingSnapshotId2
+                : "Unexpected new 2nd phase snapshot id: " + currSnapshotId2 + ", expected was "
+                + (pendingSnapshotId2 - 1) + " or " + pendingSnapshotId2;
         if (currSnapshotId1 >= pendingSnapshotId1) {
             pendingSnapshotId1 = currSnapshotId1;
             if (outbox.hasUnfinishedItem()) {
@@ -520,9 +522,9 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     private void observeBarrier(int ordinal, SnapshotBarrier barrier) {
-        if (barrier.snapshotId() < pendingSnapshotId1) {
+        if (barrier.snapshotId() != pendingSnapshotId1) {
             throw new JetException("Unexpected snapshot barrier ID " + barrier.snapshotId() + " from ordinal " + ordinal +
-                    " expected " + pendingSnapshotId1);
+                    ", expected " + pendingSnapshotId1);
         }
         currentBarrier = barrier;
         if (barrier.isTerminal()) {
