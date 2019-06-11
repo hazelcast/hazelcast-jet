@@ -155,8 +155,12 @@ public class SnapshotContext {
      */
     synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshot(
             long snapshotId, String mapName, boolean isTerminal) {
-        assert snapshotId > currentSnapshotId
-                : "new snapshotId not larger than previous. Previous=" + currentSnapshotId + ", new=" + snapshotId;
+        if (snapshotId <= currentSnapshotId) {
+            // This is possible when a SnapshotOperation is retried. We will throw because we
+            // don't know the result of the previous snapshot (it may have failed) and this is rare
+            // if not impossible.
+            throw new RuntimeException("new snapshotId not larger. Previous=" + currentSnapshotId + ", new=" + snapshotId);
+        }
         if (snapshotId != currentSnapshotId + 1) {
             // this can be a result of a lost SnapshotOperation,
             // see OperationLossTest.when_snapshotOperationLost_then_ignored()
