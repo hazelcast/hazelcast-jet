@@ -354,7 +354,7 @@ public class ProcessorTasklet implements Tasklet {
     private void processInbox() {
         long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
         if (currSnapshotId2 >= pendingSnapshotId2) {
-            pendingSnapshotId2 = currSnapshotId2;
+            pendingSnapshotId2 = currSnapshotId2 + 1;
             if (outbox.hasUnfinishedItem()) {
                 outbox.block();
             } else {

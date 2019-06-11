@@ -233,7 +233,7 @@ public class SnapshotContext {
      */
     synchronized CompletableFuture<Void> startNewSnapshot2ndPhase(long snapshotId, boolean success) {
         if (snapshotId == activeSnapshotId2ndPhase) {
-            // this is possible in case of operation packet lost and retried
+            // this is possible in case when the operation packet was lost and retried
             logger.warning("Second request for 2nd phase snapshot with id=" + snapshotId);
             CompletableFuture<Void> res = this.future2ndPhase;
             if (res == null) {
@@ -253,6 +253,7 @@ public class SnapshotContext {
 
         boolean casSuccess = numRemainingTasklets.compareAndSet(0, numTasklets);
         assert casSuccess : "numRemainingTasklets wasn't 0, but " + numRemainingTasklets.get();
+        activeSnapshotId2ndPhase = snapshotId;
         if (numTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately successful
             return completedFuture(null);

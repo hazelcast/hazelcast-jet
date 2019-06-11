@@ -193,6 +193,31 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(singletonList(DONE_ITEM), getSnapshotBufferValues());
     }
 
+    @Test
+    public void test_2phase() {
+        MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0)), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
+
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
+        assertEquals(asList("item", barrier(0)), outstream1.getBuffer());
+        snapshotCollector.getBuffer().clear();
+        outstream1.getBuffer().clear();
+
+        // 1st phase
+        snapshotContext.startNewSnapshot2ndPhase(0, true);
+        callUntil(tasklet, NO_PROGRESS);
+
+        // 2nd phase
+        assertEquals(singletonList("onSnapshotCompleted(true)"), outstream1.getBuffer());
+        assertEquals(emptyList(), getSnapshotBufferValues());
+    }
+
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
@@ -284,14 +309,18 @@ public class ProcessorTaskletTest_Snapshots {
                     snapshotQueue.remove();
                 }
             }
-            snapshotQueue.clear();
             return true;
+        }
+
+        @Override
+        public boolean onSnapshotCompleted(boolean success) {
+            return outbox.offer("onSnapshotCompleted(" + success + ')');
         }
 
         @Override
         public void restoreFromSnapshot(@Nonnull Inbox inbox) {
             for (Object o; (o = inbox.poll()) != null; ) {
-                snapshotQueue.offer((Entry) o);
+                snapshotQueue.add((Entry) o);
             }
         }
 
