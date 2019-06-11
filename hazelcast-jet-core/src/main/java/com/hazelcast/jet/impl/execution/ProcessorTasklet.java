@@ -313,6 +313,7 @@ public class ProcessorTasklet implements Tasklet {
 
             case ON_SNAPSHOT_COMPLETED:
                 if (processor.onSnapshotCompleted(ssContext.isLast1stPhaseSuccessful())) {
+                    ssContext.secondPhaseDoneForTasklet();
                     progTracker.madeProgress();
                     state = processingState();
                 }
@@ -321,7 +322,6 @@ public class ProcessorTasklet implements Tasklet {
             case WAITING_FOR_SNAPSHOT_COMPLETED:
                 long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
                 if (currSnapshotId2 >= pendingSnapshotId2) {
-                    progTracker.madeProgress();
                     state = FINAL_ON_SNAPSHOT_COMPLETED;
                     stateMachineStep(); // recursion
                 }
@@ -329,6 +329,7 @@ public class ProcessorTasklet implements Tasklet {
 
             case FINAL_ON_SNAPSHOT_COMPLETED:
                 if (processor.onSnapshotCompleted(ssContext.isLast1stPhaseSuccessful())) {
+                    ssContext.secondPhaseDoneForTasklet();
                     progTracker.madeProgress();
                     state = EMIT_DONE_ITEM;
                 }

@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestProcessorContext;
+import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.serialization.SerializationService;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -194,10 +196,9 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     @Test
-    public void test_2phase() {
+    public void test_2ndPhase() {
         MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0)), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
-
         instreams.add(instream1);
         outstreams.add(outstream1);
 
@@ -209,13 +210,46 @@ public class ProcessorTaskletTest_Snapshots {
         snapshotCollector.getBuffer().clear();
         outstream1.getBuffer().clear();
 
-        // 1st phase
-        snapshotContext.startNewSnapshot2ndPhase(0, true);
+        // start 2nd phase
+        CompletableFuture<Void> future = snapshotContext.startNewSnapshot2ndPhase(0, true);
         callUntil(tasklet, NO_PROGRESS);
 
-        // 2nd phase
         assertEquals(singletonList("onSnapshotCompleted(true)"), outstream1.getBuffer());
         assertEquals(emptyList(), getSnapshotBufferValues());
+        assertTrue("future not done", future.isDone());
+    }
+
+    @Test
+    public void when_processorCompletesAfter1stPhase_then_doneAfter2ndPhase() {
+        MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0), DONE_ITEM), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0);
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+
+        CompletableFuture<SnapshotOperationResult> future1 = snapshotContext.startNewSnapshot1stPhase(0, "map", false);
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
+        assertEquals(asList("item", barrier(0)), outstream1.getBuffer());
+        snapshotContext.firstPhaseDoneForTasklet(1, 1, 1);
+        assertTrue("future1 not done", future1.isDone());
+        snapshotCollector.getBuffer().clear();
+        outstream1.getBuffer().clear();
+
+        // we push an item after DONE_ITEM. This does not happen in reality, but we use it
+        // to test that the processor ignores it
+        instream1.push("item2");
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(emptyList(), outstream1.getBuffer());
+
+        // start 2nd phase
+        CompletableFuture<Void> future2 = snapshotContext.startNewSnapshot2ndPhase(0, true);
+        callUntil(tasklet, DONE);
+
+        assertEquals(asList("onSnapshotCompleted(true)", DONE_ITEM), outstream1.getBuffer());
+        assertEquals(singletonList(DONE_ITEM), getSnapshotBufferValues());
+        assertTrue("future2 not done", future2.isDone());
     }
 
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
