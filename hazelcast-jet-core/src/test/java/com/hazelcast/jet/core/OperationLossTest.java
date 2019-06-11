@@ -232,5 +232,8 @@ public class OperationLossTest extends JetTestSupport {
 
         // Then
         assertTrueEventually(() -> assertEquals(4, NoOutputSourceP.initCount.get()));
+
+        NoOutputSourceP.proceedLatch.countDown();
+        job.join();
     }
 }
