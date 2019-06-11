@@ -208,13 +208,13 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
         assertEquals(asList("item", barrier(0)), outstream1.getBuffer());
         snapshotCollector.getBuffer().clear();
-        outstream1.getBuffer().clear();
+        outstream1.flush();
 
         // start 2nd phase
         CompletableFuture<Void> future = snapshotContext.startNewSnapshot2ndPhase(0, true);
         callUntil(tasklet, NO_PROGRESS);
 
-        assertEquals(singletonList("onSnapshotCompleted(true)"), outstream1.getBuffer());
+        assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
         assertEquals(emptyList(), getSnapshotBufferValues());
         assertTrue("future not done", future.isDone());
     }
@@ -235,7 +235,7 @@ public class ProcessorTaskletTest_Snapshots {
         snapshotContext.firstPhaseDoneForTasklet(1, 1, 1);
         assertTrue("future1 not done", future1.isDone());
         snapshotCollector.getBuffer().clear();
-        outstream1.getBuffer().clear();
+        outstream1.flush();
 
         // we push an item after DONE_ITEM. This does not happen in reality, but we use it
         // to test that the processor ignores it
@@ -247,9 +247,34 @@ public class ProcessorTaskletTest_Snapshots {
         CompletableFuture<Void> future2 = snapshotContext.startNewSnapshot2ndPhase(0, true);
         callUntil(tasklet, DONE);
 
-        assertEquals(asList("onSnapshotCompleted(true)", DONE_ITEM), outstream1.getBuffer());
+        assertEquals(asList("osc-true-0", DONE_ITEM), outstream1.getBuffer());
         assertEquals(singletonList(DONE_ITEM), getSnapshotBufferValues());
         assertTrue("future2 not done", future2.isDone());
+    }
+
+    @Test
+    public void when_onSnapshotCompletedReturnsFalse_then_calledAgain() {
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(barrier(0)), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        processor.itemsToEmitInOnSnapshotComplete = 2;
+
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(singletonList(barrier(0)), getSnapshotBufferValues());
+        assertEquals(singletonList(barrier(0)), outstream1.getBuffer());
+        snapshotCollector.getBuffer().clear();
+        outstream1.flush();
+
+        // start 2nd phase
+        snapshotContext.startNewSnapshot2ndPhase(0, true);
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
+        outstream1.flush();
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(singletonList("osc-true-1"), outstream1.getBuffer());
     }
 
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
@@ -294,7 +319,9 @@ public class ProcessorTaskletTest_Snapshots {
 
         int nullaryProcessCallCountdown;
         int itemsToEmitInComplete;
+        int itemsToEmitInOnSnapshotComplete = 1;
         int completedCount;
+        int onSnapshotCompletedCount;
         private Outbox outbox;
 
         private Queue<Map.Entry> snapshotQueue = new ArrayDeque<>();
@@ -348,7 +375,11 @@ public class ProcessorTaskletTest_Snapshots {
 
         @Override
         public boolean onSnapshotCompleted(boolean success) {
-            return outbox.offer("onSnapshotCompleted(" + success + ')');
+            if (completedCount < itemsToEmitInOnSnapshotComplete
+                    && outbox.offer("osc-" + success + '-' + onSnapshotCompletedCount)) {
+                onSnapshotCompletedCount++;
+            }
+            return onSnapshotCompletedCount == itemsToEmitInOnSnapshotComplete;
         }
 
         @Override
