@@ -283,7 +283,8 @@ public class SnapshotContext {
             // after all higher priority vertices are done we can start the snapshot
             if (numHigherPriorityTasklets == 0 && activeSnapshotId1stPhase < currentSnapshotId) {
                 activeSnapshotId1stPhase = currentSnapshotId;
-                logger.info("Postponed snapshot " + activeSnapshotId1stPhase + " for " + jobNameAndExecutionId + " started");
+                logger.info("Postponed snapshot " + activeSnapshotId1stPhase + " for " + jobNameAndExecutionId
+                        + " started");
             }
         }
         assert numHigherPriorityTasklets <= numTasklets : "numHigherPriorityTasklets > numTasklets";

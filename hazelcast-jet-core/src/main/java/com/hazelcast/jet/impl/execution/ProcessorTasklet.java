@@ -367,7 +367,8 @@ public class ProcessorTasklet implements Tasklet {
         }
 
         if (inbox.isEmpty()) {
-            if (isSnapshotInbox() || processor.tryProcess()) { // TODO [viliam] tryProcess returned false, but we proceed to snapshot 2nd phase
+            // TODO [viliam] tryProcess returned false, but we proceed to snapshot 2nd phase anyway
+            if (isSnapshotInbox() || processor.tryProcess()) {
                 assert !outbox.hasUnfinishedItem() : isSnapshotInbox()
                         ? "Unfinished item before fillInbox call"
                         : "Processor.tryProcess() returned true, but there's unfinished item in the outbox";

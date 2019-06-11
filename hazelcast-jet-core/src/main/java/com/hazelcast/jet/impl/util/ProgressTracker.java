@@ -73,7 +73,7 @@ public class ProgressTracker {
     }
 
     /**
-     * Marks the progress as done;
+     * Marks the progress as done.
      */
     public void done() {
         isDone = true;
