@@ -66,8 +66,8 @@ enum ProcessorState {
     ON_SNAPSHOT_COMPLETED,
 
     /**
-     * Processor is not doing anything, it cannot terminate until the 2nd phase
-     * arrives.
+     * Processor completed after the 1st phase of the snapshot and is not doing
+     * anything, it cannot terminate until the 2nd phase is done.
      */
     WAITING_FOR_SNAPSHOT_COMPLETED,
 
@@ -76,7 +76,7 @@ enum ProcessorState {
      * returns {@code true}, after the processor completed, i.e. after {@link
      * #WAITING_FOR_SNAPSHOT_COMPLETED}.
      */
-    FINAL_ON_SNAPSHOT_COMPLETED,
+    ON_SNAPSHOT_COMPLETED_BEFORE_END,
 
     /**
      * Waiting for the outbox to accept the {@code DONE_ITEM}.

@@ -55,7 +55,7 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_BARRIER;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.END;
-import static com.hazelcast.jet.impl.execution.ProcessorState.FINAL_ON_SNAPSHOT_COMPLETED;
+import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED_BEFORE_END;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_WATERMARK;
@@ -322,12 +322,12 @@ public class ProcessorTasklet implements Tasklet {
             case WAITING_FOR_SNAPSHOT_COMPLETED:
                 long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
                 if (currSnapshotId2 >= pendingSnapshotId2) {
-                    state = FINAL_ON_SNAPSHOT_COMPLETED;
+                    state = ON_SNAPSHOT_COMPLETED_BEFORE_END;
                     stateMachineStep(); // recursion
                 }
                 return;
 
-            case FINAL_ON_SNAPSHOT_COMPLETED:
+            case ON_SNAPSHOT_COMPLETED_BEFORE_END:
                 if (processor.onSnapshotCompleted(ssContext.isLast1stPhaseSuccessful())) {
                     ssContext.secondPhaseDoneForTasklet();
                     progTracker.madeProgress();
