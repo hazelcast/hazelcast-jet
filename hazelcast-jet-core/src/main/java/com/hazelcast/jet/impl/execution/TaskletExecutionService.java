@@ -124,6 +124,7 @@ public class TaskletExecutionService {
             @Nonnull CompletableFuture<Void> cancellationFuture,
             @Nonnull ClassLoader jobClassLoader
     ) {
+        logger.info("aaa, tasklets=" + tasklets);
         final ExecutionTracker executionTracker = new ExecutionTracker(tasklets.size(), cancellationFuture);
         try {
             final Map<Boolean, List<Tasklet>> byCooperation =

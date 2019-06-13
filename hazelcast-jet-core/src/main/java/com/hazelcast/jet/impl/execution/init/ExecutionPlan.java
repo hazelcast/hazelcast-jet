@@ -609,9 +609,15 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return lastSnapshotId;
     }
 
-    public int getStoreSnapshotTaskletCount() {
+    public int getSsTaskletCount() {
         return (int) tasklets.stream()
                              .filter(t -> t instanceof StoreSnapshotTasklet)
+                             .count();
+    }
+
+    public int getPTaskletCount() {
+        return (int) tasklets.stream()
+                             .filter(t -> t instanceof ProcessorTasklet)
                              .count();
     }
 

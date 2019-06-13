@@ -45,7 +45,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledInitially_then_cannotStartNewSnapshot() {
         /// When
-        ssContext.initTaskletCount(1, 0);
+        ssContext.initTaskletCount(1, 1, 0);
         ssContext.cancel();
 
         // Then
@@ -55,7 +55,7 @@ public class SnapshotContextSimpleTest {
 
     @Test
     public void when_cancelledAfterSnapshotDone_then_cannotStartNewSnapshot() {
-        ssContext.initTaskletCount(1, 0);
+        ssContext.initTaskletCount(1, 1, 0);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
         /// When
@@ -69,8 +69,8 @@ public class SnapshotContextSimpleTest {
     }
 
     @Test
-    public void when_cancelledMidSnapshot_then_futureCompleted_and_taskletDoneSucceeds() {
-        ssContext.initTaskletCount(3, 0);
+    public void when_cancelledMidSnapshot_then_futureCompleted() {
+        ssContext.initTaskletCount(3, 3, 0);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
         // When
@@ -80,14 +80,11 @@ public class SnapshotContextSimpleTest {
 
         // Then1
         assertTrue(future.isDone());
-
-        // Then2
-        ssContext.taskletDone(10, false);
     }
 
     @Test
     public void when_cancelledMidSnapshot_then_snapshotDoneForTaskletSucceeds() {
-        ssContext.initTaskletCount(2, 0);
+        ssContext.initTaskletCount(2, 2, 0);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
         // When
@@ -101,12 +98,12 @@ public class SnapshotContextSimpleTest {
 
     @Test
     public void test_taskletDoneWhilePostponed() {
-        ssContext.initTaskletCount(2, 2);
+        ssContext.initTaskletCount(2, 2, 2);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
         assertEquals(9, ssContext.activeSnapshotIdPhase1());
-        ssContext.taskletDone(9, true);
+        ssContext.storeSnapshotTaskletDone(9, true);
         assertEquals(9, ssContext.activeSnapshotIdPhase1());
-        ssContext.taskletDone(9, true);
+        ssContext.storeSnapshotTaskletDone(9, true);
         assertEquals(10, ssContext.activeSnapshotIdPhase1());
         assertTrue(future.isDone());
     }

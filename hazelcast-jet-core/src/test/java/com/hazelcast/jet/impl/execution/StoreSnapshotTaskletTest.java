@@ -63,7 +63,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
     private void init(List<Object> inputData) {
         ssContext = new SnapshotContext(Logger.getLogger(SnapshotContext.class), "test job", 1,
                 ProcessingGuarantee.EXACTLY_ONCE);
-        ssContext.initTaskletCount(1, 0);
+        ssContext.initTaskletCount(1, 1, 0);
         inputData = new ArrayList<>(inputData);
         // serialize input data
         for (int i = 0; i < inputData.size(); i++) {

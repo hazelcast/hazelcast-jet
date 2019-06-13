@@ -78,7 +78,7 @@ public class SnapshotContextTest {
         SnapshotContext ssContext =
                 new SnapshotContext(mock(ILogger.class), "test job", 9, ProcessingGuarantee.EXACTLY_ONCE);
 
-        ssContext.initTaskletCount(taskletCount, numHigherPriority);
+        ssContext.initTaskletCount(taskletCount, taskletCount, numHigherPriority);
         CompletableFuture<SnapshotOperationResult> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
             future = ssContext.startNewSnapshotPhase1(10, "map", false);
@@ -89,10 +89,9 @@ public class SnapshotContextTest {
         if (taskletDone == TaskletDone.NOT_DONE) {
             ssContext.phase1DoneForTasklet(0, 0, 0);
         } else if (taskletDone == TaskletDone.DONE_BEFORE_CURRENT_SNAPSHOT) {
-            ssContext.taskletDone(9, numHigherPriority > 0);
+            ssContext.storeSnapshotTaskletDone(9, numHigherPriority > 0);
         } else if (taskletDone == TaskletDone.DONE_AFTER_CURRENT_SNAPSHOT) {
             ssContext.phase1DoneForTasklet(0, 0, 0);
-            ssContext.taskletDone(10, numHigherPriority > 0);
         }
 
         if (snapshotStarted == SnapshotStarted.AFTER) {

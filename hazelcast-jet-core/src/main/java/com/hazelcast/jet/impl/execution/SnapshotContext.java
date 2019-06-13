@@ -48,14 +48,20 @@ public class SnapshotContext {
      * decremented as the tasklets complete (this is when they receive
      * DONE_ITEM and after all pending async ops completed).
      */
-    private int numTasklets = Integer.MIN_VALUE;
+    private int numSsTasklets = Integer.MIN_VALUE;
+
+    /**
+     * Current number of {@link ProcessorTasklet}s in the job. It's
+     * decremented as they tasklets complete.
+     */
+    private int numPTasklets = Integer.MIN_VALUE;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job connected
      * to higher priority vertices. It's decremented when higher priority
      * tasklet completes. Snapshot is postponed until this counter is 0.
      */
-    private int numHigherPriorityTasklets = Integer.MIN_VALUE;
+    private int numPrioritySsTasklets = Integer.MIN_VALUE;
 
     /**
      * Used to count remaining participants in both phase 1 and 2 of the
@@ -65,7 +71,7 @@ public class SnapshotContext {
      * and the member replies to the master to start the next phase or next
      * snapshot.
      * <p>
-     * It's in the range 0..numTasklets (inclusive).
+     * It's in the range 0..numSsTasklets (inclusive).
      */
     private final AtomicInteger numRemainingTasklets = new AtomicInteger();
 
@@ -175,15 +181,19 @@ public class SnapshotContext {
         return guarantee;
     }
 
-    synchronized void initTaskletCount(int totalTaskletCount, int highPriorityTaskletCount) {
-        assert this.numTasklets == Integer.MIN_VALUE : "Tasklet count already set once.";
-        assert totalTaskletCount >= highPriorityTaskletCount :
-                "totalTaskletCount=" + totalTaskletCount + ", highPriorityTaskletCount=" + highPriorityTaskletCount;
-        assert totalTaskletCount > 0 : "totalTaskletCount=" + totalTaskletCount;
-        assert highPriorityTaskletCount >= 0 : "highPriorityTaskletCount=" + highPriorityTaskletCount;
+    synchronized void initTaskletCount(int numPTasklets, int numSsTasklets, int numPrioritySsTasklets) {
+        assert this.numSsTasklets == Integer.MIN_VALUE && this.numPTasklets == Integer.MIN_VALUE
+                : "Tasklet count already set";
+        assert numSsTasklets >= 1
+                && numPrioritySsTasklets >= 0
+                && numSsTasklets >= numPrioritySsTasklets
+                && numPTasklets >= numSsTasklets
+                : "numPTasklets=" + numPTasklets + ", numSsTasklets=" + numSsTasklets + ", numPrioritySsTasklets="
+                        + numPrioritySsTasklets;
 
-        this.numTasklets = totalTaskletCount;
-        this.numHigherPriorityTasklets = highPriorityTaskletCount;
+        this.numSsTasklets = numSsTasklets;
+        this.numPTasklets = numPTasklets;
+        this.numPrioritySsTasklets = numPrioritySsTasklets;
     }
 
     /**
@@ -196,26 +206,26 @@ public class SnapshotContext {
             // This is possible when a SnapshotOperation is retried. We will throw because we
             // don't know the result of the previous snapshot (it may have failed) and this is rare
             // if not impossible.
-            throw new RuntimeException("new snapshotId equal to previous, operation possibly retried. Previous="
+            throw new RuntimeException("new snapshotId equal to previous, operation probably retried. Previous="
                     + currentSnapshotId + ", new=" + snapshotId);
         }
         assert snapshotId == currentSnapshotId + 1
                 : "New snapshotId for " + jobNameAndExecutionId + " not incremented by 1. " +
                         "Previous=" + currentSnapshotId + ", new=" + snapshotId;
         assert currentSnapshotId == activeSnapshotIdPhase1 : "last snapshot was postponed but not started";
-        assert numTasklets >= 0 : "numTasklets=" + numTasklets;
+        assert numSsTasklets >= 0 : "numSsTasklets=" + numSsTasklets;
         if (isCancelled) {
             throw new CancellationException("execution cancelled");
         }
         this.isTerminal = isTerminal;
 
-        boolean success = numRemainingTasklets.compareAndSet(0, numTasklets);
+        boolean success = numRemainingTasklets.compareAndSet(0, numSsTasklets);
         assert success : "numRemainingTasklets wasn't 0, but " + numRemainingTasklets.get();
 
         currentSnapshotId = snapshotId;
         currentMapName = mapName;
 
-        if (numHigherPriorityTasklets == 0) {
+        if (numPrioritySsTasklets == 0) {
             // if there are no higher priority tasklets, start the snapshot immediately
             activeSnapshotIdPhase1 = currentSnapshotId;
         } else {
@@ -223,9 +233,9 @@ public class SnapshotContext {
             // see #taskletDone()
             logger.info("Snapshot " + snapshotId + " for " + jobNameAndExecutionId + " is postponed" +
                     " until all higher priority vertices are completed (number of such vertices = "
-                    + numHigherPriorityTasklets + ')');
+                    + numPrioritySsTasklets + ')');
         }
-        if (numTasklets == 0) {
+        if (numSsTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately successful
             return completedFuture(new SnapshotOperationResult(0, 0, 0, null));
         }
@@ -253,17 +263,17 @@ public class SnapshotContext {
         assert snapshotId > activeSnapshotIdPhase2
                 : "new snapshotId for phase 2 not larger than previous. Previous=" + activeSnapshotIdPhase2 + ", new="
                         + snapshotId;
-        assert numTasklets >= 0 : "numTasklets=" + numTasklets;
+        assert numPTasklets >= 0 : "numPTasklets=" + numPTasklets;
         if (isCancelled) {
             throw new CancellationException("execution cancelled");
         }
         this.lastPhase1Successful = success;
-        assert numHigherPriorityTasklets == 0 : "numHigherPriorityTasklets=" + numHigherPriorityTasklets;
+        assert numPrioritySsTasklets == 0 : "numPrioritySsTasklets=" + numPrioritySsTasklets;
 
-        boolean casSuccess = numRemainingTasklets.compareAndSet(0, numTasklets);
+        boolean casSuccess = numRemainingTasklets.compareAndSet(0, numPTasklets);
         assert casSuccess : "numRemainingTasklets wasn't 0, but " + numRemainingTasklets.get();
         activeSnapshotIdPhase2 = snapshotId;
-        if (numTasklets == 0) {
+        if (numPTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately successful
             return completedFuture(null);
         }
@@ -280,23 +290,23 @@ public class SnapshotContext {
      *                               tasklet did or did not do the current
      *                               snapshot.
      */
-    synchronized void taskletDone(long lastCompletedSnapshotId, boolean isHigherPrioritySource) {
-        assert numTasklets > 0 : "numTasklets=" + numTasklets;
+    synchronized void storeSnapshotTaskletDone(long lastCompletedSnapshotId, boolean isHigherPrioritySource) {
+        assert numSsTasklets > 0 : "numSsTasklets=" + numSsTasklets;
         assert lastCompletedSnapshotId <= activeSnapshotIdPhase1 : "activeSnapshotIdPhase1=" + activeSnapshotIdPhase1
                 + ", tasklet.lastCompletedSnapshotId=" + lastCompletedSnapshotId;
 
-        numTasklets--;
+        numSsTasklets--;
         if (isHigherPrioritySource) {
-            assert numHigherPriorityTasklets > 0 : "numHigherPriorityTasklets=" + numHigherPriorityTasklets;
-            numHigherPriorityTasklets--;
+            assert numPrioritySsTasklets > 0 : "numPrioritySsTasklets=" + numPrioritySsTasklets;
+            numPrioritySsTasklets--;
             // after all higher priority vertices are done we can start the snapshot
-            if (numHigherPriorityTasklets == 0 && activeSnapshotIdPhase1 < currentSnapshotId) {
+            if (numPrioritySsTasklets == 0 && activeSnapshotIdPhase1 < currentSnapshotId) {
                 activeSnapshotIdPhase1 = currentSnapshotId;
                 logger.info("Postponed snapshot " + activeSnapshotIdPhase1 + " for " + jobNameAndExecutionId
                         + " started");
             }
         }
-        assert numHigherPriorityTasklets <= numTasklets : "numHigherPriorityTasklets > numTasklets";
+        assert numPrioritySsTasklets <= numSsTasklets : "numPrioritySsTasklets > numSsTasklets";
         assert lastCompletedSnapshotId <= currentSnapshotId : "tasklet completed a snapshot that didn't start yet";
 
         if (lastCompletedSnapshotId < currentSnapshotId) {
@@ -309,6 +319,11 @@ public class SnapshotContext {
                     : "lastCompletedSnapshotId=" + lastCompletedSnapshotId + ", activeSnapshotIdPhase1="
                             + activeSnapshotIdPhase1 + ", activeSnapshotIdPhase2=" + activeSnapshotIdPhase2;
         }
+    }
+
+    synchronized void processorTaskletDone() {
+        assert numPTasklets > 0 : "numPTasklets=" + numPTasklets;
+        numPTasklets--;
     }
 
     /**

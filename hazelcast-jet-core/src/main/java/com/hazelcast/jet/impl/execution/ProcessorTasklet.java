@@ -342,6 +342,7 @@ public class ProcessorTasklet implements Tasklet {
 
             case EMIT_DONE_ITEM:
                 if (outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
+                    ssContext.processorTaskletDone();
                     state = END;
                     progTracker.done();
                 }

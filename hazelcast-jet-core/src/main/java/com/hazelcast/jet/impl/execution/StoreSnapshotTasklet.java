@@ -89,7 +89,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 ProgressState result = inboundEdgeStream.drainTo(addToInboxFunction);
                 if (result.isDone()) {
                     assert ssWriter.isEmpty() : "input is done, but we had some entries and not the barrier";
-                    snapshotContext.taskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
+                    snapshotContext.storeSnapshotTaskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
                     state = DONE;
                     progTracker.reset();
                 }
