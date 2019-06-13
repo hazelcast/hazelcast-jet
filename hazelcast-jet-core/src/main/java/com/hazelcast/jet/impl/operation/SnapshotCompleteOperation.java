@@ -16,7 +16,73 @@
 
 package com.hazelcast.jet.impl.operation;
 
-public class SnapshotCompleteOperation {
+import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.execution.ExecutionContext;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
 
-    // TODO [viliam] ensure operation is idempotent
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+
+public class SnapshotCompleteOperation extends AsyncJobOperation {
+
+    private long executionId;
+    private long snapshotId;
+    private boolean success;
+
+    // for deserialization
+    public SnapshotCompleteOperation() {
+    }
+
+    public SnapshotCompleteOperation(long jobId, long executionId, long snapshotId, boolean success) {
+        super(jobId);
+        this.executionId = executionId;
+        this.snapshotId = snapshotId;
+        this.success = success;
+    }
+
+    @Override
+    protected CompletableFuture<Void> doRun() {
+        JetService service = getService();
+        ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
+                getCallerAddress(), jobId(), executionId, getClass().getSimpleName()
+        );
+
+        return ctx.beginSnapshotPhase2(snapshotId, success)
+                  .whenComplete((r, t) -> {
+                    if (t != null) {
+                        getLogger().warning(
+                                String.format("Snapshot %d phase 2 for %s finished with an error on member: %s",
+                                snapshotId, ctx.jobNameAndExecutionId(), t), t);
+                    } else {
+                        logFine(getLogger(), "Snapshot %s phase 2 for %s finished successfully on member",
+                                snapshotId, ctx.jobNameAndExecutionId());
+                    }
+                });
+    }
+
+    @Override
+    public int getId() {
+        return JetInitDataSerializerHook.SNAPSHOT_COMPLETE_OPERATION;
+    }
+
+    @Override
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        super.writeInternal(out);
+        out.writeLong(executionId);
+        out.writeLong(snapshotId);
+        out.writeBoolean(success);
+    }
+
+    @Override
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        super.readInternal(in);
+        executionId = in.readLong();
+        snapshotId = in.readLong();
+        success = in.readBoolean();
+    }
 }
+

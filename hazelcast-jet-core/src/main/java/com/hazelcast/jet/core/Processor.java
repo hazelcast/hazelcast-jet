@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.logging.ILogger;
 
@@ -250,7 +251,7 @@ public interface Processor {
     }
 
     /**
-     * This is the 2nd phase of a two-phase commit. It is called after the
+     * This is the second phase of a two-phase commit. It is called after the
      * snapshot was successfully stored on all other processors in the job on
      * all cluster members.
      * <p>
@@ -264,27 +265,36 @@ public interface Processor {
      * If this processor communicates with an external transactional store, it
      * should do the following:
      * <ul>
-     *     <li>if {@code success == true}, it should commit the pending
-     *     transactions
+     *     <li>if {@code commitTransactions == true}, it should commit the
+     *     pending transactions
      *
-     *     <li>if {@code success == false}, it should do nothing to pending
-     *     transactions. If it didn't create new active transaction in {@link
-     *     #saveToSnapshot}, it can continue using the last active transaction
-     *     as active.
+     *     <li>if {@code commitTransactions == false}, it should do nothing to
+     *     pending transactions. If it didn't create new active transaction in
+     *     {@link #saveToSnapshot}, it can continue using the last active
+     *     transaction as active.
      * </ul>
      *
      * <p>
      * The method is called repeatedly until it eventually returns {@code
      * true}. No other method on this processor will be called before it
      * returns {@code true}.
+     *
+     * <h4>Error Handling</h4>
+     *
+     * The two-phase commit requires that the second phase must eventually
+     * succeed. If you're not able to commit your transactions now, you should
+     * either return {@code false} and try again later, or you can throw, in
+     * which case when the job is restarted, it will be required to commit the
+     * transactions with IDs stored in the state snapshot. This is necessary to
+     * ensure exactly-once processing of transactional processors.
      * <p>
      * The default implementation takes no action and returns {@code true}.
      *
-     * @param success true, if all members were successful in the {@link
-     *         #saveToSnapshot()}
+     * @param commitTransactions true, if all members were successful in the
+     *      {@link #saveToSnapshot()}
      * @return {@code true} if this step is now done, {@code false} otherwise
      */
-    default boolean onSnapshotCompleted(@SuppressWarnings("unused") boolean success) {
+    default boolean onSnapshotCompleted(@SuppressWarnings("unused") boolean commitTransactions) {
         return true;
     }
 
@@ -339,6 +349,14 @@ public interface Processor {
      *     vertexId + globalProcessorIndex + sequence}.
      * </ul>
      *
+     * <p>
+     * The processor must be ready to restore a transaction ID that no longer
+     * exists in the remote system: either because the transaction timed out in
+     * the remote system or because the user isn't restoring from the latest
+     * snapshot (such as when restarting from an exported snapshot). Also the
+     * job ID, if it's part of the transaction ID, will be different from the
+     * current job ID, if the job was {@linkplain
+     * JobConfig#setInitialSnapshotName started from an exported state}.
      * <p>
      * If it returns {@code false}, it will be called again before proceeding
      * to call any other methods.

@@ -147,7 +147,7 @@ public class ProcessorTasklet implements Tasklet {
         outbox = createOutbox(ssCollector);
         receivedBarriers = new BitSet(instreams.size());
         state = processingState();
-        pendingSnapshotId1 = pendingSnapshotId2 = ssContext.activeSnapshotId1stPhase() + 1;
+        pendingSnapshotId1 = pendingSnapshotId2 = ssContext.activeSnapshotIdPhase1() + 1;
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
@@ -301,7 +301,8 @@ public class ProcessorTasklet implements Tasklet {
                 if (outbox.offerToEdgesAndSnapshot(currentBarrier)) {
                     progTracker.madeProgress();
                     if (currentBarrier.isTerminal()) {
-                        state = EMIT_DONE_ITEM;
+                        // TODO [viliam] add test for terminal snapshot
+                        state = WAITING_FOR_SNAPSHOT_COMPLETED;
                     } else {
                         currentBarrier = null;
                         receivedBarriers.clear();
@@ -312,15 +313,15 @@ public class ProcessorTasklet implements Tasklet {
                 return;
 
             case ON_SNAPSHOT_COMPLETED:
-                if (processor.onSnapshotCompleted(ssContext.isLast1stPhaseSuccessful())) {
-                    ssContext.secondPhaseDoneForTasklet();
+                if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
+                    ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
                     state = processingState();
                 }
                 return;
 
             case WAITING_FOR_SNAPSHOT_COMPLETED:
-                long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
+                long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
                 if (currSnapshotId2 >= pendingSnapshotId2) {
                     state = ON_SNAPSHOT_COMPLETED_BEFORE_END;
                     stateMachineStep(); // recursion
@@ -328,8 +329,8 @@ public class ProcessorTasklet implements Tasklet {
                 return;
 
             case ON_SNAPSHOT_COMPLETED_BEFORE_END:
-                if (processor.onSnapshotCompleted(ssContext.isLast1stPhaseSuccessful())) {
-                    ssContext.secondPhaseDoneForTasklet();
+                if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
+                    ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
                     state = EMIT_DONE_ITEM;
                 }
@@ -353,7 +354,7 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     private void processInbox() {
-        long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
+        long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
         if (currSnapshotId2 >= pendingSnapshotId2) {
             pendingSnapshotId2 = currSnapshotId2 + 1;
             if (outbox.hasUnfinishedItem()) {
@@ -367,7 +368,7 @@ public class ProcessorTasklet implements Tasklet {
         }
 
         if (inbox.isEmpty()) {
-            // TODO [viliam] tryProcess returned false, but we proceed to snapshot 2nd phase anyway
+            // TODO [viliam] tryProcess returned false, but we proceed to snapshot phase 2 anyway
             if (isSnapshotInbox() || processor.tryProcess()) {
                 assert !outbox.hasUnfinishedItem() : isSnapshotInbox()
                         ? "Unfinished item before fillInbox call"
@@ -405,13 +406,13 @@ public class ProcessorTasklet implements Tasklet {
 
     private void complete() {
         // check ssContext to see if a barrier should be emitted
-        long currSnapshotId1 = ssContext.activeSnapshotId1stPhase();
-        long currSnapshotId2 = ssContext.activeSnapshotId2ndPhase();
+        long currSnapshotId1 = ssContext.activeSnapshotIdPhase1();
+        long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
         assert currSnapshotId1 + 1 == pendingSnapshotId1 || currSnapshotId1 == pendingSnapshotId1
-                : "Unexpected new 1st phase snapshot id: " + currSnapshotId1 + ", expected was "
+                : "Unexpected new phase 1 snapshot id: " + currSnapshotId1 + ", expected was "
                 + (pendingSnapshotId1 - 1) + " or " + pendingSnapshotId1;
         assert currSnapshotId2 + 1 == pendingSnapshotId2 || currSnapshotId2 == pendingSnapshotId2
-                : "Unexpected new 2nd phase snapshot id: " + currSnapshotId2 + ", expected was "
+                : "Unexpected new phase 2 snapshot id: " + currSnapshotId2 + ", expected was "
                 + (pendingSnapshotId2 - 1) + " or " + pendingSnapshotId2;
         if (currSnapshotId1 >= pendingSnapshotId1) {
             pendingSnapshotId1 = currSnapshotId1;
@@ -425,7 +426,7 @@ public class ProcessorTasklet implements Tasklet {
                 return;
             }
         } else if (currSnapshotId2 >= pendingSnapshotId2) {
-            pendingSnapshotId2 = currSnapshotId2;
+            pendingSnapshotId2 = currSnapshotId2 + 1;
             if (outbox.hasUnfinishedItem()) {
                 outbox.block();
             } else {

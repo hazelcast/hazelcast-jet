@@ -60,16 +60,16 @@ public class SnapshotOperation extends AsyncJobOperation {
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
                 getCallerAddress(), jobId(), executionId, getClass().getSimpleName()
         );
-        CompletableFuture<SnapshotOperationResult> future = ctx.beginSnapshot(snapshotId, mapName, isTerminal)
+        CompletableFuture<SnapshotOperationResult> future = ctx.beginSnapshotPhase1(snapshotId, mapName, isTerminal)
                 .exceptionally(exc -> new SnapshotOperationResult(0, 0, 0, exc))
                 .thenApply(result -> {
                     if (result.getError() == null) {
                         logFine(getLogger(),
-                                "Snapshot %s for %s finished successfully on member",
+                                "Snapshot %s phase 1 for %s finished successfully on member",
                                 snapshotId, ctx.jobNameAndExecutionId());
                     } else {
-                        getLogger().warning(String.format("Snapshot %d for %s finished with an error on member: %s",
-                                snapshotId, ctx.jobNameAndExecutionId(), result.getError()));
+                        getLogger().warning(String.format("Snapshot %d phase 1 for %s finished with an error on member: " +
+                                        "%s", snapshotId, ctx.jobNameAndExecutionId(), result.getError()));
                     }
                     return result;
                 });

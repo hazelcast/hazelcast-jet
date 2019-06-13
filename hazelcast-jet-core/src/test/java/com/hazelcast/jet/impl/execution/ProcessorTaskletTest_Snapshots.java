@@ -162,7 +162,7 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
-        snapshotContext.startNewSnapshot1stPhase(0, "map", false);
+        snapshotContext.startNewSnapshotPhase1(0, "map", false);
         outstream1.flush();
 
         callUntil(tasklet, NO_PROGRESS);
@@ -196,7 +196,7 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     @Test
-    public void test_2ndPhase() {
+    public void test_phase2() {
         MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0)), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
@@ -210,8 +210,8 @@ public class ProcessorTaskletTest_Snapshots {
         snapshotCollector.getBuffer().clear();
         outstream1.flush();
 
-        // start 2nd phase
-        CompletableFuture<Void> future = snapshotContext.startNewSnapshot2ndPhase(0, true);
+        // start phase 2
+        CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, NO_PROGRESS);
 
         assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
@@ -220,7 +220,7 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     @Test
-    public void when_processorCompletesAfter1stPhase_then_doneAfter2ndPhase() {
+    public void when_processorCompletesAfterPhase1_then_doneAfterPhase2() {
         MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0), DONE_ITEM), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
@@ -228,11 +228,11 @@ public class ProcessorTaskletTest_Snapshots {
 
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
 
-        CompletableFuture<SnapshotOperationResult> future1 = snapshotContext.startNewSnapshot1stPhase(0, "map", false);
+        CompletableFuture<SnapshotOperationResult> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", false);
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
         assertEquals(asList("item", barrier(0)), outstream1.getBuffer());
-        snapshotContext.firstPhaseDoneForTasklet(1, 1, 1);
+        snapshotContext.phase1DoneForTasklet(1, 1, 1);
         assertTrue("future1 not done", future1.isDone());
         snapshotCollector.getBuffer().clear();
         outstream1.flush();
@@ -243,8 +243,8 @@ public class ProcessorTaskletTest_Snapshots {
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(emptyList(), outstream1.getBuffer());
 
-        // start 2nd phase
-        CompletableFuture<Void> future2 = snapshotContext.startNewSnapshot2ndPhase(0, true);
+        // start phase 2
+        CompletableFuture<Void> future2 = snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, DONE);
 
         assertEquals(asList("osc-true-0", DONE_ITEM), outstream1.getBuffer());
@@ -268,8 +268,8 @@ public class ProcessorTaskletTest_Snapshots {
         snapshotCollector.getBuffer().clear();
         outstream1.flush();
 
-        // start 2nd phase
-        snapshotContext.startNewSnapshot2ndPhase(0, true);
+        // start phase 2
+        snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
         outstream1.flush();
@@ -374,9 +374,9 @@ public class ProcessorTaskletTest_Snapshots {
         }
 
         @Override
-        public boolean onSnapshotCompleted(boolean success) {
+        public boolean onSnapshotCompleted(boolean commitTransactions) {
             if (completedCount < itemsToEmitInOnSnapshotComplete
-                    && outbox.offer("osc-" + success + '-' + onSnapshotCompletedCount)) {
+                    && outbox.offer("osc-" + commitTransactions + '-' + onSnapshotCompletedCount)) {
                 onSnapshotCompletedCount++;
             }
             return onSnapshotCompletedCount == itemsToEmitInOnSnapshotComplete;

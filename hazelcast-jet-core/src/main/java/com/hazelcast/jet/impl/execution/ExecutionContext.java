@@ -204,10 +204,10 @@ public class ExecutionContext {
     }
 
     /**
-     * Starts a new snapshot by incrementing the current snapshot id
+     * Starts the phase 1 of a new snapshot.
      */
-    public CompletableFuture<SnapshotOperationResult> beginSnapshot(long snapshotId, String mapName,
-                                                                  boolean isTerminal) {
+    public CompletableFuture<SnapshotOperationResult> beginSnapshotPhase1(long snapshotId, String mapName,
+                                                                          boolean isTerminal) {
         synchronized (executionLock) {
             if (cancellationFuture.isDone()) {
                 throw new CancellationException();
@@ -215,7 +215,22 @@ public class ExecutionContext {
                 // if execution is done, there are 0 processors to take snapshots. Therefore we're done now.
                 return CompletableFuture.completedFuture(new SnapshotOperationResult(0, 0, 0, null));
             }
-            return snapshotContext.startNewSnapshot1stPhase(snapshotId, mapName, isTerminal);
+            return snapshotContext.startNewSnapshotPhase1(snapshotId, mapName, isTerminal);
+        }
+    }
+
+    /**
+     * Starts the phase 2 of the current snapshot.
+     */
+    public CompletableFuture<Void> beginSnapshotPhase2(long snapshotId, boolean success) {
+        synchronized (executionLock) {
+            if (cancellationFuture.isDone()) {
+                throw new CancellationException();
+            } else if (executionFuture != null && executionFuture.isDone()) {
+                // if execution is done, there are 0 processors to take snapshots. Therefore we're done now.
+                return CompletableFuture.completedFuture(null);
+            }
+            return snapshotContext.startNewSnapshotPhase2(snapshotId, success);
         }
     }
 

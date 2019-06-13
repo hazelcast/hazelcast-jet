@@ -209,6 +209,7 @@ public interface Job {
      *            overwritten
      * @throws JetException if the job is in an incorrect state: completed,
      *            cancelled or is in the process of restarting or suspending.
+     * @throws SnapshotFailedInSecondPhaseWarning TODO [viliam]
      */
     JobStateSnapshot cancelAndExportSnapshot(String name);
 
@@ -244,10 +245,13 @@ public interface Job {
      * <p>
      * The method call will block until it has fully exported the snapshot.
      *
+     * TODO [viliam] describe 2-phase snapshot behavior
+     *
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten
      * @throws JetException if the job is in an incorrect state: completed,
      *            cancelled or is in the process of restarting or suspending.
+     * @throws SnapshotFailedInSecondPhaseWarning TODO [viliam]
      */
     JobStateSnapshot exportSnapshot(String name);
 }

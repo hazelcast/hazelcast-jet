@@ -81,22 +81,22 @@ public class SnapshotContextTest {
         ssContext.initTaskletCount(taskletCount, numHigherPriority);
         CompletableFuture<SnapshotOperationResult> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
-            future = ssContext.startNewSnapshot1stPhase(10, "map", false);
+            future = ssContext.startNewSnapshotPhase1(10, "map", false);
             assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10,
-                    ssContext.activeSnapshotId1stPhase());
+                    ssContext.activeSnapshotIdPhase1());
         }
 
         if (taskletDone == TaskletDone.NOT_DONE) {
-            ssContext.firstPhaseDoneForTasklet(0, 0, 0);
+            ssContext.phase1DoneForTasklet(0, 0, 0);
         } else if (taskletDone == TaskletDone.DONE_BEFORE_CURRENT_SNAPSHOT) {
             ssContext.taskletDone(9, numHigherPriority > 0);
         } else if (taskletDone == TaskletDone.DONE_AFTER_CURRENT_SNAPSHOT) {
-            ssContext.firstPhaseDoneForTasklet(0, 0, 0);
+            ssContext.phase1DoneForTasklet(0, 0, 0);
             ssContext.taskletDone(10, numHigherPriority > 0);
         }
 
         if (snapshotStarted == SnapshotStarted.AFTER) {
-            future = ssContext.startNewSnapshot1stPhase(10, "map", false);
+            future = ssContext.startNewSnapshotPhase1(10, "map", false);
         }
 
         assertNotNull("future == null", future);
@@ -106,7 +106,7 @@ public class SnapshotContextTest {
         assertEquals("activeSnapshotId at the end",
                 taskletDone == TaskletDone.NOT_DONE && numHigherPriority > 0
                         ? 9
-                        : 10, ssContext.activeSnapshotId1stPhase());
+                        : 10, ssContext.activeSnapshotIdPhase1());
     }
 
     private enum SnapshotStarted {

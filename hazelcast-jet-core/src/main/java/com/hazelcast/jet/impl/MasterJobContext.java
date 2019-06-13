@@ -451,7 +451,7 @@ public class MasterJobContext {
         // this method can be called multiple times to handle the termination, it must
         // be safe against it (idempotent).
         if (mode.isWithTerminalSnapshot()) {
-            mc.snapshotContext().tryBeginSnapshot();
+            mc.snapshotContext().tryBeginSnapshotPhase1();
         } else if (executionFailureCallback != null) {
             executionFailureCallback.cancelInvocations(mode);
         }

@@ -42,6 +42,7 @@ import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.operation.PrepareForPassiveClusterOperation;
 import com.hazelcast.jet.impl.operation.ResumeJobOperation;
+import com.hazelcast.jet.impl.operation.SnapshotCompleteOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
@@ -96,6 +97,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SNAPSHOT_VALIDATION_RECORD = 35;
     public static final int CLUSTER_METADATA = 36;
     public static final int GET_CLUSTER_METADATA_OP = 37;
+    public static final int SNAPSHOT_COMPLETE_OPERATION = 38;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -188,6 +190,8 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new ClusterMetadata();
                 case GET_CLUSTER_METADATA_OP:
                     return new GetClusterMetadataOperation();
+                case SNAPSHOT_COMPLETE_OPERATION:
+                    return new SnapshotCompleteOperation();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }
