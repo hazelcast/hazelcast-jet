@@ -130,10 +130,7 @@ public class OperationLossTest extends JetTestSupport {
         assertJobStatusEventually(job, SUSPENDED);
         job.resume();
         assertJobStatusEventually(job, RUNNING);
-        job.cancel();
-        try {
-            job.join();
-        } catch (CancellationException ignored) { }
+        cancelAndJoin(job);
     }
 
     @Test
@@ -160,10 +157,7 @@ public class OperationLossTest extends JetTestSupport {
         logger.info("Lifting the packet filter...");
         PacketFiltersUtil.resetPacketFiltersFrom(instance1.getHazelcastInstance());
         waitForFirstSnapshot(jobRepository, job.getId(), 10, false);
-        job.cancel();
-        try {
-            job.join();
-        } catch (CancellationException ignored) { }
+        cancelAndJoin(job);
     }
 
     @Test

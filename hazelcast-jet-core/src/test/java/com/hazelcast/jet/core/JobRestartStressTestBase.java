@@ -27,12 +27,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
-import java.util.concurrent.CancellationException;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static org.junit.Assert.fail;
 
 public class JobRestartStressTestBase extends JetTestSupport {
 
@@ -73,11 +71,6 @@ public class JobRestartStressTestBase extends JetTestSupport {
             return null;
         }).get();
 
-        job[0].cancel();
-        try {
-            job[0].join();
-            fail("CancellationException was expected");
-        } catch (CancellationException expected) {
-        }
+        cancelAndJoin(job[0]);
     }
 }

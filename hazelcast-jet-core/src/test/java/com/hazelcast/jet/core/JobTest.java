@@ -145,8 +145,7 @@ public class JobTest extends JetTestSupport {
         NoOutputSourceP.executionStarted.await();
 
         // Then
-        job.cancel();
-        joinAndExpectCancellation(job);
+        cancelAndJoin(job);
 
         NoOutputSourceP.proceedLatch.countDown();
         assertJobStatusEventually(job, FAILED);
@@ -186,8 +185,7 @@ public class JobTest extends JetTestSupport {
         // Then
         assertJobStatusEventually(trackedJob, RUNNING);
 
-        submittedJob.cancel();
-        joinAndExpectCancellation(submittedJob);
+        cancelAndJoin(submittedJob);
     }
 
     @Test
@@ -206,8 +204,7 @@ public class JobTest extends JetTestSupport {
         // Then
         assertJobStatusEventually(trackedJob, RUNNING);
 
-        submittedJob.cancel();
-        joinAndExpectCancellation(submittedJob);
+        cancelAndJoin(submittedJob);
     }
 
     @Test
@@ -228,8 +225,7 @@ public class JobTest extends JetTestSupport {
         // Then
         assertJobStatusEventually(trackedJob, RUNNING);
 
-        submittedJob.cancel();
-        joinAndExpectCancellation(submittedJob);
+        cancelAndJoin(submittedJob);
     }
 
     @Test
