@@ -314,6 +314,7 @@ public class ProcessorTasklet implements Tasklet {
 
             case ON_SNAPSHOT_COMPLETED:
                 if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
+                    pendingSnapshotId2++;
                     ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
                     state = processingState();
@@ -356,8 +357,7 @@ public class ProcessorTasklet implements Tasklet {
 
     private void processInbox() {
         long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
-        if (currSnapshotId2 >= pendingSnapshotId2) {
-            pendingSnapshotId2 = currSnapshotId2 + 1;
+        if (currSnapshotId2 == pendingSnapshotId2) {
             if (outbox.hasUnfinishedItem()) {
                 outbox.block();
             } else {
@@ -415,8 +415,7 @@ public class ProcessorTasklet implements Tasklet {
         assert currSnapshotId2 + 1 == pendingSnapshotId2 || currSnapshotId2 == pendingSnapshotId2
                 : "Unexpected new phase 2 snapshot id: " + currSnapshotId2 + ", expected was "
                 + (pendingSnapshotId2 - 1) + " or " + pendingSnapshotId2;
-        if (currSnapshotId1 >= pendingSnapshotId1) {
-            pendingSnapshotId1 = currSnapshotId1;
+        if (currSnapshotId1 == pendingSnapshotId1) {
             if (outbox.hasUnfinishedItem()) {
                 outbox.block();
             } else {
@@ -426,8 +425,7 @@ public class ProcessorTasklet implements Tasklet {
                 progTracker.madeProgress();
                 return;
             }
-        } else if (currSnapshotId2 >= pendingSnapshotId2) {
-            pendingSnapshotId2 = currSnapshotId2 + 1;
+        } else if (currSnapshotId2 == pendingSnapshotId2) {
             if (outbox.hasUnfinishedItem()) {
                 outbox.block();
             } else {

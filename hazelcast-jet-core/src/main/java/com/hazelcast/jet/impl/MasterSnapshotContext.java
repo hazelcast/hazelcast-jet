@@ -223,10 +223,13 @@ class MasterSnapshotContext {
         // the decision moment for regular snapshots: after this the snapshot is ready to be restored from
         mc.writeJobExecutionRecord(false);
 
-        logger.info(String.format("Snapshot %d for %s completed with status %s in %dms, " +
-                        "%,d bytes, %,d keys in %,d chunks, stored in '%s'",
-                snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                stats.duration(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
+        if (logger.isFineEnabled()) {
+            // TODO [viliam] log duration after phase 2
+            logger.fine(String.format("Snapshot %d phase 1 for %s completed with status %s in %dms, " +
+                            "%,d bytes, %,d keys in %,d chunks, stored in '%s', proceeding to phase 2",
+                    snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
+                    stats.duration(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
+        }
         if (!isSuccess) {
             logger.warning(mc.jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
                     "one of the failures: " + mergedResult.getError());

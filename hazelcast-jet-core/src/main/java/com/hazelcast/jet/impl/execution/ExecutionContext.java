@@ -26,6 +26,7 @@ import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
@@ -108,7 +109,8 @@ public class ExecutionContext {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
-        snapshotContext.initTaskletCount(plan.getPTaskletCount(), plan.getSsTaskletCount(), plan.getHigherPriorityVertexCount());
+        snapshotContext.initTaskletCount(plan.getPTaskletCount(), plan.getSsTaskletCount(),
+                plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();
@@ -223,6 +225,7 @@ public class ExecutionContext {
      * Starts the phase 2 of the current snapshot.
      */
     public CompletableFuture<Void> beginSnapshotPhase2(long snapshotId, boolean success) {
+        LoggingUtil.logFine(logger, "Starting snapshot %d phase 2 for %s on member", snapshotId, jobNameAndExecutionId());
         synchronized (executionLock) {
             if (cancellationFuture.isDone()) {
                 throw new CancellationException();
