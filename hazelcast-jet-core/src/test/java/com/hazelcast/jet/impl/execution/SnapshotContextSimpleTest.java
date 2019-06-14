@@ -54,7 +54,7 @@ public class SnapshotContextSimpleTest {
     }
 
     @Test
-    public void when_cancelledAfterSnapshotDone_then_cannotStartNewSnapshot() {
+    public void when_cancelledAfterPhase1_then_cannotStartPhase2() {
         ssContext.initTaskletCount(1, 1, 0);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
@@ -65,11 +65,11 @@ public class SnapshotContextSimpleTest {
 
         // Then
         exception.expect(CancellationException.class);
-        ssContext.startNewSnapshotPhase1(11, "map", false);
+        ssContext.startNewSnapshotPhase2(10, true);
     }
 
     @Test
-    public void when_cancelledMidSnapshot_then_futureCompleted() {
+    public void when_cancelledMidPhase1_then_futureCompleted() {
         ssContext.initTaskletCount(3, 3, 0);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
@@ -83,7 +83,22 @@ public class SnapshotContextSimpleTest {
     }
 
     @Test
-    public void when_cancelledMidSnapshot_then_snapshotDoneForTaskletSucceeds() {
+    public void when_cancelledMidPhase2_then_futureCompleted() {
+        ssContext.initTaskletCount(1, 1, 0);
+        ssContext.startNewSnapshotPhase1(10, "map", false);
+        ssContext.phase1DoneForTasklet(1, 1, 1);
+        CompletableFuture<Void> future = ssContext.startNewSnapshotPhase2(10, true);
+
+        // When
+        assertFalse(future.isDone());
+        ssContext.cancel();
+
+        // Then1
+        assertTrue(future.isDone());
+    }
+
+    @Test
+    public void when_cancelledMidPhase1_then_phase1DoneForTaskletSucceeds() {
         ssContext.initTaskletCount(2, 2, 0);
         CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
@@ -94,6 +109,24 @@ public class SnapshotContextSimpleTest {
 
         // Then
         ssContext.phase1DoneForTasklet(1, 1, 1);
+        assertTrue(future.isDone());
+    }
+
+    @Test
+    public void when_cancelledMidPhase2_then_phase2DoneForTaskletSucceeds() {
+        ssContext.initTaskletCount(2, 1, 0);
+        ssContext.startNewSnapshotPhase1(10, "map", false);
+        ssContext.phase1DoneForTasklet(1, 1, 1);
+        CompletableFuture<Void> future = ssContext.startNewSnapshotPhase2(10, true);
+
+        // When
+        ssContext.phase2DoneForTasklet();
+        assertFalse(future.isDone());
+        ssContext.cancel();
+
+        // Then
+        ssContext.phase2DoneForTasklet();
+        assertTrue(future.isDone());
     }
 
     @Test
