@@ -97,7 +97,7 @@ public class ProcessorTaskletTest_Snapshots {
         // Given
         List<Object> input = new ArrayList<>();
         input.addAll(mockInput.subList(0, 4));
-        input.add(barrier(0));
+        input.add(barrier0(false));
         MockInboundStream instream1 = new MockInboundStream(0, input, input.size());
         MockOutboundStream outstream1 = new MockOutboundStream(0);
 
@@ -119,7 +119,7 @@ public class ProcessorTaskletTest_Snapshots {
         // Given
         List<Object> input1 = new ArrayList<>();
         input1.addAll(mockInput.subList(0, 4));
-        input1.add(barrier(0));
+        input1.add(barrier0(false));
         input1.addAll(mockInput.subList(4, 8));
 
         List<Object> input2 = new ArrayList<>();
@@ -142,10 +142,10 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
-        instream2.push(barrier(0));
+        instream2.push(barrier0(false));
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(asList(0, 1, 2, 3, barrier(0), 4, 5, 6, 7), outstream1.getBuffer());
-        assertEquals(asList(0, 1, 2, 3, barrier(0)), getSnapshotBufferValues());
+        assertEquals(asList(0, 1, 2, 3, barrier0(false), 4, 5, 6, 7), outstream1.getBuffer());
+        assertEquals(asList(0, 1, 2, 3, barrier0(false)), getSnapshotBufferValues());
     }
 
     @Test
@@ -170,8 +170,8 @@ public class ProcessorTaskletTest_Snapshots {
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList(2, barrier(0)), outstream1.getBuffer());
-        assertEquals(asList(0 , 1, 2, barrier(0)), getSnapshotBufferValues());
+        assertEquals(asList(2, barrier0(false)), outstream1.getBuffer());
+        assertEquals(asList(0 , 1, 2, barrier0(false)), getSnapshotBufferValues());
     }
 
     @Test
@@ -199,7 +199,7 @@ public class ProcessorTaskletTest_Snapshots {
 
     @Test
     public void test_phase2() {
-        MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0)), 1024);
+        MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier0(false)), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
         outstreams.add(outstream1);
@@ -208,8 +208,8 @@ public class ProcessorTaskletTest_Snapshots {
         processor.itemsToEmitInOnSnapshotComplete = 1;
 
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
-        assertEquals(asList("item", barrier(0)), outstream1.getBuffer());
+        assertEquals(asList("item", barrier0(false)), getSnapshotBufferValues());
+        assertEquals(asList("item", barrier0(false)), outstream1.getBuffer());
         snapshotCollector.getBuffer().clear();
         outstream1.flush();
 
@@ -225,7 +225,7 @@ public class ProcessorTaskletTest_Snapshots {
 
     @Test
     public void when_processorCompletesAfterPhase1_then_doneAfterPhase2() {
-        MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier(0), DONE_ITEM), 1024);
+        MockInboundStream instream1 = new MockInboundStream(0, asList("item", barrier0(false), DONE_ITEM), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0);
         instreams.add(instream1);
         outstreams.add(outstream1);
@@ -235,8 +235,8 @@ public class ProcessorTaskletTest_Snapshots {
 
         CompletableFuture<SnapshotOperationResult> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", false);
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
-        assertEquals(asList("item", barrier(0)), outstream1.getBuffer());
+        assertEquals(asList("item", barrier0(false)), getSnapshotBufferValues());
+        assertEquals(asList("item", barrier0(false)), outstream1.getBuffer());
         snapshotContext.phase1DoneForTasklet(1, 1, 1);
         assertTrue("future1 not done", future1.isDone());
         snapshotCollector.getBuffer().clear();
@@ -259,7 +259,7 @@ public class ProcessorTaskletTest_Snapshots {
 
     @Test
     public void when_onSnapshotCompletedReturnsFalse_then_calledAgain() {
-        MockInboundStream instream1 = new MockInboundStream(0, singletonList(barrier(0)), 1024);
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(barrier0(false)), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
         instreams.add(instream1);
         outstreams.add(outstream1);
@@ -268,8 +268,8 @@ public class ProcessorTaskletTest_Snapshots {
         processor.itemsToEmitInOnSnapshotComplete = 2;
 
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(singletonList(barrier(0)), getSnapshotBufferValues());
-        assertEquals(singletonList(barrier(0)), outstream1.getBuffer());
+        assertEquals(singletonList(barrier0(false)), getSnapshotBufferValues());
+        assertEquals(singletonList(barrier0(false)), outstream1.getBuffer());
         snapshotCollector.getBuffer().clear();
         outstream1.flush();
 
@@ -328,6 +328,24 @@ public class ProcessorTaskletTest_Snapshots {
         assertTrue("future should have been done", future.isDone());
     }
 
+    @Test
+    public void test_terminalSnapshot() {
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(barrier0(true)), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        callUntil(tasklet, NO_PROGRESS);
+
+        phase1StartAndDone();
+        CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
+
+        callUntil(tasklet, DONE);
+        assertTrue("future should have been done", future.isDone());
+        assertEquals(outstream1.getBuffer(), asList(barrier0(true), DONE_ITEM));
+    }
+
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
@@ -362,8 +380,8 @@ public class ProcessorTaskletTest_Snapshots {
         }
     }
 
-    private SnapshotBarrier barrier(long snapshotId) {
-        return new SnapshotBarrier(snapshotId, false);
+    private SnapshotBarrier barrier0(boolean isTerminal) {
+        return new SnapshotBarrier(0, isTerminal);
     }
 
     private void phase1StartAndDone() {

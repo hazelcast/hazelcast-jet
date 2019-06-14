@@ -312,7 +312,6 @@ public class ProcessorTasklet implements Tasklet {
                 if (outbox.offerToEdgesAndSnapshot(currentBarrier)) {
                     progTracker.madeProgress();
                     if (currentBarrier.isTerminal()) {
-                        // TODO [viliam] add test for terminal snapshot
                         state = WAITING_FOR_SNAPSHOT_COMPLETED;
                     } else {
                         currentBarrier = null;
