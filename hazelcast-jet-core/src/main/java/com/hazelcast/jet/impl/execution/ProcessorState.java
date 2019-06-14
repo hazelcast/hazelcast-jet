@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 
 /**
@@ -30,9 +31,13 @@ enum ProcessorState {
     PROCESS_WATERMARK,
 
     /**
-     * Making calls to {@link Processor#tryProcess()} and {@link
-     * Processor#process(int, com.hazelcast.jet.core.Inbox)} until the inbox
-     * is empty.
+     * Making calls to {@link Processor#tryProcess()} until it returns true.
+     */
+    NULLARY_TRY_PROCESS,
+
+    /**
+     * Making calls to {@link Processor#process(int, Inbox)} until the inbox is
+     * empty.
      */
     PROCESS_INBOX,
 

@@ -214,6 +214,10 @@ public class SnapshotContext {
                         "Previous=" + currentSnapshotId + ", new=" + snapshotId;
         assert currentSnapshotId == activeSnapshotIdPhase1 : "last snapshot was postponed but not started";
         assert numSsTasklets >= 0 : "numSsTasklets=" + numSsTasklets;
+        assert phase1Future == null : "phase 1 already in progress";
+        assert phase2Future == null : "phase 2 still ongoing";
+        assert snapshotId == activeSnapshotIdPhase2 + 1
+                : "snapshotId=" + snapshotId + ", activeSnapshotIdPhase2=" + activeSnapshotIdPhase2;
         if (isCancelled) {
             throw new CancellationException("execution cancelled");
         }
@@ -260,6 +264,10 @@ public class SnapshotContext {
             }
             return res;
         }
+        assert snapshotId == activeSnapshotIdPhase1 : "requested phase 2 for snapshot ID " + snapshotId
+                + ", but phase 1 snapshot ID is " + activeSnapshotIdPhase1;
+        assert phase1Future == null : "phase 1 still ongoing";
+        assert phase2Future == null : "phase 2 already in progress";
         assert snapshotId > activeSnapshotIdPhase2
                 : "new snapshotId for phase 2 not larger than previous. Previous=" + activeSnapshotIdPhase2 + ", new="
                         + snapshotId;

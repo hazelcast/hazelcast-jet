@@ -55,6 +55,7 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_BARRIER;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.END;
+import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_TRY_PROCESS;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED_BEFORE_END;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
@@ -260,7 +261,7 @@ public class ProcessorTasklet implements Tasklet {
                 if (pendingWatermark == null) {
                     long wm = watermarkCoalescer.checkWmHistory();
                     if (wm == NO_NEW_WM) {
-                        state = PROCESS_INBOX;
+                        state = NULLARY_TRY_PROCESS;
                         stateMachineStep(); // recursion
                         break;
                     }
@@ -269,8 +270,18 @@ public class ProcessorTasklet implements Tasklet {
                 if (pendingWatermark.equals(IDLE_MESSAGE)
                         ? outbox.offer(IDLE_MESSAGE)
                         : processor.tryProcessWatermark(pendingWatermark)) {
-                    state = PROCESS_INBOX;
+                    state = NULLARY_TRY_PROCESS;
                     pendingWatermark = null;
+                    stateMachineStep(); // recursion
+                }
+                break;
+
+            case NULLARY_TRY_PROCESS:
+                if (isSnapshotInbox() || processor.tryProcess()) {
+                    assert !outbox.hasUnfinishedItem() : isSnapshotInbox()
+                            ? "Unfinished item before fillInbox call"
+                            : "Processor.tryProcess() returned true, but there's unfinished item in the outbox";
+                    state = PROCESS_INBOX;
                     stateMachineStep(); // recursion
                 }
                 break;
@@ -369,15 +380,7 @@ public class ProcessorTasklet implements Tasklet {
         }
 
         if (inbox.isEmpty()) {
-            // TODO [viliam] tryProcess returned false, but we proceed to snapshot phase 2 anyway
-            if (isSnapshotInbox() || processor.tryProcess()) {
-                assert !outbox.hasUnfinishedItem() : isSnapshotInbox()
-                        ? "Unfinished item before fillInbox call"
-                        : "Processor.tryProcess() returned true, but there's unfinished item in the outbox";
-                fillInbox();
-            } else {
-                return;
-            }
+            fillInbox();
         }
         if (!inbox.isEmpty()) {
             if (isSnapshotInbox()) {
@@ -388,6 +391,8 @@ public class ProcessorTasklet implements Tasklet {
         }
 
         if (inbox.isEmpty()) {
+            assert !outbox.hasUnfinishedItem() : "outbox has unfinished item after successful process() or " +
+                    "restoreFromSnapshot() returned with an empty inbox";
             // there is either snapshot or instream is done, not both
             if (currInstream != null && currInstream.isDone()) {
                 state = COMPLETE_EDGE;
@@ -539,12 +544,10 @@ public class ProcessorTasklet implements Tasklet {
 
     /**
      * Initial state of the processor. If there are no inbound ordinals left,
-     * we will go to COMPLETE state otherwise to PROCESS_INBOX or
-     * PROCESS_WATERMARK.
+     * we will go to COMPLETE state otherwise to PROCESS_WATERMARK.
      */
     private ProcessorState processingState() {
-        return pendingWatermark != null ? PROCESS_WATERMARK
-                : instreamCursor == null ? COMPLETE : PROCESS_INBOX;
+        return instreamCursor == null ? COMPLETE : PROCESS_WATERMARK;
     }
 
     /**

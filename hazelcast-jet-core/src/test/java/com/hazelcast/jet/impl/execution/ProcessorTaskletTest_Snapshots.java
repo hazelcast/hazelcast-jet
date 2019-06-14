@@ -46,6 +46,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.impl.MasterJobContext.SNAPSHOT_RESTORE_EDGE_PRIORITY;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
@@ -56,6 +57,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -203,6 +205,7 @@ public class ProcessorTaskletTest_Snapshots {
         outstreams.add(outstream1);
 
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        processor.itemsToEmitInOnSnapshotComplete = 1;
 
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(asList("item", barrier(0)), getSnapshotBufferValues());
@@ -211,6 +214,7 @@ public class ProcessorTaskletTest_Snapshots {
         outstream1.flush();
 
         // start phase 2
+        phase1StartAndDone();
         CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, NO_PROGRESS);
 
@@ -227,6 +231,7 @@ public class ProcessorTaskletTest_Snapshots {
         outstreams.add(outstream1);
 
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        processor.itemsToEmitInOnSnapshotComplete = 1;
 
         CompletableFuture<SnapshotOperationResult> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", false);
         callUntil(tasklet, NO_PROGRESS);
@@ -269,12 +274,58 @@ public class ProcessorTaskletTest_Snapshots {
         outstream1.flush();
 
         // start phase 2
+        phase1StartAndDone();
         snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
         outstream1.flush();
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(singletonList("osc-true-1"), outstream1.getBuffer());
+    }
+
+    @Test
+    public void test_tryProcessWatermark_notInterruptedByPhase2() {
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(wm(0)), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        processor.itemsToEmitInTryProcessWatermark = 1;
+        callUntil(tasklet, NO_PROGRESS);
+
+        phase1StartAndDone();
+        CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
+
+        callUntil(tasklet, NO_PROGRESS);
+        assertFalse("future should not have been done", future.isDone());
+
+        outstream1.flush();
+        callUntil(tasklet, NO_PROGRESS);
+        assertTrue("future should have been done", future.isDone());
+
+    }
+
+    @Test
+    public void test_nullaryTryProcess_notInterruptedByPhase2() {
+        MockInboundStream instream1 = new MockInboundStream(0, emptyList(), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 1);
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        processor.itemsToEmitInTryProcess = 2;
+        callUntil(tasklet, NO_PROGRESS);
+
+        phase1StartAndDone();
+        CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
+
+        callUntil(tasklet, NO_PROGRESS);
+        assertFalse("future should not have been done", future.isDone());
+
+        outstream1.flush();
+        callUntil(tasklet, NO_PROGRESS);
+        assertTrue("future should have been done", future.isDone());
     }
 
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
@@ -315,12 +366,22 @@ public class ProcessorTaskletTest_Snapshots {
         return new SnapshotBarrier(snapshotId, false);
     }
 
+    private void phase1StartAndDone() {
+        snapshotContext.startNewSnapshotPhase1(0, "map", false);
+        snapshotContext.phase1DoneForTasklet(0, 0, 0);
+    }
+
     private static class SnapshottableProcessor implements Processor {
 
-        int nullaryProcessCallCountdown;
+        int itemsToEmitInTryProcess;
+        int itemsToEmitInTryProcessWatermark;
         int itemsToEmitInComplete;
-        int itemsToEmitInOnSnapshotComplete = 1;
+        int itemsToEmitInCompleteEdge;
+        int itemsToEmitInOnSnapshotComplete;
+        int tryProcessCount;
+        int tryProcessWatermarkCount;
         int completedCount;
+        int completedEdgeCount;
         int onSnapshotCompletedCount;
         private Outbox outbox;
 
@@ -344,7 +405,11 @@ public class ProcessorTaskletTest_Snapshots {
 
         @Override
         public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-            return outbox.offer(watermark);
+            if (tryProcessWatermarkCount < itemsToEmitInTryProcessWatermark
+                    && outbox.offer("tryProcessWatermark-" + tryProcessWatermarkCount)) {
+                tryProcessWatermarkCount++;
+            }
+            return tryProcessWatermarkCount == itemsToEmitInTryProcessWatermark && outbox.offer(watermark);
         }
 
         @Override
@@ -357,8 +422,19 @@ public class ProcessorTaskletTest_Snapshots {
         }
 
         @Override
+        public boolean completeEdge(int ordinal) {
+            if (completedEdgeCount < itemsToEmitInCompleteEdge && outbox.offer("completeEdge-" + completedEdgeCount)) {
+                completedEdgeCount++;
+            }
+            return completedEdgeCount == itemsToEmitInCompleteEdge;
+        }
+
+        @Override
         public boolean tryProcess() {
-            return nullaryProcessCallCountdown-- <= 0;
+            if (tryProcessCount < itemsToEmitInTryProcess && outbox.offer("tryProcess-" + tryProcessCount)) {
+                tryProcessCount++;
+            }
+            return tryProcessCount == itemsToEmitInTryProcess;
         }
 
         @Override
