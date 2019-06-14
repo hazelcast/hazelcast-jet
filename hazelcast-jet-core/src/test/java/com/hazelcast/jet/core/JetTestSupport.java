@@ -40,6 +40,7 @@ import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -47,6 +48,7 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -55,6 +57,7 @@ import static com.hazelcast.jet.Util.idToString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public abstract class JetTestSupport extends HazelcastTestSupport {
 
@@ -246,5 +249,18 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             assertTrue("stats are 0", record.snapshotStats().numBytes() > 0);
         }, timeoutSeconds);
         logger.info("Next snapshot found (id=" + snapshotId[0] + ", previous id=" + originalSnapshotId + ")");
+    }
+
+    /**
+     * Cancel the job and wait until it cancels using Job.join(), ignoring the
+     * CancellationException.
+     */
+    public static void cancelAndJoin(@Nonnull Job job) {
+        job.cancel();
+        try {
+            job.join();
+            fail("join didn't fail with CancellationException");
+        } catch (CancellationException ignored) {
+        }
     }
 }

@@ -65,6 +65,8 @@ public final class TestProcessors {
 
         MockP.initCount.set(0);
         MockP.closeCount.set(0);
+        MockP.saveToSnapshotCalled = false;
+        MockP.onSnapshotCompletedCalled = false;
 
         NoOutputSourceP.proceedLatch = new CountDownLatch(1);
         NoOutputSourceP.executionStarted = new CountDownLatch(totalParallelism);
@@ -269,12 +271,17 @@ public final class TestProcessors {
 
         static AtomicInteger initCount = new AtomicInteger();
         static AtomicInteger closeCount = new AtomicInteger();
+        static volatile boolean onSnapshotCompletedCalled;
+        static volatile boolean saveToSnapshotCalled;
 
         private Exception initError;
         private Exception processError;
         private RuntimeException completeError;
+        private RuntimeException saveToSnapshotError;
+        private RuntimeException onSnapshotCompleteError;
         private Exception closeError;
         private boolean isCooperative;
+        private boolean streaming;
 
         @Override
         public boolean isCooperative() {
@@ -296,6 +303,16 @@ public final class TestProcessors {
             return this;
         }
 
+        public MockP setOnSnapshotCompleteError(RuntimeException e) {
+            this.onSnapshotCompleteError = e;
+            return this;
+        }
+
+        public MockP setSaveToSnapshotError(RuntimeException e) {
+            this.saveToSnapshotError = e;
+            return this;
+        }
+
         public MockP setCloseError(Exception closeError) {
             this.closeError = closeError;
             return this;
@@ -303,6 +320,11 @@ public final class TestProcessors {
 
         public MockP nonCooperative() {
             isCooperative = false;
+            return this;
+        }
+
+        public MockP streaming() {
+            streaming = true;
             return this;
         }
 
@@ -326,6 +348,24 @@ public final class TestProcessors {
         public boolean complete() {
             if (completeError != null) {
                 throw completeError;
+            }
+            return !streaming;
+        }
+
+        @Override
+        public boolean saveToSnapshot() {
+            saveToSnapshotCalled = true;
+            if (saveToSnapshotError != null) {
+                throw saveToSnapshotError;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean onSnapshotCompleted(boolean commitTransactions) {
+            onSnapshotCompletedCalled = true;
+            if (onSnapshotCompleteError != null) {
+                throw onSnapshotCompleteError;
             }
             return true;
         }
