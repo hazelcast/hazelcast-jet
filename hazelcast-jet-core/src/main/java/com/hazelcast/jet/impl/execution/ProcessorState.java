@@ -71,8 +71,9 @@ enum ProcessorState {
     ON_SNAPSHOT_COMPLETED,
 
     /**
-     * Processor completed after the phase 1 of the snapshot and is not doing
-     * anything, it cannot terminate until the phase 2 is done.
+     * Processor completed after a phase 1 of a snapshot and is not doing
+     * anything, but it cannot be done until a phase 2 is done - this state is
+     * waiting for a phase 2.
      */
     WAITING_FOR_SNAPSHOT_COMPLETED,
 

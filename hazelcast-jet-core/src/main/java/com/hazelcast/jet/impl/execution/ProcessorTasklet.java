@@ -577,9 +577,4 @@ public class ProcessorTasklet implements Tasklet {
             processorClosed = true;
         }
     }
-
-    // visible for test
-    ProcessorState state() {
-        return state;
-    }
 }

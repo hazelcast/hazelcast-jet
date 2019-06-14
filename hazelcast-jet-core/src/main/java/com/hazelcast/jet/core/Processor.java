@@ -17,6 +17,8 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.Job;
+import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.logging.ILogger;
@@ -142,7 +144,7 @@ public interface Processor {
      *
      * @param watermark watermark to be processed
      * @return {@code true} if this watermark has now been processed,
-     *         {@code false} otherwise.
+     *         {@code false} to call this method again with the same watermark
      */
     default boolean tryProcessWatermark(@Nonnull Watermark watermark) {
         throw new UnsupportedOperationException("Missing implementation in " + getClass());
@@ -175,7 +177,7 @@ public interface Processor {
      * next call.
      *
      * @return {@code true} if the processor is now done completing the edge,
-     *         {@code false} otherwise.
+     *         {@code false} to call this method again
      */
     default boolean completeEdge(int ordinal) {
         return true;
@@ -203,14 +205,14 @@ public interface Processor {
      * the latency of snapshots and job cancellations.
      *
      * @return {@code true} if the completing step is now done, {@code false}
-     *         otherwise.
+     *         to call this method again
      */
     default boolean complete() {
         return true;
     }
 
     /**
-     * Stores processor's state to a state snapshot by adding items to the
+     * Stores the processor's state to a state snapshot by adding items to the
      * outbox's {@linkplain Outbox#offerToSnapshot(Object, Object) snapshot
      * bucket}. If this method returns {@code false}, it will be called again
      * before proceeding to call any other method.
@@ -224,38 +226,37 @@ public interface Processor {
      * If this processor communicates with an external transactional store, it
      * should do few more things:
      * <ul>
-     *     <li>mark current active transaction with the external system as
+     *     <li>mark the current active transaction with the external system as
      *     <em>pending</em> and stop using it. The pending transaction will be
-     *     completed when {@link #onSnapshotCompleted} with {@code success ==
-     *     true} is called.
+     *     completed when {@link #onSnapshotCompleted} with {@code
+     *     commitTransactions == true} is called
      *
      *     <li>store IDs of the pending transaction(s) to she snapshot. Note
      *     that there can be multiple pending transactions if the previous
-     *     snapshot completed with {@code success == false}
+     *     snapshot completed with {@code commitTransactions == false}
      *
      *     <li>optionally, start a new active transaction that will be used to
      *     handle input or produce output until {@code onSnapshotCompleted()}
      *     is called. If the implementation doesn't start a new active
      *     transaction, it can opt to not process more input or emit any output
-     *     (in case of a source processor).
      * </ul>
      *
      * <p>
      * The default implementation takes no action and returns {@code true}.
      *
-     * @return {@code true} if the saving to snapshot step is now done,
-     *      {@code false} otherwise
+     * @return {@code true} if this step is done, {@code false} to call this
+     *      method again
      */
     default boolean saveToSnapshot() {
         return true;
     }
 
     /**
-     * This is the second phase of a two-phase commit. It is called after the
-     * snapshot was successfully stored on all other processors in the job on
+     * This is the second phase of a two-phase commit. Jet calls it after the
+     * snapshot was successfully saved on all other processors in the job on
      * all cluster members.
      * <p>
-     * This method can be called even if the {@link #process(int, Inbox)
+     * This method can be called even when the {@link #process(int, Inbox)
      * process()} method didn't process the items in the inbox. After all the
      * input is exhausted, it is also called between {@link #complete()} calls.
      * Once {@code complete()} returns {@code true}, this method can still be
@@ -270,7 +271,7 @@ public interface Processor {
      *
      *     <li>if {@code commitTransactions == false}, it should do nothing to
      *     pending transactions. If it didn't create new active transaction in
-     *     {@link #saveToSnapshot}, it can continue using the last active
+     *     {@link #saveToSnapshot}, it can continue to use the last active
      *     transaction as active.
      * </ul>
      *
@@ -279,20 +280,22 @@ public interface Processor {
      * true}. No other method on this processor will be called before it
      * returns {@code true}.
      *
-     * <h4>Error Handling</h4>
+     * <h4>Error handling</h4>
      *
      * The two-phase commit requires that the second phase must eventually
      * succeed. If you're not able to commit your transactions now, you should
-     * either return {@code false} and try again later, or you can throw, in
-     * which case when the job is restarted, it will be required to commit the
-     * transactions with IDs stored in the state snapshot. This is necessary to
-     * ensure exactly-once processing of transactional processors.
+     * either return {@code false} and try again later, or you can throw a
+     * {@link RestartableException} to cause a job restart; the job is required
+     * to commit the transactions with IDs stored in the state snapshot after
+     * the restart. This is necessary to ensure exactly-once processing of
+     * transactional processors.
      * <p>
      * The default implementation takes no action and returns {@code true}.
      *
-     * @param commitTransactions true, if all members were successful in the
-     *      {@link #saveToSnapshot()}
-     * @return {@code true} if this step is now done, {@code false} otherwise
+     * @param commitTransactions true, if all members were successful in {@link
+     *      #saveToSnapshot()} and we're not doing {@link Job#exportSnapshot}
+     * @return {@code true} if this step is done, {@code false} to call this
+     *      method again
      */
     default boolean onSnapshotCompleted(@SuppressWarnings("unused") boolean commitTransactions) {
         return true;
@@ -301,12 +304,13 @@ public interface Processor {
     /**
      * Called when a batch of items is received during the "restore from
      * snapshot" operation. The type of items in the inbox is {@code
-     * Map.Entry}, exactly as they were saved in {@link #saveToSnapshot()}.
-     * This method may emit items to the outbox.
+     * Map.Entry}, key and value types are exactly as they were saved in {@link
+     * #saveToSnapshot()}. This method may emit items to the outbox.
      * <p>
      * If this method returns with items still present in the inbox, it will be
      * called again before proceeding to call any other methods. It is never
-     * called with an empty inbox.
+     * called with an empty inbox. After all items are processed, {@link
+     * #finishSnapshotRestore()} is called.
      * <p>
      * The default implementation throws an exception - if you emit something
      * in {@link #saveToSnapshot()}, you must be able to handle it here. If you
@@ -319,17 +323,17 @@ public interface Processor {
     }
 
     /**
-     * Called after a job was restarted from a snapshot and the processor
-     * has consumed all the snapshot data.
+     * Called after a job was restarted from a snapshot and the processor has
+     * consumed all the snapshot data in {@link #restoreFromSnapshot}.
      * <p>
      * If this processor communicates with an external transactional store, it
      * should do the following:
      * <ul>
      *     <li>commit transactions with IDs that were stored in the snapshot,
      *     if the are not already committed. If the processor is unable to
-     *     commit those transactions, data loss might occur. The processor might
-     *     also commit these transactions in {@link #restoreFromSnapshot} as
-     *     soon as transaction ID is received
+     *     commit those transactions, data loss or duplication might occur. The
+     *     processor might also commit these transactions in {@link
+     *     #restoreFromSnapshot} as soon as transaction ID is received
      *
      *     <li>rollback/abort all other transactions that this processor
      *     created after the transactions stored in the snapshot
@@ -337,16 +341,18 @@ public interface Processor {
      *
      * <h4>Determining the list of transactions to rollback</h4>
      *
-     * There are multiple ways to determine it:
+     * How can you know the transaction IDs of transactions created after the
+     * snapshot was stored? You can't store them to the snapshot. There are
+     * multiple ways to tackle this:
      * <ul>
      *     <li>enumerate all pending transactions in the system and rollback
      *     those that were created by this processor. For example, a file sink
-     *     can list files in the directory
+     *     can list files in the directory it is writing to
      *
      *     <li>if the remote system doesn't allow us to enumerate transactions,
      *     we can use deterministic scheme for transaction ID and probe all IDs
      *     that could be used by this processor. For example: {@code jobId +
-     *     vertexId + globalProcessorIndex + sequence}.
+     *     vertexId + globalProcessorIndex + sequence}
      * </ul>
      *
      * <p>
@@ -358,14 +364,15 @@ public interface Processor {
      * current job ID, if the job was {@linkplain
      * JobConfig#setInitialSnapshotName started from an exported state}.
      * <p>
-     * If it returns {@code false}, it will be called again before proceeding
-     * to call any other methods.
-     * <p>
-     * If this method tried to offer to the outbox and the offer call returned
-     * false, this method must also return false and retry the offer in the
-     * next call.
+     * If this method returns {@code false}, it will be called again before
+     * proceeding to call any other methods. If this method tried to offer to
+     * the outbox and the offer call returned false, this method must also
+     * return {@code false} and retry to offer in the next call.
      * <p>
      * The default implementation takes no action and returns {@code true}.
+     *
+     * @return {@code true} if this step is done, {@code false} to call this
+     *      method again
      */
     default boolean finishSnapshotRestore() {
         return true;

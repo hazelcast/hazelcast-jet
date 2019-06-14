@@ -52,7 +52,7 @@ public class SnapshotContext {
 
     /**
      * Current number of {@link ProcessorTasklet}s in the job. It's
-     * decremented as they tasklets complete.
+     * decremented as the tasklets complete.
      */
     private int numPTasklets = Integer.MIN_VALUE;
 
@@ -71,7 +71,7 @@ public class SnapshotContext {
      * and the member replies to the master to start the next phase or next
      * snapshot.
      * <p>
-     * It's in the range 0..numSsTasklets (inclusive).
+     * It's in the range 0..numSsTasklets (inclusive) or 0..numPTasklets.
      */
     private final AtomicInteger numRemainingTasklets = new AtomicInteger();
 

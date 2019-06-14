@@ -371,8 +371,7 @@ public class ProcessorTaskletTest_Snapshots {
     private static void callUntil(ProcessorTasklet tasklet, ProgressState expectedState) {
         int iterCount = 0;
         for (ProgressState r; (r = tasklet.call()) != expectedState; ) {
-            assertEquals("Failed to make progress after " + iterCount + " iterations, tasklet in state " + tasklet.state(),
-                    MADE_PROGRESS, r);
+            assertEquals("Failed to make progress after " + iterCount + " iterations", MADE_PROGRESS, r);
             assertTrue(String.format(
                     "tasklet.call() invoked %d times without reaching %s. Last state was %s",
                     CALL_COUNT_LIMIT, expectedState, r),

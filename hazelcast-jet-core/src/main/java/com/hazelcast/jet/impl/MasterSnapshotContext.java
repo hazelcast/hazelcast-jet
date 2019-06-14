@@ -166,12 +166,12 @@ class MasterSnapshotContext {
         mc.invokeOnParticipants(
                 factory,
                 responses -> mc.coordinationService().submitToCoordinatorThread(() ->
-                        onSnapshotPhase1Completed(responses, localExecutionId, newSnapshotId, finalMapName, isExport,
+                        onSnapshotPhase1Complete(responses, localExecutionId, newSnapshotId, finalMapName, isExport,
                                 isTerminal, future)),
                 null, true);
     }
 
-    private void onSnapshotPhase1Completed(
+    private void onSnapshotPhase1Complete(
             Collection<Object> responses,
             long executionId,
             long snapshotId,
@@ -237,7 +237,7 @@ class MasterSnapshotContext {
                 snapshotMap.clear();
             } catch (Exception e) {
                 logger.warning(mc.jobIdString() + ": failed to clear snapshot map '" + snapshotMapName
-                        + "' after a failure", e);
+                                + "' after a failure", e);
             }
         }
         if (!wasExport) {
@@ -250,12 +250,12 @@ class MasterSnapshotContext {
                 mc.jobId(), mc.executionId(), snapshotId, isSuccess && !isExportWithoutCancellation);
         mc.invokeOnParticipants(factory,
                 responses2 -> mc.coordinationService().submitToCoordinatorThread(() ->
-                        onSnapshotPhase2Completed(mergedResult.getError(), responses2, executionId, snapshotId,
+                        onSnapshotPhase2Complete(mergedResult.getError(), responses2, executionId, snapshotId,
                                 wasExport, wasTerminal, future, stats.startTime())),
                 null, true);
     }
 
-    private void onSnapshotPhase2Completed(
+    private void onSnapshotPhase2Complete(
             String phase1Error,
             Collection<Object> responses,
             long executionId,
