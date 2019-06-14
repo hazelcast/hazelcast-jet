@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.Util.toLocalTime;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
  * Runtime information about the job. There's one instance for each jobId, used
@@ -102,7 +103,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
             justification = "all updates to ongoingSnapshotId are synchronized")
     public void startNewSnapshot(String exportedSnapshotMapName) {
         ongoingSnapshotId++;
-        ongoingSnapshotStartTime = Clock.currentTimeMillis();
+        ongoingSnapshotStartTime = System.nanoTime();
         this.exportedSnapshotMapName = exportedSnapshotMapName;
     }
 
@@ -111,7 +112,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     ) {
         lastSnapshotFailure = failureText;
         SnapshotStats res = new SnapshotStats(
-                ongoingSnapshotId, ongoingSnapshotStartTime, Clock.currentTimeMillis(), numBytes, numKeys, numChunks
+                ongoingSnapshotId, ongoingSnapshotStartTime, System.nanoTime(), numBytes, numKeys, numChunks
         );
         // switch dataMapIndex only if the snapshot was successful and it wasn't an exported one
         if (failureText == null && exportedSnapshotMapName == null) {
@@ -282,8 +283,8 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         private long snapshotId;
 
         // stats for the current successful snapshot
-        private long startTime;
-        private long endTime;
+        private long startTimeNs;
+        private long endTimeNs;
         private long numBytes;
         private long numKeys;
         private long numChunks;
@@ -291,25 +292,25 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         public SnapshotStats() {
         }
 
-        SnapshotStats(long snapshotId, long startTime, long endTime, long numBytes, long numKeys, long numChunks) {
+        SnapshotStats(long snapshotId, long startTimeNs, long endTimeNs, long numBytes, long numKeys, long numChunks) {
             this.snapshotId = snapshotId;
-            this.startTime = startTime;
-            this.endTime = endTime;
+            this.startTimeNs = startTimeNs;
+            this.endTimeNs = endTimeNs;
             this.numBytes = numBytes;
             this.numKeys = numKeys;
             this.numChunks = numChunks;
         }
 
         public long startTime() {
-            return startTime;
+            return startTimeNs;
         }
 
         public long endTime() {
-            return endTime;
+            return endTimeNs;
         }
 
-        public long duration() {
-            return endTime - startTime;
+        public long durationMs() {
+            return NANOSECONDS.toMillis(endTimeNs - startTimeNs);
         }
 
         /**
@@ -347,8 +348,8 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         @Override
         public void writeData(ObjectDataOutput out) throws IOException {
             out.writeLong(snapshotId);
-            out.writeLong(startTime);
-            out.writeLong(endTime);
+            out.writeLong(startTimeNs);
+            out.writeLong(endTimeNs);
             out.writeLong(numBytes);
             out.writeLong(numKeys);
             out.writeLong(numChunks);
@@ -357,8 +358,8 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             snapshotId = in.readLong();
-            startTime = in.readLong();
-            endTime = in.readLong();
+            startTimeNs = in.readLong();
+            endTimeNs = in.readLong();
             numBytes = in.readLong();
             numKeys = in.readLong();
             numChunks = in.readLong();
@@ -374,8 +375,8 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
             }
             SnapshotStats that = (SnapshotStats) o;
             return snapshotId == that.snapshotId &&
-                    startTime == that.startTime &&
-                    endTime == that.endTime &&
+                    startTimeNs == that.startTimeNs &&
+                    endTimeNs == that.endTimeNs &&
                     numBytes == that.numBytes &&
                     numKeys == that.numKeys &&
                     numChunks == that.numChunks;
@@ -383,15 +384,15 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
 
         @Override
         public int hashCode() {
-            return Objects.hash(snapshotId, startTime, endTime, numBytes, numKeys, numChunks);
+            return Objects.hash(snapshotId, startTimeNs, endTimeNs, numBytes, numKeys, numChunks);
         }
 
         @Override
         public String toString() {
             return "SnapshotStats{" +
                     "snapshotId=" + snapshotId +
-                    ", startTime=" + startTime +
-                    ", endTime=" + endTime +
+                    ", startTimeNs=" + startTimeNs +
+                    ", endTimeNs=" + endTimeNs +
                     ", numBytes=" + numBytes +
                     ", numKeys=" + numKeys +
                     ", numChunks=" + numChunks +

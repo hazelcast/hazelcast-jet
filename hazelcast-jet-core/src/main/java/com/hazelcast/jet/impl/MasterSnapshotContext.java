@@ -42,6 +42,7 @@ import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
  * Part of {@link MasterContext} that deals with snapshot creation.
@@ -224,11 +225,10 @@ class MasterSnapshotContext {
         mc.writeJobExecutionRecord(false);
 
         if (logger.isFineEnabled()) {
-            // TODO [viliam] log duration after phase 2
             logger.fine(String.format("Snapshot %d phase 1 for %s completed with status %s in %dms, " +
                             "%,d bytes, %,d keys in %,d chunks, stored in '%s', proceeding to phase 2",
                     snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                    stats.duration(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
+                    stats.durationMs(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
         }
         if (!isSuccess) {
             logger.warning(mc.jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
@@ -251,7 +251,7 @@ class MasterSnapshotContext {
         mc.invokeOnParticipants(factory,
                 responses2 -> mc.coordinationService().submitToCoordinatorThread(() ->
                         onSnapshotPhase2Completed(mergedResult.getError(), responses2, executionId, snapshotId,
-                                wasExport, wasTerminal, future)),
+                                wasExport, wasTerminal, future, stats.startTime())),
                 null, true);
     }
 
@@ -262,11 +262,11 @@ class MasterSnapshotContext {
             long snapshotId,
             boolean wasExport,
             boolean wasTerminal,
-            @Nullable CompletableFuture<Void> future
-    ) {
+            @Nullable CompletableFuture<Void> future,
+            long startTime) {
         for (Object response : responses) {
             if (response instanceof Throwable) {
-                logger.warning("Second phase of snapshot " + snapshotId + " in " + mc.jobIdString()
+                logger.warning("SnapshotCompleteOperation for snapshot " + snapshotId + " in " + mc.jobIdString()
                         + " failed on member: " + response, (Throwable) response);
             }
         }
@@ -305,6 +305,10 @@ class MasterSnapshotContext {
         } finally {
             mc.unlock();
         }
+        logger.info("Snapshot " + snapshotId + " for " + mc.jobIdString() + " completed in "
+                + NANOSECONDS.toMillis(System.nanoTime() - startTime) + "ms, status="
+                + (phase1Error == null ? "success" : "failure: " + phase1Error));
+
         tryBeginSnapshotPhase1();
     }
 

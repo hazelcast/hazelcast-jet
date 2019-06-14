@@ -368,7 +368,6 @@ public class SnapshotContext {
      * ongoing snapshot will be completed with failure and no more snapshots
      * will be allowed to start.
      */
-    // TODO [viliam] test cancellation in each phase
     synchronized void cancel() {
         if (phase1Future != null) {
             reportError(new CancellationException("execution cancelled"));
