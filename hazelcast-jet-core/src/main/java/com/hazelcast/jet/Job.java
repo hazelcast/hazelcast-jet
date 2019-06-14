@@ -183,12 +183,17 @@ public interface Job {
      * and then cancels the job without processing any more data after the
      * barrier (graceful cancellation). It's similar to {@link #suspend()}
      * followed by a {@link #cancel()}, except that it won't process any more
-     * data data after the snapshot.
+     * data after the snapshot.
      * <p>
      * You can use the exported snapshot as a starting point for a new job. The
      * job doesn't need to execute the same Pipeline as the job that created it,
      * it must just be compatible with its state data. To achieve this, use
      * {@link JobConfig#setInitialSnapshotName(String)}.
+     * <p>
+     * Unlike {@link #exportSnapshot} when a snapshot is created using this
+     * method the external transactions will be committed, because this
+     * snapshot is the last one created for the job and it's safe to use it to
+     * continue the processing.
      * <p>
      * If the terminal snapshot fails, Jet will suspend this job instead of
      * cancelling it.
@@ -209,7 +214,6 @@ public interface Job {
      *            overwritten
      * @throws JetException if the job is in an incorrect state: completed,
      *            cancelled or is in the process of restarting or suspending.
-     * @throws SnapshotFailedInSecondPhaseWarning TODO [viliam]
      */
     JobStateSnapshot cancelAndExportSnapshot(String name);
 
@@ -222,7 +226,19 @@ public interface Job {
      * won't automatically delete the IMap it is exported into. You must
      * manually call {@linkplain JobStateSnapshot#destroy() snapshot.destroy()}
      * to delete it. If your state is large, make sure you have enough memory
-     * to store it.
+     * to store it. The snapshot created using this method will also not be
+     * used for automatic restart - should the job fail, previous automatically
+     * started snapshot will be used.
+     * <p>
+     * For transactional sources or sinks (that is those which use transactions
+     * to confirm reads or to commit writes) the transactions will not be
+     * committed when creating a snapshot using this method. The reason for
+     * this is that such connectors only achieve exactly-once guarantee if the
+     * job is restarted from the latest snapshot. But, for example, if the job
+     * failed after exporting a snapshot but before creating a new automatic
+     * one, the job will restart from the previous automatic snapshot and the
+     * stored internal and committed external state will be from a different
+     * point in time and a data loss will occur.
      * <p>
      * If a snapshot with the same name already exists, it will be
      * overwritten. If a snapshot is already in progress for this job (either
@@ -240,18 +256,15 @@ public interface Job {
      * snapshot, they will wait in a queue for this snapshot to complete.
      * Forceful job-control actions will interrupt the export procedure.
      * <p>
-     * You can access the exported state map using {@link
+     * You can access the exported state using {@link
      * JetInstance#getJobStateSnapshot(String)}.
      * <p>
      * The method call will block until it has fully exported the snapshot.
-     *
-     * TODO [viliam] describe 2-phase snapshot behavior
      *
      * @param name name of the snapshot. If name is already used, it will be
      *            overwritten
      * @throws JetException if the job is in an incorrect state: completed,
      *            cancelled or is in the process of restarting or suspending.
-     * @throws SnapshotFailedInSecondPhaseWarning TODO [viliam]
      */
     JobStateSnapshot exportSnapshot(String name);
 }
