@@ -390,8 +390,6 @@ public class ProcessorTasklet implements Tasklet {
         }
 
         if (inbox.isEmpty()) {
-            assert !outbox.hasUnfinishedItem() : "outbox has unfinished item after successful process() or " +
-                    "restoreFromSnapshot() returned with an empty inbox";
             // there is either snapshot or instream is done, not both
             if (currInstream != null && currInstream.isDone()) {
                 state = COMPLETE_EDGE;
