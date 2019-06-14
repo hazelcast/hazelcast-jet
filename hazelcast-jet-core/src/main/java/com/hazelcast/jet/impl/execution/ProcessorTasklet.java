@@ -408,33 +408,37 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     private void complete() {
-        // check ssContext to see if a barrier should be emitted
-        long currSnapshotId1 = ssContext.activeSnapshotIdPhase1();
-        long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
-        assert currSnapshotId1 + 1 == pendingSnapshotId1 || currSnapshotId1 == pendingSnapshotId1
-                : "Unexpected new phase 1 snapshot id: " + currSnapshotId1 + ", expected was "
-                + (pendingSnapshotId1 - 1) + " or " + pendingSnapshotId1;
-        assert currSnapshotId2 + 1 == pendingSnapshotId2 || currSnapshotId2 == pendingSnapshotId2
-                : "Unexpected new phase 2 snapshot id: " + currSnapshotId2 + ", expected was "
-                + (pendingSnapshotId2 - 1) + " or " + pendingSnapshotId2;
-        if (currSnapshotId1 == pendingSnapshotId1) {
-            if (outbox.hasUnfinishedItem()) {
-                outbox.block();
-            } else {
-                outbox.unblock();
-                state = SAVE_SNAPSHOT;
-                currentBarrier = new SnapshotBarrier(currSnapshotId1, ssContext.isTerminalSnapshot());
-                progTracker.madeProgress();
-                return;
+        // check ssContext to see if snapshot phase should be executed
+        if (pendingSnapshotId1 == pendingSnapshotId2) {
+            long currSnapshotId1 = ssContext.activeSnapshotIdPhase1();
+            assert currSnapshotId1 + 1 == pendingSnapshotId1 || currSnapshotId1 == pendingSnapshotId1
+                    : "Unexpected new phase 1 snapshot id: " + currSnapshotId1 + ", expected was "
+                    + (pendingSnapshotId1 - 1) + " or " + pendingSnapshotId1;
+            if (currSnapshotId1 == pendingSnapshotId1) {
+                if (outbox.hasUnfinishedItem()) {
+                    outbox.block();
+                } else {
+                    outbox.unblock();
+                    state = SAVE_SNAPSHOT;
+                    currentBarrier = new SnapshotBarrier(currSnapshotId1, ssContext.isTerminalSnapshot());
+                    progTracker.madeProgress();
+                    return;
+                }
             }
-        } else if (currSnapshotId2 == pendingSnapshotId2) {
-            if (outbox.hasUnfinishedItem()) {
-                outbox.block();
-            } else {
-                outbox.unblock();
-                state = ON_SNAPSHOT_COMPLETED;
-                progTracker.madeProgress();
-                return;
+        } else {
+            long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
+            assert currSnapshotId2 + 1 == pendingSnapshotId2 || currSnapshotId2 == pendingSnapshotId2
+                    : "Unexpected new phase 2 snapshot id: " + currSnapshotId2 + ", expected was "
+                    + (pendingSnapshotId2 - 1) + " or " + pendingSnapshotId2;
+            if (currSnapshotId2 == pendingSnapshotId2) {
+                if (outbox.hasUnfinishedItem()) {
+                    outbox.block();
+                } else {
+                    outbox.unblock();
+                    state = ON_SNAPSHOT_COMPLETED;
+                    progTracker.madeProgress();
+                    return;
+                }
             }
         }
         if (processor.complete()) {
