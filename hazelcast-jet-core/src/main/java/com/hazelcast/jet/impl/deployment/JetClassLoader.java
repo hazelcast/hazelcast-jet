@@ -113,6 +113,11 @@ public class JetClassLoader extends ClassLoader {
 
     private boolean checkShutdown(String resource) {
         if (isShutdown) {
+            // This class loader is used as the thread context CL in several places. It's possible
+            // that another thread inherits this classloader since a Thread inherits the parent's
+            // context CL by default (see for example: https://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8172726)
+            // In these scenarios the thread might essentially hold a reference to an obsolete classloader.
+            // Rather than throwing an unexpected exception we instead print a warning.
             String jobName = this.jobName == null ? idToString(jobId) : "'" + this.jobName + "'";
             logger.warning("Classloader for job " + jobName + " tried to load '" + resource
                     + "' after the job was completed. The classloader used for jobs is disposed after " +
