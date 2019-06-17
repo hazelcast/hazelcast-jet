@@ -17,7 +17,9 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.IOUtil;
+import com.hazelcast.spi.NodeEngine;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
@@ -39,15 +41,21 @@ public class JetClassLoader extends ClassLoader {
     private static final String JOB_URL_PROTOCOL = "jet-job-resource";
 
     private final long jobId;
+    private final String jobName;
     private final Map<String, byte[]> resources;
-    private JobResourceURLStreamHandler jobResourceURLStreamHandler;
+    private final ILogger logger;
+    private final JobResourceURLStreamHandler jobResourceURLStreamHandler;
+
     private volatile boolean isShutdown;
 
-    public JetClassLoader(@Nullable ClassLoader parent, long jobId, Map<String, byte[]> resources) {
+    public JetClassLoader(NodeEngine nodeEngine,
+                          @Nullable ClassLoader parent, @Nullable String jobName,
+                          long jobId, Map<String, byte[]> resources) {
         super(parent == null ? JetClassLoader.class.getClassLoader() : parent);
+        this.jobName = jobName;
         this.jobId = jobId;
         this.resources = resources;
-
+        this.logger = nodeEngine.getLogger(getClass());
         jobResourceURLStreamHandler = new JobResourceURLStreamHandler();
     }
 
@@ -67,17 +75,19 @@ public class JetClassLoader extends ClassLoader {
 
     @Override
     protected URL findResource(String name) {
-        checkShutdown(name);
-        if (isEmpty(name) || !resources.containsKey(name)) {
-            return null;
-        }
+        if (!checkShutdown(name)) {
+            if (isEmpty(name) || !resources.containsKey(name)) {
+                return null;
+            }
 
-        try {
-            return new URL(JOB_URL_PROTOCOL, null, -1, name, jobResourceURLStreamHandler);
-        } catch (MalformedURLException e) {
-            // this should never happen with custom URLStreamHandler
-            throw new RuntimeException(e);
+            try {
+                return new URL(JOB_URL_PROTOCOL, null, -1, name, jobResourceURLStreamHandler);
+            } catch (MalformedURLException e) {
+                // this should never happen with custom URLStreamHandler
+                throw new RuntimeException(e);
+            }
         }
+        return null;
     }
 
     @Override
@@ -91,19 +101,25 @@ public class JetClassLoader extends ClassLoader {
 
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
-        checkShutdown(name);
-        byte[] classData = resources.get(name);
-        if (classData == null) {
-            return null;
+        if (!checkShutdown(name)) {
+            byte[] classData = resources.get(name);
+            if (classData == null) {
+                return null;
+            }
+            return new InflaterInputStream(new ByteArrayInputStream(classData));
         }
-        return new InflaterInputStream(new ByteArrayInputStream(classData));
+        return null;
     }
 
-    private void checkShutdown(String resource) {
+    private boolean checkShutdown(String resource) {
         if (isShutdown) {
-            throw new IllegalStateException("Classloader for job " + idToString(jobId) + " tried to load '" + resource
-                    + "' after the job was completed. The classloader used for jobs is disposed after job is completed");
+            String jobName = this.jobName == null ? idToString(jobId) : "'" + this.jobName + "'";
+            logger.warning("Classloader for job " + jobName + " tried to load '" + resource
+                    + "' after the job was completed. The classloader used for jobs is disposed after " +
+                    "job is completed");
+            return true;
         }
+        return false;
     }
 
     private static boolean isEmpty(String className) {
@@ -160,4 +176,11 @@ public class JetClassLoader extends ClassLoader {
         }
     }
 
+    @Override
+    public String toString() {
+        return "JetClassLoader{" +
+                "jobName='" + jobName + '\'' +
+                ", jobId=" + jobId +
+                '}';
+    }
 }
