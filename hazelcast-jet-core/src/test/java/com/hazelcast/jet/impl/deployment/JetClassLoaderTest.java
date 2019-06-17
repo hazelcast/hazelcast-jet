@@ -20,16 +20,14 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import static org.junit.Assert.assertTrue;
 
 public class JetClassLoaderTest extends JetTestSupport {
 
     @Test
-    public void when_jobCompleted_then_classLoaderShutDown() throws Exception {
+    public void when_jobCompleted_then_classLoaderShutDown() {
         DAG dag = new DAG();
         dag.newVertex("v", LeakClassLoaderP::new).localParallelism(1);
 
