@@ -24,10 +24,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-public class JetClassLoaderTest extends JetTestSupport {
+import static org.junit.Assert.assertTrue;
 
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
+public class JetClassLoaderTest extends JetTestSupport {
 
     @Test
     public void when_jobCompleted_then_classLoaderShutDown() throws Exception {
@@ -40,9 +39,9 @@ public class JetClassLoaderTest extends JetTestSupport {
         instance.newJob(dag).join();
 
         // Then
-        exception.expect(IllegalStateException.class);
-        exception.expectMessage("The classloader used for jobs is disposed after job is completed");
-        LeakClassLoaderP.classLoader.findClass("foo.Class");
+        assertTrue("The classloader should have been shutdown after job completion",
+                LeakClassLoaderP.classLoader.isShutdown()
+        );
     }
 
     private static class LeakClassLoaderP extends AbstractProcessor {

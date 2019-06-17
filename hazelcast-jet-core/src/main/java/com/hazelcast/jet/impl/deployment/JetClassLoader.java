@@ -99,6 +99,10 @@ public class JetClassLoader extends ClassLoader {
         isShutdown = true;
     }
 
+    public boolean isShutdown() {
+        return isShutdown;
+    }
+
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
         if (!checkShutdown(name)) {
