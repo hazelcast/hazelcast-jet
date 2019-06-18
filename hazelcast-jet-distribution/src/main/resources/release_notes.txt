@@ -12,8 +12,8 @@ The label in the brackets refer to the respective module.
 [pipeline-api] Enable composite transforms using `apply` operator [#1352]
 [pipeline-api] Add support for fault tolerant sources to SourceBuilder API [#1394]
 [core] YAML configuration support [#1371]
-[integration] Source and sink for Elasticsearch [https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb]
-[integration] Source and sink for InfluxDB [https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch]
+[integration] Source and sink for Elasticsearch [https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch]
+[integration] Source and sink for InfluxDB [https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb]
 [beam] First release of Hazelcast Jet Beam Runner [https://beam.apache.org/documentation/runners/jet/]
 
 2. Enhancements
