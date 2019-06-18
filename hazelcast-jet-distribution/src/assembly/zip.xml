@@ -37,6 +37,7 @@
         </dependencySet>
     </dependencySets>
     <files>
+        <!-- Default XML config files -->
         <file>
             <source>${config.directory}/hazelcast-jet-default.xml</source>
             <destName>hazelcast-jet.xml</destName>
@@ -50,6 +51,23 @@
         <file>
             <source>${config.directory}/hazelcast-jet-client-default.xml</source>
             <destName>hazelcast-client.xml</destName>
+            <outputDirectory>config</outputDirectory>
+        </file>
+
+        <!-- Default YAML config files -->
+        <file>
+            <source>${config.directory}/hazelcast-jet-default.yaml</source>
+            <destName>hazelcast-jet.yaml</destName>
+            <outputDirectory>config</outputDirectory>
+        </file>
+        <file>
+            <source>${config.directory}/hazelcast-jet-member-default.yaml</source>
+            <destName>hazelcast.yaml</destName>
+            <outputDirectory>config</outputDirectory>
+        </file>
+        <file>
+            <source>${config.directory}/hazelcast-jet-client-default.yaml</source>
+            <destName>hazelcast-client.yaml</destName>
             <outputDirectory>config</outputDirectory>
         </file>
 
