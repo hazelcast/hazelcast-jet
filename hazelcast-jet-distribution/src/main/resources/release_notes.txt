@@ -38,6 +38,14 @@ The label in the brackets refer to the respective module.
 [kafka] Improve Kafka source responsiveness when broker is down [#1429]
 [kafka] Improve handling of TimeoutException in Kafka sink [#1433]
 
+4. Breaking Changes
+
+[pipeline-api] Previously it was possible to close the buffer in SourceBuilder when building a streaming source,
+               however a streaming source by definition should never close. buffer.close() method now throws when
+               called inside a streaming source. [#1394]
+[core] Signatures of SourceProcessors.convenientSourceP and convenientTimestampedSourceP
+       have been updated to support fault tolerance [#1394]
+
 ** Hazelcast Jet 3.0 **
 
 1. New Features
