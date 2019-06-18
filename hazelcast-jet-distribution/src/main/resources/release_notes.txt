@@ -33,7 +33,7 @@ The label in the brackets refer to the respective module.
 [core] Configured classloader in Hazelcast Config should be set as the parent of job classloader [#1395]
 [core] Job classloader will now print a warning if it's used after a job is completed [#1315, #1446]
 [core] Snapshot creation should be handled gracefully even if execution is already completed on a member [#1397]
-[core] Added check to making sure any explicit Hazelcast IMDG dependency has same version as the shaded one [#1412]
+[core] Added check to ensure that any explicit Hazelcast IMDG dependency has same version as the shaded one [#1412]
 [core] Fix StackOverFlowError when a very long path in DAG is used [#1430]
 [kafka] Improve Kafka source responsiveness when broker is down [#1429]
 [kafka] Improve handling of TimeoutException in Kafka sink [#1433]
