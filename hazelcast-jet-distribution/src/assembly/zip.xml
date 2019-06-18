@@ -92,17 +92,17 @@
         <file>
             <source>${config.directory}/hazelcast-jet-default.yaml</source>
             <destName>hazelcast-jet.yaml</destName>
-            <outputDirectory>config</outputDirectory>
+            <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
             <source>${config.directory}/hazelcast-jet-member-default.yaml</source>
             <destName>hazelcast.yaml</destName>
-            <outputDirectory>config</outputDirectory>
+            <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
             <source>${config.directory}/hazelcast-jet-client-default.yaml</source>
             <destName>hazelcast-client.yaml</destName>
-            <outputDirectory>config</outputDirectory>
+            <outputDirectory>config/examples</outputDirectory>
         </file>
     </files>
     <fileSets>
