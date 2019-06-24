@@ -95,7 +95,7 @@ public final class TestSources {
         Objects.requireNonNull(generatorFn, "generator");
         checkSerializable(generatorFn, "generatorFn");
 
-        return SourceBuilder.timestampedStream("generator", ctx -> new GeneratorSource<T>(itemsPerSecond, generatorFn))
+        return SourceBuilder.timestampedStream("itemStream", ctx -> new GeneratorSource<T>(itemsPerSecond, generatorFn))
             .<T>fillBufferFn(GeneratorSource::addToBuffer)
             .build();
     }

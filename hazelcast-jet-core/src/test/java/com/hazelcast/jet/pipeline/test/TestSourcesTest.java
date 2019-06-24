@@ -86,9 +86,9 @@ public class TestSourcesTest extends JetTestSupport {
 
     @Test
     public void test_itemStream_withWindowing() {
-        Pipeline p = Pipeline.create();
-
         int itemsPerSecond = 10;
+
+        Pipeline p = Pipeline.create();
         p.drawFrom(TestSources.itemStream(itemsPerSecond))
          .withNativeTimestamps(0)
          .window(WindowDefinition.tumbling(1000))
@@ -99,7 +99,7 @@ public class TestSourcesTest extends JetTestSupport {
 
         assertTrueEventually(() -> {
             assertTrue("sink list should contain some items", sinkList.size() > 1);
-            // first window may be in complete, subsequent windows should have 10 items
+            // first window may be incomplete, subsequent windows should have 10 items
             WindowResult<Long> items = (WindowResult<Long>) sinkList.get(1);
             assertEquals(10L, (long)items.result());
         }, 10);
