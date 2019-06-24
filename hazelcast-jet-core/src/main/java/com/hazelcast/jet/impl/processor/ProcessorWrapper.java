@@ -80,6 +80,11 @@ public abstract class ProcessorWrapper implements Processor {
     }
 
     @Override
+    public boolean onSnapshotCompleted(boolean commitTransactions) {
+        return wrapped.onSnapshotCompleted(commitTransactions);
+    }
+
+    @Override
     public void restoreFromSnapshot(@Nonnull Inbox inbox) {
         wrapped.restoreFromSnapshot(inbox);
     }
