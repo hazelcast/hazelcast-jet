@@ -39,7 +39,7 @@ public final class TestSources {
     private TestSources() {
     }
 
-    /***
+    /**
      * Returns a batch source which iterates through the supplied iterable and then
      * terminates.
      */
@@ -53,7 +53,7 @@ public final class TestSources {
             }).build();
     }
 
-    /***
+    /**
      * Returns a batch source which iterates through the supplied items and then
      * terminates.
      */
@@ -63,7 +63,7 @@ public final class TestSources {
         return items(Arrays.asList(items));
     }
 
-    /***
+    /**
      * Returns a streaming source which generates events of type {@link SimpleEvent} at
      * the specified rate.
      * <p>
@@ -77,7 +77,7 @@ public final class TestSources {
         return itemStream(itemsPerSecond, SimpleEvent::new);
     }
 
-    /***
+    /**
      * Returns a streaming source which generates events of type {@link SimpleEvent} at
      * the specified rate per second.
      * <p>
