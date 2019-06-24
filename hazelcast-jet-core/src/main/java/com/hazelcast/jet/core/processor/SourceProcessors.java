@@ -100,9 +100,9 @@ public final class SourceProcessors {
     public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull Projection<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, projectionFn);
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, projection);
     }
 
     /**
@@ -113,9 +113,9 @@ public final class SourceProcessors {
     public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, toProjection(projectionFn));
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, toProjection(projection));
     }
 
 

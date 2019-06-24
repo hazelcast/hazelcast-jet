@@ -77,7 +77,6 @@ public final class WriteJdbcP<T> implements Processor {
             @Nonnull String updateQuery,
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn
-
     ) {
         checkSerializable(newConnectionFn, "newConnectionFn");
         checkSerializable(bindFn, "bindFn");

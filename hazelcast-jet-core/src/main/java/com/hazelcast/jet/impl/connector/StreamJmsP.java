@@ -88,19 +88,19 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @Nonnull
     public static <T> ProcessorSupplier supplier(
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
-            @Nonnull FunctionEx<? super Connection, ? extends Session> sessionFn,
+            @Nonnull FunctionEx<? super Connection, ? extends Session> newSessionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull ConsumerEx<? super Session> flushFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
         checkSerializable(newConnectionFn, "newConnectionFn");
-        checkSerializable(sessionFn, "newSessionFn");
+        checkSerializable(newSessionFn, "newSessionFn");
         checkSerializable(consumerFn, "consumerFn");
         checkSerializable(flushFn, "flushFn");
         checkSerializable(projectionFn, "projectionFn");
 
-        return new Supplier<>(newConnectionFn, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy);
+        return new Supplier<>(newConnectionFn, newSessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy);
     }
 
     @Override

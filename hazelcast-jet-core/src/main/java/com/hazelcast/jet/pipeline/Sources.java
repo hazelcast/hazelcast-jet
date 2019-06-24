@@ -65,6 +65,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamSocketP;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -99,6 +100,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
+        checkSerializable(metaSupplier, "metaSupplier");
         return new BatchSourceTransform<>(sourceName, metaSupplier);
     }
 
@@ -140,6 +142,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
+        checkSerializable(metaSupplier, "metaSupplier");
         return new StreamSourceTransform<>(sourceName, w -> metaSupplier, false, false);
     }
 
@@ -338,9 +341,9 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projectionFn));
+        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
     }
 
     /**
@@ -356,9 +359,9 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> map(
             @Nonnull IMap<? extends K, ? extends V> map,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return map(map.getName(), predicate, projectionFn);
+        return map(map.getName(), predicate, projection);
     }
 
     /**
@@ -635,10 +638,10 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                readRemoteMapP(mapName, clientConfig, predicate, projectionFn));
+                readRemoteMapP(mapName, clientConfig, predicate, projection));
     }
 
     /**
