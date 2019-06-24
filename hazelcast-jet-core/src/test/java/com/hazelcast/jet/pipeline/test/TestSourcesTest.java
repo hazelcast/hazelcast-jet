@@ -101,7 +101,7 @@ public class TestSourcesTest extends JetTestSupport {
             assertTrue("sink list should contain some items", sinkList.size() > 1);
             // first window may be incomplete, subsequent windows should have 10 items
             WindowResult<Long> items = (WindowResult<Long>) sinkList.get(1);
-            assertEquals(10L, (long)items.result());
+            assertEquals(10L, (long) items.result());
         }, 10);
     }
 }
