@@ -1187,7 +1187,7 @@ public final class Sources {
 
     /**
      * Returns a source which connects to the specified database using the given
-     * {@code connectionSupplier}, queries the database and creates a result set
+     * {@code newConnectionFn}, queries the database and creates a result set
      * using the the given {@code resultSetFn}. It creates output objects from the
      * {@link ResultSet} using given {@code mapOutputFn} and emits them to
      * downstream.
@@ -1229,19 +1229,19 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor is 1.
      *
-     * @param connectionSupplier creates the connection
+     * @param newConnectionFn creates the connection
      * @param resultSetFn creates a {@link ResultSet} using the connection,
      *                    total parallelism and index
      * @param createOutputFn creates output objects from {@link ResultSet}
      * @param <T> type of output objects
      */
     public static <T> BatchSource<T> jdbc(
-            @Nonnull SupplierEx<? extends Connection> connectionSupplier,
+            @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull FunctionEx<? super ResultSet, ? extends T> createOutputFn
     ) {
         return batchFromProcessor("jdbcSource",
-                SourceProcessors.readJdbcP(connectionSupplier, resultSetFn, createOutputFn));
+                SourceProcessors.readJdbcP(newConnectionFn, resultSetFn, createOutputFn));
     }
 
     /**
