@@ -42,6 +42,8 @@ public final class TestSources {
     /**
      * Returns a batch source which iterates through the supplied iterable and then
      * terminates.
+     *
+     * @since 3.2
      */
     @Nonnull
     public static <T> BatchSource<T> items(@Nonnull Iterable<? extends T> items) {
@@ -56,6 +58,8 @@ public final class TestSources {
     /**
      * Returns a batch source which iterates through the supplied items and then
      * terminates.
+     *
+     * @since 3.2
      */
     @Nonnull
     public static <T> BatchSource<T> items(@Nonnull T... items) {
@@ -71,6 +75,8 @@ public final class TestSources {
      * job is restarted.
      *
      * @param itemsPerSecond how many items should be emitted each second
+     *
+     * @since 3.2
      */
     @Nonnull
     public static StreamSource<SimpleEvent> itemStream(@Nonnull int itemsPerSecond) {
@@ -87,6 +93,8 @@ public final class TestSources {
      * @param itemsPerSecond how many items should be emitted each second
      * @param generatorFn a function which takes the timestamp and the sequence of the generated item
      *                    and maps it to the desired type
+     *
+     * @since 3.2
      */
     @Nonnull
     public static <T> StreamSource<T> itemStream(
@@ -95,13 +103,12 @@ public final class TestSources {
         Objects.requireNonNull(generatorFn, "generator");
         checkSerializable(generatorFn, "generatorFn");
 
-        return SourceBuilder.timestampedStream("itemStream", ctx -> new GeneratorSource<T>(itemsPerSecond, generatorFn))
-            .<T>fillBufferFn(GeneratorSource::addToBuffer)
+        return SourceBuilder.timestampedStream("itemStream", ctx -> new ItemStreamSource<T>(itemsPerSecond, generatorFn))
+            .<T>fillBufferFn(ItemStreamSource::addToBuffer)
             .build();
     }
 
-
-    private static final class GeneratorSource<T> {
+    private static final class ItemStreamSource<T> {
         private static final int MAX_BATCH_SIZE = 1024;
 
         private final GeneratorFunction<? extends T> generator;
@@ -109,7 +116,7 @@ public final class TestSources {
         private long sequence;
         private long periodNanos;
 
-        private GeneratorSource(int itemsPerSecond, GeneratorFunction<? extends T> generator) {
+        private ItemStreamSource(int itemsPerSecond, GeneratorFunction<? extends T> generator) {
             this.periodNanos = TimeUnit.SECONDS.toNanos(1) / itemsPerSecond;
             this.generator = generator;
         }

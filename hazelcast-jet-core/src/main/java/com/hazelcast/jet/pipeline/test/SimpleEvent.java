@@ -23,6 +23,8 @@ import java.util.Objects;
 
 /**
  * A simple event with a timestamp and sequence number
+ *
+ * @since 3.2
  */
 public class SimpleEvent implements Serializable {
 
