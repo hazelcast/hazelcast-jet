@@ -47,6 +47,7 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -246,5 +247,37 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             assertTrue("stats are 0", record.snapshotStats().numBytes() > 0);
         }, timeoutSeconds);
         logger.info("Next snapshot found (id=" + snapshotId[0] + ", previous id=" + originalSnapshotId + ")");
+    }
+
+    /**
+     * Give this method a job and it will ensure it's no longer running. It
+     * will ignore if it's not running. If the cancellation fails, it will
+     * retry.
+     */
+    public void ditchJob(Job job) {
+        for (;;) {
+            Exception failure;
+            try {
+                job.cancel();
+                job.join();
+                return;
+            } catch (CancellationException e) {
+                return;
+            } catch (Exception e) {
+                failure = e;
+            }
+            sleepMillis(500);
+            JobStatus status = null;
+            try {
+                status = job.getStatus();
+                if (status == JobStatus.FAILED || status == JobStatus.COMPLETED) {
+                    return;
+                }
+            } catch (Exception e) {
+                logger.warning("Failure to read job status: " + e, e);
+            }
+            logger.warning("Failed to cancel the job and it is still " + status + ", retrying. Failure: " + failure,
+                    failure);
+        }
     }
 }
