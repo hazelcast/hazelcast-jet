@@ -47,7 +47,6 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -256,16 +255,20 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      */
     public void ditchJob(Job job) {
         for (;;) {
-            Exception failure;
+            Exception cancellationFailure;
             try {
                 job.cancel();
-                job.join();
-                return;
-            } catch (CancellationException e) {
+                try {
+                    job.join();
+                } catch (Exception ignored) {
+                    // This can be CancellationException or any other job failure. We don't care,
+                    // we're supposed to rid the cluster of the job and that's what we have.
+                }
                 return;
             } catch (Exception e) {
-                failure = e;
+                cancellationFailure = e;
             }
+
             sleepMillis(500);
             JobStatus status = null;
             try {
@@ -276,8 +279,8 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             } catch (Exception e) {
                 logger.warning("Failure to read job status: " + e, e);
             }
-            logger.warning("Failed to cancel the job and it is still " + status + ", retrying. Failure: " + failure,
-                    failure);
+            logger.warning("Failed to cancel the job and it is " + status + ", retrying. Failure: " + cancellationFailure,
+                    cancellationFailure);
         }
     }
 }
