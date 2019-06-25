@@ -19,23 +19,79 @@ package com.hazelcast.jet.pipeline.test;
 import com.hazelcast.jet.pipeline.Sink;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 
+/**
+ * @since 3.2
+ */
+public final class AssertionSinks {
 
-public final class TestSinks {
-
-    private TestSinks() {
-
+    private AssertionSinks() {
     }
 
-    public static <T> Sink<T> equals(String message, List<T> expected) {
-        return AssertionSinkBuilder.assertionSink("equals", ArrayList::new)
+    /**
+     *
+     * @param message
+     * @param expected
+     * @param <T>
+     * @return
+     */
+    public static <T> Sink<T> assertOrdered(String message, Collection<? super T> expected) {
+        final List<? super T> exp = new ArrayList<>(expected);
+        return AssertionSinkBuilder.assertionSink("assertOrdered", ArrayList::new)
             .<T>receiveFn(ArrayList::add)
-            .completeFn(received -> assertEquals(message, expected, received))
+            .completeFn(received -> assertEquals(message, exp, received))
             .build();
     }
 
+    /**
+     *
+     * @param expected
+     * @param <T>
+     * @return
+     */
+    public static <T> Sink<T> assertOrdered(Collection<? super T> expected) {
+        return assertOrdered(null, expected);
+    }
+
+    /**
+     *
+     * @param message
+     * @param expected
+     * @param <T>
+     * @return
+     */
+    public static <T> Sink<T> assertUnordered(String message, Collection<? super T> expected) {
+        final List<? super T> exp = new ArrayList<>(expected);
+        exp.sort(hashCodeComparator());
+        return AssertionSinkBuilder.assertionSink("assertUnordered", ArrayList::new)
+            .<T>receiveFn(ArrayList::add)
+            .completeFn(received -> {
+                received.sort(hashCodeComparator());
+                assertEquals(message, exp, received);
+            })
+            .build();
+    }
+
+//    public static <T> Sink<T> assertReceivedEventually() {
+//
+//    };
+    /**
+     *
+     * @param expected
+     * @param <T>
+     * @return
+     */
+    public static <T> Sink<T> assertUnordered(Collection<? super T> expected) {
+        return assertOrdered(null, expected);
+    }
+
+    private static Comparator<Object> hashCodeComparator() {
+        return Comparator.comparingInt(Object::hashCode);
+    }
 
 }

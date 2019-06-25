@@ -16,15 +16,11 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.IListJet;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -34,24 +30,10 @@ import java.util.stream.IntStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TestSourcesTest extends JetTestSupport {
-
-    private static final String SINK_NAME = "results";
-
-    private JetInstance jet;
-    private IListJet<Object> sinkList;
-
-    @Before
-    public void setup() {
-        jet = createJetMember();
-
-        sinkList = jet.getList(SINK_NAME);
-    }
+public class TestSourcesTest extends PipelineTestSupport {
 
     @Test
     public void test_items() {
-        Pipeline p = Pipeline.create();
-
         Object[] input = IntStream.range(0, 10_000).boxed().toArray();
 
         List<Object> expected = Arrays.asList(input);
@@ -59,19 +41,17 @@ public class TestSourcesTest extends JetTestSupport {
         p.drawFrom(TestSources.items(input))
          .apply(Assertions.assertOrdered(expected));
 
-        jet.newJob(p).join();
+        jet().newJob(p).join();
     }
 
     @Test
     public void test_itemStream() {
-        Pipeline p = Pipeline.create();
-
         p.drawFrom(TestSources.itemStream(10))
          .withoutTimestamps()
-         .drainTo(Sinks.list(SINK_NAME))
+         .drainTo(Sinks.list(sinkName))
          .setLocalParallelism(1);
 
-        jet.newJob(p);
+        jet().newJob(p);
 
         assertTrueEventually(() -> {
             int count = 20;
@@ -88,14 +68,13 @@ public class TestSourcesTest extends JetTestSupport {
     public void test_itemStream_withWindowing() {
         int itemsPerSecond = 10;
 
-        Pipeline p = Pipeline.create();
         p.drawFrom(TestSources.itemStream(itemsPerSecond))
          .withNativeTimestamps(0)
          .window(WindowDefinition.tumbling(1000))
          .aggregate(AggregateOperations.counting())
-         .drainTo(Sinks.list(SINK_NAME));
+         .drainTo(Sinks.list(sinkName));
 
-        jet.newJob(p);
+        jet().newJob(p);
 
         assertTrueEventually(() -> {
             assertTrue("sink list should contain some items", sinkList.size() > 1);

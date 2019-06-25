@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline.test;
+package com.hazelcast.jet.impl.pipeline.test;
 
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -25,7 +25,7 @@ import com.hazelcast.jet.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 
-public class AssertionP<A, T> extends AbstractProcessor {
+public final class AssertionP<A, T> extends AbstractProcessor {
 
     private final SupplierEx<? extends A> createFn;
     private final BiConsumerEx<? super A, ? super T> receiveFn;
@@ -49,7 +49,7 @@ public class AssertionP<A, T> extends AbstractProcessor {
     }
 
     @Override
-    protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+    protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         receiveFn.accept(state, (T) item);
         return true;
     }
@@ -60,13 +60,15 @@ public class AssertionP<A, T> extends AbstractProcessor {
         return true;
     }
 
+    @Nonnull
     public static <A, T> ProcessorMetaSupplier assertionP(
-        SupplierEx<? extends A> createFn,
-        BiConsumerEx<? super A, ? super T> receiveFn,
-        ConsumerEx<? super A> completeFn
+        @Nonnull String name,
+        @Nonnull SupplierEx<? extends A> createFn,
+        @Nonnull BiConsumerEx<? super A, ? super T> receiveFn,
+        @Nonnull ConsumerEx<? super A> completeFn
     ) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(
-            () -> new AssertionP<>(createFn, receiveFn, completeFn))
+            () -> new AssertionP<>(createFn, receiveFn, completeFn)), name
         );
     }
 }
