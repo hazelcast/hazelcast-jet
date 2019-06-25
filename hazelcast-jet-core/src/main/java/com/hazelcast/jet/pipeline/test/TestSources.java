@@ -20,6 +20,7 @@ import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.spi.annotation.Beta;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *
  * @since 3.2
  */
+@Beta
 public final class TestSources {
 
     private TestSources() {

@@ -20,4 +20,7 @@
  *
  * @since 3.2
  */
+@Beta
 package com.hazelcast.jet.pipeline.test;
+
+import com.hazelcast.spi.annotation.Beta;

@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.WindowDefinition;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -54,12 +53,13 @@ public class TestSourcesTest extends JetTestSupport {
         Pipeline p = Pipeline.create();
 
         Object[] input = IntStream.range(0, 10_000).boxed().toArray();
+
+        List<Object> expected = Arrays.asList(input);
+
         p.drawFrom(TestSources.items(input))
-         .drainTo(Sinks.list(SINK_NAME));
+         .apply(Assertions.assertOrdered(expected));
 
         jet.newJob(p).join();
-
-        assertEquals(Arrays.asList(input), new ArrayList<>(sinkList));
     }
 
     @Test

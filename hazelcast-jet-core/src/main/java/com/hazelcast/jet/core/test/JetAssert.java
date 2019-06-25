@@ -23,29 +23,47 @@ import java.util.Objects;
  *
  * @since 3.0
  */
-final class JetAssert {
+public final class JetAssert {
 
     private JetAssert() {
     }
 
-    static void assertTrue(String message, boolean condition) {
+    /**
+     * @param message
+     * @param condition
+     */
+    public static void assertTrue(String message, boolean condition) {
         if (!condition) {
             throw new AssertionError(message);
         }
     }
 
-    static void assertFalse(String message, boolean condition) {
+    /**
+     * @param message
+     * @param condition
+     */
+    public static void assertFalse(String message, boolean condition) {
         assertTrue(message, !condition);
     }
 
-    static void assertSame(String message, Object expected, Object actual) {
+    /**
+     * @param message
+     * @param expected
+     * @param actual
+     */
+    public static void assertSame(String message, Object expected, Object actual) {
         if (expected == actual) {
             return;
         }
         throwNotEqual(message, expected, actual);
     }
 
-    static void assertEquals(String message, Object expected, Object actual) {
+    /**
+     * @param message
+     * @param expected
+     * @param actual
+     */
+    public static void assertEquals(String message, Object expected, Object actual) {
         if (Objects.equals(expected, actual)) {
             return;
         }
@@ -59,15 +77,16 @@ final class JetAssert {
         String expectedString = String.valueOf(expected);
         String actualString = String.valueOf(actual);
         if (expectedString.equals(actualString)) {
-            message = message + "expected: "
+            message = message + ", expected: "
                     + formatClassAndValue(expected, expectedString)
                     + " but was: " + formatClassAndValue(actual, actualString);
         } else {
-            message = message + "expected:<" + expectedString + "> but was:<"
+            message = message + ", expected:<" + expectedString + "> but was:<"
                     + actualString + ">";
         }
         throw new AssertionError(message);
     }
+
 
     private static String formatClassAndValue(Object value, String valueString) {
         String className = value == null ? "null" : value.getClass().getName();

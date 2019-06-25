@@ -14,23 +14,28 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.pipeline;
+package com.hazelcast.jet.pipeline.test;
 
-/**
- * A data sink in a Jet pipeline. It accepts the data the pipeline
- * processed and exports it to an external system.
- *
- * @see Sinks sink factory methods
- *
- * @param <T> the type of the data the sink will receive
- *
- * @since 3.0
- */
-public interface Sink<T> {
+import com.hazelcast.jet.pipeline.Sink;
 
-    /**
-     * Returns a descriptive name for this sink.
-     */
-    String name();
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
+
+
+public final class TestSinks {
+
+    private TestSinks() {
+
+    }
+
+    public static <T> Sink<T> equals(String message, List<T> expected) {
+        return AssertionSinkBuilder.assertionSink("equals", ArrayList::new)
+            .<T>receiveFn(ArrayList::add)
+            .completeFn(received -> assertEquals(message, expected, received))
+            .build();
+    }
+
 
 }

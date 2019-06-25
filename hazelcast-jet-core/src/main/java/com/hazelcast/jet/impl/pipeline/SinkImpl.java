@@ -25,16 +25,23 @@ public class SinkImpl<T> implements Sink<T> {
 
     private final String name;
     private ProcessorMetaSupplier metaSupplier;
+    private boolean isSingleton;
     private boolean isAssignedToStage;
 
-    public SinkImpl(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier) {
+    public SinkImpl(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier, boolean isSingleton) {
         this.name = name;
         this.metaSupplier = metaSupplier;
+        this.isSingleton = isSingleton;
     }
 
     @Nonnull
     public ProcessorMetaSupplier metaSupplier() {
         return metaSupplier;
+    }
+
+    @Nonnull
+    public boolean isSingleton() {
+        return isSingleton;
     }
 
     @Override
