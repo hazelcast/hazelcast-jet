@@ -95,7 +95,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     @After
     public void after() {
         for (Job job : allJetInstances()[0].getJobs()) {
-            ditchJob(job);
+            ditchJob(job, allJetInstances());
         }
         for (DistributedObject o : allJetInstances()[0].getHazelcastInstance().getDistributedObjects()) {
             o.destroy();

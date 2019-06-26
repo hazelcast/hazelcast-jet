@@ -40,6 +40,7 @@ import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -253,8 +254,9 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
      * will ignore if it's not running. If the cancellation fails, it will
      * retry.
      */
-    public void ditchJob(Job job) {
-        for (;;) {
+    public void ditchJob(@Nonnull Job job, @Nonnull JetInstance... instancesToShutDown) {
+        int numAttempts;
+        for (numAttempts = 0; numAttempts < 10; numAttempts++) {
             Exception cancellationFailure;
             try {
                 job.cancel();
@@ -281,6 +283,13 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             }
             logger.warning("Failed to cancel the job and it is " + status + ", retrying. Failure: " + cancellationFailure,
                     cancellationFailure);
+        }
+
+        // if we got here, 10 attempts to cancel the job have failed. Cluster is in bad shape probably, shut it down
+        logger.warning(numAttempts + " attempts to cancel the job failed"
+                + (instancesToShutDown.length > 0 ? ", shutting the cluster down" : ""));
+        for (JetInstance instance : instancesToShutDown) {
+            instance.getHazelcastInstance().getLifecycleService().terminate();
         }
     }
 }
