@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetExportSnapshotCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobConfigCodec;
+import com.hazelcast.client.impl.protocol.codec.JetGetJobMetricsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobStatusCodec.ResponseParameters;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSubmissionTimeCodec;
@@ -41,6 +42,7 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -54,21 +56,43 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
  */
 public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
-    ClientJobProxy(JetClientInstanceImpl client, long jobId) {
+    private final SerializationService serializationService;
+
+    ClientJobProxy(JetClientInstanceImpl client, SerializationService serializationService, long jobId) {
         super(client, jobId);
+        this.serializationService = serializationService;
     }
 
-    ClientJobProxy(JetClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
+    ClientJobProxy(JetClientInstanceImpl client,
+                   SerializationService serializationService,
+                   long jobId,
+                   DAG dag,
+                   JobConfig config) {
         super(client, jobId, dag, config);
+        this.serializationService = serializationService;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public JobStatus getStatus() {
         ClientMessage request = JetGetJobStatusCodec.encodeRequest(getId());
         try {
             ClientMessage response = invocation(request, masterAddress()).invoke().get();
             ResponseParameters parameters = JetGetJobStatusCodec.decodeResponse(response);
             return JobStatus.values()[parameters.response];
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+    }
+
+    @Nonnull
+    @Override
+    public Map<String, Long> getMetrics() {
+        ClientMessage request = JetGetJobMetricsCodec.encodeRequest(getId());
+        try {
+            ClientMessage response = invocation(request, masterAddress()).invoke().get();
+            JetGetJobMetricsCodec.ResponseParameters parameters = JetGetJobMetricsCodec.decodeResponse(response);
+            return serializationService.toObject(parameters.response);
         } catch (Exception e) {
             throw rethrow(e);
         }
@@ -164,7 +188,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     private ClientInvocation invocation(ClientMessage request, Address invocationAddr) {
         return new ClientInvocation(
-                container().getHazelcastClient(), request, "jobId=" + getIdString(), invocationAddr
+            container().getHazelcastClient(), request, "jobId=" + getIdString(), invocationAddr
         );
     }
 
@@ -202,7 +226,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
         @Override
         public Void get(long timeout, @Nonnull TimeUnit unit)
-                throws InterruptedException, ExecutionException, TimeoutException {
+            throws InterruptedException, ExecutionException, TimeoutException {
             future.get(timeout, unit);
             return null;
         }

@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
+import com.hazelcast.jet.impl.operation.GetJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
 import com.hazelcast.jet.impl.operation.ResumeJobOperation;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
@@ -37,6 +38,8 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
+
+import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
@@ -58,6 +61,15 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     public JobStatus getStatus() {
         try {
             return this.<JobStatus>invokeOp(new GetJobStatusOperation(getId())).get();
+        } catch (Throwable t) {
+            throw rethrow(t);
+        }
+    }
+
+    @Nonnull @Override
+    public Map<String, Long> getMetrics() {
+        try {
+            return this.<Map<String, Long>>invokeOp(new GetJobMetricsOperation(getId())).get();
         } catch (Throwable t) {
             throw rethrow(t);
         }

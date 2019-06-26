@@ -24,6 +24,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
@@ -81,6 +82,12 @@ public interface Job {
      */
     @Nonnull
     JobStatus getStatus();
+
+    /**
+     * Returns a copy of the current values of all job-specific metrics.
+     */
+    @Nonnull
+    Map<String, Long> getMetrics();
 
     /**
      * Gets the future associated with the job. The returned future is

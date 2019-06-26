@@ -393,6 +393,23 @@ public class JobCoordinationService {
     }
 
     /**
+     * Returns the latest metrics for a job of fails with {@link JobNotFoundException}
+     * if the requested job is not found.
+     */
+    public CompletableFuture<Map<String, Long>> getJobMetrics(long jobId) {
+        return submitToCoordinatorThread(
+            () -> {
+                Map<String, Long> dummyMetrics = new HashMap<>();
+                dummyMetrics.put("a", 1L);
+                dummyMetrics.put("b", 2L);
+                dummyMetrics.put("c", 3L);
+                dummyMetrics.put("id", jobId);
+                return dummyMetrics; //todo (XXX)
+            }
+        );
+    }
+
+    /**
      * Returns the job submission time or fails with {@link JobNotFoundException}
      * if the requested job is not found.
      */

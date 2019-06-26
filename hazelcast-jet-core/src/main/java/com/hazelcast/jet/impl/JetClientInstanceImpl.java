@@ -94,7 +94,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         try {
             ClientMessage response = invocation.invoke().get();
             List<Long> jobs = JetGetJobIdsCodec.decodeResponse(response).response;
-            return jobs.stream().map(jobId -> new ClientJobProxy(this, jobId)).collect(toList());
+            return jobs.stream().map(jobId -> new ClientJobProxy(this, serializationService, jobId)).collect(toList());
         } catch (Throwable t) {
             throw rethrow(t);
         }
@@ -176,12 +176,12 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     @Override
     public Job newJobProxy(long jobId, DAG dag, JobConfig config) {
-        return new ClientJobProxy(this, jobId, dag, config);
+        return new ClientJobProxy(this, serializationService, jobId, dag, config);
     }
 
     @Override
     public Job newJobProxy(long jobId) {
-        return new ClientJobProxy(this, jobId);
+        return new ClientJobProxy(this, serializationService, jobId);
     }
 
     @Override
