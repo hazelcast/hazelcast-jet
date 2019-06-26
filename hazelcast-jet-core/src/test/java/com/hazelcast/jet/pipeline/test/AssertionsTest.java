@@ -25,7 +25,9 @@ import org.junit.rules.ExpectedException;
 import java.util.Arrays;
 import java.util.concurrent.CompletionException;
 
+import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
 
 public class AssertionsTest extends PipelineTestSupport {
 
@@ -61,6 +63,40 @@ public class AssertionsTest extends PipelineTestSupport {
     public void test_assertUnordered_should_fail() throws Throwable {
         p.drawFrom(TestSources.items(3, 2, 1))
          .apply(Assertions.assertUnordered(Arrays.asList(1, 2, 3, 4)));
+
+        expectedException.expect(AssertionError.class);
+        executeAndPeel();
+    }
+
+    @Test
+    public void test_assertContains() {
+        p.drawFrom(TestSources.items(4, 3, 2, 1))
+         .apply(Assertions.assertContains("message", Arrays.asList(1, 3)));
+
+        execute();
+    }
+
+    @Test
+    public void test_assertContains_should_fail() throws Throwable {
+        p.drawFrom(TestSources.items(4, 1, 2, 3))
+         .apply(Assertions.assertContains("message", Arrays.asList(1, 3, 5)));
+
+        expectedException.expect(AssertionError.class);
+        executeAndPeel();
+    }
+
+    @Test
+    public void test_assertCollected() {
+        p.drawFrom(TestSources.items(4, 3, 2, 1))
+         .apply(assertCollected(c -> assertTrue("list size must be at least 4", c.size() >= 4)));
+
+        execute();
+    }
+
+    @Test
+    public void test_assertCollected_should_fail() throws Throwable {
+        p.drawFrom(TestSources.items(1))
+         .apply(assertCollected(c -> assertTrue("list size must be at least 4", c.size() >= 4)));
 
         expectedException.expect(AssertionError.class);
         executeAndPeel();

@@ -29,8 +29,8 @@ public final class JetAssert {
     }
 
     /**
-     * @param message
-     * @param condition
+     * Asserts that the given condition is {@code true}. If not an
+     * {@link AssertionError} is thrown with the given message.
      */
     public static void assertTrue(String message, boolean condition) {
         if (!condition) {
@@ -39,17 +39,17 @@ public final class JetAssert {
     }
 
     /**
-     * @param message
-     * @param condition
+     * Asserts that the given condition is {@code false}. If not an
+     * {@link AssertionError} is thrown with the given message.
      */
     public static void assertFalse(String message, boolean condition) {
         assertTrue(message, !condition);
     }
 
     /**
-     * @param message
-     * @param expected
-     * @param actual
+     * Asserts that the two given objects are the same, when compared using
+     * the {@code ==} operator and if not an {@link AssertionError} is thrown
+     * with the given message.
      */
     public static void assertSame(String message, Object expected, Object actual) {
         if (expected == actual) {
@@ -59,9 +59,9 @@ public final class JetAssert {
     }
 
     /**
-     * @param message
-     * @param expected
-     * @param actual
+     * Asserts that the two given objects are equal, when compared using
+     * {@link Object#equals(Object)}. If they are not equal an
+     * {@link AssertionError} is thrown with the given message.
      */
     public static void assertEquals(String message, Object expected, Object actual) {
         if (Objects.equals(expected, actual)) {
