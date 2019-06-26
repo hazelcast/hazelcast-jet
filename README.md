@@ -1,5 +1,6 @@
 # Hazelcast Jet
 
+![GitHub release](https://img.shields.io/github/release/hazelcast/hazelcast-jet.svg)
 [![Join the chat at https://gitter.im/hazelcast/hazelcast-jet](https://badges.gitter.im/hazelcast/hazelcast-jet.svg)](https://gitter.im/hazelcast/hazelcast-jet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 <img src="https://github.com/hazelcast/hazelcast-jet/raw/master/logo/hazelcast-jet.png" width="100">
@@ -38,7 +39,7 @@ dependency:
 <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet</artifactId>
-    <version>3.0</version>
+    <version>3.1</version>
 </dependency>
 ```
 
