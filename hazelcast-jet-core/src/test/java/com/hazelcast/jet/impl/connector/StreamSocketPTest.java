@@ -64,16 +64,17 @@ public class StreamSocketPTest extends JetTestSupport {
     public static Collection<Object[]> parameters() {
         List<String> onaAndTwo = asList("1", "2");
         return asList(
-                new Object[]{"1\n2\n", onaAndTwo},
-                new Object[]{"1\r\n2\r\n", onaAndTwo},
-                new Object[]{"1\n2\r\n", onaAndTwo},
-                new Object[]{"1\r\n2\n", onaAndTwo},
-                new Object[]{"1\r2\n", onaAndTwo}, // mixed line terminators
+            // use %n and %r instead of \n and \r due to https://issues.apache.org/jira/browse/SUREFIRE-1662
+                new Object[]{"1%n2%n", onaAndTwo},
+                new Object[]{"1%r%n2%r%n", onaAndTwo},
+                new Object[]{"1%n2%r%n", onaAndTwo},
+                new Object[]{"1%r%n2%n", onaAndTwo},
+                new Object[]{"1%r2%n", onaAndTwo}, // mixed line terminators
                 new Object[]{"", emptyList()},
-                new Object[]{"\n", singletonList("")},
+                new Object[]{"%n", singletonList("")},
                 new Object[]{"1", emptyList()}, // no line terminator after the only line
-                new Object[]{"1\n2", singletonList("1")}, // no line terminator after the last line
-                new Object[]{"1\n\n2\n", asList("1", "", "2")}
+                new Object[]{"1%n2", singletonList("1")}, // no line terminator after the last line
+                new Object[]{"1%n%n2%n", asList("1", "", "2")}
         );
     }
 
@@ -82,12 +83,13 @@ public class StreamSocketPTest extends JetTestSupport {
         outbox = new TestOutbox(10);
         context = new TestProcessorContext();
         bucket = outbox.queue(0);
+        input = input.replaceAll("%n", "\n").replaceAll("%r", "\r");
     }
 
     @Test
     public void smokeTest() throws Exception {
         // we'll test the input as if it is split at every possible position. This is to test the logic that input can be
-        // split at any place: between \r\n, between the bytes of utf-16 sequence etc
+        // split at any place: between %r%n, between the bytes of utf-16 sequence etc
         byte[] inputBytes = input.getBytes(UTF_16);
         for (int splitIndex = 0; splitIndex < inputBytes.length; splitIndex++) {
             logger.info("--------- runTest(" + splitIndex + ") ---------");
