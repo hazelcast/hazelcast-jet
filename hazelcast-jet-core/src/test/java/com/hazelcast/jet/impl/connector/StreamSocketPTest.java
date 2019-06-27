@@ -89,7 +89,7 @@ public class StreamSocketPTest extends JetTestSupport {
     @Test
     public void smokeTest() throws Exception {
         // we'll test the input as if it is split at every possible position. This is to test the logic that input can be
-        // split at any place: between %r%n, between the bytes of utf-16 sequence etc
+        // split at any place: between \r\n, between the bytes of utf-16 sequence etc
         byte[] inputBytes = input.getBytes(UTF_16);
         for (int splitIndex = 0; splitIndex < inputBytes.length; splitIndex++) {
             logger.info("--------- runTest(" + splitIndex + ") ---------");
