@@ -35,6 +35,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Address;
@@ -42,7 +43,6 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -56,20 +56,12 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
  */
 public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
-    private final SerializationService serializationService;
-
-    ClientJobProxy(JetClientInstanceImpl client, SerializationService serializationService, long jobId) {
+    ClientJobProxy(JetClientInstanceImpl client, long jobId) {
         super(client, jobId);
-        this.serializationService = serializationService;
     }
 
-    ClientJobProxy(JetClientInstanceImpl client,
-                   SerializationService serializationService,
-                   long jobId,
-                   DAG dag,
-                   JobConfig config) {
+    ClientJobProxy(JetClientInstanceImpl client, long jobId, DAG dag, JobConfig config) {
         super(client, jobId, dag, config);
-        this.serializationService = serializationService;
     }
 
     @Nonnull
@@ -87,12 +79,12 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     @Nonnull
     @Override
-    public Map<String, Long> getMetrics() {
+    public JobMetrics getMetrics() {
         ClientMessage request = JetGetJobMetricsCodec.encodeRequest(getId());
         try {
             ClientMessage response = invocation(request, masterAddress()).invoke().get();
             JetGetJobMetricsCodec.ResponseParameters parameters = JetGetJobMetricsCodec.decodeResponse(response);
-            return serializationService.toObject(parameters.response);
+            return JobMetricsImpl.of(serializationService().toObject(parameters.response));
         } catch (Exception e) {
             throw rethrow(e);
         }

@@ -19,12 +19,12 @@ package com.hazelcast.jet;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
@@ -87,7 +87,7 @@ public interface Job {
      * Returns a copy of the current values of all job-specific metrics.
      */
     @Nonnull
-    Map<String, Long> getMetrics();
+    JobMetrics getMetrics();
 
     /**
      * Gets the future associated with the job. The returned future is

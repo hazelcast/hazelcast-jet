@@ -21,6 +21,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
@@ -67,9 +68,9 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     }
 
     @Nonnull @Override
-    public Map<String, Long> getMetrics() {
+    public JobMetrics getMetrics() {
         try {
-            return this.<Map<String, Long>>invokeOp(new GetJobMetricsOperation(getId())).get();
+            return JobMetricsImpl.of(this.<Map<String, Long>>invokeOp(new GetJobMetricsOperation(getId())).get());
         } catch (Throwable t) {
             throw rethrow(t);
         }

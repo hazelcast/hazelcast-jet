@@ -23,6 +23,7 @@ import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
@@ -33,6 +34,10 @@ import com.hazelcast.spi.exception.TargetNotMemberException;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -304,6 +309,39 @@ public abstract class AbstractJobProxy<T> implements Job {
                     + " split-brain merge and coordinator is not known";
             logger.warning(msg, t);
             future.internalCompleteExceptionally(new CancellationException(msg));
+        }
+    }
+
+    static final class JobMetricsImpl implements JobMetrics {
+
+        private final Map<String, Long> metrics;
+
+        private JobMetricsImpl(Map<String, Long> metrics) {
+            this.metrics = Collections.unmodifiableMap(new HashMap<>(metrics));
+        }
+
+        static JobMetrics of(Map<String, Long> metrics) {
+            return new JobMetricsImpl(metrics);
+        }
+
+        @Nonnull
+        @Override
+        public Collection<String> getMetricNames() {
+            return metrics.keySet();
+        }
+
+        @Override
+        public Long getMetricValue(String name) throws IllegalArgumentException {
+            if (name == null) {
+                throw new IllegalArgumentException("Metric name can't be null!");
+            }
+
+            Long value = metrics.get(name);
+            if (value == null) {
+                throw new IllegalArgumentException("Metric with name '" + name + "' not available for job!");
+            }
+
+            return value;
         }
     }
 }
