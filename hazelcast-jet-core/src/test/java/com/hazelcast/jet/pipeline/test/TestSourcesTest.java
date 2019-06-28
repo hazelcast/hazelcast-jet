@@ -73,10 +73,6 @@ public class TestSourcesTest extends PipelineTestSupport {
     public void test_itemStream_withWindowing() throws Throwable {
         int itemsPerSecond = 10;
 
-        p.drawFrom(TestSources.itemStream(10))
-            .withoutTimestamps()
-            .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)));
-
         p.drawFrom(TestSources.itemStream(itemsPerSecond))
          .withNativeTimestamps(0)
          .window(WindowDefinition.tumbling(1000))
