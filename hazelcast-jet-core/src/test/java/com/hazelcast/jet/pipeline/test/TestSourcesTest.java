@@ -19,18 +19,23 @@ package com.hazelcast.jet.pipeline.test;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
-import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.WindowDefinition;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestSourcesTest extends PipelineTestSupport {
+
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void test_items() {
@@ -45,42 +50,45 @@ public class TestSourcesTest extends PipelineTestSupport {
     }
 
     @Test
-    public void test_itemStream() {
+    public void test_itemStream() throws Throwable {
+        int expectedItemCount = 20;
+
         p.drawFrom(TestSources.itemStream(10))
          .withoutTimestamps()
-         .drainTo(Sinks.list(sinkName))
-         .setLocalParallelism(1);
+         .apply(assertCollectedEventually(10, items -> {
+             assertTrue("list should contain at least " + expectedItemCount + " items", items.size() > expectedItemCount);
+             for (int i = 0; i < items.size(); i++) {
+                 SimpleEvent e = (SimpleEvent) items.get(i);
+                 assertEquals(i, e.sequence());
+             }
+         }));
 
-        jet().newJob(p);
 
-        assertTrueEventually(() -> {
-            int count = 20;
-            assertTrue("list should contain at least " + count + " items", sinkList.size() >= count);
-            List<Object> items = sinkList.subList(0, count);
-            for (int i = 0; i < count; i++) {
-                SimpleEvent e = (SimpleEvent) items.get(i);
-                assertEquals(i, e.sequence());
-            }
-        }, 10);
+        expectedException.expect(AssertionCompletedException.class);
+        executeAndPeel();
+
     }
 
     @Test
-    public void test_itemStream_withWindowing() {
+    public void test_itemStream_withWindowing() throws Throwable {
         int itemsPerSecond = 10;
+
+        p.drawFrom(TestSources.itemStream(10))
+            .withoutTimestamps()
+            .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)));
 
         p.drawFrom(TestSources.itemStream(itemsPerSecond))
          .withNativeTimestamps(0)
          .window(WindowDefinition.tumbling(1000))
          .aggregate(AggregateOperations.counting())
-         .drainTo(Sinks.list(sinkName));
+         .apply(assertCollectedEventually(10, items -> {
+             assertTrue("sink list should contain some items", items.size() > 1);
+             // first window may be incomplete, subsequent windows should have 10 items
+             WindowResult<Long> window = (WindowResult<Long>) items.get(1);
+             assertEquals(10L, (long) window.result());
+         }));
 
-        jet().newJob(p);
-
-        assertTrueEventually(() -> {
-            assertTrue("sink list should contain some items", sinkList.size() > 1);
-            // first window may be incomplete, subsequent windows should have 10 items
-            WindowResult<Long> items = (WindowResult<Long>) sinkList.get(1);
-            assertEquals(10L, (long) items.result());
-        }, 10);
+        expectedException.expect(AssertionCompletedException.class);
+        executeAndPeel();
     }
 }

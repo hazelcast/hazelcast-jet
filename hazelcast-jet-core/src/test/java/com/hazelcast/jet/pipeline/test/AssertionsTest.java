@@ -16,18 +16,16 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
-import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
+import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 
 public class AssertionsTest extends PipelineTestSupport {
 
@@ -102,15 +100,23 @@ public class AssertionsTest extends PipelineTestSupport {
         executeAndPeel();
     }
 
-    private void executeAndPeel() throws Throwable {
-        try {
-            execute();
-        } catch (CompletionException e) {
-            Throwable t = peel(e);
-            if (t instanceof JetException && t.getCause() != null) {
-                t = t.getCause();
-            }
-            throw t;
-        }
+    @Test
+    public void test_assertCollectedEventually() throws Throwable {
+        p.drawFrom(TestSources.itemStream(1, (ts, seq) -> 0L))
+         .withoutTimestamps()
+         .apply(assertCollectedEventually(5, c -> assertTrue("did not receive item '0'", c.contains(0L))));
+
+        expectedException.expect(AssertionCompletedException.class);
+        executeAndPeel();
+    }
+
+    @Test
+    public void test_assertCollectedEventually_should_fail() throws Throwable {
+        p.drawFrom(TestSources.itemStream(1, (ts, seq) -> 0L))
+         .withoutTimestamps()
+         .apply(assertCollectedEventually(5, c -> assertTrue("did not receive item '1'", c.contains(1L))));
+
+        expectedException.expect(AssertionError.class);
+        executeAndPeel();
     }
 }

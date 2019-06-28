@@ -23,6 +23,7 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
@@ -38,10 +39,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -82,6 +85,18 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
 
     protected void execute() {
         jet().newJob(p).join();
+    }
+
+    protected void executeAndPeel() throws Throwable {
+        try {
+            execute();
+        } catch (CompletionException e) {
+            Throwable t = peel(e);
+            if (t instanceof JetException && t.getCause() != null) {
+                t = t.getCause();
+            }
+            throw t;
+        }
     }
 
     protected Job start() {
@@ -212,4 +227,6 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         clientConfig.getGroupConfig().setName(instance.getConfig().getGroupConfig().getName());
         return clientConfig;
     }
+
+
 }

@@ -27,18 +27,24 @@ import javax.annotation.Nonnull;
 
 public final class AssertionP<A, T> extends AbstractProcessor {
 
+    private static final long TIMER_INTERVAL = 200L;
+
     private final SupplierEx<? extends A> createFn;
     private final BiConsumerEx<? super A, ? super T> receiveFn;
+    private ConsumerEx<? super A> timerFn;
     private final ConsumerEx<? super A> completeFn;
 
     private A state;
+    private long nextTimerSchedule;
 
     private AssertionP(SupplierEx<? extends A> createFn,
                        BiConsumerEx<? super A, ? super T> receiveFn,
+                       ConsumerEx<? super A> timerFn,
                        ConsumerEx<? super A> completeFn
     ) {
         this.createFn = createFn;
         this.receiveFn = receiveFn;
+        this.timerFn = timerFn;
         this.completeFn = completeFn;
     }
 
@@ -49,8 +55,23 @@ public final class AssertionP<A, T> extends AbstractProcessor {
     }
 
     @Override
+    public boolean tryProcess() {
+        maybeFireTimer();
+        return true;
+    }
+
+    private void maybeFireTimer() {
+        long now = System.currentTimeMillis();
+        if (nextTimerSchedule == 0 || now >= nextTimerSchedule) {
+            timerFn.accept(state);
+            nextTimerSchedule = now + TIMER_INTERVAL;
+        }
+    }
+
+    @Override
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         receiveFn.accept(state, (T) item);
+        maybeFireTimer();
         return true;
     }
 
@@ -65,10 +86,11 @@ public final class AssertionP<A, T> extends AbstractProcessor {
         @Nonnull String name,
         @Nonnull SupplierEx<? extends A> createFn,
         @Nonnull BiConsumerEx<? super A, ? super T> receiveFn,
+        @Nonnull ConsumerEx<? super A> timerFn,
         @Nonnull ConsumerEx<? super A> completeFn
     ) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(ProcessorSupplier.of(
-            () -> new AssertionP<>(createFn, receiveFn, completeFn)), name
+            () -> new AssertionP<>(createFn, receiveFn, timerFn, completeFn)), name
         );
     }
 }

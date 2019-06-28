@@ -18,15 +18,18 @@ package com.hazelcast.jet.pipeline.test;
 
 import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.spi.annotation.Beta;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 /**
  * Various sinks which can be used to assert incoming values. The sinks
@@ -36,6 +39,7 @@ import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
  * @see Assertions
  * @since 3.2
  */
+@Beta
 public final class AssertionSinks {
 
     private AssertionSinks() {
@@ -83,6 +87,8 @@ public final class AssertionSinks {
     /**
      * Collects all the received items in a list and once the upstream stage
      * is completed it executes the assertion supplied by {@code assertFn}.
+     *
+     * @param assertFn assertion to execute once all items are received
      **/
     public static <T> Sink<T> assertCollected(ConsumerEx<List<? super T>> assertFn) {
         return AssertionSinkBuilder.assertionSink("assertCollected", ArrayList::new)
@@ -91,8 +97,68 @@ public final class AssertionSinks {
             .build();
     }
 
+    /**
+     * Collects all the received items in a list and periodically runs assertFn.
+     * {@link AssertionError} thrown from the {@code assertFn} will be ignored
+     * until {@code timeoutSeconds} has passed, in which case they will be rethrown.
+     * <p>
+     * If {@code assertFn} completes with any other errors, the exception will be rethrown.
+     * If {@code assertFn} completes without any error, the sink will throw an
+     * {@link AssertionCompletedException}
+     *
+     * @param timeoutSeconds timeout in seconds, after which any assertion error will be propagated
+     * @param assertFn assertion to execute periodically
+     **/
+    public static <T> Sink<T> assertCollectedEventually(int timeoutSeconds, ConsumerEx<List<? super T>> assertFn) {
+        return AssertionSinkBuilder.assertionSink("assertCollectedEventually", () -> new CollectingSinkWithTimer<>(
+            assertFn, timeoutSeconds)
+        )
+            .<T>receiveFn(CollectingSinkWithTimer::receive)
+            .timerFn(CollectingSinkWithTimer::timer)
+            .completeFn(CollectingSinkWithTimer::complete)
+            .build();
+    }
+
     private static Comparator<Object> hashCodeComparator() {
         return Comparator.comparingInt(Object::hashCode);
     }
 
+    private static final class CollectingSinkWithTimer<T> {
+
+        private final long start;
+        private final List<T> collected;
+        private ConsumerEx<List<? super T>> assertFn;
+        private int timeoutSeconds;
+
+        CollectingSinkWithTimer(ConsumerEx<List<? super T>> assertFn, int timeoutSeconds) {
+            this.assertFn = assertFn;
+            this.timeoutSeconds = timeoutSeconds;
+            start = System.currentTimeMillis();
+            collected = new ArrayList<>();
+        }
+
+        void receive(T item) {
+            collected.add(item);
+        }
+
+        void timer() {
+            AssertionError error;
+            try {
+                assertFn.accept(collected);
+                throw new AssertionCompletedException("Assertion completed successfully");
+            } catch (AssertionError e) {
+                error = e;
+            } catch (Exception e) {
+                throw rethrow(e);
+            }
+            long elapsed = System.currentTimeMillis() - start;
+            if (elapsed > TimeUnit.SECONDS.toMillis(timeoutSeconds)) {
+                throw new AssertionError("The following assertion failed after " + timeoutSeconds + " seconds", error);
+            }
+        }
+
+        void complete() {
+            assertFn.accept(collected);
+        }
+    }
 }

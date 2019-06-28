@@ -43,6 +43,7 @@ public final class AssertionSinkBuilder<A, T> {
     private final SupplierEx<? extends A> createFn;
     private final String name;
     private BiConsumerEx<? super A, ? super T> receiveFn;
+    private ConsumerEx<? super A> timerFn = ConsumerEx.noop();
     private ConsumerEx<? super A> completeFn = ConsumerEx.noop();
 
     private AssertionSinkBuilder(
@@ -118,6 +119,23 @@ public final class AssertionSinkBuilder<A, T> {
     }
 
     /**
+     * Sets the function that will be called periodically. You can use this function
+     * to assert that a condition will eventually be reached. The function is guaranteed
+     * to be called even if there are no items incoming into the sink.
+     * <p>
+     * You are not required to provide this function in case your implementation
+     * doesn't need it.
+     *
+     * @param timerFn the optional "timer" function
+     */
+    @Nonnull
+    public AssertionSinkBuilder<A, T> timerFn(@Nonnull ConsumerEx<? super A> timerFn) {
+        checkSerializable(timerFn, "timerFn");
+        this.timerFn = timerFn;
+        return this;
+    }
+
+    /**
      * Sets the function that will be called after all the upstream stages have
      * completed and all the items are received.
      * <p>
@@ -140,6 +158,6 @@ public final class AssertionSinkBuilder<A, T> {
     @Nonnull
     public Sink<T> build() {
         Preconditions.checkNotNull(receiveFn, "receiveFn must be set");
-        return new SinkImpl<>(name, AssertionP.assertionP(name, createFn, receiveFn, completeFn), true);
+        return new SinkImpl<>(name, AssertionP.assertionP(name, createFn, receiveFn, timerFn, completeFn), true);
     }
 }

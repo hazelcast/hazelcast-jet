@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.test;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -32,7 +33,7 @@ public final class JetAssert {
      * Asserts that the given condition is {@code true}. If not an
      * {@link AssertionError} is thrown with the given message.
      */
-    public static void assertTrue(String message, boolean condition) {
+    public static void assertTrue(@Nullable String message, boolean condition) {
         if (!condition) {
             throw new AssertionError(message);
         }
@@ -42,7 +43,7 @@ public final class JetAssert {
      * Asserts that the given condition is {@code false}. If not an
      * {@link AssertionError} is thrown with the given message.
      */
-    public static void assertFalse(String message, boolean condition) {
+    public static void assertFalse(@Nullable String message, boolean condition) {
         assertTrue(message, !condition);
     }
 
@@ -51,7 +52,7 @@ public final class JetAssert {
      * the {@code ==} operator and if not an {@link AssertionError} is thrown
      * with the given message.
      */
-    public static void assertSame(String message, Object expected, Object actual) {
+    public static void assertSame(@Nullable String message, @Nullable Object expected, @Nullable Object actual) {
         if (expected == actual) {
             return;
         }
@@ -63,11 +64,18 @@ public final class JetAssert {
      * {@link Object#equals(Object)}. If they are not equal an
      * {@link AssertionError} is thrown with the given message.
      */
-    public static void assertEquals(String message, Object expected, Object actual) {
+    public static void assertEquals(@Nullable String message, @Nullable Object expected, @Nullable Object actual) {
         if (Objects.equals(expected, actual)) {
             return;
         }
         throwNotEqual(message, expected, actual);
+    }
+
+    /**
+     * Throws an {@link AssertionError} with the given message
+     */
+    public static void fail(@Nullable String message) {
+        throw new AssertionError(message);
     }
 
     private static void throwNotEqual(String message, Object expected, Object actual) {
@@ -92,4 +100,5 @@ public final class JetAssert {
         String className = value == null ? "null" : value.getClass().getName();
         return className + "<" + valueString + ">";
     }
+
 }

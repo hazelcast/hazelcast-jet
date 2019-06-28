@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline.test;
 import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.spi.annotation.Beta;
 
 import javax.annotation.Nonnull;
@@ -160,6 +161,31 @@ public final class Assertions {
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertCollected(assertFn));
+            return stage;
+        };
+    }
+
+    /**
+     * Collects all the received items in a list and periodically runs assertFn.
+     * {@link AssertionError} thrown from the {@code assertFn} will be ignored
+     * until {@code timeoutSeconds} has passed, in which case they will be rethrown.
+     * <p>
+     * If {@code assertFn} completes with any other errors, the exception will be rethrown.
+     * If {@code assertFn} completes without any error, the sink will throw an
+     * {@link AssertionCompletedException}
+     * Example:
+     * <pre>{@code
+     * p.drawFrom(TestSources.itemStream(10))
+     * .withoutTimestamps()
+     * .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)));
+     * }</pre>
+     **/
+    @Nonnull
+    public static <T> FunctionEx<StreamStage<T>, StreamStage<T>> assertCollectedEventually(
+        int timeout, @Nonnull ConsumerEx<List<? super T>> assertFn
+    ) {
+        return stage -> {
+            stage.drainTo(AssertionSinks.assertCollectedEventually(timeout, assertFn));
             return stage;
         };
     }

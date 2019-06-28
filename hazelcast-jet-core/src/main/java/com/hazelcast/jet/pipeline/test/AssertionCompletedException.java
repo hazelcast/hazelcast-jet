@@ -18,25 +18,31 @@ package com.hazelcast.jet.pipeline.test;
 
 import com.hazelcast.spi.annotation.Beta;
 
-import java.io.Serializable;
-
 /**
- * A function which takes a timestamp and sequence as input
- *
- * @param <R> the type of the result of the function
+ * An exception which indicates that an assertion was completed successfully
  *
  * @since 3.2
  */
-@FunctionalInterface
 @Beta
-public interface GeneratorFunction<R> extends Serializable {
+public final class AssertionCompletedException extends RuntimeException {
 
     /**
-     * Applies the function to the given timestamp and sequence.
-     *
-     * @param timestamp the current timestamp
-     * @param sequence the current sequence
-     * @return the function result
+     * Creates the exception
      */
-    R generate(long timestamp, long sequence) throws Exception;
+    public AssertionCompletedException() {
+    }
+
+    /**
+     * Creates the exception with the given message
+     */
+    public AssertionCompletedException(String message) {
+        super(message);
+    }
+
+    /**
+     * Creates the exception with the given message and cause
+     */
+    public AssertionCompletedException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
