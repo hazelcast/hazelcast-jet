@@ -72,6 +72,10 @@ public final class AssertionSinkBuilder<A, T> {
      *     and can either assert the item directly or add it to the state
      *     object.
      * </li><li>
+     *     {@code timerFn} is run periodically even when there are no items
+     *     received. This can be used to assert that certain assertions have
+     *     been reached within a specific period in streaming pipelines.
+     * </li><li>
      *     {@code completeFn} is run after all the items have been received.
      *     This typically only applies only for batch jobs, in a streaming
      *     job this method may never be called.
