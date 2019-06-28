@@ -81,7 +81,7 @@ public final class TestSources {
      * @since 3.2
      */
     @Nonnull
-    public static StreamSource<SimpleEvent> itemStream(@Nonnull int itemsPerSecond) {
+    public static StreamSource<SimpleEvent> itemStream(int itemsPerSecond) {
         return itemStream(itemsPerSecond, SimpleEvent::new);
     }
 
@@ -100,7 +100,7 @@ public final class TestSources {
      */
     @Nonnull
     public static <T> StreamSource<T> itemStream(
-        @Nonnull int itemsPerSecond, @Nonnull GeneratorFunction<? extends T> generatorFn
+        int itemsPerSecond, @Nonnull GeneratorFunction<? extends T> generatorFn
     ) {
         Objects.requireNonNull(generatorFn, "generator");
         checkSerializable(generatorFn, "generatorFn");

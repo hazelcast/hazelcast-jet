@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline.test;
 
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import org.junit.Rule;
@@ -58,8 +57,7 @@ public class TestSourcesTest extends PipelineTestSupport {
          .apply(assertCollectedEventually(10, items -> {
              assertTrue("list should contain at least " + expectedItemCount + " items", items.size() > expectedItemCount);
              for (int i = 0; i < items.size(); i++) {
-                 SimpleEvent e = (SimpleEvent) items.get(i);
-                 assertEquals(i, e.sequence());
+                 assertEquals(i, items.get(i).sequence());
              }
          }));
 
@@ -77,11 +75,10 @@ public class TestSourcesTest extends PipelineTestSupport {
          .withNativeTimestamps(0)
          .window(WindowDefinition.tumbling(1000))
          .aggregate(AggregateOperations.counting())
-         .apply(assertCollectedEventually(10, items -> {
-             assertTrue("sink list should contain some items", items.size() > 1);
+         .apply(assertCollectedEventually(10, windowResults -> {
+             assertTrue("sink list should contain some items", windowResults.size() > 1);
              // first window may be incomplete, subsequent windows should have 10 items
-             WindowResult<Long> window = (WindowResult<Long>) items.get(1);
-             assertEquals(10L, (long) window.result());
+             assertEquals(10L, (long) windowResults.get(1).result());
          }));
 
         expectedException.expect(AssertionCompletedException.class);

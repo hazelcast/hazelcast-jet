@@ -69,6 +69,7 @@ public final class AssertionP<A, T> extends AbstractProcessor {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         receiveFn.accept(state, (T) item);
         maybeFireTimer();

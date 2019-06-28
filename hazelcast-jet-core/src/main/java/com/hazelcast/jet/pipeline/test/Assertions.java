@@ -55,7 +55,7 @@ public final class Assertions {
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertOrdered(
-        @Nullable String message, @Nonnull Collection<? super T> expected
+        @Nullable String message, @Nonnull Collection<? extends T> expected
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertOrdered(message, expected));
@@ -76,7 +76,7 @@ public final class Assertions {
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertOrdered(
-        @Nonnull Collection<? super T> expected
+        @Nonnull Collection<? extends T> expected
     ) {
         return assertOrdered(null, expected);
     }
@@ -95,7 +95,7 @@ public final class Assertions {
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertUnordered(
-        @Nullable String message, @Nonnull Collection<? super T> expected
+        @Nullable String message, @Nonnull Collection<? extends T> expected
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertUnordered(message, expected));
@@ -117,7 +117,7 @@ public final class Assertions {
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertUnordered(
-        @Nonnull Collection<? super T> expected
+        @Nonnull Collection<? extends T> expected
     ) {
         return assertUnordered(null, expected);
     }
@@ -136,7 +136,7 @@ public final class Assertions {
      **/
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertContains(
-        @Nullable String message, @Nonnull Collection<? super T> expected
+        @Nullable String message, @Nonnull Collection<? extends T> expected
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertContains(message, expected));
@@ -157,7 +157,7 @@ public final class Assertions {
      **/
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertCollected(
-        @Nonnull ConsumerEx<List<? super T>> assertFn
+        @Nonnull ConsumerEx<? super List<T>> assertFn
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertCollected(assertFn));
@@ -182,7 +182,7 @@ public final class Assertions {
      **/
     @Nonnull
     public static <T> FunctionEx<StreamStage<T>, StreamStage<T>> assertCollectedEventually(
-        int timeout, @Nonnull ConsumerEx<List<? super T>> assertFn
+        int timeout, @Nonnull ConsumerEx<? super List<T>> assertFn
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertCollectedEventually(timeout, assertFn));

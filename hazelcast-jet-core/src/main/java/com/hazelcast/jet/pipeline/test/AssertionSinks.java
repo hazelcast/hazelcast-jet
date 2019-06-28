@@ -20,6 +20,8 @@ import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.spi.annotation.Beta;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -50,7 +52,8 @@ public final class AssertionSinks {
      * items, and nothing else. If the assertion fails, the job will fail with a
      * {@link AssertionError} with the given message.
      */
-    public static <T> Sink<T> assertOrdered(String message, Collection<? super T> expected) {
+    @Nonnull
+    public static <T> Sink<T> assertOrdered(@Nullable String message, @Nonnull Collection<? extends T> expected) {
         final List<? super T> exp = new ArrayList<>(expected);
         return assertCollected(received -> assertEquals(message, exp, received));
     }
@@ -60,7 +63,8 @@ public final class AssertionSinks {
      * items in any order, but nothing else. If the assertion fails, the job
      * will fail with a {@link AssertionError} with the given message.
      */
-    public static <T> Sink<T> assertUnordered(String message, Collection<? super T> expected) {
+    @Nonnull
+    public static <T> Sink<T> assertUnordered(@Nullable String message, @Nonnull Collection<? extends T> expected) {
         final List<? super T> exp = new ArrayList<>(expected);
         exp.sort(hashCodeComparator());
         return assertCollected(received -> {
@@ -74,13 +78,14 @@ public final class AssertionSinks {
      * If the assertion fails, the job will fail with a {@link AssertionError} with
      * the given message.
      **/
-    public static <T> Sink<T> assertContains(String message, Collection<? super T> expected) {
+    @Nonnull
+    public static <T> Sink<T> assertContains(@Nullable String message, @Nonnull Collection<? extends T> expected) {
         final HashSet<? super T> set = new HashSet<>(expected);
         return AssertionSinkBuilder.assertionSink("assertContains", () -> set)
             .<T>receiveFn(HashSet::remove)
-            .completeFn(exp -> {
-                assertTrue(message + ", the following items have not been observed: " + exp, exp.isEmpty());
-            })
+            .completeFn(exp -> assertTrue(
+                    message + ", the following items have not been observed: " + exp,
+                    exp.isEmpty()))
             .build();
     }
 
@@ -90,10 +95,11 @@ public final class AssertionSinks {
      *
      * @param assertFn assertion to execute once all items are received
      **/
-    public static <T> Sink<T> assertCollected(ConsumerEx<List<? super T>> assertFn) {
-        return AssertionSinkBuilder.assertionSink("assertCollected", ArrayList::new)
+    @Nonnull
+    public static <T> Sink<T> assertCollected(@Nonnull ConsumerEx<? super List<T>> assertFn) {
+        return AssertionSinkBuilder.assertionSink("assertCollected", ArrayList<T>::new)
             .<T>receiveFn(ArrayList::add)
-            .completeFn(assertFn::accept)
+            .completeFn(assertFn)
             .build();
     }
 
@@ -109,10 +115,14 @@ public final class AssertionSinks {
      * @param timeoutSeconds timeout in seconds, after which any assertion error will be propagated
      * @param assertFn assertion to execute periodically
      **/
-    public static <T> Sink<T> assertCollectedEventually(int timeoutSeconds, ConsumerEx<List<? super T>> assertFn) {
-        return AssertionSinkBuilder.assertionSink("assertCollectedEventually", () -> new CollectingSinkWithTimer<>(
-            assertFn, timeoutSeconds)
-        )
+    @Nonnull
+    public static <T> Sink<T> assertCollectedEventually(
+            int timeoutSeconds,
+            @Nonnull ConsumerEx<? super List<T>> assertFn
+    ) {
+        return AssertionSinkBuilder
+                .assertionSink("assertCollectedEventually",
+                        () -> new CollectingSinkWithTimer<>(assertFn, timeoutSeconds))
             .<T>receiveFn(CollectingSinkWithTimer::receive)
             .timerFn(CollectingSinkWithTimer::timer)
             .completeFn(CollectingSinkWithTimer::complete)
@@ -127,10 +137,10 @@ public final class AssertionSinks {
 
         private final long start;
         private final List<T> collected;
-        private ConsumerEx<List<? super T>> assertFn;
+        private ConsumerEx<? super List<T>> assertFn;
         private int timeoutSeconds;
 
-        CollectingSinkWithTimer(ConsumerEx<List<? super T>> assertFn, int timeoutSeconds) {
+        CollectingSinkWithTimer(ConsumerEx<? super List<T>> assertFn, int timeoutSeconds) {
             this.assertFn = assertFn;
             this.timeoutSeconds = timeoutSeconds;
             start = System.currentTimeMillis();
