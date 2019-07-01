@@ -106,11 +106,11 @@ public final class AssertionSinks {
     /**
      * Collects all the received items in a list and periodically runs assertFn.
      * {@link AssertionError} thrown from the {@code assertFn} will be ignored
-     * until {@code timeoutSeconds} has passed, in which case they will be rethrown.
+     * until {@code timeoutSeconds} has passed, in which case it will be rethrown.
      * <p>
      * If {@code assertFn} completes with any other errors, the exception will be rethrown.
      * If {@code assertFn} completes without any error, the sink will throw an
-     * {@link AssertionCompletedException}
+     * {@link AssertionCompletedException}.
      *
      * @param timeoutSeconds timeout in seconds, after which any assertion error will be propagated
      * @param assertFn assertion to execute periodically

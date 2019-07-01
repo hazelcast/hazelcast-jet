@@ -102,7 +102,7 @@ public final class TestSources {
     public static <T> StreamSource<T> itemStream(
         int itemsPerSecond, @Nonnull GeneratorFunction<? extends T> generatorFn
     ) {
-        Objects.requireNonNull(generatorFn, "generator");
+        Objects.requireNonNull(generatorFn, "generatorFn");
         checkSerializable(generatorFn, "generatorFn");
 
         return SourceBuilder.timestampedStream("itemStream", ctx -> new ItemStreamSource<T>(itemsPerSecond, generatorFn))

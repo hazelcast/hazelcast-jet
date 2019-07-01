@@ -61,7 +61,6 @@ public class TestSourcesTest extends PipelineTestSupport {
              }
          }));
 
-
         expectedException.expect(AssertionCompletedException.class);
         executeAndPeel();
 
