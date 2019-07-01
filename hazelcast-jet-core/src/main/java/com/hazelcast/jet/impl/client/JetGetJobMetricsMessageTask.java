@@ -29,12 +29,12 @@ public class JetGetJobMetricsMessageTask extends AbstractJetMessageTask<JetGetJo
 
     JetGetJobMetricsMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection,
-            JetGetJobMetricsCodec::decodeRequest,
-            JetGetJobMetricsCodec::encodeResponse);
+                JetGetJobMetricsCodec::decodeRequest,
+                JetGetJobMetricsCodec::encodeResponse);
     }
 
     @Override
-    protected ClientMessage encodeResponse(Object o) { //todo (XXX): hacky, need a nicer solution
+    protected ClientMessage encodeResponse(Object o) {
         return super.encodeResponse(toData(o));
     }
 

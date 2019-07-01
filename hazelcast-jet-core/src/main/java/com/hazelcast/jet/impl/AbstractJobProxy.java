@@ -333,15 +333,20 @@ public abstract class AbstractJobProxy<T> implements Job {
         @Override
         public Long getMetricValue(String name) throws IllegalArgumentException {
             if (name == null) {
-                throw new IllegalArgumentException("Metric name can't be null!");
+                throw new IllegalArgumentException("Metric name can't be null.");
             }
 
             Long value = metrics.get(name);
             if (value == null) {
-                throw new IllegalArgumentException("Metric with name '" + name + "' not available for job!");
+                throw new IllegalArgumentException("Metric with name '" + name + "' not available for job.");
             }
 
             return value;
+        }
+
+        @Override
+        public String toString() {
+            return JobMetricsImpl.class.getSimpleName() + "{" + metrics + "}";
         }
     }
 }

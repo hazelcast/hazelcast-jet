@@ -27,6 +27,8 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
@@ -118,6 +120,11 @@ public class JobResult implements IdentifiedDataSerializable {
     @Nonnull
     public JobStatus getJobStatus() {
         return isSuccessful() ? COMPLETED : FAILED;
+    }
+
+    @Nonnull
+    public Map<String, Long> getJobMetrics() {
+        return Collections.singletonMap("dummy_from_result", jobId); //todo (XXX)
     }
 
     @Nonnull

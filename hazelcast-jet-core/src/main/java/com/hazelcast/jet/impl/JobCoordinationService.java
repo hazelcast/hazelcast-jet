@@ -36,6 +36,7 @@ import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
+import com.hazelcast.jet.impl.operation.ReportJobMetricsOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
@@ -366,7 +367,7 @@ public class JobCoordinationService {
                 return jobResult.getJobStatus();
             }
 
-            // check if there a master context for running job
+            // check if there is a master context for running job
             MasterContext currentMasterContext = masterContexts.get(jobId);
             if (currentMasterContext != null) {
                 JobStatus jobStatus = currentMasterContext.jobStatus();
@@ -397,16 +398,45 @@ public class JobCoordinationService {
      * if the requested job is not found.
      */
     public CompletableFuture<Map<String, Long>> getJobMetrics(long jobId) {
-        return submitToCoordinatorThread(
-            () -> {
-                Map<String, Long> dummyMetrics = new HashMap<>();
-                dummyMetrics.put("a", 1L);
-                dummyMetrics.put("b", 2L);
-                dummyMetrics.put("c", 3L);
-                dummyMetrics.put("id", jobId);
-                return dummyMetrics; //todo (XXX)
-            }
+        CompletableFuture<Map<String, Long>> cf = new CompletableFuture<>();
+        submitToCoordinatorThread(
+                () -> {
+                    // first check if there is a job result present.
+                    // this map is updated first during completion.
+                    JobResult jobResult = jobRepository.getJobResult(jobId);
+                    if (jobResult != null) {
+                        cf.complete(jobResult.getJobMetrics());
+                        return;
+                    }
+
+                    // check if there is a master context for running job
+                    MasterContext mc = masterContexts.get(jobId);
+                    if (mc != null) {
+                        mc.invokeOnParticipants(
+                                plan -> new ReportJobMetricsOperation(mc.jobId(), mc.executionId()),
+                                objects -> completeWithMergedMetrics(cf, objects),
+                                cf::completeExceptionally,
+                                false
+                        );
+                        return;
+                    }
+
+                    cf.completeExceptionally(new JobNotFoundException(jobId));
+                }
         );
+        return cf;
+    }
+
+    private void completeWithMergedMetrics(CompletableFuture<Map<String, Long>> cf, Collection<Object> metrics) {
+        Map<String, Long> mergedMetrics = new HashMap<>();
+        for (Object o : metrics) {
+            if (o instanceof Throwable) {
+                cf.completeExceptionally((Throwable) o);
+                return;
+            }
+            mergedMetrics.putAll((Map<String, Long>) o);
+        }
+        cf.complete(mergedMetrics);
     }
 
     /**

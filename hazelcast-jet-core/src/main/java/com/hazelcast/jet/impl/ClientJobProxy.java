@@ -180,7 +180,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     private ClientInvocation invocation(ClientMessage request, Address invocationAddr) {
         return new ClientInvocation(
-            container().getHazelcastClient(), request, "jobId=" + getIdString(), invocationAddr
+                container().getHazelcastClient(), request, "jobId=" + getIdString(), invocationAddr
         );
     }
 
@@ -218,7 +218,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
         @Override
         public Void get(long timeout, @Nonnull TimeUnit unit)
-            throws InterruptedException, ExecutionException, TimeoutException {
+                throws InterruptedException, ExecutionException, TimeoutException {
             future.get(timeout, unit);
             return null;
         }
