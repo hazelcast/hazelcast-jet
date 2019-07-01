@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -331,17 +332,9 @@ public abstract class AbstractJobProxy<T> implements Job {
         }
 
         @Override
-        public Long getMetricValue(String name) throws IllegalArgumentException {
-            if (name == null) {
-                throw new IllegalArgumentException("Metric name can't be null.");
-            }
-
-            Long value = metrics.get(name);
-            if (value == null) {
-                throw new IllegalArgumentException("Metric with name '" + name + "' not available for job.");
-            }
-
-            return value;
+        public Long getMetricValue(String name) {
+            Objects.requireNonNull(name);
+            return metrics.get(name);
         }
 
         @Override

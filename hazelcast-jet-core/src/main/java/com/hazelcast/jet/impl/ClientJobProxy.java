@@ -64,8 +64,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
         super(client, jobId, dag, config);
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public JobStatus getStatus() {
         ClientMessage request = JetGetJobStatusCodec.encodeRequest(getId());
         try {
@@ -77,8 +76,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
         }
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public JobMetrics getMetrics() {
         ClientMessage request = JetGetJobMetricsCodec.encodeRequest(getId());
         try {

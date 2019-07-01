@@ -124,7 +124,7 @@ public class JobResult implements IdentifiedDataSerializable {
 
     @Nonnull
     public Map<String, Long> getJobMetrics() {
-        return Collections.singletonMap("dummy_from_result", jobId); //todo (XXX)
+        return Collections.singletonMap("dummy_from_result", jobId); //todo (metrics for finished jobs)
     }
 
     @Nonnull

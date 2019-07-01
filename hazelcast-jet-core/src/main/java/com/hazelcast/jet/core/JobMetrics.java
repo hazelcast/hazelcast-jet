@@ -16,12 +16,15 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.spi.annotation.Beta;
+
 import javax.annotation.Nonnull;
 import java.util.Collection;
 
 /**
  * Contains information related to job-specific metrics.
  */
+@Beta
 public interface JobMetrics {
 
     /**
@@ -34,6 +37,8 @@ public interface JobMetrics {
      * Retruns the value of a job specific metric with the given name.
      * @throws IllegalArgumentException if name is null or if no job metric with this name is available.
      */
-    Long getMetricValue(String name) throws IllegalArgumentException;
+    Long getMetricValue(String name);
+
+    //todo (metrics for finished jobs): look into interogating the metrics based on name tags
 
 }
