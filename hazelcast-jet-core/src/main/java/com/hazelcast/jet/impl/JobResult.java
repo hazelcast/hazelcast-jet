@@ -27,7 +27,6 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -43,6 +42,7 @@ public class JobResult implements IdentifiedDataSerializable {
 
     private String coordinatorUUID;
     private long jobId;
+    private Map<String, Long> jobMetrics;
     private JobConfig jobConfig;
     private long creationTime;
     private long completionTime;
@@ -52,12 +52,14 @@ public class JobResult implements IdentifiedDataSerializable {
     }
 
     JobResult(long jobId,
+              Map<String, Long> jobMetrics,
               @Nonnull JobConfig jobConfig,
               @Nonnull String coordinatorUUID,
               long creationTime, long completionTime,
               @Nullable String failureText
     ) {
         this.jobId = jobId;
+        this.jobMetrics = jobMetrics;
         this.jobConfig = jobConfig;
         this.coordinatorUUID = coordinatorUUID;
         this.creationTime = creationTime;
@@ -124,7 +126,7 @@ public class JobResult implements IdentifiedDataSerializable {
 
     @Nonnull
     public Map<String, Long> getJobMetrics() {
-        return Collections.singletonMap("dummy_from_result", jobId); //todo (metrics for finished jobs)
+        return jobMetrics;
     }
 
     @Nonnull
@@ -142,6 +144,7 @@ public class JobResult implements IdentifiedDataSerializable {
         return "JobResult{" +
                 "coordinatorUUID='" + coordinatorUUID + '\'' +
                 ", jobId=" + idToString(jobId) +
+                ", jobMetrics=" + jobMetrics +
                 ", name=" + jobConfig.getName() +
                 ", creationTime=" + toLocalDateTime(creationTime) +
                 ", completionTime=" + toLocalDateTime(completionTime) +
@@ -162,6 +165,7 @@ public class JobResult implements IdentifiedDataSerializable {
     @Override
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(jobId);
+        out.writeObject(jobMetrics);
         out.writeObject(jobConfig);
         out.writeUTF(coordinatorUUID);
         out.writeLong(creationTime);
@@ -172,6 +176,7 @@ public class JobResult implements IdentifiedDataSerializable {
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         jobId = in.readLong();
+        jobMetrics = in.readObject();
         jobConfig = in.readObject();
         coordinatorUUID = in.readUTF();
         creationTime = in.readLong();

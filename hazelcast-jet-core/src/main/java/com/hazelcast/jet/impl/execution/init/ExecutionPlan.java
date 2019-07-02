@@ -137,12 +137,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.memberCount = memberCount;
     }
 
-    public void initialize(
-            NodeEngine nodeEngine,
-            long jobId,
-            long executionId,
-            SnapshotContext snapshotContext,
-            MetricsRegistry... extraMetricsRegistries
+    public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext,
+                           MetricsRegistry... extraMetricsRegistries
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
@@ -658,12 +654,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         }
 
         @Override
-        public <S> void register(
-                @Nonnull S source,
-                @Nonnull String metricName,
-                @Nonnull ProbeLevel level,
-                @Nonnull ProbeUnit unit,
-                @Nonnull DoubleProbeFunction<S> probeFn
+        public <S> void register(@Nonnull S source, @Nonnull String metricName, @Nonnull ProbeLevel level,
+                                 @Nonnull ProbeUnit unit, @Nonnull DoubleProbeFunction<S> probeFn
         ) {
             for (ProbeBuilder builder : builders) {
                 builder.register(source, metricName, level, unit, probeFn);
@@ -671,12 +663,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         }
 
         @Override
-        public <S> void register(
-                @Nonnull S source,
-                @Nonnull String metricName,
-                @Nonnull ProbeLevel level,
-                @Nonnull ProbeUnit unit,
-                @Nonnull LongProbeFunction<S> probeFn
+        public <S> void register(@Nonnull S source, @Nonnull String metricName, @Nonnull ProbeLevel level,
+                                 @Nonnull ProbeUnit unit, @Nonnull LongProbeFunction<S> probeFn
         ) {
             for (ProbeBuilder builder : builders) {
                 builder.register(source, metricName, level, unit, probeFn);

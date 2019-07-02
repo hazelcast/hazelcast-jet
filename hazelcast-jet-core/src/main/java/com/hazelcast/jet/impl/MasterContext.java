@@ -31,8 +31,10 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,6 +79,7 @@ public class MasterContext {
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile long executionId;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
+    private volatile Map<String, Long> jobMetrics;
 
     private final MasterJobContext jobContext;
     private final MasterSnapshotContext snapshotContext;
@@ -97,6 +100,7 @@ public class MasterContext {
 
         jobContext = new MasterJobContext(this, nodeEngine.getLogger(MasterJobContext.class));
         snapshotContext = createMasterSnapshotContext(nodeEngine);
+        jobMetrics = Collections.emptyMap();
     }
 
     MasterSnapshotContext createMasterSnapshotContext(NodeEngineImpl nodeEngine) {
@@ -138,6 +142,15 @@ public class MasterContext {
 
     void setJobStatus(JobStatus jobStatus) {
         this.jobStatus = jobStatus;
+    }
+
+    Map<String, Long> jobMetrics() {
+        return jobMetrics;
+    }
+
+    void setJobMetrics(Map<String, Long> jobMetrics) {
+        Objects.requireNonNull(jobMetrics);
+        this.jobMetrics = jobMetrics;
     }
 
     public JobConfig jobConfig() {

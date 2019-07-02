@@ -545,10 +545,12 @@ public class MasterJobContext {
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new CompleteExecutionOperation(mc.executionId(), finalError);
         mc.invokeOnParticipants(operationCtor, responses -> {
-            if (responses.stream().anyMatch(Objects::nonNull)) {
+            if (responses.stream().anyMatch(Throwable.class::isInstance)) {
                 // log errors
                 logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
                         "resources might leak: " + responses);
+            } else {
+                mc.setJobMetrics(JobMetricsUtil.mergeMetrics(responses));
             }
             onCompleteExecutionCompleted(error);
         }, null, true);

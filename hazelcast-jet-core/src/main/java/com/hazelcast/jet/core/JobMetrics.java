@@ -39,6 +39,4 @@ public interface JobMetrics {
      */
     Long getMetricValue(String name);
 
-    //todo (metrics for finished jobs): look into interogating the metrics based on name tags
-
 }

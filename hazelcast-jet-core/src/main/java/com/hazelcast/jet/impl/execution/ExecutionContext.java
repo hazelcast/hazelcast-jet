@@ -37,7 +37,6 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -188,13 +187,10 @@ public class ExecutionContext {
     }
 
     private void deregisterMetricsSources(MetricsRegistry... metricsRegistries) {
-        Arrays.stream(metricsRegistries).forEach(
-                mr -> {
-                    processors.forEach(mr::deregister);
-                    tasklets.forEach(mr::deregister);
-                }
-        );
-
+        for (MetricsRegistry registry : metricsRegistries) {
+            processors.forEach(registry::deregister);
+            tasklets.forEach(registry::deregister);
+        }
     }
 
     /**

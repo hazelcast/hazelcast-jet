@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -414,7 +415,7 @@ public class JobCoordinationService {
                     if (mc != null) {
                         mc.invokeOnParticipants(
                                 plan -> new ReportJobMetricsOperation(mc.jobId(), mc.executionId()),
-                                objects -> completeWithMergedMetrics(cf, objects),
+                                objects -> completeWithMergedMetrics(cf, mc, objects),
                                 cf::completeExceptionally,
                                 false
                         );
@@ -427,16 +428,15 @@ public class JobCoordinationService {
         return cf;
     }
 
-    private void completeWithMergedMetrics(CompletableFuture<Map<String, Long>> cf, Collection<Object> metrics) {
-        Map<String, Long> mergedMetrics = new HashMap<>();
-        for (Object o : metrics) {
-            if (o instanceof Throwable) {
-                cf.completeExceptionally((Throwable) o);
-                return;
-            }
-            mergedMetrics.putAll((Map<String, Long>) o);
+    private void completeWithMergedMetrics(CompletableFuture<Map<String, Long>> cf, MasterContext mc,
+                                           Collection<Object> metrics) {
+        Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
+        if (firstThrowable.isPresent()) {
+            cf.completeExceptionally((Throwable) firstThrowable.get());
+        } else {
+            mc.setJobMetrics(JobMetricsUtil.mergeMetrics(metrics));
+            cf.complete(mc.jobMetrics());
         }
-        cf.complete(mergedMetrics);
     }
 
     /**
@@ -640,8 +640,9 @@ public class JobCoordinationService {
             // the order of operations is important.
 
             long jobId = masterContext.jobId();
+            Map<String, Long> jobMetrics = masterContext.jobMetrics();
             String coordinator = nodeEngine.getNode().getThisUuid();
-            jobRepository.completeJob(jobId, coordinator, completionTime, error);
+            jobRepository.completeJob(jobId, jobMetrics, coordinator, completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
