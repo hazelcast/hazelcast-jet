@@ -52,7 +52,7 @@ public abstract class TestInClusterSupport extends JetTestSupport {
     private static JetInstance[] allJetInstances;
 
     protected static JetInstance member;
-    private static JetInstance client;
+    protected static JetInstance client;
 
     private static final TestMode MEMBER_TEST_MODE = new TestMode("member", () -> member);
     private static final TestMode CLIENT_TEST_MODE = new TestMode("client", () -> client);

@@ -82,7 +82,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
         try {
             ClientMessage response = invocation(request, masterAddress()).invoke().get();
             JetGetJobMetricsCodec.ResponseParameters parameters = JetGetJobMetricsCodec.decodeResponse(response);
-            return JobMetrics.of(serializationService().toObject(parameters.response));
+            return serializationService().toObject(parameters.response);
         } catch (Exception e) {
             throw rethrow(e);
         }
