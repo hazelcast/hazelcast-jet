@@ -55,52 +55,52 @@ public final class AssertionSinkBuilder<A, T> {
         this.createFn = createFn;
     }
 
-    /**
-     * Returns a builder object that offers a step-by-step fluent API to build
-     * an assertion {@link Sink} for the Pipeline API. An assertion sink is
-     * typically used for testing of pipelines where you can want to run
-     * an assertion either on each item as they arrive, or when all items have been
-     * received.
-     * <p>
-     * These are the callback functions you can provide to implement the sink's
-     * behavior:
-     * <ol><li>
-     *     {@code createFn} creates the state which can be used to hold incoming
-     *     items.
-     * </li><li>
-     *     {@code receiveFn} gets notified of each item the sink receives
-     *     and can either assert the item directly or add it to the state
-     *     object.
-     * </li><li>
-     *     {@code timerFn} is run periodically even when there are no items
-     *     received. This can be used to assert that certain assertions have
-     *     been reached within a specific period in streaming pipelines.
-     * </li><li>
-     *     {@code completeFn} is run after all the items have been received.
-     *     This typically only applies only for batch jobs, in a streaming
-     *     job this method may never be called.
-     * </li></ol>
-     * The returned sink will have a global parallelism of 1: all items will be
-     * sent to the same instance of the sink.
-     *
-     * It doesn't participate in the fault-tolerance protocol,
-     * which means you can't remember across a job restart which items you
-     * already received. The sink will still receive each item at least once,
-     * thus complying with the <em>at-least-once</em> processing guarantee. If
-     * the sink is idempotent (suppresses duplicate items), it will also be
-     * compatible with the <em>exactly-once</em> guarantee.
-     *
-     * @param <A> type of the state object
-     *
-     * @since 3.2
-     */
-    @Nonnull
-    public static <A> AssertionSinkBuilder<A, Void> assertionSink(
-            @Nonnull String name,
-            @Nonnull SupplierEx<? extends A> createFn
-    ) {
-        return new AssertionSinkBuilder<>(name, createFn);
-    }
+/**
+ * Returns a builder object that offers a step-by-step fluent API to build
+ * an assertion {@link Sink} for the Pipeline API. An assertion sink is
+ * typically used for testing of pipelines where you can want to run
+ * an assertion either on each item as they arrive, or when all items have been
+ * received.
+ * <p>
+ * These are the callback functions you can provide to implement the sink's
+ * behavior:
+ * <ol><li>
+ *     {@code createFn} creates the state which can be used to hold incoming
+ *     items.
+ * </li><li>
+ *     {@code receiveFn} gets notified of each item the sink receives
+ *     and can either assert the item directly or add it to the state
+ *     object.
+ * </li><li>
+ *     {@code timerFn} is run periodically even when there are no items
+ *     received. This can be used to assert that certain assertions have
+ *     been reached within a specific period in streaming pipelines.
+ * </li><li>
+ *     {@code completeFn} is run after all the items have been received.
+ *     This typically only applies only for batch jobs, in a streaming
+ *     job this method may never be called.
+ * </li></ol>
+ * The returned sink will have a global parallelism of 1: all items will be
+ * sent to the same instance of the sink.
+ *
+ * It doesn't participate in the fault-tolerance protocol,
+ * which means you can't remember across a job restart which items you
+ * already received. The sink will still receive each item at least once,
+ * thus complying with the <em>at-least-once</em> processing guarantee. If
+ * the sink is idempotent (suppresses duplicate items), it will also be
+ * compatible with the <em>exactly-once</em> guarantee.
+ *
+ * @param <A> type of the state object
+ *
+ * @since 3.2
+ */
+@Nonnull
+public static <A> AssertionSinkBuilder<A, Void> assertionSink(
+        @Nonnull String name,
+        @Nonnull SupplierEx<? extends A> createFn
+) {
+    return new AssertionSinkBuilder<>(name, createFn);
+}
 
     /**
      * Sets the function Jet will call upon receiving an item. The function
