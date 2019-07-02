@@ -9,6 +9,4 @@ include::pipeline-cheatsheet.adoc[]
 
 include::implement-aggregation.adoc[]
 
-include::test-your-pipeline.adoc[]
-
 :leveloffset: -1
