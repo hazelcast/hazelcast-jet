@@ -16,16 +16,15 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 
-import java.util.Map;
-
 public class ReportJobMetricsOperation extends AbstractJobOperation {
 
     private long executionId;
-    private Map<String, Long> response;
+    private JobMetrics response;
 
     public ReportJobMetricsOperation() {
     }

@@ -40,8 +40,6 @@ import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 
-import java.util.Map;
-
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 
@@ -70,7 +68,7 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     @Nonnull @Override
     public JobMetrics getMetrics() {
         try {
-            return JobMetricsImpl.of(this.<Map<String, Long>>invokeOp(new GetJobMetricsOperation(getId())).get());
+            return this.<JobMetrics>invokeOp(new GetJobMetricsOperation(getId())).get();
         } catch (Throwable t) {
             throw rethrow(t);
         }

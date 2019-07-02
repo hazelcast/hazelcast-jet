@@ -17,10 +17,10 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,21 +29,21 @@ public final class JobMetricsUtil {
     private JobMetricsUtil() {
     }
 
-    public static Map<String, Long> getJobMetrics(JetService service, long executionId) {
+    public static JobMetrics getJobMetrics(JetService service, long executionId) {
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
         if (executionContext == null) {
-            return Collections.emptyMap();
+            return JobMetrics.EMPTY;
         } else {
             ToMapProbeRenderer renderer = new ToMapProbeRenderer();
             executionContext.renderJobMetrics(renderer);
-            return renderer.toMap();
+            return renderer.toJobMetrics();
         }
     }
 
-    static Map<String, Long> mergeMetrics(Collection<Object> metrics) {
-        Map<String, Long> mergedMetrics = new HashMap<>();
+    static JobMetrics mergeMetrics(Collection<Object> metrics) {
+        JobMetrics mergedMetrics = JobMetrics.EMPTY;
         for (Object o : metrics) {
-            mergedMetrics.putAll((Map<String, Long>) o);
+            mergedMetrics = mergedMetrics.merge((JobMetrics) o);
         }
         return mergedMetrics;
     }
@@ -57,8 +57,8 @@ public final class JobMetricsUtil {
 
         private final Map<String, Long> map = new HashMap<>();
 
-        public Map<String, Long> toMap() {
-            return Collections.unmodifiableMap(map);
+        public JobMetrics toJobMetrics() {
+            return JobMetrics.of(map);
         }
 
         @Override

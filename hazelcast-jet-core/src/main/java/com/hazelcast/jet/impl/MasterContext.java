@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.logging.ILogger;
@@ -31,7 +32,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -79,7 +79,7 @@ public class MasterContext {
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile long executionId;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
-    private volatile Map<String, Long> jobMetrics;
+    private volatile JobMetrics jobMetrics;
 
     private final MasterJobContext jobContext;
     private final MasterSnapshotContext snapshotContext;
@@ -100,7 +100,7 @@ public class MasterContext {
 
         jobContext = new MasterJobContext(this, nodeEngine.getLogger(MasterJobContext.class));
         snapshotContext = createMasterSnapshotContext(nodeEngine);
-        jobMetrics = Collections.emptyMap();
+        jobMetrics = JobMetrics.EMPTY;
     }
 
     MasterSnapshotContext createMasterSnapshotContext(NodeEngineImpl nodeEngine) {
@@ -144,11 +144,11 @@ public class MasterContext {
         this.jobStatus = jobStatus;
     }
 
-    Map<String, Long> jobMetrics() {
+    JobMetrics jobMetrics() {
         return jobMetrics;
     }
 
-    void setJobMetrics(Map<String, Long> jobMetrics) {
+    void setJobMetrics(JobMetrics jobMetrics) {
         Objects.requireNonNull(jobMetrics);
         this.jobMetrics = jobMetrics;
     }

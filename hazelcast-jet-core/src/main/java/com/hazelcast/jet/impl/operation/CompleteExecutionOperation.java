@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
@@ -28,7 +29,6 @@ import com.hazelcast.spi.ExceptionAction;
 import com.hazelcast.spi.Operation;
 
 import java.io.IOException;
-import java.util.Map;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.jet.Util.idToString;
@@ -38,7 +38,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
     private long executionId;
     private Throwable error;
-    private Map<String, Long> response;
+    private JobMetrics response;
 
     public CompleteExecutionOperation() {
     }

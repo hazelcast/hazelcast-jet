@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
@@ -266,7 +267,7 @@ public class JobRepository {
      * @throws JobNotFoundException if the JobRecord is not found
      * @throws IllegalStateException if the JobResult is already present
      */
-    void completeJob(long jobId, Map<String, Long> jobMetrics, String coordinator, long completionTime, Throwable error) {
+    void completeJob(long jobId, JobMetrics jobMetrics, String coordinator, long completionTime, Throwable error) {
         JobRecord jobRecord = getJobRecord(jobId);
         if (jobRecord == null) {
             throw new JobNotFoundException(jobId);

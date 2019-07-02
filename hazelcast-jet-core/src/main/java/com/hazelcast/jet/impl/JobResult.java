@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
@@ -27,7 +28,6 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,7 +42,7 @@ public class JobResult implements IdentifiedDataSerializable {
 
     private String coordinatorUUID;
     private long jobId;
-    private Map<String, Long> jobMetrics;
+    private JobMetrics jobMetrics;
     private JobConfig jobConfig;
     private long creationTime;
     private long completionTime;
@@ -52,7 +52,7 @@ public class JobResult implements IdentifiedDataSerializable {
     }
 
     JobResult(long jobId,
-              Map<String, Long> jobMetrics,
+              JobMetrics jobMetrics,
               @Nonnull JobConfig jobConfig,
               @Nonnull String coordinatorUUID,
               long creationTime, long completionTime,
@@ -125,7 +125,7 @@ public class JobResult implements IdentifiedDataSerializable {
     }
 
     @Nonnull
-    public Map<String, Long> getJobMetrics() {
+    public JobMetrics getJobMetrics() {
         return jobMetrics;
     }
 

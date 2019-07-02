@@ -19,24 +19,78 @@ package com.hazelcast.jet.core;
 import com.hazelcast.spi.annotation.Beta;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Contains information related to job-specific metrics.
  */
 @Beta
-public interface JobMetrics {
+public final class JobMetrics implements Serializable {
+
+    /**
+     * Static empty instance, contains no metrics
+     */
+    public static final JobMetrics EMPTY = new JobMetrics();
+
+    private final Map<String, Long> metrics;
+
+    /**
+     * Builds an empty {@link JobMetrics} object.
+     */
+    private JobMetrics() {
+        this(Collections.emptyMap());
+    }
+
+    /**
+     * Builds a {@link JobMetrics} object based on a key-value map of metrics data.
+     */
+    private JobMetrics(Map<String, Long> metrics) {
+        this.metrics = Collections.unmodifiableMap(metrics);
+    }
+
+    /**
+     * Builds a {@link JobMetrics} object based on a key-value map of metrics data.
+     */
+    public static JobMetrics of(Map<String, Long> metrics) {
+        return new JobMetrics(new HashMap<>(metrics));
+    }
 
     /**
      * Returns a collection containing the names of all job specific metrics available.
      */
     @Nonnull
-    Collection<String> getMetricNames();
+    Collection<String> getMetricNames() {
+        return metrics.keySet();
+    }
 
     /**
      * Retruns the value of a job specific metric with the given name.
      * @throws IllegalArgumentException if name is null or if no job metric with this name is available.
      */
-    Long getMetricValue(String name);
+    Long getMetricValue(String name) {
+        Objects.requireNonNull(name);
+        return metrics.get(name);
+    }
 
+    @Override
+    public String toString() {
+        return JobMetrics.class.getSimpleName() + "{" + metrics + "}";
+    }
+
+    /**
+     * Merges two immutable {@link JobMetrics} instances into a third
+     * @param other
+     * @return
+     */
+    public JobMetrics merge(JobMetrics other) {
+        Map<String, Long> map = new HashMap<>();
+        map.putAll(this.metrics);
+        map.putAll(other.metrics);
+        return new JobMetrics(map);
+    }
 }

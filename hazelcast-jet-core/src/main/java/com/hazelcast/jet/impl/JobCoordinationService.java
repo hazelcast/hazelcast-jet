@@ -30,6 +30,7 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -398,8 +399,8 @@ public class JobCoordinationService {
      * Returns the latest metrics for a job of fails with {@link JobNotFoundException}
      * if the requested job is not found.
      */
-    public CompletableFuture<Map<String, Long>> getJobMetrics(long jobId) {
-        CompletableFuture<Map<String, Long>> cf = new CompletableFuture<>();
+    public CompletableFuture<JobMetrics> getJobMetrics(long jobId) {
+        CompletableFuture<JobMetrics> cf = new CompletableFuture<>();
         submitToCoordinatorThread(
                 () -> {
                     // first check if there is a job result present.
@@ -428,7 +429,7 @@ public class JobCoordinationService {
         return cf;
     }
 
-    private void completeWithMergedMetrics(CompletableFuture<Map<String, Long>> cf, MasterContext mc,
+    private void completeWithMergedMetrics(CompletableFuture<JobMetrics> cf, MasterContext mc,
                                            Collection<Object> metrics) {
         Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
         if (firstThrowable.isPresent()) {
@@ -640,7 +641,7 @@ public class JobCoordinationService {
             // the order of operations is important.
 
             long jobId = masterContext.jobId();
-            Map<String, Long> jobMetrics = masterContext.jobMetrics();
+            JobMetrics jobMetrics = masterContext.jobMetrics();
             String coordinator = nodeEngine.getNode().getThisUuid();
             jobRepository.completeJob(jobId, jobMetrics, coordinator, completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
