@@ -77,7 +77,7 @@ public final class TestSources {
      * This source is not fault-tolerant. The sequence will be reset once a job
      * is restarted. The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
-     * timestamp is the current system real time at the moment they are
+     * timestamp is the current system time at the moment they are
      * generated.
      *
      * @param itemsPerSecond how many items should be emitted each second
@@ -96,12 +96,13 @@ public final class TestSources {
      * This source is not fault-tolerant. The sequence will be reset once a job
      * is restarted. The source supports {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
-     * timestamp is the current system real time at the moment they are
+     * timestamp is the current system time at the moment they are
      * generated.
      *
      * @param itemsPerSecond how many items should be emitted each second
-     * @param generatorFn a function which takes the timestamp and the sequence of the generated item
-     *                    and maps it to the desired type
+     * @param generatorFn a function which takes the timestamp and the sequence of the generated
+     *                    item and maps it to the desired type
+     *
      *
      * @since 3.2
      */
@@ -140,7 +141,7 @@ public final class TestSources {
             // round ts down to nearest period
             long tsNanos = TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis());
             long ts = TimeUnit.NANOSECONDS.toMillis(tsNanos - (tsNanos % periodNanos));
-            for (int i = 0; i < MAX_BATCH_SIZE && nowNs < emitSchedule; i++) {
+            for (int i = 0; i < MAX_BATCH_SIZE && nowNs >= emitSchedule; i++) {
                 T item = generator.generate(ts, sequence++);
                 buf.add(item, ts);
                 emitSchedule += periodNanos;
