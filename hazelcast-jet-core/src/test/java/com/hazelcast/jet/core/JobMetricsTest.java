@@ -19,9 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
-import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -77,8 +75,10 @@ public class JobMetricsTest extends TestInClusterSupport {
         DAG dag = new DAG();
         RuntimeException e = new RuntimeException("mock error");
         Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(singletonList(1)));
-        Vertex process = dag.newVertex("faulty",
-                new TestProcessors.MockPMS(() -> new TestProcessors.MockPS(() -> new TestProcessors.MockP().setProcessError(e), MEMBER_COUNT)));
+        Vertex process = dag.newVertex(
+                "faulty",
+                new TestProcessors.MockPMS(() ->
+                        new TestProcessors.MockPS(() -> new TestProcessors.MockP().setProcessError(e), MEMBER_COUNT)));
         dag.edge(between(source, process));
 
         Job job = runJobExpectFailure(dag, e);
