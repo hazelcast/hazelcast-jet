@@ -24,10 +24,11 @@ import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.function.SupplierEx;
 
 import javax.annotation.Nonnull;
+import java.util.concurrent.TimeUnit;
 
 public final class AssertionP<A, T> extends AbstractProcessor {
 
-    private static final long TIMER_INTERVAL = 200L;
+    private static final long TIMER_INTERVAL = TimeUnit.MILLISECONDS.toNanos(200);
 
     private final SupplierEx<? extends A> createFn;
     private final BiConsumerEx<? super A, ? super T> receiveFn;
@@ -61,7 +62,7 @@ public final class AssertionP<A, T> extends AbstractProcessor {
     }
 
     private void maybeFireTimer() {
-        long now = System.currentTimeMillis();
+        long now = System.nanoTime();
         if (nextTimerSchedule == 0 || now >= nextTimerSchedule) {
             timerFn.accept(state);
             nextTimerSchedule = now + TIMER_INTERVAL;
