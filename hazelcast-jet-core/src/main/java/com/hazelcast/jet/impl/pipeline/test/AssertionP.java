@@ -31,7 +31,7 @@ public final class AssertionP<A, T> extends AbstractProcessor {
 
     private final SupplierEx<? extends A> createFn;
     private final BiConsumerEx<? super A, ? super T> receiveFn;
-    private ConsumerEx<? super A> timerFn;
+    private final ConsumerEx<? super A> timerFn;
     private final ConsumerEx<? super A> completeFn;
 
     private A state;

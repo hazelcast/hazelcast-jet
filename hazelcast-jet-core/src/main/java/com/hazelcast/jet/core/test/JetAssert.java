@@ -30,7 +30,7 @@ public final class JetAssert {
     }
 
     /**
-     * Asserts that the given condition is {@code true}. If not an
+     * Asserts that the given condition is {@code true}. If not, an
      * {@link AssertionError} is thrown with the given message.
      */
     public static void assertTrue(@Nullable String message, boolean condition) {
@@ -40,7 +40,7 @@ public final class JetAssert {
     }
 
     /**
-     * Asserts that the given condition is {@code false}. If not an
+     * Asserts that the given condition is {@code false}. If not, an
      * {@link AssertionError} is thrown with the given message.
      */
     public static void assertFalse(@Nullable String message, boolean condition) {
@@ -49,7 +49,7 @@ public final class JetAssert {
 
     /**
      * Asserts that the two given objects are the same, when compared using
-     * the {@code ==} operator and if not an {@link AssertionError} is thrown
+     * the {@code ==} operator and if not, an {@link AssertionError} is thrown
      * with the given message.
      */
     public static void assertSame(@Nullable String message, @Nullable Object expected, @Nullable Object actual) {
@@ -61,7 +61,7 @@ public final class JetAssert {
 
     /**
      * Asserts that the two given objects are equal, when compared using
-     * {@link Object#equals(Object)}. If they are not equal an
+     * {@link Object#equals(Object)}. If they are not equal, an
      * {@link AssertionError} is thrown with the given message.
      */
     public static void assertEquals(@Nullable String message, @Nullable Object expected, @Nullable Object actual) {
@@ -72,7 +72,7 @@ public final class JetAssert {
     }
 
     /**
-     * Throws an {@link AssertionError} with the given message
+     * Throws an {@link AssertionError} with the given message.
      */
     public static void fail(@Nullable String message) {
         throw new AssertionError(message);
@@ -95,10 +95,8 @@ public final class JetAssert {
         throw new AssertionError(message);
     }
 
-
     private static String formatClassAndValue(Object value, String valueString) {
         String className = value == null ? "null" : value.getClass().getName();
         return className + "<" + valueString + ">";
     }
-
 }

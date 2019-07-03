@@ -39,7 +39,6 @@ public class SinkImpl<T> implements Sink<T> {
         return metaSupplier;
     }
 
-    @Nonnull
     public boolean isSingleton() {
         return isSingleton;
     }

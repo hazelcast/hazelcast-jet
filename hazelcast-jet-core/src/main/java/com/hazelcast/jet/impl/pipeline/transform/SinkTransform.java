@@ -49,12 +49,11 @@ public class SinkTransform<T> extends AbstractTransform {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 adaptingMetaSupplier(sink.metaSupplier(), ordinalsToAdapt));
         p.addEdges(this, pv.v, e -> {
-            // note: have to use a all to one edge for the assertion sink
+            // note: have to use an all-to-one edge for the assertion sink.
             // all the items will be routed to the member with the partition key
             if (sink.isSingleton()) {
                 e.allToOne(sink.name()).distributed();
             }
         });
-
     }
 }
