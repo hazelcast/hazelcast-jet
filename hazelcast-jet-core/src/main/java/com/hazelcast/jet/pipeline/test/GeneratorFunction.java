@@ -21,7 +21,7 @@ import com.hazelcast.spi.annotation.Beta;
 import java.io.Serializable;
 
 /**
- * A function which takes a timestamp and sequence as input
+ * A function which takes a timestamp and a sequence number as the input.
  *
  * @param <R> the type of the result of the function
  *

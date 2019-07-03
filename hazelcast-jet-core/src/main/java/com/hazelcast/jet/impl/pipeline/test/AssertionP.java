@@ -26,22 +26,22 @@ import com.hazelcast.jet.function.SupplierEx;
 import javax.annotation.Nonnull;
 import java.util.concurrent.TimeUnit;
 
-public final class AssertionP<A, T> extends AbstractProcessor {
+public final class AssertionP<S, T> extends AbstractProcessor {
 
     private static final long TIMER_INTERVAL = TimeUnit.MILLISECONDS.toNanos(200);
 
-    private final SupplierEx<? extends A> createFn;
-    private final BiConsumerEx<? super A, ? super T> receiveFn;
-    private final ConsumerEx<? super A> timerFn;
-    private final ConsumerEx<? super A> completeFn;
+    private final SupplierEx<? extends S> createFn;
+    private final BiConsumerEx<? super S, ? super T> receiveFn;
+    private final ConsumerEx<? super S> timerFn;
+    private final ConsumerEx<? super S> completeFn;
 
-    private A state;
+    private S state;
     private long nextTimerSchedule;
 
-    private AssertionP(SupplierEx<? extends A> createFn,
-                       BiConsumerEx<? super A, ? super T> receiveFn,
-                       ConsumerEx<? super A> timerFn,
-                       ConsumerEx<? super A> completeFn
+    private AssertionP(SupplierEx<? extends S> createFn,
+                       BiConsumerEx<? super S, ? super T> receiveFn,
+                       ConsumerEx<? super S> timerFn,
+                       ConsumerEx<? super S> completeFn
     ) {
         this.createFn = createFn;
         this.receiveFn = receiveFn;

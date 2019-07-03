@@ -20,6 +20,7 @@ import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.jet.pipeline.StreamSourceStage;
 import com.hazelcast.spi.annotation.Beta;
 
 import javax.annotation.Nonnull;
@@ -71,10 +72,13 @@ public final class TestSources {
 
     /**
      * Returns a streaming source which generates events of type {@link SimpleEvent} at
-     * the specified rate.
+     * the specified rate infinitely.
      * <p>
-     * This source does not support fault-tolerance. The sequence will be reset once a
-     * job is restarted.
+     * This source is not fault-tolerant. The sequence will be reset once a job
+     * is restarted. The source supports {@linkplain
+     * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
+     * timestamp is the current system real time at the moment they are
+     * generated.
      *
      * @param itemsPerSecond how many items should be emitted each second
      *
@@ -86,11 +90,14 @@ public final class TestSources {
     }
 
     /**
-     * Returns a streaming source which generates events of type {@link SimpleEvent} at
-     * the specified rate per second.
+     * Returns a streaming source which generates events created by the {@code
+     * generatorFn} at the specified rate infinitely.
      * <p>
-     * This source does not support fault-tolerance. The sequence will be reset once a
-     * job is restarted.
+     * This source is not fault-tolerant. The sequence will be reset once a job
+     * is restarted. The source supports {@linkplain
+     * StreamSourceStage#withNativeTimestamps(long) native timestamps}. The
+     * timestamp is the current system real time at the moment they are
+     * generated.
      *
      * @param itemsPerSecond how many items should be emitted each second
      * @param generatorFn a function which takes the timestamp and the sequence of the generated item
@@ -100,13 +107,14 @@ public final class TestSources {
      */
     @Nonnull
     public static <T> StreamSource<T> itemStream(
-        int itemsPerSecond, @Nonnull GeneratorFunction<? extends T> generatorFn
+        int itemsPerSecond,
+        @Nonnull GeneratorFunction<? extends T> generatorFn
     ) {
         Objects.requireNonNull(generatorFn, "generatorFn");
         checkSerializable(generatorFn, "generatorFn");
 
         return SourceBuilder.timestampedStream("itemStream", ctx -> new ItemStreamSource<T>(itemsPerSecond, generatorFn))
-            .<T>fillBufferFn(ItemStreamSource::addToBuffer)
+            .<T>fillBufferFn(ItemStreamSource::fillBuffer)
             .build();
     }
 
@@ -123,17 +131,15 @@ public final class TestSources {
             this.generator = generator;
         }
 
-        void addToBuffer(TimestampedSourceBuffer<T> buf) throws Exception {
+        void fillBuffer(TimestampedSourceBuffer<T> buf) throws Exception {
+            long nowNs = System.nanoTime();
             if (emitSchedule == 0) {
-                emitSchedule = System.nanoTime();
+                emitSchedule = nowNs;
             }
-            for (int i = 0; i < MAX_BATCH_SIZE; i++) {
-                if (System.nanoTime() < emitSchedule) {
-                    break;
-                }
-                // round ts down to nearest period
-                long tsNanos = TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis());
-                long ts = TimeUnit.NANOSECONDS.toMillis(tsNanos - (tsNanos % periodNanos));
+            // round ts down to nearest period
+            long tsNanos = TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis());
+            long ts = TimeUnit.NANOSECONDS.toMillis(tsNanos - (tsNanos % periodNanos));
+            for (int i = 0; i < MAX_BATCH_SIZE && nowNs < emitSchedule; i++) {
                 T item = generator.generate(ts, sequence++);
                 buf.add(item, ts);
                 emitSchedule += periodNanos;

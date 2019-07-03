@@ -16,10 +16,13 @@
 
 package com.hazelcast.jet.pipeline.test;
 
+import com.hazelcast.jet.Job;
 import com.hazelcast.spi.annotation.Beta;
 
 /**
- * An exception which indicates that an assertion was completed successfully
+ * An exception which indicates that an assertion passed successfully. It is
+ * used to terminate the streaming job. If caught from the {@link Job#join()}
+ * method, it can be ignored.
  *
  * @since 3.2
  */
