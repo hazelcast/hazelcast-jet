@@ -26,9 +26,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nonnull;
+
 import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class JobMetricsTest extends TestInClusterSupport {
@@ -60,13 +65,41 @@ public class JobMetricsTest extends TestInClusterSupport {
         TestProcessors.NoOutputSourceP.proceedLatch.countDown();
         assertEquals(JobStatus.RUNNING, job.getStatus());
 
-        JetTestSupport.assertTrueEventually(
-                () -> assertTrue(job.getMetrics().size() > 0));
-        JetTestSupport.assertTrueEventually(
-                () -> assertTrue(job.getMetrics().withTag("metric", "queuesSize").size() > 0));
+        JetTestSupport.assertTrueEventually(() -> assertJobHasMetrics(job));
 
         job.join();
         assertEquals(JobStatus.COMPLETED, job.getStatus());
+        assertJobHasMetrics(job);
+    }
+
+    @Test
+    public void metricsForFailedJob() {
+        DAG dag = new DAG();
+        RuntimeException e = new RuntimeException("mock error");
+        Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(singletonList(1)));
+        Vertex process = dag.newVertex("faulty",
+                new TestProcessors.MockPMS(() -> new TestProcessors.MockPS(() -> new TestProcessors.MockP().setProcessError(e), MEMBER_COUNT)));
+        dag.edge(between(source, process));
+
+        Job job = runJobExpectFailure(dag, e);
+        assertEquals(JobStatus.FAILED, job.getStatus());
+        assertJobHasMetrics(job);
+    }
+
+    private Job runJobExpectFailure(@Nonnull DAG dag, @Nonnull RuntimeException expectedException) {
+        Job job = null;
+        try {
+            job = member.newJob(dag);
+            job.join();
+            fail("Job execution should have failed");
+        } catch (Exception actual) {
+            Throwable cause = peel(actual);
+            assertContains(cause.getMessage(), expectedException.getMessage());
+        }
+        return job;
+    }
+
+    private void assertJobHasMetrics(Job job) {
         assertTrue(job.getMetrics().size() > 0);
         assertTrue(job.getMetrics().withTag("metric", "queuesSize").size() > 0);
     }
