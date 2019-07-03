@@ -29,10 +29,12 @@ import java.util.List;
 
 /**
  * Various assertions which can be used to assert items passing through the
- * pipeline.
+ * pipeline for correctness. Each assertion also returns the stage it is
+ * attached so the assertions could be used in-line.
  * <p>
- * In this class there are variants that can be used in-line in the pipeline.
- * Variants that can be used as sinks are in {@link AssertionSinks}.
+ * The assertions in this class are to be used together with the {@code apply()}
+ * operator on the pipeline. For assertions that can be used directly
+ * as sinks, see {@link AssertionSinks}.
  *
  * @since 3.2
  */
@@ -47,16 +49,16 @@ public final class Assertions {
      * items and nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError} with the given message.
      * <p>
-     * Since Jet jobs are distributed, input from multiple upstream processors
-     * is merged in a non-deterministic way. Therefore this assertion is usable
-     * only for testing of non-distributed sources.
-     * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
      *  .apply(Assertions.assertOrdered("unexpected values", Arrays.asList(1, 2, 3, 4)))
      *  .drainTo(Sinks.logger());
      * }</pre>
+     *
+     * <b>Note:</b> Since Jet jobs are distributed, input from multiple upstream
+     * processors is merged in a non-deterministic way. Therefore this assertion
+     * is recommended only for testing of non-distributed sources.
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertOrdered(
@@ -73,17 +75,17 @@ public final class Assertions {
      * Asserts that the previous stage emitted the exact sequence of expected
      * items and nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError}.
+     * <p>
      * Example:
-     * <p>
-     * Since Jet jobs are distributed, input from multiple upstream processors
-     * is merged in a non-deterministic way. Therefore this assertion is usable
-     * only for testing of non-distributed sources.
-     * <p>
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
      *  .apply(Assertions.assertOrderedArrays.asList(1, 2, 3, 4)))
      *  .drainTo(Sinks.logger())
      * }</pre>
+     *
+     * <b>Note:</b> Since Jet jobs are distributed, input from multiple upstream
+     * processors is merged in a non-deterministic way. Therefore this assertion
+     * is recommended only for testing of non-distributed sources.
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertOrdered(
@@ -181,8 +183,6 @@ public final class Assertions {
      * completed it executes the assertion supplied by {@code assertFn}. If no
      * items were collected, it will be called with empty list.
      * <p>
-     * Not usable in streaming jobs - use {@link #assertCollectedEventually}.
-     * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
@@ -190,6 +190,9 @@ public final class Assertions {
      *          assertTrue("expected minimum of 4 items", items.size() >= 4)))
      *  .drainTo(Sinks.logger())
      * }</pre>
+     *
+     * <b>Note:</b> This assertion is not usable in streaming jobs. For the streaming
+     * equivalent see {@link #assertCollectedEventually}.
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertCollected(
@@ -210,9 +213,7 @@ public final class Assertions {
      * <p>
      * When {@code assertFn} completes without any error, the sink will throw
      * an {@link AssertionCompletedException} to indicate success. Exception is
-     * used to terminate the job so that you can {@code join()} it. This also
-     * requires that there are no other assertions in the job as this one can
-     * complete the job before the other ones succeeded.
+     * used to terminate the job so that you can {@code join()} it.
      * <p>
      * Example:
      * <pre>{@code
@@ -220,6 +221,9 @@ public final class Assertions {
      *  .withoutTimestamps()
      *  .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)));
      * }</pre>
+     *
+     * <b>Note:</b> This assertions requires that there are no other assertions in the
+     * job as this one can complete the job before the other ones succeeded.
      */
     @Nonnull
     public static <T> FunctionEx<StreamStage<T>, StreamStage<T>> assertCollectedEventually(
