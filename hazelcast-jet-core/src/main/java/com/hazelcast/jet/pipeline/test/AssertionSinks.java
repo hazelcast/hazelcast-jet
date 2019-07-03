@@ -24,23 +24,23 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
- * Various sinks which can be used to assert incoming values. The sinks
- * can be used as terminal or inline in a pipeline using the convenience
- * provided in {@link Assertions}.
+ * Various assertions which can be used to assert items on the output of a
+ * pipeline.
+ * <p>
+ * In this class there are variants that can be used as sinks in the pipeline.
+ * Variants that can be used in-line in a pipeline are in {@link Assertions}.
  *
- * @see Assertions
  * @since 3.2
  */
 @Beta
@@ -51,8 +51,12 @@ public final class AssertionSinks {
 
     /**
      * Asserts that the previous stage emitted the exact sequence of expected
-     * items, and nothing else. If the assertion fails, the job will fail with a
+     * items and nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError} with the given message.
+     * <p>
+     * Since Jet jobs are distributed, input from multiple upstream processors
+     * is merged in a non-deterministic way. Therefore this assertion is usable
+     * only for testing of non-distributed sources.
      */
     @Nonnull
     public static <T> Sink<T> assertOrdered(@Nullable String message, @Nonnull Collection<? extends T> expected) {
@@ -61,12 +65,12 @@ public final class AssertionSinks {
     }
 
     /**
-     * Asserts that the previous stage emitted the expected
-     * items in any order, but nothing else. If the assertion fails, the job
-     * will fail with a {@link AssertionError} with the given message.
+     * Asserts that the previous stage emitted the expected items in any order,
+     * but nothing else. If the assertion fails, the job will fail with an
+     * {@link AssertionError} with the given message.
      */
     @Nonnull
-    public static <T> Sink<T> assertUnordered(@Nullable String message, @Nonnull Collection<? extends T> expected) {
+    public static <T> Sink<T> assertAnyOrder(@Nullable String message, @Nonnull Collection<? extends T> expected) {
         Map<? extends T, Long> expBag = toBag(expected);
         return assertCollected(received -> {
             String msg = "Expected and received did not match. The items are printed in the format of a map as follows:" +
@@ -83,7 +87,7 @@ public final class AssertionSinks {
      * Asserts that the previous stage emitted all of the given items in any order.
      * If the assertion fails, the job will fail with a {@link AssertionError} with
      * the given message.
-     **/
+     */
     @Nonnull
     public static <T> Sink<T> assertContains(@Nullable String message, @Nonnull Collection<? extends T> expected) {
         final HashSet<? super T> set = new HashSet<>(expected);
@@ -96,11 +100,14 @@ public final class AssertionSinks {
     }
 
     /**
-     * Collects all the received items in a list and once the upstream stage
-     * is completed it executes the assertion supplied by {@code assertFn}.
+     * Collects all the received items in a list and once the upstream stage is
+     * completed it executes the assertion supplied by {@code assertFn}. If no
+     * items were collected, it will be called with empty list.
+     * <p>
+     * Not usable in streaming jobs - use {@link #assertCollectedEventually}.
      *
      * @param assertFn assertion to execute once all items are received
-     **/
+     */
     @Nonnull
     public static <T> Sink<T> assertCollected(@Nonnull ConsumerEx<? super List<T>> assertFn) {
         return AssertionSinkBuilder.assertionSink("assertCollected", ArrayList<T>::new)
@@ -110,17 +117,21 @@ public final class AssertionSinks {
     }
 
     /**
-     * Collects all the received items in a list and periodically runs assertFn.
-     * {@link AssertionError} thrown from the {@code assertFn} will be ignored
-     * until {@code timeoutSeconds} has passed, in which case it will be rethrown.
+     * Collects all the received items into a list and periodically runs the
+     * {@code assertFn}. An {@link AssertionError} thrown from the {@code
+     * assertFn} will be ignored until {@code timeoutSeconds} have passed,
+     * after which the last {@code AssertionError} will be rethrown. If {@code
+     * assertFn} throws any other exception, it will be rethrown immediately.
      * <p>
-     * If {@code assertFn} completes with any other errors, the exception will be rethrown.
-     * If {@code assertFn} completes without any error, the sink will throw an
-     * {@link AssertionCompletedException}.
+     * When {@code assertFn} completes without any error, the sink will throw
+     * an {@link AssertionCompletedException} to indicate success. Exception is
+     * used to terminate the job so that you can {@code join()} it. This also
+     * requires that there are no other assertions in the job as this one can
+     * complete the job before the other ones succeeded.
      *
      * @param timeoutSeconds timeout in seconds, after which any assertion error will be propagated
      * @param assertFn assertion to execute periodically
-     **/
+     */
     @Nonnull
     public static <T> Sink<T> assertCollectedEventually(
             int timeoutSeconds,
@@ -135,22 +146,17 @@ public final class AssertionSinks {
             .build();
     }
 
-    private static Comparator<Object> hashCodeComparator() {
-        return Comparator.comparingInt(Object::hashCode);
-    }
-
     private static final class CollectingSinkWithTimer<T> {
 
-        private final long start;
-        private final List<T> collected;
+        private final long start = System.nanoTime();
+        private final List<T> collected = new ArrayList<>();
+
         private ConsumerEx<? super List<T>> assertFn;
         private int timeoutSeconds;
 
         CollectingSinkWithTimer(ConsumerEx<? super List<T>> assertFn, int timeoutSeconds) {
             this.assertFn = assertFn;
             this.timeoutSeconds = timeoutSeconds;
-            start = System.currentTimeMillis();
-            collected = new ArrayList<>();
         }
 
         void receive(T item) {
@@ -158,18 +164,16 @@ public final class AssertionSinks {
         }
 
         void timer() {
-            AssertionError error;
             try {
                 assertFn.accept(collected);
                 throw new AssertionCompletedException("Assertion completed successfully");
             } catch (AssertionError e) {
-                error = e;
+                if (NANOSECONDS.toSeconds(System.nanoTime() - start) > timeoutSeconds) {
+                    throw new AssertionError("Assertion still failing after " + timeoutSeconds + " seconds, " +
+                            "last error: " + e, e);
+                }
             } catch (Exception e) {
                 throw rethrow(e);
-            }
-            long elapsed = System.currentTimeMillis() - start;
-            if (elapsed > TimeUnit.SECONDS.toMillis(timeoutSeconds)) {
-                throw new AssertionError("The following assertion failed after " + timeoutSeconds + " seconds", error);
             }
         }
 

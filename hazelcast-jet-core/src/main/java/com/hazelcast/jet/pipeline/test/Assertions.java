@@ -28,9 +28,11 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Various assertions which can be used to test pipelines for correctness
- * of output. Each assertion also returns the stage it is attached to so
- * the assertions could be used inline in a pipeline.
+ * Various assertions which can be used to assert items passing through the
+ * pipeline.
+ * <p>
+ * In this class there are variants that can be used in-line in the pipeline.
+ * Variants that can be used as sinks are in {@link AssertionSinks}.
  *
  * @since 3.2
  */
@@ -38,24 +40,28 @@ import java.util.List;
 public final class Assertions {
 
     private Assertions() {
-
     }
 
     /**
      * Asserts that the previous stage emitted the exact sequence of expected
-     * items and nothing else. If the assertion fails, the job will fail with a
+     * items and nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError} with the given message.
+     * <p>
+     * Since Jet jobs are distributed, input from multiple upstream processors
+     * is merged in a non-deterministic way. Therefore this assertion is usable
+     * only for testing of non-distributed sources.
      * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
      *  .apply(Assertions.assertOrdered("unexpected values", Arrays.asList(1, 2, 3, 4)))
-     *  .drainTo(Sinks.logger())
+     *  .drainTo(Sinks.logger());
      * }</pre>
      */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertOrdered(
-        @Nullable String message, @Nonnull Collection<? extends T> expected
+        @Nullable String message,
+        @Nonnull Collection<? extends T> expected
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertOrdered(message, expected));
@@ -65,9 +71,14 @@ public final class Assertions {
 
     /**
      * Asserts that the previous stage emitted the exact sequence of expected
-     * items and nothing else. If the assertion fails, the job will fail with a
+     * items and nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError}.
      * Example:
+     * <p>
+     * Since Jet jobs are distributed, input from multiple upstream processors
+     * is merged in a non-deterministic way. Therefore this assertion is usable
+     * only for testing of non-distributed sources.
+     * <p>
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
      *  .apply(Assertions.assertOrderedArrays.asList(1, 2, 3, 4)))
@@ -82,44 +93,45 @@ public final class Assertions {
     }
 
     /**
-     * Asserts that the previous stage emitted the expected
-     * items in any order, but nothing else. If the assertion fails, the job will fail with a
+     * Asserts that the previous stage emitted the expected items in any order,
+     * but nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError} with the given message.
      * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(4, 3, 2, 1))
-     *  .apply(Assertions.assertUnordered("unexpected values", Arrays.asList(1, 2, 3, 4)))
+     *  .apply(Assertions.assertAnyOrder("unexpected values", Arrays.asList(1, 2, 3, 4)))
      *  .drainTo(Sinks.logger())
      * }</pre>
      */
     @Nonnull
-    public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertUnordered(
-        @Nullable String message, @Nonnull Collection<? extends T> expected
+    public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertAnyOrder(
+        @Nullable String message,
+        @Nonnull Collection<? extends T> expected
     ) {
         return stage -> {
-            stage.drainTo(AssertionSinks.assertUnordered(message, expected));
+            stage.drainTo(AssertionSinks.assertAnyOrder(message, expected));
             return stage;
         };
     }
 
     /**
-     * Asserts that the previous stage emitted the expected
-     * items in any order, but nothing else. If the assertion fails, the job will fail with a
+     * Asserts that the previous stage emitted the expected items in any order,
+     * but nothing else. If the assertion fails, the job will fail with an
      * {@link AssertionError}.
      * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(4, 3, 2, 1))
-     *  .apply(Assertions.assertUnordered(Arrays.asList(1, 2, 3, 4)))
+     *  .apply(Assertions.assertAnyOrder(Arrays.asList(1, 2, 3, 4)))
      *  .drainTo(Sinks.logger())
      * }</pre>
      */
     @Nonnull
-    public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertUnordered(
+    public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertAnyOrder(
         @Nonnull Collection<? extends T> expected
     ) {
-        return assertUnordered(null, expected);
+        return assertAnyOrder(null, expected);
     }
 
     /**
@@ -130,13 +142,14 @@ public final class Assertions {
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(4, 3, 2, 1))
-     *  .apply(Assertions.assertUnordered(Arrays.asList(1, 3)))
+     *  .apply(Assertions.assertAnyOrder(Arrays.asList(1, 3)))
      *  .drainTo(Sinks.logger())
      * }</pre>
-     **/
+     */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertContains(
-        @Nullable String message, @Nonnull Collection<? extends T> expected
+        @Nullable String message,
+        @Nonnull Collection<? extends T> expected
     ) {
         return stage -> {
             stage.drainTo(AssertionSinks.assertContains(message, expected));
@@ -145,16 +158,39 @@ public final class Assertions {
     }
 
     /**
-     * Collects all the received items in a list and once the upstream stage
-     * is completed it executes the assertion supplied by {@code assertFn}.
+     * Asserts that the previous stage emitted all of the given items in any order.
+     * If the assertion fails, the job will fail with a {@link AssertionError} with
+     * the given message.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * p.drawFrom(TestSources.items(4, 3, 2, 1))
+     *  .apply(Assertions.assertAnyOrder(Arrays.asList(1, 3)))
+     *  .drainTo(Sinks.logger())
+     * }</pre>
+     */
+    @Nonnull
+    public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertContains(
+        @Nonnull Collection<? extends T> expected
+    ) {
+        return assertContains(null, expected);
+    }
+
+    /**
+     * Collects all the received items in a list and once the upstream stage is
+     * completed it executes the assertion supplied by {@code assertFn}. If no
+     * items were collected, it will be called with empty list.
+     * <p>
+     * Not usable in streaming jobs - use {@link #assertCollectedEventually}.
      * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
-     *  .apply(Assertions.assertCollected(items -> assertTrue("expected minimum of 4 items", items.size >= 4)))
+     *  .apply(Assertions.assertCollected(items ->
+     *          assertTrue("expected minimum of 4 items", items.size() >= 4)))
      *  .drainTo(Sinks.logger())
      * }</pre>
-     **/
+     */
     @Nonnull
     public static <T> FunctionEx<BatchStage<T>, BatchStage<T>> assertCollected(
         @Nonnull ConsumerEx<? super List<T>> assertFn
@@ -166,20 +202,25 @@ public final class Assertions {
     }
 
     /**
-     * Collects all the received items in a list and periodically runs assertFn.
-     * {@link AssertionError} thrown from the {@code assertFn} will be ignored
-     * until {@code timeoutSeconds} has passed, in which case they will be rethrown.
+     * Collects all the received items into a list and periodically runs the
+     * {@code assertFn}. An {@link AssertionError} thrown from the {@code
+     * assertFn} will be ignored until {@code timeoutSeconds} have passed,
+     * after which the last {@code AssertionError} will be rethrown. If {@code
+     * assertFn} throws any other exception, it will be rethrown immediately.
      * <p>
-     * If {@code assertFn} completes with any other errors, the exception will be rethrown.
-     * If {@code assertFn} completes without any error, the sink will throw an
-     * {@link AssertionCompletedException}
+     * When {@code assertFn} completes without any error, the sink will throw
+     * an {@link AssertionCompletedException} to indicate success. Exception is
+     * used to terminate the job so that you can {@code join()} it. This also
+     * requires that there are no other assertions in the job as this one can
+     * complete the job before the other ones succeeded.
+     * <p>
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.itemStream(10))
-     * .withoutTimestamps()
-     * .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)));
+     *  .withoutTimestamps()
+     *  .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)));
      * }</pre>
-     **/
+     */
     @Nonnull
     public static <T> FunctionEx<StreamStage<T>, StreamStage<T>> assertCollectedEventually(
         int timeout, @Nonnull ConsumerEx<? super List<T>> assertFn

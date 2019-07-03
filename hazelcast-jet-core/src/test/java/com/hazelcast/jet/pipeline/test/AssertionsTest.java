@@ -56,15 +56,15 @@ public class AssertionsTest extends PipelineTestSupport {
     }
 
     @Test
-    public void test_assertUnordered() {
+    public void test_assertAnyOrder() {
         p.drawFrom(TestSources.items(4, 3, 2, 1))
-         .apply(Assertions.assertUnordered(Arrays.asList(1, 2, 3, 4)));
+         .apply(Assertions.assertAnyOrder(Arrays.asList(1, 2, 3, 4)));
 
         execute();
     }
 
     @Test
-    public void test_assertUnordered_distributedSource() {
+    public void test_assertAnyOrder_distributedSource() {
         List<Integer> input = IntStream.range(0, itemCount).boxed().collect(Collectors.toList());
         putToBatchSrcMap(input);
 
@@ -73,15 +73,15 @@ public class AssertionsTest extends PipelineTestSupport {
                                                      .collect(Collectors.toList());
 
         p.drawFrom(Sources.map(srcMap))
-         .apply(Assertions.assertUnordered(expected));
+         .apply(Assertions.assertAnyOrder(expected));
 
         execute();
     }
 
     @Test
-    public void test_assertUnordered_should_fail() throws Throwable {
+    public void test_assertAnyOrder_should_fail() throws Throwable {
         p.drawFrom(TestSources.items(3, 2, 1))
-         .apply(Assertions.assertUnordered(Arrays.asList(1, 2, 3, 4)));
+         .apply(Assertions.assertAnyOrder(Arrays.asList(1, 2, 3, 4)));
 
         expectedException.expect(AssertionError.class);
         executeAndPeel();
@@ -90,7 +90,7 @@ public class AssertionsTest extends PipelineTestSupport {
     @Test
     public void test_assertContains() {
         p.drawFrom(TestSources.items(4, 3, 2, 1))
-         .apply(Assertions.assertContains("message", Arrays.asList(1, 3)));
+         .apply(Assertions.assertContains(Arrays.asList(1, 3)));
 
         execute();
     }
@@ -98,7 +98,7 @@ public class AssertionsTest extends PipelineTestSupport {
     @Test
     public void test_assertContains_should_fail() throws Throwable {
         p.drawFrom(TestSources.items(4, 1, 2, 3))
-         .apply(Assertions.assertContains("message", Arrays.asList(1, 3, 5)));
+         .apply(Assertions.assertContains(Arrays.asList(1, 3, 5)));
 
         expectedException.expect(AssertionError.class);
         executeAndPeel();
