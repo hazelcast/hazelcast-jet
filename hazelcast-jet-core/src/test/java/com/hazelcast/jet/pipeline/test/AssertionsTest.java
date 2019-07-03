@@ -17,15 +17,21 @@
 package com.hazelcast.jet.pipeline.test;
 
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
+import com.hazelcast.jet.pipeline.Sources;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
+import static org.junit.Assert.assertTrue;
 
 public class AssertionsTest extends PipelineTestSupport {
 
@@ -53,6 +59,21 @@ public class AssertionsTest extends PipelineTestSupport {
     public void test_assertUnordered() {
         p.drawFrom(TestSources.items(4, 3, 2, 1))
          .apply(Assertions.assertUnordered(Arrays.asList(1, 2, 3, 4)));
+
+        execute();
+    }
+
+    @Test
+    public void test_assertUnordered_distributedSource() {
+        List<Integer> input = IntStream.range(0, itemCount).boxed().collect(Collectors.toList());
+        putToBatchSrcMap(input);
+
+        List<Entry<String, Integer>> expected = input.stream()
+                                                     .map(i -> entry(String.valueOf(i), i))
+                                                     .collect(Collectors.toList());
+
+        p.drawFrom(Sources.map(srcMap))
+         .apply(Assertions.assertUnordered(expected));
 
         execute();
     }

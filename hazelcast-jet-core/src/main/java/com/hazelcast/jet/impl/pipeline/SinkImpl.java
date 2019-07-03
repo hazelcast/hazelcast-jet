@@ -24,14 +24,14 @@ import javax.annotation.Nonnull;
 public class SinkImpl<T> implements Sink<T> {
 
     private final String name;
-    private ProcessorMetaSupplier metaSupplier;
-    private boolean isSingleton;
+    private final ProcessorMetaSupplier metaSupplier;
+    private final boolean isTotalParallelismOne;
     private boolean isAssignedToStage;
 
-    public SinkImpl(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier, boolean isSingleton) {
+    public SinkImpl(@Nonnull String name, @Nonnull ProcessorMetaSupplier metaSupplier, boolean isTotalParallelismOne) {
         this.name = name;
         this.metaSupplier = metaSupplier;
-        this.isSingleton = isSingleton;
+        this.isTotalParallelismOne = isTotalParallelismOne;
     }
 
     @Nonnull
@@ -39,8 +39,8 @@ public class SinkImpl<T> implements Sink<T> {
         return metaSupplier;
     }
 
-    public boolean isSingleton() {
-        return isSingleton;
+    public boolean isTotalParallelismOne() {
+        return isTotalParallelismOne;
     }
 
     @Override

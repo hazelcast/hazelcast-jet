@@ -27,7 +27,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
@@ -65,12 +67,16 @@ public final class AssertionSinks {
      */
     @Nonnull
     public static <T> Sink<T> assertUnordered(@Nullable String message, @Nonnull Collection<? extends T> expected) {
-        final List<? super T> exp = new ArrayList<>(expected);
-        exp.sort(hashCodeComparator());
+        Map<? extends T, Long> expBag = toBag(expected);
         return assertCollected(received -> {
-            received.sort(hashCodeComparator());
-            assertEquals(message, exp, received);
+            String msg = "Expected and received did not match. The items are printed in the format of a map as follows:" +
+                " {<item>=<num occurrences>}";
+            assertEquals(message == null ? msg : message + ", " + msg, expBag, toBag(received));
         });
+    }
+
+    private static <T> Map<T, Long> toBag(Collection<T> coll) {
+        return coll.stream().collect(Collectors.groupingBy(c -> c, Collectors.counting()));
     }
 
     /**

@@ -51,7 +51,7 @@ public class SinkTransform<T> extends AbstractTransform {
         p.addEdges(this, pv.v, e -> {
             // note: have to use an all-to-one edge for the assertion sink.
             // all the items will be routed to the member with the partition key
-            if (sink.isSingleton()) {
+            if (sink.isTotalParallelismOne()) {
                 e.allToOne(sink.name()).distributed();
             }
         });

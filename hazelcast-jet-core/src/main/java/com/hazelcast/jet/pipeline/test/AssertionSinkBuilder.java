@@ -32,23 +32,23 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 /**
  * See {@link AssertionSinkBuilder#assertionSink(String, SupplierEx)}.
  *
- * @param <A> type of the state object
+ * @param <S> type of the state object
  * @param <T> type of the items the sink will accept
  *
  * @since 3.2
  */
 @Beta
-public final class AssertionSinkBuilder<A, T> {
+public final class AssertionSinkBuilder<S, T> {
 
-    private final SupplierEx<? extends A> createFn;
+    private final SupplierEx<? extends S> createFn;
     private final String name;
-    private BiConsumerEx<? super A, ? super T> receiveFn;
-    private ConsumerEx<? super A> timerFn = ConsumerEx.noop();
-    private ConsumerEx<? super A> completeFn = ConsumerEx.noop();
+    private BiConsumerEx<? super S, ? super T> receiveFn;
+    private ConsumerEx<? super S> timerFn = ConsumerEx.noop();
+    private ConsumerEx<? super S> completeFn = ConsumerEx.noop();
 
     private AssertionSinkBuilder(
             @Nonnull String name,
-            @Nonnull SupplierEx<? extends A> createFn
+            @Nonnull SupplierEx<? extends S> createFn
     ) {
         checkSerializable(createFn, "createFn");
         this.name = name;
@@ -85,19 +85,16 @@ public final class AssertionSinkBuilder<A, T> {
      * <p>
      * The sink doesn't participate in the fault-tolerance protocol, which
      * means you can't remember which items you already received across a job
-     * restart. The sink will still receive each item at least once, thus
-     * complying with the <em>at-least-once</em> processing guarantee. If the
-     * sink is idempotent (suppresses duplicate items), it will also be
-     * compatible with the <em>exactly-once</em> guarantee.
+     * restart.
      *
-     * @param <A> type of the state object
+     * @param <S> type of the state object
      *
      * @since 3.2
      */
     @Nonnull
-    public static <A> AssertionSinkBuilder<A, Void> assertionSink(
+    public static <S> AssertionSinkBuilder<S, Void> assertionSink(
             @Nonnull String name,
-            @Nonnull SupplierEx<? extends A> createFn
+            @Nonnull SupplierEx<? extends S> createFn
     ) {
         return new AssertionSinkBuilder<>(name, createFn);
     }
@@ -113,11 +110,11 @@ public final class AssertionSinkBuilder<A, T> {
      */
     @Nonnull
     @SuppressWarnings("unchecked")
-    public <T_NEW> AssertionSinkBuilder<A, T_NEW> receiveFn(
-            @Nonnull BiConsumerEx<? super A, ? super T_NEW> receiveFn
+    public <T_NEW> AssertionSinkBuilder<S, T_NEW> receiveFn(
+            @Nonnull BiConsumerEx<? super S, ? super T_NEW> receiveFn
     ) {
         checkSerializable(receiveFn, "receiveFn");
-        AssertionSinkBuilder<A, T_NEW> newThis = (AssertionSinkBuilder<A, T_NEW>) this;
+        AssertionSinkBuilder<S, T_NEW> newThis = (AssertionSinkBuilder<S, T_NEW>) this;
         newThis.receiveFn = receiveFn;
         return newThis;
     }
@@ -133,7 +130,7 @@ public final class AssertionSinkBuilder<A, T> {
      * @param timerFn the optional "timer" function
      */
     @Nonnull
-    public AssertionSinkBuilder<A, T> timerFn(@Nonnull ConsumerEx<? super A> timerFn) {
+    public AssertionSinkBuilder<S, T> timerFn(@Nonnull ConsumerEx<? super S> timerFn) {
         checkSerializable(timerFn, "timerFn");
         this.timerFn = timerFn;
         return this;
@@ -148,7 +145,7 @@ public final class AssertionSinkBuilder<A, T> {
      * @param completeFn the optional "complete" function
      */
     @Nonnull
-    public AssertionSinkBuilder<A, T> completeFn(@Nonnull ConsumerEx<? super A> completeFn) {
+    public AssertionSinkBuilder<S, T> completeFn(@Nonnull ConsumerEx<? super S> completeFn) {
         checkSerializable(completeFn, "completeFn");
         this.completeFn = completeFn;
         return this;
