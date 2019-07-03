@@ -23,7 +23,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * A simple event with a timestamp and sequence number
+ * A simple event with a timestamp and a sequence number.
  *
  * @since 3.2
  */

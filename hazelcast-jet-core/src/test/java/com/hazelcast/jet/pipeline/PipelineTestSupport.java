@@ -227,6 +227,4 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         clientConfig.getGroupConfig().setName(instance.getConfig().getGroupConfig().getName());
         return clientConfig;
     }
-
-
 }
