@@ -114,9 +114,10 @@ public final class TestSources {
         private static final int MAX_BATCH_SIZE = 1024;
 
         private final GeneratorFunction<? extends T> generator;
+        private final long periodNanos;
+
         private long emitSchedule;
         private long sequence;
-        private long periodNanos;
 
         private ItemStreamSource(int itemsPerSecond, GeneratorFunction<? extends T> generator) {
             this.periodNanos = TimeUnit.SECONDS.toNanos(1) / itemsPerSecond;

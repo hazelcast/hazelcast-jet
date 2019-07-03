@@ -136,7 +136,7 @@ public final class Assertions {
 
     /**
      * Asserts that the previous stage emitted all of the given items in any order.
-     * If the assertion fails, the job will fail with a {@link AssertionError} with
+     * If the assertion fails, the job will fail with an {@link AssertionError} with
      * the given message.
      * <p>
      * Example:
