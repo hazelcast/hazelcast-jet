@@ -16,28 +16,49 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
+import com.hazelcast.internal.metrics.MetricsUtil;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobMetrics;
-import com.hazelcast.jet.impl.execution.ExecutionContext;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class JobMetricsUtil {
 
+    // required precision after the decimal point for doubles
+    private static final int CONVERSION_PRECISION = 4;
+    // coefficient for converting doubles to long
+    private static final double DOUBLE_TO_LONG = Math.pow(10, CONVERSION_PRECISION);
+
     private JobMetricsUtil() {
     }
 
-    public static JobMetrics getJobMetrics(JetService service, long executionId) {
-        ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
-        if (executionContext == null) {
-            return JobMetrics.EMPTY;
-        } else {
-            ToMapProbeRenderer renderer = new ToMapProbeRenderer();
-            executionContext.renderJobMetrics(renderer);
-            return renderer.toJobMetrics();
+    public static Long getExecutionIdFromMetricName(String metricName) {
+        if (!metricName.startsWith("[") || !metricName.endsWith("]")) {
+            //non-standard name format, it's not a job metric
+            return null;
         }
+
+        List<Map.Entry<String, String>> tagEntries = MetricsUtil.parseMetricName(metricName);
+
+        //attempt to identify the execution id tag in a hacky, but fast way
+        if (tagEntries.size() >= 3 && "exec".equals(tagEntries.get(2).getKey())) {
+            return Util.idFromString(tagEntries.get(2).getValue());
+        }
+
+        //fall back to full search
+        for (Map.Entry<String, String> entry : tagEntries) {
+            if ("exec".equals(entry.getKey())) {
+                return Util.idFromString(entry.getValue());
+            }
+        }
+
+        return null;
+    }
+
+    public static long toLongMetricValue(double value) {
+        return Math.round(value * DOUBLE_TO_LONG);
     }
 
     static JobMetrics mergeMetrics(Collection<Object> metrics) {
@@ -47,40 +68,4 @@ public final class JobMetricsUtil {
         }
         return mergedMetrics;
     }
-
-    private static class ToMapProbeRenderer implements ProbeRenderer {
-
-        // required precision after the decimal point for doubles
-        private static final int CONVERSION_PRECISION = 4;
-        // coefficient for converting doubles to long
-        private static final double DOUBLE_TO_LONG = Math.pow(10, CONVERSION_PRECISION);
-
-        private final Map<String, Long> map = new HashMap<>();
-
-        public JobMetrics toJobMetrics() {
-            return JobMetrics.of(map);
-        }
-
-        @Override
-        public void renderLong(String name, long value) {
-            map.put(name, value);
-        }
-
-        @Override
-        public void renderDouble(String name, double value) {
-            long longValue = Math.round(value * DOUBLE_TO_LONG);
-            renderLong(name, longValue);
-        }
-
-        @Override
-        public void renderException(String name, Exception e) {
-
-        }
-
-        @Override
-        public void renderNoValue(String name) {
-
-        }
-    }
-
 }

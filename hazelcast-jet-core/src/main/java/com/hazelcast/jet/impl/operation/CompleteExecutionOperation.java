@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.logging.ILogger;
@@ -27,11 +29,14 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.ExceptionAction;
 import com.hazelcast.spi.Operation;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 
 public class CompleteExecutionOperation extends Operation implements IdentifiedDataSerializable {
@@ -57,15 +62,19 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         logger.fine("Completing execution " + idToString(executionId) + " from caller " + callerAddress
                 + ", error=" + error);
 
+        NodeEngineImpl nodeEngine = (NodeEngineImpl) getNodeEngine();
         Address masterAddress = getNodeEngine().getMasterAddress();
         if (!callerAddress.equals(masterAddress)) {
             throw new IllegalStateException("Caller " + callerAddress + " cannot complete execution "
                     + idToString(executionId) + " because it is not master. Master is: " + masterAddress);
         }
 
-        response = JobMetricsUtil.getJobMetrics(service, executionId);
+        JobExecutionService jobExecutionService = service.getJobExecutionService();
+        JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
+        nodeEngine.getMetricsRegistry().render(metricsRenderer);
+        response = metricsRenderer.getJobMetrics();
 
-        service.getJobExecutionService().completeExecution(executionId, error);
+        jobExecutionService.completeExecution(executionId, error);
     }
 
     @Override
@@ -100,5 +109,43 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         super.readInternal(in);
         executionId = in.readLong();
         error = in.readObject();
+    }
+
+    private static class JobMetricsRenderer implements ProbeRenderer {
+
+        private final Long executionIdOfInterest;
+        private final Map<String, Long> jobMetrics = new HashMap<>();
+
+        JobMetricsRenderer(long executionId) {
+            this.executionIdOfInterest = executionId;
+        }
+
+        @Override
+        public void renderLong(String name, long value) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
+            if (executionIdOfInterest.equals(executionId)) {
+                jobMetrics.put(name, value);
+            }
+        }
+
+        @Override
+        public void renderDouble(String name, double value) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
+            if (executionIdOfInterest.equals(executionId)) {
+                jobMetrics.put(name, JobMetricsUtil.toLongMetricValue(value));
+            }
+        }
+
+        @Override
+        public void renderException(String name, Exception e) {
+        }
+
+        @Override
+        public void renderNoValue(String name) {
+        }
+
+        JobMetrics getJobMetrics() {
+            return JobMetrics.of(jobMetrics);
+        }
     }
 }

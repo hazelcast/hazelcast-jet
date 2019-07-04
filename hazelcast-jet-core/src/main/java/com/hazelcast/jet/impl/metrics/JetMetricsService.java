@@ -21,6 +21,9 @@ import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.config.MetricsConfig;
+import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobExecutionService;
+import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.LiveOperationRegistry;
 import com.hazelcast.jet.impl.metrics.jmx.JmxPublisher;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer;
@@ -35,6 +38,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -90,7 +94,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
     @Override
     public void init(NodeEngine nodeEngine, Properties properties) {
-        this.publishers = getPublishers();
+        this.publishers = getPublishers(nodeEngine);
 
         if (publishers.isEmpty()) {
             return;
@@ -184,7 +188,7 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
         }
     }
 
-    private List<MetricsPublisher> getPublishers() {
+    private List<MetricsPublisher> getPublishers(NodeEngine nodeEngine) {
         List<MetricsPublisher> publishers = new ArrayList<>();
         if (config.isEnabled()) {
             int journalSize = Math.max(
@@ -198,6 +202,10 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
                     }
             );
             publishers.add(publisher);
+
+            JobExecutionService jobExecutionService = nodeEngine.<JetService>getService(JetService.SERVICE_NAME)
+                    .getJobExecutionService();
+            publishers.add(new InternalJobMetricsPublisher(jobExecutionService));
         }
         if (config.isJmxEnabled()) {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
@@ -257,6 +265,41 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
 
         private void logError(String name, Object value, MetricsPublisher publisher, Exception e) {
             logger.fine("Error publishing metric to: " + publisher.name() + ", metric=" + name + ", value=" + value, e);
+        }
+    }
+
+    /**
+     * Internal publisher which notifies the {@JobExecutionService} about latest metric values
+     */
+    public static class InternalJobMetricsPublisher implements MetricsPublisher {
+
+        private final JobExecutionService jobExecutionService;
+
+        private final Map<String, Long> metrics = new HashMap<>();
+
+        public InternalJobMetricsPublisher(JobExecutionService jobExecutionService) {
+            this.jobExecutionService = jobExecutionService;
+        }
+
+        @Override
+        public void publishLong(String name, long value) {
+            metrics.put(name, value);
+        }
+
+        @Override
+        public void publishDouble(String name, double value) {
+            publishLong(name, JobMetricsUtil.toLongMetricValue(value));
+        }
+
+        @Override
+        public void whenComplete() {
+            jobExecutionService.updateMetrics(metrics);
+            metrics.clear();
+        }
+
+        @Override
+        public String name() {
+            return "Internal Publisher";
         }
     }
 }

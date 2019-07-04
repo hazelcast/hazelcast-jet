@@ -55,6 +55,9 @@ public final class JobMetrics implements Serializable {
 
     /** Builds a {@link JobMetrics} object based on a key-value map of metrics data. */
     public static JobMetrics of(Map<String, Long> metrics) {
+        if (metrics.isEmpty()) {
+            return EMPTY;
+        }
         return new JobMetrics(new HashMap<>(metrics));
     }
 

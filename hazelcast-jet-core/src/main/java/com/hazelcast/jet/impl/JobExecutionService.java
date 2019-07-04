@@ -327,6 +327,23 @@ public class JobExecutionService {
         }
     }
 
+    public void updateMetrics(Map<String, Long> metrics) {
+        //clear all job metrics
+        executionContexts.values().forEach(ExecutionContext::clearJobMetrics);
+
+        for (Entry<String, Long> entry : metrics.entrySet()) {
+            String metricName = entry.getKey();
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(metricName);
+            if (executionId != null) {
+                ExecutionContext executionContext = executionContexts.get(executionId);
+                if (executionContext != null) {
+                    Long metricValue = entry.getValue();
+                    executionContext.addJobMetric(metricName, metricValue);
+                }
+            }
+        }
+    }
+
     public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);

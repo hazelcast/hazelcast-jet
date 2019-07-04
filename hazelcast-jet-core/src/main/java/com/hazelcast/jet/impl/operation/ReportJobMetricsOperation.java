@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.JobMetricsUtil;
+import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 
 public class ReportJobMetricsOperation extends AbstractJobOperation {
@@ -37,7 +37,12 @@ public class ReportJobMetricsOperation extends AbstractJobOperation {
     @Override
     public void run() {
         JetService service = getService();
-        response = JobMetricsUtil.getJobMetrics(service, executionId);
+        ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
+        if (executionContext == null) {
+            response = JobMetrics.EMPTY;
+        } else {
+            response = executionContext.getJobMetrics();
+        }
     }
 
     @Override

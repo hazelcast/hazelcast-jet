@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
-import com.hazelcast.internal.metrics.DoubleProbeFunction;
 import com.hazelcast.internal.metrics.LongProbeFunction;
-import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.internal.metrics.ProbeBuilder;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
@@ -59,7 +57,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.partition.IPartitionService;
 import com.hazelcast.util.StringUtil;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -137,9 +134,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.memberCount = memberCount;
     }
 
-    public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext,
-                           MetricsRegistry... extraMetricsRegistries
-    ) {
+    public void initialize(NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
         initProcSuppliers(jobId, executionId);
@@ -187,8 +182,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberCount
                 );
 
-                ProbeBuilder probeBuilder = new MultiProbeBuilder(
-                        this.nodeEngine.getMetricsRegistry(), extraMetricsRegistries)
+                ProbeBuilder probeBuilder = this.nodeEngine.getMetricsRegistry().newProbeBuilder()
                         .withTag("module", "jet")
                         .withTag("job", idToString(jobId))
                         .withTag("exec", idToString(executionId))
@@ -630,57 +624,5 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     // for test
     List<VertexDef> getVertices() {
         return vertices;
-    }
-
-    private static class MultiProbeBuilder implements ProbeBuilder {
-
-        private final ProbeBuilder[] builders;
-
-        MultiProbeBuilder(MetricsRegistry metricsRegistry, MetricsRegistry... metricsRegistries) {
-            builders = new ProbeBuilder[1 + metricsRegistries.length];
-
-            builders[0] = metricsRegistry.newProbeBuilder();
-            for (int i = 1; i <= metricsRegistries.length; i++) {
-                builders[i] = metricsRegistries[i - 1].newProbeBuilder();
-            }
-        }
-
-        @Override
-        public ProbeBuilder withTag(String tag, String value) {
-            for (int i = 0; i < builders.length; i++) {
-                builders[i] = builders[i].withTag(tag, value);
-            }
-            return this;
-        }
-
-        @Override
-        public <S> void register(@Nonnull S source, @Nonnull String metricName, @Nonnull ProbeLevel level,
-                                 @Nonnull ProbeUnit unit, @Nonnull DoubleProbeFunction<S> probeFn
-        ) {
-            for (ProbeBuilder builder : builders) {
-                builder.register(source, metricName, level, unit, probeFn);
-            }
-        }
-
-        @Override
-        public <S> void register(@Nonnull S source, @Nonnull String metricName, @Nonnull ProbeLevel level,
-                                 @Nonnull ProbeUnit unit, @Nonnull LongProbeFunction<S> probeFn
-        ) {
-            for (ProbeBuilder builder : builders) {
-                builder.register(source, metricName, level, unit, probeFn);
-            }
-        }
-
-        @Override
-        public <S> void scanAndRegister(S source) {
-            for (ProbeBuilder builder : builders) {
-                builder.scanAndRegister(source);
-            }
-        }
-
-        @Override
-        public String metricName() {
-            return builders[0].metricName();
-        }
     }
 }

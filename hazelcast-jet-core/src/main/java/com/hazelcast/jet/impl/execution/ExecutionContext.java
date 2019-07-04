@@ -17,10 +17,8 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.MetricsRegistry;
-import com.hazelcast.internal.metrics.ProbeLevel;
-import com.hazelcast.internal.metrics.impl.MetricsRegistryImpl;
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
@@ -37,6 +35,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,7 +85,7 @@ public class ExecutionContext {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
-    private final MetricsRegistry jobMetricsRegistry;
+    private final Map<String, Long> jobMetrics = new HashMap<>();
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -98,7 +97,6 @@ public class ExecutionContext {
         this.nodeEngine = nodeEngine;
 
         this.jobName = idToString(jobId);
-        this.jobMetricsRegistry = getJobMetricsRegistry(jobName, nodeEngine);
 
         logger = nodeEngine.getLogger(getClass());
     }
@@ -113,7 +111,7 @@ public class ExecutionContext {
         processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, jobMetricsRegistry);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
@@ -180,17 +178,9 @@ public class ExecutionContext {
                         + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
             }
         }
-        deregisterMetricsSources(
-                ((NodeEngineImpl) nodeEngine).getMetricsRegistry(),
-                jobMetricsRegistry
-        );
-    }
-
-    private void deregisterMetricsSources(MetricsRegistry... metricsRegistries) {
-        for (MetricsRegistry registry : metricsRegistries) {
-            processors.forEach(registry::deregister);
-            tasklets.forEach(registry::deregister);
-        }
+        MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
+        processors.forEach(metricsRegistry::deregister);
+        tasklets.forEach(metricsRegistry::deregister);
     }
 
     /**
@@ -260,10 +250,6 @@ public class ExecutionContext {
         return coordinator;
     }
 
-    public void renderJobMetrics(ProbeRenderer renderer) {
-        jobMetricsRegistry.render(renderer);
-    }
-
     public Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap() {
         return senderMap;
     }
@@ -282,9 +268,15 @@ public class ExecutionContext {
         return jobName;
     }
 
-    private static MetricsRegistryImpl getJobMetricsRegistry(String jobName, NodeEngine nodeEngine) {
-        ILogger logger = nodeEngine.getLogger(MetricsRegistry.class);
-        ProbeLevel probeLevel = ((NodeEngineImpl) nodeEngine).getMetricsRegistry().minimumLevel();
-        return new MetricsRegistryImpl(jobName, logger, probeLevel);
+    public JobMetrics getJobMetrics() {
+        return JobMetrics.of(jobMetrics);
+    }
+
+    public void clearJobMetrics() {
+        jobMetrics.clear();
+    }
+
+    public void addJobMetric(String name, Long value) {
+        jobMetrics.put(name, value);
     }
 }
