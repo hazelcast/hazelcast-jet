@@ -117,11 +117,12 @@ public final class AssertionSinks {
     }
 
     /**
-     * Collects all the received items into a list and periodically runs the
-     * {@code assertFn}. An {@link AssertionError} thrown from the {@code
-     * assertFn} will be ignored until {@code timeoutSeconds} have passed,
-     * after which the last {@code AssertionError} will be rethrown. If {@code
-     * assertFn} throws any other exception, it will be rethrown immediately.
+     * Collects all the received items into a list and runs the {@code assertFn}
+     * every time a new item is received. An {@link AssertionError} thrown from
+     * the {@code assertFn} will be ignored until {@code timeoutSeconds} have
+     * passed, after which the last {@code AssertionError} will be rethrown.
+     * If {@code assertFn} throws any other exception, it will be rethrown
+     * immediately.
      * <p>
      * When {@code assertFn} completes without any error, the sink will throw
      * an {@link AssertionCompletedException} to indicate success. Exception is
