@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.core.test.JetAssert.assertEquals;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Various assertions which can be used to assert items on the output of a
@@ -152,28 +152,29 @@ public final class AssertionSinks {
         private final List<T> collected = new ArrayList<>();
 
         private ConsumerEx<? super List<T>> assertFn;
-        private int timeoutSeconds;
+        private long timeoutNanos;
+        private AssertionError lastError;
 
         CollectingSinkWithTimer(ConsumerEx<? super List<T>> assertFn, int timeoutSeconds) {
             this.assertFn = assertFn;
-            this.timeoutSeconds = timeoutSeconds;
+            this.timeoutNanos = SECONDS.toNanos(timeoutSeconds);
         }
 
         void receive(T item) {
             collected.add(item);
+            try {
+                assertFn.accept(collected);
+                throw new AssertionCompletedException("Assertion passed successfully");
+            } catch (AssertionError e) {
+                lastError = e;
+            } catch (Exception e) {
+                throw rethrow(e);
+            }
         }
 
         void timer() {
-            try {
-                assertFn.accept(collected);
-                throw new AssertionCompletedException("Assertion completed successfully");
-            } catch (AssertionError e) {
-                if (NANOSECONDS.toSeconds(System.nanoTime() - start) > timeoutSeconds) {
-                    throw new AssertionError("Assertion still failing after " + timeoutSeconds + " seconds, " +
-                            "last error: " + e, e);
-                }
-            } catch (Exception e) {
-                throw rethrow(e);
+            if (System.nanoTime() - start > timeoutNanos) {
+                throw new AssertionError(lastError);
             }
         }
 

@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * Various assertions which can be used to assert items passing through the
  * pipeline for correctness. Each assertion also returns the stage it is
- * attached so the assertions could be used in-line.
+ * attached to so the assertions could be used in-line.
  * <p>
  * The assertions in this class are to be used together with the {@code apply()}
  * operator on the pipeline. For assertions that can be used directly
