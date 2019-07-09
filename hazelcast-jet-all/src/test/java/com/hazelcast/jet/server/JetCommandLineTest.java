@@ -100,6 +100,7 @@ public class JetCommandLineTest extends JetTestSupport {
     public void before() {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
+        cfg.getHazelcastConfig().getNetworkConfig().setPort(9000);
         jet = createJetMember(cfg);
         client = createJetClient();
         resetOut();
