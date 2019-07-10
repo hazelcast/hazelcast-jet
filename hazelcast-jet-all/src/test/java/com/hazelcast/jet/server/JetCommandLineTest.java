@@ -100,13 +100,17 @@ public class JetCommandLineTest extends JetTestSupport {
     public void before() {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
-        cfg.getHazelcastConfig().getNetworkConfig().setPort(9000);
+        String groupName = randomName();
+        cfg.getHazelcastConfig().getGroupConfig().setName(groupName);
         jet = createJetMember(cfg);
-        client = createJetClient();
+        ClientConfig clientConfig = new ClientConfig();
+        clientConfig.getGroupConfig().setName(groupName);
+        client = createJetClient(clientConfig);
         resetOut();
 
         Address address = jet.getCluster().getLocalMember().getAddress();
         System.setProperty("member", address.getHost() + ":" + address.getPort());
+        System.setProperty("group", groupName);
         sourceMap = jet.getMap(SOURCE_NAME);
         IntStream.range(0, ITEM_COUNT).forEach(i -> sourceMap.put(i, i));
         sinkList = jet.getList(SINK_NAME);

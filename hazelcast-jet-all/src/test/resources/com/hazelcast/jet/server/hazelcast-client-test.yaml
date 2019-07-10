@@ -14,7 +14,7 @@
 
 hazelcast-client:
   group:
-    name: jet
+    name: ${group}
 
   network:
     cluster-members:
