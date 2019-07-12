@@ -20,36 +20,30 @@ import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.spi.annotation.Beta;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.Util.entry;
+
 /**
- * Contains information related to job-specific metrics.
+ * An immutable snapshot of job-specific metrics.
  */
 @Beta
 public final class JobMetrics implements Serializable {
 
     /** Static empty instance, contains no metrics */
-    public static final JobMetrics EMPTY = new JobMetrics();
+    public static final JobMetrics EMPTY = new JobMetrics(Collections.emptyMap());
 
     private final Map<String, Long> metrics;
 
-    /** Builds an empty {@link JobMetrics} object. */
-    private JobMetrics() {
-        this(Collections.emptyMap());
-    }
-
-    /** Builds a {@link JobMetrics} object based on a key-value map of metrics data. */
-    private JobMetrics(Map<String, Long> metrics) {
-        Objects.requireNonNull(metrics);
+    private JobMetrics(@Nonnull Map<String, Long> metrics) {
         this.metrics = Collections.unmodifiableMap(metrics);
     }
 
@@ -61,22 +55,29 @@ public final class JobMetrics implements Serializable {
         return new JobMetrics(new HashMap<>(metrics));
     }
 
-    /** Returns a collection containing the names of all job specific metrics available. */
+    /**
+     * Returns a collection containing the names of all job-specific metrics
+     * available.
+     */
     @Nonnull
-    Collection<String> getMetricNames() {
+    public Collection<String> getMetricNames() {
         return metrics.keySet();
     }
 
     /**
-     * Retruns the value of a job specific metric with the given name.
-     * @throws IllegalArgumentException if name is null or if no job metric with this name is available.
+     * Returns the value of a job-specific metric with the given name. Returns
+     * null if the metric doesn't exist.
      */
-    Long getMetricValue(String name) {
-        Objects.requireNonNull(name);
+    @Nullable
+    public Long getMetricValue(@Nonnull String name) {
         return metrics.get(name);
     }
 
-    /** Merges two immutable {@link JobMetrics} instances into a third */
+    /**
+     * Merges metrics from this and the {@code other} instances into a new
+     * {@link JobMetrics} instance. If a metric is found in both collections,
+     * it will have the value from the {@code other} object.
+     */
     public JobMetrics merge(JobMetrics other) {
         Map<String, Long> map = new HashMap<>();
         map.putAll(this.metrics);
@@ -84,13 +85,14 @@ public final class JobMetrics implements Serializable {
         return new JobMetrics(map);
     }
 
-    /** Returns a subset of the current metrics, which have the specified value for the specified tag. */
+    /**
+     * Returns a subset of this metrics which have the specified value for the
+     * specified tag.
+     */
     public JobMetrics withTag(String tag, String value) {
-        String nameToken = tag + '=' + MetricsUtil.escapeMetricNamePart(value);
-        Predicate<Map.Entry<String, Long>> filterPredicate = e ->
-                new HashSet<>(Arrays.asList(e.getKey().split("[,\\]\\[]"))).contains(nameToken);
+        Entry<String, String> tagValue = entry(tag, value);
         Map<String, Long> filteredMetrics = metrics.entrySet().stream()
-                .filter(filterPredicate)
+                .filter(entry -> MetricsUtil.parseMetricName(entry.getKey()).contains(tagValue))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         return new JobMetrics(filteredMetrics);
     }

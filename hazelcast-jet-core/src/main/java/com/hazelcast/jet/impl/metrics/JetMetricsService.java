@@ -269,7 +269,8 @@ public class JetMetricsService implements ManagedService, ConfigurableService<Me
     }
 
     /**
-     * Internal publisher which notifies the {@JobExecutionService} about latest metric values
+     * Internal publisher which notifies the {@link JobExecutionService} about
+     * latest metric values.
      */
     public static class InternalJobMetricsPublisher implements MetricsPublisher {
 

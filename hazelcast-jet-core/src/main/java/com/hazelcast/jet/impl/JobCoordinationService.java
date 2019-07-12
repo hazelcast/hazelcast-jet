@@ -37,7 +37,6 @@ import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
-import com.hazelcast.jet.impl.operation.ReportJobMetricsOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.Data;
@@ -58,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -411,15 +409,10 @@ public class JobCoordinationService {
                         return;
                     }
 
-                    // check if there is a master context for running job
+                    // check if there is a master context for the running job
                     MasterContext mc = masterContexts.get(jobId);
                     if (mc != null) {
-                        mc.invokeOnParticipants(
-                                plan -> new ReportJobMetricsOperation(mc.jobId(), mc.executionId()),
-                                objects -> completeWithMergedMetrics(cf, mc, objects),
-                                cf::completeExceptionally,
-                                false
-                        );
+                        mc.collectMetrics(cf);
                         return;
                     }
 
@@ -427,17 +420,6 @@ public class JobCoordinationService {
                 }
         );
         return cf;
-    }
-
-    private void completeWithMergedMetrics(CompletableFuture<JobMetrics> cf, MasterContext mc,
-                                           Collection<Object> metrics) {
-        Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
-        if (firstThrowable.isPresent()) {
-            cf.completeExceptionally((Throwable) firstThrowable.get());
-        } else {
-            mc.setJobMetrics(JobMetricsUtil.mergeMetrics(metrics));
-            cf.complete(mc.jobMetrics());
-        }
     }
 
     /**

@@ -22,6 +22,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.operation.ReportJobMetricsOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -35,6 +36,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -289,5 +292,25 @@ public class MasterContext {
                                                             .collect(Collectors.toList()));
             }
         }));
+    }
+
+    void collectMetrics(CompletableFuture<JobMetrics> clientFuture) {
+        invokeOnParticipants(
+                plan -> new ReportJobMetricsOperation(jobId(), executionId()),
+                objects -> completeWithMergedMetrics(clientFuture, objects),
+                clientFuture::completeExceptionally,
+                false
+        );
+    }
+
+    private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
+                                           Collection<Object> metrics) {
+        Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
+        if (firstThrowable.isPresent()) {
+            clientFuture.completeExceptionally((Throwable) firstThrowable.get());
+        } else {
+            setJobMetrics(JobMetricsUtil.mergeMetrics(metrics));
+            clientFuture.complete(jobMetrics());
+        }
     }
 }

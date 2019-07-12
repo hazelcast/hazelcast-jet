@@ -84,7 +84,7 @@ public interface Job {
     JobStatus getStatus();
 
     /**
-     * Returns a copy of the current values of all job-specific metrics.
+     * Returns a snapshot of the current values of all job-specific metrics.
      */
     @Nonnull
     JobMetrics getMetrics();
