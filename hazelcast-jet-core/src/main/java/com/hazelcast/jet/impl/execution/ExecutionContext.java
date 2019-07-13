@@ -258,11 +258,6 @@ public class ExecutionContext {
         return receiverMap;
     }
 
-    // visible for testing only
-    public SnapshotContext snapshotContext() {
-        return snapshotContext;
-    }
-
     @Nullable
     public String jobName() {
         return jobName;

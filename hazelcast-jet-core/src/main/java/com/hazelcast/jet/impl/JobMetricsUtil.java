@@ -16,15 +16,17 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobMetrics;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class JobMetricsUtil {
+
+    private static final Pattern METRIC_KEY_EXEC_ID_PATTERN =
+            Pattern.compile("module=jet,job=[^,]+,exec=([^,]+),.*");
 
     // required precision after the decimal point for doubles
     private static final int CONVERSION_PRECISION = 4;
@@ -35,26 +37,12 @@ public final class JobMetricsUtil {
     }
 
     public static Long getExecutionIdFromMetricName(String metricName) {
-        if (!metricName.startsWith("[") || !metricName.endsWith("]")) {
-            //non-standard name format, it's not a job metric
+        Matcher m = METRIC_KEY_EXEC_ID_PATTERN.matcher(metricName);
+        if (!m.matches()) {
+            // not a job-related metric, ignore it
             return null;
         }
-
-        List<Map.Entry<String, String>> tagEntries = MetricsUtil.parseMetricName(metricName);
-
-        //attempt to identify the execution id tag in a hacky, but fast way
-        if (tagEntries.size() >= 3 && "exec".equals(tagEntries.get(2).getKey())) {
-            return Util.idFromString(tagEntries.get(2).getValue());
-        }
-
-        //fall back to full search
-        for (Map.Entry<String, String> entry : tagEntries) {
-            if ("exec".equals(entry.getKey())) {
-                return Util.idFromString(entry.getValue());
-            }
-        }
-
-        return null;
+        return Util.idFromString(m.group(1));
     }
 
     public static long toLongMetricValue(double value) {

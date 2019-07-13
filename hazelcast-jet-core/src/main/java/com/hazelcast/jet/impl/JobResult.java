@@ -52,7 +52,7 @@ public class JobResult implements IdentifiedDataSerializable {
     }
 
     JobResult(long jobId,
-              JobMetrics jobMetrics,
+              @Nonnull JobMetrics jobMetrics,
               @Nonnull JobConfig jobConfig,
               @Nonnull String coordinatorUUID,
               long creationTime, long completionTime,

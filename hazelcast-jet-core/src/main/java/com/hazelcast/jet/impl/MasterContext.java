@@ -22,7 +22,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.ReportJobMetricsOperation;
+import com.hazelcast.jet.impl.operation.GetJobMetricsFromMemberOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -296,7 +296,7 @@ public class MasterContext {
 
     void collectMetrics(CompletableFuture<JobMetrics> clientFuture) {
         invokeOnParticipants(
-                plan -> new ReportJobMetricsOperation(jobId(), executionId()),
+                plan -> new GetJobMetricsFromMemberOperation(jobId(), executionId()),
                 objects -> completeWithMergedMetrics(clientFuture, objects),
                 clientFuture::completeExceptionally,
                 false

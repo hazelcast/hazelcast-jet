@@ -24,8 +24,8 @@ import com.hazelcast.nio.Connection;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.Operation;
 
-public class JetGetJobMetricsMessageTask extends AbstractJetMessageTask<JetGetJobMetricsCodec.RequestParameters, Data> {
-
+public class JetGetJobMetricsMessageTask
+        extends AbstractJetMessageTask<JetGetJobMetricsCodec.RequestParameters, Data> {
 
     JetGetJobMetricsMessageTask(ClientMessage clientMessage, Node node, Connection connection) {
         super(clientMessage, node, connection,

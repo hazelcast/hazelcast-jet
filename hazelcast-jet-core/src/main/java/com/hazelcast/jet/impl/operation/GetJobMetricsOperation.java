@@ -21,6 +21,10 @@ import com.hazelcast.spi.impl.AllowedDuringPassiveState;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * An operation sent from a member to master to query metrics for a specific
+ * job ID.
+ */
 public class GetJobMetricsOperation extends AsyncJobOperation implements AllowedDuringPassiveState {
 
     public GetJobMetricsOperation() {

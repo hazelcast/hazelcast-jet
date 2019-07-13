@@ -21,15 +21,19 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 
-public class ReportJobMetricsOperation extends AbstractJobOperation {
+/**
+ * An operation sent from the master to all members to query metrics for a
+ * specific job ID.
+ */
+public class GetJobMetricsFromMemberOperation extends AbstractJobOperation {
 
     private long executionId;
     private JobMetrics response;
 
-    public ReportJobMetricsOperation() {
+    public GetJobMetricsFromMemberOperation() {
     }
 
-    public ReportJobMetricsOperation(long jobId, long executionId) {
+    public GetJobMetricsFromMemberOperation(long jobId, long executionId) {
         super(jobId);
         this.executionId = executionId;
     }
@@ -52,7 +56,6 @@ public class ReportJobMetricsOperation extends AbstractJobOperation {
 
     @Override
     public int getId() {
-        return JetInitDataSerializerHook.REPORT_METRICS_OP;
+        return JetInitDataSerializerHook.GET_JOB_METRICS_FROM_MEMBER_OP;
     }
-
 }

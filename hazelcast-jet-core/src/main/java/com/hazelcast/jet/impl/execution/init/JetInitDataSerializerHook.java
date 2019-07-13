@@ -34,15 +34,15 @@ import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
+import com.hazelcast.jet.impl.operation.GetJobMetricsFromMemberOperation;
+import com.hazelcast.jet.impl.operation.GetJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
 import com.hazelcast.jet.impl.operation.GetJobSummaryListOperation;
-import com.hazelcast.jet.impl.operation.GetJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.operation.PrepareForPassiveClusterOperation;
-import com.hazelcast.jet.impl.operation.ReportJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.ResumeJobOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
@@ -99,7 +99,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int CLUSTER_METADATA = 36;
     public static final int GET_CLUSTER_METADATA_OP = 37;
     public static final int GET_JOB_METRICS_OP = 38;
-    public static final int REPORT_METRICS_OP = 39;
+    public static final int GET_JOB_METRICS_FROM_MEMBER_OP = 39;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -138,8 +138,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new SubmitJobOperation();
                 case GET_JOB_STATUS_OP:
                     return new GetJobStatusOperation();
-                case GET_JOB_METRICS_OP:
-                    return new GetJobMetricsOperation();
                 case SNAPSHOT_OPERATION:
                     return new SnapshotOperation();
                 case JOB_EXECUTION_RECORD:
@@ -194,8 +192,10 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new ClusterMetadata();
                 case GET_CLUSTER_METADATA_OP:
                     return new GetClusterMetadataOperation();
-                case REPORT_METRICS_OP:
-                    return new ReportJobMetricsOperation();
+                case GET_JOB_METRICS_OP:
+                    return new GetJobMetricsOperation();
+                case GET_JOB_METRICS_FROM_MEMBER_OP:
+                    return new GetJobMetricsFromMemberOperation();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }
