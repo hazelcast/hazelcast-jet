@@ -21,6 +21,8 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 
+import java.util.Collections;
+
 /**
  * An operation sent from the master to all members to query metrics for a
  * specific job ID.
@@ -43,7 +45,7 @@ public class GetJobMetricsFromMemberOperation extends AbstractJobOperation {
         JetService service = getService();
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
         if (executionContext == null) {
-            response = JobMetrics.EMPTY;
+            response = JobMetrics.of(Collections.emptyMap());
         } else {
             response = executionContext.getJobMetrics();
         }

@@ -35,7 +35,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -85,7 +85,7 @@ public class ExecutionContext {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
-    private final Map<String, Long> jobMetrics = new HashMap<>();
+    private volatile Map<String, Long> jobMetrics = Collections.emptyMap();
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -267,11 +267,7 @@ public class ExecutionContext {
         return JobMetrics.of(jobMetrics);
     }
 
-    public void clearJobMetrics() {
-        jobMetrics.clear();
-    }
-
-    public void addJobMetric(String name, Long value) {
-        jobMetrics.put(name, value);
+    public void setJobMetric(Map<String, Long> jobMetrics) {
+        this.jobMetrics = jobMetrics;
     }
 }

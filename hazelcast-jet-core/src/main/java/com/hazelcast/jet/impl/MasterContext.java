@@ -33,6 +33,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -103,7 +104,7 @@ public class MasterContext {
 
         jobContext = new MasterJobContext(this, nodeEngine.getLogger(MasterJobContext.class));
         snapshotContext = createMasterSnapshotContext(nodeEngine);
-        jobMetrics = JobMetrics.EMPTY;
+        jobMetrics = JobMetrics.of(Collections.emptyMap());
     }
 
     MasterSnapshotContext createMasterSnapshotContext(NodeEngineImpl nodeEngine) {

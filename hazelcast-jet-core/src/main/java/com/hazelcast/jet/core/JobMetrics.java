@@ -38,8 +38,7 @@ import static com.hazelcast.jet.Util.entry;
 @Beta
 public final class JobMetrics implements Serializable {
 
-    /** Static empty instance, contains no metrics */
-    public static final JobMetrics EMPTY = new JobMetrics(Collections.emptyMap());
+    private static final JobMetrics EMPTY = new JobMetrics(Collections.emptyMap());
 
     private final Map<String, Long> metrics;
 
@@ -48,11 +47,19 @@ public final class JobMetrics implements Serializable {
     }
 
     /** Builds a {@link JobMetrics} object based on a key-value map of metrics data. */
-    public static JobMetrics of(Map<String, Long> metrics) {
+    public static JobMetrics of(@Nonnull Map<String, Long> metrics) {
         if (metrics.isEmpty()) {
             return EMPTY;
         }
         return new JobMetrics(new HashMap<>(metrics));
+    }
+
+    /**
+     * Returns an unmodifiable map view of these metrics.
+     */
+    @Nonnull
+    public Map<String, Long> asMap() {
+        return metrics;
     }
 
     /**
@@ -71,18 +78,6 @@ public final class JobMetrics implements Serializable {
     @Nullable
     public Long getMetricValue(@Nonnull String name) {
         return metrics.get(name);
-    }
-
-    /**
-     * Merges metrics from this and the {@code other} instances into a new
-     * {@link JobMetrics} instance. If a metric is found in both collections,
-     * it will have the value from the {@code other} object.
-     */
-    public JobMetrics merge(JobMetrics other) {
-        Map<String, Long> map = new HashMap<>();
-        map.putAll(this.metrics);
-        map.putAll(other.metrics);
-        return new JobMetrics(map);
     }
 
     /**

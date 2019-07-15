@@ -19,6 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,20 +52,41 @@ public class JobMetricsTest extends TestInClusterSupport {
         instanceCanRetrieveJobMetrics(client);
     }
 
-    private void instanceCanRetrieveJobMetrics(JetInstance jetInstance) throws InterruptedException {
+    private void instanceCanRetrieveJobMetrics(JetInstance jetInstance) throws Throwable {
         DAG dag = new DAG();
         Vertex v1 = dag.newVertex("v1", TestProcessors.MockP::new);
-        Vertex v2 = dag.newVertex("v2", () -> new TestProcessors.NoOutputSourceP());
+        Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
         dag.edge(between(v1, v2));
 
         Job job = jetInstance.newJob(dag);
 
         TestProcessors.NoOutputSourceP.executionStarted.await();
-        TestProcessors.NoOutputSourceP.proceedLatch.countDown();
         assertEquals(JobStatus.RUNNING, job.getStatus());
 
         JetTestSupport.assertTrueEventually(() -> assertJobHasMetrics(job));
 
+        TestProcessors.NoOutputSourceP.proceedLatch.countDown();
+        job.join();
+        assertEquals(JobStatus.COMPLETED, job.getStatus());
+        assertJobHasMetrics(job);
+    }
+
+    @Test
+    public void metricsForRestartedJobs() throws Throwable {
+        DAG dag = new DAG();
+        Vertex v1 = dag.newVertex("v1", TestProcessors.MockP::new);
+        Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
+        dag.edge(between(v1, v2));
+
+        Job job = member.newJob(dag);
+        TestProcessors.NoOutputSourceP.executionStarted.await();
+        assertEquals(JobStatus.RUNNING, job.getStatus());
+
+        job.restart();
+        JetTestSupport.assertEqualsEventually(job::getStatus, JobStatus.RUNNING);
+        JetTestSupport.assertTrueEventually(() -> assertJobHasMetrics(job));
+
+        TestProcessors.NoOutputSourceP.proceedLatch.countDown();
         job.join();
         assertEquals(JobStatus.COMPLETED, job.getStatus());
         assertJobHasMetrics(job);

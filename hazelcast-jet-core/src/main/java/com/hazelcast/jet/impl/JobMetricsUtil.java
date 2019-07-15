@@ -20,13 +20,15 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobMetrics;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class JobMetricsUtil {
 
     private static final Pattern METRIC_KEY_EXEC_ID_PATTERN =
-            Pattern.compile("module=jet,job=[^,]+,exec=([^,]+),.*");
+            Pattern.compile("\\[module=jet,job=[^,]+,exec=([^,]+),.*");
 
     // required precision after the decimal point for doubles
     private static final int CONVERSION_PRECISION = 4;
@@ -50,10 +52,10 @@ public final class JobMetricsUtil {
     }
 
     static JobMetrics mergeMetrics(Collection<Object> metrics) {
-        JobMetrics mergedMetrics = JobMetrics.EMPTY;
+        Map<String, Long> map = new HashMap<>();
         for (Object o : metrics) {
-            mergedMetrics = mergedMetrics.merge((JobMetrics) o);
+            map.putAll(((JobMetrics) o).asMap());
         }
-        return mergedMetrics;
+        return JobMetrics.of(map);
     }
 }
