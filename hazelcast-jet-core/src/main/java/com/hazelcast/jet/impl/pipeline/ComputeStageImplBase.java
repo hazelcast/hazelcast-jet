@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
+import com.hazelcast.jet.core.MetricsSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -46,6 +47,9 @@ import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
@@ -112,7 +116,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
         PredicateEx<T> adaptedFn = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
-        return (RET) attach(new MapTransform<T, T>("filter", transform, t -> adaptedFn.test(t) ? t : null), fnAdapter);
+        Set<MetricsSupplier> metricsSuppliers = filterFn instanceof MetricsSupplier ?
+                Collections.singleton((MetricsSupplier) filterFn) : Collections.emptySet();
+        return (RET) attach(new MapTransform<T, T>("filter", transform, t -> adaptedFn.test(t) ? t : null),
+                fnAdapter, metricsSuppliers);
     }
 
     @Nonnull
@@ -355,7 +362,14 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+        return attach(transform, fnAdapter, Collections.emptySet());
+        //todo (user metrics): this method should go away in the end,
+        // after we go through all transforms and switch to the other attach method
+    }
+
+    abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter,
+                              @Nonnull Collection<MetricsSupplier> metricsSuppliers);
 
     static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
         if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {

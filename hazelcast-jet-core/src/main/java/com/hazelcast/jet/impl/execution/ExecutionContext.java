@@ -177,6 +177,9 @@ public class ExecutionContext {
         MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
         processors.forEach(metricsRegistry::deregister);
         tasklets.forEach(metricsRegistry::deregister);
+
+        //todo (user metrics): ExecutionPlan should have a tear-down,
+        // we should call it from here and de-register user metrics there
     }
 
     /**

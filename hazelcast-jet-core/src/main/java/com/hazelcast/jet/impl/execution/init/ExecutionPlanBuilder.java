@@ -23,10 +23,12 @@ import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.MetricsSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.impl.ProcessorWithMetricsMetaSupplier;
 import com.hazelcast.jet.impl.execution.init.Contexts.MetaSupplierCtx;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
@@ -34,6 +36,7 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.partition.IPartitionService;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -98,7 +101,11 @@ public final class ExecutionPlanBuilder {
             for (Entry<MemberInfo, ExecutionPlan> e : plans.entrySet()) {
                 final ProcessorSupplier processorSupplier = procSupplierFn.apply(e.getKey().getAddress());
                 checkSerializable(processorSupplier, "ProcessorSupplier in vertex '" + vertex.getName() + '\'');
-                final VertexDef vertexDef = new VertexDef(vertexId, vertex.getName(), processorSupplier, localParallelism);
+                Collection<MetricsSupplier> metricsSuppliers = metaSupplier instanceof ProcessorWithMetricsMetaSupplier ?
+                        ((ProcessorWithMetricsMetaSupplier) metaSupplier).getMetricsSuppliers() :
+                        Collections.emptySet();
+                final VertexDef vertexDef = new VertexDef(vertexId, vertex.getName(), processorSupplier,
+                        metricsSuppliers, localParallelism);
                 vertexDef.addInboundEdges(inbound);
                 vertexDef.addOutboundEdges(outbound);
                 e.getValue().addVertex(vertexDef);

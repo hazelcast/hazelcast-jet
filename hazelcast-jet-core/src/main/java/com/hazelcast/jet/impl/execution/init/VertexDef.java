@@ -16,8 +16,10 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.jet.core.MetricsSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.MasterJobContext;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -38,15 +40,18 @@ public class VertexDef implements IdentifiedDataSerializable {
     private List<EdgeDef> outboundEdges = new ArrayList<>();
     private String name;
     private ProcessorSupplier processorSupplier;
+    private List<MetricsSupplier> metricsSuppliers;
     private int localParallelism;
 
     VertexDef() {
     }
 
-    VertexDef(int id, String name, ProcessorSupplier processorSupplier, int localParallelism) {
+    VertexDef(int id, String name, ProcessorSupplier processorSupplier, Iterable<MetricsSupplier> metricsSuppliers,
+              int localParallelism) {
         this.id = id;
         this.name = name;
         this.processorSupplier = processorSupplier;
+        this.metricsSuppliers = cloneToList(metricsSuppliers);
         this.localParallelism = localParallelism;
     }
 
@@ -80,6 +85,10 @@ public class VertexDef implements IdentifiedDataSerializable {
 
     ProcessorSupplier processorSupplier() {
         return processorSupplier;
+    }
+
+    Iterable<MetricsSupplier> metricsSuppliers() {
+        return metricsSuppliers;
     }
 
     boolean isSnapshotVertex() {
@@ -140,6 +149,7 @@ public class VertexDef implements IdentifiedDataSerializable {
         out.writeUTF(name);
         writeList(out, inboundEdges);
         writeList(out, outboundEdges);
+        writeList(out, metricsSuppliers);
         CustomClassLoadedObject.write(out, processorSupplier);
         out.writeInt(localParallelism);
     }
@@ -150,7 +160,14 @@ public class VertexDef implements IdentifiedDataSerializable {
         name = in.readUTF();
         inboundEdges = readList(in);
         outboundEdges = readList(in);
+        metricsSuppliers = readList(in);
         processorSupplier = CustomClassLoadedObject.read(in);
         localParallelism = in.readInt();
+    }
+
+    public static <T> List<T> cloneToList(Iterable<T> iterable) {
+        List<T> list = new ArrayList<>();
+        iterable.forEach(t -> list.add(Util.serde(t)));
+        return list;
     }
 }

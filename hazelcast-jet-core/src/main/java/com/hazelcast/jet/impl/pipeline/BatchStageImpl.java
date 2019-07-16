@@ -21,14 +21,16 @@ import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
+import com.hazelcast.jet.core.MetricsSupplier;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
+import com.hazelcast.jet.impl.pipeline.transform.MetricsSupplierTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
@@ -36,6 +38,7 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -202,9 +205,12 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
+    <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter,
+                     @Nonnull Collection<MetricsSupplier> metricsSuppliers) {
         pipelineImpl.connect(transform.upstream(), transform);
-        return (RET) new BatchStageImpl<>(transform, pipelineImpl);
+        Transform wrappedTransform = metricsSuppliers.isEmpty() ? transform :
+                new MetricsSupplierTransform(metricsSuppliers, transform);
+        return (RET) new BatchStageImpl<>(wrappedTransform, pipelineImpl);
     }
 
     @Nonnull @Override

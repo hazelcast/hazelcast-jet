@@ -203,6 +203,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         .withTag("procType", processor.getClass().getSimpleName())
                         .scanAndRegister(processor);
 
+                vertex.metricsSuppliers().forEach(processorProbeBuilder::scanAndRegister);
+
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
                 List<OutboundEdgeStream> outboundStreams = createOutboundEdgeStreams(

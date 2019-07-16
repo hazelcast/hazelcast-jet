@@ -27,8 +27,10 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.ProcessorWithMetricsMetaSupplier;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
+import com.hazelcast.jet.impl.pipeline.transform.MetricsSupplierTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
@@ -236,7 +238,12 @@ public class Planner {
 
     public PlannerVertex addVertex(Transform transform, String name, int localParallelism,
                                    ProcessorMetaSupplier metaSupplier) {
-        PlannerVertex pv = new PlannerVertex(dag.newVertex(name, metaSupplier));
+        ProcessorMetaSupplier wrappedMetaSupplier = transform instanceof MetricsSupplierTransform ?
+                new ProcessorWithMetricsMetaSupplier(
+                        ((MetricsSupplierTransform) transform).getMetricsSuppliers(),
+                        metaSupplier
+                ) : metaSupplier;
+        PlannerVertex pv = new PlannerVertex(dag.newVertex(name, wrappedMetaSupplier));
         pv.v.localParallelism(localParallelism);
         xform2vertex.put(transform, pv);
         return pv;
