@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
@@ -31,8 +30,8 @@ import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
@@ -482,8 +481,7 @@ public class JobRepository {
     }
 
     public static final class UpdateJobExecutionRecordEntryProcessor implements
-                    EntryProcessor<Long, JobExecutionRecord>,
-                    EntryBackupProcessor<Long, JobExecutionRecord>,
+                    EntryProcessor<Long, JobExecutionRecord, Object>,
                     IdentifiedDataSerializable {
 
         private long jobId;
@@ -520,22 +518,12 @@ public class JobRepository {
         }
 
         @Override
-        public EntryBackupProcessor<Long, JobExecutionRecord> getBackupProcessor() {
-            return this;
-        }
-
-        @Override
-        public void processBackup(Entry<Long, JobExecutionRecord> entry) {
-            process(entry);
-        }
-
-        @Override
         public int getFactoryId() {
             return JetInitDataSerializerHook.FACTORY_ID;
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.UPDATE_JOB_EXECUTION_RECORD_EP;
         }
 
@@ -551,6 +539,72 @@ public class JobRepository {
             jobId = in.readLong();
             jobExecutionRecord = in.readObject();
             canCreate = in.readBoolean();
+        }
+    }
+
+    public static class FilterExecutionIdByJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
+
+        private long jobId;
+
+        public FilterExecutionIdByJobIdPredicate() {
+        }
+
+        FilterExecutionIdByJobIdPredicate(long jobId) {
+            this.jobId = jobId;
+        }
+
+        @Override
+        public boolean apply(Entry<Long, Long> mapEntry) {
+            return mapEntry.getKey() != jobId && mapEntry.getValue() == jobId;
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetInitDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getClassId() {
+            return JetInitDataSerializerHook.FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeLong(jobId);
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            jobId = in.readLong();
+        }
+    }
+
+    public static class FilterJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
+
+        public FilterJobIdPredicate() {
+        }
+
+        @Override
+        public boolean apply(Entry<Long, Long> mapEntry) {
+            return mapEntry.getKey().equals(mapEntry.getValue());
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetInitDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getClassId() {
+            return JetInitDataSerializerHook.FILTER_JOB_ID;
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
         }
     }
 
@@ -577,7 +631,7 @@ public class JobRepository {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.FILTER_JOB_RESULT_BY_NAME;
         }
 

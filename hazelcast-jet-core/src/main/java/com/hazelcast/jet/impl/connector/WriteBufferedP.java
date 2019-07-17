@@ -22,10 +22,10 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.function.Consumer;

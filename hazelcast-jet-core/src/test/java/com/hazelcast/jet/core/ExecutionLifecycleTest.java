@@ -17,7 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.core.DistributedObject;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;

@@ -16,20 +16,20 @@
 
 package com.hazelcast.jet.spring;
 
+import com.hazelcast.collection.IList;
+import com.hazelcast.collection.IQueue;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.JoinConfig;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.config.TcpIpConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IQueue;
-import com.hazelcast.jet.IListJet;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.MetricsConfig;
+import com.hazelcast.map.IMap;
 import com.hazelcast.spring.CustomSpringJUnit4ClassRunner;
 import com.hazelcast.spring.context.SpringManagedContext;
 import org.junit.AfterClass;
@@ -60,10 +60,10 @@ public class TestApplicationContext {
     private HazelcastInstance hazelcastInstance;
 
     @Resource(name = "my-map-bean")
-    private IMapJet map;
+    private IMap map;
 
     @Resource(name = "my-list-bean")
-    private IListJet list;
+    private IList list;
 
     @Resource(name = "my-queue-bean")
     private IQueue queue;

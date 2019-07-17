@@ -23,7 +23,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +42,7 @@ import static java.lang.Math.max;
  * all tests in the class.
  */
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 @SuppressWarnings("checkstyle:declarationorder")
 public abstract class TestInClusterSupport extends JetTestSupport {
 
@@ -84,8 +84,10 @@ public abstract class TestInClusterSupport extends JetTestSupport {
         // should be 2 * MEMBER_COUNT.
         hzConfig.getProperties().setProperty("hazelcast.partition.count", "" + 2 * MEMBER_COUNT);
         hzConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
-        hzConfig.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
-        hzConfig.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);
+        hzConfig.getMapConfig(JOURNALED_MAP_PREFIX + '*').getEventJournalConfig().setEnabled(true);
+        hzConfig.getCacheConfig(JOURNALED_CACHE_PREFIX + '*').getEventJournalConfig().setEnabled(true);
+        member = createCluster(MEMBER_COUNT, config);
+        client = factory.newClient();
         return config;
     }
 

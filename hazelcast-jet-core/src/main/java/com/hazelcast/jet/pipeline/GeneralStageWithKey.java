@@ -16,18 +16,18 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.map.IMap;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.BiPredicateEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

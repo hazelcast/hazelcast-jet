@@ -19,27 +19,28 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.cache.CacheEventType;
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.core.EntryEventType;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToResultSetFunction;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
+import com.hazelcast.query.Predicates;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
@@ -210,7 +211,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and
      * {@link Projections#multiAttribute}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or {@link PredicateBuilder}
+     * using the {@link Predicates} factory or {@link PredicateBuilder}
      * to create the predicate. In this case Jet can test the predicate and
      * apply the projection without deserializing the whole object.
      * <p>
@@ -247,7 +248,7 @@ public final class Sources {
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events. If you want to specify just the
      *                  projection, use {@link
-     *                  GenericPredicates#alwaysTrue()} as a pass-through
+     *                  Predicates#alwaysTrue()} as a pass-through
      *                  predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -280,7 +281,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and
      * {@link Projections#multiAttribute}) to create your projection instance
-     * and using the {@link GenericPredicates} factory or {@link PredicateBuilder}
+     * and using the {@link Predicates} factory or {@link PredicateBuilder}
      * to create the predicate. In this case Jet can test the predicate and
      * apply the projection without deserializing the whole object.
      * <p>
@@ -317,7 +318,7 @@ public final class Sources {
      * @param map        the Hazelcast map to draw data from
      * @param predicate  the predicate to filter the events. If you want to specify just the
      *                   projection, use {@link
-     *                   GenericPredicates#alwaysTrue()} as a pass-through
+     *                   Predicates#alwaysTrue()} as a pass-through
      *                   predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -579,7 +580,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and {@link
      * Projections#multiAttribute}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or
+     * using the {@link Predicates} factory or
      * {@link PredicateBuilder PredicateBuilder} to create
      * the predicate. In this case Jet can test the predicate and apply the
      * projection without deserializing the whole object.
@@ -612,7 +613,7 @@ public final class Sources {
      *
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events. If you want to specify just the
-     *                  projection, use {@link GenericPredicates#alwaysTrue()}
+     *                  projection, use {@link Predicates#alwaysTrue()}
      *                  as a pass-through predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to

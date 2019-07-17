@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.impl.pipeline.test.AssertionP;
 import com.hazelcast.jet.pipeline.Sink;

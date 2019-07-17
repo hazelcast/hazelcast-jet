@@ -23,9 +23,9 @@ import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

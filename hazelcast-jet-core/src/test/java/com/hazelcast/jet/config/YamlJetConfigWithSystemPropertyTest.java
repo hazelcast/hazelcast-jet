@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 import static junit.framework.TestCase.assertEquals;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -53,7 +55,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
         // Given
         File file = File.createTempFile("foo", ".yaml");
         file.delete();
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.setProperty(SYSPROP_JET_CONFIG, file.getAbsolutePath());
 
         // When
         new YamlJetConfigBuilder().build();
@@ -64,7 +66,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
         // Given
         File file = File.createTempFile("foo", ".yaml");
         file.delete();
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.setProperty(SYSPROP_JET_CONFIG, file.getAbsolutePath());
 
         // When
         new YamlJetConfigBuilder().build();
@@ -79,7 +81,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(JET_TEST_YAML);
             os.write(Util.readFully(resourceAsStream));
         }
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, tempFile.getAbsolutePath());
+        System.setProperty(SYSPROP_JET_CONFIG, tempFile.getAbsolutePath());
 
         //When
         JetConfig jetConfig = new YamlJetConfigBuilder().build();
@@ -97,7 +99,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
         // Given
         File file = File.createTempFile("foo", ".yaml");
         file.delete();
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.setProperty(SYSPROP_MEMBER_CONFIG, file.getAbsolutePath());
 
         // When
         new YamlJetConfigBuilder().build();
@@ -109,7 +111,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
         // Given
         File file = File.createTempFile("foo", ".bar");
         file.delete();
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.setProperty(SYSPROP_MEMBER_CONFIG, file.getAbsolutePath());
 
         // When
         new YamlJetConfigBuilder().build();
@@ -124,7 +126,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(JET_MEMBER_TEST_YAML);
             os.write(Util.readFully(resourceAsStream));
         }
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, tempFile.getAbsolutePath());
+        System.setProperty(SYSPROP_MEMBER_CONFIG, tempFile.getAbsolutePath());
 
         //When
         JetConfig jetConfig = new YamlJetConfigBuilder().build();
@@ -138,7 +140,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test(expected = HazelcastException.class)
     public void when_classpathSpecifiedNonExistingFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:non-existing.yaml");
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:non-existing.yaml");
 
         //When
         new YamlJetConfigBuilder().build();
@@ -147,7 +149,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test(expected = HazelcastException.class)
     public void when_classpathSpecifiedNonExistingNonYamlFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:non-existing.bar");
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:non-existing.bar");
 
         //When
         new YamlJetConfigBuilder().build();
@@ -157,7 +159,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test
     public void when_classpathSpecified_usesSpecifiedResource() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + JET_TEST_YAML);
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:" + JET_TEST_YAML);
 
         //When
         JetConfig jetConfig = new YamlJetConfigBuilder().build();
@@ -171,7 +173,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test(expected = HazelcastException.class)
     public void when_classpathMemberSpecifiedNonExistingFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:non-existing.yaml");
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:non-existing.yaml");
 
         //When
         new YamlJetConfigBuilder().build();
@@ -181,7 +183,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test(expected = HazelcastException.class)
     public void when_classpathMemberSpecifiedNonExistingNonYamlFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:non-existing.bar");
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:non-existing.bar");
 
         //When
         new YamlJetConfigBuilder().build();
@@ -191,7 +193,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test
     public void when_classpathMemberSpecified_usesSpecifiedResource() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:" + JET_MEMBER_TEST_YAML);
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:" + JET_MEMBER_TEST_YAML);
 
         //When
         JetConfig jetConfig = new YamlJetConfigBuilder().build();
@@ -204,7 +206,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test
     public void when_configHasVariable_variablesAreReplaced() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + JET_TEST_WITH_VARIABLES_YAML);
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:" + JET_TEST_WITH_VARIABLES_YAML);
         Properties properties = new Properties();
         properties.put("thread.count", String.valueOf(55));
         properties.put("flow.control.period", "50");
@@ -228,7 +230,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test
     public void when_configMemberHasVariable_variablesAreReplaced() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:" + JET_MEMBER_TEST_YAML);
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:" + JET_MEMBER_TEST_YAML);
 
         Properties properties = new Properties();
         properties.put("imdg.pass", PASSWORD);
@@ -247,7 +249,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
     @Test
     public void when_edgeDefaultsSpecified_usesSpecified() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + JET_TEST_YAML);
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:" + JET_TEST_YAML);
 
         // When
         JetConfig jetConfig = new YamlJetConfigBuilder().build();
@@ -261,7 +263,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
 
     @Test
     public void loadingThroughSystemPropertyWithLocator_nonYamlSuffix() {
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:test-jet.foobar");
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:test-jet.foobar");
 
         expectedException.expect(HazelcastException.class);
         expectedException.expectMessage("hazelcast.jet.config");
@@ -273,7 +275,7 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
 
     @Test
     public void loadingThroughSystemPropertyWithLocator_existingClasspathResource() {
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + JET_TEST_YAML);
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:" + JET_TEST_YAML);
 
         JetInstance instance = Jet.newJetInstance();
         JetConfig config = instance.getConfig();

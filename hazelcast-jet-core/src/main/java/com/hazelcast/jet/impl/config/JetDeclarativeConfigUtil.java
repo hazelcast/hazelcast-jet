@@ -14,34 +14,18 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.function;
+package com.hazelcast.jet.impl.config;
 
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 
-import java.io.Serializable;
-import java.util.function.Supplier;
-
-/**
- * {@code Serializable} variant of {@link Supplier java.util.function.Supplier}
- * which declares checked exception.
- *
- * @since 3.0
- */
-@FunctionalInterface
-public interface SupplierEx<T> extends Supplier<T>, Serializable {
+public final class JetDeclarativeConfigUtil {
 
     /**
-     * Exception-declaring version of {@link Supplier#get}.
+     * System property used for defining the configuring file used for
+     * Hazelcast Jet instance configuration.
      */
-    T getEx() throws Exception;
+    public static final String SYSPROP_JET_CONFIG = "hazelcast.jet.config";
 
-    @Override
-    default T get() {
-        try {
-            return getEx();
-        } catch (Exception e) {
-            throw ExceptionUtil.sneakyThrow(e);
-        }
+    private JetDeclarativeConfigUtil() {
     }
 
 }

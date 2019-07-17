@@ -25,7 +25,7 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
-import com.hazelcast.spi.ExceptionAction;
+import com.hazelcast.spi.impl.operationservice.ExceptionAction;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -34,7 +34,7 @@ import java.util.Set;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.jet.impl.util.Util.jobIdAndExecutionId;
-import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
+import static com.hazelcast.spi.impl.operationservice.ExceptionAction.THROW_EXCEPTION;
 
 /**
  * Operation sent from master to members to initialize execution of a job.
@@ -79,7 +79,7 @@ public class InitExecutionOperation extends AbstractJobOperation {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.INIT_EXECUTION_OP;
     }
 

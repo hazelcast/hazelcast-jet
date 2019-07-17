@@ -17,7 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.hamcrest.Matchers;
 import org.junit.Rule;

@@ -18,21 +18,21 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BinaryOperatorEx;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.BinaryOperatorEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -60,36 +60,36 @@ public final class HazelcastWriters {
 
     @Nonnull
     public static <K, V> ProcessorMetaSupplier writeMapSupplier(
-        @Nonnull String name,
-        @Nullable ClientConfig clientConfig
+            @Nonnull String name,
+            @Nullable ClientConfig clientConfig
     ) {
         boolean isLocal = clientConfig == null;
         return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
-            asXmlString(clientConfig),
-            ArrayMap::new,
-            ArrayMap::add,
-            instance -> {
-                IMap<K, V> map = instance.getMap(name);
-                return buffer -> {
-                    try {
-                        map.putAll(buffer);
-                    } catch (HazelcastInstanceNotActiveException e) {
-                        throw handleInstanceNotActive(e, isLocal);
-                    }
-                    buffer.clear();
-                };
-            },
-            ConsumerEx.noop()
+                asXmlString(clientConfig),
+                ArrayMap::new,
+                ArrayMap::add,
+                instance -> {
+                    IMap<K, V> map = instance.getMap(name);
+                    return buffer -> {
+                        try {
+                            map.putAll(buffer);
+                        } catch (HazelcastInstanceNotActiveException e) {
+                            throw handleInstanceNotActive(e, isLocal);
+                        }
+                        buffer.clear();
+                    };
+                },
+                ConsumerEx.noop()
         ));
     }
 
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier mergeMapSupplier(
-        @Nonnull String name,
-        @Nullable ClientConfig clientConfig,
-        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-        @Nonnull FunctionEx<? super T, ? extends V> toValueFn,
-        @Nonnull BinaryOperatorEx<V> mergeFn
+            @Nonnull String name,
+            @Nullable ClientConfig clientConfig,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends V> toValueFn,
+            @Nonnull BinaryOperatorEx<V> mergeFn
     ) {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toValueFn, "toValueFn");
@@ -106,45 +106,45 @@ public final class HazelcastWriters {
 
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
-        @Nonnull String mapName,
-        @Nullable ClientConfig clientConfig,
-        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-        @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
+            @Nonnull String mapName,
+            @Nullable ClientConfig clientConfig,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn
     ) {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(updateFn, "updateFn");
 
         return ProcessorMetaSupplier.of(new UpdateMapP.Supplier<>(
-            asXmlString(clientConfig), mapName, toKeyFn, updateFn
+                asXmlString(clientConfig), mapName, toKeyFn, updateFn
         ));
     }
 
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
-        @Nonnull String name,
-        @Nullable ClientConfig clientConfig,
-        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-        @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn
+    public static <T, K, V, R> ProcessorMetaSupplier updateMapSupplier(
+            @Nonnull String name,
+            @Nullable ClientConfig clientConfig,
+            @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
     ) {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
 
         return ProcessorMetaSupplier.of(new UpdateMapWithEntryProcessorP.Supplier<>(
-            name, asXmlString(clientConfig), toKeyFn, toEntryProcessorFn
+                name, asXmlString(clientConfig), toKeyFn, toEntryProcessorFn
         ));
     }
 
     @Nonnull
     public static <K, V> ProcessorMetaSupplier writeCacheSupplier(
-        @Nonnull String name, @Nullable ClientConfig clientConfig
+            @Nonnull String name, @Nullable ClientConfig clientConfig
     ) {
         boolean isLocal = clientConfig == null;
         return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
-            asXmlString(clientConfig),
-            ArrayMap::new,
-            ArrayMap::add,
-            CacheFlush.flushToCache(name, isLocal),
-            ConsumerEx.noop()
+                asXmlString(clientConfig),
+                ArrayMap::new,
+                ArrayMap::add,
+                CacheFlush.flushToCache(name, isLocal),
+                ConsumerEx.noop()
         ));
     }
 
@@ -152,21 +152,21 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeListSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
         return preferLocalParallelismOne(new WriterSupplier<>(
-            asXmlString(clientConfig),
-            ArrayList::new,
-            ArrayList::add,
-            instance -> {
-                IList<Object> list = instance.getList(name);
-                return buffer -> {
-                    try {
-                        list.addAll(buffer);
-                    } catch (HazelcastInstanceNotActiveException e) {
-                        throw handleInstanceNotActive(e, isLocal);
-                    }
-                    buffer.clear();
-                };
-            },
-            ConsumerEx.noop()
+                asXmlString(clientConfig),
+                ArrayList::new,
+                ArrayList::add,
+                instance -> {
+                    IList<Object> list = instance.getList(name);
+                    return buffer -> {
+                        try {
+                            list.addAll(buffer);
+                        } catch (HazelcastInstanceNotActiveException e) {
+                            throw handleInstanceNotActive(e, isLocal);
+                        }
+                        buffer.clear();
+                    };
+                },
+                ConsumerEx.noop()
         ));
     }
 
@@ -182,8 +182,8 @@ public final class HazelcastWriters {
     private static class CacheFlush {
 
         static <K, V> FunctionEx<HazelcastInstance, ConsumerEx<ArrayMap<K, V>>> flushToCache(
-            String name,
-            boolean isLocal
+                String name,
+                boolean isLocal
         ) {
             return instance -> {
                 ICache<K, V> cache = instance.getCacheManager().getCache(name);
@@ -246,11 +246,11 @@ public final class HazelcastWriters {
         private final ConsumerEx<B> disposeBufferFn;
 
         WriterSupplier(
-            String clientXml,
-            SupplierEx<B> newBufferFn,
-            BiConsumerEx<B, T> addToBufferFn,
-            FunctionEx<HazelcastInstance, ConsumerEx<B>> instanceToFlushBufferFn,
-            ConsumerEx<B> disposeBufferFn
+                String clientXml,
+                SupplierEx<B> newBufferFn,
+                BiConsumerEx<B, T> addToBufferFn,
+                FunctionEx<HazelcastInstance, ConsumerEx<B>> instanceToFlushBufferFn,
+                ConsumerEx<B> disposeBufferFn
         ) {
             super(clientXml);
             this.newBufferFn = newBufferFn;
@@ -266,3 +266,4 @@ public final class HazelcastWriters {
         }
     }
 }
+

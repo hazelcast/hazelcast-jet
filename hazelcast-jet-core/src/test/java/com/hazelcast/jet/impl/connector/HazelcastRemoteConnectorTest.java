@@ -19,14 +19,14 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.cache.ICache;
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
-import com.hazelcast.config.EventJournalConfig;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.instance.HazelcastInstanceFactory;
-import com.hazelcast.jet.IListJet;
+import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
@@ -90,9 +90,13 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
         JetInstance jet2 = factory.newMember(jetConfig);
 
         Config config = new Config();
-        config.addCacheConfig(new CacheSimpleConfig().setName("*"));
-        config.addEventJournalConfig(new EventJournalConfig().setCacheName("default").setMapName("default"));
+        CacheSimpleConfig cacheConfig = new CacheSimpleConfig().setName("*");
+        cacheConfig.getEventJournalConfig().setEnabled(true);
+        config.addCacheConfig(cacheConfig);
         config.getGroupConfig().setName(randomName());
+        MapConfig mapConfig = new MapConfig();
+        mapConfig.setName("*").getEventJournalConfig().setEnabled(true);
+        config.addMapConfig(mapConfig);
         hz = Hazelcast.newHazelcastInstance(config);
         HazelcastInstance hz2 = Hazelcast.newHazelcastInstance(config);
 
@@ -141,7 +145,7 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
         dag.edge(between(source, sink));
 
         executeAndWait(dag);
-        IListJet<Object> list = jet.getList(SINK_NAME);
+        IList<Object> list = jet.getList(SINK_NAME);
         assertEquals(ITEM_COUNT - 1, list.size());
         assertFalse(list.contains(0));
         assertTrue(list.contains(1));
@@ -158,7 +162,7 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
         dag.edge(between(source, sink));
 
         executeAndWait(dag);
-        IListJet<Object> list = jet.getList(SINK_NAME);
+        IList<Object> list = jet.getList(SINK_NAME);
         assertEquals(ITEM_COUNT - 1, list.size());
         assertFalse(list.contains(0));
         assertTrue(list.contains(1));

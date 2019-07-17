@@ -33,9 +33,9 @@ import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.client.util.ClientDelegatingFuture;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryXmlConfig;
-import com.hazelcast.core.Cluster;
+import com.hazelcast.cluster.Cluster;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.core.Member;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
@@ -63,12 +63,12 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     private final HazelcastClientInstanceImpl client;
     private final SerializationService serializationService;
 
-    private final ClientMessageDecoder decodeMetricsResponse = new ClientMessageDecoder() {
+    private final ClientMessageDecoder decodeMetricsResponse = new ClientMessageDecoder<MetricsResultSet>() {
         @Override
-        public <T> T decodeClientMessage(ClientMessage msg) {
+        public MetricsResultSet decodeClientMessage(ClientMessage msg) {
             RingbufferSlice<Map.Entry<Long, byte[]>> deserialized =
                     serializationService.toObject(JetReadMetricsCodec.decodeResponse(msg).response);
-            return (T) new MetricsResultSet(deserialized);
+            return new MetricsResultSet(deserialized);
         }
     };
 

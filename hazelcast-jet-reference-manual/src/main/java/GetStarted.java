@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.collection.IList;
+import com.hazelcast.map.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;

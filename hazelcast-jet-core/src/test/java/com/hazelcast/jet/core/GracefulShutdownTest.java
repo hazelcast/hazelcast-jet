@@ -17,16 +17,16 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.core.MapStore;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.map.MapStore;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;

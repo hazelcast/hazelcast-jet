@@ -38,7 +38,7 @@ public class ResumeJobOperation extends AbstractJobOperation {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.RESUME_JOB_OP;
     }
 }

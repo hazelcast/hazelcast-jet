@@ -285,7 +285,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.EXECUTION_PLAN;
     }
 

@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;

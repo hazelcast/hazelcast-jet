@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Traverser;
@@ -28,8 +28,8 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
@@ -63,7 +63,12 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+<<<<<<< HEAD
 import static com.hazelcast.jet.function.Functions.entryKey;
+=======
+import static com.hazelcast.util.function.Functions.entryKey;
+import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
+>>>>>>> Re-use functions from Hazelcast
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.test.PacketFiltersUtil.delayOperationsFrom;
 import static java.util.Arrays.asList;

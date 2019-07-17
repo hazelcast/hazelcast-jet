@@ -23,12 +23,12 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.function.ToResultSetFunction;
 import com.hazelcast.jet.impl.connector.ConvenientSourceP;
 import com.hazelcast.jet.impl.connector.ConvenientSourceP.SourceBufferConsumerSide;
@@ -106,7 +106,7 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link Sources#map(String, Predicate, FunctionEx)}.
+     * {@link Sources#map(String, Predicate, Projection)}.
      */
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier readMapP(
@@ -373,8 +373,8 @@ public final class SourceProcessors {
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.of(
-            StreamJmsP.PREFERRED_LOCAL_PARALLELISM,
-            StreamJmsP.supplier(newConnectionFn, newSessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy)
+                StreamJmsP.PREFERRED_LOCAL_PARALLELISM,
+                StreamJmsP.supplier(newConnectionFn, newSessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy)
         );
     }
 
@@ -516,13 +516,13 @@ public final class SourceProcessors {
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<>(
-                    createFn,
-                    (BiConsumer<? super C, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
-                    createSnapshotFn,
-                    restoreSnapshotFn,
-                    destroyFn,
-                    new SourceBufferImpl.Timestamped<>(),
-                    eventTimePolicy
+                        createFn,
+                        (BiConsumer<? super C, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
+                        createSnapshotFn,
+                        restoreSnapshotFn,
+                        destroyFn,
+                        new SourceBufferImpl.Timestamped<>(),
+                        eventTimePolicy
                 ));
         return preferredLocalParallelism > 0
                 ? ProcessorMetaSupplier.of(preferredLocalParallelism, procSup)

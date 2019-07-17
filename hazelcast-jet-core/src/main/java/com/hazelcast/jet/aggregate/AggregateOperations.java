@@ -28,15 +28,15 @@ import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BinaryOperatorEx;
-import com.hazelcast.jet.function.ComparatorEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToDoubleFunctionEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.BinaryOperatorEx;
+import com.hazelcast.util.function.ComparatorEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
+import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.util.function.ToDoubleFunctionEx;
+import com.hazelcast.util.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOpAggregator;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -60,7 +60,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.FunctionEx.identity;
+import static com.hazelcast.util.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**

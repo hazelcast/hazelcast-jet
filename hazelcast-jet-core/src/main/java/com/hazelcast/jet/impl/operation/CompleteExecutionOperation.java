@@ -27,9 +27,9 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.ExceptionAction;
-import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.impl.operationservice.ExceptionAction;
+import com.hazelcast.spi.impl.operationservice.Operation;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -37,7 +37,7 @@ import java.util.Map;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
-import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
+import static com.hazelcast.spi.impl.operationservice.ExceptionAction.THROW_EXCEPTION;
 
 public class CompleteExecutionOperation extends Operation implements IdentifiedDataSerializable {
 
@@ -95,7 +95,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.COMPLETE_EXECUTION_OP;
     }
 

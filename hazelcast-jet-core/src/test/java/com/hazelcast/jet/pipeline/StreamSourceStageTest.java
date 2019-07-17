@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.collection.IList;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.BeforeClass;
@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;

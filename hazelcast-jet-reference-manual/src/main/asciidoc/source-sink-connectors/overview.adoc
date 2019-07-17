@@ -147,7 +147,7 @@ Sink ❌
 |❌
 
 |<<connector-imdg-journal, IMap's Event Journal>>
-|{jet-javadoc}/pipeline/Sources.html#mapJournal-java.lang.String-com.hazelcast.jet.function.PredicateEx-com.hazelcast.jet.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
+|{jet-javadoc}/pipeline/Sources.html#mapJournal-java.lang.String-com.hazelcast.util.function.PredicateEx-com.hazelcast.util.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
 |{jet-samples}/event-journal/src/main/java/MapJournalSource.java[Sample]
 |✅
 |✅
@@ -157,7 +157,7 @@ Sink ❌
 
 
 |<<connector-imdg-journal, ICache's Event Journal>>
-|{jet-javadoc}/pipeline/Sources.html#cacheJournal-java.lang.String-com.hazelcast.jet.function.PredicateEx-com.hazelcast.jet.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
+|{jet-javadoc}/pipeline/Sources.html#cacheJournal-java.lang.String-com.hazelcast.util.function.PredicateEx-com.hazelcast.util.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
 |
 |✅
 |✅
@@ -166,7 +166,7 @@ Sink ❌
 |✅
 
 |Event Journal of IMap in another cluster
-|{jet-javadoc}/pipeline/Sources.html#remoteMapJournal-java.lang.String-com.hazelcast.client.config.ClientConfig-com.hazelcast.jet.function.PredicateEx-com.hazelcast.jet.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
+|{jet-javadoc}/pipeline/Sources.html#remoteMapJournal-java.lang.String-com.hazelcast.client.config.ClientConfig-com.hazelcast.util.function.PredicateEx-com.hazelcast.util.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
 |{jet-samples}/event-journal/src/main/java/RemoteMapJournalSource.java[Sample]
 |✅
 |✅
@@ -175,7 +175,7 @@ Sink ❌
 |❌
 
 |Event Journal of ICache in another cluster
-|{jet-javadoc}/pipeline/Sources.html#remoteCacheJournal-java.lang.String-com.hazelcast.client.config.ClientConfig-com.hazelcast.jet.function.PredicateEx-com.hazelcast.jet.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
+|{jet-javadoc}/pipeline/Sources.html#remoteCacheJournal-java.lang.String-com.hazelcast.client.config.ClientConfig-com.hazelcast.util.function.PredicateEx-com.hazelcast.util.function.FunctionEx-com.hazelcast.jet.pipeline.JournalInitialPosition-[Source]
 |
 |✅
 |✅
@@ -254,7 +254,7 @@ Sink ❌
 |<<connector-files-avro, Avro>>
 |{jet-javadoc}/avro/AvroSources.html#files-java.lang.String-java.lang.Class-[Source]
 
-{jet-javadoc}/avro/AvroSinks.html#files-java.lang.String-com.hazelcast.jet.function.SupplierEx-[Sink]
+{jet-javadoc}/avro/AvroSinks.html#files-java.lang.String-com.hazelcast.util.function.SupplierEx-[Sink]
 |{jet-samples}/file-io/src/main/java/avro/AvroSource.java[Source Sample]
 
 {jet-samples}/file-io/src/main/java/avro/AvroSink.java[Sink Sample]
@@ -269,7 +269,7 @@ Sink ❌
 |<<connector-socket, TCP Socket>>
 |{jet-javadoc}/pipeline/Sources.html#socket-java.lang.String-int-java.nio.charset.Charset-[Source]
 
-{jet-javadoc}/pipeline/Sinks.html#socket-java.lang.String-int-com.hazelcast.jet.function.FunctionEx-java.nio.charset.Charset-[Sink]
+{jet-javadoc}/pipeline/Sinks.html#socket-java.lang.String-int-com.hazelcast.util.function.FunctionEx-java.nio.charset.Charset-[Sink]
 |{jet-samples}/sockets/src/main/java/StreamTextSocket.java[Source]
 
 {jet-samples}/sockets/src/main/java/WriteTextSocket.java[Sink]
@@ -280,11 +280,11 @@ Sink ❌
 |❌
 
 |<<jms>>
-|{jet-javadoc}/pipeline/Sources.html#jmsQueue-com.hazelcast.jet.function.SupplierEx-java.lang.String-[Queue Source]
-{jet-javadoc}/pipeline/Sources.html#jmsTopic-com.hazelcast.jet.function.SupplierEx-java.lang.String-[Topic Source]
+|{jet-javadoc}/pipeline/Sources.html#jmsQueue-com.hazelcast.util.function.SupplierEx-java.lang.String-[Queue Source]
+{jet-javadoc}/pipeline/Sources.html#jmsTopic-com.hazelcast.util.function.SupplierEx-java.lang.String-[Topic Source]
 
-{jet-javadoc}/pipeline/Sinks.html#jmsQueue-com.hazelcast.jet.function.SupplierEx-java.lang.String-[Queue Sink]
-{jet-javadoc}/pipeline/Sinks.html#jmsTopic-com.hazelcast.jet.function.SupplierEx-java.lang.String-[Topic Sink]
+{jet-javadoc}/pipeline/Sinks.html#jmsQueue-com.hazelcast.util.function.SupplierEx-java.lang.String-[Queue Sink]
+{jet-javadoc}/pipeline/Sinks.html#jmsTopic-com.hazelcast.util.function.SupplierEx-java.lang.String-[Topic Sink]
 |{jet-samples}/jms/src/main/java/JmsQueueSample.java[Queue Sample]
 
 {jet-samples}/jms/src/main/java/JmsTopicSample.java[Topic Sample]
@@ -301,9 +301,9 @@ Topic Sink ✅
 |❌
 
 |<<jdbc>>
-|{jet-javadoc}/pipeline/Sources.html#jdbc-com.hazelcast.jet.function.SupplierEx-com.hazelcast.jet.function.ToResultSetFunction-com.hazelcast.jet.function.FunctionEx-[Source]
+|{jet-javadoc}/pipeline/Sources.html#jdbc-com.hazelcast.util.function.SupplierEx-com.hazelcast.util.function.ToResultSetFunction-com.hazelcast.util.function.FunctionEx-[Source]
 
-{jet-javadoc}/pipeline/Sinks.html#jdbc-java.lang.String-com.hazelcast.jet.function.SupplierEx-com.hazelcast.jet.function.BiConsumerEx-[Sink]
+{jet-javadoc}/pipeline/Sinks.html#jdbc-java.lang.String-com.hazelcast.util.function.SupplierEx-com.hazelcast.util.function.BiConsumerEx-[Sink]
 |{jet-samples}/jdbc/src/main/java/JdbcSource.java[Source Sample]
 
 {jet-samples}/jdbc/src/main/java/JdbcSink.java[Sink Sample]
@@ -314,7 +314,7 @@ Topic Sink ✅
 |❌
 
 |Application Log
-|{jet-javadoc}/pipeline/Sinks.html#logger-com.hazelcast.jet.function.FunctionEx-[Sink]
+|{jet-javadoc}/pipeline/Sinks.html#logger-com.hazelcast.util.function.FunctionEx-[Sink]
 |{jet-samples}/enrichment/src/main/java/Enrichment.java[Sink]
 |N/A
 |N/A

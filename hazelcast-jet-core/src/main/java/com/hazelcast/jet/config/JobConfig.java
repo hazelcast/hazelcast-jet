@@ -478,7 +478,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetConfigDataSerializerHook.JOB_CONFIG;
     }
 

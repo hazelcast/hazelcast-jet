@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
@@ -44,7 +44,9 @@ import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
-import static com.hazelcast.jet.function.ComparatorEx.comparing;
+import static com.hazelcast.util.function.ComparatorEx.comparing;
+import static com.hazelcast.util.function.Functions.entryValue;
+import static com.hazelcast.util.function.Functions.wholeItem;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;

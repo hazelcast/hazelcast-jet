@@ -18,12 +18,6 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapStatefulTransform;
@@ -45,6 +39,12 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.BiPredicateEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
+import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

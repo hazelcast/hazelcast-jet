@@ -21,7 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;

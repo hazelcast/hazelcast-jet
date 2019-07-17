@@ -35,7 +35,6 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.Preconditions;
-import com.hazelcast.util.function.Predicate;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -49,6 +48,7 @@ import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Predicate;
 
 import static com.hazelcast.jet.core.metrics.MetricNames.COALESCED_WM;
 import static com.hazelcast.jet.core.metrics.MetricNames.EMITTED_COUNT;

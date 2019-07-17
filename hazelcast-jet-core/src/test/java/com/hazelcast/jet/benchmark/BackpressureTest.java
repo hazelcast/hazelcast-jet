@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.benchmark;
 
-import com.hazelcast.core.Member;
-import com.hazelcast.core.Partition;
+import com.hazelcast.cluster.Member;
+import com.hazelcast.partition.Partition;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.JetConfig;
@@ -45,7 +45,7 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.util.function.Functions.wholeItem;
 import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;

@@ -19,10 +19,10 @@ package com.hazelcast.jet.impl.client;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetResumeJobCodec;
 import com.hazelcast.client.impl.protocol.task.BlockingMessageTask;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.operation.ResumeJobOperation;
 import com.hazelcast.nio.Connection;
-import com.hazelcast.spi.Operation;
+import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetResumeJobMessageTask
         extends AbstractJetMessageTask<JetResumeJobCodec.RequestParameters, Void> implements BlockingMessageTask {

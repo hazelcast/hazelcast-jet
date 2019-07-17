@@ -235,7 +235,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.JOB_EXECUTION_RECORD;
     }
 
@@ -352,7 +352,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.SNAPSHOT_STATS;
         }
 

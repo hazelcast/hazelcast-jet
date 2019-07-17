@@ -17,8 +17,8 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.core.function.ObjLongBiFunction;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

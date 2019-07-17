@@ -130,7 +130,7 @@ public class VertexDef implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.VERTEX_DEF;
     }
 

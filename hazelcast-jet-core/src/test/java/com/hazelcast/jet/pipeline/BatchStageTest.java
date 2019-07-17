@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -26,9 +26,9 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
 import org.junit.Test;
 
@@ -50,7 +50,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.util.function.Functions.wholeItem;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;

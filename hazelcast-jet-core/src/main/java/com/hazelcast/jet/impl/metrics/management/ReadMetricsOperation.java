@@ -19,8 +19,8 @@ package com.hazelcast.jet.impl.metrics.management;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.spi.Operation;
-import com.hazelcast.spi.ReadonlyOperation;
+import com.hazelcast.spi.impl.operationservice.Operation;
+import com.hazelcast.spi.impl.operationservice.ReadonlyOperation;
 
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
