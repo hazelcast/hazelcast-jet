@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.config;
 
 import com.hazelcast.config.AbstractConfigLocator;
 
+import static com.hazelcast.config.DeclarativeConfigUtil.YAML_ACCEPTED_SUFFIXES;
+
 /**
  * A support class for the {@link YamlJetConfigBuilder} to locate the
  * client yaml configuration.
@@ -29,16 +31,16 @@ public final class YamlJetClientConfigLocator extends AbstractConfigLocator {
     private static final String HAZELCAST_CLIENT_DEFAULT_YAML = "hazelcast-jet-client-default.yaml";
 
     public YamlJetClientConfigLocator() {
-        this(false);
-    }
-
-    public YamlJetClientConfigLocator(boolean failIfSysPropWithNotExpectedSuffix) {
-        super(failIfSysPropWithNotExpectedSuffix);
     }
 
     @Override
     public boolean locateFromSystemProperty() {
-        return loadFromSystemProperty(HAZELCAST_CLIENT_CONFIG_PROPERTY, "yaml", "yml");
+        return loadFromSystemProperty(HAZELCAST_CLIENT_CONFIG_PROPERTY, YAML_ACCEPTED_SUFFIXES);
+    }
+
+    @Override
+    public boolean locateFromSystemPropertyOrFailOnUnacceptedSuffix() {
+        return loadFromSystemPropertyOrFailOnUnacceptedSuffix(HAZELCAST_CLIENT_CONFIG_PROPERTY, YAML_ACCEPTED_SUFFIXES);
     }
 
     @Override
