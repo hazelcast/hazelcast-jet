@@ -19,19 +19,19 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.PartitionAware;
 import com.hazelcast.internal.serialization.impl.HeapData;
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.Bits;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.partition.PartitionAware;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.partition.IPartitionService;
 
@@ -354,7 +354,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.ASYNC_SNAPSHOT_WRITER_SNAPSHOT_DATA_KEY;
         }
 
@@ -407,7 +407,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.ASYNC_SNAPSHOT_WRITER_SNAPSHOT_DATA_VALUE_TERMINATOR;
         }
 

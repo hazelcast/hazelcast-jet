@@ -22,8 +22,7 @@ import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.core.Partition;
-import com.hazelcast.instance.HazelcastInstanceImpl;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.internal.journal.EventJournalReader;
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -45,8 +44,8 @@ import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
+import com.hazelcast.partition.Partition;
 import com.hazelcast.ringbuffer.ReadResultSet;
-import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,6 +56,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
@@ -92,7 +92,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Nonnull
     private final Predicate<? super E> predicate;
     @Nonnull
-    private final com.hazelcast.util.function.Function<? super E, ? extends T> projection;
+    private final Function<? super E, ? extends T> projection;
     @Nonnull
     private final JournalInitialPosition initialPos;
     @Nonnull

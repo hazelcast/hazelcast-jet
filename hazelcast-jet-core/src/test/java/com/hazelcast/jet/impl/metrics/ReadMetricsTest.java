@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.core.Member;
-import com.hazelcast.instance.MemberImpl;
+import com.hazelcast.cluster.Member;
+import com.hazelcast.instance.impl.MemberImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;

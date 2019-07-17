@@ -205,7 +205,7 @@ public class Vertex implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetDataSerializerHook.VERTEX;
     }
 

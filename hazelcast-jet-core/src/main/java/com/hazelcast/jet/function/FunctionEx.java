@@ -30,7 +30,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  * @since 3.0
  */
 @FunctionalInterface
-public interface FunctionEx<T, R> extends Function<T, R>, com.hazelcast.util.function.Function<T, R>, Serializable {
+public interface FunctionEx<T, R> extends Function<T, R>, Serializable {
 
     /**
      * Exception-declaring version of {@link Function#apply}.

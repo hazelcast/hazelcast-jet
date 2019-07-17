@@ -141,10 +141,10 @@ public final class SinkProcessors {
      * {@link Sinks#mapWithEntryProcessor(String, FunctionEx, FunctionEx)}.
      */
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier updateMapP(
+    public static <T, K, V, R> ProcessorMetaSupplier updateMapP(
             @Nonnull String mapName,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn
+            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
 
     ) {
         return HazelcastWriters.updateMapSupplier(mapName, null, toKeyFn, toEntryProcessorFn);
@@ -156,11 +156,11 @@ public final class SinkProcessors {
      * FunctionEx)}.
      */
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier updateRemoteMapP(
+    public static <T, K, V, R> ProcessorMetaSupplier updateRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn
+            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
     ) {
         return HazelcastWriters.updateMapSupplier(mapName, clientConfig, toKeyFn, toEntryProcessorFn);
     }

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;

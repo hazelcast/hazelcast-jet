@@ -18,8 +18,8 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.config.Config;
-import com.hazelcast.core.IMap;
-import com.hazelcast.instance.HazelcastInstanceImpl;
+import com.hazelcast.map.IMap;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.HeapData;

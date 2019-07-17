@@ -26,13 +26,13 @@ import com.hazelcast.nio.BufferObjectDataOutput;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.nio.Packet;
 import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 import static com.hazelcast.jet.impl.Networking.createStreamPacketHeader;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;

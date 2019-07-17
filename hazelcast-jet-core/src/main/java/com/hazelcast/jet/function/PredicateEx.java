@@ -32,7 +32,7 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  * @since 3.0
  */
 @FunctionalInterface
-public interface PredicateEx<T> extends Predicate<T>, com.hazelcast.util.function.Predicate<T>, Serializable {
+public interface PredicateEx<T> extends Predicate<T>, Serializable {
 
     /**
      * Exception-declaring version of {@link Predicate#test}.

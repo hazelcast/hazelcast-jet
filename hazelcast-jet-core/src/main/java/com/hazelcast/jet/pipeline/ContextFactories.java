@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
@@ -89,7 +89,7 @@ public final class ContextFactories {
      * @since 3.0
      */
     @Nonnull
-    public static <K, V> ContextFactory<IMapJet<K, V>> iMapContext(@Nonnull String mapName) {
+    public static <K, V> ContextFactory<IMap<K, V>> iMapContext(@Nonnull String mapName) {
         return ContextFactory
                 .withCreateFn(jet -> jet.<K, V>getMap(mapName))
                 .withLocalSharing();

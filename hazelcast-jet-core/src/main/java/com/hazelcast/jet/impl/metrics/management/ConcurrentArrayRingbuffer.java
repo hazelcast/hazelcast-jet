@@ -162,7 +162,7 @@ public class ConcurrentArrayRingbuffer<E> {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetMetricsDataSerializerHook.RINGBUFFER_SLICE;
         }
 

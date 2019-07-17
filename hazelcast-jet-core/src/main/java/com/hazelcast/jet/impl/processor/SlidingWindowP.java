@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.core.PartitionAware;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
@@ -27,14 +26,14 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.partition.PartitionAware;
 import com.hazelcast.util.collection.Long2ObjectHashMap;
-import com.hazelcast.util.function.LongFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,6 +46,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.LongFunction;
 import java.util.function.ToLongFunction;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -506,7 +506,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.SLIDING_WINDOW_P_SNAPSHOT_KEY;
         }
 

@@ -22,12 +22,13 @@ import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.proxy.ClientMapProxy;
 import com.hazelcast.client.spi.ClientPartitionService;
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
-import com.hazelcast.instance.HazelcastInstanceImpl;
+import com.hazelcast.collection.IList;
+import com.hazelcast.map.IMap;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -41,7 +42,6 @@ import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BinaryOperatorEx;
 import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.nio.ObjectDataInput;
@@ -114,7 +114,7 @@ public final class HazelcastWriters {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
+    public static <T, K, V, R> ProcessorMetaSupplier updateMapSupplier(
             @Nonnull String mapName,
             @Nullable ClientConfig clientConfig,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
@@ -124,7 +124,7 @@ public final class HazelcastWriters {
         checkSerializable(updateFn, "updateFn");
 
         boolean isLocal = clientConfig == null;
-        return preferLocalParallelismOne(new HazelcastWriterSupplier<UpdateMapContext<K, V, T>, T>(
+        return preferLocalParallelismOne(new HazelcastWriterSupplier<UpdateMapContext<T, K, V, R>, T>(
                 asXmlString(clientConfig),
                 instance -> procContext -> new UpdateMapContext<>(instance, mapName, toKeyFn, updateFn, isLocal),
                 UpdateMapContext::add,
@@ -133,7 +133,7 @@ public final class HazelcastWriters {
         ));
     }
 
-    private static final class UpdateMapContext<K, V, T> {
+    private static final class UpdateMapContext<T, K, V, R> {
         private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
 
         private final FunctionEx<? super T, ? extends K> toKeyFn;
@@ -214,7 +214,7 @@ public final class HazelcastWriters {
                     if (tmpMaps[partitionId].isEmpty()) {
                         continue;
                     }
-                    ApplyFnEntryProcessor<K, V, T> entryProcessor =
+                    ApplyFnEntryProcessor<T, K, V, R> entryProcessor =
                             new ApplyFnEntryProcessor<>(tmpMaps[partitionId], updateFn);
                     try {
                         // block until we get a permit
@@ -245,8 +245,8 @@ public final class HazelcastWriters {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, V> ICompletableFuture<Map<K, V>> submitToKeys(
-            IMap<K, V> map, Set<Data> keys, EntryProcessor<K, V> entryProcessor) {
+    private static <K, V, R> ICompletableFuture<Map<K, V>> submitToKeys(
+            IMap<K, V> map, Set<Data> keys, EntryProcessor<K, V, R> entryProcessor) {
         // TODO remove this method once submitToKeys is public API
         // we force Set<Data> instead of Set<K> to avoid re-serialization of keys
         // this relies on an implementation detail of submitToKeys method.
@@ -262,11 +262,11 @@ public final class HazelcastWriters {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
+    public static <T, K, V, R> ProcessorMetaSupplier updateMapSupplier(
             @Nonnull String name,
             @Nullable ClientConfig clientConfig,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn
+            @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn
     ) {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
@@ -404,7 +404,7 @@ public final class HazelcastWriters {
         }
     }
 
-    private static final class EntryProcessorWriter<T, K, V> extends AbstractProcessor {
+    private static final class EntryProcessorWriter<T, K, V, R> extends AbstractProcessor {
 
         private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
         private final AtomicInteger numConcurrentOps = new AtomicInteger();
@@ -412,9 +412,9 @@ public final class HazelcastWriters {
         private final boolean isLocal;
         private final IMap<? super K, ? extends V> map;
         private final FunctionEx<? super T, ? extends K> toKeyFn;
-        private final FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn;
+        private final FunctionEx<? super T, ? extends EntryProcessor<? super K, ? super V, R>> toEntryProcessorFn;
         private final AtomicReference<Throwable> lastError = new AtomicReference<>();
-        private final ExecutionCallback callback = callbackOf(
+        private final ExecutionCallback<? super R> callback = callbackOf(
                 response -> numConcurrentOps.decrementAndGet(),
                 exception -> {
                     numConcurrentOps.decrementAndGet();
@@ -427,7 +427,7 @@ public final class HazelcastWriters {
                 @Nonnull HazelcastInstance instance,
                 @Nonnull String name,
                 @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-                @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn,
+                @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn,
                 boolean isLocal
         ) {
             this.map = instance.getMap(name);
@@ -456,9 +456,25 @@ public final class HazelcastWriters {
             try {
                 @SuppressWarnings("unchecked")
                 T item = (T) object;
-                EntryProcessor<K, V> entryProcessor = toEntryProcessorFn.apply(item);
+                EntryProcessor<? super K, ? super V, R> entryProcessor = toEntryProcessorFn.apply(item);
+                ExecutionCallback<? super R> callback = this.callback;
                 K key = toKeyFn.apply(item);
-                map.submitToKey(key, entryProcessor, callback);
+                map.submitToKey(key, new EntryProcessor<K, V, R>() {
+                    @Override
+                    public R process(Entry<K, V> entry) {
+                        return null;
+                    }
+                }, new ExecutionCallback<R>() {
+                    @Override
+                    public void onResponse(R response) {
+
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+
+                    }
+                });
                 return true;
             } catch (HazelcastInstanceNotActiveException e) {
                 throw handleInstanceNotActive(e, isLocal);
@@ -489,14 +505,25 @@ public final class HazelcastWriters {
         }
     }
 
-    private static final class EntryProcessorWriterSupplier<T, K, V> implements ProcessorSupplier {
+    static class EP<K, V, R> {
+        void test() {
+            HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance();
+            IMap<? super K, ? super V> map = hazelcastInstance.getMap("map");
+            ExecutionCallback<? super R> callback = null;
+            EntryProcessor<? super K, ? super V, R> ep = null;
+            K key = null;
+            map.submitToKey(key, ep, callback);
+        }
+    }
+
+    private static final class EntryProcessorWriterSupplier<T, K, V, R> implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
 
         private final String name;
         private final String clientXml;
         private final FunctionEx<? super T, ? extends K> toKeyFn;
-        private final FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn;
+        private final FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn;
         private final boolean isLocal;
         private transient HazelcastInstance client;
         private transient HazelcastInstance instance;
@@ -505,7 +532,7 @@ public final class HazelcastWriters {
                 @Nonnull String name,
                 @Nullable String clientXml,
                 @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-                @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn,
+                @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn,
                 boolean isLocal
         ) {
             this.name = name;
@@ -601,8 +628,8 @@ public final class HazelcastWriters {
 
     @SuppressFBWarnings(value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
             justification = "the class is never java-serialized")
-    public static class ApplyFnEntryProcessor<K, V, T>
-            implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable,
+    public static class ApplyFnEntryProcessor<T, K, V, R>
+            implements EntryProcessor<K, V, R>, IdentifiedDataSerializable,
             SerializationServiceAware {
         private Map<Data, Object> keysToUpdate;
         private BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
@@ -620,7 +647,7 @@ public final class HazelcastWriters {
         }
 
         @Override
-        public Object process(Entry<K, V> entry) {
+        public R process(Entry<K, V> entry) {
             // it should not matter that we don't take the PartitionStrategy here into account
             Data keyData = serializationService.toData(entry.getKey());
             Object item = keysToUpdate.get(keyData);
@@ -646,16 +673,6 @@ public final class HazelcastWriters {
             V oldValue = entry.getValue();
             V newValue = updateFn.apply(oldValue, item);
             entry.setValue(newValue);
-        }
-
-        @Override
-        public EntryBackupProcessor<K, V> getBackupProcessor() {
-            return this;
-        }
-
-        @Override
-        public void processBackup(Entry<K, V> entry) {
-            process(entry);
         }
 
         @Override
@@ -713,7 +730,7 @@ public final class HazelcastWriters {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetDataSerializerHook.APPLY_FN_ENTRY_PROCESSOR;
         }
 

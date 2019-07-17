@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.collection.IList;
+import com.hazelcast.map.IMap;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;

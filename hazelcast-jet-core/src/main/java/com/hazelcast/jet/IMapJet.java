@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 
 /**
  * A distributed, in-memory concurrent map implementation.

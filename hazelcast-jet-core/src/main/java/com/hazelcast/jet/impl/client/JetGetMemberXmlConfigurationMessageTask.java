@@ -20,9 +20,9 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.JetGetMemberXmlConfigurationCodec;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.ConfigXmlGenerator;
-import com.hazelcast.instance.Node;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.nio.Connection;
-import com.hazelcast.spi.Operation;
+import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetGetMemberXmlConfigurationMessageTask
         extends AbstractJetMessageTask<JetGetMemberXmlConfigurationCodec.RequestParameters, String> {

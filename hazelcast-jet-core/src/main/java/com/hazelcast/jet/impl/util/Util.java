@@ -19,8 +19,8 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConfigXmlGenerator;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
@@ -35,7 +35,6 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
@@ -45,7 +44,6 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -69,7 +67,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,6 +74,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
@@ -387,16 +386,13 @@ public final class Util {
         return toZonedDateTime(timestamp).toLocalTime().format(LOCAL_TIME_FORMATTER);
     }
 
-    public static <K, V> EntryProcessor<K, V> entryProcessor(
+    public static <K, V> EntryProcessor<K, V, V> entryProcessor(
             BiFunctionEx<? super K, ? super V, ? extends V> remappingFunction
     ) {
-        return new AbstractEntryProcessor<K, V>() {
-            @Override
-            public Object process(Entry<K, V> entry) {
-                V newValue = remappingFunction.apply(entry.getKey(), entry.getValue());
-                entry.setValue(newValue);
-                return newValue;
-            }
+        return entry -> {
+            V newValue = remappingFunction.apply(entry.getKey(), entry.getValue());
+            entry.setValue(newValue);
+            return newValue;
         };
     }
 
@@ -566,22 +562,22 @@ public final class Util {
         return name + '-' + index;
     }
 
-    public static <T> PredicateEx<T> wrapImdgPredicate(com.hazelcast.util.function.Predicate<T> predicate) {
+    public static <T> PredicateEx<T> wrapImdgPredicate(Predicate<T> predicate) {
         return new ImdgPredicateWrapper(predicate);
     }
 
-    public static <T> com.hazelcast.util.function.Predicate<T> maybeUnwrapImdgPredicate(PredicateEx<T> predicate) {
+    public static <T> Predicate<T> maybeUnwrapImdgPredicate(PredicateEx<T> predicate) {
         if (predicate instanceof ImdgPredicateWrapper) {
             return ((ImdgPredicateWrapper<T>) predicate).wrapped;
         }
         return predicate;
     }
 
-    public static FunctionEx wrapImdgFunction(com.hazelcast.util.function.Function function) {
+    public static FunctionEx wrapImdgFunction(Function function) {
         return new ImdgFunctionWrapper(function);
     }
 
-    public static <T, R> com.hazelcast.util.function.Function<T, R> maybeUnwrapImdgFunction(FunctionEx<T, R> function) {
+    public static <T, R> Function<T, R> maybeUnwrapImdgFunction(FunctionEx<T, R> function) {
         if (function instanceof ImdgFunctionWrapper) {
             return ((ImdgFunctionWrapper<T, R>) function).wrapped;
         }
@@ -589,7 +585,7 @@ public final class Util {
     }
 
     private static final class ImdgPredicateWrapper<T> implements PredicateEx<T> {
-        private final com.hazelcast.util.function.Predicate<T> wrapped;
+        private final Predicate<T> wrapped;
 
         ImdgPredicateWrapper(Predicate<T> wrapped) {
             this.wrapped = wrapped;
@@ -602,9 +598,9 @@ public final class Util {
     }
 
     private static final class ImdgFunctionWrapper<T, R> implements FunctionEx<T, R> {
-        private final com.hazelcast.util.function.Function<T, R> wrapped;
+        private final Function<T, R> wrapped;
 
-        ImdgFunctionWrapper(com.hazelcast.util.function.Function<T, R> wrapped) {
+        ImdgFunctionWrapper(Function<T, R> wrapped) {
             this.wrapped = wrapped;
         }
 

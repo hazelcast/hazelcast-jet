@@ -427,7 +427,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.SESSION_WINDOW_P_WINDOWS;
         }
 

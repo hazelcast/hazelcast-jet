@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -28,8 +27,8 @@ import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
@@ -440,8 +439,7 @@ public class JobRepository {
     }
 
     public static final class UpdateJobExecutionRecordEntryProcessor implements
-                    EntryProcessor<Long, JobExecutionRecord>,
-                    EntryBackupProcessor<Long, JobExecutionRecord>,
+                    EntryProcessor<Long, JobExecutionRecord, Object>,
                     IdentifiedDataSerializable {
 
         private long jobId;
@@ -478,22 +476,12 @@ public class JobRepository {
         }
 
         @Override
-        public EntryBackupProcessor<Long, JobExecutionRecord> getBackupProcessor() {
-            return this;
-        }
-
-        @Override
-        public void processBackup(Entry<Long, JobExecutionRecord> entry) {
-            process(entry);
-        }
-
-        @Override
         public int getFactoryId() {
             return JetInitDataSerializerHook.FACTORY_ID;
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.UPDATE_JOB_EXECUTION_RECORD_EP;
         }
 
@@ -534,7 +522,7 @@ public class JobRepository {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE;
         }
 
@@ -565,7 +553,7 @@ public class JobRepository {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.FILTER_JOB_ID;
         }
 
@@ -601,7 +589,7 @@ public class JobRepository {
         }
 
         @Override
-        public int getId() {
+        public int getClassId() {
             return JetInitDataSerializerHook.FILTER_JOB_RESULT_BY_NAME;
         }
 

@@ -470,7 +470,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetDataSerializerHook.DAG;
     }
 }
