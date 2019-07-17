@@ -29,6 +29,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
+import com.hazelcast.jet.core.MetricTags;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
@@ -183,24 +184,24 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 );
 
                 ProbeBuilder probeBuilder = this.nodeEngine.getMetricsRegistry().newProbeBuilder()
-                        .withTag("module", "jet")
-                        .withTag("job", idToString(jobId))
-                        .withTag("exec", idToString(executionId))
-                        .withTag("vertex", vertex.name());
+                        .withTag(MetricTags.MODULE, "jet")
+                        .withTag(MetricTags.JOB, idToString(jobId))
+                        .withTag(MetricTags.EXECUTION, idToString(executionId))
+                        .withTag(MetricTags.VERTEX, vertex.name());
 
                 // ignore vertices which are only used for snapshot restore and do not
                 // consider snapshot restore edges for determining source tag
                 if (vertex.inboundEdges().stream().allMatch(EdgeDef::isSnapshotRestoreEdge)
                         && !vertex.isSnapshotVertex()) {
-                    probeBuilder = probeBuilder.withTag("source", "true");
+                    probeBuilder = probeBuilder.withTag(MetricTags.SOURCE, "true");
                 }
                 if (vertex.outboundEdges().size() == 0) {
-                    probeBuilder = probeBuilder.withTag("sink", "true");
+                    probeBuilder = probeBuilder.withTag(MetricTags.SINK, "true");
                 }
                 ProbeBuilder processorProbeBuilder = probeBuilder
-                        .withTag("proc", String.valueOf(globalProcessorIndex));
+                        .withTag(MetricTags.PROCESSOR, String.valueOf(globalProcessorIndex));
                 processorProbeBuilder
-                        .withTag("procType", processor.getClass().getSimpleName())
+                        .withTag(MetricTags.PROCESSOR_TYPE, processor.getClass().getSimpleName())
                         .scanAndRegister(processor);
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
@@ -366,7 +367,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     ) {
         final List<OutboundEdgeStream> outboundStreams = new ArrayList<>();
         for (EdgeDef edge : srcVertex.outboundEdges()) {
-            ProbeBuilder probeBuilder2 = probeBuilder.withTag("ordinal", String.valueOf(edge.sourceOrdinal()));
+            ProbeBuilder probeBuilder2 = probeBuilder.withTag(MetricTags.ORDINAL, String.valueOf(edge.sourceOrdinal()));
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
             if (edge.isDistributed()) {
                 memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge, probeBuilder2);

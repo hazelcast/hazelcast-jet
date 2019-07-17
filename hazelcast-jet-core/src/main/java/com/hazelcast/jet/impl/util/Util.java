@@ -67,8 +67,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -628,48 +626,6 @@ public final class Util {
             action.run();
         } finally {
             currentThread.setContextClassLoader(previousCl);
-        }
-    }
-
-
-    /**
-     * Attempt to efficiently build multi-maps when they are small.
-     */
-    public static <T, K, V> Map<T, Map<K, V>> putIntoMultiMap(Map<T, Map<K, V>> multiMap, T t, K k, V v) {
-        if (multiMap == null || multiMap.isEmpty()) {
-            return Collections.singletonMap(t, Collections.singletonMap(k, v));
-        } else {
-            Map<K, V> map = multiMap.get(t);
-            map = putIntoMap(map, k, v);
-            if (multiMap.size() == 1) {
-                if (map.containsKey(t)) {
-                    return Collections.singletonMap(t, map);
-                } else {
-                    multiMap = new HashMap<>(multiMap);
-                    multiMap.put(t, map);
-                    return multiMap;
-                }
-            } else {
-                multiMap.put(t, map);
-                return multiMap;
-            }
-        }
-    }
-
-    private static <K, V> Map<K, V> putIntoMap(Map<K, V> map, K k, V v) {
-        if (map == null || map.isEmpty()) {
-            return Collections.singletonMap(k, v);
-        } else if (map.size() == 1) {
-            if (map.containsKey(k)) {
-                return Collections.singletonMap(k, v);
-            } else {
-                map = new HashMap<>(map);
-                map.put(k, v);
-                return map;
-            }
-        } else {
-            map.put(k, v);
-            return map;
         }
     }
 }

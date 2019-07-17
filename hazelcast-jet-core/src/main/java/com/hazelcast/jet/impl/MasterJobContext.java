@@ -24,6 +24,7 @@ import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
@@ -550,7 +551,9 @@ public class MasterJobContext {
                 logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
                         "resources might leak: " + responses);
             } else {
-                mc.setJobMetrics(JobMetricsUtil.mergeMetrics(responses));
+                Map<String, Long> mergedMetrics = new HashMap<>();
+                responses.forEach(o -> mergedMetrics.putAll(((JobMetrics) o).toMap()));
+                mc.setJobMetrics(JobMetrics.of(mergedMetrics));
             }
             onCompleteExecutionCompleted(error);
         }, null, true);

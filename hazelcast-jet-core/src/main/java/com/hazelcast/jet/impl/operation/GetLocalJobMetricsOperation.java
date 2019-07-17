@@ -27,15 +27,15 @@ import java.util.Collections;
  * An operation sent from the master to all members to query metrics for a
  * specific job ID.
  */
-public class GetJobMetricsFromMemberOperation extends AbstractJobOperation {
+public class GetLocalJobMetricsOperation extends AbstractJobOperation {
 
     private long executionId;
     private JobMetrics response;
 
-    public GetJobMetricsFromMemberOperation() {
+    public GetLocalJobMetricsOperation() {
     }
 
-    public GetJobMetricsFromMemberOperation(long jobId, long executionId) {
+    public GetLocalJobMetricsOperation(long jobId, long executionId) {
         super(jobId);
         this.executionId = executionId;
     }
@@ -44,11 +44,7 @@ public class GetJobMetricsFromMemberOperation extends AbstractJobOperation {
     public void run() {
         JetService service = getService();
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
-        if (executionContext == null) {
-            response = JobMetrics.of(Collections.emptyMap());
-        } else {
-            response = executionContext.getJobMetrics();
-        }
+        response = executionContext == null ? JobMetrics.of(Collections.emptyMap()) : executionContext.getJobMetrics();
     }
 
     @Override
@@ -58,6 +54,6 @@ public class GetJobMetricsFromMemberOperation extends AbstractJobOperation {
 
     @Override
     public int getId() {
-        return JetInitDataSerializerHook.GET_JOB_METRICS_FROM_MEMBER_OP;
+        return JetInitDataSerializerHook.GET_LOCAL_JOB_METRICS_OP;
     }
 }

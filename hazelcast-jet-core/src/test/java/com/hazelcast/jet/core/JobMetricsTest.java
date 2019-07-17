@@ -123,7 +123,7 @@ public class JobMetricsTest extends TestInClusterSupport {
 
     private void assertJobHasMetrics(Job job) {
         assertTrue(job.getMetrics().size() > 0);
-        assertTrue(job.getMetrics().withTag("metric", "queuesSize").size() > 0);
+        assertTrue(job.getMetrics().withTag(MetricTags.METRIC, "queuesSize").size() > 0);
     }
 
 }

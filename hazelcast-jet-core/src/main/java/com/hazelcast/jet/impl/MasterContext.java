@@ -22,7 +22,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.GetJobMetricsFromMemberOperation;
+import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -297,7 +298,7 @@ public class MasterContext {
 
     void collectMetrics(CompletableFuture<JobMetrics> clientFuture) {
         invokeOnParticipants(
-                plan -> new GetJobMetricsFromMemberOperation(jobId(), executionId()),
+                plan -> new GetLocalJobMetricsOperation(jobId(), executionId()),
                 objects -> completeWithMergedMetrics(clientFuture, objects),
                 clientFuture::completeExceptionally,
                 false
@@ -310,7 +311,9 @@ public class MasterContext {
         if (firstThrowable.isPresent()) {
             clientFuture.completeExceptionally((Throwable) firstThrowable.get());
         } else {
-            setJobMetrics(JobMetricsUtil.mergeMetrics(metrics));
+            Map<String, Long> mergedMetrics = new HashMap<>();
+            metrics.forEach(o -> mergedMetrics.putAll(((JobMetrics) o).toMap()));
+            setJobMetrics(JobMetrics.of(mergedMetrics));
             clientFuture.complete(jobMetrics());
         }
     }

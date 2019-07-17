@@ -17,11 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.core.JobMetrics;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,13 +45,5 @@ public final class JobMetricsUtil {
 
     public static long toLongMetricValue(double value) {
         return Math.round(value * DOUBLE_TO_LONG);
-    }
-
-    static JobMetrics mergeMetrics(Collection<Object> metrics) {
-        Map<String, Long> map = new HashMap<>();
-        for (Object o : metrics) {
-            map.putAll(((JobMetrics) o).asMap());
-        }
-        return JobMetrics.of(map);
     }
 }

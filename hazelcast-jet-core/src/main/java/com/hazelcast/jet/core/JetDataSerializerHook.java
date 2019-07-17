@@ -49,6 +49,10 @@ public final class JetDataSerializerHook implements DataSerializerHook {
      * Serialization ID of the {@link ApplyFnEntryProcessor} class.
      */
     public static final int APPLY_FN_ENTRY_PROCESSOR = 3;
+    /**
+     * Serialization ID of the {@link JobMetrics} class.
+     */
+    public static final int JOB_METRICS = 4;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_DS_FACTORY, JET_DS_FACTORY_ID);
 
@@ -74,6 +78,8 @@ public final class JetDataSerializerHook implements DataSerializerHook {
                     return new Vertex();
                 case APPLY_FN_ENTRY_PROCESSOR:
                     return new ApplyFnEntryProcessor();
+                case JOB_METRICS:
+                    return new JobMetrics();
                 default:
                     throw new IllegalArgumentException("Unknown type id " + typeId);
             }

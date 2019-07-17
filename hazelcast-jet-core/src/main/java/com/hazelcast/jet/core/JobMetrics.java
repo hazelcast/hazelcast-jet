@@ -17,36 +17,65 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.internal.metrics.MetricsUtil;
-import com.hazelcast.spi.annotation.Beta;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Serializable;
-import java.util.Collection;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
 
 /**
- * An immutable snapshot of job-specific metrics.
+ * <p>
+ *     An immutable collection of job-specific metrics, where each metric has a name and a
+ *     {@link Long} numberic value. The name is a {@link String} formed from a comma separated
+ *     list of tag=value pairs, which may or may not be enclosed by square brackets. Some
+ *     examples of valid metric names:
+ *     <ul>
+ *         <li>[module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]</li>
+ *         <li>module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity</li>
+ *     </ul>
+ * </p>
+ *
+ * <p>
+ *     Since all names are built from tag-value pairs it's possible to filter metrics based on tags,
+ *     that's what the {@link #withTag(String, String)} method does. For a list of possible tag names
+ *     see {@link MetricTags}.
+ * </p>
+ *
+ * @since 3.2
  */
-@Beta
-public final class JobMetrics implements Serializable {
+public final class JobMetrics implements IdentifiedDataSerializable {
 
     private static final JobMetrics EMPTY = new JobMetrics(Collections.emptyMap());
 
-    private final Map<String, Long> metrics;
+    private Map<String, Long> metrics;
+
+    JobMetrics() {
+        metrics = null;
+    }
 
     private JobMetrics(@Nonnull Map<String, Long> metrics) {
         this.metrics = Collections.unmodifiableMap(metrics);
     }
 
-    /** Builds a {@link JobMetrics} object based on a key-value map of metrics data. */
+    /**
+     * <p>
+     *     Builds a {@link JobMetrics} object based on a key-value map of metrics data.
+     *     The key Strings in the map should be well formed metric names (see class javadoc
+     *     for details).
+     * </p>
+     */
+    @Nonnull
     public static JobMetrics of(@Nonnull Map<String, Long> metrics) {
         if (metrics.isEmpty()) {
             return EMPTY;
@@ -58,22 +87,21 @@ public final class JobMetrics implements Serializable {
      * Returns an unmodifiable map view of these metrics.
      */
     @Nonnull
-    public Map<String, Long> asMap() {
+    public Map<String, Long> toMap() {
         return metrics;
     }
 
     /**
-     * Returns a collection containing the names of all job-specific metrics
-     * available.
+     * Returns the name of all metrics contained in this {@link JobMetrics} object.
      */
     @Nonnull
-    public Collection<String> getMetricNames() {
+    public Set<String> getMetricNames() {
         return metrics.keySet();
     }
 
     /**
-     * Returns the value of a job-specific metric with the given name. Returns
-     * null if the metric doesn't exist.
+     * Returns the value of the metric with the given name, if present. Returns
+     * null otherwise.
      */
     @Nullable
     public Long getMetricValue(@Nonnull String name) {
@@ -81,9 +109,20 @@ public final class JobMetrics implements Serializable {
     }
 
     /**
-     * Returns a subset of this metrics which have the specified value for the
-     * specified tag.
+     * <p>
+     *     Returns a new {@link JobMetrics} instance containing a subset of the metrics found
+     *     in the current instance. The subset is formed by those metrics which have the metric
+     *     tag with the specified value in their name.
+     * </p>
+     *
+     * <p>
+     *     For example if we call {@code tag="vertex"} & {@code value="filter"} as the parameters, then the metric
+     *     named {@code [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]}
+     *     will be included while an other one named {@code [module=jet,job=jobId,exec=execId,vertex=map,proc=3,
+     *     unit=count,metric=queuesCapacity]} will not.
+     * </p>
      */
+    @Nonnull
     public JobMetrics withTag(String tag, String value) {
         Entry<String, String> tagValue = entry(tag, value);
         Map<String, Long> filteredMetrics = metrics.entrySet().stream()
@@ -92,9 +131,31 @@ public final class JobMetrics implements Serializable {
         return new JobMetrics(filteredMetrics);
     }
 
-    /** Returns the number of metrics present.*/
+    /**
+     * Returns the number of metrics present.
+     */
     public int size() {
         return metrics.size();
+    }
+
+    @Override
+    public int getFactoryId() {
+        return JetDataSerializerHook.FACTORY_ID;
+    }
+
+    @Override
+    public int getId() {
+        return JetDataSerializerHook.JOB_METRICS;
+    }
+
+    @Override
+    public void writeData(ObjectDataOutput out) throws IOException {
+        out.writeObject(metrics);
+    }
+
+    @Override
+    public void readData(ObjectDataInput in) throws IOException {
+        metrics = in.readObject();
     }
 
     @Override

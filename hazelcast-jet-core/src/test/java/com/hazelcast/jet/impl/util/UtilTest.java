@@ -25,7 +25,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -155,61 +154,5 @@ public class UtilTest extends JetTestSupport {
         assertEquals("a-1-2", addOrIncrementIndexInName("a-1"));
         assertEquals("a-1-3", addOrIncrementIndexInName("a-1-2"));
         assertEquals("a--1-2", addOrIncrementIndexInName("a--1"));
-    }
-
-    @Test
-    public void putIntoMultiMap() {
-        assertEquals(
-                toMultiMap(new Object[] {"t", new String[]{"k", "v"}}),
-                Util.putIntoMultiMap(null, "t", "k", "v")
-        );
-        assertEquals(
-                toMultiMap(new Object[] {"t", new String[]{"k", "v"}}),
-                Util.putIntoMultiMap(Collections.emptyMap(), "t", "k", "v")
-        );
-
-        assertEquals(
-                toMultiMap(new Object[] {"t", new String[]{"k1", "v1"}}),
-                Util.putIntoMultiMap(toMultiMap(new Object[] {"t", new String[]{"k1", "v1"}}), "t", "k1", "v1")
-        );
-
-        assertEquals(
-                toMultiMap(new Object[] {"t", new String[]{"k1", "v2"}}),
-                Util.putIntoMultiMap(toMultiMap(new Object[] {"t", new String[]{"k1", "v1"}}), "t", "k1", "v2")
-        );
-
-        assertEquals(
-                toMultiMap(new Object[] {"t", new String[]{"k1", "v1", "k2", "v1"}}),
-                Util.putIntoMultiMap(toMultiMap(new Object[] {"t", new String[]{"k1", "v1"}}), "t", "k2", "v1")
-        );
-
-        assertEquals(
-                toMultiMap(new Object[] {"t", new String[]{"k1", "v1", "k2", "v2"}}),
-                Util.putIntoMultiMap(toMultiMap(new Object[] {"t", new String[]{"k1", "v1"}}), "t", "k2", "v2")
-        );
-
-        assertEquals(
-                toMultiMap(new Object[] {"t1", new String[]{"k1", "v1"}, "t2", new String[] {"k2", "v2"}}),
-                Util.putIntoMultiMap(toMultiMap(new Object[] {"t1", new String[]{"k1", "v1"}}), "t2", "k2", "v2")
-        );
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> Map<T, Map<T, T>> toMultiMap(Object[] content) {
-        Map<T, Map<T, T>> multiMap = new HashMap<>();
-        for (int i = 0; i < content.length; i = i + 2) {
-            T key = (T) content[i];
-            Map<T, T> map = toMap((T[]) content[i + 1]);
-            multiMap.put(key, map);
-        }
-        return multiMap;
-    }
-
-    private static <T> Map<T, T> toMap(T[] content) {
-        Map<T, T> map = new HashMap<>();
-        for (int i = 0; i < content.length; i = i + 2) {
-            map.put(content[i], content[i + 1]);
-        }
-        return map;
     }
 }

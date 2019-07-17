@@ -22,6 +22,7 @@ import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.MetricTags;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
@@ -164,7 +165,7 @@ public class ProcessorTasklet implements Tasklet {
         for (int i = 0; i < instreams.size(); i++) {
             int finalI = i;
             ProbeBuilder builderWithOrdinal = probeBuilder
-                    .withTag("ordinal", String.valueOf(i));
+                    .withTag(MetricTags.ORDINAL, String.valueOf(i));
             builderWithOrdinal.register(this, "receivedCount", ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
             builderWithOrdinal.register(this, "receivedBatches", ProbeLevel.INFO, ProbeUnit.COUNT,
@@ -180,7 +181,7 @@ public class ProcessorTasklet implements Tasklet {
         for (int i = 0; i < emittedCounts.length() - (context.snapshottingEnabled() ? 0 : 1); i++) {
             int finalI = i;
             probeBuilder
-                    .withTag("ordinal", i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
+                    .withTag(MetricTags.ORDINAL, i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
                     .register(this, "emittedCount", ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }

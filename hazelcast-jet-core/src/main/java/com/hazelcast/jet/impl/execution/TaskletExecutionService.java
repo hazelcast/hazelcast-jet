@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.core.MetricTags;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -92,7 +93,7 @@ public class TaskletExecutionService {
                 Math.max(minimumIdleTimeNs, MAXIMUM_IDLE_NON_COOPERATIVE));
 
         nodeEngine.getMetricsRegistry().newProbeBuilder()
-                       .withTag("module", "jet")
+                       .withTag(MetricTags.MODULE, "jet")
                        .scanAndRegister(this);
 
         Arrays.setAll(cooperativeWorkers, i -> new CooperativeWorker());
@@ -101,8 +102,8 @@ public class TaskletExecutionService {
         Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
         for (int i = 0; i < cooperativeWorkers.length; i++) {
             nodeEngine.getMetricsRegistry().newProbeBuilder()
-                           .withTag("module", "jet")
-                           .withTag("cooperativeWorker", String.valueOf(i))
+                           .withTag(MetricTags.MODULE, "jet")
+                           .withTag(MetricTags.COOPERATIVE_WORKER, String.valueOf(i))
                            .scanAndRegister(cooperativeWorkers[i]);
         }
     }

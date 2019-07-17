@@ -51,6 +51,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -414,6 +415,21 @@ public class JobCoordinationService {
                     if (mc != null) {
                         mc.collectMetrics(cf);
                         return;
+                    }
+
+                    // no master context found, job might be just submitted
+                    JobExecutionRecord jobExecutionRecord = jobRepository.getJobExecutionRecord(jobId);
+                    if (jobExecutionRecord != null) {
+                        cf.complete(JobMetrics.of(Collections.emptyMap()));
+                        return;
+                    } else {
+                        // no job record found, but check job results again
+                        // since job might have been completed meanwhile.
+                        jobResult = jobRepository.getJobResult(jobId);
+                        if (jobResult != null) {
+                            cf.complete(jobResult.getJobMetrics());
+                            return;
+                        }
                     }
 
                     cf.completeExceptionally(new JobNotFoundException(jobId));

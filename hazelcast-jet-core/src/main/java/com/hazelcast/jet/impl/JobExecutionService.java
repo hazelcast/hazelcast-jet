@@ -36,7 +36,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -49,7 +49,6 @@ import java.util.function.Supplier;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobIdAndExecutionId;
-import static com.hazelcast.jet.impl.util.Util.putIntoMultiMap;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -330,7 +329,7 @@ public class JobExecutionService {
     }
 
     public void updateMetrics(Map<String, Long> metrics) {
-        Map<ExecutionContext, Map<String, Long>> metricsOfExecutions = Collections.emptyMap();
+        Map<ExecutionContext, Map<String, Long>> metricsOfExecutions = new HashMap<>();
 
         for (Entry<String, Long> entry : metrics.entrySet()) {
             String metricName = entry.getKey();
@@ -339,7 +338,9 @@ public class JobExecutionService {
                 ExecutionContext executionContext = executionContexts.get(executionId);
                 if (executionContext != null) {
                     Long metricValue = entry.getValue();
-                    metricsOfExecutions = putIntoMultiMap(metricsOfExecutions, executionContext, metricName, metricValue);
+                    metricsOfExecutions
+                            .computeIfAbsent(executionContext, ec -> new HashMap<>())
+                            .put(metricName, metricValue);
                 }
             }
         }

@@ -69,7 +69,7 @@ public interface JetCodecTemplate {
     @Request(id = 15, retryable = true, response = ResponseMessageConst.STRING)
     Object getMemberXmlConfiguration();
 
-    @Request(id = 16, retryable = false, response = ResponseMessageConst.DATA)
+    @Request(id = 16, retryable = true, response = ResponseMessageConst.DATA)
     Object getJobMetrics(long jobId);
 
 }

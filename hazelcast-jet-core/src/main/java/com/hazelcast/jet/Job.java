@@ -17,6 +17,7 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobMetrics;
@@ -84,7 +85,20 @@ public interface Job {
     JobStatus getStatus();
 
     /**
-     * Returns a snapshot of the current values of all job-specific metrics.
+     * <p>Returns a snapshot of the current values of all job-specific metrics.</p>
+     *
+     * <p>While the job is running the metric values get updated periodically
+     * (see {@link MetricsConfig#getCollectionIntervalSeconds()}, default is
+     * {@value MetricsConfig#DEFAULT_METRICS_COLLECTION_SECONDS} seconds). </p>
+     *
+     * <p>Once a job finishes executing (successfully or with a failure) the
+     * metrics will have their most up-to-date values (ie. last metric updates
+     * from right before job completion will not get lost).</p>
+     *
+     * <p>If a job is restarted then the metrics are reset too, their values
+     * will reflect only updates from the latest execution of the job.</p>
+     *
+     * @since 3.2
      */
     @Nonnull
     JobMetrics getMetrics();
