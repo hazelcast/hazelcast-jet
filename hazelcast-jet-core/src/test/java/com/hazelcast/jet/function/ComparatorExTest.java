@@ -22,7 +22,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.function.ComparatorEx.*;
+import static com.hazelcast.util.function.ComparatorEx.comparing;
+import static com.hazelcast.util.function.ComparatorEx.comparingDouble;
+import static com.hazelcast.util.function.ComparatorEx.comparingInt;
+import static com.hazelcast.util.function.ComparatorEx.comparingLong;
+import static com.hazelcast.util.function.ComparatorEx.naturalOrder;
+import static com.hazelcast.util.function.ComparatorEx.reverseOrder;
 import static com.hazelcast.util.function.ComparatorEx.nullsFirst;
 import static com.hazelcast.util.function.ComparatorEx.nullsLast;
 import static org.junit.Assert.assertEquals;
