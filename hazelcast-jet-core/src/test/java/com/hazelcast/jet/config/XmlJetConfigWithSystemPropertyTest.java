@@ -18,7 +18,6 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.core.HazelcastException;
 import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -31,6 +30,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 import static java.io.File.createTempFile;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -48,7 +49,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
         // Given
         File file = createTempFile("foo", ".xml");
         file.delete();
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.setProperty(SYSPROP_JET_CONFIG, file.getAbsolutePath());
 
         // When
         new XmlJetConfigBuilder().build();
@@ -63,7 +64,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_XML_1);
             os.write(Util.readFully(resourceAsStream));
         }
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, tempFile.getAbsolutePath());
+        System.setProperty(SYSPROP_JET_CONFIG, tempFile.getAbsolutePath());
 
         // When
         XmlJetConfigBuilder builder = new XmlJetConfigBuilder();
@@ -80,7 +81,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
         // Given
         File file = createTempFile("foo", ".xml");
         file.delete();
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.setProperty(SYSPROP_MEMBER_CONFIG, file.getAbsolutePath());
 
         // When
         new XmlJetConfigBuilder().build();
@@ -91,7 +92,8 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
         // Given
         File file = createTempFile("foo", ".bar");
         file.delete();
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, file.getAbsolutePath());
+        System.out.println("file = " + file.getAbsolutePath());
+        System.setProperty(SYSPROP_MEMBER_CONFIG, file.getAbsolutePath());
 
         // When
         new XmlJetConfigBuilder().build();
@@ -107,7 +109,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_XML_2);
             os.write(Util.readFully(resourceAsStream));
         }
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, tempFile.getAbsolutePath());
+        System.setProperty(SYSPROP_MEMBER_CONFIG, tempFile.getAbsolutePath());
 
         // When
         XmlJetConfigBuilder builder = new XmlJetConfigBuilder();
@@ -121,7 +123,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test(expected = HazelcastException.class)
     public void when_classpathSpecifiedNonExistingFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:non-existing.xml");
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:non-existing.xml");
 
         // When
         new XmlJetConfigBuilder().build();
@@ -132,7 +134,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test
     public void when_classpathSpecified_usesSpecifiedResource() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + TEST_XML_1);
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:" + TEST_XML_1);
 
         // When
         XmlJetConfigBuilder builder = new XmlJetConfigBuilder();
@@ -147,7 +149,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test(expected = HazelcastException.class)
     public void when_classpathMemberSpecifiedNonExistingFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:non-existing.xml");
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:non-existing.xml");
 
         // When
         new XmlJetConfigBuilder().build();
@@ -156,7 +158,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test(expected = HazelcastException.class)
     public void when_classpathMemberSpecifiedNonExistingNonXmlFile_thenThrowsException() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:non-existing.bar");
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:non-existing.bar");
 
         // When
         new XmlJetConfigBuilder().build();
@@ -167,7 +169,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test
     public void when_classpathMemberSpecified_usesSpecifiedResource() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:" + TEST_XML_2);
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:" + TEST_XML_2);
 
         // When
         XmlJetConfigBuilder builder = new XmlJetConfigBuilder();
@@ -181,7 +183,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test
     public void when_configHasVariable_variablesAreReplaced() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:hazelcast-jet-with-variables.xml");
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:hazelcast-jet-with-variables.xml");
         Properties properties = new Properties();
         properties.put("thread.count", String.valueOf(55));
         properties.put("flow.control.period", "50");
@@ -206,7 +208,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test
     public void when_configMemberHasVariable_variablesAreReplaced() {
         // Given
-        System.setProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY, "classpath:" + TEST_XML_2);
+        System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:" + TEST_XML_2);
 
         Properties properties = new Properties();
         properties.put("imdg.pass", PASSWORD);
@@ -225,7 +227,7 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
     @Test
     public void when_edgeDefaultsSpecified_usesSpecified() {
         // Given
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:" + TEST_XML_1);
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:" + TEST_XML_1);
 
         // When
         XmlJetConfigBuilder builder = new XmlJetConfigBuilder();
@@ -245,33 +247,24 @@ public class XmlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfigW
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("hazelcast-jet-foo.bar");
             os.write(Util.readFully(resourceAsStream));
         }
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, tempFile.getAbsolutePath());
+        System.setProperty(SYSPROP_JET_CONFIG, tempFile.getAbsolutePath());
 
         XmlJetConfigBuilder configBuilder = new XmlJetConfigBuilder();
         JetConfig config = configBuilder.build();
         assertEquals("bar", config.getProperties().getProperty("foo"));
     }
 
-    @Test
-    public void when_classPathSpecifiedNonXml_then_loadedAsXml() {
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:hazelcast-jet-foo.bar");
+    @Test(expected = HazelcastException.class)
+    public void when_classPathSpecifiedNonXml_then_throwsException() {
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:hazelcast-jet-foo.bar");
 
         XmlJetConfigBuilder configBuilder = new XmlJetConfigBuilder();
-        JetConfig config = configBuilder.build();
-        assertEquals("bar", config.getProperties().getProperty("foo"));
+        configBuilder.build();
     }
 
-    @Test
-    public void loadingThroughSystemPropertyViaLocator_nonXmlSuffix() {
-        System.setProperty(HAZELCAST_JET_CONFIG_PROPERTY, "classpath:hazelcast-jet-foo.bar");
-
-        JetInstance instance = Jet.newJetInstance();
-        JetConfig config = instance.getConfig();
-        instance.shutdown();
-
-        assertEquals("bar", config.getProperties().getProperty("foo"));
-
+    @Test(expected = HazelcastException.class)
+    public void when_loadingThroughSystemPropertyViaLocator_nonXmlSuffix_then_throwsException() {
+        System.setProperty(SYSPROP_JET_CONFIG, "classpath:hazelcast-jet-foo.bar");
+        Jet.newJetInstance();
     }
-
-
 }

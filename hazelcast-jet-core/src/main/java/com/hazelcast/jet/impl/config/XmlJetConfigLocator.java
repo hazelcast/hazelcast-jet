@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.config;
 import com.hazelcast.config.AbstractConfigLocator;
 
 import static com.hazelcast.config.DeclarativeConfigUtil.XML_ACCEPTED_SUFFIXES;
+import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 
 /**
  * A support class for the {@link XmlJetConfigBuilder} to locate the
@@ -26,7 +27,6 @@ import static com.hazelcast.config.DeclarativeConfigUtil.XML_ACCEPTED_SUFFIXES;
  */
 public final class XmlJetConfigLocator extends AbstractConfigLocator {
 
-    private static final String HAZELCAST_JET_CONFIG_PROPERTY = "hazelcast.jet.config";
     private static final String HAZELCAST_JET_XML = "hazelcast-jet.xml";
     private static final String HAZELCAST_JET_DEFAULT_XML = "hazelcast-jet-default.xml";
 
@@ -35,12 +35,12 @@ public final class XmlJetConfigLocator extends AbstractConfigLocator {
 
     @Override
     public boolean locateFromSystemProperty() {
-        return loadFromSystemProperty(HAZELCAST_JET_CONFIG_PROPERTY, XML_ACCEPTED_SUFFIXES);
+        return loadFromSystemProperty(SYSPROP_JET_CONFIG, XML_ACCEPTED_SUFFIXES);
     }
 
     @Override
     public boolean locateFromSystemPropertyOrFailOnUnacceptedSuffix() {
-        return loadFromSystemPropertyOrFailOnUnacceptedSuffix(HAZELCAST_JET_CONFIG_PROPERTY, XML_ACCEPTED_SUFFIXES);
+        return loadFromSystemPropertyOrFailOnUnacceptedSuffix(SYSPROP_JET_CONFIG, XML_ACCEPTED_SUFFIXES);
     }
 
     @Override

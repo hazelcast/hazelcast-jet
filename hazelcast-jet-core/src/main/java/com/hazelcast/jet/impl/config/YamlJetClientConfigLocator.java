@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.config;
 
 import com.hazelcast.config.AbstractConfigLocator;
 
+import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
 import static com.hazelcast.config.DeclarativeConfigUtil.YAML_ACCEPTED_SUFFIXES;
 
 /**
@@ -26,7 +27,6 @@ import static com.hazelcast.config.DeclarativeConfigUtil.YAML_ACCEPTED_SUFFIXES;
  */
 public final class YamlJetClientConfigLocator extends AbstractConfigLocator {
 
-    private static final String HAZELCAST_CLIENT_CONFIG_PROPERTY = "hazelcast.client.config";
     private static final String HAZELCAST_CLIENT_YAML = "hazelcast-client.yaml";
     private static final String HAZELCAST_CLIENT_DEFAULT_YAML = "hazelcast-jet-client-default.yaml";
 
@@ -35,12 +35,12 @@ public final class YamlJetClientConfigLocator extends AbstractConfigLocator {
 
     @Override
     public boolean locateFromSystemProperty() {
-        return loadFromSystemProperty(HAZELCAST_CLIENT_CONFIG_PROPERTY, YAML_ACCEPTED_SUFFIXES);
+        return loadFromSystemProperty(SYSPROP_CLIENT_CONFIG, YAML_ACCEPTED_SUFFIXES);
     }
 
     @Override
     public boolean locateFromSystemPropertyOrFailOnUnacceptedSuffix() {
-        return loadFromSystemPropertyOrFailOnUnacceptedSuffix(HAZELCAST_CLIENT_CONFIG_PROPERTY, YAML_ACCEPTED_SUFFIXES);
+        return loadFromSystemPropertyOrFailOnUnacceptedSuffix(SYSPROP_CLIENT_CONFIG, YAML_ACCEPTED_SUFFIXES);
     }
 
     @Override

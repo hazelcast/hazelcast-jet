@@ -27,6 +27,9 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
+import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
+import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.not;
@@ -48,9 +51,6 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastSerialClassRunner.class)
 public abstract class AbstractJetConfigWithSystemPropertyTest {
 
-    protected static final String HAZELCAST_JET_CONFIG_PROPERTY = "hazelcast.jet.config";
-    protected static final String HAZELCAST_MEMBER_CONFIG_PROPERTY = "hazelcast.config";
-    protected static final String HAZELCAST_CLIENT_CONFIG_PROPERTY = "hazelcast.client.config";
     protected static final String TEST_GROUP_NAME = "imdg";
     protected static final String PASSWORD = "PASSWORD";
     protected static final String INSTANCE_NAME = "my-instance";
@@ -58,9 +58,9 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
     @Before
     @After
     public void beforeAndAfter() {
-        System.clearProperty(HAZELCAST_JET_CONFIG_PROPERTY);
-        System.clearProperty(HAZELCAST_MEMBER_CONFIG_PROPERTY);
-        System.clearProperty(HAZELCAST_CLIENT_CONFIG_PROPERTY);
+        System.clearProperty(SYSPROP_JET_CONFIG);
+        System.clearProperty(SYSPROP_CLIENT_CONFIG);
+        System.clearProperty(SYSPROP_MEMBER_CONFIG);
     }
 
     @Test(expected = HazelcastException.class)
