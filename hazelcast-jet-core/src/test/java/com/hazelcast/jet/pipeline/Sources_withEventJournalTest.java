@@ -19,15 +19,15 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.cache.ICache;
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.map.IMap;
-import com.hazelcast.jet.IListJet;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -60,8 +60,8 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         Config config = new Config();
         config.getGroupConfig().setName(randomName());
         config.addCacheConfig(new CacheSimpleConfig().setName("*"));
-        config.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
-        config.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);
+        config.getMapConfig(JOURNALED_MAP_PREFIX + '*').getEventJournalConfig().setEnabled(true);
+        config.getCacheConfig(JOURNALED_CACHE_PREFIX + '*').getEventJournalConfig().setEnabled(true);
 
         remoteHz = createRemoteCluster(config, 2).get(0);
         clientConfig = getClientConfigForRemoteCluster(remoteHz);
@@ -216,7 +216,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         // Then
         p.drawFrom(source).withoutTimestamps().drainTo(sink);
         jet().newJob(p);
-        IListJet<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
+        IList<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
         assertTrueEventually(() -> {
                     assertEquals(2, sinkList.size());
 
@@ -246,7 +246,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         // Then
         p.drawFrom(source).withoutTimestamps().drainTo(sink);
         jet().newJob(p);
-        IListJet<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
+        IList<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
         assertTrueEventually(() -> {
                     assertEquals(2, sinkList.size());
 

@@ -24,8 +24,6 @@ import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.PartitioningStrategyConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.map.IMap;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Processor;
@@ -36,7 +34,8 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.map.AbstractEntryProcessor;
+import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
@@ -369,7 +368,7 @@ public class SinksTest extends PipelineTestSupport {
         p.close();
 
         // assert the output map contents
-        IMapJet<Object, Object> actual = member.getMap(sinkName);
+        IMap<Object, Object> actual = member.getMap(sinkName);
         assertEquals(1, actual.size());
         assertEquals(3, actual.get("k"));
     }
@@ -801,7 +800,7 @@ public class SinksTest extends PipelineTestSupport {
         list.addAll(sequence(itemCount));
     }
 
-    private static class IncrementEntryProcessor<K> extends AbstractEntryProcessor<K, Integer> {
+    private static class IncrementEntryProcessor<K> implements EntryProcessor<K, Integer, Void> {
 
         private Integer value;
 
@@ -810,7 +809,7 @@ public class SinksTest extends PipelineTestSupport {
         }
 
         @Override
-        public Object process(Entry<K, Integer> entry) {
+        public Void process(Entry<K, Integer> entry) {
             entry.setValue(entry.getValue() == null ? value : entry.getValue() + value);
             return null;
         }

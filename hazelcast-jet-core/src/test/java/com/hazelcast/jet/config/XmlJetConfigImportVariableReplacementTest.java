@@ -18,7 +18,6 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.IdentityReplacer;
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.TestReplacer;
-import com.hazelcast.config.ConfigurationException;
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.core.HazelcastException;
@@ -357,7 +356,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     }
 
     @Override
-    @Test(expected = ConfigurationException.class)
+    @Test(expected = InvalidConfigurationException.class)
     public void testMissingReplacement() throws Exception {
         String xml = JET_START_TAG
                 + "    <config-replacers>\n"

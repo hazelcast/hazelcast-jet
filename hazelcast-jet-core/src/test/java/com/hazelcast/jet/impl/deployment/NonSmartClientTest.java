@@ -51,7 +51,7 @@ public class NonSmartClientTest extends JetTestSupport {
     @Before
     public void setUp() {
         JetConfig jetConfig = new JetConfig();
-        jetConfig.getHazelcastConfig().getMapEventJournalConfig("journal*").setEnabled(true);
+        jetConfig.getHazelcastConfig().getMapConfig("journal*").getEventJournalConfig().setEnabled(true);
         instance = createJetMember(jetConfig);
         JetInstance jetInstance = createJetMember(jetConfig);
         Address address = jetInstance.getCluster().getLocalMember().getAddress();

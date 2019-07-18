@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.config;
 
-import com.hazelcast.config.ConfigurationException;
+import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.core.HazelcastException;
 import org.junit.Rule;
 import org.junit.Test;
@@ -99,7 +99,7 @@ public abstract class AbstractJetConfigImportVariableReplacementTest {
     @Test
     public abstract void testReplacers() throws Exception;
 
-    @Test(expected = ConfigurationException.class)
+    @Test(expected = InvalidConfigurationException.class)
     public abstract void testMissingReplacement() throws Exception;
 
     @Test

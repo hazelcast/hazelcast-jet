@@ -17,7 +17,7 @@
 package com.hazelcast.jet.benchmark;
 
 import com.hazelcast.cluster.Member;
-import com.hazelcast.core.Partition;
+import com.hazelcast.partition.Partition;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.JetConfig;

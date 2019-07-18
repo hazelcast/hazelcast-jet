@@ -28,7 +28,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,7 +60,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Category(ParallelTest.class)
+@Category(ParallelJVMTest.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class SlidingWindowPTest {
 

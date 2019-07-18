@@ -17,10 +17,7 @@
 package com.hazelcast.jet.server;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.core.IList;
-import com.hazelcast.jet.IListJet;
-import com.hazelcast.jet.IMapJet;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -30,6 +27,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -79,8 +77,8 @@ public class JetCommandLineTest extends JetTestSupport {
     private PrintStream out;
     private PrintStream err;
     private JetInstance jet;
-    private IMapJet<Integer, Integer> sourceMap;
-    private IListJet<Integer> sinkList;
+    private IMap<Integer, Integer> sourceMap;
+    private IList<Integer> sinkList;
     private JetInstance client;
 
     @BeforeClass
@@ -99,7 +97,7 @@ public class JetCommandLineTest extends JetTestSupport {
     @Before
     public void before() {
         JetConfig cfg = new JetConfig();
-        cfg.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
+        cfg.getHazelcastConfig().getMapConfig(SOURCE_NAME).getEventJournalConfig().setEnabled(true);
         String groupName = randomName();
         cfg.getHazelcastConfig().getGroupConfig().setName(groupName);
         jet = createJetMember(cfg);

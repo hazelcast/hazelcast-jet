@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Rule;
 import org.junit.Test;
@@ -132,7 +132,7 @@ public class UtilTest extends JetTestSupport {
         JetInstance[] instances = createJetMembers(2);
 
         logger.info("Populating source map...");
-        IMapJet<Object, Object> srcMap = instances[0].getMap("src");
+        IMap<Object, Object> srcMap = instances[0].getMap("src");
         Map<Integer, Integer> testData = IntStream.range(0, 100_000).boxed().collect(toMap(e -> e, e -> e));
         srcMap.putAll(testData);
 

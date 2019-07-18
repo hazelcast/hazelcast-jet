@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.DAG;
@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -67,7 +67,7 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-@Category(ParallelTest.class)
+@Category(ParallelJVMTest.class)
 public class ReadHdfsPTest extends HdfsTestSupport {
 
     private static final String[] ENTRIES = range(0, 4)

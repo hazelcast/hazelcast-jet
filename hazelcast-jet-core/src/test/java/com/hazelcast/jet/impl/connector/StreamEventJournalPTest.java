@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -75,13 +74,11 @@ public class StreamEventJournalPTest extends JetTestSupport {
     public void setUp() {
         JetConfig config = new JetConfig();
 
-        EventJournalConfig journalConfig = new EventJournalConfig()
-                .setMapName("*")
-                .setCapacity(JOURNAL_CAPACITY)
-                .setEnabled(true);
 
         config.getHazelcastConfig().setProperty(PARTITION_COUNT.getName(), String.valueOf(NUM_PARTITIONS));
-        config.getHazelcastConfig().addEventJournalConfig(journalConfig);
+        config.getHazelcastConfig().getMapConfig("*")
+              .getEventJournalConfig().setEnabled(true)
+              .setCapacity(JOURNAL_CAPACITY);
         instance = this.createJetMember(config);
 
         map = (MapProxyImpl<String, Integer>) instance.getHazelcastInstance().<String, Integer>getMap("test");

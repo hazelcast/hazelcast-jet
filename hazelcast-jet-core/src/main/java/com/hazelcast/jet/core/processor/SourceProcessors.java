@@ -99,25 +99,11 @@ public final class SourceProcessors {
     @Nonnull
     public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
         return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, projection);
     }
-
-    /**
-     * Returns a supplier of processors for
-     * {@link Sources#map(String, Predicate, FunctionEx)}.
-     */
-    @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier readMapP(
-            @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, toProjection(projection));
-    }
-
 
     /**
      * Returns a supplier of processors for
@@ -164,26 +150,10 @@ public final class SourceProcessors {
     public static <T, K, V> ProcessorMetaSupplier readRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
         return ReadWithPartitionIteratorP.readRemoteMapSupplier(mapName, clientConfig, projection, predicate);
-    }
-
-    /**
-     * Returns a supplier of processors for
-     * {@link Sources#remoteMap(String, ClientConfig, Predicate, FunctionEx)}.
-     */
-    @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier readRemoteMapP(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
-    ) {
-        return ReadWithPartitionIteratorP.readRemoteMapSupplier(
-                mapName, clientConfig, toProjection(projectionFn), predicate
-        );
     }
 
     /**

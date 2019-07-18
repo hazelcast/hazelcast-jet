@@ -23,7 +23,6 @@ import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
@@ -48,7 +47,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.projection.Projections.singleAttribute;
-import static com.hazelcast.query.TruePredicate.truePredicate;
+import static com.hazelcast.query.Predicates.alwaysTrue;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -88,7 +87,7 @@ public class SourcesTest extends PipelineTestSupport {
 
         // When
         BatchSource<Integer> source = Sources.batchFromProcessor("test",
-                readMapP(srcName, truePredicate(), Entry::getValue));
+                readMapP(srcName, alwaysTrue(), Entry::getValue));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -139,7 +138,7 @@ public class SourcesTest extends PipelineTestSupport {
         putToBatchSrcMap(input);
 
         // When
-        BatchSource<Object> source = Sources.map(srcName, truePredicate(), singleAttribute("value"));
+        BatchSource<Object> source = Sources.map(srcName, alwaysTrue(), singleAttribute("value"));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -154,7 +153,7 @@ public class SourcesTest extends PipelineTestSupport {
         putToBatchSrcMap(input);
 
         // When
-        BatchSource<Integer> source = Sources.map(srcMap, truePredicate(), Projections.singleAttribute("value"));
+        BatchSource<Integer> source = Sources.map(srcMap, alwaysTrue(), Projections.singleAttribute("value"));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -171,7 +170,7 @@ public class SourcesTest extends PipelineTestSupport {
         // When
         BatchSource<Integer> source = Sources.map(
                 srcName,
-                truePredicate(),
+                alwaysTrue(),
                 Entry<String, Integer>::getValue);
 
         // Then
@@ -189,7 +188,7 @@ public class SourcesTest extends PipelineTestSupport {
         // When
         BatchSource<Integer> source = Sources.map(
                 srcMap,
-                truePredicate(),
+                alwaysTrue(),
                 Entry::getValue);
 
         // Then
@@ -202,11 +201,11 @@ public class SourcesTest extends PipelineTestSupport {
     public void map_withProjectionToNull_then_nullsSkipped() {
         // given
         String mapName = randomName();
-        IMapJet<Integer, Entry<Integer, String>> sourceMap = jet().getMap(mapName);
+        IMap<Integer, Entry<Integer, String>> sourceMap = jet().getMap(mapName);
         range(0, itemCount).forEach(i -> sourceMap.put(i, entry(i, i % 2 == 0 ? null : String.valueOf(i))));
 
         // when
-        BatchSource<String> source = Sources.map(mapName, truePredicate(), singleAttribute("value"));
+        BatchSource<String> source = Sources.map(mapName, alwaysTrue(), singleAttribute("value"));
 
         // then
         p.drawFrom(source).drainTo(sink);
@@ -250,7 +249,7 @@ public class SourcesTest extends PipelineTestSupport {
 
         // When
         BatchSource<Object> source = Sources.remoteMap(
-                srcName, clientConfig, truePredicate(), singleAttribute("value"));
+                srcName, clientConfig, alwaysTrue(), singleAttribute("value"));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -266,7 +265,7 @@ public class SourcesTest extends PipelineTestSupport {
 
         // When
         BatchSource<Integer> source = Sources.remoteMap(
-                srcName, clientConfig, truePredicate(), Entry<String, Integer>::getValue);
+                srcName, clientConfig, alwaysTrue(), Entry<String, Integer>::getValue);
 
         // Then
         p.drawFrom(source).drainTo(sink);

@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -32,7 +32,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static java.util.Arrays.asList;
 
-@Category(ParallelTest.class)
+@Category(ParallelJVMTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class RollingAggregatePTest {
 

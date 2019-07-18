@@ -40,6 +40,7 @@ import com.hazelcast.projection.Projection;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
+import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
@@ -210,7 +211,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and
      * {@link Projections#multiAttribute}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or {@link PredicateBuilder}
+     * using the {@link Predicates} factory or {@link PredicateBuilder}
      * to create the predicate. In this case Jet can test the predicate and
      * apply the projection without deserializing the whole object.
      * <p>
@@ -247,7 +248,7 @@ public final class Sources {
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events. If you want to specify just the
      *                  projection, use {@link
-     *                  GenericPredicates#alwaysTrue()} as a pass-through
+     *                  Predicates#alwaysTrue()} as a pass-through
      *                  predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -257,7 +258,7 @@ public final class Sources {
     @Nonnull
     public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
@@ -280,7 +281,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and
      * {@link Projections#multiAttribute}) to create your projection instance
-     * and using the {@link GenericPredicates} factory or {@link PredicateBuilder}
+     * and using the {@link Predicates} factory or {@link PredicateBuilder}
      * to create the predicate. In this case Jet can test the predicate and
      * apply the projection without deserializing the whole object.
      * <p>
@@ -317,7 +318,7 @@ public final class Sources {
      * @param map        the Hazelcast map to draw data from
      * @param predicate  the predicate to filter the events. If you want to specify just the
      *                   projection, use {@link
-     *                   GenericPredicates#alwaysTrue()} as a pass-through
+     *                   Predicates#alwaysTrue()} as a pass-through
      *                   predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -327,39 +328,8 @@ public final class Sources {
     @Nonnull
     public static <T, K, V> BatchSource<T> map(
             @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return map(map.getName(), predicate, projection);
-    }
-
-    /**
-     * Convenience for {@link #map(String, Predicate, Projection)}
-     * which uses a {@link FunctionEx} as the projection function.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> map(
-            @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
-    }
-
-    /**
-     * Convenience for {@link #map(IMap, Predicate, Projection)} which uses a
-     * {@link FunctionEx} as the projection function.
-     * <p>
-     * <strong>NOTE:</strong> Jet only remembers the name of the map you supply
-     * and acquires a map with that name on the local cluster. If you supply a
-     * map instance from another cluster, no error will be thrown to indicate
-     * this.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> map(
-            @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return map(map.getName(), predicate, projection);
     }
@@ -578,7 +548,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and {@link
      * Projections#multiAttribute}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or
+     * using the {@link Predicates} factory or
      * {@link PredicateBuilder PredicateBuilder} to create
      * the predicate. In this case Jet can test the predicate and apply the
      * projection without deserializing the whole object.
@@ -611,7 +581,7 @@ public final class Sources {
      *
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events. If you want to specify just the
-     *                  projection, use {@link GenericPredicates#alwaysTrue()}
+     *                  projection, use {@link Predicates#alwaysTrue()}
      *                  as a pass-through predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -622,23 +592,8 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                readRemoteMapP(mapName, clientConfig, predicate, projection));
-    }
-
-    /**
-     * Convenience for {@link #remoteMap(String, ClientConfig, Predicate, Projection)}
-     * which use a {@link FunctionEx} as the projection function.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> remoteMap(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
                 readRemoteMapP(mapName, clientConfig, predicate, projection));

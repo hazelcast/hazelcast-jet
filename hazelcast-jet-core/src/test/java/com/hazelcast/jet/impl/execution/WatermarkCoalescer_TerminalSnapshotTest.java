@@ -62,7 +62,6 @@ public class WatermarkCoalescer_TerminalSnapshotTest extends JetTestSupport {
     public void setUp() {
         JetConfig config = new JetConfig();
         EventJournalConfig journalConfig = new EventJournalConfig()
-                .setMapName("*")
                 .setCapacity(1_000_000)
                 .setEnabled(true);
 
@@ -70,7 +69,7 @@ public class WatermarkCoalescer_TerminalSnapshotTest extends JetTestSupport {
         // to work correctly
         config.getHazelcastConfig().setProperty(
                 GroupProperty.PARTITION_COUNT.getName(), String.valueOf(PARTITION_COUNT));
-        config.getHazelcastConfig().addEventJournalConfig(journalConfig);
+        config.getHazelcastConfig().getMapConfig("*").setEventJournalConfig(journalConfig);
         instance = createJetMember(config);
         sourceMap = instance.getMap("test");
     }

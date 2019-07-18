@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.config.EventJournalConfig;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -65,13 +65,13 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     public void setUp() {
         JetConfig config = new JetConfig();
 
-        EventJournalConfig journalConfig = new EventJournalConfig()
-                .setMapName("*")
+        MapConfig mapConfig = new MapConfig();
+        mapConfig.getEventJournalConfig()
                 .setCapacity(JOURNAL_CAPACITY)
                 .setEnabled(true);
 
         config.getHazelcastConfig().setProperty(PARTITION_COUNT.getName(), "2");
-        config.getHazelcastConfig().addEventJournalConfig(journalConfig);
+        config.getHazelcastConfig().addMapConfig(mapConfig);
         instance = this.createJetMember(config);
 
         map = (MapProxyImpl<Integer, Integer>) instance.getHazelcastInstance().<Integer, Integer>getMap("test");

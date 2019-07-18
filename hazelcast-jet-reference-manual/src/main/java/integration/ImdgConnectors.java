@@ -18,7 +18,7 @@ package integration;
 
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
-import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import datamodel.Person;
@@ -93,7 +92,7 @@ public class ImdgConnectors {
 
     static
     //tag::s6[]
-    class IncrementEntryProcessor implements EntryProcessor<String, Integer> {
+    class IncrementEntryProcessor implements EntryProcessor<String, Integer, Integer> {
 
         private int incrementBy;
 
@@ -102,14 +101,10 @@ public class ImdgConnectors {
         }
 
         @Override
-        public Object process(Entry<String, Integer> entry) {
+        public Integer process(Entry<String, Integer> entry) {
             return entry.setValue(entry.getValue() + incrementBy);
         }
 
-        @Override
-        public EntryBackupProcessor<String, Integer> getBackupProcessor() {
-            return null;
-        }
     }
     //end::s6[]
 
@@ -144,7 +139,8 @@ public class ImdgConnectors {
         //tag::s9[]
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig()
-           .getMapEventJournalConfig("inputMap")
+           .getMapConfig("inputMap")
+           .getEventJournalConfig()
            .setEnabled(true)
            .setCapacity(1000)         // how many events to keep before evicting
            .setTimeToLiveSeconds(10); // evict events older than this
@@ -153,7 +149,8 @@ public class ImdgConnectors {
 
         //tag::s10[]
         cfg.getHazelcastConfig()
-           .getCacheEventJournalConfig("inputCache")
+           .getCacheConfig("inputCache")
+           .getEventJournalConfig()
            .setEnabled(true)
            .setCapacity(1000)
            .setTimeToLiveSeconds(10);

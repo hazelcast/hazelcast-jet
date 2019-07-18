@@ -77,8 +77,8 @@ public abstract class TestInClusterSupport extends JetTestSupport {
         // should be 2 * MEMBER_COUNT.
         hzConfig.getProperties().setProperty("hazelcast.partition.count", "" + 2 * MEMBER_COUNT);
         hzConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
-        hzConfig.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
-        hzConfig.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);
+        hzConfig.getMapConfig(JOURNALED_MAP_PREFIX + '*').getEventJournalConfig().setEnabled(true);
+        hzConfig.getCacheConfig(JOURNALED_CACHE_PREFIX + '*').getEventJournalConfig().setEnabled(true);
         member = createCluster(MEMBER_COUNT, config);
         client = factory.newClient();
     }

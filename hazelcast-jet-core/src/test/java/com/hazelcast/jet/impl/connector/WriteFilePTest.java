@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.IListJet;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -60,7 +60,7 @@ public class WriteFilePTest extends JetTestSupport {
     private JetInstance instance;
     private Path directory;
     private Path file;
-    private IListJet<String> list;
+    private IList<String> list;
 
     @Before
     public void setup() throws IOException {

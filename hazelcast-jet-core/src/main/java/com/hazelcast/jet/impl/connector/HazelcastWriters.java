@@ -21,13 +21,11 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.proxy.ClientMapProxy;
 import com.hazelcast.client.spi.ClientPartitionService;
+import com.hazelcast.collection.IList;
 import com.hazelcast.core.ExecutionCallback;
-import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.collection.IList;
-import com.hazelcast.map.IMap;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.RestartableException;
@@ -37,12 +35,13 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BinaryOperatorEx;
 import com.hazelcast.jet.function.ConsumerEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -404,17 +403,18 @@ public final class HazelcastWriters {
         }
     }
 
+
     private static final class EntryProcessorWriter<T, K, V, R> extends AbstractProcessor {
 
         private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
         private final AtomicInteger numConcurrentOps = new AtomicInteger();
 
         private final boolean isLocal;
-        private final IMap<? super K, ? extends V> map;
+        private final IMap<K, V> map;
         private final FunctionEx<? super T, ? extends K> toKeyFn;
-        private final FunctionEx<? super T, ? extends EntryProcessor<? super K, ? super V, R>> toEntryProcessorFn;
+        private final FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn;
         private final AtomicReference<Throwable> lastError = new AtomicReference<>();
-        private final ExecutionCallback<? super R> callback = callbackOf(
+        private final ExecutionCallback<R> callback = callbackOf(
                 response -> numConcurrentOps.decrementAndGet(),
                 exception -> {
                     numConcurrentOps.decrementAndGet();
@@ -456,25 +456,8 @@ public final class HazelcastWriters {
             try {
                 @SuppressWarnings("unchecked")
                 T item = (T) object;
-                EntryProcessor<? super K, ? super V, R> entryProcessor = toEntryProcessorFn.apply(item);
-                ExecutionCallback<? super R> callback = this.callback;
                 K key = toKeyFn.apply(item);
-                map.submitToKey(key, new EntryProcessor<K, V, R>() {
-                    @Override
-                    public R process(Entry<K, V> entry) {
-                        return null;
-                    }
-                }, new ExecutionCallback<R>() {
-                    @Override
-                    public void onResponse(R response) {
-
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
-
-                    }
-                });
+                map.submitToKey(key, toEntryProcessorFn.apply(item), callback);
                 return true;
             } catch (HazelcastInstanceNotActiveException e) {
                 throw handleInstanceNotActive(e, isLocal);
@@ -502,17 +485,6 @@ public final class HazelcastWriters {
             if (t != null) {
                 throw sneakyThrow(t);
             }
-        }
-    }
-
-    static class EP<K, V, R> {
-        void test() {
-            HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance();
-            IMap<? super K, ? super V> map = hazelcastInstance.getMap("map");
-            ExecutionCallback<? super R> callback = null;
-            EntryProcessor<? super K, ? super V, R> ep = null;
-            K key = null;
-            map.submitToKey(key, ep, callback);
         }
     }
 

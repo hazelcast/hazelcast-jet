@@ -26,7 +26,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -48,7 +48,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertTrue;
 
-@Category(ParallelTest.class)
+@Category(ParallelJVMTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class SlidingWindowP_stage1Test {
 

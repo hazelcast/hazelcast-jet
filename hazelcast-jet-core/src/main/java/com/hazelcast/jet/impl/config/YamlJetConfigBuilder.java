@@ -44,7 +44,7 @@ public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder {
 
     public YamlJetConfigBuilder(YamlJetConfigLocator locator) {
         if (locator == null) {
-            locator = new YamlJetConfigLocator(true);
+            locator = new YamlJetConfigLocator();
             locator.locateEverywhere();
         }
         this.in = locator.getIn();

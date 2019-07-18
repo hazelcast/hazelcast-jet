@@ -16,9 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.jet.IListJet;
-import com.hazelcast.jet.IMapJet;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
@@ -31,13 +29,14 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.junit.After;
@@ -92,9 +91,9 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
     @Parameter
     public boolean ordered;
 
-    private IMapJet<Integer, Integer> journaledMap;
+    private IMap<Integer, Integer> journaledMap;
     private ContextFactory<ExecutorService> contextFactory;
-    private IListJet<Object> sinkList;
+    private IList<Object> sinkList;
     private JobConfig jobConfig;
 
     @Parameters(name = "ordered={0}")
@@ -105,9 +104,9 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
     @BeforeClass
     public static void beforeClass() {
         JetConfig config = new JetConfig();
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig()
-                .setMapName("journaledMap*")
-                .setCapacity(100_000));
+        config.getHazelcastConfig().getMapConfig("journaledMap*").getEventJournalConfig()
+              .setEnabled(true)
+              .setCapacity(100_000);
         inst = factory.newMember(config);
         factory.newMember(config);
     }
