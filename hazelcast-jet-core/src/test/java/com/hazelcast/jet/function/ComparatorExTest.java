@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.hazelcast.util.function;
+package com.hazelcast.jet.function;
 
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.util.function.ComparatorEx;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.util.function.ComparatorEx.*;
 import static com.hazelcast.util.function.ComparatorEx.nullsFirst;
 import static com.hazelcast.util.function.ComparatorEx.nullsLast;
-import static com.hazelcast.util.function.ComparatorsEx.NATURAL_ORDER;
-import static com.hazelcast.util.function.ComparatorsEx.REVERSE_ORDER;
-import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 
@@ -33,20 +33,20 @@ public class ComparatorExTest {
 
     @Test
     public void when_reverseComparator() {
-        assertSame(REVERSE_ORDER, NATURAL_ORDER.reversed());
-        assertSame(NATURAL_ORDER, REVERSE_ORDER.reversed());
+        assertSame(reverseOrder(), naturalOrder().reversed());
+        assertSame(naturalOrder(), reverseOrder().reversed());
     }
 
     @Test
     public void when_reverseOrderComparator() {
-        ComparatorEx c = REVERSE_ORDER;
+        ComparatorEx c = reverseOrder();
         assertEquals(1, c.compare(1, 2));
         assertEquals(-1, c.compare(2, 1));
     }
 
     @Test
     public void when_nullsFirstComparator() {
-        ComparatorEx c = nullsFirst(NATURAL_ORDER);
+        ComparatorEx c = nullsFirst(naturalOrder());
         assertEquals(-1, c.compare(1, 2));
         assertEquals(1, c.compare(2, 1));
         assertEquals(1, c.compare(0, null));
@@ -55,7 +55,7 @@ public class ComparatorExTest {
 
     @Test
     public void when_nullsLastComparator() {
-        ComparatorEx c = nullsLast(NATURAL_ORDER);
+        ComparatorEx c = nullsLast(naturalOrder());
         assertEquals(-1, c.compare(1, 2));
         assertEquals(1, c.compare(2, 1));
         assertEquals(-1, c.compare(0, null));
@@ -82,18 +82,18 @@ public class ComparatorExTest {
 
     @Test
     public void testSerializable_naturalOrder() {
-        checkSerializable(ComparatorEx.naturalOrder(), null);
+        checkSerializable(naturalOrder(), null);
     }
 
     @Test
     public void testSerializable_reverseOrder() {
-        checkSerializable(ComparatorEx.reverseOrder(), null);
+        checkSerializable(reverseOrder(), null);
     }
 
     @Test
     public void testSerializable_thenComparing_keyExtractor() {
         checkSerializable(
-                ComparatorEx.naturalOrder()
+                naturalOrder()
                                      .thenComparing(Object::toString),
                 null);
     }
@@ -101,7 +101,7 @@ public class ComparatorExTest {
     @Test
     public void testSerializable_thenComparing_otherComparator() {
         checkSerializable(
-                ComparatorEx.naturalOrder()
+                naturalOrder()
                                      .thenComparing(Comparable::compareTo),
                 null);
     }
@@ -109,7 +109,7 @@ public class ComparatorExTest {
     @Test
     public void testSerializable_thenComparing_keyExtractor_keyComparator() {
         checkSerializable(
-                ComparatorEx.naturalOrder()
+                naturalOrder()
                                      .thenComparing(Object::toString, Comparable::compareTo),
                 null);
     }
@@ -117,7 +117,7 @@ public class ComparatorExTest {
     @Test
     public void testSerializable_thenComparingInt() {
         checkSerializable(
-                ComparatorEx.naturalOrder()
+                naturalOrder()
                                      .thenComparingInt(Object::hashCode),
                 null);
     }
@@ -154,27 +154,27 @@ public class ComparatorExTest {
 
     @Test
     public void testSerializable_comparing_keyExtractor() {
-        checkSerializable(ComparatorEx.comparing(Object::toString), null);
+        checkSerializable(comparing(Object::toString), null);
     }
 
     @Test
     public void testSerializable_comparing_keyExtractor_keyComparator() {
-        checkSerializable(ComparatorEx.comparing(Object::toString, String::compareTo), null);
+        checkSerializable(comparing(Object::toString, String::compareTo), null);
     }
 
     @Test
     public void testSerializable_comparingInt() {
-        checkSerializable(ComparatorEx.comparingInt(Object::hashCode), null);
+        checkSerializable(comparingInt(Object::hashCode), null);
     }
 
     @Test
     public void testSerializable_comparingLong() {
-        checkSerializable(ComparatorEx.comparingLong(Long::longValue), null);
+        checkSerializable(comparingLong(Long::longValue), null);
     }
 
     @Test
     public void testSerializable_comparingDouble() {
-        checkSerializable(ComparatorEx.comparingDouble(Double::doubleValue), null);
+        checkSerializable(comparingDouble(Double::doubleValue), null);
     }
 
 }

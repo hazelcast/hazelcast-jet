@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.hazelcast.util.function;
+package com.hazelcast.jet.function;
 
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.Functions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
