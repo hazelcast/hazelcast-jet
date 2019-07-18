@@ -21,6 +21,7 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.ICacheJet;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetInstance;
@@ -89,6 +90,9 @@ public class HazelcastConnectorTest extends JetTestSupport {
         Config hazelcastConfig = jetConfig.getHazelcastConfig();
         CacheSimpleConfig cacheConfig = new CacheSimpleConfig().setName("*");
         cacheConfig.getEventJournalConfig().setEnabled(true);
+        MapConfig mapConfig = new MapConfig();
+        mapConfig.setName("*").getEventJournalConfig().setEnabled(true);
+        hazelcastConfig.addMapConfig(mapConfig);
         hazelcastConfig.addCacheConfig(cacheConfig);
         jetInstance = factory.newMember(jetConfig);
         jetInstance2 = factory.newMember(jetConfig);

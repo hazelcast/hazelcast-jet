@@ -22,6 +22,7 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -93,6 +94,9 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
         cacheConfig.getEventJournalConfig().setEnabled(true);
         config.addCacheConfig(cacheConfig);
         config.getGroupConfig().setName(randomName());
+        MapConfig mapConfig = new MapConfig();
+        mapConfig.setName("*").getEventJournalConfig().setEnabled(true);
+        config.addMapConfig(mapConfig);
         hz = Hazelcast.newHazelcastInstance(config);
         HazelcastInstance hz2 = Hazelcast.newHazelcastInstance(config);
 

@@ -65,16 +65,18 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
     public void setUp() {
         JetConfig config = new JetConfig();
 
+        String mapName = randomMapName();
         MapConfig mapConfig = new MapConfig();
+        mapConfig.setName(mapName);
         mapConfig.getEventJournalConfig()
-                .setCapacity(JOURNAL_CAPACITY)
-                .setEnabled(true);
+                 .setCapacity(JOURNAL_CAPACITY)
+                 .setEnabled(true);
 
         config.getHazelcastConfig().setProperty(PARTITION_COUNT.getName(), "2");
         config.getHazelcastConfig().addMapConfig(mapConfig);
         instance = this.createJetMember(config);
 
-        map = (MapProxyImpl<Integer, Integer>) instance.getHazelcastInstance().<Integer, Integer>getMap("test");
+        map = (MapProxyImpl<Integer, Integer>) instance.getHazelcastInstance().<Integer, Integer>getMap(mapName);
 
         partitionKeys = new int[2];
         for (int i = 1; IntStream.of(partitionKeys).anyMatch(val -> val == 0); i++) {
@@ -142,7 +144,7 @@ public class StreamEventJournalP_WmCoalescingTest extends JetTestSupport {
         Thread updatingThread = new Thread(() -> uncheckRun(() -> {
             // We will start after a delay so that the source will first become idle and then recover.
             latch.await();
-            for (;;) {
+            for (; ; ) {
                 map.put(partitionKeys[0], 12);
                 Thread.sleep(100);
             }
