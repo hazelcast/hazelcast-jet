@@ -18,9 +18,9 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.BiPredicateEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.ContextFactory;

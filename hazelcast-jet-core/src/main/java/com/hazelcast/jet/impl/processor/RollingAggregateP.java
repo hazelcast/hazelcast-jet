@@ -20,7 +20,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.GeneralStageWithKey;
 

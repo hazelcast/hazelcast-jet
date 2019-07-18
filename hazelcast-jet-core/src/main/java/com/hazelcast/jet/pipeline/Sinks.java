@@ -21,11 +21,11 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.core.Offloadable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BinaryOperatorEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.BinaryOperatorEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
@@ -54,7 +54,7 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
-import static com.hazelcast.jet.function.Functions.entryValue;
+import static com.hazelcast.util.function.Functions.entryValue;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**

@@ -18,7 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
 import com.hazelcast.jet.impl.pipeline.FunctionAdapter;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;

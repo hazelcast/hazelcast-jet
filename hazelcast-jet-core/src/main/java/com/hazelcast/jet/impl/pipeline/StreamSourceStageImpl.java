@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.function.ObjLongBiFunction;
-import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.util.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.pipeline.StreamSourceStage;

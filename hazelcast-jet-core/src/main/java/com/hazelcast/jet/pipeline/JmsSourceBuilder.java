@@ -18,9 +18,9 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;

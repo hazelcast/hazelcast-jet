@@ -26,7 +26,7 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.util.function.PredicateEx;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import org.junit.AfterClass;
@@ -42,7 +42,7 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.function.Functions.entryValue;
+import static com.hazelcast.util.function.Functions.entryValue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;

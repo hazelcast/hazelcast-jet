@@ -18,8 +18,8 @@ package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.util.Preconditions;
 
@@ -31,7 +31,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.function.FunctionEx.identity;
+import static com.hazelcast.util.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;

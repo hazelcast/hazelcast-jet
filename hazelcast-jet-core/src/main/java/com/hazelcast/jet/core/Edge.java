@@ -19,7 +19,7 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.impl.MasterJobContext;
 import com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
@@ -35,7 +35,7 @@ import java.io.Serializable;
 import java.util.Map;
 
 import static com.hazelcast.jet.core.Partitioner.defaultPartitioner;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.util.function.Functions.wholeItem;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**

@@ -17,9 +17,9 @@
 package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,7 +27,7 @@ import org.junit.runner.RunWith;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.datamodel.Tag.tag0;
 import static com.hazelcast.jet.datamodel.Tag.tag1;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.util.function.Functions.wholeItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 

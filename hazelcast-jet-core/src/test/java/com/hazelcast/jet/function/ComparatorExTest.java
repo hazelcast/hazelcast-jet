@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.function;
+package com.hazelcast.util.function;
 
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.function.ComparatorEx.nullsFirst;
-import static com.hazelcast.jet.function.ComparatorEx.nullsLast;
-import static com.hazelcast.jet.function.ComparatorsEx.NATURAL_ORDER;
-import static com.hazelcast.jet.function.ComparatorsEx.REVERSE_ORDER;
+import static com.hazelcast.util.function.ComparatorEx.nullsFirst;
+import static com.hazelcast.util.function.ComparatorEx.nullsLast;
+import static com.hazelcast.util.function.ComparatorsEx.NATURAL_ORDER;
+import static com.hazelcast.util.function.ComparatorsEx.REVERSE_ORDER;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;

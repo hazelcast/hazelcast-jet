@@ -18,7 +18,7 @@ package com.hazelcast.jet.kafka;
 
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamSourceStage;

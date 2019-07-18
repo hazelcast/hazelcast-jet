@@ -33,7 +33,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.MigrationWatcher;
 import com.hazelcast.jet.impl.util.CircularListCursor;

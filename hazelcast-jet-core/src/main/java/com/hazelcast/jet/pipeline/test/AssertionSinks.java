@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.function.ConsumerEx;
+import com.hazelcast.util.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.spi.annotation.Beta;
 

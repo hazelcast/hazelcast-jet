@@ -21,7 +21,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelJVMTest;

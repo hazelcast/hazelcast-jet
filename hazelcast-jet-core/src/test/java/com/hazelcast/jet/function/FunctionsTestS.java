@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.function;
+package com.hazelcast.util.function;
 
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.HazelcastTestSupport;
@@ -22,11 +22,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.Functions.entryKey;
-import static com.hazelcast.jet.function.Functions.entryValue;
-import static com.hazelcast.jet.function.Functions.wholeItem;
-import static com.hazelcast.jet.function.PredicateEx.alwaysFalse;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.util.function.Functions.entryKey;
+import static com.hazelcast.util.function.Functions.entryValue;
+import static com.hazelcast.util.function.Functions.wholeItem;
+import static com.hazelcast.util.function.PredicateEx.alwaysFalse;
+import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 

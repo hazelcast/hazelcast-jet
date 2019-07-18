@@ -25,7 +25,7 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.util.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.processor.SessionWindowP.Keys;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
@@ -40,7 +40,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.function.Functions.entryKey;
+import static com.hazelcast.util.function.Functions.entryKey;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 

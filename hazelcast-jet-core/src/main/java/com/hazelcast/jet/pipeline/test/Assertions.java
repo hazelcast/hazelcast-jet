@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.spi.annotation.Beta;

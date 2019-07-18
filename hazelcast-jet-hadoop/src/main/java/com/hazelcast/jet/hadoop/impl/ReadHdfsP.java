@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
