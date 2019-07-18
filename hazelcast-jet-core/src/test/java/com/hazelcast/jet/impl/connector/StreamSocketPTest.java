@@ -50,6 +50,7 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 @Category(ParallelJVMTest.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastParallelParametersRunnerFactory.class)
 public class StreamSocketPTest extends JetTestSupport {
 
     @Parameter
