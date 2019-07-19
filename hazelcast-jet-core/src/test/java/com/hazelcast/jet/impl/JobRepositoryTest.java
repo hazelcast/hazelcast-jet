@@ -91,7 +91,7 @@ public class JobRepositoryTest extends JetTestSupport {
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).isEmpty());
+        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).get().isEmpty());
         List<Long> ids = executionIds.get(jobId);
         assertTrue(ids.contains(executionId1));
         assertTrue(ids.contains(executionId2));
@@ -111,7 +111,7 @@ public class JobRepositoryTest extends JetTestSupport {
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse(jobRepository.getJobResources(jobId).isEmpty());
+        assertFalse(jobRepository.getJobResources(jobId).get().isEmpty());
 
         List<Long> ids = executionIds.get(jobId);
         assertTrue(ids.contains(executionId1));
@@ -126,7 +126,7 @@ public class JobRepositoryTest extends JetTestSupport {
 
         cleanup();
 
-        assertTrue(jobRepository.getJobResources(jobId).isEmpty());
+        assertTrue(jobRepository.getJobResources(jobId).get().isEmpty());
     }
 
     @Test

@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.DeflaterOutputStream;
@@ -127,11 +128,14 @@ public class JobRepository {
      */
     public static final String SNAPSHOT_DATA_MAP_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "snapshot.";
 
+    /**
+     * Maximum number of job results to keep
+     */
+    public static final int JOB_RESULTS_MAX_SIZE = 1_000;
+
     private static final long DEFAULT_RESOURCES_EXPIRATION_MILLIS = HOURS.toMillis(2);
     private static final int JOB_ID_STRING_LENGTH = idToString(0L).length();
 
-    // maximum number of job results to keep
-    public static final int JOB_RESULTS_MAX_SIZE = 1_000;
 
     private final HazelcastInstance instance;
     private final ILogger logger;
@@ -184,7 +188,7 @@ public class JobRepository {
         }
         // avoid creating resources map if map is empty
         if (tmpMap.size() > 0) {
-            IMap<String, Object> jobResourcesMap = getJobResources(jobId);
+            IMap<String, Object> jobResourcesMap = getJobResources(jobId).get();
             // now upload it all
             try {
                 jobResourcesMap.putAll(tmpMap);
@@ -308,15 +312,10 @@ public class JobRepository {
      * so that it will not be used again for a new job submission.
      */
     void deleteJob(long jobId) {
-        // delete the job record
+        // delete the job record and related records
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
         executionIds.remove(jobId);
-
-        // delete job resources
-        instance.getMap(snapshotDataMapName(jobId, 0)).destroy();
-        instance.getMap(snapshotDataMapName(jobId, 1)).destroy();
-        getJobResources(jobId).destroy();
     }
 
     /**
@@ -398,8 +397,8 @@ public class JobRepository {
        return jobExecutionRecords.get(jobId);
     }
 
-    <T> IMap<String, T> getJobResources(long jobId) {
-        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId));
+    <T> Supplier<IMap<String, T>> getJobResources(long jobId) {
+        return Util.memoizeConcurrent(() -> instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId)));
     }
 
     public JobResult getJobResult(long jobId) {
@@ -574,7 +573,7 @@ public class JobRepository {
     private static class ExecutionIdProcessor extends AbstractEntryProcessor {
         private final long executionId;
 
-        public ExecutionIdProcessor(long executionId) {
+        ExecutionIdProcessor(long executionId) {
             this.executionId = executionId;
         }
 
