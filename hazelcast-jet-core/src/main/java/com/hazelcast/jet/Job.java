@@ -85,18 +85,18 @@ public interface Job {
     JobStatus getStatus();
 
     /**
-     * <p>Returns a snapshot of the current values of all job-specific metrics.</p>
-     *
-     * <p>While the job is running the metric values get updated periodically
+     * Returns a snapshot of the current values of all job-specific metrics.
+     * <p>
+     * While the job is running the metric values get updated periodically
      * (see {@link MetricsConfig#getCollectionIntervalSeconds()}, default is
-     * {@value MetricsConfig#DEFAULT_METRICS_COLLECTION_SECONDS} seconds). </p>
-     *
-     * <p>Once a job finishes executing (successfully or with a failure) the
+     * {@value MetricsConfig#DEFAULT_METRICS_COLLECTION_SECONDS} seconds).
+     * <p>
+     * Once a job finishes executing (successfully or with a failure) the
      * metrics will have their most up-to-date values (ie. last metric updates
-     * from right before job completion will not get lost).</p>
-     *
-     * <p>If a job is restarted then the metrics are reset too, their values
-     * will reflect only updates from the latest execution of the job.</p>
+     * from right before job completion will not get lost).
+     * <p>
+     * If a job is restarted then the metrics are reset too, their values
+     * will reflect only updates from the latest execution of the job.
      *
      * @since 3.2
      */

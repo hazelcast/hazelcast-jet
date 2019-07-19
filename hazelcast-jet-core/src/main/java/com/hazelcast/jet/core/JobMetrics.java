@@ -35,22 +35,18 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.Util.entry;
 
 /**
+ * An immutable collection of job-specific metrics, where each metric has a name and a
+ * {@link Long} numberic value. The name is a {@link String} formed from a comma separated
+ * list of tag=value pairs, which may or may not be enclosed by square brackets. Some
+ * examples of valid metric names:
+ * <ul>
+ * <li>[module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]</li>
+ * <li>module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity</li>
+ * </ul>
  * <p>
- *     An immutable collection of job-specific metrics, where each metric has a name and a
- *     {@link Long} numberic value. The name is a {@link String} formed from a comma separated
- *     list of tag=value pairs, which may or may not be enclosed by square brackets. Some
- *     examples of valid metric names:
- *     <ul>
- *         <li>[module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]</li>
- *         <li>module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity</li>
- *     </ul>
- * </p>
- *
- * <p>
- *     Since all names are built from tag-value pairs it's possible to filter metrics based on tags,
- *     that's what the {@link #withTag(String, String)} method does. For a list of possible tag names
- *     see {@link MetricTags}.
- * </p>
+ * Since all names are built from tag-value pairs it's possible to filter metrics based on tags,
+ * that's what the {@link #withTag(String, String)} method does. For a list of possible tag names
+ * see {@link MetricTags}.
  *
  * @since 3.2
  */
@@ -65,18 +61,18 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     private JobMetrics(@Nonnull Map<String, Long> metrics) {
+        Objects.requireNonNull(metrics, "metrics");
         this.metrics = Collections.unmodifiableMap(metrics);
     }
 
     /**
-     * <p>
-     *     Builds a {@link JobMetrics} object based on a key-value map of metrics data.
-     *     The key Strings in the map should be well formed metric names (see class javadoc
-     *     for details).
-     * </p>
+     * Builds a {@link JobMetrics} object based on a key-value map of metrics data.
+     * The key Strings in the map should be well formed metric names (see class javadoc
+     * for details).
      */
     @Nonnull
     public static JobMetrics of(@Nonnull Map<String, Long> metrics) {
+        Objects.requireNonNull(metrics, "metrics");
         if (metrics.isEmpty()) {
             return EMPTY;
         }
@@ -105,25 +101,26 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      */
     @Nullable
     public Long getMetricValue(@Nonnull String name) {
+        Objects.requireNonNull(name, "name");
+
         return metrics.get(name);
     }
 
     /**
+     * Returns a new {@link JobMetrics} instance containing a subset of the metrics found
+     * in the current instance. The subset is formed by those metrics which have the metric
+     * tag with the specified value in their name.
      * <p>
-     *     Returns a new {@link JobMetrics} instance containing a subset of the metrics found
-     *     in the current instance. The subset is formed by those metrics which have the metric
-     *     tag with the specified value in their name.
-     * </p>
-     *
-     * <p>
-     *     For example if we call {@code tag="vertex"} & {@code value="filter"} as the parameters, then the metric
-     *     named {@code [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]}
-     *     will be included while an other one named {@code [module=jet,job=jobId,exec=execId,vertex=map,proc=3,
-     *     unit=count,metric=queuesCapacity]} will not.
-     * </p>
+     * For example if we call {@code tag="vertex"} & {@code value="filter"} as the parameters, then the metric
+     * named {@code [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]}
+     * will be included while an other one named {@code [module=jet,job=jobId,exec=execId,vertex=map,proc=3,
+     * unit=count,metric=queuesCapacity]} will not.
      */
     @Nonnull
-    public JobMetrics withTag(String tag, String value) {
+    public JobMetrics withTag(@Nonnull String tag, @Nonnull String value) {
+        Objects.requireNonNull(tag, "tag");
+        Objects.requireNonNull(value, "value");
+
         Entry<String, String> tagValue = entry(tag, value);
         Map<String, Long> filteredMetrics = metrics.entrySet().stream()
                 .filter(entry -> MetricsUtil.parseMetricName(entry.getKey()).contains(tagValue))
