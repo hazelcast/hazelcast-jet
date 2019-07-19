@@ -278,7 +278,8 @@ public class JobRepository {
      * Returns how many execution ids are present for the given job id
      */
     long getExecutionIdCount(long jobId) {
-        return executionIds.get(jobId).size();
+        List<Long> longs = executionIds.get(jobId);
+        return longs == null ? 0 : longs.size();
     }
 
     /**
