@@ -47,7 +47,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -95,7 +94,7 @@ public class JobRepository {
     /**
      * Name of internal IMap which stores executions for a job
      */
-    public static final String JOB_EXECUTION_IDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "executions";
+    public static final String JOB_EXECUTION_COUNTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "executions";
 
     /**
      * Name of internal flake ID generator which is used for unique id generation.
@@ -140,7 +139,7 @@ public class JobRepository {
     private final HazelcastInstance instance;
     private final ILogger logger;
 
-    private final IMap<Long, List<Long>> executionIds;
+    private final IMap<Long, Integer> executionCounts;
     private final IMap<Long, JobRecord> jobRecords;
     private final IMap<Long, JobExecutionRecord> jobExecutionRecords;
     private final IMap<Long, JobResult> jobResults;
@@ -153,7 +152,7 @@ public class JobRepository {
         this.instance = jetInstance.getHazelcastInstance();
         this.logger = instance.getLoggingService().getLogger(getClass());
 
-        this.executionIds = instance.getMap(JOB_EXECUTION_IDS_MAP_NAME);
+        this.executionCounts = instance.getMap(JOB_EXECUTION_COUNTS_MAP_NAME);
         this.idGenerator = instance.getFlakeIdGenerator(RANDOM_ID_GENERATOR_NAME);
         this.jobRecords = instance.getMap(JOB_RECORDS_MAP_NAME);
         this.jobExecutionRecords = instance.getMap(JOB_EXECUTION_RECORDS_MAP_NAME);
@@ -171,7 +170,7 @@ public class JobRepository {
      * If the upload process fails for any reason, such as being unable to access a resource,
      * uploaded resources are cleaned up.
      */
-    public long uploadJobResources(JobConfig jobConfig) {
+    long uploadJobResources(JobConfig jobConfig) {
         long jobId = newJobId();
         Map<String, byte[]> tmpMap = new HashMap<>();
         try {
@@ -270,7 +269,7 @@ public class JobRepository {
      */
     long newExecutionId(long jobId) {
         long executionId = idGenerator.newId();
-        executionIds.executeOnKey(jobId, new ExecutionIdProcessor(executionId));
+        executionCounts.executeOnKey(jobId, new IncrementExecutionCount());
         return executionId;
     }
 
@@ -278,8 +277,8 @@ public class JobRepository {
      * Returns how many execution ids are present for the given job id
      */
     long getExecutionIdCount(long jobId) {
-        List<Long> longs = executionIds.get(jobId);
-        return longs == null ? 0 : longs.size();
+        Integer count = executionCounts.get(jobId);
+        return count == null ? 0 : count;
     }
 
     /**
@@ -316,7 +315,7 @@ public class JobRepository {
         // delete the job record and related records
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
-        executionIds.remove(jobId);
+        executionCounts.remove(jobId);
     }
 
     /**
@@ -571,23 +570,18 @@ public class JobRepository {
         }
     }
 
-    private static class ExecutionIdProcessor extends AbstractEntryProcessor {
-        private final long executionId;
+    private static class IncrementExecutionCount extends AbstractEntryProcessor {
 
-        ExecutionIdProcessor(long executionId) {
-            this.executionId = executionId;
+        IncrementExecutionCount() {
         }
 
         @Override
         public Object process(Entry entry) {
-            List<Long> value;
             if (entry.getValue() == null) {
-                value = new ArrayList<>();
+                entry.setValue(1);
             } else {
-                value = (List<Long>) entry.getValue();
+                entry.setValue((int) entry.getValue() + 1);
             }
-            value.add(executionId);
-            entry.setValue(value);
             return null;
         }
     }
