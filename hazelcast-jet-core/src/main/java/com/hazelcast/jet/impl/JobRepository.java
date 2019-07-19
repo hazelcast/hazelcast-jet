@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.flakeidgen.FlakeIdGenerator;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -28,6 +29,7 @@ import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.MapService;
@@ -45,7 +47,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -88,9 +92,14 @@ public class JobRepository {
     public static final String RESOURCES_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "resources.";
 
     /**
-     * Name of internal IMap which is used for unique id generation.
+     * Name of internal IMap which stores executions for a job
      */
-    public static final String RANDOM_IDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "ids";
+    public static final String JOB_EXECUTION_IDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "executions";
+
+    /**
+     * Name of internal flake ID generator which is used for unique id generation.
+     */
+    public static final String RANDOM_ID_GENERATOR_NAME = INTERNAL_JET_OBJECTS_PREFIX + "ids";
 
     /**
      * Name of internal IMap which stores {@link JobRecord}s.
@@ -121,21 +130,27 @@ public class JobRepository {
     private static final long DEFAULT_RESOURCES_EXPIRATION_MILLIS = HOURS.toMillis(2);
     private static final int JOB_ID_STRING_LENGTH = idToString(0L).length();
 
+    // maximum number of job results to keep
+    public static final int JOB_RESULTS_MAX_SIZE = 1_000;
+
     private final HazelcastInstance instance;
     private final ILogger logger;
 
-    private final IMap<Long, Long> randomIds;
+    private final IMap<Long, List<Long>> executionIds;
     private final IMap<Long, JobRecord> jobRecords;
     private final IMap<Long, JobExecutionRecord> jobExecutionRecords;
     private final IMap<Long, JobResult> jobResults;
     private final IMap<String, SnapshotValidationRecord> exportedSnapshotDetailsCache;
+    private final FlakeIdGenerator idGenerator;
+
     private long resourcesExpirationMillis = DEFAULT_RESOURCES_EXPIRATION_MILLIS;
 
     public JobRepository(JetInstance jetInstance) {
         this.instance = jetInstance.getHazelcastInstance();
         this.logger = instance.getLoggingService().getLogger(getClass());
 
-        this.randomIds = instance.getMap(RANDOM_IDS_MAP_NAME);
+        this.executionIds = instance.getMap(JOB_EXECUTION_IDS_MAP_NAME);
+        this.idGenerator = instance.getFlakeIdGenerator(RANDOM_ID_GENERATOR_NAME);
         this.jobRecords = instance.getMap(JOB_RECORDS_MAP_NAME);
         this.jobExecutionRecords = instance.getMap(JOB_EXECUTION_RECORDS_MAP_NAME);
         this.jobResults = instance.getMap(JOB_RESULTS_MAP_NAME);
@@ -154,7 +169,6 @@ public class JobRepository {
      */
     public long uploadJobResources(JobConfig jobConfig) {
         long jobId = newJobId();
-        IMap<String, Object> jobResourcesMap = getJobResources(jobId);
         Map<String, byte[]> tmpMap = new HashMap<>();
         try {
             for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
@@ -165,21 +179,25 @@ public class JobRepository {
                     readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
                 }
             }
-            // now upload it all
-            jobResourcesMap.putAll(tmpMap);
         } catch (Exception e) {
-            jobResourcesMap.destroy();
             throw new JetException("Job resource upload failed", e);
+        }
+        // avoid creating resources map if map is empty
+        if (tmpMap.size() > 0) {
+            IMap<String, Object> jobResourcesMap = getJobResources(jobId);
+            // now upload it all
+            try {
+                jobResourcesMap.putAll(tmpMap);
+            } catch (Exception e) {
+                jobResourcesMap.destroy();
+                throw new JetException("Job resource upload failed", e);
+            }
         }
         return jobId;
     }
 
     private long newJobId() {
-        long jobId;
-        do {
-            jobId = Util.secureRandomNextLong();
-        } while (randomIds.putIfAbsent(jobId, jobId) != null);
-        return jobId;
+       return idGenerator.newId();
     }
 
     /**
@@ -247,10 +265,8 @@ public class JobRepository {
      * Generates a new execution id for the given job id, guaranteed to be unique across the cluster
      */
     long newExecutionId(long jobId) {
-        long executionId;
-        do {
-            executionId = Util.secureRandomNextLong();
-        } while (randomIds.putIfAbsent(executionId, jobId) != null);
+        long executionId = idGenerator.newId();
+        executionIds.executeOnKey(jobId, new ExecutionIdProcessor(executionId));
         return executionId;
     }
 
@@ -258,7 +274,7 @@ public class JobRepository {
      * Returns how many execution ids are present for the given job id
      */
     long getExecutionIdCount(long jobId) {
-        return randomIds.values(new FilterExecutionIdByJobIdPredicate(jobId)).size();
+        return executionIds.get(jobId).size();
     }
 
     /**
@@ -295,8 +311,7 @@ public class JobRepository {
         // delete the job record
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
-        // delete the execution ids, but keep the job id
-        randomIds.removeAll(new FilterExecutionIdByJobIdPredicate(jobId));
+        executionIds.remove(jobId);
 
         // delete job resources
         instance.getMap(snapshotDataMapName(jobId, 0)).destroy();
@@ -345,6 +360,12 @@ public class JobRepository {
                     }
                 }
             }
+        }
+        // delete oldest job results
+        if (jobResults.size() > JOB_RESULTS_MAX_SIZE) {
+            jobResults.values().stream().sorted(Comparator.comparing(JobResult::getCompletionTime).reversed())
+                      .skip(JOB_RESULTS_MAX_SIZE)
+                      .forEach(r -> jobResults.remove(r.getJobId()));
         }
     }
 
@@ -512,72 +533,6 @@ public class JobRepository {
         }
     }
 
-    public static class FilterExecutionIdByJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
-
-        private long jobId;
-
-        public FilterExecutionIdByJobIdPredicate() {
-        }
-
-        FilterExecutionIdByJobIdPredicate(long jobId) {
-            this.jobId = jobId;
-        }
-
-        @Override
-        public boolean apply(Entry<Long, Long> mapEntry) {
-            return mapEntry.getKey() != jobId && mapEntry.getValue() == jobId;
-        }
-
-        @Override
-        public int getFactoryId() {
-            return JetInitDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getId() {
-            return JetInitDataSerializerHook.FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeLong(jobId);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            jobId = in.readLong();
-        }
-    }
-
-    public static class FilterJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
-
-        public FilterJobIdPredicate() {
-        }
-
-        @Override
-        public boolean apply(Entry<Long, Long> mapEntry) {
-            return mapEntry.getKey().equals(mapEntry.getValue());
-        }
-
-        @Override
-        public int getFactoryId() {
-            return JetInitDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getId() {
-            return JetInitDataSerializerHook.FILTER_JOB_ID;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-        }
-    }
-
     public static class FilterJobResultByNamePredicate
             implements Predicate<Long, JobResult>, IdentifiedDataSerializable {
 
@@ -613,6 +568,27 @@ public class JobRepository {
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             name = in.readUTF();
+        }
+    }
+
+    private static class ExecutionIdProcessor extends AbstractEntryProcessor {
+        private final long executionId;
+
+        public ExecutionIdProcessor(long executionId) {
+            this.executionId = executionId;
+        }
+
+        @Override
+        public Object process(Entry entry) {
+            List<Long> value;
+            if (entry.getValue() == null) {
+                value = new ArrayList<>();
+            } else {
+                value = (List<Long>) entry.getValue();
+            }
+            value.add(executionId);
+            entry.setValue(value);
+            return null;
         }
     }
 }

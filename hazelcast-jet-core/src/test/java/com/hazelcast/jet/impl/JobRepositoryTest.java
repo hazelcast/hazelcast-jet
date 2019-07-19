@@ -39,9 +39,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 
-import static com.hazelcast.jet.impl.JobRepository.RANDOM_IDS_MAP_NAME;
+import static com.hazelcast.jet.impl.JobRepository.JOB_EXECUTION_IDS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetProperties.JOB_SCAN_PERIOD;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -59,7 +60,7 @@ public class JobRepositoryTest extends JetTestSupport {
     private JobConfig jobConfig = new JobConfig();
     private JetInstance instance;
     private JobRepository jobRepository;
-    private IMap<Long, Long> jobIds;
+    private IMap<Long, List<Long>> executionIds;
 
     @Before
     public void setup() {
@@ -71,7 +72,7 @@ public class JobRepositoryTest extends JetTestSupport {
         jobRepository = new JobRepository(instance);
         jobRepository.setResourcesExpirationMillis(RESOURCES_EXPIRATION_TIME_MILLIS);
 
-        jobIds = instance.getMap(RANDOM_IDS_MAP_NAME);
+        executionIds = instance.getMap(JOB_EXECUTION_IDS_MAP_NAME);
 
         TestProcessors.reset(2);
     }
@@ -91,8 +92,9 @@ public class JobRepositoryTest extends JetTestSupport {
 
         assertNotNull(jobRepository.getJobRecord(jobId));
         assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).isEmpty());
-        assertTrue(jobIds.containsKey(executionId1));
-        assertTrue(jobIds.containsKey(executionId2));
+        List<Long> ids = executionIds.get(jobId);
+        assertTrue(ids.contains(executionId1));
+        assertTrue(ids.contains(executionId2));
     }
 
     @Test
@@ -110,8 +112,10 @@ public class JobRepositoryTest extends JetTestSupport {
 
         assertNotNull(jobRepository.getJobRecord(jobId));
         assertFalse(jobRepository.getJobResources(jobId).isEmpty());
-        assertTrue(jobIds.containsKey(executionId1));
-        assertTrue(jobIds.containsKey(executionId2));
+
+        List<Long> ids = executionIds.get(jobId);
+        assertTrue(ids.contains(executionId1));
+        assertTrue(ids.contains(executionId2));
     }
 
     @Test
