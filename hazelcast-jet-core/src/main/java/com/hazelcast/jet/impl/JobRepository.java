@@ -26,6 +26,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.EntryBackupProcessor;
@@ -46,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -352,6 +354,14 @@ public class JobRepository {
                     }
                 }
             }
+        }
+
+        int maxNoResults = nodeEngine.getProperties().getInteger(JetProperties.JOB_RESULTS_MAX_SIZE);
+        // delete oldest job results
+        if (jobResults.size() > maxNoResults) {
+            jobResults.values().stream().sorted(Comparator.comparing(JobResult::getCompletionTime).reversed())
+                      .skip(maxNoResults)
+                      .forEach(r -> jobResults.remove(r.getJobId()));
         }
     }
 
