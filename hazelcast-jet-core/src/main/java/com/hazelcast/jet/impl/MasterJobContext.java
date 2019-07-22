@@ -172,6 +172,7 @@ public class MasterJobContext {
             DAG dag = dagAndClassloader.f0();
             ClassLoader classLoader = dagAndClassloader.f1();
             JobExecutionRecord jobExecRec = mc.jobExecutionRecord();
+            jobExecRec.markExecuted();
             String dotRepresentation = dag.toDotString(); // must call this before rewriteDagWithSnapshotRestore()
             long snapshotId = jobExecRec.snapshotId();
             String snapshotName = mc.jobConfig().getInitialSnapshotName();

@@ -29,7 +29,6 @@ import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.MapService;
@@ -92,11 +91,6 @@ public class JobRepository {
     public static final String RESOURCES_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "resources.";
 
     /**
-     * Name of internal IMap which stores executions for a job
-     */
-    public static final String JOB_EXECUTION_COUNTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "executions";
-
-    /**
      * Name of internal flake ID generator which is used for unique id generation.
      */
     public static final String RANDOM_ID_GENERATOR_NAME = INTERNAL_JET_OBJECTS_PREFIX + "ids";
@@ -139,7 +133,6 @@ public class JobRepository {
     private final HazelcastInstance instance;
     private final ILogger logger;
 
-    private final IMap<Long, Integer> executionCounts;
     private final IMap<Long, JobRecord> jobRecords;
     private final IMap<Long, JobExecutionRecord> jobExecutionRecords;
     private final IMap<Long, JobResult> jobResults;
@@ -152,7 +145,6 @@ public class JobRepository {
         this.instance = jetInstance.getHazelcastInstance();
         this.logger = instance.getLoggingService().getLogger(getClass());
 
-        this.executionCounts = instance.getMap(JOB_EXECUTION_COUNTS_MAP_NAME);
         this.idGenerator = instance.getFlakeIdGenerator(RANDOM_ID_GENERATOR_NAME);
         this.jobRecords = instance.getMap(JOB_RECORDS_MAP_NAME);
         this.jobExecutionRecords = instance.getMap(JOB_EXECUTION_RECORDS_MAP_NAME);
@@ -268,17 +260,7 @@ public class JobRepository {
      * Generates a new execution id for the given job id, guaranteed to be unique across the cluster
      */
     long newExecutionId(long jobId) {
-        long executionId = idGenerator.newId();
-        executionCounts.executeOnKey(jobId, new IncrementExecutionCount());
-        return executionId;
-    }
-
-    /**
-     * Returns how many execution ids are present for the given job id
-     */
-    long getExecutionIdCount(long jobId) {
-        Integer count = executionCounts.get(jobId);
-        return count == null ? 0 : count;
+        return idGenerator.newId();
     }
 
     /**
@@ -315,7 +297,6 @@ public class JobRepository {
         // delete the job record and related records
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
-        executionCounts.remove(jobId);
     }
 
     /**
@@ -567,22 +548,6 @@ public class JobRepository {
         @Override
         public void readData(ObjectDataInput in) throws IOException {
             name = in.readUTF();
-        }
-    }
-
-    private static class IncrementExecutionCount extends AbstractEntryProcessor {
-
-        IncrementExecutionCount() {
-        }
-
-        @Override
-        public Object process(Entry entry) {
-            if (entry.getValue() == null) {
-                entry.setValue(1);
-            } else {
-                entry.setValue((int) entry.getValue() + 1);
-            }
-            return null;
         }
     }
 }

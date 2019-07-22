@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.DistributedObject;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -41,11 +40,9 @@ import org.junit.runner.RunWith;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.hazelcast.jet.impl.JobRepository.JOB_EXECUTION_COUNTS_MAP_NAME;
 import static com.hazelcast.jet.impl.util.JetProperties.JOB_SCAN_PERIOD;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -60,7 +57,6 @@ public class JobRepositoryTest extends JetTestSupport {
     private JobConfig jobConfig = new JobConfig();
     private JetInstance instance;
     private JobRepository jobRepository;
-    private IMap<Long, Integer> executionIds;
 
     @Before
     public void setup() {
@@ -72,8 +68,6 @@ public class JobRepositoryTest extends JetTestSupport {
         jobRepository = new JobRepository(instance);
         jobRepository.setResourcesExpirationMillis(RESOURCES_EXPIRATION_TIME_MILLIS);
 
-        executionIds = instance.getMap(JOB_EXECUTION_COUNTS_MAP_NAME);
-
         TestProcessors.reset(2);
     }
 
@@ -83,8 +77,8 @@ public class JobRepositoryTest extends JetTestSupport {
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobId, dag);
         jobRepository.putNewJobRecord(jobRecord);
-        long executionId1 = jobRepository.newExecutionId(jobId);
-        long executionId2 = jobRepository.newExecutionId(jobId);
+        jobRepository.newExecutionId(jobId);
+        jobRepository.newExecutionId(jobId);
 
         sleepUntilJobExpires();
 
@@ -92,7 +86,6 @@ public class JobRepositoryTest extends JetTestSupport {
 
         assertNotNull(jobRepository.getJobRecord(jobId));
         assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).get().isEmpty());
-        assertEquals("expected two executions", 2, (int) executionIds.get(jobId));
     }
 
     @Test
@@ -101,8 +94,8 @@ public class JobRepositoryTest extends JetTestSupport {
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobId, dag);
         jobRepository.putNewJobRecord(jobRecord);
-        long executionId1 = jobRepository.newExecutionId(jobId);
-        long executionId2 = jobRepository.newExecutionId(jobId);
+        jobRepository.newExecutionId(jobId);
+        jobRepository.newExecutionId(jobId);
 
         sleepUntilJobExpires();
 
@@ -110,8 +103,6 @@ public class JobRepositoryTest extends JetTestSupport {
 
         assertNotNull(jobRepository.getJobRecord(jobId));
         assertFalse(jobRepository.getJobResources(jobId).get().isEmpty());
-
-        assertEquals("expected two executions", 2, (int) executionIds.get(jobId));
     }
 
     @Test
