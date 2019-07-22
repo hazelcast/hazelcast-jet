@@ -276,7 +276,7 @@ public class JobRepository {
     /**
      * Returns how many execution ids are present for the given job id
      */
-    long getExecutionIdCount(long jobId) {
+    long getExecutionCount(long jobId) {
         Integer count = executionCounts.get(jobId);
         return count == null ? 0 : count;
     }
