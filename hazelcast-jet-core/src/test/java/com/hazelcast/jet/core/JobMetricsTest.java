@@ -31,6 +31,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -72,7 +73,47 @@ public class JobMetricsTest extends TestInClusterSupport {
     }
 
     @Test
-    public void metricsForRestartedJobs() throws Throwable {
+    public void notYetRunningJob() {
+        DAG dag = new DAG();
+        Vertex v1 = dag.newVertex("v1", TestProcessors.MockP::new);
+        Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
+        dag.edge(between(v1, v2));
+
+        Job job = member.newJob(dag);
+        assertNotNull(job.getMetrics()); //make sure the metrics fetch operation completes and returns something
+
+        TestProcessors.NoOutputSourceP.proceedLatch.countDown();
+        job.join();
+    }
+
+    @Test
+    public void suspendedJob() throws Throwable {
+        DAG dag = new DAG();
+        Vertex v1 = dag.newVertex("v1", TestProcessors.MockP::new);
+        Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
+        dag.edge(between(v1, v2));
+
+        Job job = member.newJob(dag);
+        TestProcessors.NoOutputSourceP.executionStarted.await();
+        assertEquals(JobStatus.RUNNING, job.getStatus());
+        JetTestSupport.assertTrueEventually(() -> assertJobHasMetrics(job));
+
+        job.suspend();
+        JetTestSupport.assertEqualsEventually(job::getStatus, JobStatus.SUSPENDED);
+        JetTestSupport.assertTrueEventually(() -> assertJobHasMetrics(job));
+
+        job.resume();
+        JetTestSupport.assertEqualsEventually(job::getStatus, JobStatus.RUNNING);
+        JetTestSupport.assertTrueEventually(() -> assertJobHasMetrics(job));
+
+        TestProcessors.NoOutputSourceP.proceedLatch.countDown();
+        job.join();
+        assertEquals(JobStatus.COMPLETED, job.getStatus());
+        assertJobHasMetrics(job);
+    }
+
+    @Test
+    public void restartedJobs() throws Throwable {
         DAG dag = new DAG();
         Vertex v1 = dag.newVertex("v1", TestProcessors.MockP::new);
         Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
@@ -93,7 +134,7 @@ public class JobMetricsTest extends TestInClusterSupport {
     }
 
     @Test
-    public void metricsForFailedJob() {
+    public void failedJob() {
         DAG dag = new DAG();
         RuntimeException e = new RuntimeException("mock error");
         Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(singletonList(1)));

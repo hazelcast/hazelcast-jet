@@ -36,7 +36,7 @@ import static com.hazelcast.jet.Util.entry;
 
 /**
  * An immutable collection of job-specific metrics, where each metric has a name and a
- * {@link Long} numberic value. The name is a {@link String} formed from a comma separated
+ * {@link Long} numeric value. The name is a {@link String} formed from a comma separated
  * list of tag=value pairs, which may or may not be enclosed by square brackets. Some
  * examples of valid metric names:
  * <ul>

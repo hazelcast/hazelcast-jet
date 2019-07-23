@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.spi.exception.RetryableHazelcastException;
 
-import java.util.Collections;
+import java.io.IOException;
 
 /**
  * An operation sent from the master to all members to query metrics for a
@@ -30,7 +32,7 @@ import java.util.Collections;
 public class GetLocalJobMetricsOperation extends AbstractJobOperation {
 
     private long executionId;
-    private JobMetrics response;
+    private Object response;
 
     public GetLocalJobMetricsOperation() {
     }
@@ -44,7 +46,8 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
     public void run() {
         JetService service = getService();
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
-        response = executionContext == null ? JobMetrics.of(Collections.emptyMap()) : executionContext.getJobMetrics();
+        response = executionContext == null ? new RetryableHazelcastException("Execution unknown") :
+                                                executionContext.getJobMetrics();
     }
 
     @Override
@@ -55,5 +58,17 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
     @Override
     public int getId() {
         return JetInitDataSerializerHook.GET_LOCAL_JOB_METRICS_OP;
+    }
+
+    @Override
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        super.writeInternal(out);
+        out.writeLong(executionId);
+    }
+
+    @Override
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        super.readInternal(in);
+        executionId = in.readLong();
     }
 }

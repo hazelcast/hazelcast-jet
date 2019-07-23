@@ -28,6 +28,7 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
+import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
@@ -105,7 +107,7 @@ public class MasterContext {
 
         jobContext = new MasterJobContext(this, nodeEngine.getLogger(MasterJobContext.class));
         snapshotContext = createMasterSnapshotContext(nodeEngine);
-        jobMetrics = JobMetrics.of(Collections.emptyMap());
+        jobMetrics = null;
     }
 
     MasterSnapshotContext createMasterSnapshotContext(NodeEngineImpl nodeEngine) {
@@ -150,7 +152,7 @@ public class MasterContext {
     }
 
     JobMetrics jobMetrics() {
-        return jobMetrics;
+        return jobMetrics == null ? JobMetrics.of(Collections.emptyMap()) : jobMetrics;
     }
 
     void setJobMetrics(JobMetrics jobMetrics) {
@@ -297,12 +299,22 @@ public class MasterContext {
     }
 
     void collectMetrics(CompletableFuture<JobMetrics> clientFuture) {
-        invokeOnParticipants(
-                plan -> new GetLocalJobMetricsOperation(jobId(), executionId()),
-                objects -> completeWithMergedMetrics(clientFuture, objects),
-                clientFuture::completeExceptionally,
-                false
-        );
+        if (jobStatus == RUNNING) {
+            long jobId = jobId();
+            long executionId = executionId();
+            invokeOnParticipants(
+                    plan -> new GetLocalJobMetricsOperation(jobId, executionId),
+                    objects -> completeWithMergedMetrics(clientFuture, objects),
+                    clientFuture::completeExceptionally,
+                    false
+            );
+        } else {
+            if (jobMetrics == null) {
+                clientFuture.completeExceptionally(new RetryableHazelcastException("Execution not started yet"));
+            } else {
+                clientFuture.complete(jobMetrics);
+            }
+        }
     }
 
     private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
@@ -313,8 +325,7 @@ public class MasterContext {
         } else {
             Map<String, Long> mergedMetrics = new HashMap<>();
             metrics.forEach(o -> mergedMetrics.putAll(((JobMetrics) o).toMap()));
-            setJobMetrics(JobMetrics.of(mergedMetrics));
-            clientFuture.complete(jobMetrics());
+            clientFuture.complete(JobMetrics.of(mergedMetrics));
         }
     }
 }
