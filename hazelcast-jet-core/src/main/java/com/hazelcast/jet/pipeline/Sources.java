@@ -65,6 +65,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamRemoteMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamSocketP;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -79,6 +80,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * <p>
  * The default local parallelism for sources in this class is 1 or 2, check the
  * documentation of individual methods.
+ *
+ * @since 3.0
  */
 public final class Sources {
 
@@ -97,6 +100,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
+        checkSerializable(metaSupplier, "metaSupplier");
         return new BatchSourceTransform<>(sourceName, metaSupplier);
     }
 
@@ -138,6 +142,7 @@ public final class Sources {
             @Nonnull String sourceName,
             @Nonnull ProcessorMetaSupplier metaSupplier
     ) {
+        checkSerializable(metaSupplier, "metaSupplier");
         return new StreamSourceTransform<>(sourceName, w -> metaSupplier, false, false);
     }
 
@@ -336,9 +341,9 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projectionFn));
+        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
     }
 
     /**
@@ -354,9 +359,9 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> map(
             @Nonnull IMap<? extends K, ? extends V> map,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return map(map.getName(), predicate, projectionFn);
+        return map(map.getName(), predicate, projection);
     }
 
     /**
@@ -633,10 +638,10 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                readRemoteMapP(mapName, clientConfig, predicate, projectionFn));
+                readRemoteMapP(mapName, clientConfig, predicate, projection));
     }
 
     /**
@@ -1185,7 +1190,7 @@ public final class Sources {
 
     /**
      * Returns a source which connects to the specified database using the given
-     * {@code connectionSupplier}, queries the database and creates a result set
+     * {@code newConnectionFn}, queries the database and creates a result set
      * using the the given {@code resultSetFn}. It creates output objects from the
      * {@link ResultSet} using given {@code mapOutputFn} and emits them to
      * downstream.
@@ -1227,19 +1232,19 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor is 1.
      *
-     * @param connectionSupplier creates the connection
+     * @param newConnectionFn creates the connection
      * @param resultSetFn creates a {@link ResultSet} using the connection,
      *                    total parallelism and index
      * @param createOutputFn creates output objects from {@link ResultSet}
      * @param <T> type of output objects
      */
     public static <T> BatchSource<T> jdbc(
-            @Nonnull SupplierEx<? extends Connection> connectionSupplier,
+            @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull FunctionEx<? super ResultSet, ? extends T> createOutputFn
     ) {
         return batchFromProcessor("jdbcSource",
-                SourceProcessors.readJdbcP(connectionSupplier, resultSetFn, createOutputFn));
+                SourceProcessors.readJdbcP(newConnectionFn, resultSetFn, createOutputFn));
     }
 
     /**

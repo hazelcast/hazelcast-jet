@@ -47,6 +47,8 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation
  *
  * @param <T> type of the input item
  * @param <K> type of the key
+ *
+ * @since 3.0
  */
 public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
 
@@ -360,7 +362,7 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
 
     /**
      * Offers a step-by-step API to build a pipeline stage that co-aggregates
-     * the data from several input stages. This stage will be already
+     * the data from several input stages. The current stage will be already
      * registered with the builder you get.
      * <p>
      * This builder requires you to provide a multi-input aggregate operation.
@@ -414,8 +416,9 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     }
 
     @Nonnull @Override
-    default <R> BatchStage<R> customTransform(@Nonnull String stageName,
-                                              @Nonnull SupplierEx<Processor> procSupplier
+    default <R> BatchStage<R> customTransform(
+            @Nonnull String stageName,
+            @Nonnull SupplierEx<Processor> procSupplier
     ) {
         return customTransform(stageName, ProcessorMetaSupplier.of(procSupplier));
     }

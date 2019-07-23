@@ -123,6 +123,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * </ul>
  *
  * @param <T> the event type
+ *
+ * @since 3.0
  */
 public class EventTimeMapper<T> {
 
@@ -158,7 +160,7 @@ public class EventTimeMapper<T> {
      *
      * @param eventTimePolicy event time policy as passed in {@link
      *                        Sources#streamFromProcessorWithWatermarks}
-     **/
+     */
     public EventTimeMapper(EventTimePolicy<? super T> eventTimePolicy) {
         this.idleTimeoutNanos = MILLISECONDS.toNanos(eventTimePolicy.idleTimeoutMillis());
         this.timestampFn = eventTimePolicy.timestampFn();

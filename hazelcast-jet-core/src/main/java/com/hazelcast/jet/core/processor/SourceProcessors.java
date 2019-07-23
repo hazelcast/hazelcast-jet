@@ -75,6 +75,8 @@ import static com.hazelcast.util.Preconditions.checkNotNegative;
  * Static utility class with factories of source processors (the DAG
  * entry points). For other kinds for a vertices refer to the {@link
  * com.hazelcast.jet.core.processor package-level documentation}.
+ *
+ * @since 3.0
  */
 public final class SourceProcessors {
 
@@ -98,9 +100,9 @@ public final class SourceProcessors {
     public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull Projection<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, projectionFn);
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, projection);
     }
 
     /**
@@ -111,9 +113,9 @@ public final class SourceProcessors {
     public static <T, K, V> ProcessorMetaSupplier readMapP(
             @Nonnull String mapName,
             @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
+            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, toProjection(projectionFn));
+        return ReadWithPartitionIteratorP.readMapSupplier(mapName, predicate, toProjection(projection));
     }
 
 
@@ -142,9 +144,6 @@ public final class SourceProcessors {
             @Nonnull JournalInitialPosition initialPos,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
-        checkSerializable(predicateFn, "predicateFn");
-        checkSerializable(projectionFn, "projectionFn");
-
         return StreamEventJournalP.streamMapSupplier(mapName, predicateFn, projectionFn, initialPos, eventTimePolicy);
     }
 
@@ -344,8 +343,6 @@ public final class SourceProcessors {
             boolean sharedFileSystem,
             @Nonnull BiFunctionEx<? super String, ? super String, ? extends R> mapOutputFn
     ) {
-        checkSerializable(mapOutputFn, "mapOutputFn");
-
         String charsetName = charset.name();
         return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem,
                 path -> Files.lines(path, Charset.forName(charsetName)),
@@ -364,8 +361,6 @@ public final class SourceProcessors {
             boolean sharedFileSystem,
             @Nonnull BiFunctionEx<? super String, ? super String, ?> mapOutputFn
     ) {
-        checkSerializable(mapOutputFn, "mapOutputFn");
-
         return StreamFilesP.metaSupplier(watchedDirectory, charset.name(), glob, sharedFileSystem, mapOutputFn);
     }
 
@@ -374,14 +369,14 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier streamJmsQueueP(
-            @Nonnull SupplierEx<? extends Connection> connectionSupplier,
-            @Nonnull FunctionEx<? super Connection, ? extends Session> sessionFn,
+            @Nonnull SupplierEx<? extends Connection> newConnectionFn,
+            @Nonnull FunctionEx<? super Connection, ? extends Session> newSessionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull ConsumerEx<? super Session> flushFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.of(
-                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy),
+                StreamJmsP.supplier(newConnectionFn, newSessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy),
                 StreamJmsP.PREFERRED_LOCAL_PARALLELISM);
     }
 
@@ -390,14 +385,14 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier streamJmsTopicP(
-            @Nonnull SupplierEx<? extends Connection> connectionSupplier,
-            @Nonnull FunctionEx<? super Connection, ? extends Session> sessionFn,
+            @Nonnull SupplierEx<? extends Connection> newConnectionFn,
+            @Nonnull FunctionEx<? super Connection, ? extends Session> newSessionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull ConsumerEx<? super Session> flushFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(
-                StreamJmsP.supplier(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy));
+                StreamJmsP.supplier(newConnectionFn, newSessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy));
     }
 
     /**
@@ -405,14 +400,11 @@ public final class SourceProcessors {
      * SupplierEx, ToResultSetFunction, FunctionEx)}.
      */
     public static <T> ProcessorMetaSupplier readJdbcP(
-            @Nonnull SupplierEx<? extends java.sql.Connection> connectionSupplier,
+            @Nonnull SupplierEx<? extends java.sql.Connection> newConnectionFn,
             @Nonnull ToResultSetFunction resultSetFn,
             @Nonnull FunctionEx<? super ResultSet, ? extends T> mapOutputFn
     ) {
-        checkSerializable(connectionSupplier, "connectionSupplier");
-        checkSerializable(resultSetFn, "resultSetFn");
-        checkSerializable(mapOutputFn, "mapOutputFn");
-        return ReadJdbcP.supplier(connectionSupplier, resultSetFn, mapOutputFn);
+        return ReadJdbcP.supplier(newConnectionFn, resultSetFn, mapOutputFn);
     }
 
     /**
@@ -424,7 +416,6 @@ public final class SourceProcessors {
             @Nonnull String query,
             @Nonnull FunctionEx<? super ResultSet, ? extends T> mapOutputFn
     ) {
-        checkSerializable(mapOutputFn, "mapOutputFn");
         return ReadJdbcP.supplier(connectionURL, query, mapOutputFn);
     }
 
@@ -471,6 +462,8 @@ public final class SourceProcessors {
         checkSerializable(createFn, "createFn");
         checkSerializable(fillBufferFn, "fillBufferFn");
         checkSerializable(destroyFn, "destroyFn");
+        checkSerializable(createSnapshotFn, "createSnapshotFn");
+        checkSerializable(restoreSnapshotFn, "restoreSnapshotFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
                 () -> new ConvenientSourceP<>(
@@ -520,16 +513,18 @@ public final class SourceProcessors {
         checkSerializable(createFn, "createFn");
         checkSerializable(fillBufferFn, "fillBufferFn");
         checkSerializable(destroyFn, "destroyFn");
+        checkSerializable(createSnapshotFn, "createSnapshotFn");
+        checkSerializable(restoreSnapshotFn, "restoreSnapshotFn");
         checkNotNegative(preferredLocalParallelism + 1, "preferredLocalParallelism must >= -1");
         ProcessorSupplier procSup = ProcessorSupplier.of(
-                () -> new ConvenientSourceP<C, T, S>(
-                        createFn,
-                        (BiConsumer<? super C, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
-                        createSnapshotFn,
-                        restoreSnapshotFn,
-                        destroyFn,
-                        new SourceBufferImpl.Timestamped<>(),
-                        eventTimePolicy
+                () -> new ConvenientSourceP<>(
+                    createFn,
+                    (BiConsumer<? super C, ? super SourceBufferConsumerSide<?>>) fillBufferFn,
+                    createSnapshotFn,
+                    restoreSnapshotFn,
+                    destroyFn,
+                    new SourceBufferImpl.Timestamped<>(),
+                    eventTimePolicy
                 ));
         return preferredLocalParallelism > 0
                 ? ProcessorMetaSupplier.of(procSup, preferredLocalParallelism)

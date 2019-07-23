@@ -33,6 +33,7 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
@@ -48,12 +49,14 @@ import static com.hazelcast.util.Preconditions.checkPositive;
  * </ul>
  *
  * @param <C> type of the context object
+ *
+ * @since 3.0
  */
 public final class SourceBuilder<C> {
     private final String name;
     private final FunctionEx<? super Context, ? extends C> createFn;
-    private FunctionEx<? super C, Object> createSnapshotFn;
-    private BiConsumerEx<? super C, ? super List<Object>> restoreSnapshotFn;
+    private FunctionEx<? super C, Object> createSnapshotFn = ctx -> null;
+    private BiConsumerEx<? super C, ? super List<Object>> restoreSnapshotFn = (ctx, states) -> { };
     private ConsumerEx<? super C> destroyFn = ConsumerEx.noop();
     private int preferredLocalParallelism;
 
@@ -112,6 +115,7 @@ public final class SourceBuilder<C> {
             @Nonnull String name,
             @Nonnull FunctionEx<? super Context, ? extends C> createFn
     ) {
+        checkSerializable(createFn, "createFn");
         this.name = name;
         this.createFn = createFn;
     }
@@ -175,10 +179,13 @@ public final class SourceBuilder<C> {
      * @param name     a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the source's context object
      * @param <C>      type of the context object
+     *
+     * @since 3.0
      */
     @Nonnull
     public static <C> SourceBuilder<C>.Batch<Void> batch(
-            @Nonnull String name, @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
+            @Nonnull String name,
+            @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
         return new SourceBuilder<C>(name, createFn).new Batch<Void>();
     }
@@ -236,10 +243,13 @@ public final class SourceBuilder<C> {
      * @param name     a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the source's context object
      * @param <C>      type of the context object
+     *
+     * @since 3.0
      */
     @Nonnull
     public static <C> SourceBuilder<C>.Stream<Void> stream(
-            @Nonnull String name, @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
+            @Nonnull String name,
+            @Nonnull FunctionEx<? super Processor.Context, ? extends C> createFn
     ) {
         return new SourceBuilder<C>(name, createFn).new Stream<Void>();
     }
@@ -316,6 +326,8 @@ public final class SourceBuilder<C> {
      * @param name a descriptive name for the source (for diagnostic purposes)
      * @param createFn a function that creates the source's context object
      * @param <C> type of the context object
+     *
+     * @since 3.0
      */
     @Nonnull
     public static <C> SourceBuilder<C>.TimestampedStream<Void> timestampedStream(
@@ -337,6 +349,7 @@ public final class SourceBuilder<C> {
          */
         @Nonnull
         public Base<T> destroyFn(@Nonnull ConsumerEx<? super C> destroyFn) {
+            checkSerializable(destroyFn, "destroyFn");
             SourceBuilder.this.destroyFn = destroyFn;
             return this;
         }
@@ -392,12 +405,14 @@ public final class SourceBuilder<C> {
          *                 buffer.add(numToEmit.getAndIncrement());
          *             }
          *         })
-         *         .createSnapshotFn(AtomicInteger::get)
+         *         .createSnapshotFn(numToEmit -> numToEmit.get())
          *         .restoreSnapshotFn((numToEmit, states) -> numToEmit.set(states.get(0)))
          *         .build();
          * }</pre>
          *
          * @param <S> type of the snapshot object
+         *
+         * @since 3.1
          */
         @Nonnull
         abstract <S> FaultTolerant<? extends Base<T>, S> createSnapshotFn(
@@ -431,6 +446,7 @@ public final class SourceBuilder<C> {
         public <T_NEW> BaseNoTimestamps<T_NEW> fillBufferFn(
                 @Nonnull BiConsumerEx<? super C, ? super SourceBuffer<T_NEW>> fillBufferFn
         ) {
+            checkSerializable(fillBufferFn, "fillBufferFn");
             BaseNoTimestamps<T_NEW> newThis = (BaseNoTimestamps<T_NEW>) this;
             newThis.fillBufferFn = fillBufferFn;
             return newThis;
@@ -441,6 +457,8 @@ public final class SourceBuilder<C> {
      * See {@link SourceBuilder#batch(String, FunctionEx)}.
      *
      * @param <T> type of emitted objects
+     *
+     * @since 3.0
      */
     public final class Batch<T> extends BaseNoTimestamps<T> {
         private Batch() {
@@ -493,6 +511,8 @@ public final class SourceBuilder<C> {
      * See {@link SourceBuilder#stream(String, FunctionEx)}.
      *
      * @param <T> type of emitted objects
+     *
+     * @since 3.0
      */
     public final class Stream<T> extends BaseNoTimestamps<T> {
         private Stream() {
@@ -541,6 +561,8 @@ public final class SourceBuilder<C> {
      * See {@link SourceBuilder#timestampedStream(String, FunctionEx)}.
      *
      * @param <T> type of emitted objects
+     *
+     * @since 3.0
      */
     public final class TimestampedStream<T> extends Base<T> {
         private BiConsumerEx<? super C, ? super TimestampedSourceBuffer<T>> fillBufferFn;
@@ -614,12 +636,15 @@ public final class SourceBuilder<C> {
      *
      * @param <B> type of the builder this sub-builder was created from
      * @param <S> type of the object saved to the state snapshot
+     *
+     * @since 3.1
      */
     public final class FaultTolerant<B, S> {
         private final B parentBuilder;
 
         @SuppressWarnings("unchecked")
         private FaultTolerant(B parentBuilder, FunctionEx<? super C, ? extends S> createSnapshotFn) {
+            checkSerializable(createSnapshotFn, "createSnapshotFn");
             this.parentBuilder = parentBuilder;
             SourceBuilder.this.createSnapshotFn = (FunctionEx<? super C, Object>) createSnapshotFn;
         }
@@ -635,16 +660,21 @@ public final class SourceBuilder<C> {
          * stream from the same item it was about to emit when the snapshot was
          * taken.
          * <p>
-         * If your source is distributed, there are several source processors
-         * running it. Each processor applied {@code createSnapshotFn} to its local
-         * source context and the snapshot contains all those objects. This is why
-         * {@code restoreSnapshotFn} accepts a list of snapshot objects. It should
+         * If your source is <em>not {@linkplain Base#distributed(int)
+         * distributed}</em>, the `List` in the second argument contains
+         * exactly 1 element; it is safe to use `get(0)` on it. If your source
+         * is distributed, the list will contain objects returned by {@code
+         * createSnapshotFn} in all parallel instances. This is why {@code
+         * restoreSnapshotFn} accepts a list of snapshot objects. It should
          * figure out which part of the snapshot data pertains to it and it can
-         * do so as explained in {@link Base#distributed builder.distributed()}.
+         * do so as explained {@link Base#distributed here}.
+         *
+         * @since 3.1
          */
         @SuppressWarnings("unchecked")
         @Nonnull
         public B restoreSnapshotFn(@Nonnull BiConsumerEx<? super C, ? super List<S>> restoreSnapshotFn) {
+            checkSerializable(restoreSnapshotFn, "restoreSnapshotFn");
             SourceBuilder.this.restoreSnapshotFn = (BiConsumerEx<? super C, ? super List<Object>>) restoreSnapshotFn;
             return parentBuilder;
         }

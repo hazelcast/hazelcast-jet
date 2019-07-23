@@ -38,6 +38,8 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
 
 /**
  * See {@link Sources#jmsQueueBuilder} or {@link Sources#jmsTopicBuilder}.
+ *
+ * @since 3.0
  */
 public final class JmsSourceBuilder {
 
@@ -192,12 +194,12 @@ public final class JmsSourceBuilder {
         FunctionEx<? super ConnectionFactory, ? extends Connection> connectionFnLocal = connectionFn;
         @SuppressWarnings("UnnecessaryLocalVariable")
         SupplierEx<? extends ConnectionFactory> factorySupplierLocal = factorySupplier;
-        SupplierEx<? extends Connection> connectionSupplier =
+        SupplierEx<? extends Connection> newConnectionFn =
                 () -> connectionFnLocal.apply(factorySupplierLocal.get());
 
         Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFactory = policy ->
-                isTopic ? streamJmsTopicP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn, policy)
-                        : streamJmsQueueP(connectionSupplier, sessionFn, consumerFn, flushFn, projectionFn, policy);
+                isTopic ? streamJmsTopicP(newConnectionFn, sessionFn, consumerFn, flushFn, projectionFn, policy)
+                        : streamJmsQueueP(newConnectionFn, sessionFn, consumerFn, flushFn, projectionFn, policy);
         return Sources.streamFromProcessorWithWatermarks(sourceName(), metaSupplierFactory, true);
     }
 

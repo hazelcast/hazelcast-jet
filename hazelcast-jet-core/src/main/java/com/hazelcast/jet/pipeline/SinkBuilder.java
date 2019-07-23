@@ -24,7 +24,6 @@ import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
@@ -37,6 +36,8 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *
  * @param <W> type of the writer object
  * @param <T> type of the items the sink will accept
+ *
+ * @since 3.0
  */
 public final class SinkBuilder<W, T> {
 
@@ -89,6 +90,8 @@ public final class SinkBuilder<W, T> {
      * compatible with the <em>exactly-once</em> guarantee.
      *
      * @param <W> type of the writer object
+     *
+     * @since 3.0
      */
     @Nonnull
     public static <W> SinkBuilder<W, Void> sinkBuilder(
@@ -180,6 +183,6 @@ public final class SinkBuilder<W, T> {
     public Sink<T> build() {
         Preconditions.checkNotNull(receiveFn, "receiveFn must be set");
         SupplierEx<Processor> supplier = writeBufferedP(createFn, receiveFn, flushFn, destroyFn);
-        return new SinkImpl<>(name, ProcessorMetaSupplier.of(supplier, preferredLocalParallelism));
+        return Sinks.fromProcessor(name, ProcessorMetaSupplier.of(supplier, preferredLocalParallelism));
     }
 }

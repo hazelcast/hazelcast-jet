@@ -16,13 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.ConsumerEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.connector.WriteJmsP;
-import com.hazelcast.jet.impl.pipeline.SinkImpl;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;
@@ -38,6 +37,8 @@ import static com.hazelcast.util.Preconditions.checkNotNull;
  * See {@link Sinks#jmsQueueBuilder} or {@link Sinks#jmsTopicBuilder}.
  *
  * @param <T> type of the items the sink accepts
+ *
+ * @since 3.0
  */
 public final class JmsSinkBuilder<T> {
 
@@ -193,9 +194,9 @@ public final class JmsSinkBuilder<T> {
 
         FunctionEx<ConnectionFactory, Connection> connectionFnLocal = connectionFn;
         SupplierEx<ConnectionFactory> factorySupplierLocal = factorySupplier;
-        SupplierEx<Connection> connectionSupplier = () -> connectionFnLocal.apply(factorySupplierLocal.get());
-        return new SinkImpl<>(sinkName(),
-                WriteJmsP.supplier(connectionSupplier, sessionFn, messageFn, sendFn, flushFn, destinationName, isTopic));
+        SupplierEx<Connection> newConnectionFn = () -> connectionFnLocal.apply(factorySupplierLocal.get());
+        return Sinks.fromProcessor(sinkName(),
+                WriteJmsP.supplier(newConnectionFn, sessionFn, messageFn, sendFn, flushFn, destinationName, isTopic));
     }
 
     private String sinkName() {

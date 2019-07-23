@@ -88,8 +88,10 @@ public class JobExecutionService {
                         (PrivilegedAction<JetClassLoader>) () -> {
                             ClassLoader parent = config.getClassLoaderFactory() != null
                                     ? config.getClassLoaderFactory().getJobClassLoader()
-                                    : null;
-                            return new JetClassLoader(parent, jobId, jobRepository.getJobResources(jobId));
+                                    : nodeEngine.getConfigClassLoader();
+                            return new JetClassLoader(
+                                    nodeEngine, parent, config.getName(), jobId, jobRepository.getJobResources(jobId)
+                            );
                         }));
     }
 
@@ -206,7 +208,8 @@ public class JobExecutionService {
         ExecutionContext created = new ExecutionContext(nodeEngine, taskletExecutionService,
                 jobId, executionId, coordinator, addresses);
         try {
-            created.initialize(plan);
+            ClassLoader jobCl = getClassLoader(plan.getJobConfig(), jobId);
+            com.hazelcast.jet.impl.util.Util.doWithClassLoader(jobCl, () -> created.initialize(plan));
         } finally {
             ExecutionContext oldContext = executionContexts.put(executionId, created);
             assert oldContext == null : "Duplicate ExecutionContext for execution " + Util.idToString(executionId);
@@ -310,10 +313,11 @@ public class JobExecutionService {
     public void completeExecution(long executionId, Throwable error) {
         ExecutionContext executionContext = executionContexts.remove(executionId);
         if (executionContext != null) {
+            JetClassLoader removed = classLoaders.remove(executionContext.jobId());
             try {
-                executionContext.completeExecution(error);
+                com.hazelcast.jet.impl.util.Util.doWithClassLoader(removed, () ->
+                    executionContext.completeExecution(error));
             } finally {
-                JetClassLoader removed = classLoaders.remove(executionContext.jobId());
                 removed.shutdown();
                 executionContextJobIds.remove(executionContext.jobId());
                 logger.fine("Completed execution of " + executionContext.jobNameAndExecutionId());

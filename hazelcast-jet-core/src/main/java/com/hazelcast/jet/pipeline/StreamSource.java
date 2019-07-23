@@ -27,6 +27,8 @@ import javax.annotation.Nonnull;
  * @see Sources source factory methods
  *
  * @param <T> the stream item type
+ *
+ * @since 3.0
  */
 public interface StreamSource<T> {
     /**
@@ -54,11 +56,15 @@ public interface StreamSource<T> {
      * disable the feature.
      *
      * @param timeoutMillis the timeout in milliseconds or zero to disable.
+     *
+     * @since 3.1
      */
     StreamSource<T> setPartitionIdleTimeout(long timeoutMillis);
 
     /**
      * Returns the value set by {@link #setPartitionIdleTimeout(long)}.
+     *
+     * @since 3.1
      */
     long partitionIdleTimeout();
 }

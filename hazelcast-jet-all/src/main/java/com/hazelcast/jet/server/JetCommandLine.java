@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.server;
 
-
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.client.config.YamlClientConfigBuilder;
 import com.hazelcast.core.Cluster;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.Jet;
@@ -54,7 +54,6 @@ import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -65,6 +64,7 @@ import java.util.logging.LogManager;
 import static com.hazelcast.instance.BuildInfoProvider.getBuildInfo;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 
 @Command(
@@ -81,7 +81,7 @@ import static java.util.Collections.emptyList;
         sortOptions = false,
         subcommands = {HelpCommand.class}
 )
-public class JetCommandLine implements Callable<Void> {
+public class JetCommandLine implements Runnable {
 
     private static final int MAX_STR_LENGTH = 24;
     private static final int WAIT_INTERVAL_MILLIS = 100;
@@ -91,12 +91,12 @@ public class JetCommandLine implements Callable<Void> {
     private final PrintStream err;
 
     @Option(names = {"-f", "--config"},
-            description = "Optional path to a client config XML file. " +
+            description = "Optional path to a client config XML/YAML file. " +
                     "By default config/hazelcast-client.xml is used." +
                     "If this option is specified then the addresses and group name options are ignored.",
             order = 0
     )
-    private File configXml;
+    private File config;
 
     @Option(names = {"-a", "--addresses"},
             split = ",",
@@ -138,6 +138,7 @@ public class JetCommandLine implements Callable<Void> {
             String[] args
     ) {
         CommandLine cmd = new CommandLine(new JetCommandLine(jetClientFn, out, err));
+        cmd.getSubcommands().get("submit").setStopAtPositional(true);
 
         String jetVersion = getBuildInfo().getJetBuildInfo().getVersion();
         cmd.getCommandSpec().usageMessage().header("Hazelcast Jet " + jetVersion);
@@ -159,8 +160,8 @@ public class JetCommandLine implements Callable<Void> {
     }
 
     @Override
-    public Void call() {
-        return null;
+    public void run() {
+        // top-level command, do nothing
     }
 
     @Command(description = "Submits a job to the cluster",
@@ -194,7 +195,13 @@ public class JetCommandLine implements Callable<Void> {
             throw new Exception("File " + file + " could not be found.");
         }
         printf("Submitting JAR '%s' with arguments %s%n", file, params);
-        JetBootstrap.executeJar(getClientConfig(), file.getAbsolutePath(), snapshotName, name, params);
+        if (name != null) {
+            printf("Using job name '%s'%n", name);
+        }
+        if (snapshotName != null) {
+            printf("Job will be restored from snapshot with name '%s'%n", snapshotName);
+        }
+        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
     }
 
     @Command(
@@ -352,14 +359,14 @@ public class JetCommandLine implements Callable<Void> {
             String format = "%-24s %-19s %-18s %-23s%n";
             printf(format, "NAME", "ID", "STATUS", "SUBMISSION TIME");
             summaries.stream()
-                    .filter(job -> listAll || isActive(job.getStatus()))
-                    .forEach(job -> {
-                        String idString = idToString(job.getJobId());
-                        String name = job.getName().equals(idString) ? "N/A" : shorten(job.getName(), MAX_STR_LENGTH);
-                        printf(format,
-                                name, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime())
-                        );
-                    });
+                     .filter(job -> listAll || isActive(job.getStatus()))
+                     .forEach(job -> {
+                         String idString = idToString(job.getJobId());
+                         String name = job.getName().equals(idString) ? "N/A" : shorten(job.getName(), MAX_STR_LENGTH);
+                         printf(format,
+                                 name, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime())
+                         );
+                     });
         });
     }
 
@@ -409,7 +416,7 @@ public class JetCommandLine implements Callable<Void> {
     private void runWithJet(Verbosity verbosity, Consumer<JetInstance> consumer) throws IOException {
         this.verbosity.merge(verbosity);
         configureLogging();
-        JetInstance jet = jetClientFn.apply(getClientConfig());
+        JetInstance jet = getJetClient();
         try {
             consumer.accept(jet);
         } finally {
@@ -417,9 +424,16 @@ public class JetCommandLine implements Callable<Void> {
         }
     }
 
+    private JetInstance getJetClient() {
+        return uncheckCall(() -> jetClientFn.apply(getClientConfig()));
+    }
+
     private ClientConfig getClientConfig() throws IOException {
-        if (configXml != null) {
-            return new XmlClientConfigBuilder(configXml).build();
+        if (isYaml()) {
+            return new YamlClientConfigBuilder(config).build();
+        }
+        if (isConfigNotNull()) {
+            return new XmlClientConfigBuilder(config).build();
         }
         if (addresses != null) {
             ClientConfig config = new ClientConfig();
@@ -428,6 +442,15 @@ public class JetCommandLine implements Callable<Void> {
             return config;
         }
         return ConfigProvider.locateAndGetClientConfig();
+    }
+
+    private boolean isYaml() {
+        return isConfigNotNull() &&
+                (config.getPath().endsWith(".yaml") || config.getPath().endsWith(".yml"));
+    }
+
+    private boolean isConfigNotNull() {
+        return config != null;
     }
 
     private void configureLogging() throws IOException {
@@ -496,7 +519,7 @@ public class JetCommandLine implements Callable<Void> {
         @Override
         public String[] getVersion() {
             JetBuildInfo jetBuildInfo = getBuildInfo().getJetBuildInfo();
-            return new String[]{
+            return new String[] {
                     "Hazelcast Jet " + jetBuildInfo.getVersion(),
                     "Revision " + jetBuildInfo.getRevision(),
                     "Build " + jetBuildInfo.getBuild()

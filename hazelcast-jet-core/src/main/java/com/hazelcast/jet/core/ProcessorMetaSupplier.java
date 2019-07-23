@@ -57,6 +57,8 @@ import static java.util.Collections.singletonList;
  * and partitioning services. It can use the information from these services to
  * precisely parameterize each {@code Processor} instance that will be created on
  * each member.
+ *
+ * @since 3.0
  */
 @FunctionalInterface
 public interface ProcessorMetaSupplier extends Serializable {
@@ -291,8 +293,8 @@ public interface ProcessorMetaSupplier extends Serializable {
                             protected boolean tryProcess(int ordinal, @Nonnull Object item) {
                                 throw new IllegalStateException(
                                         "This vertex has a total parallelism of one and as such only"
-                                                + " expects input on one node. Edge configuration must be adjusted to"
-                                                + " make sure that only the expected node receives any input."
+                                                + " expects input on a specific node. Edge configuration must be adjusted"
+                                                + " to make sure that only the expected node receives any input."
                                                 + " Unexpected input received from ordinal " + ordinal + ": " + item
                                 );
                             }
@@ -314,6 +316,8 @@ public interface ProcessorMetaSupplier extends Serializable {
     /**
      * Context passed to the meta-supplier at init time on the member that
      * received a job request from the client.
+     *
+     * @since 3.0
      */
     interface Context {
 
