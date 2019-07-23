@@ -22,6 +22,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.spi.NodeEngine;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -49,9 +50,10 @@ public class JetClassLoader extends ClassLoader {
 
     private volatile boolean isShutdown;
 
-    public JetClassLoader(NodeEngine nodeEngine,
+    public JetClassLoader(@Nonnull NodeEngine nodeEngine,
                           @Nullable ClassLoader parent, @Nullable String jobName,
-                          long jobId, Supplier<IMap<String, byte[]>> resourcesSupplier) {
+                          long jobId, @Nonnull Supplier<IMap<String, byte[]>> resourcesSupplier
+    ) {
         super(parent == null ? JetClassLoader.class.getClassLoader() : parent);
         this.jobName = jobName;
         this.jobId = jobId;

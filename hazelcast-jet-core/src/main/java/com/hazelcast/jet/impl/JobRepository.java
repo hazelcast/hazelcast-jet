@@ -378,6 +378,9 @@ public class JobRepository {
        return jobExecutionRecords.get(jobId);
     }
 
+    /**
+     * Gets the job resources map, lazily evaluated to avoid creating the map if it won't be needed
+     */
     <T> Supplier<IMap<String, T>> getJobResources(long jobId) {
         return Util.memoizeConcurrent(() -> instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId)));
     }
