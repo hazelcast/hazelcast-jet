@@ -131,12 +131,14 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     /**
-     * Adds an edge to this DAG. The vertices it connects must already be present
-     * in the DAG. It is an error to add an edge that connects the same two
-     * vertices as another existing edge. It is an error to connect an edge to
-     * a vertex at the same ordinal as another existing edge. However, inbound
-     * and outbound ordinals are independent, so there can be two edges at the
-     * same ordinal, one inbound and one outbound.
+     * Adds an edge to this DAG. The vertices it connects must already be
+     * present in the DAG. It is an error to connect an edge to a vertex at the
+     * same ordinal as another existing edge. However, inbound and outbound
+     * ordinals are independent, so there can be two edges at the same ordinal,
+     * one inbound and one outbound.
+     * <p>
+     * Jet supports multigraphs, that is you can add two edges between the same
+     * tow vertices. However, they have to have different ordinals.
      */
     @Nonnull
     public DAG edge(@Nonnull Edge edge) {
