@@ -25,6 +25,8 @@ import com.hazelcast.spi.exception.RetryableHazelcastException;
 
 import java.io.IOException;
 
+import static com.hazelcast.jet.Util.idToString;
+
 /**
  * An operation sent from the master to all members to query metrics for a
  * specific job ID.
@@ -46,8 +48,10 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
     public void run() {
         JetService service = getService();
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
-        response = executionContext == null ? new RetryableHazelcastException("Execution unknown") :
-                                                executionContext.getJobMetrics();
+        if (executionContext == null) {
+            throw new RetryableHazelcastException("Execution " + idToString(executionId) + " not found");
+        }
+        response = executionContext.getJobMetrics();
     }
 
     @Override
