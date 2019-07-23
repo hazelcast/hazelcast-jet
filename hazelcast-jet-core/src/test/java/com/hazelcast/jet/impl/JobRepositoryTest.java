@@ -162,13 +162,13 @@ public class JobRepositoryTest extends JetTestSupport {
         DAG dag = new DAG();
         dag.newVertex("v", Processors.noopP());
 
+        // create max+1 jobs
         for (int i = 0; i < MAX_JOB_RESULTS_COUNT + 1; i++) {
             instance.newJob(dag).join();
         }
 
-        assertTrueEventually(
-            () -> assertEquals(MAX_JOB_RESULTS_COUNT, jobRepository.getJobResults().size()), 10
-        );
+        jobRepository.cleanup(getNodeEngineImpl(instance));
+        assertEquals(MAX_JOB_RESULTS_COUNT, jobRepository.getJobResults().size());
     }
 
     private void cleanup() {

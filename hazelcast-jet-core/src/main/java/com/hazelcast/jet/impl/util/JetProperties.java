@@ -43,6 +43,7 @@ public final class JetProperties {
      */
     public static final HazelcastProperty JOB_RESULTS_TTL_SECONDS
             = new HazelcastProperty("jet.job.results.ttl.seconds", DAYS.toSeconds(7), SECONDS);
+
     /**
      * Maximum number of job results to keep in the cluster, the oldest
      * results will be automatically deleted after this size is reached.
@@ -50,7 +51,7 @@ public final class JetProperties {
      * Default value is 10,000 jobs.
      */
     public static final HazelcastProperty JOB_RESULTS_MAX_SIZE
-        = new HazelcastProperty("jet.job.results.max.size", 10_000);
+            = new HazelcastProperty("jet.job.results.max.size", 10_000);
 
     public static final HazelcastProperty JET_HOME
             = new HazelcastProperty("jet.home", "");
