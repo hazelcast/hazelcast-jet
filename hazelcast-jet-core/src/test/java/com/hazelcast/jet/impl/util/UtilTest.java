@@ -38,6 +38,7 @@ import static com.hazelcast.jet.impl.util.Util.addOrIncrementIndexInName;
 import static com.hazelcast.jet.impl.util.Util.gcd;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
+import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -132,7 +133,7 @@ public class UtilTest extends JetTestSupport {
 
         logger.info("Populating source map...");
         IMapJet<Object, Object> srcMap = instances[0].getMap("src");
-        Map<Integer, Integer> testData = IntStream.range(0, 100_000).boxed().collect(Collectors.toMap(e -> e, e -> e));
+        Map<Integer, Integer> testData = IntStream.range(0, 100_000).boxed().collect(toMap(e -> e, e -> e));
         srcMap.putAll(testData);
 
         logger.info("Copying using job...");

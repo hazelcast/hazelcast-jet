@@ -561,9 +561,7 @@ public class MasterJobContext {
                 logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
                         "resources might leak: " + responses);
             } else {
-                Map<String, Long> mergedMetrics = new HashMap<>();
-                responses.forEach(o -> mergedMetrics.putAll(((JobMetrics) o).toMap()));
-                setJobMetrics(JobMetrics.of(mergedMetrics));
+                setJobMetrics(mergeMetrics(responses));
             }
             onCompleteExecutionCompleted(error);
         }, null, true);
@@ -779,7 +777,7 @@ public class MasterJobContext {
         return jobMetrics;
     }
 
-    void setJobMetrics(JobMetrics jobMetrics) {
+    private void setJobMetrics(JobMetrics jobMetrics) {
         this.jobMetrics = Objects.requireNonNull(jobMetrics);
     }
 
@@ -817,10 +815,22 @@ public class MasterJobContext {
         if (firstThrowable.isPresent()) {
             clientFuture.completeExceptionally((Throwable) firstThrowable.get());
         } else {
-            Map<String, Long> mergedMetrics = new HashMap<>();
-            metrics.forEach(o -> mergedMetrics.putAll(((JobMetrics) o).toMap()));
-            clientFuture.complete(JobMetrics.of(mergedMetrics));
+            JobMetrics jobMetrics = mergeMetrics(metrics);
+            clientFuture.complete(jobMetrics);
         }
+    }
+
+    private JobMetrics mergeMetrics(Collection<Object> metrics) {
+        Map<String, Long> mergedMetrics = new HashMap<>();
+        int expectedCount = 0;
+        for (Object o : metrics) {
+            JobMetrics m = (JobMetrics) o;
+            mergedMetrics.putAll(m.toMap());
+            expectedCount += m.size();
+        }
+        assert mergedMetrics.size() == expectedCount : "Duplicate metrics from members, expectedCount=" + expectedCount
+                + ", actual count=" + mergedMetrics.size();
+        return JobMetrics.of(mergedMetrics);
     }
 
     // true -> failures, false -> success responses

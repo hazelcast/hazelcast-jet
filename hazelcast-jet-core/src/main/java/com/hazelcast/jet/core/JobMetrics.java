@@ -35,18 +35,19 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.Util.entry;
 
 /**
- * An immutable collection of job-specific metrics, where each metric has a name and a
- * {@link Long} numeric value. The name is a {@link String} formed from a comma separated
- * list of tag=value pairs, which may or may not be enclosed by square brackets. Some
- * examples of valid metric names:
- * <ul>
- * <li>[module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]</li>
- * <li>module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity</li>
- * </ul>
+ * An immutable collection of job-specific metrics where each metric has a name
+ * and a {@link Long} numeric value. The name is a {@link String} formed as a
+ * comma separated list of tag=value pairs, enclosed in square brackets.
+ * Example of a valid metric name:
+ *
+ * <pre>{@code
+ *     [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]
+ * }</pre>
+ *
  * <p>
- * Since all names are built from tag-value pairs it's possible to filter metrics based on tags,
- * that's what the {@link #withTag(String, String)} method does. For a list of possible tag names
- * see {@link MetricTags}.
+ * Since all names are built from tag-value pairs it's possible to filter
+ * metrics based on tags, that's what the {@link #withTag(String, String)}
+ * method does. For a list of possible tag names see {@link MetricTags}.
  *
  * @since 3.2
  */

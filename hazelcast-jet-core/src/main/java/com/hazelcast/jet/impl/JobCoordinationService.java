@@ -395,7 +395,7 @@ public class JobCoordinationService {
     }
 
     /**
-     * Returns the latest metrics for a job of fails with {@link JobNotFoundException}
+     * Returns the latest metrics for a job or fails with {@link JobNotFoundException}
      * if the requested job is not found.
      */
     public CompletableFuture<JobMetrics> getJobMetrics(long jobId) {
