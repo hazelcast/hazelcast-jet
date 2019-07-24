@@ -19,11 +19,8 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
-import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNotFound;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -34,12 +31,8 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,14 +43,10 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
-import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
-import static java.util.Collections.emptyMap;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Data pertaining to single job on master member. There's one instance per job,
@@ -74,7 +63,6 @@ public class MasterContext {
             return "NULL_OBJECT";
         }
     };
-    private static final int COLLECT_METRICS_RETRY_DELAY_MILLIS = 100;
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -89,8 +77,6 @@ public class MasterContext {
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile long executionId;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
-    @Nonnull
-    private volatile JobMetrics jobMetrics = JobMetrics.of(emptyMap());
 
     private final MasterJobContext jobContext;
     private final MasterSnapshotContext snapshotContext;
@@ -152,14 +138,6 @@ public class MasterContext {
 
     void setJobStatus(JobStatus jobStatus) {
         this.jobStatus = jobStatus;
-    }
-
-    JobMetrics jobMetrics() {
-        return jobMetrics;
-    }
-
-    void setJobMetrics(JobMetrics jobMetrics) {
-        this.jobMetrics = Objects.requireNonNull(jobMetrics);
     }
 
     public JobConfig jobConfig() {
@@ -298,45 +276,5 @@ public class MasterContext {
                                                             .collect(Collectors.toList()));
             }
         }));
-    }
-
-    void collectMetrics(CompletableFuture<JobMetrics> clientFuture) {
-        if (jobStatus == RUNNING) {
-            long jobId = jobId();
-            long executionId = executionId();
-            invokeOnParticipants(
-                    plan -> new GetLocalJobMetricsOperation(jobId, executionId),
-                    objects -> completeWithMergedMetrics(clientFuture, objects),
-                    null,
-                    false
-            );
-        } else {
-            clientFuture.complete(jobMetrics);
-        }
-    }
-
-    private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
-                                           Collection<Object> metrics) {
-        if (metrics.stream().anyMatch(ExecutionNotFound.class::isInstance)) {
-            // If any member threw ExecutionNotFound, we'll retry. This happens
-            // when the job is starting or completing - master sees the job as
-            // RUNNING, but some members might have terminated already. When
-            // retrying, the job will eventually not be RUNNING, in which case
-            // we'll return last known metrics, or it will be running again, in
-            // which case we'll get fresh metrics.
-            logFinest(logger, "Rescheduling collectMetrics for %s, some members threw %s", jobIdString(),
-                    ExecutionNotFound.class.getSimpleName());
-            nodeEngine.getExecutionService().schedule(() ->
-                    collectMetrics(clientFuture), COLLECT_METRICS_RETRY_DELAY_MILLIS, MILLISECONDS);
-            return;
-        }
-        Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
-        if (firstThrowable.isPresent()) {
-            clientFuture.completeExceptionally((Throwable) firstThrowable.get());
-        } else {
-            Map<String, Long> mergedMetrics = new HashMap<>();
-            metrics.forEach(o -> mergedMetrics.putAll(((JobMetrics) o).toMap()));
-            clientFuture.complete(JobMetrics.of(mergedMetrics));
-        }
     }
 }

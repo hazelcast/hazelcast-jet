@@ -413,7 +413,7 @@ public class JobCoordinationService {
                     // check if there is a master context for the running job
                     MasterContext mc = masterContexts.get(jobId);
                     if (mc != null) {
-                        mc.collectMetrics(cf);
+                        mc.jobContext().collectMetrics(cf);
                         return;
                     }
 
@@ -639,7 +639,7 @@ public class JobCoordinationService {
             // the order of operations is important.
 
             long jobId = masterContext.jobId();
-            JobMetrics jobMetrics = masterContext.jobMetrics();
+            JobMetrics jobMetrics = masterContext.jobContext().jobMetrics();
             String coordinator = nodeEngine.getNode().getThisUuid();
             jobRepository.completeJob(jobId, jobMetrics, coordinator, completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {

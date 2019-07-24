@@ -56,8 +56,13 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
 
         DAG dag = new DAG();
         dag.newVertex("v1", (SupplierEx<Processor>) NoOutputSourceP::new).localParallelism(1);
+        // todo make this test deterministic: the initial collection delay is 1s. We sleep 2s, that should work,
+        //  but for reliability it should be at least 10 seconds, which will slow down the test. We can submit one
+        //  job, wait until it has metrics, then submit another and check that it doesn't. This test is designed
+        //  to ensure that the job.getMetrics() call doesn't block until collection takes place
+        sleepSeconds(2);
         Job job = inst.newJob(dag);
-        sleepSeconds(1);
-        assertEquals(0, job.getMetrics().size());
+        JobMetrics metrics = job.getMetrics();
+        assertEquals(metrics.toString(), 0, metrics.size());
     }
 }
