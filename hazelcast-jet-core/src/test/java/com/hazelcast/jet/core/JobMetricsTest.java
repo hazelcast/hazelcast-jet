@@ -22,6 +22,7 @@ import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -120,6 +121,20 @@ public class JobMetricsTest extends TestInClusterSupport {
                 throw e;
             }
         });
+    }
+
+    @Test
+    public void test_duplicateMetricsFromMembers() {
+        // A job with a distributed edge causes the presence of distributedBytesIn metric, which
+        // doesn't contain the `proc` tag which is unique among members. If not handled correctly,
+        // the job will fail, there's an assertion when merging the metrics.
+        DAG dag = new DAG();
+        Vertex v1 = dag.newVertex("v1", Processors.noopP());
+        Vertex v2 = dag.newVertex("v2", Processors.noopP());
+        dag.edge(between(v1, v2).distributed());
+        Job job = member.newJob(dag);
+        job.join();
+        job.getMetrics();
     }
 
     @Test
