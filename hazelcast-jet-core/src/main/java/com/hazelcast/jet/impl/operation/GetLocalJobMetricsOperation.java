@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.spi.exception.RetryableHazelcastException;
 
 import java.io.IOException;
 
@@ -29,7 +29,7 @@ import static com.hazelcast.jet.Util.idToString;
 
 /**
  * An operation sent from the master to all members to query metrics for a
- * specific job ID.
+ * specific execution ID.
  */
 public class GetLocalJobMetricsOperation extends AbstractJobOperation {
 
@@ -49,7 +49,7 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
         JetService service = getService();
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
         if (executionContext == null) {
-            throw new RetryableHazelcastException("Execution " + idToString(executionId) + " not found");
+            throw new ExecutionNotFound(executionId);
         }
         response = executionContext.getJobMetrics();
     }
@@ -74,5 +74,11 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
         executionId = in.readLong();
+    }
+
+    public static class ExecutionNotFound extends JetException {
+        public ExecutionNotFound(long executionId) {
+            super("Execution " + idToString(executionId) + "not found");
+        }
     }
 }

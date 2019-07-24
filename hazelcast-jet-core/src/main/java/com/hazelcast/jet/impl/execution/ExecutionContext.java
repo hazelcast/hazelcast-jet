@@ -267,7 +267,7 @@ public class ExecutionContext {
         return JobMetrics.of(jobMetrics);
     }
 
-    public void setJobMetric(Map<String, Long> jobMetrics) {
+    public void setJobMetrics(Map<String, Long> jobMetrics) {
         this.jobMetrics = jobMetrics;
     }
 }

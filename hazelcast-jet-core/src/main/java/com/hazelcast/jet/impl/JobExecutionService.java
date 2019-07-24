@@ -331,7 +331,7 @@ public class JobExecutionService {
         for (Entry<Long, Map<String, Long>> entry : metrics.entrySet()) {
             ExecutionContext executionContext = executionContexts.get(entry.getKey());
             if (executionContext != null) {
-                executionContext.setJobMetric(entry.getValue());
+                executionContext.setJobMetrics(entry.getValue());
             }
         }
     }

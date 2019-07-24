@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
+import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNotFound;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
@@ -319,6 +320,16 @@ public class MasterContext {
 
     private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
                                            Collection<Object> metrics) {
+        if (metrics.stream().anyMatch(ExecutionNotFound.class::isInstance)) {
+            // If any member threw ExecutionNotFound, we'll retry. This happens
+            // when the job is starting or completing - master sees the job as
+            // RUNNING, but some members might have terminated already. When
+            // retrying, the job will eventually not be RUNNING, in which case
+            // we'll return last known metrics, or it will be running again, in
+            // which case we'll get fresh metrics.
+            collectMetrics(clientFuture);
+            return;
+        }
         Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
         if (firstThrowable.isPresent()) {
             clientFuture.completeExceptionally((Throwable) firstThrowable.get());
