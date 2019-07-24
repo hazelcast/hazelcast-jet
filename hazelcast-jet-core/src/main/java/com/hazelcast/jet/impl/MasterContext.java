@@ -29,13 +29,11 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.spi.InternalCompletableFuture;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.Operation;
-import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -55,8 +53,11 @@ import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
+import static java.util.Collections.emptyMap;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Data pertaining to single job on master member. There's one instance per job,
@@ -73,6 +74,7 @@ public class MasterContext {
             return "NULL_OBJECT";
         }
     };
+    private static final int COLLECT_METRICS_RETRY_DELAY_MILLIS = 100;
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -87,7 +89,8 @@ public class MasterContext {
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile long executionId;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
-    private volatile JobMetrics jobMetrics;
+    @Nonnull
+    private volatile JobMetrics jobMetrics = JobMetrics.of(emptyMap());
 
     private final MasterJobContext jobContext;
     private final MasterSnapshotContext snapshotContext;
@@ -108,7 +111,6 @@ public class MasterContext {
 
         jobContext = new MasterJobContext(this, nodeEngine.getLogger(MasterJobContext.class));
         snapshotContext = createMasterSnapshotContext(nodeEngine);
-        jobMetrics = null;
     }
 
     MasterSnapshotContext createMasterSnapshotContext(NodeEngineImpl nodeEngine) {
@@ -153,12 +155,11 @@ public class MasterContext {
     }
 
     JobMetrics jobMetrics() {
-        return jobMetrics == null ? JobMetrics.of(Collections.emptyMap()) : jobMetrics;
+        return jobMetrics;
     }
 
     void setJobMetrics(JobMetrics jobMetrics) {
-        Objects.requireNonNull(jobMetrics);
-        this.jobMetrics = jobMetrics;
+        this.jobMetrics = Objects.requireNonNull(jobMetrics);
     }
 
     public JobConfig jobConfig() {
@@ -306,15 +307,11 @@ public class MasterContext {
             invokeOnParticipants(
                     plan -> new GetLocalJobMetricsOperation(jobId, executionId),
                     objects -> completeWithMergedMetrics(clientFuture, objects),
-                    clientFuture::completeExceptionally,
+                    null,
                     false
             );
         } else {
-            if (jobMetrics == null) {
-                clientFuture.completeExceptionally(new RetryableHazelcastException("Execution not started yet"));
-            } else {
-                clientFuture.complete(jobMetrics);
-            }
+            clientFuture.complete(jobMetrics);
         }
     }
 
@@ -327,7 +324,10 @@ public class MasterContext {
             // retrying, the job will eventually not be RUNNING, in which case
             // we'll return last known metrics, or it will be running again, in
             // which case we'll get fresh metrics.
-            collectMetrics(clientFuture);
+            logFinest(logger, "Rescheduling collectMetrics for %s, some members threw %s", jobIdString(),
+                    ExecutionNotFound.class.getSimpleName());
+            nodeEngine.getExecutionService().schedule(() ->
+                    collectMetrics(clientFuture), COLLECT_METRICS_RETRY_DELAY_MILLIS, MILLISECONDS);
             return;
         }
         Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();

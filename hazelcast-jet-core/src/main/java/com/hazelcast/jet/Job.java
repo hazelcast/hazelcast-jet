@@ -88,15 +88,20 @@ public interface Job {
      * Returns a snapshot of the current values of all job-specific metrics.
      * <p>
      * While the job is running the metric values get updated periodically
-     * (see {@link MetricsConfig#getCollectionIntervalSeconds()}, default is
-     * {@value MetricsConfig#DEFAULT_METRICS_COLLECTION_SECONDS} seconds).
+     * (see {@link MetricsConfig#setCollectionIntervalSeconds}).
      * <p>
-     * Once a job finishes executing (successfully or with a failure) the
-     * metrics will have their most up-to-date values (ie. last metric updates
-     * from right before job completion will not get lost).
+     * Once a job stops executing (successfully, after a failure, cancellation,
+     * or temporarily while suspended) the metrics will have their most
+     * recent values (i.e. the last metric values from the moment before the
+     * job completed).
      * <p>
      * If a job is restarted then the metrics are reset too, their values
      * will reflect only updates from the latest execution of the job.
+     * <p>
+     * The method returns empty metrics if metrics collection is {@link
+     * MetricsConfig#setEnabled disabled} or until the first collection takes
+     * place. Also keep in mind that the collections occur at different time on
+     * each member, metrics form various members aren't from the same instant.
      *
      * @since 3.2
      */

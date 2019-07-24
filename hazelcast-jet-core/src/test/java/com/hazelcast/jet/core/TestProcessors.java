@@ -118,7 +118,7 @@ public final class TestProcessors {
             try {
                 RuntimeException localFailure = failure.getAndUpdate(e -> null);
                 if (localFailure != null) {
-                    throw localFailure;
+                    throw new RuntimeException(localFailure);
                 }
                 return proceedLatch.await(timeoutMillis, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
@@ -163,14 +163,14 @@ public final class TestProcessors {
                     initCalled.compareAndSet(false, true)
             );
             if (initError != null) {
-                throw initError;
+                throw new RuntimeException(initError);
             }
         }
 
         @Nonnull @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             if (getError != null) {
-                throw getError;
+                throw new RuntimeException(getError);
             }
             return a -> supplierFn.get();
         }
@@ -188,7 +188,7 @@ public final class TestProcessors {
             );
 
             if (closeError != null) {
-                throw closeError;
+                throw new RuntimeException(closeError);
             }
         }
     }
@@ -234,14 +234,14 @@ public final class TestProcessors {
             initCount.incrementAndGet();
 
             if (initError != null) {
-                throw initError;
+                throw new RuntimeException(initError);
             }
         }
 
         @Nonnull @Override
         public List<Processor> get(int count) {
             if (getError != null) {
-                throw getError;
+                throw new RuntimeException(getError);
             }
             return Stream.generate(supplier).limit(count).collect(toList());
         }
@@ -260,7 +260,7 @@ public final class TestProcessors {
                     + initCount.get() + " times!", closeCount.get() <= initCount.get());
 
             if (closeError != null) {
-                throw closeError;
+                throw new RuntimeException(closeError);
             }
         }
     }
@@ -307,17 +307,17 @@ public final class TestProcessors {
         }
 
         @Override
-        protected void init(@Nonnull Context context) throws Exception {
+        protected void init(@Nonnull Context context) {
             initCount.incrementAndGet();
             if (initError != null) {
-                throw initError;
+                throw new RuntimeException(initError);
             }
         }
 
         @Override
-        protected boolean tryProcess(int ordinal, @Nonnull Object item) throws Exception {
+        protected boolean tryProcess(int ordinal, @Nonnull Object item) {
             if (processError != null) {
-                throw processError;
+                throw new RuntimeException(processError);
             }
             return tryEmit(item);
         }
@@ -325,16 +325,16 @@ public final class TestProcessors {
         @Override
         public boolean complete() {
             if (completeError != null) {
-                throw completeError;
+                throw new RuntimeException(completeError);
             }
             return true;
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             closeCount.incrementAndGet();
             if (closeError != null) {
-                throw closeError;
+                throw new RuntimeException(closeError);
             }
         }
     }

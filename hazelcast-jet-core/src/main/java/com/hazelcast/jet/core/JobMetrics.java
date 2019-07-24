@@ -175,6 +175,6 @@ public final class JobMetrics implements IdentifiedDataSerializable {
 
     @Override
     public String toString() {
-        return JobMetrics.class.getSimpleName() + "{" + metrics + "}";
+        return JobMetrics.class.getSimpleName() + metrics;
     }
 }

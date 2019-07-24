@@ -78,7 +78,7 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
 
     public static class ExecutionNotFound extends JetException {
         public ExecutionNotFound(long executionId) {
-            super("Execution " + idToString(executionId) + "not found");
+            super("Execution " + idToString(executionId) + " not found");
         }
     }
 }
