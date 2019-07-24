@@ -36,7 +36,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -328,24 +327,13 @@ public class JobExecutionService {
         }
     }
 
-    public void updateMetrics(Map<String, Long> metrics) {
-        Map<ExecutionContext, Map<String, Long>> metricsOfExecutions = new HashMap<>();
-
-        for (Entry<String, Long> entry : metrics.entrySet()) {
-            String metricName = entry.getKey();
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(metricName);
-            if (executionId != null) {
-                ExecutionContext executionContext = executionContexts.get(executionId);
-                if (executionContext != null) {
-                    Long metricValue = entry.getValue();
-                    metricsOfExecutions
-                            .computeIfAbsent(executionContext, ec -> new HashMap<>())
-                            .put(metricName, metricValue);
-                }
+    public void updateMetrics(Map<Long, Map<String, Long>> metrics) {
+        for (Entry<Long, Map<String, Long>> entry : metrics.entrySet()) {
+            ExecutionContext executionContext = executionContexts.get(entry.getKey());
+            if (executionContext != null) {
+                executionContext.setJobMetric(entry.getValue());
             }
         }
-
-        metricsOfExecutions.forEach(ExecutionContext::setJobMetric);
     }
 
     public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {

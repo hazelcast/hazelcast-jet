@@ -196,13 +196,13 @@ public class JetMetricsService implements LiveOperationsTracker {
 
     /**
      * Internal publisher which notifies the {@link JobExecutionService} about
-     * latest metric values.
+     * the latest metric values.
      */
     public static class InternalJobMetricsPublisher implements MetricsPublisher {
 
         private final JobExecutionService jobExecutionService;
 
-        private final Map<String, Long> metrics = new HashMap<>();
+        private final Map<Long, Map<String, Long>> metrics = new HashMap<>();
 
         InternalJobMetricsPublisher(JobExecutionService jobExecutionService) {
             this.jobExecutionService = jobExecutionService;
@@ -210,7 +210,11 @@ public class JetMetricsService implements LiveOperationsTracker {
 
         @Override
         public void publishLong(String name, long value) {
-            metrics.put(name, value);
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
+            if (executionId != null) {
+                metrics.computeIfAbsent(executionId, x -> new HashMap<>())
+                        .put(name, value);
+            }
         }
 
         @Override
