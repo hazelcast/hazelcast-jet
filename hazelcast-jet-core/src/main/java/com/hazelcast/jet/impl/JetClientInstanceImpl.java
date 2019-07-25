@@ -29,7 +29,9 @@ import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetJobSummaryListCodec;
 import com.hazelcast.client.impl.protocol.codec.JetGetMemberXmlConfigurationCodec;
 import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec;
+import com.hazelcast.client.impl.protocol.codec.JetSubmitLightJobCodec;
 import com.hazelcast.client.spi.impl.ClientInvocation;
+import com.hazelcast.client.spi.impl.ClientInvocationFuture;
 import com.hazelcast.client.util.ClientDelegatingFuture;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryXmlConfig;
@@ -46,6 +48,7 @@ import com.hazelcast.jet.impl.metrics.management.MetricsResultSet;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
@@ -83,8 +86,13 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     @Nonnull @Override
     public LightJob newLightJob(DAG dag) {
-        // TODO [viliam]
-        throw new UnsupportedOperationException("todo");
+        Data dagSerialized = serializationService.toData(dag);
+        ClientInvocation invocation = new ClientInvocation(
+                client, JetSubmitLightJobCodec.encodeRequest(dagSerialized), null, masterAddress(client.getCluster())
+        );
+
+        ClientInvocationFuture future = invocation.invoke();
+        return new ClientLightJobProxy(future);
     }
 
     @Nonnull @Override

@@ -16,17 +16,16 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.client.spi.impl.ClientInvocationFuture;
 import com.hazelcast.jet.LightJob;
-
-import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
-public class LightJobProxy implements LightJob {
+public class ClientLightJobProxy implements LightJob {
 
-    private final Future<Void> future;
+    private final ClientInvocationFuture future;
 
-    LightJobProxy(Future<Void> future) {
+    ClientLightJobProxy(ClientInvocationFuture future) {
         this.future = future;
     }
 
@@ -44,3 +43,4 @@ public class LightJobProxy implements LightJob {
         throw new UnsupportedOperationException("todo");
     }
 }
+

@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -31,14 +32,29 @@ import static java.util.Arrays.asList;
 @RunWith(HazelcastSerialClassRunner.class)
 public class LightJobTest extends JetTestSupport {
 
+    private JetInstance inst;
+
+    @Before
+    public void before() {
+        inst = createJetMember();
+    }
+
     @Test
-    public void test() {
-        JetInstance inst = createJetMember();
+    public void test_member() {
+        test(inst);
+    }
+
+    @Test
+    public void test_client() {
+        test(createJetClient());
+    }
+
+    private void test(JetInstance submittingInstance) {
         DAG dag = new DAG();
         Vertex src = dag.newVertex("src", ListSource.supplier(asList(1, 2, 3)));
         Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP());
         dag.edge(between(src, sink).distributed());
 
-        inst.newLightJob(dag).join();
+        submittingInstance.newLightJob(dag).join();
     }
 }
