@@ -36,7 +36,7 @@ import java.util.List;
  * operator on the pipeline. For assertions that can be used directly
  * as sinks, see {@link AssertionSinks}.
  *
- * @since 3.2
+ * @since 3.1.1
  */
 @Beta
 public final class Assertions {

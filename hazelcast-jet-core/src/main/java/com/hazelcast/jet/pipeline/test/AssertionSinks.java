@@ -41,7 +41,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * In this class there are variants that can be used as sinks in the pipeline.
  * Variants that can be used in-line in a pipeline are in {@link Assertions}.
  *
- * @since 3.2
+ * @since 3.1.1
  */
 @Beta
 public final class AssertionSinks {

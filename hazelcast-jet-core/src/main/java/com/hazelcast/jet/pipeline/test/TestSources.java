@@ -34,7 +34,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  * Contains factory methods for various mock sources which can be used
  * for pipeline testing and development.
  *
- * @since 3.2
+ * @since 3.1.1
  */
 @Beta
 public final class TestSources {
@@ -46,7 +46,7 @@ public final class TestSources {
      * Returns a batch source which iterates through the supplied iterable and then
      * terminates.
      *
-     * @since 3.2
+     * @since 3.1.1
      */
     @Nonnull
     public static <T> BatchSource<T> items(@Nonnull Iterable<? extends T> items) {
@@ -62,7 +62,7 @@ public final class TestSources {
      * Returns a batch source which iterates through the supplied items and then
      * terminates.
      *
-     * @since 3.2
+     * @since 3.1.1
      */
     @Nonnull
     public static <T> BatchSource<T> items(@Nonnull T... items) {
@@ -87,7 +87,7 @@ public final class TestSources {
      *
      * @param itemsPerSecond how many items should be emitted each second
      *
-     * @since 3.2
+     * @since 3.1.1
      */
     @Nonnull
     public static StreamSource<SimpleEvent> itemStream(int itemsPerSecond) {
@@ -113,7 +113,7 @@ public final class TestSources {
      * @param generatorFn a function which takes the timestamp and the sequence of the generated
      *                    item and maps it to the desired type
      *
-     * @since 3.2
+     * @since 3.1.1
      */
     @Nonnull
     public static <T> StreamSource<T> itemStream(

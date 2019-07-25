@@ -25,7 +25,7 @@ import java.io.Serializable;
  *
  * @param <R> the type of the result of the function
  *
- * @since 3.2
+ * @since 3.1.1
  */
 @FunctionalInterface
 @Beta
