@@ -26,6 +26,7 @@ import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.LightJob;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -203,6 +204,11 @@ public final class JetBootstrap {
         @Nonnull @Override
         public Job newJobIfAbsent(@Nonnull DAG dag, @Nonnull JobConfig config) {
             return instance.newJobIfAbsent(dag, updateJobConfig(config));
+        }
+
+        @Nonnull @Override
+        public LightJob newLightJob(DAG dag) {
+            return instance.newLightJob(dag);
         }
 
         private JobConfig updateJobConfig(@Nonnull JobConfig config) {

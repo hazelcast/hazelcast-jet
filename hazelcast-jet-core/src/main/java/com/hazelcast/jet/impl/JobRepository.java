@@ -192,7 +192,7 @@ public class JobRepository {
         return jobId;
     }
 
-    private long newJobId() {
+    public long newJobId() {
        return idGenerator.newId();
     }
 

@@ -18,11 +18,13 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.LightJob;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
+import com.hazelcast.jet.impl.operation.LightJobOperation;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.impl.MapService;
@@ -53,6 +55,23 @@ public class JetInstanceImpl extends AbstractJetInstance {
     @Nonnull @Override
     public JetConfig getConfig() {
         return config;
+    }
+
+    @Nonnull @Override
+    public LightJob newLightJob(DAG dag) {
+        Address masterAddress = nodeEngine.getMasterAddress();
+        Future<Long> future = nodeEngine
+                .getOperationService()
+                .createInvocationBuilder(JetService.SERVICE_NAME, new LightJobOperation(dag), masterAddress)
+                .invoke();
+
+        long jobId;
+        try {
+            jobId = future.get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
+        return new LightJobProxy(jobId);
     }
 
     @Nonnull @Override

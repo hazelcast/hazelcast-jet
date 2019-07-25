@@ -37,6 +37,7 @@ import com.hazelcast.core.Cluster;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Member;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.LightJob;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -78,6 +79,12 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         this.serializationService = client.getSerializationService();
 
         ExceptionUtil.registerJetExceptions(hazelcastInstance.getClientExceptionFactory());
+    }
+
+    @Nonnull @Override
+    public LightJob newLightJob(DAG dag) {
+        // TODO [viliam]
+        throw new UnsupportedOperationException("todo");
     }
 
     @Nonnull @Override
