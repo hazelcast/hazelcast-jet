@@ -97,9 +97,9 @@ public class LightMasterContext {
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new InitExecutionOperation(jobId, jobId, membersView.getVersion(), participants,
                         nodeEngine.getSerializationService().toData(plan), true);
-        invokeOnParticipants(operationCtor, this::onInitStepCompleted, null, false);
         vertices = new HashSet<>();
         dag.iterator().forEachRemaining(vertices::add);
+        invokeOnParticipants(operationCtor, this::onInitStepCompleted, null, false);
         return jobCompletionFuture;
     }
 
