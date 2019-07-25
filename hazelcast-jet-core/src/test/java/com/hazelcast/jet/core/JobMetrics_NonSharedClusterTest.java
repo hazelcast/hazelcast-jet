@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for JobMetrics that don't use shared cluster.
@@ -56,13 +57,15 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
 
         DAG dag = new DAG();
         dag.newVertex("v1", (SupplierEx<Processor>) NoOutputSourceP::new).localParallelism(1);
-        // todo make this test deterministic: the initial collection delay is 1s. We sleep 2s, that should work,
-        //  but for reliability it should be at least 10 seconds, which will slow down the test. We can submit one
-        //  job, wait until it has metrics, then submit another and check that it doesn't. This test is designed
-        //  to ensure that the job.getMetrics() call doesn't block until collection takes place
-        sleepSeconds(2);
-        Job job = inst.newJob(dag);
-        JobMetrics metrics = job.getMetrics();
-        assertEquals(metrics.toString(), 0, metrics.size());
+
+        Job job1 = inst.newJob(dag);
+        JetTestSupport.assertTrueEventually(() -> assertTrue(job1.getMetrics().size() > 0));
+
+        //job1 has metrics so the metrics service did an initial rendering
+
+        Job job2 = inst.newJob(dag);
+        assertEquals(0, job2.getMetrics().size());
+        //job2's query for metrics returns, it just is empty for now
     }
+
 }
