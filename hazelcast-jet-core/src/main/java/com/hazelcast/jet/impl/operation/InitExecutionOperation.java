@@ -47,17 +47,19 @@ public class InitExecutionOperation extends AbstractJobOperation {
     private int coordinatorMemberListVersion;
     private Set<MemberInfo> participants;
     private Data serializedPlan;
+    private boolean isLightJob;
 
     public InitExecutionOperation() {
     }
 
     public InitExecutionOperation(long jobId, long executionId, int coordinatorMemberListVersion,
-                                  Set<MemberInfo> participants, Data serializedPlan) {
+                                  Set<MemberInfo> participants, Data serializedPlan, boolean isLightJob) {
         super(jobId);
         this.executionId = executionId;
         this.coordinatorMemberListVersion = coordinatorMemberListVersion;
         this.participants = participants;
         this.serializedPlan = serializedPlan;
+        this.isLightJob = isLightJob;
     }
 
     @Override
@@ -88,6 +90,7 @@ public class InitExecutionOperation extends AbstractJobOperation {
         super.writeInternal(out);
 
         out.writeLong(executionId);
+        out.writeBoolean(isLightJob);
         out.writeInt(coordinatorMemberListVersion);
         out.writeInt(participants.size());
         for (MemberInfo participant : participants) {
@@ -101,6 +104,7 @@ public class InitExecutionOperation extends AbstractJobOperation {
         super.readInternal(in);
 
         executionId = in.readLong();
+        isLightJob = in.readBoolean();
         coordinatorMemberListVersion = in.readInt();
         int count = in.readInt();
         participants = new HashSet<>();
@@ -111,8 +115,12 @@ public class InitExecutionOperation extends AbstractJobOperation {
     }
 
     private ExecutionPlan deserializePlan(Data planBlob) {
-        JetService service = getService();
-        ClassLoader cl = service.getClassLoader(jobId());
-        return deserializeWithCustomClassLoader(getNodeEngine().getSerializationService(), cl, planBlob);
+        if (isLightJob) {
+            return getNodeEngine().getSerializationService().toObject(planBlob);
+        } else {
+            JetService service = getService();
+            ClassLoader cl = service.getClassLoader(jobId());
+            return deserializeWithCustomClassLoader(getNodeEngine().getSerializationService(), cl, planBlob);
+        }
     }
 }

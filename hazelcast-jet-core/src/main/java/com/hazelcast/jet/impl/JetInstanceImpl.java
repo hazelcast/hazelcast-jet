@@ -65,13 +65,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
                 .createInvocationBuilder(JetService.SERVICE_NAME, new LightJobOperation(dag), masterAddress)
                 .invoke();
 
-        long jobId;
-        try {
-            jobId = future.get();
-        } catch (Exception e) {
-            throw rethrow(e);
-        }
-        return new LightJobProxy(jobId);
+        return new LightJobProxy(future);
     }
 
     @Nonnull @Override

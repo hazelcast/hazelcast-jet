@@ -18,11 +18,15 @@ package com.hazelcast.jet;
 
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.TestProcessors.ListSource;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.core.processor.Processors.noopP;
+import static com.hazelcast.jet.core.Edge.between;
+import static java.util.Arrays.asList;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class LightJobTest extends JetTestSupport {
@@ -31,9 +35,10 @@ public class LightJobTest extends JetTestSupport {
     public void test() {
         JetInstance inst = createJetMember();
         DAG dag = new DAG();
-        dag.newVertex("v1", noopP());
+        Vertex src = dag.newVertex("src", ListSource.supplier(asList(1, 2, 3)));
+        Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP());
+        dag.edge(between(src, sink).distributed());
 
-        inst.newLightJob(dag);
-        sleepSeconds(10);
+        inst.newLightJob(dag).join();
     }
 }

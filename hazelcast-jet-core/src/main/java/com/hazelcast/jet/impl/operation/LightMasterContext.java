@@ -84,11 +84,10 @@ public class LightMasterContext {
         jobIdString = idToString(jobId);
     }
 
-    public void start() {
+    public CompletableFuture<Void> start() {
         String dotRepresentation = dag.toDotString();
         MembersView membersView = getMembersView();
-        logger.info("Start executing light " + jobIdString
-                + ", execution graph in DOT format:\n" + dotRepresentation
+        logger.info("Start executing light " + jobIdString + ", execution graph in DOT format:\n" + dotRepresentation
                 + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
         logger.fine("Building execution plan for " + jobIdString);
         executionPlanMap =
@@ -97,10 +96,11 @@ public class LightMasterContext {
         Set<MemberInfo> participants = executionPlanMap.keySet();
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new InitExecutionOperation(jobId, jobId, membersView.getVersion(), participants,
-                        nodeEngine.getSerializationService().toData(plan));
+                        nodeEngine.getSerializationService().toData(plan), true);
         invokeOnParticipants(operationCtor, this::onInitStepCompleted, null, false);
         vertices = new HashSet<>();
         dag.iterator().forEachRemaining(vertices::add);
+        return jobCompletionFuture;
     }
 
     // Called as callback when all InitOperation invocations are done
@@ -119,8 +119,7 @@ public class LightMasterContext {
         logger.fine("Executing " + jobIdString);
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, jobId);
-        Consumer<Collection<Object>> completionCallback = this::onExecuteStepCompleted;
-        invokeOnParticipants(operationCtor, completionCallback, error -> cancelInvocations(), false);
+        invokeOnParticipants(operationCtor, this::onExecuteStepCompleted, error -> cancelInvocations(), false);
     }
 
     // Called as callback when all ExecuteOperation invocations are done

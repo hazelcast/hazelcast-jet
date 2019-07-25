@@ -26,6 +26,7 @@ import java.io.Serializable;
 import static com.hazelcast.jet.Util.idToString;
 
 // TODO [viliam] serialization
+// TODO [viliam] use AsyncOperation (liveOpRegistry)
 public class LightJobOperation extends Operation implements Serializable {
 
     private final DAG dag;
@@ -47,11 +48,13 @@ public class LightJobOperation extends Operation implements Serializable {
                     + getNodeEngine().getClusterService().getMasterAddress());
         }
         jobId = getJetService().getJobRepository().newJobId();
-        new LightMasterContext(getNodeEngine(), dag, jobId).start();
+        new LightMasterContext(getNodeEngine(), dag, jobId)
+                .start()
+                .whenComplete((r, t) -> sendResponse(t != null ? t : r));
     }
 
     @Override
-    public Object getResponse() {
-        return jobId;
+    public boolean returnsResponse() {
+        return false;
     }
 }

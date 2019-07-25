@@ -201,7 +201,7 @@ public class MasterJobContext {
             Set<MemberInfo> participants = mc.executionPlanMap().keySet();
             Function<ExecutionPlan, Operation> operationCtor = plan ->
                     new InitExecutionOperation(mc.jobId(), mc.executionId(), membersView.getVersion(), participants,
-                            mc.nodeEngine().getSerializationService().toData(plan));
+                            mc.nodeEngine().getSerializationService().toData(plan), false);
             mc.invokeOnParticipants(operationCtor, this::onInitStepCompleted, null, false);
         } catch (UserCausedException e) {
             finalizeJob(e.getCause());

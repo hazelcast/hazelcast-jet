@@ -18,18 +18,25 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.LightJob;
 
+import java.util.concurrent.Future;
+
+import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+
 public class LightJobProxy implements LightJob {
 
-    private final long jobId;
+    private final Future<Long> future;
 
-    LightJobProxy(long jobId) {
-
-        this.jobId = jobId;
+    LightJobProxy(Future<Long> future) {
+        this.future = future;
     }
 
     @Override
     public void join() {
-        throw new UnsupportedOperationException("todo");
+        try {
+            future.get();
+        } catch (Exception e) {
+            throw rethrow(e);
+        }
     }
 
     @Override

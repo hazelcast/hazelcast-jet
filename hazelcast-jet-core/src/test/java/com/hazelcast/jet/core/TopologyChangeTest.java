@@ -498,7 +498,7 @@ public class TopologyChangeTest extends JetTestSupport {
         JobRecord jobRecord = new JobRecord(jobId, 0, null, "", new JobConfig());
         instances[0].getMap(JOB_RECORDS_MAP_NAME).put(jobId, jobRecord);
 
-        InitExecutionOperation op = new InitExecutionOperation(jobId, executionId, memberListVersion, memberInfos, null);
+        InitExecutionOperation op = new InitExecutionOperation(jobId, executionId, memberListVersion, memberInfos, null, false);
         Future<Object> future = getOperationService(master)
                 .createInvocationBuilder(JetService.SERVICE_NAME, op, getAddress(master))
                 .invoke();
