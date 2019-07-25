@@ -35,7 +35,7 @@ import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
-import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNotFound;
+import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNotFoundException;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
@@ -798,15 +798,15 @@ public class MasterJobContext {
 
     private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
                                            Collection<Object> metrics) {
-        if (metrics.stream().anyMatch(ExecutionNotFound.class::isInstance)) {
-            // If any member threw ExecutionNotFound, we'll retry. This happens
+        if (metrics.stream().anyMatch(ExecutionNotFoundException.class::isInstance)) {
+            // If any member threw ExecutionNotFoundException, we'll retry. This happens
             // when the job is starting or completing - master sees the job as
             // RUNNING, but some members might have terminated already. When
             // retrying, the job will eventually not be RUNNING, in which case
             // we'll return last known metrics, or it will be running again, in
             // which case we'll get fresh metrics.
             logFinest(logger, "Rescheduling collectMetrics for %s, some members threw %s", mc.jobIdString(),
-                    ExecutionNotFound.class.getSimpleName());
+                    GetLocalJobMetricsOperation.ExecutionNotFoundException.class.getSimpleName());
             mc.nodeEngine().getExecutionService().schedule(() ->
                     collectMetrics(clientFuture), COLLECT_METRICS_RETRY_DELAY_MILLIS, MILLISECONDS);
             return;

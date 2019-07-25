@@ -49,7 +49,7 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
         JetService service = getService();
         ExecutionContext executionContext = service.getJobExecutionService().getExecutionContext(executionId);
         if (executionContext == null) {
-            throw new ExecutionNotFound(executionId);
+            throw new ExecutionNotFoundException(executionId);
         }
         response = executionContext.getJobMetrics();
     }
@@ -76,8 +76,8 @@ public class GetLocalJobMetricsOperation extends AbstractJobOperation {
         executionId = in.readLong();
     }
 
-    public static class ExecutionNotFound extends JetException {
-        public ExecutionNotFound(long executionId) {
+    public static class ExecutionNotFoundException extends JetException {
+        ExecutionNotFoundException(long executionId) {
             super("Execution " + idToString(executionId) + " not found");
         }
     }
