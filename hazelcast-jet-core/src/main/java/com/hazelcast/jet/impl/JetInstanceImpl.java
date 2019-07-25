@@ -24,7 +24,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
-import com.hazelcast.jet.impl.operation.LightJobOperation;
+import com.hazelcast.jet.impl.operation.SubmitLightJobOperation;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.impl.MapService;
@@ -62,7 +62,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
         Address masterAddress = nodeEngine.getMasterAddress();
         Future<Long> future = nodeEngine
                 .getOperationService()
-                .createInvocationBuilder(JetService.SERVICE_NAME, new LightJobOperation(dag), masterAddress)
+                .createInvocationBuilder(JetService.SERVICE_NAME, new SubmitLightJobOperation(dag), masterAddress)
                 .invoke();
 
         return new LightJobProxy(future);

@@ -19,20 +19,23 @@ package com.hazelcast.jet.impl.operation;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.spi.Operation;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
 
-import java.io.Serializable;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.idToString;
 
-// TODO [viliam] serialization
-// TODO [viliam] use AsyncOperation (liveOpRegistry)
-public class LightJobOperation extends Operation implements Serializable {
+public class SubmitLightJobOperation extends AsyncOperation {
 
-    private final DAG dag;
-    private long jobId;
+    private DAG dag;
 
-    public LightJobOperation(DAG dag) {
+    public SubmitLightJobOperation() {
+    }
+
+    public SubmitLightJobOperation(DAG dag) {
         this.dag = dag;
     }
 
@@ -42,19 +45,30 @@ public class LightJobOperation extends Operation implements Serializable {
     }
 
     @Override
-    public void run() {
+    protected CompletableFuture<Void> doRun() {
+        long jobId = getJetService().getJobRepository().newJobId();
         if (!getNodeEngine().getClusterService().isMaster()) {
             throw new JetException("Cannot submit job " + idToString(jobId) + " to non-master node. Master address: "
                     + getNodeEngine().getClusterService().getMasterAddress());
         }
-        jobId = getJetService().getJobRepository().newJobId();
-        new LightMasterContext(getNodeEngine(), dag, jobId)
-                .start()
-                .whenComplete((r, t) -> sendResponse(t != null ? t : r));
+        return new LightMasterContext(getNodeEngine(), dag, jobId)
+                .start();
     }
 
     @Override
-    public boolean returnsResponse() {
-        return false;
+    public int getId() {
+        return JetInitDataSerializerHook.SUBMIT_LIGHT_JOB_OP;
+    }
+
+    @Override
+    protected void writeInternal(ObjectDataOutput out) throws IOException {
+        super.writeInternal(out);
+        out.writeObject(dag);
+    }
+
+    @Override
+    protected void readInternal(ObjectDataInput in) throws IOException {
+        super.readInternal(in);
+        dag = in.readObject();
     }
 }
