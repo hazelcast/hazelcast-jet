@@ -197,6 +197,7 @@ public class ExecutionContext {
             if (executionFuture == null) {
                 // if cancelled before execution started, then assign the already completed future.
                 executionFuture = cancellationFuture;
+                completeExecution(mode != null ? new JobTerminateRequestedException(mode) : new CancellationException());
             }
             snapshotContext.cancel();
             return executionFuture;

@@ -128,15 +128,7 @@ public class LightMasterContext {
     }
 
     private void invokeCompleteExecution(Throwable error) {
-        Function<ExecutionPlan, Operation> operationCtor = plan -> new CompleteExecutionOperation(jobId, error);
-        invokeOnParticipants(operationCtor, responses -> {
-            if (responses.stream().anyMatch(Objects::nonNull)) {
-                // log errors
-                logger.severe(jobIdString + ": some CompleteExecutionOperation invocations failed, execution " +
-                        "resources might leak: " + responses);
-            }
-            finalizeJob(error);
-        }, null, true);
+        finalizeJob(error);
     }
 
     private void finalizeJob(@Nullable Throwable failure) {

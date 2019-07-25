@@ -16,11 +16,12 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.core.IList;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.TestProcessors.ListSource;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.core.processor.DiagnosticProcessors;
+import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import org.junit.runner.RunWith;
 
 import static com.hazelcast.jet.core.Edge.between;
 import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class LightJobTest extends JetTestSupport {
@@ -52,9 +54,11 @@ public class LightJobTest extends JetTestSupport {
     private void test(JetInstance submittingInstance) {
         DAG dag = new DAG();
         Vertex src = dag.newVertex("src", ListSource.supplier(asList(1, 2, 3)));
-        Vertex sink = dag.newVertex("sink", DiagnosticProcessors.writeLoggerP());
+        Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
         dag.edge(between(src, sink).distributed());
 
         submittingInstance.newLightJob(dag).join();
+        IList<Integer> result = inst.getList("sink");
+        assertEquals(asList(1, 2, 3), result);
     }
 }

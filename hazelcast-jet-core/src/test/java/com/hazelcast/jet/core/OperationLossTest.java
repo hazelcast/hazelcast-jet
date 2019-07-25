@@ -42,11 +42,9 @@ import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.JobStatus.COMPLETING;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.STARTING;
-import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.function.FunctionEx.identity;
 import static java.util.Collections.singletonList;
@@ -110,30 +108,6 @@ public class OperationLossTest extends JetTestSupport {
         PacketFiltersUtil.resetPacketFiltersFrom(instance1.getHazelcastInstance());
         NoOutputSourceP.proceedLatch.countDown();
         job.join();
-    }
-
-    @Test
-    public void when_completeExecutionOperationLost_then_jobCompletes() {
-        PacketFiltersUtil.dropOperationsFrom(instance1.getHazelcastInstance(), JetInitDataSerializerHook.FACTORY_ID,
-                singletonList(JetInitDataSerializerHook.COMPLETE_EXECUTION_OP));
-        DAG dag = new DAG();
-        Vertex v1 = dag.newVertex("v1", () -> new DummyStatefulP()).localParallelism(1);
-        Vertex v2 = dag.newVertex("v2", mapP(identity())).localParallelism(1);
-        dag.edge(between(v1, v2).distributed());
-
-        Job job = instance1.newJob(dag);
-        assertJobStatusEventually(job, RUNNING);
-        job.suspend();
-        assertJobStatusEventually(job, COMPLETING);
-        assertTrueAllTheTime(() -> assertEquals(COMPLETING, job.getStatus()), 1);
-        PacketFiltersUtil.resetPacketFiltersFrom(instance1.getHazelcastInstance());
-        assertJobStatusEventually(job, SUSPENDED);
-        job.resume();
-        assertJobStatusEventually(job, RUNNING);
-        job.cancel();
-        try {
-            job.join();
-        } catch (CancellationException ignored) { }
     }
 
     @Test

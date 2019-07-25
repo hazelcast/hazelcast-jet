@@ -330,18 +330,18 @@ public class JobExecutionService {
     public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
-        CompletableFuture<Void> future = execCtx.beginExecution();
-        future.whenComplete(withTryCatch(logger, (i, e) -> {
-            if (e instanceof CancellationException) {
-                logger.fine("Execution of " + execCtx.jobNameAndExecutionId() + " was cancelled");
-            } else if (e != null) {
-                logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
-                        + " completed with failure", e);
-            } else {
-                logger.fine("Execution of " + execCtx.jobNameAndExecutionId() + " completed");
-            }
-        }));
-        return future;
+        return execCtx.beginExecution()
+              .whenComplete(withTryCatch(logger, (i, e) -> {
+                  completeExecution(executionId, e);
+                  if (e instanceof CancellationException) {
+                      logger.fine("Execution of " + execCtx.jobNameAndExecutionId() + " was cancelled");
+                  } else if (e != null) {
+                      logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
+                              + " completed with failure", e);
+                  } else {
+                      logger.fine("Execution of " + execCtx.jobNameAndExecutionId() + " completed");
+                  }
+              }));
     }
 
     int numberOfExecutions() {

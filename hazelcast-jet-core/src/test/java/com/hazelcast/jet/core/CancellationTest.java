@@ -19,7 +19,6 @@ package com.hazelcast.jet.core;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.TestProcessors.MockP;
-import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -39,9 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.test.PacketFiltersUtil.rejectOperationsBetween;
-import static com.hazelcast.test.PacketFiltersUtil.resetPacketFiltersFrom;
-import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -180,31 +176,6 @@ public class CancellationTest extends JetTestSupport {
         expectedException.expect(CancellationException.class);
         Job tracked = instance2.getJobs().iterator().next();
         tracked.join();
-    }
-
-    @Test
-    public void when_jobCancelled_then_jobStatusIsSetDuringCancellation() {
-        // Given
-        JetInstance instance1 = createJetMember();
-        JetInstance instance2 = createJetMember();
-        rejectOperationsBetween(instance1.getHazelcastInstance(), instance2.getHazelcastInstance(),
-                JetInitDataSerializerHook.FACTORY_ID, singletonList(JetInitDataSerializerHook.COMPLETE_EXECUTION_OP));
-
-        DAG dag = new DAG();
-        dag.newVertex("slow", StuckSource::new);
-
-        Job job = instance1.newJob(dag);
-        assertExecutionStarted();
-
-        // When
-        job.cancel();
-
-        // Then
-        assertJobStatusEventually(job, JobStatus.COMPLETING, 3);
-
-        resetPacketFiltersFrom(instance1.getHazelcastInstance());
-
-        assertJobStatusEventually(job, JobStatus.FAILED, 3);
     }
 
     @Test

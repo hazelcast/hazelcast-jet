@@ -27,7 +27,6 @@ import com.hazelcast.jet.impl.JobRepository.UpdateJobExecutionRecordEntryProcess
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
-import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
@@ -65,7 +64,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int JOB_RESULT = 4;
     public static final int INIT_EXECUTION_OP = 5;
     public static final int START_EXECUTION_OP = 6;
-    public static final int COMPLETE_EXECUTION_OP = 7;
     public static final int SUBMIT_JOB_OP = 8;
     public static final int GET_JOB_STATUS_OP = 9;
     public static final int SNAPSHOT_OPERATION = 10;
@@ -127,8 +125,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new InitExecutionOperation();
                 case START_EXECUTION_OP:
                     return new StartExecutionOperation();
-                case COMPLETE_EXECUTION_OP:
-                    return new CompleteExecutionOperation();
                 case SUBMIT_JOB_OP:
                     return new SubmitJobOperation();
                 case GET_JOB_STATUS_OP:
