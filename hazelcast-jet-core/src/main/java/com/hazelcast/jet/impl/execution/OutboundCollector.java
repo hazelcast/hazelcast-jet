@@ -169,9 +169,6 @@ public interface OutboundCollector {
 
         Partitioned(OutboundCollector[] collectors, Partitioner partitioner, int partitionCount) {
             super(collectors);
-            this.partitions = Stream.of(collectors)
-                                    .flatMapToInt(c -> IntStream.of(c.getPartitions()))
-                                    .sorted().toArray();
             this.partitioner = partitioner;
             this.partitionLookupTable = new OutboundCollector[partitionCount];
 
