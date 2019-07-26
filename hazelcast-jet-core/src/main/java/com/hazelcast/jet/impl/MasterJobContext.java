@@ -63,6 +63,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
@@ -423,7 +424,7 @@ public class MasterJobContext {
     }
 
     // Called as callback when all InitOperation invocations are done
-    private void onInitStepCompleted(Collection<Object> responses) {
+    private void onInitStepCompleted(Collection<Map.Entry<MemberInfo, Object>> responses) {
         Throwable error = getResult("Init", responses);
         JobStatus status = mc.jobStatus();
         if (error == null && status == STARTING) {
@@ -447,7 +448,7 @@ public class MasterJobContext {
         }
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(mc.jobId(), executionId);
-        Consumer<Collection<Object>> completionCallback = this::onExecuteStepCompleted;
+        Consumer<Collection<Map.Entry<MemberInfo, Object>>> completionCallback = this::onExecuteStepCompleted;
 
         mc.setJobStatus(RUNNING);
 
@@ -469,7 +470,7 @@ public class MasterJobContext {
     }
 
     // Called as callback when all ExecuteOperation invocations are done
-    private void onExecuteStepCompleted(Collection<Object> responses) {
+    private void onExecuteStepCompleted(Collection<Map.Entry<MemberInfo, Object>> responses) {
         invokeCompleteExecution(getResult("Execution", responses));
     }
 
@@ -496,7 +497,7 @@ public class MasterJobContext {
      *     that the job will be restarted
      * </ul>
      */
-    private Throwable getResult(String opName, Collection<Object> responses) {
+    private Throwable getResult(String opName, Collection<Map.Entry<MemberInfo, Object>> responses) {
         if (isCancelled()) {
             logger.fine(mc.jobIdString() + " to be cancelled after " + opName);
             return new CancellationException();
@@ -556,7 +557,7 @@ public class MasterJobContext {
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new CompleteExecutionOperation(mc.executionId(), finalError);
         mc.invokeOnParticipants(operationCtor, responses -> {
-            if (responses.stream().anyMatch(Throwable.class::isInstance)) {
+            if (responses.stream().map(Map.Entry::getValue).anyMatch(Throwable.class::isInstance)) {
                 // log errors
                 logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
                         "resources might leak: " + responses);
@@ -797,8 +798,9 @@ public class MasterJobContext {
     }
 
     private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
-                                           Collection<Object> metrics) {
-        if (metrics.stream().anyMatch(ExecutionNotFoundException.class::isInstance)) {
+                                           Collection<Map.Entry<MemberInfo, Object>> metrics) {
+        Stream<Object> responses = metrics.stream().map(Map.Entry::getValue);
+        if (responses.anyMatch(ExecutionNotFoundException.class::isInstance)) {
             // If any member threw ExecutionNotFoundException, we'll retry. This happens
             // when the job is starting or completing - master sees the job as
             // RUNNING, but some members might have terminated already. When
@@ -811,7 +813,7 @@ public class MasterJobContext {
                     collectMetrics(clientFuture), COLLECT_METRICS_RETRY_DELAY_MILLIS, MILLISECONDS);
             return;
         }
-        Optional<Object> firstThrowable = metrics.stream().filter(Throwable.class::isInstance).findFirst();
+        Optional<Object> firstThrowable = responses.filter(Throwable.class::isInstance).findFirst();
         if (firstThrowable.isPresent()) {
             clientFuture.completeExceptionally((Throwable) firstThrowable.get());
         } else {
@@ -820,11 +822,11 @@ public class MasterJobContext {
         }
     }
 
-    private JobMetrics mergeMetrics(Collection<Object> metrics) {
+    private JobMetrics mergeMetrics(Collection<Map.Entry<MemberInfo, Object>> metrics) {
         Map<String, Long> mergedMetrics = new HashMap<>();
         int expectedCount = 0;
-        for (Object o : metrics) {
-            JobMetrics m = (JobMetrics) o;
+        for (Map.Entry<MemberInfo, Object> e : metrics) {
+            JobMetrics m = (JobMetrics) e.getValue();
             mergedMetrics.putAll(m.toMap());
             expectedCount += m.size();
         }
@@ -834,9 +836,10 @@ public class MasterJobContext {
     }
 
     // true -> failures, false -> success responses
-    private Map<Boolean, List<Object>> groupResponses(Collection<Object> responses) {
+    private Map<Boolean, List<Object>> groupResponses(Collection<Map.Entry<MemberInfo, Object>> responses) {
         Map<Boolean, List<Object>> grouped = responses
                 .stream()
+                .map(Map.Entry::getValue)
                 .collect(partitioningBy(e -> e instanceof Throwable));
 
         grouped.putIfAbsent(true, emptyList());
