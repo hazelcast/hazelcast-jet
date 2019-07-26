@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.core.Member;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
@@ -189,8 +188,7 @@ public class JetMetricsService implements LiveOperationsTracker {
             );
             publishers.add(publisher);
 
-            Member localMember = nodeEngine.getLocalMember();
-            publishers.add(new InternalJobMetricsPublisher(localMember, jobExecutionService));
+            publishers.add(new InternalJobMetricsPublisher(jobExecutionService));
         }
         if (config.isJmxEnabled()) {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
@@ -205,16 +203,10 @@ public class JetMetricsService implements LiveOperationsTracker {
     public static class InternalJobMetricsPublisher implements MetricsPublisher {
 
         private final JobExecutionService jobExecutionService;
-        private final String memberPrefix;
-
         private final Map<Long, Map<String, Long>> metrics = new HashMap<>();
 
-        InternalJobMetricsPublisher(@Nonnull Member member,
-                                    @Nonnull JobExecutionService jobExecutionService) {
-            Objects.requireNonNull(member, "member");
+        InternalJobMetricsPublisher(@Nonnull JobExecutionService jobExecutionService) {
             Objects.requireNonNull(jobExecutionService, "jobExecutionService");
-
-            this.memberPrefix = JobMetricsUtil.getMemberPrefix(member);
             this.jobExecutionService = jobExecutionService;
         }
 
@@ -222,7 +214,6 @@ public class JetMetricsService implements LiveOperationsTracker {
         public void publishLong(String name, long value) {
             Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
             if (executionId != null) {
-                name = JobMetricsUtil.addPrefixToName(name, memberPrefix);
                 metrics.computeIfAbsent(executionId, x -> new HashMap<>())
                         .put(name, value);
             }

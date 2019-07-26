@@ -16,22 +16,26 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.core.Member;
+import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.Util;
 import com.hazelcast.nio.Address;
+import com.hazelcast.version.MemberVersion;
 import org.junit.Test;
 
+import java.util.Collections;
+
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class JobMetricsUtilTest {
 
     @Test
     public void prefixNameWithMemberTags() throws Throwable {
-        Member member = mock(Member.class);
-        when(member.getUuid()).thenReturn(Util.idToString(1834287L));
-        when(member.getAddress()).thenReturn(new Address("127.0.0.1", 12345));
+        MemberInfo member = new MemberInfo(
+                new Address("127.0.0.1", 12345),
+                Util.idToString(1834287L),
+                Collections.emptyMap(),
+                MemberVersion.UNKNOWN
+        );
 
         String memberPrefix = JobMetricsUtil.getMemberPrefix(member);
         String prefixedName = JobMetricsUtil.addPrefixToName("[tag1=val1,tag2=val2]", memberPrefix);

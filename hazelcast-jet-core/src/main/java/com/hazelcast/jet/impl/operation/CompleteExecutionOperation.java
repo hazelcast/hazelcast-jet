@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.core.Member;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
@@ -32,11 +31,9 @@ import com.hazelcast.spi.ExceptionAction;
 import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
@@ -73,7 +70,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         }
 
         JobExecutionService jobExecutionService = service.getJobExecutionService();
-        JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(nodeEngine.getLocalMember(), executionId);
+        JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
         nodeEngine.getMetricsRegistry().render(metricsRenderer);
         response = metricsRenderer.getJobMetrics();
 
@@ -116,13 +113,10 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
     private static class JobMetricsRenderer implements ProbeRenderer {
 
-        private final String memberPrefix;
         private final Long executionIdOfInterest;
         private final Map<String, Long> jobMetrics = new HashMap<>();
 
-        JobMetricsRenderer(@Nonnull  Member member, long executionId) {
-            Objects.requireNonNull(member, "member");
-            this.memberPrefix = JobMetricsUtil.getMemberPrefix(member);
+        JobMetricsRenderer(long executionId) {
             this.executionIdOfInterest = executionId;
         }
 
@@ -130,7 +124,6 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         public void renderLong(String name, long value) {
             Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
             if (executionIdOfInterest.equals(executionId)) {
-                name = JobMetricsUtil.addPrefixToName(name, memberPrefix);
                 jobMetrics.put(name, value);
             }
         }

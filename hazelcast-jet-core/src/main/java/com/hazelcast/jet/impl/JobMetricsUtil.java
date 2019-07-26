@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.core.Member;
+import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.MetricTags;
@@ -54,11 +54,11 @@ public final class JobMetricsUtil {
         return Math.round(value * DOUBLE_TO_LONG);
     }
 
-    public static String getMemberPrefix(@Nonnull Member member) {
-        Objects.requireNonNull(member, "member");
+    public static String getMemberPrefix(@Nonnull MemberInfo memberInfo) {
+        Objects.requireNonNull(memberInfo, "memberInfo");
 
-        String uuid = member.getUuid();
-        String address = member.getAddress().toString();
+        String uuid = memberInfo.getUuid();
+        String address = memberInfo.getAddress().toString();
         return MetricTags.MEMBER + "=" + MetricsUtil.escapeMetricNamePart(uuid) + "," +
                 MetricTags.ADDRESS + "=" + MetricsUtil.escapeMetricNamePart(address) + ",";
     }

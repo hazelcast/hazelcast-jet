@@ -63,7 +63,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
@@ -799,8 +799,8 @@ public class MasterJobContext {
 
     private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
                                            Collection<Map.Entry<MemberInfo, Object>> metrics) {
-        Stream<Object> responses = metrics.stream().map(Map.Entry::getValue);
-        if (responses.anyMatch(ExecutionNotFoundException.class::isInstance)) {
+        List<Object> responses = metrics.stream().map(Map.Entry::getValue).collect(Collectors.toList());
+        if (responses.stream().anyMatch(ExecutionNotFoundException.class::isInstance)) {
             // If any member threw ExecutionNotFoundException, we'll retry. This happens
             // when the job is starting or completing - master sees the job as
             // RUNNING, but some members might have terminated already. When
@@ -813,7 +813,7 @@ public class MasterJobContext {
                     collectMetrics(clientFuture), COLLECT_METRICS_RETRY_DELAY_MILLIS, MILLISECONDS);
             return;
         }
-        Optional<Object> firstThrowable = responses.filter(Throwable.class::isInstance).findFirst();
+        Optional<Object> firstThrowable = responses.stream().filter(Throwable.class::isInstance).findFirst();
         if (firstThrowable.isPresent()) {
             clientFuture.completeExceptionally((Throwable) firstThrowable.get());
         } else {
@@ -825,13 +825,20 @@ public class MasterJobContext {
     private JobMetrics mergeMetrics(Collection<Map.Entry<MemberInfo, Object>> metrics) {
         Map<String, Long> mergedMetrics = new HashMap<>();
         int expectedCount = 0;
-        for (Map.Entry<MemberInfo, Object> e : metrics) {
-            JobMetrics m = (JobMetrics) e.getValue();
-            mergedMetrics.putAll(m.toMap());
-            expectedCount += m.size();
+        for (Map.Entry<MemberInfo, Object> memberEntry : metrics) {
+            String memberPrefix = JobMetricsUtil.getMemberPrefix(memberEntry.getKey());
+            Map<String, Long> metricMap = ((JobMetrics) memberEntry.getValue()).toMap();
+            for (Map.Entry<String, Long> entry : metricMap.entrySet()) {
+                String name = JobMetricsUtil.addPrefixToName(entry.getKey(), memberPrefix);
+                Long value = entry.getValue();
+                mergedMetrics.put(name, value);
+            }
+            expectedCount += metricMap.size();
         }
+
         assert mergedMetrics.size() == expectedCount : "Duplicate metrics from members, expectedCount=" + expectedCount
                 + ", actual count=" + mergedMetrics.size();
+
         return JobMetrics.of(mergedMetrics);
     }
 
