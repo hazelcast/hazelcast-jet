@@ -25,8 +25,6 @@ import com.hazelcast.jet.impl.util.ProgressTracker;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 @FunctionalInterface
 public interface OutboundCollector {
@@ -171,17 +169,22 @@ public interface OutboundCollector {
 
         Partitioned(OutboundCollector[] collectors, Partitioner partitioner, int partitionCount) {
             super(collectors);
-            this.partitions = Stream.of(collectors)
-                                    .flatMapToInt(c -> IntStream.of(c.getPartitions()))
-                                    .sorted().toArray();
             this.partitioner = partitioner;
             this.partitionLookupTable = new OutboundCollector[partitionCount];
 
+            int[] myPartitions = new int[partitionCount];
+            int idx = 0;
             for (OutboundCollector collector : collectors) {
-                for (int partitionId : collector.getPartitions()) {
-                    partitionLookupTable[partitionId] = collector;
+                int[] partitionsForCollector = collector.getPartitions();
+                assert partitionsForCollector != null : "collector must define partitions";
+
+                for (int partition : partitionsForCollector) {
+                    partitionLookupTable[partition] = collector;
                 }
+                System.arraycopy(partitionsForCollector, 0, myPartitions, idx, partitionsForCollector.length);
+                idx += partitionsForCollector.length;
             }
+            this.partitions = Arrays.copyOf(myPartitions, idx);
         }
 
         @Override
