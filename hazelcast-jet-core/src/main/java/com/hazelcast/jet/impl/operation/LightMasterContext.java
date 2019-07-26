@@ -52,6 +52,7 @@ import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.TerminationMode.CANCEL_FORCEFUL;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 
 public class LightMasterContext {
@@ -87,16 +88,17 @@ public class LightMasterContext {
     public CompletableFuture<Void> start() {
         String dotRepresentation = dag.toDotString();
         MembersView membersView = getMembersView();
-        logger.fine("Start executing light " + jobIdString + ", execution graph in DOT format:\n" + dotRepresentation
-                + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
-        logger.fine("Building execution plan for " + jobIdString);
+        logFine(logger, "Start executing light %s, execution graph in DOT format:\n%s"
+                + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.",
+                jobIdString, dotRepresentation);
+        logFine(logger, "Building execution plan for %s", jobIdString);
         JobConfig config = new JobConfig()
             .setMetricsEnabled(false)
             .setAutoScaling(false);
 
         executionPlanMap =
                 createExecutionPlans(nodeEngine, membersView, dag, jobId, jobId, config, 0);
-        logger.fine("Built execution plans for " + jobIdString);
+        logFine(logger, "Built execution plans for %s", jobIdString);
         Set<MemberInfo> participants = executionPlanMap.keySet();
         Function<ExecutionPlan, Operation> operationCtor = plan ->
                 new InitExecutionOperation(jobId, jobId, membersView.getVersion(), participants,
@@ -120,7 +122,7 @@ public class LightMasterContext {
     // If a participant leaves or the execution fails in a participant locally, executions are cancelled
     // on the remaining participants and the callback is completed after all invocations return.
     private void invokeStartExecution() {
-        logger.fine("Executing " + jobIdString);
+        logFine(logger, "Executing %s", jobIdString);
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(jobId, jobId);
         invokeOnParticipants(operationCtor, this::onExecuteStepCompleted, error -> cancelInvocations(), false);
