@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.core.Member;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
@@ -34,10 +35,12 @@ import com.hazelcast.spi.LiveOperationsTracker;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -186,7 +189,8 @@ public class JetMetricsService implements LiveOperationsTracker {
             );
             publishers.add(publisher);
 
-            publishers.add(new InternalJobMetricsPublisher(jobExecutionService));
+            Member localMember = nodeEngine.getLocalMember();
+            publishers.add(new InternalJobMetricsPublisher(localMember, jobExecutionService));
         }
         if (config.isJmxEnabled()) {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
@@ -201,10 +205,16 @@ public class JetMetricsService implements LiveOperationsTracker {
     public static class InternalJobMetricsPublisher implements MetricsPublisher {
 
         private final JobExecutionService jobExecutionService;
+        private final String memberPrefix;
 
         private final Map<Long, Map<String, Long>> metrics = new HashMap<>();
 
-        InternalJobMetricsPublisher(JobExecutionService jobExecutionService) {
+        InternalJobMetricsPublisher(@Nonnull Member member,
+                                    @Nonnull JobExecutionService jobExecutionService) {
+            Objects.requireNonNull(member, "member");
+            Objects.requireNonNull(jobExecutionService, "jobExecutionService");
+
+            this.memberPrefix = JobMetricsUtil.getMemberPrefix(member);
             this.jobExecutionService = jobExecutionService;
         }
 
@@ -212,6 +222,7 @@ public class JetMetricsService implements LiveOperationsTracker {
         public void publishLong(String name, long value) {
             Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
             if (executionId != null) {
+                name = JobMetricsUtil.addPrefixToName(name, memberPrefix);
                 metrics.computeIfAbsent(executionId, x -> new HashMap<>())
                         .put(name, value);
             }

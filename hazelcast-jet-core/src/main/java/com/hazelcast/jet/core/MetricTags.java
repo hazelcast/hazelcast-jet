@@ -34,6 +34,16 @@ public final class MetricTags {
     public static final String MODULE = "module";
 
     /**
+     * Unique ID of the cluster member sourcing the metric.
+     */
+    public static final String MEMBER = "member";
+
+    /**
+     * Network address of the cluster member sourcing the metric.
+     */
+    public static final String ADDRESS = "address";
+
+    /**
      * Unique ID of the job (sourcing the metric), example value would be a
      * numerical (long) ID encoded in a human readable form, like {@code
      * "2f7f-d88a-4669-6195"}, see {@link Util#idToString(long)})} for details.

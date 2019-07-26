@@ -125,16 +125,20 @@ public class JobMetricsTest extends TestInClusterSupport {
 
     @Test
     public void test_duplicateMetricsFromMembers() {
-        // A job with a distributed edge causes the presence of distributedBytesIn metric, which
-        // doesn't contain the `proc` tag which is unique among members. If not handled correctly,
-        // the job will fail, there's an assertion when merging the metrics.
+        // A job with a distributed edge causes the presence of distributedBytesIn
+        // metric, which doesn't contain the `proc` tag which is unique among
+        // members. If there is no special handling for this, then there would
+        // be multiple metrics with the same name, causing problems during
+        // merging.
         DAG dag = new DAG();
         Vertex v1 = dag.newVertex("v1", Processors.noopP());
         Vertex v2 = dag.newVertex("v2", Processors.noopP());
         dag.edge(between(v1, v2).distributed());
         Job job = member.newJob(dag);
         job.join();
-        job.getMetrics();
+        assertJobHasMetrics(job);
+        // If there would be multiple metrics with the same name, then an
+        // assertion error would be thrown when merging them.
     }
 
     @Test
