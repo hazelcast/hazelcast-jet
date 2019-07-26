@@ -87,11 +87,15 @@ public class LightMasterContext {
     public CompletableFuture<Void> start() {
         String dotRepresentation = dag.toDotString();
         MembersView membersView = getMembersView();
-        logger.info("Start executing light " + jobIdString + ", execution graph in DOT format:\n" + dotRepresentation
+        logger.fine("Start executing light " + jobIdString + ", execution graph in DOT format:\n" + dotRepresentation
                 + "\nHINT: You can use graphviz or http://viz-js.com to visualize the printed graph.");
         logger.fine("Building execution plan for " + jobIdString);
+        JobConfig config = new JobConfig()
+            .setMetricsEnabled(false)
+            .setAutoScaling(false);
+
         executionPlanMap =
-                createExecutionPlans(nodeEngine, membersView, dag, jobId, jobId, new JobConfig(), 0);
+                createExecutionPlans(nodeEngine, membersView, dag, jobId, jobId, config, 0);
         logger.fine("Built execution plans for " + jobIdString);
         Set<MemberInfo> participants = executionPlanMap.keySet();
         Function<ExecutionPlan, Operation> operationCtor = plan ->
