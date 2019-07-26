@@ -64,16 +64,12 @@ public final class JobMetricsUtil {
     }
 
     public static String addPrefixToName(@Nonnull String name, @Nonnull String prefix) {
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(prefix, "prefix");
+        assert !prefix.isEmpty() : "Prefix is empty";
+        assert prefix.endsWith(",") : "Prefix should end in a comma";
 
-        if (prefix.isEmpty() || !prefix.endsWith(",")) {
-            throw new IllegalArgumentException("Invalid prefix");
-        }
-
-        if (name.length() < 3 || !name.startsWith("[") || !name.endsWith("]")) {
-            throw new IllegalArgumentException("Invalid name format");
-        }
+        assert name.length() >= 3 : "Name too short";
+        assert name.startsWith("[") : "Name of non-standard format";
+        assert name.endsWith("]") : "Name of non-standard format";
 
         return "[" + prefix + name.substring(1);
     }
