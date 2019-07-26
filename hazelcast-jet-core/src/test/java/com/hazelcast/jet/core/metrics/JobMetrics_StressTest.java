@@ -28,22 +28,21 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.core.JetTestSupport.assertTrueEventually;
-import static com.hazelcast.test.HazelcastTestSupport.sleepMillis;
+import javax.annotation.Nonnull;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
-public class JobMetricsStressTest extends JetTestSupport {
+public class JobMetrics_StressTest extends JetTestSupport {
 
     private static final int RESTART_COUNT = 10;
     private static final int TOTAL_PROCESSORS = Runtime.getRuntime().availableProcessors();

@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.core;
+package com.hazelcast.jet.core.metrics;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.function.SupplierEx;
 import org.junit.Before;

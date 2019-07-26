@@ -26,18 +26,19 @@ import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import static org.junit.Assert.assertEquals;
 
 
-public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
+public class JobMetrics_StreamTest extends TestInClusterSupport {
 
     private static final String NOT_FILTER_OUT_PREFIX = "ok";
     private static final String FILTER_OUT_PREFIX = "nok";
@@ -57,12 +58,12 @@ public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
 
     @Test
     public void metricsExistForRunningJob() {
-        Map<String, String> map = member.getMap(journalMapName);
+        Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
-        List<String> sink = member.getList(sinkListName);
+        List<String> sink = testMode.getJet().getList(sinkListName);
 
         Pipeline p = createPipeline();
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
 
         assertTrueEventually(() -> assertEquals(2, sink.size()));
         assertTrueEventually(() -> assertMetrics(job.getMetrics(), 3, 1));
@@ -75,12 +76,12 @@ public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
 
     @Test
     public void metricsExistWhenJobCompleted() {
-        Map<String, String> map = member.getMap(journalMapName);
+        Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
-        List<String> sink = member.getList(sinkListName);
+        List<String> sink = testMode.getJet().getList(sinkListName);
 
         Pipeline p = createPipeline();
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
 
         putIntoMap(map, 1, 1);
 
@@ -95,14 +96,14 @@ public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
     @Ignore("https://hazelcast.atlassian.net/wiki/spaces/JET/pages/1758560997/"
             + "Metrics+for+Completed+Jobs+Design?focusedCommentId=1767506913#comment-1767506913")
     public void metricsExistWhenJobSuspendedAndResumed() {
-        Map<String, String> map = member.getMap(journalMapName);
+        Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
-        List<String> sink = member.getList(sinkListName);
+        List<String> sink = testMode.getJet().getList(sinkListName);
 
         Pipeline p = createPipeline();
 
         JobConfig jobConfig = new JobConfig().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
-        Job job = member.newJob(p, jobConfig);
+        Job job = testMode.getJet().newJob(p, jobConfig);
 
         putIntoMap(map, 1, 1);
 
@@ -134,12 +135,12 @@ public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
 
     @Test
     public void resetMetricsWhenJobIsRestarted() {
-        Map<String, String> map = member.getMap(journalMapName);
+        Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
-        List<String> sink = member.getList(sinkListName);
+        List<String> sink = testMode.getJet().getList(sinkListName);
 
         Pipeline p = createPipeline();
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
 
         assertTrueEventually(() -> assertEquals(2, sink.size()));
         assertTrueEventually(() -> assertMetrics(job.getMetrics(), 3, 1));
@@ -166,12 +167,12 @@ public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
 
     @Test
     public void resetMetricsWhenJobIsRestarted_journalPositionFromCurrent() {
-        Map<String, String> map = member.getMap(journalMapName);
+        Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
-        List<String> sink = member.getList(sinkListName);
+        List<String> sink = testMode.getJet().getList(sinkListName);
 
         Pipeline p = createPipeline(JournalInitialPosition.START_FROM_CURRENT);
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
 
         assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
         assertTrueEventually(() -> assertMetrics(job.getMetrics(), 0, 0));
@@ -200,13 +201,13 @@ public class CompletedJobMetrics_StreamTest extends TestInClusterSupport {
     @Ignore("https://hazelcast.atlassian.net/wiki/spaces/JET/pages/1758560997/"
             + "Metrics+for+Completed+Jobs+Design?focusedCommentId=1767866594#comment-1767866594")
     public void notResetMetricsForExactlyOnceProcessingGuarantee() {
-        Map<String, String> map = member.getMap(journalMapName);
+        Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
-        List<String> sink = member.getList(sinkListName);
+        List<String> sink = testMode.getJet().getList(sinkListName);
 
         Pipeline p = createPipeline(JournalInitialPosition.START_FROM_CURRENT);
         JobConfig jobConfig = new JobConfig().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
-        Job job = member.newJob(p, jobConfig);
+        Job job = testMode.getJet().newJob(p, jobConfig);
 
         assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
         assertTrueEventually(() -> assertMetrics(job.getMetrics(), 0, 0));

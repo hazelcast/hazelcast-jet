@@ -23,10 +23,11 @@ import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import java.util.HashSet;
-import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
@@ -35,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.fail;
 
-public class CompletedJobMetrics_BatchTest extends TestInClusterSupport {
+public class JobMetrics_BatchTest extends TestInClusterSupport {
 
     private static final String SOURCE_VERTEX = "items";
     private static final String FLAT_MAP_AND_FILTER_VERTEX = "fused(flat-map, filter)";
@@ -51,7 +52,7 @@ public class CompletedJobMetrics_BatchTest extends TestInClusterSupport {
     public void metricsExistWhenJobCompleted() {
         Pipeline p = createPipeline();
 
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
         job.join();
 
         assertTrueEventually(() -> assertMetrics(job.getMetrics()));
@@ -61,7 +62,7 @@ public class CompletedJobMetrics_BatchTest extends TestInClusterSupport {
     public void addMemberAfterJobFinishedNotAffectMetrics() {
         Pipeline p = createPipeline();
 
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
         job.join();
 
         JetInstance newMember = factory.newMember(prepareConfig());
@@ -81,12 +82,12 @@ public class CompletedJobMetrics_BatchTest extends TestInClusterSupport {
         Job job;
         try {
             assertTrueEventually(() -> assertEquals(MEMBER_COUNT + 1, newMember.getCluster().getMembers().size()));
-            job = member.newJob(p);
+            job = testMode.getJet().newJob(p);
             job.join();
         } finally {
             newMember.shutdown();
         }
-        assertTrueEventually(() -> assertEquals(MEMBER_COUNT, member.getCluster().getMembers().size()));
+        assertTrueEventually(() -> assertEquals(MEMBER_COUNT, testMode.getJet().getCluster().getMembers().size()));
         assertTrueEventually(() -> assertMetrics(job.getMetrics()));
     }
 
@@ -96,8 +97,8 @@ public class CompletedJobMetrics_BatchTest extends TestInClusterSupport {
         Pipeline p = createPipeline();
         Pipeline p2 = createPipeline(anotherText);
 
-        Job job = member.newJob(p);
-        Job job2 = member.newJob(p2);
+        Job job = testMode.getJet().newJob(p);
+        Job job2 = testMode.getJet().newJob(p2);
         job.join();
         job2.join();
 
@@ -110,7 +111,7 @@ public class CompletedJobMetrics_BatchTest extends TestInClusterSupport {
     public void restartFinishedJobNotAffectMetrics() {
         Pipeline p = createPipeline();
 
-        Job job = member.newJob(p);
+        Job job = testMode.getJet().newJob(p);
         job.join();
         try {
             job.restart();
