@@ -56,14 +56,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
@@ -799,8 +797,7 @@ public class MasterJobContext {
 
     private void completeWithMergedMetrics(CompletableFuture<JobMetrics> clientFuture,
                                            Collection<Map.Entry<MemberInfo, Object>> metrics) {
-        List<Object> responses = metrics.stream().map(Map.Entry::getValue).collect(Collectors.toList());
-        if (responses.stream().anyMatch(ExecutionNotFoundException.class::isInstance)) {
+        if (metrics.stream().anyMatch(en -> en.getValue() instanceof ExecutionNotFoundException)) {
             // If any member threw ExecutionNotFoundException, we'll retry. This happens
             // when the job is starting or completing - master sees the job as
             // RUNNING, but some members might have terminated already. When
@@ -813,9 +810,10 @@ public class MasterJobContext {
                     collectMetrics(clientFuture), COLLECT_METRICS_RETRY_DELAY_MILLIS, MILLISECONDS);
             return;
         }
-        Optional<Object> firstThrowable = responses.stream().filter(Throwable.class::isInstance).findFirst();
-        if (firstThrowable.isPresent()) {
-            clientFuture.completeExceptionally((Throwable) firstThrowable.get());
+        Throwable firstThrowable = (Throwable) metrics.stream().map(Map.Entry::getValue)
+                                                      .filter(Throwable.class::isInstance).findFirst().orElse(null);
+        if (firstThrowable != null) {
+            clientFuture.completeExceptionally(firstThrowable);
         } else {
             JobMetrics jobMetrics = mergeMetrics(metrics);
             clientFuture.complete(jobMetrics);

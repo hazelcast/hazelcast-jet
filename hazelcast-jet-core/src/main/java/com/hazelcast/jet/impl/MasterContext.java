@@ -29,7 +29,6 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -41,6 +40,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
@@ -225,7 +225,7 @@ public class MasterContext {
      *                                pairs themselves will never be null); size
      *                                will be equal to participant count
      * @param errorCallback           A callback that will be called after each
-     *                                a failure of each individual operation
+     *                                failure of each individual operation
      * @param retryOnTimeoutException if true, operations that threw {@link
      *                                com.hazelcast.core.OperationTimeoutException}
      *                                will be retried
@@ -276,7 +276,7 @@ public class MasterContext {
                     "Duplicate response for " + memberInfo.getAddress() + ". Old=" + oldResponse + ", new=" + response;
             if (remainingCount.decrementAndGet() == 0 && completionCallback != null) {
                 completionCallback.accept(collectedResponses.entrySet().stream()
-                        .map(e -> e.getValue() == NULL_OBJECT ? new SimpleImmutableEntry<>(e.getKey(), null) : e)
+                        .map(e -> e.getValue() == NULL_OBJECT ? entry(e.getKey(), null) : e)
                         .collect(Collectors.toList()));
             }
         }));

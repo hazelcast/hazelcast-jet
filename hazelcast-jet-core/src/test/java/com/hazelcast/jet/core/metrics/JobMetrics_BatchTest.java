@@ -32,9 +32,9 @@ import java.util.Set;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.Functions.wholeItem;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
 
 public class JobMetrics_BatchTest extends TestInClusterSupport {
 
@@ -49,25 +49,29 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
     private static final String COMMON_TEXT = "look at some common text here and uncommon text here";
 
     @Test
-    public void metricsExistWhenJobCompleted() {
+    public void when_jobCompleted_then_metricsExist() {
         Pipeline p = createPipeline();
 
         Job job = testMode.getJet().newJob(p);
+        // When
         job.join();
 
+        // Then
         assertTrueEventually(() -> assertMetrics(job.getMetrics()));
     }
 
     @Test
-    public void addMemberAfterJobFinishedNotAffectMetrics() {
+    public void when_memberAddedAfterJobFinished_then_metricsNotAffected() {
         Pipeline p = createPipeline();
 
         Job job = testMode.getJet().newJob(p);
         job.join();
 
+        // When
         JetInstance newMember = factory.newMember(prepareConfig());
         try {
             assertTrueEventually(() -> assertEquals(MEMBER_COUNT + 1, newMember.getCluster().getMembers().size()));
+            // Then
             assertTrueEventually(() -> assertMetrics(job.getMetrics()));
         } finally {
             newMember.shutdown();
@@ -75,7 +79,7 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
     }
 
     @Test
-    public void removeMemberAfterJobFinishedNotAffectMetrics() {
+    public void when_memberRemovedAfterJobFinished_then_metricsNotAffected() {
         Pipeline p = createPipeline();
 
         JetInstance newMember = factory.newMember(prepareConfig());
@@ -92,7 +96,7 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
     }
 
     @Test
-    public void twoDifferentPipelinesHasDifferentMetrics() {
+    public void when_twoDifferentPipelines_then_haveDifferentMetrics() {
         String anotherText = "look at some common text here and here";
         Pipeline p = createPipeline();
         Pipeline p2 = createPipeline(anotherText);
@@ -105,22 +109,6 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
         assertNotEquals(job.getMetrics(), job2.getMetrics());
         assertTrueEventually(() -> assertMetrics(job.getMetrics()));
         assertTrueEventually(() -> assertMetrics(job2.getMetrics(), anotherText));
-    }
-
-    @Test
-    public void restartFinishedJobNotAffectMetrics() {
-        Pipeline p = createPipeline();
-
-        Job job = testMode.getJet().newJob(p);
-        job.join();
-        try {
-            job.restart();
-            fail();
-        } catch (IllegalStateException ex) {
-            // expected
-        }
-
-        assertTrueEventually(() -> assertMetrics(job.getMetrics()));
     }
 
     private Pipeline createPipeline() {
@@ -145,13 +133,9 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
     private void assertMetrics(JobMetrics metrics, String originalText) {
         Assert.assertNotNull(metrics);
 
-        String[] split = originalText.split(" ");
-        int wordCount = split.length;
-        Set<String> wordSet = new HashSet<>();
-        for (int i = 0; i < split.length; i++) {
-            wordSet.add(split[i]);
-        }
-        int uniqueWordCount = wordSet.size();
+        String[] words = originalText.split("\\W+");
+        int wordCount = words.length;
+        int uniqueWordCount = new HashSet<>(asList(words)).size();
 
         assertEquals(1, sumValueFor(metrics, SOURCE_VERTEX, EMITTED_COUNT_METRIC));
         assertEquals(1, sumValueFor(metrics, FLAT_MAP_AND_FILTER_VERTEX, RECEIVE_COUNT_METRIC));

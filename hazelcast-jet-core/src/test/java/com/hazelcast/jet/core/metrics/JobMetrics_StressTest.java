@@ -48,17 +48,17 @@ public class JobMetrics_StressTest extends JetTestSupport {
     private static final int TOTAL_PROCESSORS = Runtime.getRuntime().availableProcessors();
     private static final int WAIT_FOR_METRICS_COLLECTION_TIME = 1200;
 
-    private static Throwable restartThreadException;
-    private static Throwable obtainMetricsThreadException;
+    private static volatile Throwable restartThreadException;
+    private static volatile Throwable obtainMetricsThreadException;
 
     private JetInstance instance;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         restartThreadException = null;
         obtainMetricsThreadException = null;
-        IncrementingProcessor.initCount = new AtomicInteger();
-        IncrementingProcessor.completeCount = new AtomicInteger();
+        IncrementingProcessor.initCount.set(0);
+        IncrementingProcessor.completeCount.set(0);
 
         JetConfig config = new JetConfig();
         config.getMetricsConfig().setCollectionIntervalSeconds(1);
@@ -67,12 +67,12 @@ public class JobMetrics_StressTest extends JetTestSupport {
 
     @Test
     public void restart_stressTest() throws Throwable {
-        stressTest(job -> new JobRestartThread(job));
+        stressTest(JobRestartThread::new);
     }
 
     @Test
     public void suspend_resume_stressTest() throws Throwable {
-        stressTest(job -> new JobSuspendResumeThread(job));
+        stressTest(JobSuspendResumeThread::new);
     }
 
     private void stressTest(Function<Job, Runnable> restart) throws Throwable {
@@ -109,13 +109,13 @@ public class JobMetrics_StressTest extends JetTestSupport {
         return dag;
     }
 
-    public static final class IncrementingProcessor implements Processor {
+    private static final class IncrementingProcessor implements Processor {
 
         @Probe
-        public static AtomicInteger initCount = new AtomicInteger();
+        static final AtomicInteger initCount = new AtomicInteger();
 
         @Probe
-        public static AtomicInteger completeCount = new AtomicInteger();
+        static final AtomicInteger completeCount = new AtomicInteger();
 
         @Override
         public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
@@ -183,7 +183,7 @@ public class JobMetrics_StressTest extends JetTestSupport {
 
     private static class ObtainMetricsThread implements Runnable {
 
-        public boolean stop;
+        volatile boolean stop;
         private final Job job;
 
         ObtainMetricsThread(Job job) {
