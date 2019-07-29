@@ -57,18 +57,74 @@ public final class JetProperties {
             = new HazelcastProperty("jet.home", "");
 
     /**
-     * The minimum time in microseconds the worker threads will sleep if none
-     * of the tasklets made any progress. If you see high cpu usage for jobs
-     * with otherwise low traffic, you can try increasing the value.
+     * The minimum time in microseconds the cooperative worker threads will
+     * sleep if none of the tasklets made any progress. Lower values increase
+     * idle CPU usage but may result in decreased latency. Higher values will
+     * increase latency and very high values (>10000µs) will also limit throughput.
      * <p>
-     * The default value is 25µs, but the {@code parkNano} call actually sleeps
-     * longer, by default 50µs on Linux and up to 15000µs on Windows. See
-     * https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/
-     * for more information. Higher value also slightly increases latency and a
-     * very high value (>10000µs) limits the throughput.
+     * The default is value is {@code 25µs}
+     * </p>
+     * <p>
+     * Note: the underlying {@code parkNano} call may actually
+     * sleep longer depending on the operating system (up to 15000µs on Windows).
+     * <p>
+     * See https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/
+     * for more information.
      */
-    public static final HazelcastProperty JET_MINIMUM_IDLE_MICROSECONDS
-            = new HazelcastProperty("jet.minimum.idle.microseconds", 25, MICROSECONDS);
+    public static final HazelcastProperty JET_IDLE_COOPERATIVE_MIN_MICROSECONDS
+            = new HazelcastProperty("jet.idle.cooperative.min.microseconds", 25, MICROSECONDS);
+
+    /**
+     * The maximum time in microseconds the cooperative worker threads will
+     * sleep if none of the tasklets made any progress. Lower values increase
+     * idle CPU usage but may result in decreased latency. Higher values will
+     * increase latency and very high values (>10000µs) will also limit throughput.
+     * <p>
+     * The default is value is {@code 500µs}
+     * </p>
+     * <p>
+     * Note: the underlying {@code parkNano} call may actually
+     * sleep longer depending on the operating system (up to 15000µs on Windows).
+     * <p>
+     * See https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/
+     * for more information.
+     */
+    public static final HazelcastProperty JET_IDLE_COOPERATIVE_MAX_MICROSECONDS
+        = new HazelcastProperty("jet.idle.cooperative.max.microseconds", 500, MICROSECONDS);
+
+    /**
+     * The minimum time in microseconds the non-cooperative worker threads will
+     * sleep if none of the tasklets made any progress. Lower values increase
+     * idle CPU usage but may result in decreased latency. Higher values will
+     * increase latency and very high values (>10000µs) will also limit throughput.
+     * <p>
+     * The default is value is {@code 25µs}
+     * <p>
+     * Note: the underlying {@code parkNano} call may actually
+     * sleep longer depending on the operating system (up to 15000µs on Windows).
+     * <p>
+     * See https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/
+     * for more information.
+     */
+    public static final HazelcastProperty JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS
+        = new HazelcastProperty("jet.idle.noncooperative.min.microseconds", 25, MICROSECONDS);
+
+    /**
+     * The maximum time in microseconds the non-cooperative worker threads will
+     * sleep if none of the tasklets made any progress. Lower values increase
+     * idle CPU usage but may result in decreased latency. Higher values will
+     * increase latency and very high values (>10000µs) will also limit throughput.
+     * <p>
+     * The default is value is {@code 5000µs}
+     * <p>
+     * Note: the underlying {@code parkNano} call may actually
+     * sleep longer depending on the operating system (up to 15000µs on Windows).
+     * <p>
+     * See https://hazelcast.com/blog/locksupport-parknanos-under-the-hood-and-the-curious-case-of-parking/
+     * for more information.
+     */
+    public static final HazelcastProperty JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS
+        = new HazelcastProperty("jet.idle.noncooperative.max.microseconds", 5000, MICROSECONDS);
 
     private JetProperties() {
     }
