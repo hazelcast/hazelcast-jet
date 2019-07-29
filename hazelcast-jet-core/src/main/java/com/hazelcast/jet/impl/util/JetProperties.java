@@ -63,7 +63,6 @@ public final class JetProperties {
      * increase latency and very high values (>10000µs) will also limit throughput.
      * <p>
      * The default is value is {@code 25µs}
-     * </p>
      * <p>
      * Note: the underlying {@code parkNano} call may actually
      * sleep longer depending on the operating system (up to 15000µs on Windows).
@@ -81,7 +80,6 @@ public final class JetProperties {
      * increase latency and very high values (>10000µs) will also limit throughput.
      * <p>
      * The default is value is {@code 500µs}
-     * </p>
      * <p>
      * Note: the underlying {@code parkNano} call may actually
      * sleep longer depending on the operating system (up to 15000µs on Windows).

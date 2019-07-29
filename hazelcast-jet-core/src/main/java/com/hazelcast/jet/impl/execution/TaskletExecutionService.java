@@ -227,7 +227,9 @@ public class TaskletExecutionService {
         }
 
         logger.info(String.format("Creating idler with %s=%dµs,%s=%dµs", minName, min, maxName, max));
-        return new BackoffIdleStrategy(0, 0, min, max);
+        return new BackoffIdleStrategy(0, 0,
+            TimeUnit.MICROSECONDS.toNanos(min), TimeUnit.MICROSECONDS.toNanos(max)
+        );
     }
 
     private final class BlockingWorker implements Runnable {
