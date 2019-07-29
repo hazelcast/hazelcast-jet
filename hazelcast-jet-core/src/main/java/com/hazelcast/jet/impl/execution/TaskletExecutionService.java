@@ -49,10 +49,10 @@ import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
-import static com.hazelcast.jet.impl.util.JetProperties.JET_IDLE_COOPERATIVE_MAX_MICROSECONDS;
-import static com.hazelcast.jet.impl.util.JetProperties.JET_IDLE_COOPERATIVE_MIN_MICROSECONDS;
-import static com.hazelcast.jet.impl.util.JetProperties.JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS;
-import static com.hazelcast.jet.impl.util.JetProperties.JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS;
+import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MAX_MICROSECONDS;
+import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MIN_MICROSECONDS;
+import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS;
+import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -228,7 +228,7 @@ public class TaskletExecutionService {
 
         logger.info(String.format("Creating idler with %s=%dµs,%s=%dµs", minName, min, maxName, max));
         return new BackoffIdleStrategy(0, 0,
-            TimeUnit.MICROSECONDS.toNanos(min), TimeUnit.MICROSECONDS.toNanos(max)
+            minProp.getTimeUnit().toNanos(min), maxProp.getTimeUnit().toNanos(max)
         );
     }
 

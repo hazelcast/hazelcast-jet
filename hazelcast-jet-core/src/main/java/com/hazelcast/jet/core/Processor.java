@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.impl.util.JetProperties;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;

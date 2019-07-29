@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
+import static com.hazelcast.jet.core.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
 import static java.lang.Boolean.parseBoolean;

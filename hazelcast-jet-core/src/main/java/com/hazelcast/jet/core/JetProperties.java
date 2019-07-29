@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.util;
+package com.hazelcast.jet.core;
 
 import com.hazelcast.spi.properties.HazelcastProperty;
 
@@ -29,8 +29,17 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 public final class JetProperties {
 
+    /**
+     * Jet will periodically check for new jobs to start and perform cleanup of
+     * unused resources. This property configures how often this check and
+     * cleanup will be done.
+     */
     public static final HazelcastProperty JOB_SCAN_PERIOD
             = new HazelcastProperty("jet.job.scan.period", SECONDS.toMillis(5), MILLISECONDS);
+
+    /**
+     *
+     */
     public static final HazelcastProperty JET_SHUTDOWNHOOK_ENABLED
             = new HazelcastProperty("jet.shutdownhook.enabled", SHUTDOWNHOOK_ENABLED.getDefaultValue());
 
@@ -53,6 +62,11 @@ public final class JetProperties {
     public static final HazelcastProperty JOB_RESULTS_MAX_SIZE
             = new HazelcastProperty("jet.job.results.max.size", 10_000);
 
+    /**
+     * Root of Jet installation. Used as default location for the lossless recovery
+     * store. By default it will be automatically set to the start of the Jet
+     * installation path.
+     */
     public static final HazelcastProperty JET_HOME
             = new HazelcastProperty("jet.home", "");
 
