@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -99,9 +98,7 @@ public class JobMetrics_StreamTest extends TestInClusterSupport {
     }
 
     @Test
-    @Ignore("https://hazelcast.atlassian.net/wiki/spaces/JET/pages/1758560997/"
-            + "Metrics+for+Completed+Jobs+Design?focusedCommentId=1767506913#comment-1767506913")
-    public void metricsExistWhenJobSuspendedAndResumed() {
+    public void when_jobWithExactlyOnceSuspendAndResume_then_metricsReset() {
         Map<String, String> map = testMode.getJet().getMap(journalMapName);
         putIntoMap(map, 2, 1);
         List<String> sink = testMode.getJet().getList(sinkListName);
@@ -109,6 +106,7 @@ public class JobMetrics_StreamTest extends TestInClusterSupport {
         Pipeline p = createPipeline();
 
         JobConfig jobConfig = new JobConfig().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+        // When
         Job job = testMode.getJet().newJob(p, jobConfig);
 
         putIntoMap(map, 1, 1);
@@ -128,15 +126,17 @@ public class JobMetrics_StreamTest extends TestInClusterSupport {
 
         assertJobStatusEventually(job, RUNNING);
         assertTrueEventually(() -> assertEquals(4, sink.size()));
-        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 7, 3));
+        // Then
+        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 2, 1));
 
         putIntoMap(map, 1, 1);
         assertTrueEventually(() -> assertEquals(5, sink.size()));
-        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 9, 4));
+        // Then
+        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 4, 2));
 
         job.cancel();
         assertJobStatusEventually(job, FAILED);
-        assertMetrics(job.getMetrics(), 9, 4);
+        assertMetrics(job.getMetrics(), 4, 2);
     }
 
     @Test
@@ -205,41 +205,6 @@ public class JobMetrics_StreamTest extends TestInClusterSupport {
         job.cancel();
         assertJobStatusEventually(job, FAILED);
         assertMetrics(job.getMetrics(), 2, 1);
-    }
-
-    @Test
-    @Ignore("https://hazelcast.atlassian.net/wiki/spaces/JET/pages/1758560997/"
-            + "Metrics+for+Completed+Jobs+Design?focusedCommentId=1767866594#comment-1767866594")
-    public void notResetMetricsForExactlyOnceProcessingGuarantee() {
-        Map<String, String> map = testMode.getJet().getMap(journalMapName);
-        putIntoMap(map, 2, 1);
-        List<String> sink = testMode.getJet().getList(sinkListName);
-
-        Pipeline p = createPipeline(JournalInitialPosition.START_FROM_CURRENT);
-        JobConfig jobConfig = new JobConfig().setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
-        Job job = testMode.getJet().newJob(p, jobConfig);
-
-        assertJobStatusEventually(job, RUNNING);
-        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 0, 0));
-
-        putIntoMap(map, 2, 1);
-
-        assertTrueEventually(() -> assertEquals(2, sink.size()));
-        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 3, 1));
-
-        job.restart();
-
-        assertJobStatusEventually(job, RUNNING);
-        assertTrueEventually(() -> assertEquals(2, sink.size()));
-        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 3, 1));
-
-        putIntoMap(map, 1, 1);
-        assertTrueEventually(() -> assertEquals(3, sink.size()));
-        assertTrueEventually(() -> assertMetrics(job.getMetrics(), 5, 2));
-
-        job.cancel();
-        assertJobStatusEventually(job, FAILED);
-        assertMetrics(job.getMetrics(), 5, 2);
     }
 
     private Pipeline createPipeline() {
