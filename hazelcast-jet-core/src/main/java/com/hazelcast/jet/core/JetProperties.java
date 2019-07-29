@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.spi.properties.HazelcastProperty;
 
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
@@ -38,7 +39,10 @@ public final class JetProperties {
             = new HazelcastProperty("jet.job.scan.period", SECONDS.toMillis(5), MILLISECONDS);
 
     /**
-     *
+     * Whether a JVM shutdown hook is registered to shutdown the node gracefully
+     * when the process is terminated. The shutdown hook will terminate all running
+     * jobs and then gracefully terminate the note, in a way that is
+     * equivalent to calling {@link JetInstance#shutdown()}.
      */
     public static final HazelcastProperty JET_SHUTDOWNHOOK_ENABLED
             = new HazelcastProperty("jet.shutdownhook.enabled", SHUTDOWNHOOK_ENABLED.getDefaultValue());
