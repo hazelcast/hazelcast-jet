@@ -51,6 +51,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     private long snapshotIntervalMillis = SNAPSHOT_INTERVAL_MILLIS_DEFAULT;
     private boolean autoScaling = true;
     private boolean splitBrainProtectionEnabled;
+    private boolean enableMetrics = true;
     private List<ResourceConfig> resourceConfigs = new ArrayList<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
@@ -423,6 +424,23 @@ public class JobConfig implements IdentifiedDataSerializable {
         return this;
     }
 
+    /**
+     * Sets whether metrics collection should be enabled for the job.
+     * It's enabled by default.
+     */
+    @Nonnull
+    public JobConfig setMetricsEnabled(boolean enabled) {
+        this.enableMetrics = enabled;
+        return this;
+    }
+
+    /**
+     * Returns if metrics collection is enabled for the job
+     */
+    public boolean isMetricsEnabled() {
+        return enableMetrics;
+    }
+
     @Override
     public int getFactoryId() {
         return JetConfigDataSerializerHook.FACTORY_ID;
@@ -443,6 +461,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeObject(resourceConfigs);
         out.writeObject(classLoaderFactory);
         out.writeUTF(initialSnapshotName);
+        out.writeBoolean(enableMetrics);
     }
 
     @Override
@@ -455,6 +474,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         resourceConfigs = in.readObject();
         classLoaderFactory = in.readObject();
         initialSnapshotName = in.readUTF();
+        enableMetrics = in.readBoolean();
     }
 
     @Override
