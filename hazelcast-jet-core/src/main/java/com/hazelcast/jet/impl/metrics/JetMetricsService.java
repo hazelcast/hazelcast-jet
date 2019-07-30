@@ -56,8 +56,6 @@ import static java.util.stream.Collectors.joining;
  */
 public class JetMetricsService implements LiveOperationsTracker {
 
-    public static final String SERVICE_NAME = "hz:impl:jetMetricsService";
-
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
     private final LiveOperationRegistry liveOperationRegistry;

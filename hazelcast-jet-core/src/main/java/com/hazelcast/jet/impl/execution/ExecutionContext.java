@@ -113,7 +113,7 @@ public class ExecutionContext {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
-        JetMetricsService service = nodeEngine.getService(JetMetricsService.SERVICE_NAME);
+        JetMetricsService service = ((JetService) nodeEngine.getService(JetService.SERVICE_NAME)).getMetricsService();
         boolean registerMetrics = jobConfig.isMetricsEnabled() && service.isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext, registerMetrics);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
