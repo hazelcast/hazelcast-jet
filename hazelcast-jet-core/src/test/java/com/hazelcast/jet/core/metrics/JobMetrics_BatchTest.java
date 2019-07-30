@@ -111,6 +111,20 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
         assertTrueEventually(() -> assertMetrics(job2.getMetrics(), anotherText));
     }
 
+    @Test
+    public void when_twoDifferentJobsForTheSamePipeline_then_haveDifferentMetrics() {
+        Pipeline p = createPipeline();
+
+        Job job = testMode.getJet().newJob(p);
+        Job job2 = testMode.getJet().newJob(p);
+        job.join();
+        job2.join();
+
+        assertNotEquals(job.getMetrics(), job2.getMetrics());
+        assertTrueEventually(() -> assertMetrics(job.getMetrics()));
+        assertTrueEventually(() -> assertMetrics(job2.getMetrics()));
+    }
+
     private Pipeline createPipeline() {
         return createPipeline(COMMON_TEXT);
     }
