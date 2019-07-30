@@ -63,7 +63,7 @@ public class JetMetricsService implements LiveOperationsTracker {
     private final LiveOperationRegistry liveOperationRegistry;
     // Holds futures for pending read metrics operations
     private final ConcurrentMap<CompletableFuture<RingbufferSlice<Map.Entry<Long, byte[]>>>, Long>
-            pendingReads = new ConcurrentHashMap<>();
+        pendingReads = new ConcurrentHashMap<>();
 
     /**
      * Ringbuffer which stores a bounded history of metrics. For each round of collection,
@@ -103,8 +103,8 @@ public class JetMetricsService implements LiveOperationsTracker {
         }
 
         logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
-                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
-                + publishers.stream().map(MetricsPublisher::name).collect(joining(", ", "[", "]")));
+            + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
+            + publishers.stream().map(MetricsPublisher::name).collect(joining(", ", "[", "]")));
 
         ProbeRenderer renderer = new PublisherProbeRenderer();
         scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsPublisher", () -> {
@@ -117,6 +117,10 @@ public class JetMetricsService implements LiveOperationsTracker {
                 }
             }
         }, 1, config.getCollectionIntervalSeconds(), TimeUnit.SECONDS);
+    }
+
+    public boolean isEnabled() {
+        return config.isEnabled();
     }
 
     public LiveOperationRegistry getLiveOperationRegistry() {
@@ -177,14 +181,14 @@ public class JetMetricsService implements LiveOperationsTracker {
         List<MetricsPublisher> publishers = new ArrayList<>();
         if (config.isEnabled()) {
             int journalSize = Math.max(
-                    1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
+                1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
             );
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
             ManagementCenterPublisher publisher = new ManagementCenterPublisher(this.nodeEngine.getLoggingService(),
-                    (blob, ts) -> {
-                        metricsJournal.add(entry(ts, blob));
-                        pendingReads.forEach(this::tryCompleteRead);
-                    }
+                (blob, ts) -> {
+                    metricsJournal.add(entry(ts, blob));
+                    pendingReads.forEach(this::tryCompleteRead);
+                }
             );
             publishers.add(publisher);
 

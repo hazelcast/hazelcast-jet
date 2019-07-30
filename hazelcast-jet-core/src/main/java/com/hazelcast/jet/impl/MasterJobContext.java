@@ -175,18 +175,14 @@ public class MasterJobContext {
     void tryStartJob(Function<Long, Long> executionIdSupplier) {
         executionStartTime = System.nanoTime();
         try {
+            JobExecutionRecord jobExecRec = mc.jobExecutionRecord();
+            jobExecRec.markExecuted();
             Tuple2<DAG, ClassLoader> dagAndClassloader = resolveDagAndCL(executionIdSupplier);
             if (dagAndClassloader == null) {
                 return;
             }
             DAG dag = dagAndClassloader.f0();
             ClassLoader classLoader = dagAndClassloader.f1();
-            JobExecutionRecord jobExecRec = mc.jobExecutionRecord();
-            try {
-                mc.jobRepository().clearSnapshotData(mc.jobId(), jobExecRec.ongoingDataMapIndex());
-            } catch (Exception e) {
-                logger.warning("Cannot delete old snapshots for " + mc.jobName(), e);
-            }
             String dotRepresentation = dag.toDotString(); // must call this before rewriteDagWithSnapshotRestore()
             long snapshotId = jobExecRec.snapshotId();
             String snapshotName = mc.jobConfig().getInitialSnapshotName();
