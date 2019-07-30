@@ -87,7 +87,7 @@ public interface Job {
     /**
      * Returns a snapshot of the current values of all job-specific metrics.
      * <p>
-     * While the job is running the metric values get updated periodically
+     * While the job is running the metric values are updated periodically
      * (see {@link MetricsConfig#setCollectionIntervalSeconds}).
      * <p>
      * Once a job stops executing (successfully, after a failure, cancellation,
@@ -95,13 +95,13 @@ public interface Job {
      * recent values (i.e. the last metric values from the moment before the
      * job completed).
      * <p>
-     * If a job is restarted then the metrics are reset too, their values
+     * When a job is restarted then the metrics are reset too, their values
      * will reflect only updates from the latest execution of the job.
      * <p>
      * The method returns empty metrics if metrics collection is {@link
      * MetricsConfig#setEnabled disabled} or until the first collection takes
-     * place. Also keep in mind that the collections occur at different time on
-     * each member, metrics form various members aren't from the same instant.
+     * place. Also keep in mind that the collections may occur at different times on
+     * each member, metrics from various members aren't from the same instant.
      *
      * @since 3.2
      */
