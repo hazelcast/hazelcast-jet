@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.aggregate;
 
+import com.hazelcast.aggregation.Aggregator;
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
@@ -36,6 +38,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToDoubleFunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.aggregate.AggregateOpAggregator;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.GeneralStage;
@@ -1747,5 +1750,35 @@ public final class AggregateOperations {
     @Nonnull
     public static CoAggregateOperationBuilder coAggregateOperationBuilder() {
         return new CoAggregateOperationBuilder();
+    }
+
+    /**
+     * Adapts this aggregate operation to be used for {@link IMap#aggregate(Aggregator)}
+     * calls.
+     * <p>
+     * Using {@code IMap} aggregations can be desirable when you want to make
+     * use of {@linkplain IMap#addIndex(String, boolean) indices} when doing aggregations
+     * and want to use the Jet aggregations API instead of writing a custom
+     * {@link Aggregator}.
+     * <p>
+     * For example, the following aggregation can be used to group people by
+     * their age and find the counts for each group.
+     * <pre>{@code
+     *   IMap<Integer, Movie> map = jet.getMap("people");
+     *   Map<Integer, Long> counts = map.aggregate(
+     *     AggregateOperations.toAggregator(
+     *       AggregateOperations.groupingBy(
+     *         e -> e.getValue().getGender(), AggregateOperations.counting()
+     *       )
+     *     )
+     *   );
+     * }
+     * </pre>
+     */
+    @Nonnull
+    public static <T, A, R> Aggregator<T, R> toAggregator(
+        AggregateOperation1<? super T, A, R> aggrOp
+    ) {
+        return new AggregateOpAggregator<>(aggrOp);
     }
 }
