@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
@@ -27,6 +26,7 @@ import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -36,7 +36,6 @@ import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,7 +85,7 @@ public class ExecutionContext {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
-    private volatile Map<String, Long> jobMetrics = Collections.emptyMap();
+    private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -267,11 +266,11 @@ public class ExecutionContext {
         return jobName;
     }
 
-    public JobMetrics getJobMetrics() {
-        return JobMetrics.of(jobMetrics);
+    public RawJobMetrics getJobMetrics() {
+        return jobMetrics;
     }
 
-    public void setJobMetrics(Map<String, Long> jobMetrics) {
+    public void setJobMetrics(RawJobMetrics jobMetrics) {
         this.jobMetrics = jobMetrics;
     }
 }

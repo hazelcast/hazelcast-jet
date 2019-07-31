@@ -24,15 +24,16 @@ import com.hazelcast.internal.cluster.impl.MembersView;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Edge;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNotFoundException;
@@ -92,7 +93,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -118,7 +118,7 @@ public class MasterJobContext {
     private volatile ExecutionFailureCallback executionFailureCallback;
     private volatile Set<Vertex> vertices;
     @Nonnull
-    private volatile JobMetrics jobMetrics = JobMetrics.of(emptyMap());
+    private volatile JobMetrics jobMetrics = JobMetrics.empty();
 
     /**
      * A future (re)created when the job is started and completed when its
@@ -817,23 +817,20 @@ public class MasterJobContext {
     }
 
     private JobMetrics mergeMetrics(Collection<Map.Entry<MemberInfo, Object>> metrics) {
-        Map<String, Long> mergedMetrics = new HashMap<>();
+        JobMetrics mergedMetrics = JobMetrics.empty();
         int expectedCount = 0;
         for (Map.Entry<MemberInfo, Object> memberEntry : metrics) {
             String memberPrefix = JobMetricsUtil.getMemberPrefix(memberEntry.getKey());
-            Map<String, Long> metricMap = ((JobMetrics) memberEntry.getValue()).toMap();
-            for (Map.Entry<String, Long> entry : metricMap.entrySet()) {
-                String name = JobMetricsUtil.addPrefixToName(entry.getKey(), memberPrefix);
-                Long value = entry.getValue();
-                mergedMetrics.put(name, value);
-            }
-            expectedCount += metricMap.size();
+            RawJobMetrics rawJobMetrics = (RawJobMetrics) memberEntry.getValue();
+            rawJobMetrics = rawJobMetrics.prefixNames(memberPrefix);
+            mergedMetrics = mergedMetrics.merge(JobMetrics.of(rawJobMetrics.getTimestamp(), rawJobMetrics.getValues()));
+            expectedCount += rawJobMetrics.getValues().size();
         }
 
         assert mergedMetrics.size() == expectedCount : "Duplicate metrics from members, expectedCount=" + expectedCount
                 + ", actual count=" + mergedMetrics.size();
 
-        return JobMetrics.of(mergedMetrics);
+        return mergedMetrics;
     }
 
     // true -> failures, false -> success responses

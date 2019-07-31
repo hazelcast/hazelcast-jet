@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.core.MetricTags;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -48,12 +48,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MAX_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MIN_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;

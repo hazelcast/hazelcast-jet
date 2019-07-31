@@ -19,15 +19,14 @@ package com.hazelcast.jet.core.metrics;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.Set;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
@@ -161,13 +160,11 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
         assertEquals(uniqueWordCount, sumValueFor(metrics, SINK_VERTEX, RECEIVE_COUNT_METRIC));
     }
 
-    private int sumValueFor(JobMetrics metrics, String vertex, String metric) {
-        Set<String> metricNames = metrics.withTag("vertex", vertex).withTag("metric", metric).getMetricNames();
-        int sum = 0;
-        for (String metricName : metricNames) {
-            sum += metrics.getMetricValue(metricName);
-        }
-        return sum;
+    private long sumValueFor(JobMetrics metrics, String vertex, String metric) {
+        Collection<Measurement> measurements = metrics
+                .filter(MeasurementFilters.tagValueEquals(MetricTags.VERTEX, vertex))
+                .get(metric);
+        return measurements.stream().mapToLong(Measurement::getValue).sum();
     }
 
 }

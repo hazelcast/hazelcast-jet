@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.core;
+package com.hazelcast.jet.core.metrics;
 
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.Util;
+import com.hazelcast.jet.core.Processor;
 
 /**
- * Metric names are formed from a comma separated list of {@code
+ * Metric descriptors are formed from a comma separated list of {@code
  * tag_name=tag_value} pairs. The constants defined here are the possible tag
  * names that are used in Jet. See individual descriptions for the meaning of
  * information carried by each tag.
@@ -99,7 +100,7 @@ public final class MetricTags {
     public static final String ORDINAL = "ordinal";
 
     /**
-     * The name of the metric. This tag is mandatory.
+     * The name of the metric. This is the tag that conceptually identifies a metric. Mandatory tag.
      */
     public static final String METRIC = "metric";
 

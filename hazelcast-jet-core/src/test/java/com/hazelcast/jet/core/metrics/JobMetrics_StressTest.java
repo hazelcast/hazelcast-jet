@@ -22,7 +22,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
@@ -33,7 +32,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
-import java.util.Set;
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -198,23 +197,21 @@ public class JobMetrics_StressTest extends JetTestSupport {
                 while (!stop) {
                     assertNotNull(job.getMetrics());
 
-                    JobMetrics withInitCountTag = job.getMetrics().withTag("metric", "initCount");
-                    Set<String> initCountNames = withInitCountTag.getMetricNames();
-                    if (initCountNames.size() != TOTAL_PROCESSORS) {
+                    Collection<Measurement> initCountMeasurements = job.getMetrics().get("initCount");
+                    if (initCountMeasurements.size() != TOTAL_PROCESSORS) {
                         continue;
                     }
-                    long initCountSum = sumValuesInMetrics(withInitCountTag, initCountNames);
+                    long initCountSum = initCountMeasurements.stream().mapToLong(Measurement::getValue).sum();
                     assertTrue("Metrics value should be increasing, current: " + initCountSum
                             + ", previous: " + previousInitCountSum,
                             initCountSum >= previousInitCountSum);
                     previousInitCountSum = initCountSum;
 
-                    JobMetrics withCompleteCountTag = job.getMetrics().withTag("metric", "completeCount");
-                    Set<String> completeCountNames = withCompleteCountTag.getMetricNames();
-                    if (completeCountNames.size() != TOTAL_PROCESSORS) {
+                    Collection<Measurement> completeCountMeasurements = job.getMetrics().get("completeCount");
+                    if (completeCountMeasurements.size() != TOTAL_PROCESSORS) {
                         continue;
                     }
-                    long completeCountSum = sumValuesInMetrics(withCompleteCountTag, completeCountNames);
+                    long completeCountSum = completeCountMeasurements.stream().mapToLong(Measurement::getValue).sum();
                     assertTrue("Metrics value should be increasing, current: " + completeCountSum
                             + ", previous: " + previousCompleteCountSum,
                             completeCountSum >= previousCompleteCountSum);
@@ -222,24 +219,15 @@ public class JobMetrics_StressTest extends JetTestSupport {
                 }
                 assertTrueEventually(() -> {
                     assertNotNull(job.getMetrics());
-                    JobMetrics withInitCountTag = job.getMetrics().withTag("metric", "initCount");
-                    Set<String> metricNames = withInitCountTag.getMetricNames();
-                    assertEquals(TOTAL_PROCESSORS, metricNames.size());
-                    long sum = sumValuesInMetrics(withInitCountTag, metricNames);
+                    Collection<Measurement> initCountMeasurements = job.getMetrics().get("initCount");
+                    assertEquals(TOTAL_PROCESSORS, initCountMeasurements.size());
+                    long sum = initCountMeasurements.stream().mapToLong(Measurement::getValue).sum();
                     assertEquals((RESTART_COUNT + 1) * TOTAL_PROCESSORS * TOTAL_PROCESSORS, sum);
                 }, 3);
             } catch (Throwable ex) {
                 obtainMetricsThreadException = ex;
                 throw ex;
             }
-        }
-
-        private long sumValuesInMetrics(JobMetrics metrics, Set<String> metricNames) {
-            long sum = 0;
-            for (String metricName : metricNames) {
-                sum += metrics.getMetricValue(metricName);
-            }
-            return sum;
         }
     }
 }

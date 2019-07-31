@@ -20,8 +20,8 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.pipeline.Pipeline;
 
 import javax.annotation.Nonnull;

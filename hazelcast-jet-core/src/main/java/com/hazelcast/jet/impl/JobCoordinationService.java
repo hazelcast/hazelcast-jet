@@ -30,10 +30,10 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
@@ -51,7 +51,6 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -72,6 +71,7 @@ import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
 import static com.hazelcast.cluster.ClusterState.PASSIVE;
 import static com.hazelcast.cluster.memberselector.MemberSelectors.DATA_MEMBER_SELECTOR;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.core.JetProperties.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.core.JobStatus.COMPLETING;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -80,7 +80,6 @@ import static com.hazelcast.jet.impl.TerminationMode.CANCEL_FORCEFUL;
 import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
-import static com.hazelcast.jet.core.JetProperties.JOB_SCAN_PERIOD;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
@@ -420,7 +419,7 @@ public class JobCoordinationService {
                     // no master context found, job might be just submitted
                     JobExecutionRecord jobExecutionRecord = jobRepository.getJobExecutionRecord(jobId);
                     if (jobExecutionRecord != null) {
-                        cf.complete(JobMetrics.of(Collections.emptyMap()));
+                        cf.complete(JobMetrics.empty());
                         return;
                     } else {
                         // no job record found, but check job results again
@@ -566,7 +565,7 @@ public class JobCoordinationService {
      * causes the method to return {@code false}.
      */
     private boolean allMembersHaveSameState(ClusterState clusterState) {
-        // TODO remove once the issue is fixed on the imdg side
+        // TODO remove once the issue is fixed on the IMDG side
         try {
             Set<Member> members = nodeEngine.getClusterService().getMembers();
             List<Future<ClusterMetadata>> futures =

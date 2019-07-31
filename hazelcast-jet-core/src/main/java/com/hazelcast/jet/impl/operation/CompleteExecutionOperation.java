@@ -17,11 +17,11 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
@@ -43,7 +43,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
     private long executionId;
     private Throwable error;
-    private JobMetrics response;
+    private RawJobMetrics response;
 
     public CompleteExecutionOperation() {
     }
@@ -122,7 +122,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
         @Override
         public void renderLong(String name, long value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
             if (executionIdOfInterest.equals(executionId)) {
                 jobMetrics.put(name, value);
             }
@@ -141,8 +141,8 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         public void renderNoValue(String name) {
         }
 
-        JobMetrics getJobMetrics() {
-            return JobMetrics.of(jobMetrics);
+        RawJobMetrics getJobMetrics() {
+            return RawJobMetrics.of(System.currentTimeMillis(), jobMetrics);
         }
     }
 }

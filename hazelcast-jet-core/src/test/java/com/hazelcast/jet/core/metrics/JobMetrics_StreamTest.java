@@ -20,7 +20,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -29,9 +28,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -239,14 +238,11 @@ public class JobMetrics_StreamTest extends TestInClusterSupport {
                 sumValueFor(metrics, "listSink(" + sinkListName + ")", RECEIVE_COUNT_METRIC));
     }
 
-    private int sumValueFor(JobMetrics metrics, String vertex, String metric) {
-        Set<String> metricNames = metrics.withTag("vertex", vertex).withTag("metric", metric).getMetricNames();
-        int sum = 0;
-        for (String metricName : metricNames) {
-            if (!metricName.contains("ordinal=snapshot")) {
-                sum += metrics.getMetricValue(metricName);
-            }
-        }
-        return sum;
+    private long sumValueFor(JobMetrics metrics, String vertex, String metric) {
+        Collection<Measurement> measurements = metrics
+                .filter(MeasurementFilters.tagValueEquals(MetricTags.VERTEX, vertex)
+                            .and(MeasurementFilters.tagValueEquals(MetricTags.ORDINAL, "snapshot").negate()))
+                .get(metric);
+        return measurements.stream().mapToLong(Measurement::getValue).sum();
     }
 }

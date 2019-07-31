@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -327,11 +328,11 @@ public class JobExecutionService {
         }
     }
 
-    public void updateMetrics(Map<Long, Map<String, Long>> metrics) {
+    public void updateMetrics(long timestamp, Map<Long, Map<String, Long>> metrics) {
         for (Entry<Long, Map<String, Long>> entry : metrics.entrySet()) {
             ExecutionContext executionContext = executionContexts.get(entry.getKey());
             if (executionContext != null) {
-                executionContext.setJobMetrics(entry.getValue());
+                executionContext.setJobMetrics(RawJobMetrics.of(timestamp, entry.getValue()));
             }
         }
     }

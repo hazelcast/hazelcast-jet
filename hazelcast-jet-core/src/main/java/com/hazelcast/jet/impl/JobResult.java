@@ -18,8 +18,8 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.JobMetrics;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;

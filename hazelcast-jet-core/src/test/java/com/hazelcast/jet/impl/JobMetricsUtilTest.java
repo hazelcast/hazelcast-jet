@@ -38,7 +38,7 @@ public class JobMetricsUtilTest {
         );
 
         String memberPrefix = JobMetricsUtil.getMemberPrefix(member);
-        String prefixedName = JobMetricsUtil.addPrefixToName("[tag1=val1,tag2=val2]", memberPrefix);
+        String prefixedName = JobMetricsUtil.addPrefixToDescriptor("[tag1=val1,tag2=val2]", memberPrefix);
 
         assertEquals(
                 "[member=0000-0000-001b-fd2f,address=[127.0.0.1]:12345,tag1=val1,tag2=val2]",

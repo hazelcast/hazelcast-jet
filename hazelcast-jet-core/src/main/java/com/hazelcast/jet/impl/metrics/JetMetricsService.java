@@ -214,7 +214,7 @@ public class JetMetricsService implements LiveOperationsTracker {
 
         @Override
         public void publishLong(String name, long value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricName(name);
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
             if (executionId != null) {
                 metrics.computeIfAbsent(executionId, x -> new HashMap<>())
                         .put(name, value);
@@ -228,7 +228,7 @@ public class JetMetricsService implements LiveOperationsTracker {
 
         @Override
         public void whenComplete() {
-            jobExecutionService.updateMetrics(metrics);
+            jobExecutionService.updateMetrics(System.currentTimeMillis(), metrics);
             metrics.clear();
         }
 
