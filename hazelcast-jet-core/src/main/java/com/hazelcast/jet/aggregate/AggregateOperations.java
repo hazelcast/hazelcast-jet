@@ -1777,7 +1777,7 @@ public final class AggregateOperations {
      */
     @Nonnull
     public static <T, A, R> Aggregator<T, R> toAggregator(
-        AggregateOperation1<? super T, A, R> aggrOp
+        AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         return new AggregateOpAggregator<>(aggrOp);
     }

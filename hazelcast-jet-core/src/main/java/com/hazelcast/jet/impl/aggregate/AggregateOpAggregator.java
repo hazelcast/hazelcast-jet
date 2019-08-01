@@ -29,16 +29,15 @@ import static java.util.Objects.requireNonNull;
 
 public class AggregateOpAggregator<T, A, R> extends Aggregator<T, R> implements IdentifiedDataSerializable {
 
-    private AggregateOperation1<? super T, A, R> aggrOp;
+    private AggregateOperation1<? super T, A, ? extends R> aggrOp;
     private A accumulator;
 
     public AggregateOpAggregator() {
     }
 
-    public AggregateOpAggregator(
-        AggregateOperation1<? super T, A, R> aggrOp
-    ) {
-        requireNonNull(aggrOp.combineFn(), "AggregateOperation.combineFn is required for Aggregators");
+    public AggregateOpAggregator(AggregateOperation1<? super T, A, ? extends R> aggrOp) {
+        requireNonNull(aggrOp.combineFn(),
+                "The supplied AggregateOperation doesn't have the combineFn, which is required for an Aggregator");
         this.aggrOp = aggrOp;
         this.accumulator = aggrOp.createFn().get();
     }
@@ -49,9 +48,9 @@ public class AggregateOpAggregator<T, A, R> extends Aggregator<T, R> implements 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void combine(Aggregator aggregator) {
-        AggregateOpAggregator<T, A, R> other = (AggregateOpAggregator<T, A, R>) aggregator;
+        @SuppressWarnings("unchecked")
+        AggregateOpAggregator<? super T, A, ? extends R> other = (AggregateOpAggregator) aggregator;
         aggrOp.combineFn().accept(accumulator, other.accumulator);
     }
 
