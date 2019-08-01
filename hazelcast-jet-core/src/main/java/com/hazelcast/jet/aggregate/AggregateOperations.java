@@ -1770,7 +1770,7 @@ public final class AggregateOperations {
      *       )
      *     )
      *   );
-     * </pre>
+     * }</pre>
      */
     @Nonnull
     public static <T, A, R> Collector<T, A, R> toCollector(AggregateOperation1<? super T, A, ? extends R> aggrOp) {
