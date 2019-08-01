@@ -26,13 +26,14 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.EventTimeMapper;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.EventTimePolicy;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToResultSetFunction;
+import com.hazelcast.jet.impl.connector.ReadMapP;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.map.journal.EventJournalMapEvent;
@@ -167,7 +168,9 @@ public final class Sources {
      */
     @Nonnull
     public static <K, V> BatchSource<Entry<K, V>> map(@Nonnull String mapName) {
-        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName));
+        return batchFromProcessor("mapSource(" + mapName + ')',
+            ReadMapP.readMapSupplier(mapName, null, null)
+        );
     }
 
     /**
