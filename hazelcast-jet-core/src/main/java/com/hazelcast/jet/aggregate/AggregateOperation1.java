@@ -63,10 +63,10 @@ public interface AggregateOperation1<T, A, R> extends AggregateOperation<A, R> {
     <R_NEW> AggregateOperation1<T, A, R_NEW> andThen(FunctionEx<? super R, ? extends R_NEW> thenFn);
 
     /**
-     * Adapts this aggregate operation to a collector which can be passed to
-     * {@link java.util.stream.Stream#collect(Collector)}.
+     * @deprecated see {@linkplain AggregateOperations#toCollector(AggregateOperation1)}
      */
     @Nonnull
+    @Deprecated
     default Collector<T, A, R> toCollector() {
         BiConsumerEx<? super A, ? super A> combineFn = combineFn();
         if (combineFn == null) {

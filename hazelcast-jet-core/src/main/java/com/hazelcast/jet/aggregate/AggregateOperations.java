@@ -55,6 +55,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
@@ -1753,6 +1754,41 @@ public final class AggregateOperations {
     }
 
     /**
+     * Adapts this aggregate operation to a collector which can be passed to
+     * {@link java.util.stream.Stream#collect(Collector)}.
+     * <p>
+     * This can be useful when you want to combine java.util.stream with Jet
+     * aggregations. For example, the below can be used to do multiple aggregations
+     * in a single pass over the same data set:
+     * <pre>{@code
+     *   Stream<Person> personStream = people.stream();
+     *   personStream.collect(
+     *     AggregateOperations.toCollector(
+     *       AggregateOperations.allOf(
+     *         AggregateOperations.counting(),
+     *         AggregateOperations.averagingLong(p -> p.getAge())
+     *       )
+     *     )
+     *   );
+     * </pre>
+     */
+    @Nonnull
+    public static <T, A, R> Collector<T, A, R> toCollector(AggregateOperation1<? super T, A, ? extends R> aggrOp) {
+        BiConsumerEx<? super A, ? super A> combineFn = aggrOp.combineFn();
+        if (combineFn == null) {
+            throw new IllegalArgumentException("This aggregate operation doesn't implement combineFn()");
+        }
+        return Collector.of(
+            aggrOp.createFn(),
+            (acc, t) -> aggrOp.accumulateFn().accept(acc, t),
+            (l, r) -> {
+                combineFn.accept(l, r);
+                return l;
+            },
+            a -> aggrOp.finishFn().apply(a));
+    }
+
+    /**
      * Adapts this aggregate operation to be used for {@link IMap#aggregate(Aggregator)}
      * calls.
      * <p>
@@ -1764,7 +1800,7 @@ public final class AggregateOperations {
      * For example, the following aggregation can be used to group people by
      * their age and find the counts for each group.
      * <pre>{@code
-     *   IMap<Integer, Movie> map = jet.getMap("people");
+     *   IMap<Integer, Person> map = jet.getMap("people");
      *   Map<Integer, Long> counts = map.aggregate(
      *     AggregateOperations.toAggregator(
      *       AggregateOperations.groupingBy(
