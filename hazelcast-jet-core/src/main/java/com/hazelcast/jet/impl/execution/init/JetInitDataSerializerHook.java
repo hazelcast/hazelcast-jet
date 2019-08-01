@@ -27,6 +27,7 @@ import com.hazelcast.jet.impl.JobRepository.UpdateJobExecutionRecordEntryProcess
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
+import com.hazelcast.jet.impl.aggregate.AggregateOpAggregator;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
@@ -95,8 +96,9 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SNAPSHOT_VALIDATION_RECORD = 35;
     public static final int CLUSTER_METADATA = 36;
     public static final int GET_CLUSTER_METADATA_OP = 37;
-    public static final int GET_JOB_METRICS_OP = 38;
-    public static final int GET_LOCAL_JOB_METRICS_OP = 39;
+    public static final int AGGREGATE_OP_AGGREGATOR = 38;
+    public static final int GET_JOB_METRICS_OP = 39;
+    public static final int GET_LOCAL_JOB_METRICS_OP = 40;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -185,6 +187,8 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new ClusterMetadata();
                 case GET_CLUSTER_METADATA_OP:
                     return new GetClusterMetadataOperation();
+                case AGGREGATE_OP_AGGREGATOR:
+                    return new AggregateOpAggregator<>();
                 case GET_JOB_METRICS_OP:
                     return new GetJobMetricsOperation();
                 case GET_LOCAL_JOB_METRICS_OP:
