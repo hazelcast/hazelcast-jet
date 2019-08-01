@@ -68,17 +68,6 @@ public interface AggregateOperation1<T, A, R> extends AggregateOperation<A, R> {
     @Nonnull
     @Deprecated
     default Collector<T, A, R> toCollector() {
-        BiConsumerEx<? super A, ? super A> combineFn = combineFn();
-        if (combineFn == null) {
-            throw new IllegalArgumentException("This aggregate operation doesn't implement combineFn()");
-        }
-        return Collector.of(
-                createFn(),
-                (acc, t) -> accumulateFn().accept(acc, t),
-                (l, r) -> {
-                    combineFn.accept(l, r);
-                    return l;
-                },
-                a -> finishFn().apply(a));
+        return AggregateOperations.toCollector(this);
     }
 }
