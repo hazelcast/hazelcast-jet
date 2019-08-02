@@ -232,12 +232,12 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
     }
 
     private void assertJobHasMetrics(Job job) {
-        assertFalse(job.getMetrics().isEmpty());
+        assertFalse(job.getMetrics().metrics().isEmpty());
         assertFalse(job.getMetrics().get("queuesSize").isEmpty());
     }
 
     private void assertEmptyJobMetrics(Job job) {
-        assertTrue(job.getMetrics().isEmpty());
+        assertTrue(job.getMetrics().metrics().isEmpty());
     }
 
     private static class BlockingInInitMetaSupplier implements ProcessorMetaSupplier {

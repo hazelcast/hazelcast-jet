@@ -52,7 +52,7 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
         DAG dag = new DAG();
         dag.newVertex("v1", (SupplierEx<Processor>) NoOutputSourceP::new).localParallelism(1);
         Job job = inst.newJob(dag);
-        assertTrue(job.getMetrics().isEmpty());
+        assertTrue(job.getMetrics().metrics().isEmpty());
     }
 
     @Test
@@ -67,7 +67,7 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
         // Initial collection interval is 1 second. So let's run a job and wait until it has metrics.
         Job job1 = inst.newJob(dag);
         try {
-            JetTestSupport.assertTrueEventually(() -> assertFalse(job1.getMetrics().isEmpty()), 10);
+            JetTestSupport.assertTrueEventually(() -> assertFalse(job1.getMetrics().metrics().isEmpty()), 10);
         } catch (AssertionError e) {
             // If we don't get metrics in 10 seconds, ignore it, we probably missed the first collection
             // with this job. We might have caught a different error, let's log it at least.
@@ -78,7 +78,7 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
         // return empty metrics because the next collection will be in 10_000 seconds.
         Job job2 = inst.newJob(dag);
         assertJobStatusEventually(job2, RUNNING);
-        assertTrue(job2.getMetrics().isEmpty());
+        assertTrue(job2.getMetrics().metrics().isEmpty());
     }
 
 }

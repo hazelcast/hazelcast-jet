@@ -818,18 +818,12 @@ public class MasterJobContext {
 
     private JobMetrics mergeMetrics(Collection<Map.Entry<MemberInfo, Object>> metrics) {
         JobMetrics mergedMetrics = JobMetrics.empty();
-        int expectedCount = 0;
         for (Map.Entry<MemberInfo, Object> memberEntry : metrics) {
             String memberPrefix = JobMetricsUtil.getMemberPrefix(memberEntry.getKey());
             RawJobMetrics rawJobMetrics = (RawJobMetrics) memberEntry.getValue();
             rawJobMetrics = rawJobMetrics.prefixNames(memberPrefix);
             mergedMetrics = mergedMetrics.merge(JobMetrics.of(rawJobMetrics.getTimestamp(), rawJobMetrics.getValues()));
-            expectedCount += rawJobMetrics.getValues().size();
         }
-
-        assert mergedMetrics.size() == expectedCount : "Duplicate metrics from members, expectedCount=" + expectedCount
-                + ", actual count=" + mergedMetrics.size();
-
         return mergedMetrics;
     }
 

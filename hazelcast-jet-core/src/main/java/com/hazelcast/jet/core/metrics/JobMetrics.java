@@ -160,22 +160,6 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns the total number of {@link Measurement}s present (<strong>NOT</strong> just the number of the metric names
-     * present).
-     */
-    public int size() {
-        return metrics.values().stream().mapToInt(Set::size).sum();
-    }
-
-    /**
-     * Returns true if the current instance of {@link JobMetrics} doesn't contain any metric names, thus any {@link
-     * Measurement}s either.
-     */
-    public boolean isEmpty() {
-        return metrics.isEmpty();
-    }
-
-    /**
      * Merges the current instance of {@link JobMetrics} with the provided one and returns the result as a new {@link
      * JobMetrics} object. The returned object will contain all metric names from both sources and a union of all their
      * {@link Measurement}s.
