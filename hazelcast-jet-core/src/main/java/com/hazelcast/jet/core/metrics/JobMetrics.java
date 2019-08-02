@@ -188,6 +188,22 @@ public final class JobMetrics implements IdentifiedDataSerializable {
         return new JobMetrics(Stream.concat(thisMeasurements, thatMeasurements).collect(COLLECTOR));
     }
 
+    /**
+     * Prints out a multi-line, user friendly version of the content.
+     */
+    public String prettyPrint() {
+        StringBuilder sb = new StringBuilder();
+        for (Entry<String, Set<Measurement>> entry : metrics.entrySet()) {
+            sb.append("\n").append(entry.getKey());
+
+            Set<Measurement> measurements = entry.getValue();
+            for (Measurement measurement : measurements) {
+                sb.append("\n\t").append(measurement);
+            }
+        }
+        return sb.toString();
+    }
+
     @Override
     public int getFactoryId() {
         return MetricsDataSerializerHook.FACTORY_ID;
