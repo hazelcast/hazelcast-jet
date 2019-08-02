@@ -23,10 +23,11 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -38,10 +39,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toList;
 
 /**
- * An immutable collection of job-specific metrics, pairs of metric names and sets of associated {@link Measurement}s.
+ * An immutable collection of job-specific metrics, pairs of metric names
+ * and sets of associated {@link Measurement}s.
  *
  * @since 3.2
  */
@@ -49,18 +51,18 @@ public final class JobMetrics implements IdentifiedDataSerializable {
 
     private static final JobMetrics EMPTY = new JobMetrics(Collections.emptyMap());
 
-    private static final Collector<Measurement, ?, TreeMap<String, Set<Measurement>>> COLLECTOR = Collectors.groupingBy(
+    private static final Collector<Measurement, ?, TreeMap<String, List<Measurement>>> COLLECTOR = Collectors.groupingBy(
             measurement -> measurement.getTag(MetricTags.METRIC),
             TreeMap::new,
-            Collectors.mapping(identity(), toSet())
+            Collectors.mapping(identity(), toList())
     );
 
-    private Map<String, Set<Measurement>> metrics; //metric name -> set of measurements
+    private Map<String, List<Measurement>> metrics; //metric name -> set of measurements
 
     JobMetrics() { //needed for deserialization
     }
 
-    private JobMetrics(@Nonnull Map<String, Set<Measurement>> metrics) {
+    private JobMetrics(@Nonnull Map<String, List<Measurement>> metrics) {
         this.metrics = new HashMap<>(metrics);
     }
 
@@ -73,14 +75,17 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Builds a {@link JobMetrics} object based on one global timestamp and a key-value map of raw metrics data. The key
-     * {@code String}s in the map should be well formed metric descriptors and the values associated with them are {@code
-     * long} numbers.
+     * Builds a {@link JobMetrics} object based on one global timestamp and
+     * a key-value map of raw metrics data. The key {@code String}s in the
+     * map should be well formed metric descriptors and the values
+     * associated with them are {@code long} numbers.
      * <p>
-     * Descriptors are {@code String}s structured as a comma separated lists of tag=value pairs, enclosed in square
-     * brackets. An example of a valid metric descriptor would be:
+     * Descriptors are {@code String}s structured as a comma separated lists
+     * of tag=value pairs, enclosed in square brackets. An example of a
+     * valid metric descriptor would be:
      * <pre>{@code
-     *      [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]
+     *      [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,
+     *                                   unit=count,metric=queuesCapacity]
      * }</pre>
      */
     @Nonnull
@@ -92,8 +97,8 @@ public final class JobMetrics implements IdentifiedDataSerializable {
         return new JobMetrics(parseRawMetrics(timestamp, metrics));
     }
 
-    private static Map<String, Set<Measurement>> parseRawMetrics(long timestamp, Map<String, Long> raw) {
-        HashMap<String, Set<Measurement>> parsed = new HashMap<>();
+    private static Map<String, List<Measurement>> parseRawMetrics(long timestamp, Map<String, Long> raw) {
+        HashMap<String, List<Measurement>> parsed = new HashMap<>();
         for (Entry<String, Long> rawEntry : raw.entrySet()) {
             Long value = rawEntry.getValue();
             if (value == null) {
@@ -108,7 +113,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
                 throw new IllegalArgumentException("Metric name missing");
             }
 
-            Set<Measurement> measurements = parsed.computeIfAbsent(metricName, mn -> new HashSet<>());
+            List<Measurement> measurements = parsed.computeIfAbsent(metricName, mn -> new ArrayList<>());
             measurements.add(Measurement.of(value, timestamp, tags));
         }
         return parsed;
@@ -126,33 +131,38 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      * Returns all {@link Measurement}s associated with a given metric name.
      */
     @Nonnull
-    public Set<Measurement> get(@Nonnull String metricName) {
+    public List<Measurement> get(@Nonnull String metricName) {
         Objects.requireNonNull(metricName);
-        Set<Measurement> measurements = metrics.get(metricName);
-        return measurements == null ? Collections.emptySet() : measurements;
+        List<Measurement> measurements = metrics.get(metricName);
+        return measurements == null ? Collections.emptyList() : measurements;
     }
 
     /**
-     * Convenience method for {@link #filter(Predicate<Measurement>)}, returns a new {@link JobMetrics} instance containing
-     * only those {@link Measurement}s which have the specified tag set to the specified value.
+     * Convenience method for {@link #filter(Predicate<Measurement>)},
+     * returns a new {@link JobMetrics} instance containing only those
+     * {@link Measurement}s which have the specified tag set to the
+     * specified value.
      */
     @Nonnull
     public JobMetrics filter(@Nonnull String tagName, @Nonnull String tagValue) {
-        return filter(MeasurementFilters.tagValueEquals(tagName, tagValue));
+        return filter(MeasurementPredicates.tagValueEquals(tagName, tagValue));
     }
 
     /**
-     * Returns a new {@link JobMetrics} instance containing a subset of the {@link Measurement}s found in the current one.
-     * The subset is formed by those {@link Measurement}s which match the provided {@link Predicate}.
+     * Returns a new {@link JobMetrics} instance containing a subset of
+     * the {@link Measurement}s found in the current one. The subset is
+     * formed by those {@link Measurement}s which match the provided
+     * {@link Predicate}.
      * <p>
-     * The metric names which have all their {@link Measurement}s filtered out won't be present in the new {@link
+     * The metric names which have all their {@link Measurement}s filtered
+     * out won't be present in the new {@link
      * JobMetrics} instance.
      */
     @Nonnull
     public JobMetrics filter(@Nonnull Predicate<Measurement> predicate) {
         Objects.requireNonNull(predicate, "predicate");
 
-        Map<String, Set<Measurement>> filteredMetrics = metrics.values().stream()
+        Map<String, List<Measurement>> filteredMetrics = metrics.values().stream()
                 .flatMap(Collection::stream)
                 .filter(predicate)
                 .collect(COLLECTOR);
@@ -160,24 +170,10 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns the total number of {@link Measurement}s present (<strong>NOT</strong> just the number of the metric names
-     * present).
-     */
-    public int size() {
-        return metrics.values().stream().mapToInt(Set::size).sum();
-    }
-
-    /**
-     * Returns true if the current instance of {@link JobMetrics} doesn't contain any metric names, thus any {@link
-     * Measurement}s either.
-     */
-    public boolean isEmpty() {
-        return metrics.isEmpty();
-    }
-
-    /**
-     * Merges the current instance of {@link JobMetrics} with the provided one and returns the result as a new {@link
-     * JobMetrics} object. The returned object will contain all metric names from both sources and a union of all their
+     * Merges the current instance of {@link JobMetrics} with the provided
+     * one and returns the result as a new {@link JobMetrics} object. The
+     * returned object will contain all metric names from both sources and
+     * a union of all their
      * {@link Measurement}s.
      */
     @Nonnull
@@ -186,6 +182,22 @@ public final class JobMetrics implements IdentifiedDataSerializable {
         Stream<Measurement> thisMeasurements = this.metrics.values().stream().flatMap(Collection::stream);
         Stream<Measurement> thatMeasurements = that.metrics.values().stream().flatMap(Collection::stream);
         return new JobMetrics(Stream.concat(thisMeasurements, thatMeasurements).collect(COLLECTOR));
+    }
+
+    /**
+     * Prints out a multi-line, user friendly version of the content.
+     */
+    public String prettyPrint() {
+        StringBuilder sb = new StringBuilder();
+        for (Entry<String, List<Measurement>> entry : metrics.entrySet()) {
+            sb.append("\n").append(entry.getKey());
+
+            List<Measurement> measurements = entry.getValue();
+            for (Measurement measurement : measurements) {
+                sb.append("\n\t").append(measurement);
+            }
+        }
+        return sb.toString();
     }
 
     @Override
