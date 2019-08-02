@@ -23,10 +23,11 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.toList;
 
 /**
  * An immutable collection of job-specific metrics, pairs of metric names
@@ -50,18 +51,18 @@ public final class JobMetrics implements IdentifiedDataSerializable {
 
     private static final JobMetrics EMPTY = new JobMetrics(Collections.emptyMap());
 
-    private static final Collector<Measurement, ?, TreeMap<String, Set<Measurement>>> COLLECTOR = Collectors.groupingBy(
+    private static final Collector<Measurement, ?, TreeMap<String, List<Measurement>>> COLLECTOR = Collectors.groupingBy(
             measurement -> measurement.getTag(MetricTags.METRIC),
             TreeMap::new,
-            Collectors.mapping(identity(), toSet())
+            Collectors.mapping(identity(), toList())
     );
 
-    private Map<String, Set<Measurement>> metrics; //metric name -> set of measurements
+    private Map<String, List<Measurement>> metrics; //metric name -> set of measurements
 
     JobMetrics() { //needed for deserialization
     }
 
-    private JobMetrics(@Nonnull Map<String, Set<Measurement>> metrics) {
+    private JobMetrics(@Nonnull Map<String, List<Measurement>> metrics) {
         this.metrics = new HashMap<>(metrics);
     }
 
@@ -96,8 +97,8 @@ public final class JobMetrics implements IdentifiedDataSerializable {
         return new JobMetrics(parseRawMetrics(timestamp, metrics));
     }
 
-    private static Map<String, Set<Measurement>> parseRawMetrics(long timestamp, Map<String, Long> raw) {
-        HashMap<String, Set<Measurement>> parsed = new HashMap<>();
+    private static Map<String, List<Measurement>> parseRawMetrics(long timestamp, Map<String, Long> raw) {
+        HashMap<String, List<Measurement>> parsed = new HashMap<>();
         for (Entry<String, Long> rawEntry : raw.entrySet()) {
             Long value = rawEntry.getValue();
             if (value == null) {
@@ -112,7 +113,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
                 throw new IllegalArgumentException("Metric name missing");
             }
 
-            Set<Measurement> measurements = parsed.computeIfAbsent(metricName, mn -> new HashSet<>());
+            List<Measurement> measurements = parsed.computeIfAbsent(metricName, mn -> new ArrayList<>());
             measurements.add(Measurement.of(value, timestamp, tags));
         }
         return parsed;
@@ -130,10 +131,10 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      * Returns all {@link Measurement}s associated with a given metric name.
      */
     @Nonnull
-    public Set<Measurement> get(@Nonnull String metricName) {
+    public List<Measurement> get(@Nonnull String metricName) {
         Objects.requireNonNull(metricName);
-        Set<Measurement> measurements = metrics.get(metricName);
-        return measurements == null ? Collections.emptySet() : measurements;
+        List<Measurement> measurements = metrics.get(metricName);
+        return measurements == null ? Collections.emptyList() : measurements;
     }
 
     /**
@@ -161,7 +162,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     public JobMetrics filter(@Nonnull Predicate<Measurement> predicate) {
         Objects.requireNonNull(predicate, "predicate");
 
-        Map<String, Set<Measurement>> filteredMetrics = metrics.values().stream()
+        Map<String, List<Measurement>> filteredMetrics = metrics.values().stream()
                 .flatMap(Collection::stream)
                 .filter(predicate)
                 .collect(COLLECTOR);
@@ -188,10 +189,10 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      */
     public String prettyPrint() {
         StringBuilder sb = new StringBuilder();
-        for (Entry<String, Set<Measurement>> entry : metrics.entrySet()) {
+        for (Entry<String, List<Measurement>> entry : metrics.entrySet()) {
             sb.append("\n").append(entry.getKey());
 
-            Set<Measurement> measurements = entry.getValue();
+            List<Measurement> measurements = entry.getValue();
             for (Measurement measurement : measurements) {
                 sb.append("\n\t").append(measurement);
             }

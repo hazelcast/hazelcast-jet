@@ -34,7 +34,7 @@ public final class MeasurementPredicates {
      * @return a filtering predicate
      */
     public static Predicate<Measurement> containsTag(String tag) {
-        return new IsPresent(tag);
+        return measurement -> measurement.getTag(tag) != null;
     }
 
     /**
@@ -46,7 +46,7 @@ public final class MeasurementPredicates {
      * @return a filtering predicate
      */
     public static Predicate<Measurement> tagValueEquals(String tag, String value) {
-        return new Equals(tag, value);
+        return measurement -> value.equals(measurement.getTag(tag));
     }
 
     /**
@@ -58,56 +58,9 @@ public final class MeasurementPredicates {
      * @return a filtering predicate
      */
     public static Predicate<Measurement> tagValueMatches(String tag, String valueRegexp) {
-        return new Matches(tag, valueRegexp);
-    }
-
-    private static class IsPresent implements Predicate<Measurement> {
-
-        private final String tag;
-
-        IsPresent(String tag) {
-            this.tag = tag;
-        }
-
-        @Override
-        public boolean test(Measurement measurement) {
-            return measurement.getTag(tag) != null;
-        }
-
-    }
-
-    private static class Equals implements Predicate<Measurement> {
-
-        private final String tag;
-        private final String value;
-
-        Equals(String tag, String value) {
-            this.tag = tag;
-            this.value = value;
-        }
-
-        @Override
-        public boolean test(Measurement measurement) {
-            return value.equals(measurement.getTag(tag));
-        }
-
-    }
-
-    private static class Matches implements Predicate<Measurement> {
-
-        private final String tag;
-        private final Pattern valueRegexp;
-
-        Matches(String tag, String valueRegexp) {
-            this.tag = tag;
-            this.valueRegexp = Pattern.compile(valueRegexp);
-        }
-
-        @Override
-        public boolean test(Measurement measurement) {
+        return measurement -> {
             String value = measurement.getTag(tag);
-            return value == null || valueRegexp.matcher(value).matches();
-        }
-
+            return value == null || Pattern.compile(valueRegexp).matcher(value).matches();
+        };
     }
 }
