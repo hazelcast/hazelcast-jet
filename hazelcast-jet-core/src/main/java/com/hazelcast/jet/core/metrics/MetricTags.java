@@ -22,9 +22,9 @@ import com.hazelcast.jet.core.Processor;
 
 /**
  * Metric descriptors are formed from a comma separated list of {@code
- * tag_name=tag_value} pairs. The constants defined here are the possible tag
- * names that are used in Jet. See individual descriptions for the meaning of
- * information carried by each tag.
+ * tag_name=tag_value} pairs. The constants defined here are the possible
+ * tag names that are used in Jet. See individual descriptions for the
+ * meaning of information carried by each tag.
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public final class MetricTags {
@@ -47,14 +47,15 @@ public final class MetricTags {
     /**
      * Unique ID of the job (sourcing the metric), example value would be a
      * numerical (long) ID encoded in a human readable form, like {@code
-     * "2f7f-d88a-4669-6195"}, see {@link Util#idToString(long)})} for details.
+     * "2f7f-d88a-4669-6195"}, see {@link Util#idToString(long)})} for
+     * details.
      */
     public static final String JOB = "job";
 
     /**
      * Unique ID of a particular execution of a job (sourcing the metric),
-     * example value would be a numerical (long) ID encoded in a human readable
-     * form, like {@code "2f7f-d88a-4669-6195"}, see {@link
+     * example value would be a numerical (long) ID encoded in a human
+     * readable form, like {@code "2f7f-d88a-4669-6195"}, see {@link
      * Util#idToString(long)} for details.
      */
     public static final String EXECUTION = "exec";
@@ -71,20 +72,20 @@ public final class MetricTags {
     public static final String PROCESSOR = "proc";
 
     /**
-     * Class name without package name of the {@link Processor} sourcing the
-     * metric (only for processor-specific metrics).
+     * Class name without package name of the {@link Processor} sourcing
+     * the metric (only for processor-specific metrics).
      */
     public static final String PROCESSOR_TYPE = "procType";
 
     /**
-     * Boolean flag which is true if the {@link Processor} sourcing the metric
-     * is a DAG source. Value is {@code true} or {@code false}.
+     * Boolean flag which is true if the {@link Processor} sourcing the
+     * metric is a DAG source. Value is {@code true} or {@code false}.
      */
     public static final String SOURCE = "source";
 
     /**
-     * Boolean flag which is true if the {@link Processor} sourcing the metric
-     * is a DAG sink. Value is {@code true} or {@code false}.
+     * Boolean flag which is true if the {@link Processor} sourcing the
+     * metric is a DAG sink. Value is {@code true} or {@code false}.
      */
     public static final String SINK = "sink";
 
@@ -100,7 +101,8 @@ public final class MetricTags {
     public static final String ORDINAL = "ordinal";
 
     /**
-     * The name of the metric. This is the tag that conceptually identifies a metric. Mandatory tag.
+     * The name of the metric. This is the tag that conceptually identifies
+     * a metric. Mandatory tag.
      */
     public static final String METRIC = "metric";
 

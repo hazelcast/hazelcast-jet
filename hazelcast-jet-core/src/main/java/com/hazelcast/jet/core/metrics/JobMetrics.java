@@ -41,7 +41,8 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toSet;
 
 /**
- * An immutable collection of job-specific metrics, pairs of metric names and sets of associated {@link Measurement}s.
+ * An immutable collection of job-specific metrics, pairs of metric names
+ * and sets of associated {@link Measurement}s.
  *
  * @since 3.2
  */
@@ -73,14 +74,17 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Builds a {@link JobMetrics} object based on one global timestamp and a key-value map of raw metrics data. The key
-     * {@code String}s in the map should be well formed metric descriptors and the values associated with them are {@code
-     * long} numbers.
+     * Builds a {@link JobMetrics} object based on one global timestamp and
+     * a key-value map of raw metrics data. The key {@code String}s in the
+     * map should be well formed metric descriptors and the values
+     * associated with them are {@code long} numbers.
      * <p>
-     * Descriptors are {@code String}s structured as a comma separated lists of tag=value pairs, enclosed in square
-     * brackets. An example of a valid metric descriptor would be:
+     * Descriptors are {@code String}s structured as a comma separated lists
+     * of tag=value pairs, enclosed in square brackets. An example of a
+     * valid metric descriptor would be:
      * <pre>{@code
-     *      [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,unit=count,metric=queuesCapacity]
+     *      [module=jet,job=jobId,exec=execId,vertex=filter,proc=3,
+     *                                   unit=count,metric=queuesCapacity]
      * }</pre>
      */
     @Nonnull
@@ -133,19 +137,24 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Convenience method for {@link #filter(Predicate<Measurement>)}, returns a new {@link JobMetrics} instance containing
-     * only those {@link Measurement}s which have the specified tag set to the specified value.
+     * Convenience method for {@link #filter(Predicate<Measurement>)},
+     * returns a new {@link JobMetrics} instance containing only those
+     * {@link Measurement}s which have the specified tag set to the
+     * specified value.
      */
     @Nonnull
     public JobMetrics filter(@Nonnull String tagName, @Nonnull String tagValue) {
-        return filter(MeasurementFilters.tagValueEquals(tagName, tagValue));
+        return filter(MeasurementPredicates.tagValueEquals(tagName, tagValue));
     }
 
     /**
-     * Returns a new {@link JobMetrics} instance containing a subset of the {@link Measurement}s found in the current one.
-     * The subset is formed by those {@link Measurement}s which match the provided {@link Predicate}.
+     * Returns a new {@link JobMetrics} instance containing a subset of
+     * the {@link Measurement}s found in the current one. The subset is
+     * formed by those {@link Measurement}s which match the provided
+     * {@link Predicate}.
      * <p>
-     * The metric names which have all their {@link Measurement}s filtered out won't be present in the new {@link
+     * The metric names which have all their {@link Measurement}s filtered
+     * out won't be present in the new {@link
      * JobMetrics} instance.
      */
     @Nonnull
@@ -160,8 +169,10 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Merges the current instance of {@link JobMetrics} with the provided one and returns the result as a new {@link
-     * JobMetrics} object. The returned object will contain all metric names from both sources and a union of all their
+     * Merges the current instance of {@link JobMetrics} with the provided
+     * one and returns the result as a new {@link JobMetrics} object. The
+     * returned object will contain all metric names from both sources and
+     * a union of all their
      * {@link Measurement}s.
      */
     @Nonnull

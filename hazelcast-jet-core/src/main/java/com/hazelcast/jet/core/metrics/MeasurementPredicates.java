@@ -20,11 +20,12 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
- * Static utility class for creating various {@link Measurement} filtering predicates.
+ * Static utility class for creating various {@link Measurement} filtering
+ * predicates.
  */
-public final class MeasurementFilters {
+public final class MeasurementPredicates {
 
-    private MeasurementFilters() { }
+    private MeasurementPredicates() { }
 
     /**
      * Matches a {@link Measurement} which contain the specified tag.
@@ -37,7 +38,8 @@ public final class MeasurementFilters {
     }
 
     /**
-     * Matches a {@link Measurement} which contains the specified tag and the tag has the specified value.
+     * Matches a {@link Measurement} which contains the specified tag and
+     * the tag has the specified value.
      *
      * @param tag   the tag to match
      * @param value the value the tag has to have
@@ -48,7 +50,8 @@ public final class MeasurementFilters {
     }
 
     /**
-     * Matches a {@link Measurement} which has this exact tag with a value matching the provided regular expression.
+     * Matches a {@link Measurement} which has this exact tag with a value
+     * matching the provided regular expression.
      *
      * @param tag         the tag to match
      * @param valueRegexp regular expression to match the value against

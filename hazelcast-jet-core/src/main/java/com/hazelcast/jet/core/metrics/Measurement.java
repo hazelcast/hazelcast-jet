@@ -28,19 +28,23 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 /**
- * Immutable data class containing information about one metric measurement, consisting of:
+ * Immutable data class containing information about one metric measurement,
+ * consisting of:
  * <ul>
  * <li>metric value</li>
  * <li>metric timestamp, generated when the metric was gathered</li>
  * <li>metric descriptor (set of tag name-value pairs) </li>
  * </ul>
  * <p>
- * A metrics descriptor can be thought of as a set of attributes associated with a particular metric, metric which in turn
- * is defined by its name (for a full list of metric names provided see {@link MetricNames}). The attributes are specified
- * as tags that have names and values (for a full list of tag names see {@link MetricTags}). The metric name is also
- * duplicated as one of the tags, see {@link MetricTags#METRIC}. An example descriptor would have a collection of
- * tags/attributes like this: {@code module=jet, job=jobId, exec=execId, vertex=filter, proc=3, unit=count,
- * metric=queuesCapacity, ...}
+ * A metrics descriptor can be thought of as a set of attributes associated
+ * with a particular metric, metric which in turn is defined by its name
+ * (for a full list of metric names provided see {@link MetricNames}).
+ * The attributes are specified as tags that have names and values (for a
+ * full list of tag names see {@link MetricTags}). The metric name is also
+ * duplicated as one of the tags, see {@link MetricTags#METRIC}. An example
+ * descriptor would have a collection of tags/attributes like this:
+ * {@code module=jet, job=jobId, exec=execId, vertex=filter, proc=3,
+ * unit=count, metric=queuesCapacity, ...}
  *
  * @since 3.2
  */
@@ -60,7 +64,8 @@ public class Measurement implements IdentifiedDataSerializable {
     }
 
     /**
-     * Builds a {@link Measurement} instance based on timestamp, value and the metric descriptor in map form.
+     * Builds a {@link Measurement} instance based on timestamp, value and
+     * the metric descriptor in map form.
      */
     @Nonnull
     public static Measurement of(long value, long timestamp, @Nonnull Map<String, String> tags) {
@@ -76,15 +81,17 @@ public class Measurement implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns the timestamps associated with this {@link Measurement}, the moment when the value was gathered.
+     * Returns the timestamps associated with this {@link Measurement}, the
+     * moment when the value was gathered.
      */
     public long getTimestamp() {
         return timestamp;
     }
 
     /**
-     * Returns the value associated with a specific tag, based on the metric description of this particular {@link
-     * Measurement}. For a list of possible tag names see {@link MetricTags}.
+     * Returns the value associated with a specific tag, based on the metric
+     * description of this particular {@link Measurement}. For a list of
+     * possible tag names see {@link MetricTags}.
      */
     @Nullable
     public String getTag(String name) {
