@@ -116,4 +116,7 @@ public final class MetricNames {
      */
     public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
 
+    private MetricNames() {
+    }
+
 }
