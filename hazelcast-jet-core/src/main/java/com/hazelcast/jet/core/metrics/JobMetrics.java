@@ -228,6 +228,11 @@ public final class JobMetrics implements IdentifiedDataSerializable {
 
     @Override
     public String toString() {
-        return metrics.toString();
+        StringBuilder sb = new StringBuilder();
+        metrics.forEach((k, v) -> {
+            sb.append(k).append(":\n");
+            v.forEach(m -> sb.append("  ").append(m).append("\n"));
+        });
+        return sb.toString();
     }
 }

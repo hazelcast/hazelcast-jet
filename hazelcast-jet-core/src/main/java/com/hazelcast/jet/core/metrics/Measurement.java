@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * Immutable data class containing information about one metric measurement, consisting of:
@@ -124,13 +126,24 @@ public class Measurement implements IdentifiedDataSerializable {
     public boolean equals(Object obj) {
         final Measurement that;
         return this == obj || obj instanceof Measurement
-                && this.timestamp == (that = (Measurement) obj).timestamp
-                && this.value == that.value
-                && Objects.equals(this.tags, that.tags);
+            && this.timestamp == (that = (Measurement) obj).timestamp
+            && this.value == that.value
+            && Objects.equals(this.tags, that.tags);
     }
 
     @Override
     public String toString() {
-        return value + " @ " + timestamp + ' ' + tags;
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%,26d", value))
+          .append(" ")
+          .append(Util.toLocalTime(timestamp))
+          .append(" [");
+        String tags = this.tags.entrySet().stream()
+                               .map(e -> e.getKey() + "=" + e.getValue())
+                               .collect(Collectors.joining(", "));
+
+        return sb.append(tags)
+                 .append(']')
+                 .toString();
     }
 }
