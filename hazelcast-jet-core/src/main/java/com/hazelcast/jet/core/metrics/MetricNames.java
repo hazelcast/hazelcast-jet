@@ -86,10 +86,9 @@ public final class MetricNames {
      * Tracks the highest coalesced watermark observed on all input
      * {@link Edge}s of a particular {@link Vertex} (ie. the highest
      * watermark observed on all input queues of that {@link Vertex}).
-     * The {@link Edge} and the {@link Vertex}, together with the concrete
-     * {@link Processor} running them can be identified based on the
-     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
-     * {@link MetricTags#PROCESSOR} tags of the metric.
+     * The {@link Vertex} and the {@link Processor} can be identified
+     * based on the {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR}
+     * tags of the metric.
      */
     public static final String TOP_OBSERVED_WM = "topObservedWm";
 

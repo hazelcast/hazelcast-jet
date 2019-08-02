@@ -24,9 +24,10 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -62,7 +63,7 @@ public class Measurement implements IdentifiedDataSerializable {
     private Measurement(long value, long timestamp, @Nonnull Map<String, String> tags) {
         this.value = value;
         this.timestamp = timestamp;
-        this.tags = new TreeMap<>(tags);
+        this.tags = new HashMap<>(tags);
     }
 
     /**
@@ -133,24 +134,26 @@ public class Measurement implements IdentifiedDataSerializable {
     public boolean equals(Object obj) {
         final Measurement that;
         return this == obj || obj instanceof Measurement
-            && this.timestamp == (that = (Measurement) obj).timestamp
-            && this.value == that.value
-            && Objects.equals(this.tags, that.tags);
+                && this.timestamp == (that = (Measurement) obj).timestamp
+                && this.value == that.value
+                && Objects.equals(this.tags, that.tags);
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("%,26d", value))
-          .append(" ")
-          .append(Util.toLocalTime(timestamp))
-          .append(" [");
-        String tags = this.tags.entrySet().stream()
-                               .map(e -> e.getKey() + "=" + e.getValue())
-                               .collect(Collectors.joining(", "));
 
-        return sb.append(tags)
-                 .append(']')
-                 .toString();
+        sb.append(String.format("%,5d", value))
+                .append("  ")
+                .append(Util.toLocalTime(timestamp))
+                .append("  [");
+
+        String tags = this.tags.entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getKey))
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining(", "));
+        sb.append(tags).append(']');
+
+        return sb.toString();
     }
 }

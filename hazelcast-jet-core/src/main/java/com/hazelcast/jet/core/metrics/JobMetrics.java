@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -241,10 +243,28 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        metrics.forEach((k, v) -> {
-            sb.append(k).append(":\n");
-            v.forEach(m -> sb.append("  ").append(m).append("\n"));
-        });
+        metrics.entrySet().stream()
+                .sorted(Comparator.comparing(Entry::getKey))
+                .forEach(mainEntry -> {
+                    sb.append(mainEntry.getKey()).append(":\n");
+                    mainEntry.getValue().stream()
+                            .collect(
+                                    groupingBy(m -> {
+                                                String vertex = m.getTag(MetricTags.VERTEX);
+                                                return vertex == null ? "" : vertex;
+                                            }
+                                    )
+                            )
+                            .entrySet().stream()
+                            .sorted(Comparator.comparing(Map.Entry::getKey))
+                            .forEach(
+                                    e -> {
+                                        String vertexName = e.getKey();
+                                        sb.append("  ").append(vertexName).append(":\n");
+                                        e.getValue().forEach(m -> sb.append("    ").append(m).append("\n"));
+                                    }
+                            );
+                });
         return sb.toString();
     }
 }

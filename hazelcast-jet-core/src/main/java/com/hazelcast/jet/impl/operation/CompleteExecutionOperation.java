@@ -72,6 +72,8 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         JobExecutionService jobExecutionService = service.getJobExecutionService();
         JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
         nodeEngine.getMetricsRegistry().render(metricsRenderer);
+        //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense at this point
+        //  take for example MetricNames.LAST_FORWARDED_WM_LATENCY
         response = metricsRenderer.getJobMetrics();
 
         jobExecutionService.completeExecution(executionId, error);
