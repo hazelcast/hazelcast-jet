@@ -115,6 +115,42 @@ public final class MetricNames {
      */
     public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
 
+    /**
+     * Counts data items coming in over the network for DISTRIBUTED input
+     * {@link Edge}s of particular {@link Vertex} instances running on
+     * various {@link Processor}s. These in turn can be identified based
+     * on the {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String DISTRIBUTED_ITEMS_IN = "distributedItemsOut";
+
+    /**
+     * Tracks the data volume (bytes) coming in over the network for
+     * DISTRIBUTED input {@link Edge}s of particular {@link Vertex}
+     * instances running on various {@link Processor}s. These in turn can
+     * be identified based on the {@link MetricTags#ORDINAL},
+     * {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String DISTRIBUTED_BYTES_IN = "distributedBytesIn";
+
+    /**
+     * Counts data items going out over the network for DISTRIBUTED output
+     * {@link Edge}s of particular {@link Vertex} instances running on
+     * various {@link Processor}s. These in turn can be identified based
+     * on the {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String DISTRIBUTED_ITEMS_OUT = "distributedItemsOut";
+
+    /**
+     * Tracks the data volume (bytes) going out over the network for
+     * DISTRIBUTED output {@link Edge}s of particular {@link Vertex}
+     * instances running on various {@link Processor}s. These in turn can
+     * be identified based on the {@link MetricTags#ORDINAL},
+     * {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String DISTRIBUTED_BYTES_OUT = "distributedBytesOut";
+
     private MetricNames() {
     }
 

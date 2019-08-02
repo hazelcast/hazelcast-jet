@@ -76,6 +76,10 @@ import java.util.stream.IntStream;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
+import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_BYTES_IN;
+import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_BYTES_OUT;
+import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_ITEMS_IN;
+import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_ITEMS_OUT;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
@@ -427,9 +431,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             // and don't use the reference to source, but we use the source to deregister the metrics when the job
             // finishes.
             if (probeBuilder != null && firstTasklet != null) {
-                probeBuilder.register(firstTasklet, "distributedBytesOut", ProbeLevel.INFO, ProbeUnit.BYTES,
+                probeBuilder.register(firstTasklet, DISTRIBUTED_BYTES_OUT, ProbeLevel.INFO, ProbeUnit.BYTES,
                         addCountersProbeFunction(bytesCounters));
-                probeBuilder.register(firstTasklet, "distributedItemsOut", ProbeLevel.INFO, ProbeUnit.BYTES,
+                probeBuilder.register(firstTasklet, DISTRIBUTED_ITEMS_OUT, ProbeLevel.INFO, ProbeUnit.BYTES,
                         addCountersProbeFunction(itemsCounters));
             }
             return addrToConveyor;
@@ -583,9 +587,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            // We register the metrics to the first tasklet. The metrics itself aggregate counters from
                            // all tasklets and don't use the reference to source, but we use the source to deregister
                            // the metrics when the job finishes.
-                           probeBuilder.register(firstTasklet, "distributedItemsIn", ProbeLevel.INFO, ProbeUnit.COUNT,
+                           probeBuilder.register(firstTasklet, DISTRIBUTED_ITEMS_IN, ProbeLevel.INFO, ProbeUnit.COUNT,
                                    addCountersProbeFunction(itemCounters));
-                           probeBuilder.register(firstTasklet, "distributedBytesIn", ProbeLevel.INFO, ProbeUnit.COUNT,
+                           probeBuilder.register(firstTasklet, DISTRIBUTED_BYTES_IN, ProbeLevel.INFO, ProbeUnit.COUNT,
                                    addCountersProbeFunction(bytesCounters));
                        }
                        return addrToTasklet;
