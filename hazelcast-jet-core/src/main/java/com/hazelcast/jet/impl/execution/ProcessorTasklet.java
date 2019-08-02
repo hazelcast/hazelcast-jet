@@ -50,6 +50,15 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 
+import static com.hazelcast.jet.core.metrics.MetricNames.COALESCED_WM;
+import static com.hazelcast.jet.core.metrics.MetricNames.EMITTED_COUNT;
+import static com.hazelcast.jet.core.metrics.MetricNames.LAST_FORWARDED_WM;
+import static com.hazelcast.jet.core.metrics.MetricNames.LAST_FORWARDED_WM_LATENCY;
+import static com.hazelcast.jet.core.metrics.MetricNames.QUEUE_CAPACITY;
+import static com.hazelcast.jet.core.metrics.MetricNames.QUEUE_SIZES;
+import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_BATCHES;
+import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_COUNT;
+import static com.hazelcast.jet.core.metrics.MetricNames.TOP_OBSERVED_WM;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
@@ -166,15 +175,15 @@ public class ProcessorTasklet implements Tasklet {
             int finalI = i;
             ProbeBuilder builderWithOrdinal = probeBuilder
                     .withTag(MetricTags.ORDINAL, String.valueOf(i));
-            builderWithOrdinal.register(this, "receivedCount", ProbeLevel.INFO, ProbeUnit.COUNT,
+            builderWithOrdinal.register(this, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
-            builderWithOrdinal.register(this, "receivedBatches", ProbeLevel.INFO, ProbeUnit.COUNT,
+            builderWithOrdinal.register(this, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
 
             InboundEdgeStream instream = instreams.get(finalI);
-            builderWithOrdinal.register(this, "topObservedWm", ProbeLevel.INFO, ProbeUnit.MS,
+            builderWithOrdinal.register(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                     (LongProbeFunction<ProcessorTasklet>) t -> instream.topObservedWm());
-            builderWithOrdinal.register(this, "coalescedWm", ProbeLevel.INFO, ProbeUnit.MS,
+            builderWithOrdinal.register(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                     (LongProbeFunction<ProcessorTasklet>) t -> instream.coalescedWm());
         }
 
@@ -182,21 +191,21 @@ public class ProcessorTasklet implements Tasklet {
             int finalI = i;
             probeBuilder
                     .withTag(MetricTags.ORDINAL, i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
-                    .register(this, "emittedCount", ProbeLevel.INFO, ProbeUnit.COUNT,
+                    .register(this, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
 
-        probeBuilder.register(this, "topObservedWm", ProbeLevel.INFO, ProbeUnit.MS,
+        probeBuilder.register(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.topObservedWm());
-        probeBuilder.register(this, "coalescedWm", ProbeLevel.INFO, ProbeUnit.MS,
+        probeBuilder.register(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.coalescedWm());
-        probeBuilder.register(this, "lastForwardedWm", ProbeLevel.INFO, ProbeUnit.MS,
+        probeBuilder.register(this, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.outbox.lastForwardedWm());
-        probeBuilder.register(this, "lastForwardedWmLatency", ProbeLevel.INFO, ProbeUnit.MS,
+        probeBuilder.register(this, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> lastForwardedWmLatency());
-        probeBuilder.register(this, "queuesSize", ProbeLevel.INFO, ProbeUnit.COUNT,
+        probeBuilder.register(this, QUEUE_SIZES, ProbeLevel.INFO, ProbeUnit.COUNT,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
-        probeBuilder.register(this, "queuesCapacity", ProbeLevel.INFO, ProbeUnit.COUNT,
+        probeBuilder.register(this, QUEUE_CAPACITY, ProbeLevel.INFO, ProbeUnit.COUNT,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 

@@ -16,6 +16,10 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.jet.core.Edge;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.Vertex;
+
 /**
  * Each metric provided by Jet has a specific name which conceptually
  * identifies what it's being used to measure. Besides their name metrics
@@ -30,5 +34,86 @@ package com.hazelcast.jet.core.metrics;
  * take in Jet.
  */
 public final class MetricNames {
-    //todo: soon!
+
+    /**
+     * Counts incoming data items on input {@link Edge}s of particular
+     * {@link Vertex} instances running on various {@link Processor}s.
+     * These in turn can be identified based on the
+     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String RECEIVED_COUNT = "receivedCount";
+
+    /**
+     * Counts incoming data item batches on input {@link Edge}s of particular
+     * {@link Vertex} instances running on various {@link Processor}s.
+     * These in turn can be identified based on the
+     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String RECEIVED_BATCHES = "receivedBatches";
+
+    /**
+     * Tracks the total size of all input queues of a particular
+     * {@link Vertex} on a particular {@link Processor}. They both can be
+     * identified based on the {@link MetricTags#VERTEX} and
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String QUEUE_SIZES = "queuesSize";
+
+    /**
+     * Tracks the total capacity of all input queues of a particular
+     * {@link Vertex} on a particular {@link Processor}. They both can be
+     * identified based on the {@link MetricTags#VERTEX} and
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String QUEUE_CAPACITY = "queuesCapacity";
+
+    /**
+     * Counts the data items emitted on outgoing {@link Edge}s of particular
+     * {@link Vertex} instances running on various {@link Processor}s.
+     * These in turn can be identified based on the
+     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     * <p>
+     * When the {@link MetricTags#ORDINAL} tag contains the value "snapshot"
+     * then the count contains the number of snapshots saved by the
+     * {@link Processor}.
+     */
+    public static final String EMITTED_COUNT = "emittedCount";
+
+    /**
+     * Tracks the highest coalesced watermark observed on all input
+     * {@link Edge}s of a particular {@link Vertex} (ie. the highest
+     * watermark observed on all input queues of that {@link Vertex}).
+     * The {@link Edge} and the {@link Vertex}, together with the concrete
+     * {@link Processor} running them can be identified based on the
+     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String TOP_OBSERVED_WM = "topObservedWm";
+
+    /**
+     * Tracks the highest watermark observed on all the input queues
+     * of a particular incoming {@link Edge} of a certain {@link Vertex}.
+     * The {@link Edge} and the {@link Vertex}, together with the concrete
+     * {@link Processor} running them can be identified based on the
+     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
+     */
+    public static final String COALESCED_WM = "coalescedWm";
+
+    /**
+     * Tracks the last watermark emitted by a particular {@link Processor},
+     * which can be identified based on the {@link MetricTags#PROCESSOR} tag.
+     */
+    public static final String LAST_FORWARDED_WM = "lastForwardedWm";
+
+    /**
+     * Tracks the difference between the last emitted watermark and the
+     * system time of a particular {@link Processor}. The {@link Processor}
+     * can be identified based on the {@link MetricTags#PROCESSOR} tag.
+     */
+    public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
+
 }
