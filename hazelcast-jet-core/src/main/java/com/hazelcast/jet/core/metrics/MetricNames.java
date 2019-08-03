@@ -122,7 +122,7 @@ public final class MetricNames {
      * on the {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
      * {@link MetricTags#PROCESSOR} tags of the metric.
      */
-    public static final String DISTRIBUTED_ITEMS_IN = "distributedItemsOut";
+    public static final String DISTRIBUTED_ITEMS_IN = "distributedItemsIn";
 
     /**
      * Tracks the data volume (bytes) coming in over the network for
