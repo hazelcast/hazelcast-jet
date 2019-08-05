@@ -19,8 +19,10 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.Partition;
 import com.hazelcast.instance.HazelcastInstanceImpl;
+import com.hazelcast.instance.Node;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -28,6 +30,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.map.impl.LazyMapEntry;
 import com.hazelcast.map.impl.iterator.MapEntriesWithCursor;
 import com.hazelcast.map.impl.operation.MapFetchEntriesOperation;
@@ -45,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
@@ -65,6 +69,7 @@ public class ReadMapP<E, T> extends AbstractProcessor {
     private final Predicate<? super E> predicate;
     private final com.hazelcast.util.function.Function<? super E, ? extends T> projection;
     private final int[] partitionIds;
+    private final BooleanSupplier migrationWatcher;
 
     private MapProxyImpl mapProxy;
     private final int[] readOffsets;
@@ -82,11 +87,13 @@ public class ReadMapP<E, T> extends AbstractProcessor {
             String mapName,
             List<Integer> assignedPartitions,
             PredicateEx<? super E> predicateFn,
-            FunctionEx<? super E, ? extends T> projectionFn
+            FunctionEx<? super E, ? extends T> projectionFn,
+            BooleanSupplier migrationWatcher
     ) {
         this.mapName = mapName;
         this.predicate = maybeUnwrapImdgPredicate(predicateFn);
         this.projection = maybeUnwrapImdgFunction(projectionFn);
+        this.migrationWatcher = migrationWatcher;
 
         partitionIds = assignedPartitions.stream().mapToInt(Integer::intValue).toArray();
         readOffsets = new int[partitionIds.length];
@@ -115,7 +122,16 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
+    private void initialRead() {
+        readFutures = new ICompletableFuture[partitionIds.length];
+        for (int i = 0; i < readFutures.length; i++) {
+            readFutures[i] = readFromMap(partitionIds[i], readOffsets[i]);
+        }
+    }
+
     private boolean emitResultSet() {
+        checkMigration();
         for (; resultSetPosition < batch.size(); resultSetPosition++) {
             Entry<Data, Data> data = batch.get(resultSetPosition);
             Entry<Object, Object> entry = new LazyMapEntry<>(data.getKey(), data.getValue(), serializationService);
@@ -127,11 +143,9 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         return true;
     }
 
-    @SuppressWarnings("unchecked")
-    private void initialRead() {
-        readFutures = new ICompletableFuture[partitionIds.length];
-        for (int i = 0; i < readFutures.length; i++) {
-            readFutures[i] = readFromMap(partitionIds[i], readOffsets[i]);
+    private void checkMigration() {
+        if (migrationWatcher.getAsBoolean()) {
+            throw new RestartableException("Partition migration detected");
         }
     }
 
@@ -235,6 +249,8 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         private final PredicateEx<? super E> predicate;
         private final FunctionEx<? super E, ? extends T> projection;
 
+        private transient BooleanSupplier migrationWatcher;
+
         ClusterProcessorSupplier(
                 String mapName,
                 List<Integer> ownedPartitions,
@@ -248,6 +264,13 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         }
 
         @Override
+        public void init(@Nonnull Context context) {
+            Node node = ((HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance()).node;
+            JetService jetService = node.nodeEngine.getService(JetService.SERVICE_NAME);
+            migrationWatcher = jetService.getSharedMigrationWatcher().createWatcher();
+        }
+
+        @Override
         public List<Processor> get(int count) {
             return processorToPartitions(count, ownedPartitions)
                     .values().stream()
@@ -258,7 +281,7 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         private Processor processorForPartitions(List<Integer> partitions) {
             return partitions.isEmpty()
                     ? Processors.noopP().get()
-                    : new ReadMapP<>(mapName, partitions, predicate, projection);
+                    : new ReadMapP<>(mapName, partitions, predicate, projection, migrationWatcher);
         }
     }
 
