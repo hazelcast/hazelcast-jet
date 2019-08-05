@@ -95,8 +95,9 @@ public interface Job {
      * recent values (i.e. the last metric values from the moment before the
      * job completed).
      * <p>
-     * When a job is restarted then the metrics are reset too, their values
-     * will reflect only updates from the latest execution of the job.
+     * When a job is restarted (or resumed after being previously suspended)
+     * the metrics are reset too, their values will reflect only updates
+     * from the latest execution of the job.
      * <p>
      * The method returns empty metrics if metrics collection is {@link
      * MetricsConfig#setEnabled disabled} or until the first collection takes
