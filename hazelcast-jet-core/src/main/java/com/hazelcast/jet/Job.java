@@ -101,7 +101,8 @@ public interface Job {
      * The method returns empty metrics if metrics collection is {@link
      * MetricsConfig#setEnabled disabled} or until the first collection takes
      * place. Also keep in mind that the collections may occur at different times on
-     * each member, metrics from various members aren't from the same instant.
+     * each member, metrics from various members aren't from the same instant
+     * of time.
      *
      * @since 3.2
      */
