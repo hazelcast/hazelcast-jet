@@ -169,7 +169,7 @@ public final class Sources {
     @Nonnull
     public static <K, V> BatchSource<Entry<K, V>> map(@Nonnull String mapName) {
         return batchFromProcessor("mapSource(" + mapName + ')',
-            ReadMapP.readMapSupplier(mapName, null, null)
+            ReadMapP.readMapSupplier(mapName)
         );
     }
 

@@ -28,21 +28,20 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.map.impl.LazyMapEntry;
-import com.hazelcast.map.impl.iterator.MapEntriesWithCursor;
-import com.hazelcast.map.impl.operation.MapFetchEntriesOperation;
+import com.hazelcast.map.impl.operation.MapFetchWithQueryOperation;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
+import com.hazelcast.map.impl.query.Query;
+import com.hazelcast.map.impl.query.QueryResult;
+import com.hazelcast.map.impl.query.ResultSegment;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
-import com.hazelcast.util.Preconditions;
-import com.hazelcast.util.function.Predicate;
+import com.hazelcast.projection.Projection;
+import com.hazelcast.query.Predicate;
+import com.hazelcast.util.IterationType;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -53,46 +52,44 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static com.hazelcast.jet.impl.util.Util.maybeUnwrapImdgFunction;
-import static com.hazelcast.jet.impl.util.Util.maybeUnwrapImdgPredicate;
+import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-public class ReadMapP<E, T> extends AbstractProcessor {
+public class ReadMapP<K, V, T> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 16384;
 
     private final String mapName;
-    private final Predicate<? super E> predicate;
-    private final com.hazelcast.util.function.Function<? super E, ? extends T> projection;
+    private final Predicate<? super K, ? super V> predicate;
+    private final Projection<? super Entry<K, V>, ? extends T> projection;
     private final int[] partitionIds;
     private final BooleanSupplier migrationWatcher;
 
     private MapProxyImpl mapProxy;
     private final int[] readOffsets;
 
-    private ICompletableFuture<MapEntriesWithCursor>[] readFutures;
+    private ICompletableFuture<ResultSegment>[] readFutures;
 
     // currently processed batch, it's partitionId and iterating position
-    private List<Map.Entry<Data, Data>> batch = emptyList();
+    private QueryResult queryResult = new QueryResult();
     private int currentPartitionIndex = -1;
     private int resultSetPosition;
     private int completedPartitions;
     private InternalSerializationService serializationService;
 
-    ReadMapP(
+    private ReadMapP(
             String mapName,
             List<Integer> assignedPartitions,
-            PredicateEx<? super E> predicateFn,
-            FunctionEx<? super E, ? extends T> projectionFn,
+            Predicate<? super K, ? super V> predicate,
+            Projection<? super Entry<K, V>, ? extends T> projection,
             BooleanSupplier migrationWatcher
     ) {
         this.mapName = mapName;
-        this.predicate = maybeUnwrapImdgPredicate(predicateFn);
-        this.projection = maybeUnwrapImdgFunction(projectionFn);
+        this.predicate = predicate;
+        this.projection = projection;
         this.migrationWatcher = migrationWatcher;
 
         partitionIds = assignedPartitions.stream().mapToInt(Integer::intValue).toArray();
@@ -132,10 +129,10 @@ public class ReadMapP<E, T> extends AbstractProcessor {
 
     private boolean emitResultSet() {
         checkMigration();
-        for (; resultSetPosition < batch.size(); resultSetPosition++) {
-            Entry<Data, Data> data = batch.get(resultSetPosition);
-            Entry<Object, Object> entry = new LazyMapEntry<>(data.getKey(), data.getValue(), serializationService);
-            if (!tryEmit(entry)) {
+        for (; resultSetPosition < queryResult.size(); resultSetPosition++) {
+            Entry<Data, Data> data = queryResult.getRows().get(resultSetPosition);
+            Object result = serializationService.toObject(data.getValue());
+            if (!tryEmit(result)) {
                 return false;
             }
         }
@@ -150,18 +147,18 @@ public class ReadMapP<E, T> extends AbstractProcessor {
     }
 
     private boolean tryGetNextResultSet() {
-        while (batch.size() == resultSetPosition && ++currentPartitionIndex < partitionIds.length) {
-            ICompletableFuture<MapEntriesWithCursor> future = readFutures[currentPartitionIndex];
+        while (queryResult.size() == resultSetPosition && ++currentPartitionIndex < partitionIds.length) {
+            ICompletableFuture<ResultSegment> future = readFutures[currentPartitionIndex];
             if (future == null || !future.isDone()) {
                 continue;
             }
-            MapEntriesWithCursor result = toResultSet(future);
+            ResultSegment result = toResultSet(future);
             if (result.getNextTableIndexToReadFrom() < 0) {
                 completedPartitions++;
             } else {
-                assert !batch.isEmpty() : "empty but not terminal batch";
+                assert !queryResult.isEmpty() : "empty but not terminal batch";
             }
-            batch = result.getBatch();
+            queryResult = (QueryResult) result.getResult();
             resultSetPosition = 0;
             readOffsets[currentPartitionIndex] = result.getNextTableIndexToReadFrom();
             // make another read on the same partition
@@ -176,7 +173,7 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         return true;
     }
 
-    private MapEntriesWithCursor toResultSet(ICompletableFuture<MapEntriesWithCursor> future) {
+    private ResultSegment toResultSet(ICompletableFuture<ResultSegment> future) {
         try {
             return future.get();
         } catch (ExecutionException e) {
@@ -193,28 +190,34 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         }
     }
 
-    private ICompletableFuture<MapEntriesWithCursor> readFromMap(int partitionId, int offset) {
+    private ICompletableFuture<ResultSegment> readFromMap(int partitionId, int offset) {
         if (offset < 0) {
             return null;
         }
-        MapFetchEntriesOperation op = new MapFetchEntriesOperation(mapName, offset, MAX_FETCH_SIZE);
+        Query query = Query.of()
+                .mapName(mapName)
+                .iterationType(IterationType.VALUE)
+                .predicate(predicate == null ? (e -> true) : predicate)
+                .projection(projection == null ? new IdentityProjection() : projection)
+                .build();
+        MapFetchWithQueryOperation op = new MapFetchWithQueryOperation(mapName, offset, MAX_FETCH_SIZE, query);
         return mapProxy.getOperationService().invokeOnPartition(mapProxy.getServiceName(), op, partitionId);
     }
 
-    private static class ClusterMetaSupplier<E, T> implements ProcessorMetaSupplier {
+    private static class ClusterMetaSupplier<K, V, T> implements ProcessorMetaSupplier {
 
         static final long serialVersionUID = 1L;
 
         private final String mapName;
-        private final PredicateEx<? super E> predicate;
-        private final FunctionEx<? super E, ? extends T> projection;
+        private final Predicate<? super K, ? super V> predicate;
+        private final Projection<? super Entry<K, V>, ? extends T> projection;
 
         private transient Map<Address, List<Integer>> addrToPartitions;
 
         ClusterMetaSupplier(
                 String mapName,
-                PredicateEx<? super E> predicate,
-                FunctionEx<? super E, ? extends T> projection
+                Predicate<? super K, ? super V> predicate,
+                Projection<? super Entry<K, V>, ? extends T> projection
         ) {
             this.mapName = mapName;
             this.predicate = predicate;
@@ -234,28 +237,29 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         }
 
         @Override
-        public Function<Address, ProcessorSupplier> get(List<Address> addresses) {
+        @Nonnull
+        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new ClusterProcessorSupplier<>(mapName, addrToPartitions.get(address),
                     predicate, projection);
         }
     }
 
-    private static class ClusterProcessorSupplier<E, T> implements ProcessorSupplier {
+    private static class ClusterProcessorSupplier<K, V, T> implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
 
         private final String mapName;
         private final List<Integer> ownedPartitions;
-        private final PredicateEx<? super E> predicate;
-        private final FunctionEx<? super E, ? extends T> projection;
+        private final Predicate<? super K, ? super V> predicate;
+        private final Projection<? super Entry<K, V>, ? extends T> projection;
 
         private transient BooleanSupplier migrationWatcher;
 
         ClusterProcessorSupplier(
                 String mapName,
                 List<Integer> ownedPartitions,
-                PredicateEx<? super E> predicate,
-                FunctionEx<? super E, ? extends T> projection
+                Predicate<? super K, ? super V> predicate,
+                Projection<? super Entry<K, V>, ? extends T> projection
         ) {
             this.ownedPartitions = ownedPartitions;
             this.mapName = mapName;
@@ -271,6 +275,7 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         }
 
         @Override
+        @Nonnull
         public List<Processor> get(int count) {
             return processorToPartitions(count, ownedPartitions)
                     .values().stream()
@@ -285,18 +290,29 @@ public class ReadMapP<E, T> extends AbstractProcessor {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readMapSupplier(
+    static <K, V, T> ProcessorMetaSupplier readMapSupplier(
             @Nonnull String mapName,
-            @Nullable PredicateEx<? super Entry<K, V>> predicate,
-            @Nullable FunctionEx<? super Entry<K, V>, ? extends T> projection
+            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        Preconditions.checkTrue(predicate == null, "predicate not supported");
-        Preconditions.checkTrue(projection == null, "projection not supported");
-//        checkSerializable(predicate, "predicate");
-//        checkSerializable(projection, "projection");
+        checkSerializable(predicate, "predicate");
+        checkSerializable(projection, "projection");
 
         return new ClusterMetaSupplier<>(mapName, predicate, projection);
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier readMapSupplier(
+            @Nonnull String mapName
+    ) {
+        return readMapSupplier(mapName, e -> true, new IdentityProjection<>());
+    }
+
+    private static class IdentityProjection<T> extends Projection<T, T> {
+        @Override
+        public T transform(T input) {
+            return input;
+        }
     }
 }

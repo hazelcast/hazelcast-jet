@@ -20,6 +20,9 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.projection.Projection;
+import com.hazelcast.query.Predicate;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +46,17 @@ public class ReadMapPTest extends JetTestSupport {
     }
 
     @Test
-    public void test() {
+    public void test_whenEmpty() {
+        TestSupport
+                .verifyProcessor(ReadMapP.readMapSupplier("map"))
+                .jetInstance(jet)
+                .disableSnapshots()
+                .disableProgressAssertion()
+                .expectOutput(emptyList());
+    }
+
+    @Test
+    public void test_whenNoPredicateAndNoProjection() {
         IMap<Integer, String> map = jet.getMap("map");
         List<Entry<Integer, String>> expected = new ArrayList<>();
         for (int i = 0; i < 1000; i++) {
@@ -52,7 +65,7 @@ public class ReadMapPTest extends JetTestSupport {
         }
 
         TestSupport
-            .verifyProcessor(ReadMapP.readMapSupplier("map", null, null))
+            .verifyProcessor(ReadMapP.readMapSupplier("map"))
             .jetInstance(jet)
             .disableSnapshots()
             .disableProgressAssertion()
@@ -61,12 +74,32 @@ public class ReadMapPTest extends JetTestSupport {
     }
 
     @Test
-    public void testEmpty() {
+    public void test_whenPredicateAndProjectionSet() {
+        IMap<Integer, String> map = jet.getMap("map");
+        List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 1000; i++) {
+            map.put(i, "value-" + i);
+            if (i % 2 == 0) {
+                expected.add("value-" + i);
+            }
+        }
+
+        Predicate<Integer, String> predicate = entry -> entry.getKey() % 2 == 0;
+        Projection<Entry<Integer, String>, String> projection = toProjection(Entry::getValue);
         TestSupport
-            .verifyProcessor(ReadMapP.readMapSupplier("map", null, null))
+            .verifyProcessor(ReadMapP.readMapSupplier("map", predicate, projection))
             .jetInstance(jet)
             .disableSnapshots()
             .disableProgressAssertion()
-            .expectOutput(emptyList());
+            .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+            .expectOutput(expected);
+    }
+
+    private static <I, O> Projection<I, O> toProjection(FunctionEx<I, O> projectionFn) {
+        return new Projection<I, O>() {
+            @Override public O transform(I input) {
+                return projectionFn.apply(input);
+            }
+        };
     }
 }
