@@ -378,11 +378,20 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         return localParallelism;
     }
 
-     /**
+    /**
      * Returns a DOT format (graphviz) representation of the DAG.
      */
     @Nonnull
     public String toDotString() {
+        return toDotString(-1);
+    }
+
+    /**
+     * Returns a DOT format (graphviz) representation of the DAG and annotates
+     * the vertices using default parallelism with the supplied value.
+     */
+    @Nonnull
+    public String toDotString(int defaultParallelism) {
         final StringBuilder builder = new StringBuilder(512);
         builder.append("digraph DAG {\n");
         int clusterCount = 0;
@@ -392,8 +401,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
 
             if (out.isEmpty() && in.isEmpty()) {
                 // dangling vertex
+                String name = escapeGraphviz(vertexNameAndParallelism(defaultParallelism, v));
                 builder.append("\t")
-                       .append("\"").append(escapeGraphviz(v.getName())).append("\"")
+                       .append("\"").append(name).append("\"")
                        .append(";\n");
             }
             for (Edge e : out) {
@@ -409,10 +419,12 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                     builder.append("\tsubgraph cluster_").append(clusterCount++).append(" {\n")
                            .append("\t");
                 }
+                String source = escapeGraphviz(vertexNameAndParallelism(defaultParallelism, e.getSource()));
+                String destination = escapeGraphviz(vertexNameAndParallelism(defaultParallelism, e.getDestination()));
                 builder.append("\t")
-                       .append("\"").append(escapeGraphviz(e.getSourceName())).append("\"")
+                       .append("\"").append(source).append("\"")
                        .append(" -> ")
-                       .append("\"").append(escapeGraphviz(e.getDestName())).append("\"");
+                       .append("\"").append(destination).append("\"");
                 if (!labels.isEmpty()) {
                     builder.append(labels.stream().collect(joining("-", " [label=\"", "\"]")));
                 }
@@ -424,6 +436,14 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         }
         builder.append("}");
         return builder.toString();
+    }
+
+    private String vertexNameAndParallelism(int defaultParallelism, Vertex v) {
+        int localParallelism = getLocalParallelism(defaultParallelism, v);
+        String parallelism = localParallelism == -1 ?
+            defaultParallelism == -1 ? "default" : String.valueOf(defaultParallelism)
+            : String.valueOf(localParallelism);
+        return v.getName() + "[parallelism=" + parallelism + "]";
     }
 
     @Override
