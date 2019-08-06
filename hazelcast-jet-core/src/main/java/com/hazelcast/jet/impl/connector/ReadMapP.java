@@ -58,7 +58,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-public class ReadMapP<K, V, T> extends AbstractProcessor {
+public final class ReadMapP<K, V, T> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 16384;
 
