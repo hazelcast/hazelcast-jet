@@ -131,6 +131,8 @@ public final class JobMetrics implements IdentifiedDataSerializable {
 
     /**
      * Returns all {@link Measurement}s associated with a given metric name.
+     * <p>
+     * For a list of job-specific metric names please see {@link MetricNames}.
      */
     @Nonnull
     public List<Measurement> get(@Nonnull String metricName) {
@@ -144,6 +146,8 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      * returns a new {@link JobMetrics} instance containing only those
      * {@link Measurement}s which have the specified tag set to the
      * specified value.
+     * <p>
+     * For a list of available tag names, see {@link MetricTags}.
      */
     @Nonnull
     public JobMetrics filter(@Nonnull String tagName, @Nonnull String tagValue) {
