@@ -100,6 +100,10 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
         assertThat(config, not(nullValue()));
         assertThat(config.getGroupConfig().getName(), not(equalTo(TEST_GROUP_NAME)));
     }
+    protected static void assertEnterpriseMemberConfig(Config config) {
+        assertThat(config, not(nullValue()));
+        assertThat(config.getProperty("test-property"), equalTo("test-value"));
+    }
 
     protected static void assertMemberConfig(Config config) {
         assertThat(config, not(nullValue()));

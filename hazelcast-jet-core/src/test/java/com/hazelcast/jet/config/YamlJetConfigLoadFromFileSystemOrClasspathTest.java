@@ -18,6 +18,7 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
@@ -27,6 +28,7 @@ import java.io.InputStream;
 
 import static com.hazelcast.jet.config.AbstractJetConfigWithSystemPropertyTest.assertConfig;
 import static com.hazelcast.jet.config.AbstractJetConfigWithSystemPropertyTest.assertDefaultMemberConfig;
+import static com.hazelcast.jet.config.AbstractJetConfigWithSystemPropertyTest.assertEnterpriseMemberConfig;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetConfigLoadFromFileSystemOrClasspathTest {
@@ -58,6 +60,15 @@ public class YamlJetConfigLoadFromFileSystemOrClasspathTest extends AbstractJetC
         // Then
         assertConfig(jetConfig);
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
+    }
+
+    @Test
+    public void when_memberConfigPresentInClasspath_usesClasspathResource() {
+        // When
+        JetConfig jetConfig = JetConfig.loadDefault();
+
+        // Then
+        assertEnterpriseMemberConfig(jetConfig.getHazelcastConfig());
     }
 
 }
