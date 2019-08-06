@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.projection.Projection;
@@ -48,7 +49,7 @@ public class ReadMapPTest extends JetTestSupport {
     @Test
     public void test_whenEmpty() {
         TestSupport
-                .verifyProcessor(ReadMapP.readMapSupplier("map"))
+                .verifyProcessor(SourceProcessors.readMapP("map"))
                 .jetInstance(jet)
                 .disableSnapshots()
                 .disableProgressAssertion()
@@ -65,7 +66,7 @@ public class ReadMapPTest extends JetTestSupport {
         }
 
         TestSupport
-            .verifyProcessor(ReadMapP.readMapSupplier("map"))
+            .verifyProcessor(SourceProcessors.readMapP("map"))
             .jetInstance(jet)
             .disableSnapshots()
             .disableProgressAssertion()
@@ -87,7 +88,7 @@ public class ReadMapPTest extends JetTestSupport {
         Predicate<Integer, String> predicate = entry -> entry.getKey() % 2 == 0;
         Projection<Entry<Integer, String>, String> projection = toProjection(Entry::getValue);
         TestSupport
-            .verifyProcessor(ReadMapP.readMapSupplier("map", predicate, projection))
+            .verifyProcessor(SourceProcessors.readMapP("map", predicate, projection))
             .jetInstance(jet)
             .disableSnapshots()
             .disableProgressAssertion()

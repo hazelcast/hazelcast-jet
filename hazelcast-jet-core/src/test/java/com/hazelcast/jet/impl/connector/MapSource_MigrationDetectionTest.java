@@ -95,7 +95,7 @@ public class MapSource_MigrationDetectionTest extends JetTestSupport {
 
         // populate the map
         IMap<Integer, Integer> m = mapInstance.getMap("map");
-        Map<Integer, Integer> tmpMap = new HashMap();
+        Map<Integer, Integer> tmpMap = new HashMap<>();
         for (int i = 0; i < 10_000; i++) {
             tmpMap.put(i, i);
         }
