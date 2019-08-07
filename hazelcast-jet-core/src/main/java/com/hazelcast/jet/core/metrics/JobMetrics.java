@@ -76,7 +76,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      * map should be well formed metric descriptors and the values
      * associated with them are {@code long} numbers.
      * <p>
-     * Descriptors are {@code String}s structured as a comma separated lists
+     * Descriptors are {@code String}s structured as a comma-separated lists
      * of tag=value pairs, enclosed in square brackets. An example of a
      * valid metric descriptor would be:
      * <pre>{@code
@@ -174,8 +174,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      * Merges the current instance of {@link JobMetrics} with the provided
      * one and returns the result as a new {@link JobMetrics} object. The
      * returned object will contain all metric names from both sources and
-     * a union of all their
-     * {@link Measurement}s.
+     * a union of all their {@link Measurement}s.
      */
     @Nonnull
     public JobMetrics merge(@Nonnull JobMetrics that) {
