@@ -18,6 +18,18 @@
 <hazelcast xsi:schemaLocation="http://www.hazelcast.com/schema/config hazelcast-config-3.12.xsd"
            xmlns="http://www.hazelcast.com/schema/config"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <group>
+        <name>jet</name>
+    </group>
+    <network>
+        <port auto-increment="true" port-count="100">5701</port>
+        <join>
+            <multicast enabled="true">
+                <multicast-group>224.2.2.3</multicast-group>
+                <multicast-port>54328</multicast-port>
+            </multicast>
+        </join>
+    </network>
     <properties>
         <property name="test-property">test-value</property>
     </properties>
