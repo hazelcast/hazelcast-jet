@@ -260,7 +260,7 @@ class MasterSnapshotContext {
                     // normally and we don't care if it does - the snapshot is done, though unsuccessfully, and
                     // we have to bring the execution down.
                     // Let's execute the CompleteExecutionOperation to terminate them.
-                    mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null);
+                    mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null, null);
                 }
             } else if (!wasExport) {
                 // if this snapshot was an automatic snapshot, schedule the next one

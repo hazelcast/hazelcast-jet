@@ -34,7 +34,6 @@ import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNotFoundException;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
@@ -424,8 +423,11 @@ public class MasterJobContext {
         if (error == null && status == STARTING) {
             invokeStartExecution();
         } else {
-            invokeCompleteExecution(error != null ? error
-                    : new IllegalStateException("Cannot execute " + mc.jobIdString() + ": status is " + status));
+            cancelExecutionInvocations(mc.jobId(), mc.executionId(), null, () ->
+                    onCompleteExecution(error != null
+                            ? error
+                            : new IllegalStateException("Cannot execute " + mc.jobIdString() + ": status is " + status))
+            );
         }
     }
 
@@ -442,10 +444,19 @@ public class MasterJobContext {
         }
 
         Function<ExecutionPlan, Operation> operationCtor = plan -> new StartExecutionOperation(mc.jobId(), executionId);
-        Consumer<Collection<Map.Entry<MemberInfo, Object>>> completionCallback = this::onExecuteStepCompleted;
+        Consumer<Collection<Map.Entry<MemberInfo, Object>>> completionCallback =
+                responses -> {
+                    if (responses.stream().map(Map.Entry::getValue).anyMatch(Throwable.class::isInstance)) {
+                        // log errors
+                        logger.severe(mc.jobIdString() + ": some " + StartExecutionOperation.class.getSimpleName()
+                                + " invocations failed, execution resources might leak: " + responses);
+                    } else {
+                        setJobMetrics(mergeMetrics(responses));
+                    }
+                    onCompleteExecution(getResult("Execution", responses));
+                };
 
         mc.setJobStatus(RUNNING);
-
         mc.invokeOnParticipants(operationCtor, completionCallback, executionFailureCallback, false);
 
         if (mc.jobConfig().getProcessingGuarantee() != NONE) {
@@ -461,11 +472,6 @@ public class MasterJobContext {
         } else if (executionFailureCallback != null) {
             executionFailureCallback.cancelInvocations(mode);
         }
-    }
-
-    // Called as callback when all ExecuteOperation invocations are done
-    private void onExecuteStepCompleted(Collection<Map.Entry<MemberInfo, Object>> responses) {
-        invokeCompleteExecution(getResult("Execution", responses));
     }
 
     void setFinalResult(Throwable failure) {
@@ -536,30 +542,23 @@ public class MasterJobContext {
                 .orElseGet(TopologyChangedException::new);
     }
 
-    private void invokeCompleteExecution(Throwable error) {
+    private void onCompleteExecution(Throwable error) {
         JobStatus status = mc.jobStatus();
 
-        Throwable finalError;
-        if (status == STARTING || status == RUNNING) {
-            logger.fine("Sending CompleteExecutionOperation for " + mc.jobIdString());
-            finalError = error;
-        } else {
+        if (status != STARTING && status != RUNNING) {
             logCannotComplete(error);
-            finalError = new IllegalStateException("Job coordination failed");
+            error = new IllegalStateException("Job coordination failed");
         }
 
-        Function<ExecutionPlan, Operation> operationCtor = plan ->
-                new CompleteExecutionOperation(mc.executionId(), finalError);
-        mc.invokeOnParticipants(operationCtor, responses -> {
-            if (responses.stream().map(Map.Entry::getValue).anyMatch(Throwable.class::isInstance)) {
-                // log errors
-                logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
-                        "resources might leak: " + responses);
-            } else {
-                setJobMetrics(mergeMetrics(responses));
-            }
-            onCompleteExecutionCompleted(error);
-        }, null, true);
+        if (error instanceof JobTerminateRequestedException
+                && ((JobTerminateRequestedException) error).mode().isWithTerminalSnapshot()) {
+            // have to use Async version, the future is completed inside a synchronized block
+            Throwable finalError = error;
+            mc.snapshotContext().terminalSnapshotFuture()
+              .whenCompleteAsync(withTryCatch(logger, (r, e) -> finalizeJob(finalError)));
+        } else {
+            finalizeJob(error);
+        }
     }
 
     private void logCannotComplete(Throwable error) {
@@ -572,18 +571,7 @@ public class MasterJobContext {
         }
     }
 
-    private void onCompleteExecutionCompleted(Throwable error) {
-        if (error instanceof JobTerminateRequestedException
-                && ((JobTerminateRequestedException) error).mode().isWithTerminalSnapshot()) {
-            // have to use Async version, the future is completed inside a synchronized block
-            mc.snapshotContext().terminalSnapshotFuture()
-              .whenCompleteAsync(withTryCatch(logger, (r, e) -> finalizeJob(error)));
-        } else {
-            finalizeJob(error);
-        }
-    }
-
-    void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode) {
+    void cancelExecutionInvocations(long jobId, long executionId, TerminationMode mode, Runnable callback) {
         mc.nodeEngine().getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
                 mc.invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode),
                         responses -> {
@@ -591,6 +579,9 @@ public class MasterJobContext {
                                 // log errors
                                 logger.severe(mc.jobIdString() + ": some TerminateExecutionOperation invocations " +
                                         "failed, execution might remain stuck: " + responses);
+                            }
+                            if (callback != null) {
+                                callback.run();
                             }
                         }, null, true));
     }
@@ -684,7 +675,7 @@ public class MasterJobContext {
             for (Vertex vertex : vertices) {
                 try {
                     vertex.getMetaSupplier().close(failure);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     logger.severe(mc.jobIdString()
                             + " encountered an exception in ProcessorMetaSupplier.complete(), ignoring it", e);
                 }
@@ -879,7 +870,7 @@ public class MasterJobContext {
 
         void cancelInvocations(TerminationMode mode) {
             if (invocationsCancelled.compareAndSet(false, true)) {
-                cancelExecutionInvocations(mc.jobId(), executionId, mode);
+                cancelExecutionInvocations(mc.jobId(), executionId, mode, null);
             }
         }
     }
