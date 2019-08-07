@@ -36,7 +36,6 @@ import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadJdbcP;
 import com.hazelcast.jet.impl.connector.ReadMapP;
-import com.hazelcast.jet.impl.connector.ReadRemoteMapP;
 import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import com.hazelcast.jet.impl.connector.StreamEventJournalP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
@@ -91,7 +90,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readMapP(@Nonnull String mapName) {
-        return ReadMapP.readMapSupplier(mapName, null, null);
+        return ReadMapP.readLocalMapSupplier(mapName);
     }
 
     /**
@@ -104,7 +103,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadMapP.readMapSupplier(mapName, predicate, projection);
+        return ReadMapP.readLocalMapSupplier(mapName, predicate, projection);
     }
 
     /**
@@ -117,7 +116,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadMapP.readMapSupplier(mapName, predicate, toProjection(projection));
+        return ReadMapP.readLocalMapSupplier(mapName, predicate, toProjection(projection));
     }
 
 
@@ -155,7 +154,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
-        return ReadRemoteMapP.readRemoteMapSupplier(mapName, clientConfig, null, null);
+        return ReadMapP.readRemoteMapSupplier(mapName, clientConfig);
     }
 
     /**
@@ -169,7 +168,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadRemoteMapP.readRemoteMapSupplier(mapName, clientConfig, predicate, projection);
+        return ReadMapP.readRemoteMapSupplier(mapName, clientConfig, predicate, projection);
     }
 
     /**
@@ -183,7 +182,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
     ) {
-        return ReadRemoteMapP.readRemoteMapSupplier(mapName, clientConfig, predicate, toProjection(projectionFn));
+        return ReadMapP.readRemoteMapSupplier(mapName, clientConfig, predicate, toProjection(projectionFn));
     }
 
     /**

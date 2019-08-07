@@ -28,7 +28,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.projection.Projections;
-import com.hazelcast.query.Predicates;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -43,7 +42,6 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
@@ -278,18 +276,6 @@ public class SourcesTest extends PipelineTestSupport {
 
     @Test
     public void remoteMapWithUnknownValueClass_whenQueryingIsNotNecessary() throws Exception {
-        remoteMapWithUnknownValueClass(() -> Sources.remoteMap(srcName, clientConfig));
-    }
-
-    @Test
-    public void remoteMapWithUnknownValueClass_whenQueryingIsNecessary() throws Exception {
-        remoteMapWithUnknownValueClass(
-                () -> Sources.remoteMap(srcName, clientConfig, Predicates.alwaysTrue(), Projections.identity())
-        );
-    }
-
-    private void remoteMapWithUnknownValueClass(Supplier<BatchSource<Entry<String, Object>>> sourceSupplier)
-                                                                                                throws Exception {
         // Given
         URL jarResource = Thread.currentThread().getContextClassLoader()
                                 .getResource("deployment/sample-pojo-1.0-car.jar");
@@ -303,7 +289,7 @@ public class SourcesTest extends PipelineTestSupport {
         map.put("key", person);
 
         // When
-        BatchSource<Entry<String, Object>> source = sourceSupplier.get();
+        BatchSource<Entry<String, Object>> source = Sources.remoteMap(srcName, clientConfig);
 
         // Then
         p.drawFrom(source).map(en -> en.getValue().toString()).drainTo(sink);

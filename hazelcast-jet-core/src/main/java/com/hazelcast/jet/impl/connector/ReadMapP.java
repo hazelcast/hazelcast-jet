@@ -16,7 +16,16 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.codec.MapFetchEntriesCodec;
+import com.hazelcast.client.impl.protocol.codec.MapFetchWithQueryCodec;
+import com.hazelcast.client.proxy.ClientMapProxy;
+import com.hazelcast.client.spi.ClientPartitionService;
+import com.hazelcast.client.spi.impl.ClientInvocation;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.Partition;
 import com.hazelcast.instance.HazelcastInstanceImpl;
 import com.hazelcast.instance.Node;
@@ -29,6 +38,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.MigrationWatcher;
 import com.hazelcast.map.impl.LazyMapEntry;
 import com.hazelcast.map.impl.iterator.MapEntriesWithCursor;
 import com.hazelcast.map.impl.operation.MapFetchEntriesOperation;
@@ -48,55 +58,53 @@ import com.hazelcast.util.IterationType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 
+import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
+import static com.hazelcast.jet.impl.util.Util.asClientConfig;
+import static com.hazelcast.jet.impl.util.Util.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-public final class ReadMapP<K, V, T> extends AbstractProcessor {
+public final class ReadMapP<R, E> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 16384;
-
-    private final String mapName;
-    private final Predicate<? super K, ? super V> predicate;
-    private final Projection<? super Entry<K, V>, ? extends T> projection;
+    private final Reader<R, E> reader;
     private final int[] partitionIds;
     private final BooleanSupplier migrationWatcher;
     private final int[] readOffsets;
 
-    private MapProxyImpl mapProxy;
-    private ICompletableFuture<ResultSegment>[] readFutures;
+    private Future[] readFutures;
 
     // currently processed batch, it's partitionId and iterating position
-    private List batch = Collections.emptyList();
+    private List<E> batch = Collections.emptyList();
     private int currentPartitionIndex = -1;
     private int resultSetPosition;
     private int completedPartitions;
-    private InternalSerializationService serializationService;
 
     private ReadMapP(
-            @Nonnull String mapName,
+            @Nonnull Reader<R, E> reader,
             @Nonnull List<Integer> assignedPartitions,
-            @Nonnull BooleanSupplier migrationWatcher,
-            @Nullable Predicate<? super K, ? super V> predicate,
-            @Nullable Projection<? super Entry<K, V>, ? extends T> projection
+            @Nonnull BooleanSupplier migrationWatcher
     ) {
-        this.mapName = mapName;
-        this.predicate = predicate;
-        this.projection = projection;
+        this.reader = reader;
         this.migrationWatcher = migrationWatcher;
 
         partitionIds = assignedPartitions.stream().mapToInt(Integer::intValue).toArray();
@@ -107,22 +115,41 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
     }
 
     @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readMapSupplier(
-            @Nonnull String mapName,
-            @Nullable Predicate<? super K, ? super V> predicate,
-            @Nullable Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        checkSerializable(predicate, "predicate");
-        checkSerializable(projection, "projection");
-
-        return new ClusterMetaSupplier<>(mapName, predicate, projection);
+    public static ProcessorMetaSupplier readLocalMapSupplier(@Nonnull String mapName) {
+        return new LocalProcessorMetaSupplier<>(new LocalMapReader(mapName));
     }
 
-    @Override
-    protected void init(Context context) {
-        HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
-        mapProxy = (MapProxyImpl) hzInstance.getMap(mapName);
-        serializationService = hzInstance.getSerializationService();
+    @Nonnull
+    public static <K, V, T> ProcessorMetaSupplier readLocalMapSupplier(
+            @Nonnull String mapName,
+            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
+    ) {
+        checkSerializable(Objects.requireNonNull(predicate), "predicate");
+        checkSerializable(Objects.requireNonNull(projection), "projection");
+
+        return new LocalProcessorMetaSupplier<>(new LocalMapQueryReader(mapName, predicate, projection));
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier readRemoteMapSupplier(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig
+    ) {
+        return new RemoteProcessorMetaSupplier<>(new RemoteMapReader(mapName), clientConfig);
+    }
+
+    @Nonnull
+    public static <K, V, T> ProcessorMetaSupplier readRemoteMapSupplier(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
+    ) {
+        checkSerializable(Objects.requireNonNull(predicate), "predicate");
+        checkSerializable(Objects.requireNonNull(projection), "projection");
+
+        return new RemoteProcessorMetaSupplier<>(new RemoteMapQueryReader(mapName, predicate, projection), clientConfig);
     }
 
     @Override
@@ -138,27 +165,17 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     private void initialRead() {
-        readFutures = new ICompletableFuture[partitionIds.length];
+        readFutures = new Future[partitionIds.length];
         for (int i = 0; i < readFutures.length; i++) {
-            readFutures[i] = readFromMap(partitionIds[i], readOffsets[i]);
+            readFutures[i] = reader.startBatch(partitionIds[i], readOffsets[i]);
         }
     }
 
-    @SuppressWarnings("unchecked")
     private boolean emitResultSet() {
         checkMigration();
-        boolean queryNeeded = queryNeeded();
         for (; resultSetPosition < batch.size(); resultSetPosition++) {
-            Object data = batch.get(resultSetPosition);
-            Object result;
-            if (queryNeeded) {
-                result = serializationService.toObject(((QueryResultRow) data).getValue());
-            } else {
-                Entry<Data, Data> dataEntry = (Entry<Data, Data>) data;
-                result = new LazyMapEntry(dataEntry.getKey(), dataEntry.getValue(), serializationService);
-            }
+            Object result = reader.getFromBatch(batch, resultSetPosition);
             if (result == null) {
                 continue;
             }
@@ -177,14 +194,13 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
     }
 
     private boolean tryGetNextResultSet() {
-        boolean queryNeeded = queryNeeded();
         while (batch.size() == resultSetPosition && ++currentPartitionIndex < partitionIds.length) {
-            ICompletableFuture future = readFutures[currentPartitionIndex];
+            Future future = readFutures[currentPartitionIndex];
             if (future == null || !future.isDone()) {
                 continue;
             }
-            Object result = toResultSet(future);
-            int nextTableIndexToReadFrom = getNextTableIndexToReadFrom(result, queryNeeded);
+            R result = reader.getBatchResults(future);
+            int nextTableIndexToReadFrom = reader.getNextTableIndexToReadFrom(result);
 
             if (nextTableIndexToReadFrom < 0) {
                 completedPartitions++;
@@ -192,13 +208,13 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
                 assert !batch.isEmpty() : "empty but not terminal batch";
             }
 
-            batch = getBatch(result, queryNeeded);
+            batch = reader.getBatch(result);
 
             resultSetPosition = 0;
             readOffsets[currentPartitionIndex] = nextTableIndexToReadFrom;
             // make another read on the same partition
             readFutures[currentPartitionIndex] =
-                    readFromMap(partitionIds[currentPartitionIndex], readOffsets[currentPartitionIndex]);
+                    reader.startBatch(partitionIds[currentPartitionIndex], readOffsets[currentPartitionIndex]);
         }
 
         if (currentPartitionIndex == partitionIds.length) {
@@ -208,82 +224,14 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
         return true;
     }
 
-    private List getBatch(Object result, boolean queryNeeded) {
-        if (queryNeeded) {
-            QueryResult queryResult = (QueryResult) ((ResultSegment) result).getResult();
-            return queryResult.getRows();
-        } else {
-            return ((MapEntriesWithCursor) result).getBatch();
-        }
-    }
-
-    private int getNextTableIndexToReadFrom(Object result, boolean queryNeeded) {
-        if (queryNeeded) {
-            return ((ResultSegment) result).getNextTableIndexToReadFrom();
-        } else {
-            return ((MapEntriesWithCursor) result).getNextTableIndexToReadFrom();
-        }
-    }
-
-    private Object toResultSet(ICompletableFuture future) {
-        try {
-            return future.get();
-        } catch (ExecutionException e) {
-            Throwable ex = peel(e);
-            if (ex instanceof HazelcastSerializationException) {
-                throw new JetException("Serialization error when reading the map: are the key, value, " +
-                        "predicate and projection classes visible to IMDG? You need to use User Code " +
-                        "Deployment, adding the classes to JetConfig isn't enough", e);
-            } else {
-                throw rethrow(ex);
-            }
-        } catch (InterruptedException e) {
-            throw rethrow(e);
-        }
-    }
-
-    private ICompletableFuture<ResultSegment> readFromMap(int partitionId, int offset) {
-        if (offset < 0) {
-            return null;
-        }
-        Operation op = queryNeeded() ?
-                new MapFetchWithQueryOperation(
-                        mapName,
-                        offset,
-                        MAX_FETCH_SIZE,
-                        Query.of()
-                                .mapName(mapName)
-                                .iterationType(IterationType.VALUE)
-                                .predicate(predicate)
-                                .projection(projection)
-                                .build()
-                ) :
-                new MapFetchEntriesOperation(mapName, offset, MAX_FETCH_SIZE);
-        return mapProxy.getOperationService().invokeOnPartition(mapProxy.getServiceName(), op, partitionId);
-    }
-
-    private boolean queryNeeded() {
-        return predicate != null || projection != null;
-    }
-
-    private static class ClusterMetaSupplier<K, V, T> implements ProcessorMetaSupplier {
+    private static class LocalProcessorMetaSupplier<R, E> implements ProcessorMetaSupplier {
 
         static final long serialVersionUID = 1L;
-
-        private final String mapName;
-        private final Predicate<? super K, ? super V> predicate;
-        private final Projection<? super Entry<K, V>, ? extends T> projection;
-
+        private Reader<R, E> reader;
         private transient Map<Address, List<Integer>> addrToPartitions;
 
-        ClusterMetaSupplier(
-                @Nonnull String mapName,
-                @Nullable Predicate<? super K, ? super V> predicate,
-                @Nullable Projection<? super Entry<K, V>, ? extends T> projection
-        ) {
-            this.mapName = mapName;
-            this.predicate = predicate;
-            this.projection = projection;
+        LocalProcessorMetaSupplier(@Nonnull Reader<R, E> reader) {
+            this.reader = reader;
         }
 
         @Override
@@ -305,38 +253,33 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
         @Override
         @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new ClusterProcessorSupplier<>(mapName, addrToPartitions.get(address),
-                    predicate, projection);
+            return address -> new LocalProcessorSupplier<>(reader, addrToPartitions.get(address));
         }
     }
 
-    private static class ClusterProcessorSupplier<K, V, T> implements ProcessorSupplier {
+    private static class LocalProcessorSupplier<R, E> implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
 
-        private final String mapName;
+        private final Reader<R, E> reader;
         private final List<Integer> ownedPartitions;
-        private final Predicate<? super K, ? super V> predicate;
-        private final Projection<? super Entry<K, V>, ? extends T> projection;
 
         private transient BooleanSupplier migrationWatcher;
 
-        ClusterProcessorSupplier(
-                @Nonnull String mapName,
-                @Nonnull List<Integer> ownedPartitions,
-                @Nullable Predicate<? super K, ? super V> predicate,
-                @Nullable Projection<? super Entry<K, V>, ? extends T> projection
+        LocalProcessorSupplier(
+                @Nonnull Reader<R, E> reader,
+                @Nonnull List<Integer> ownedPartitions
         ) {
+            this.reader = reader;
             this.ownedPartitions = ownedPartitions;
-            this.mapName = mapName;
-            this.predicate = predicate;
-            this.projection = projection;
         }
 
         @Override
         public void init(@Nonnull Context context) {
-            Node node = ((HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance()).node;
+            HazelcastInstanceImpl hzInstance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
+            Node node = hzInstance.node;
             JetService jetService = node.nodeEngine.getService(JetService.SERVICE_NAME);
+            reader.init(hzInstance);
             migrationWatcher = jetService.getSharedMigrationWatcher().createWatcher();
         }
 
@@ -350,10 +293,458 @@ public final class ReadMapP<K, V, T> extends AbstractProcessor {
         }
 
         private Processor processorForPartitions(List<Integer> partitions) {
-            return partitions.isEmpty()
-                    ? Processors.noopP().get()
-                    : new ReadMapP<>(mapName, partitions, migrationWatcher, predicate, projection);
+            if (partitions.isEmpty()) {
+                return Processors.noopP().get();
+            } else {
+                return new ReadMapP<>(
+                        reader,
+                        partitions,
+                        migrationWatcher
+                );
+            }
         }
     }
 
+    private static class RemoteProcessorMetaSupplier<R, E> implements ProcessorMetaSupplier {
+
+        static final long serialVersionUID = 1L;
+
+        private final String clientXml;
+        private final Reader<R, E> reader;
+
+        private transient int remotePartitionCount;
+
+        RemoteProcessorMetaSupplier(
+                @Nonnull Reader<R, E> reader,
+                @Nonnull ClientConfig clientConfig
+        ) {
+            this.reader = reader;
+            this.clientXml = asXmlString(clientConfig);
+        }
+
+        /**
+         * Assigns the {@code list} to {@code count} sublists in a round-robin fashion. One call returns
+         * the {@code index}-th sublist.
+         *
+         * <p>For example, for a 7-element list where {@code count == 3}, it would respectively return for
+         * indices 0..2:
+         *
+         * <pre>
+         *   0, 3, 6
+         *   1, 4
+         *   2, 5
+         * </pre>
+         */
+        @Nonnull
+        private static <T> List<T> roundRobinSubList(@Nonnull List<T> list, int index, int count) {
+            if (index < 0 || index >= count) {
+                throw new IllegalArgumentException("index=" + index + ", count=" + count);
+            }
+            return IntStream.range(0, list.size())
+                    .filter(i -> i % count == index)
+                    .mapToObj(list::get)
+                    .collect(toList());
+        }
+
+        @Override
+        public int preferredLocalParallelism() {
+            return 2;
+        }
+
+        @Override
+        public void init(@Nonnull ProcessorMetaSupplier.Context context) {
+            remotePartitionCount = getPartitionCount();
+
+        }
+
+        private int getPartitionCount() {
+            HazelcastInstance client = newHazelcastClient(asClientConfig(clientXml));
+            try {
+                HazelcastClientProxy clientProxy = (HazelcastClientProxy) client;
+                ClientPartitionService partitionService = clientProxy.client.getClientPartitionService();
+                return partitionService.getPartitionCount();
+            } finally {
+                client.shutdown();
+            }
+        }
+
+        @Override
+        @Nonnull
+        public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+            List<Integer> partitions = IntStream.rangeClosed(0, remotePartitionCount - 1).boxed().collect(toList());
+            return address -> new RemoteProcessorSupplier<>(
+                    clientXml,
+                    reader,
+                    roundRobinSubList(partitions, addresses.indexOf(address), addresses.size())
+            );
+        }
+    }
+
+    private static class RemoteProcessorSupplier<R, E> implements ProcessorSupplier {
+
+        static final long serialVersionUID = 1L;
+
+        private final String clientXml;
+        private final Reader<R, E> reader;
+        private final List<Integer> ownedPartitions;
+
+        private transient HazelcastInstance client;
+        private transient MigrationWatcher migrationWatcher;
+
+        RemoteProcessorSupplier(
+                @Nonnull String clientXml,
+                @Nonnull Reader<R, E> reader,
+                @Nonnull List<Integer> ownedPartitions
+        ) {
+            this.clientXml = clientXml;
+            this.reader = reader;
+            this.ownedPartitions = ownedPartitions;
+        }
+
+        @Override
+        public void init(@Nonnull Context context) {
+            client = newHazelcastClient(asClientConfig(clientXml));
+            reader.init(client);
+            migrationWatcher = new MigrationWatcher(client);
+        }
+
+        @Override
+        public void close(Throwable error) {
+            if (migrationWatcher != null) {
+                migrationWatcher.deregister();
+            }
+            if (client != null) {
+                client.shutdown();
+            }
+        }
+
+        @Override
+        @Nonnull
+        public List<Processor> get(int count) {
+            return processorToPartitions(count, ownedPartitions)
+                    .values().stream()
+                    .map(this::processorForPartitions)
+                    .collect(toList());
+        }
+
+        private Processor processorForPartitions(List<Integer> partitions) {
+            if (partitions.isEmpty()) {
+                return Processors.noopP().get();
+            } else {
+                return new ReadMapP<>(
+                        reader,
+                        partitions,
+                        migrationWatcher.createWatcher()
+                );
+            }
+        }
+    }
+
+    protected interface Reader<R, E> extends Serializable {
+
+        void init(@Nonnull HazelcastInstance hzInstance);
+
+        @Nullable
+        Future startBatch(int partitionId, int offset);
+
+        @Nonnull
+        R getBatchResults(Future future);
+
+        @Nonnull
+        List<E> getBatch(R result);
+
+        int getNextTableIndexToReadFrom(R result);
+
+        @Nullable
+        Object getFromBatch(List<E> batch, int index);
+
+    }
+
+    private abstract static class AbstractReader<R, E> implements Reader<R, E> {
+
+        protected final String mapName;
+        protected final Predicate predicate;
+        protected final Projection projection;
+
+        protected transient InternalSerializationService serializationService;
+
+        AbstractReader(
+                @Nonnull String mapName,
+                @Nullable Predicate predicate,
+                @Nullable Projection projection
+        ) {
+            this.mapName = mapName;
+            this.predicate = predicate;
+            this.projection = projection;
+        }
+
+        @Nonnull
+        @Override
+        public R getBatchResults(Future future) {
+            try {
+                return (R) future.get();
+            } catch (ExecutionException e) {
+                Throwable ex = peel(e);
+                if (ex instanceof HazelcastSerializationException) {
+                    throw new JetException("Serialization error when reading the map: are the key, value, " +
+                            "predicate and projection classes visible to IMDG? You need to use User Code " +
+                            "Deployment, adding the classes to JetConfig isn't enough", e);
+                } else {
+                    throw rethrow(ex);
+                }
+            } catch (InterruptedException e) {
+                throw rethrow(e);
+            }
+        }
+    }
+
+    private static class LocalMapReader extends AbstractReader<MapEntriesWithCursor, Entry<Data, Data>> {
+
+        static final long serialVersionUID = 1L;
+
+        private transient MapProxyImpl mapProxyImpl;
+
+        LocalMapReader(@Nonnull String mapName) {
+            super(mapName, null, null);
+        }
+
+        @Override
+        public void init(@Nonnull HazelcastInstance hzInstance) {
+            this.mapProxyImpl = (MapProxyImpl) hzInstance.getMap(mapName);
+            this.serializationService = ((HazelcastInstanceImpl) hzInstance).getSerializationService();
+        }
+
+        @Nullable
+        @Override
+        public Future startBatch(int partitionId, int offset) {
+            if (offset < 0) {
+                return null;
+            }
+            Operation op = new MapFetchEntriesOperation(mapName, offset, MAX_FETCH_SIZE);
+            return mapProxyImpl.getOperationService().invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
+        }
+
+        @Nonnull
+        @Override
+        public List<Entry<Data, Data>> getBatch(MapEntriesWithCursor result) {
+            return result.getBatch();
+        }
+
+        @Override
+        public int getNextTableIndexToReadFrom(MapEntriesWithCursor result) {
+            return result.getNextTableIndexToReadFrom();
+        }
+
+        @Nullable
+        @Override
+        public Object getFromBatch(List<Entry<Data, Data>> batch, int index) {
+            Entry<Data, Data> dataEntry = batch.get(index);
+            return new LazyMapEntry(dataEntry.getKey(), dataEntry.getValue(), serializationService);
+        }
+    }
+
+    private static class LocalMapQueryReader extends AbstractReader<ResultSegment, QueryResultRow> {
+
+        static final long serialVersionUID = 1L;
+
+        private transient MapProxyImpl mapProxyImpl;
+
+        LocalMapQueryReader(
+                @Nonnull String mapName,
+                @Nonnull Predicate predicate,
+                @Nonnull Projection projection
+        ) {
+            super(mapName, predicate, projection);
+        }
+
+        @Override
+        public void init(@Nonnull HazelcastInstance hzInstance) {
+            this.mapProxyImpl = (MapProxyImpl) hzInstance.getMap(mapName);
+            this.serializationService = ((HazelcastInstanceImpl) hzInstance).getSerializationService();
+        }
+
+        @Nullable
+        @Override
+        public Future startBatch(int partitionId, int offset) {
+            if (offset < 0) {
+                return null;
+            }
+            Operation op = new MapFetchWithQueryOperation(
+                    mapName,
+                    offset,
+                    MAX_FETCH_SIZE,
+                    Query.of()
+                            .mapName(mapName)
+                            .iterationType(IterationType.VALUE)
+                            .predicate(predicate)
+                            .projection(projection)
+                            .build()
+            );
+            return mapProxyImpl.getOperationService().invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
+        }
+
+        @Nonnull
+        @Override
+        public List<QueryResultRow> getBatch(ResultSegment result) {
+            QueryResult queryResult = (QueryResult) result.getResult();
+            return queryResult.getRows();
+        }
+
+        @Override
+        public int getNextTableIndexToReadFrom(ResultSegment result) {
+            return result.getNextTableIndexToReadFrom();
+        }
+
+        @Nullable
+        @Override
+        public Object getFromBatch(List<QueryResultRow> batch, int index) {
+            return serializationService.toObject(batch.get(index).getValue());
+        }
+    }
+
+    private static class RemoteMapReader extends AbstractReader<MapFetchEntriesCodec.ResponseParameters,
+                                                                                            Entry<Data, Data>> {
+
+        static final long serialVersionUID = 1L;
+
+        private transient ClientMapProxy clientMapProxy;
+
+        RemoteMapReader(@Nonnull String mapName) {
+            super(mapName, null, null);
+        }
+
+        @Override
+        public void init(@Nonnull HazelcastInstance hzInstance) {
+            this.clientMapProxy = (ClientMapProxy) hzInstance.getMap(mapName);
+            this.serializationService = clientMapProxy.getContext().getSerializationService();
+        }
+
+        @Override
+        @Nullable
+        public Future startBatch(int partitionId, int offset) {
+            if (offset < 0) {
+                return null;
+            }
+            ClientMessage request = MapFetchEntriesCodec.encodeRequest(mapName, partitionId, offset, MAX_FETCH_SIZE);
+            ClientInvocation clientInvocation = new ClientInvocation(
+                    (HazelcastClientInstanceImpl) clientMapProxy.getContext().getHazelcastInstance(),
+                    request,
+                    mapName,
+                    partitionId
+            );
+            return clientInvocation.invoke();
+        }
+
+        @Nonnull
+        @Override
+        public MapFetchEntriesCodec.ResponseParameters getBatchResults(Future future) {
+            try {
+                return MapFetchEntriesCodec.decodeResponse((ClientMessage) future.get());
+            } catch (ExecutionException e) {
+                Throwable ex = peel(e);
+                if (ex instanceof HazelcastSerializationException) {
+                    throw new JetException("Serialization error when reading the map: are the key, value, " +
+                            "predicate and projection classes visible to IMDG? You need to use User Code " +
+                            "Deployment, adding the classes to JetConfig isn't enough", e);
+                } else {
+                    throw rethrow(ex);
+                }
+            } catch (InterruptedException e) {
+                throw rethrow(e);
+            }
+        }
+
+        @Nonnull
+        @Override
+        public List<Entry<Data, Data>> getBatch(MapFetchEntriesCodec.ResponseParameters result) {
+            return result.entries;
+        }
+
+        @Override
+        public int getNextTableIndexToReadFrom(MapFetchEntriesCodec.ResponseParameters result) {
+            return result.tableIndex;
+        }
+
+        @Nullable
+        @Override
+        public Object getFromBatch(List<Entry<Data, Data>> batch, int index) {
+            Entry<Data, Data> dataEntry = batch.get(index);
+            return new LazyMapEntry(dataEntry.getKey(), dataEntry.getValue(), serializationService);
+        }
+    }
+
+    private static class RemoteMapQueryReader extends AbstractReader<MapFetchWithQueryCodec.ResponseParameters, Data> {
+
+        static final long serialVersionUID = 1L;
+
+        private transient ClientMapProxy clientMapProxy;
+
+        RemoteMapQueryReader(
+                @Nonnull String mapName,
+                @Nonnull Predicate predicate,
+                @Nonnull Projection projection
+        ) {
+            super(mapName, predicate, projection);
+        }
+
+        @Override
+        public void init(@Nonnull HazelcastInstance hzInstance) {
+            this.clientMapProxy = (ClientMapProxy) hzInstance.getMap(mapName);
+            this.serializationService = clientMapProxy.getContext().getSerializationService();
+        }
+
+        @Override
+        @Nullable
+        public Future startBatch(int partitionId, int offset) {
+            if (offset < 0) {
+                return null;
+            }
+            ClientMessage request = MapFetchWithQueryCodec.encodeRequest(mapName, offset, MAX_FETCH_SIZE,
+                    serializationService.toData(projection),
+                    serializationService.toData(predicate));
+            ClientInvocation clientInvocation = new ClientInvocation(
+                    (HazelcastClientInstanceImpl) clientMapProxy.getContext().getHazelcastInstance(),
+                    request,
+                    mapName,
+                    partitionId
+            );
+            return clientInvocation.invoke();
+        }
+
+        @Nonnull
+        @Override
+        public MapFetchWithQueryCodec.ResponseParameters getBatchResults(Future future) {
+            try {
+                return MapFetchWithQueryCodec.decodeResponse((ClientMessage) future.get());
+            } catch (ExecutionException e) {
+                Throwable ex = peel(e);
+                if (ex instanceof HazelcastSerializationException) {
+                    throw new JetException("Serialization error when reading the map: are the key, value, " +
+                            "predicate and projection classes visible to IMDG? You need to use User Code " +
+                            "Deployment, adding the classes to JetConfig isn't enough", e);
+                } else {
+                    throw rethrow(ex);
+                }
+            } catch (InterruptedException e) {
+                throw rethrow(e);
+            }
+        }
+
+        @Nonnull
+        @Override
+        public List<Data> getBatch(MapFetchWithQueryCodec.ResponseParameters result) {
+            return result.results;
+        }
+
+        @Override
+        public int getNextTableIndexToReadFrom(MapFetchWithQueryCodec.ResponseParameters result) {
+            return result.nextTableIndexToReadFrom;
+        }
+
+        @Nullable
+        @Override
+        public Object getFromBatch(List<Data> batch, int index) {
+            return serializationService.toObject(batch.get(index));
+        }
+    }
 }
