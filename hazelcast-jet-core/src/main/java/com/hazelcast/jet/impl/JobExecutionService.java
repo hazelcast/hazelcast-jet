@@ -25,6 +25,7 @@ import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.deployment.JetClassLoader;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
@@ -50,6 +51,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
@@ -342,42 +344,38 @@ public class JobExecutionService {
         }
     }
 
-    public CompletableFuture<RawJobMetrics> beginExecution(Address coordinator, long jobId, long executionId) {
+    public CompletableFuture<Tuple2<RawJobMetrics, Throwable>> beginExecution(Address coordinator, long jobId,
+                                                                              long executionId) {
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
         return execCtx.beginExecution()
               .handle((i, e) -> {
-                  RawJobMetrics response = null;
-                  e = peel(e);
+                  RawJobMetrics metrics;
                   try {
-                      if (e == null) {
-                          JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
-                          nodeEngine.getMetricsRegistry().render(metricsRenderer);
-                          //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense
-                          // at this point take for example MetricNames.LAST_FORWARDED_WM_LATENCY
-                          response = metricsRenderer.getJobMetrics();
-                      }
-                      completeExecution(executionId, e);
-                  } catch (Throwable e2) {
-                      logger.severe("Exception during callback: " + e2, e2);
-                      throw sneakyThrow(e2);
-                  }
+                      e = peel(e);
+                      JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
+                      nodeEngine.getMetricsRegistry().render(metricsRenderer);
+                      //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense
+                      // at this point take for example MetricNames.LAST_FORWARDED_WM_LATENCY
+                      metrics = metricsRenderer.getJobMetrics();
 
-                  if (e != null) {
+                      completeExecution(executionId, e);
                       if (e instanceof CancellationException) {
                           LoggingUtil.logFine(logger, "Execution of %s was cancelled",
                                   execCtx.jobNameAndExecutionId());
-                      } else {
+                      } else if (e != null) {
                           if (logger.isFineEnabled()) {
                               logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
                                       + " completed with failure", e);
                           }
+                      } else {
+                          LoggingUtil.logFine(logger, "Execution of %s completed", execCtx.jobNameAndExecutionId());
                       }
-                      throw sneakyThrow(e);
+                      return tuple2(metrics, e);
+                  } catch (Throwable e2) {
+                      logger.severe("Exception during callback: " + e2, e2);
+                      throw sneakyThrow(e2);
                   }
-
-                  LoggingUtil.logFine(logger, "Execution of %s completed", execCtx.jobNameAndExecutionId());
-                  return response;
               });
     }
 

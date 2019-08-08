@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.nio.ObjectDataInput;
@@ -41,7 +42,7 @@ public class StartExecutionOperation extends AsyncJobOperation {
     }
 
     @Override
-    protected CompletableFuture<RawJobMetrics> doRun() {
+    protected CompletableFuture<Tuple2<RawJobMetrics, Throwable>> doRun() {
         return getJetService().getJobExecutionService().beginExecution(getCallerAddress(), jobId(), executionId);
     }
 

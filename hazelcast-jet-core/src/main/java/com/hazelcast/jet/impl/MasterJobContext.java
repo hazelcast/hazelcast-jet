@@ -62,7 +62,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.Edge.between;
@@ -433,6 +435,7 @@ public class MasterJobContext {
 
     // If a participant leaves or the execution fails in a participant locally, executions are cancelled
     // on the remaining participants and the callback is completed after all invocations return.
+    @SuppressWarnings("unchecked")
     private void invokeStartExecution() {
         logger.fine("Executing " + mc.jobIdString());
 
@@ -449,11 +452,28 @@ public class MasterJobContext {
                     if (responses.stream().map(Map.Entry::getValue).anyMatch(Throwable.class::isInstance)) {
                         // log errors
                         logger.severe(mc.jobIdString() + ": some " + StartExecutionOperation.class.getSimpleName()
-                                + " invocations failed, execution resources might leak: " + responses);
+                                + " invocations failed: " + responses);
                     } else {
-                        setJobMetrics(mergeMetrics(responses));
+                        // unwrap the RawJobMetrics from Tuple2<RawJobMetrics, Throwable>
+                        Collection<Map.Entry<MemberInfo, Object>> metrics = responses.stream()
+                                .map(en -> entry(en.getKey(), ((Tuple2) en.getValue()).f0()))
+                                .collect(Collectors.toList());
+                        setJobMetrics(mergeMetrics(metrics));
                     }
-                    onCompleteExecution(getResult("Execution", responses));
+                    // unwrap the Throwable from Tuple2<RawJobMetrics, Throwable>
+                    Collection<Map.Entry<MemberInfo, Object>> exceptions = responses.stream()
+                            .map((Map.Entry<MemberInfo, Object> en) -> {
+                                        Object throwable;
+                                        if (en.getValue() instanceof Throwable) {
+                                            throwable = en.getValue();
+                                        } else {
+                                            throwable = ((Tuple2<RawJobMetrics, Throwable>) en.getValue()).f1();
+                                        }
+                                        return entry(en.getKey(), throwable);
+                                    }
+                            )
+                            .collect(Collectors.toList());
+                    onCompleteExecution(getResult("Execution", exceptions));
                 };
 
         mc.setJobStatus(RUNNING);

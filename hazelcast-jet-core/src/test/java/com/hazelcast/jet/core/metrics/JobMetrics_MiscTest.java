@@ -48,7 +48,6 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.TestUtil.assertExceptionInCauses;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -182,12 +181,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
     public void test_jobFailed() {
         DAG dag = new DAG();
         RuntimeException e = new RuntimeException("mock error");
-        Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(singletonList(1)));
-        Vertex process = dag.newVertex(
-                "faulty",
-                new TestProcessors.MockPMS(() ->
-                        new TestProcessors.MockPS(() -> new TestProcessors.MockP().setProcessError(e), MEMBER_COUNT)));
-        dag.edge(between(source, process));
+        dag.newVertex("faulty", () -> new TestProcessors.MockP().setCompleteError(e));
 
         Job job = runJobExpectFailure(dag, e);
         assertJobStatusEventually(job, JobStatus.FAILED);
@@ -232,8 +226,8 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
     }
 
     private void assertJobHasMetrics(Job job) {
-        assertFalse(job.getMetrics().metrics().isEmpty());
-        assertFalse(job.getMetrics().get("queuesSize").isEmpty());
+        assertFalse("metrics are empty", job.getMetrics().metrics().isEmpty());
+        assertFalse("`queuesSize` metric not found", job.getMetrics().get("queuesSize").isEmpty());
     }
 
     private void assertEmptyJobMetrics(Job job) {
