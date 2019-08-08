@@ -36,7 +36,6 @@ import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadJdbcP;
 import com.hazelcast.jet.impl.connector.ReadMapP;
-import com.hazelcast.jet.impl.connector.ReadWithPartitionIteratorP;
 import com.hazelcast.jet.impl.connector.StreamEventJournalP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamJmsP;
@@ -224,7 +223,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readCacheP(@Nonnull String cacheName) {
-        return ReadWithPartitionIteratorP.readCacheSupplier(cacheName);
+        return ReadMapP.readLocalCacheSupplier(cacheName);
     }
 
     /**
@@ -265,7 +264,7 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier readRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig
     ) {
-        return ReadWithPartitionIteratorP.readRemoteCacheSupplier(cacheName, clientConfig);
+        return ReadMapP.readRemoteCacheSupplier(cacheName, clientConfig);
     }
 
     /**
