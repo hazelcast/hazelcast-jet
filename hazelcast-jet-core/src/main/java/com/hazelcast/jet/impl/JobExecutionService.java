@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobIdAndExecutionId;
@@ -346,8 +347,9 @@ public class JobExecutionService {
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
         return execCtx.beginExecution()
               .handle((i, e) -> {
+                  RawJobMetrics response = null;
+                  e = peel(e);
                   try {
-                      RawJobMetrics response = null;
                       if (e == null) {
                           JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
                           nodeEngine.getMetricsRegistry().render(metricsRenderer);
@@ -356,25 +358,26 @@ public class JobExecutionService {
                           response = metricsRenderer.getJobMetrics();
                       }
                       completeExecution(executionId, e);
-                      if (e != null) {
-                          if (e instanceof CancellationException) {
-                              LoggingUtil.logFine(logger, "Execution of %s was cancelled",
-                                      execCtx.jobNameAndExecutionId());
-                          } else {
-                              if (logger.isFineEnabled()) {
-                                  logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
-                                          + " completed with failure", e);
-                              }
-                          }
-                          throw sneakyThrow(e);
-                      }
-
-                      LoggingUtil.logFine(logger, "Execution of %s completed", execCtx.jobNameAndExecutionId());
-                      return response;
                   } catch (Throwable e2) {
                       logger.severe("Exception during callback: " + e2, e2);
                       throw sneakyThrow(e2);
                   }
+
+                  if (e != null) {
+                      if (e instanceof CancellationException) {
+                          LoggingUtil.logFine(logger, "Execution of %s was cancelled",
+                                  execCtx.jobNameAndExecutionId());
+                      } else {
+                          if (logger.isFineEnabled()) {
+                              logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
+                                      + " completed with failure", e);
+                          }
+                      }
+                      throw sneakyThrow(e);
+                  }
+
+                  LoggingUtil.logFine(logger, "Execution of %s completed", execCtx.jobNameAndExecutionId());
+                  return response;
               });
     }
 

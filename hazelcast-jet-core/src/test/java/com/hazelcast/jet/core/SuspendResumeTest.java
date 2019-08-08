@@ -88,7 +88,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
+            MockPS.receivedCloseErrors.forEach(this::assertSuspend);
         }, 5);
     }
 
@@ -111,7 +111,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT + 1, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
+            MockPS.receivedCloseErrors.forEach(this::assertSuspend);
         }, 5);
     }
 
@@ -134,7 +134,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT - 1, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
+            MockPS.receivedCloseErrors.forEach(this::assertSuspend);
         }, 5);
     }
 
@@ -169,7 +169,7 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueEventually(() -> {
             assertEquals(2 * NODE_COUNT - 1, MockPS.closeCount.get());
             assertEquals(NODE_COUNT, MockPS.receivedCloseErrors.size());
-            assertTrue(MockPS.receivedCloseErrors.stream().allMatch(this::isSuspend));
+            MockPS.receivedCloseErrors.forEach(this::assertSuspend);
         }, 5);
     }
 
@@ -289,8 +289,8 @@ public class SuspendResumeTest extends JetTestSupport {
         assertTrueAllTheTime(() -> assertEquals(SUSPENDED, job.getStatus()), 10);
     }
 
-    private boolean isSuspend(Throwable e) {
-        return e instanceof JobTerminateRequestedException
-                && ((JobTerminateRequestedException) e).mode().actionAfterTerminate() == SUSPEND;
+    private void assertSuspend(Throwable e) {
+        assertInstanceOf(JobTerminateRequestedException.class, e);
+        assertEquals(SUSPEND, ((JobTerminateRequestedException) e).mode().actionAfterTerminate());
     }
 }
