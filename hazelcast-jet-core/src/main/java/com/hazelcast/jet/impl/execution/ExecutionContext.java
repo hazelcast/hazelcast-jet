@@ -17,10 +17,14 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.JetService;
+import com.hazelcast.jet.impl.JobExecutionService;
+import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
@@ -28,14 +32,15 @@ import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
-import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +48,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
@@ -61,6 +68,7 @@ public class ExecutionContext {
     private final Set<Address> participants;
     private final Object executionLock = new Object();
     private final ILogger logger;
+    private final JobExecutionService jobExecutionService;
     private String jobName;
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
@@ -75,26 +83,28 @@ public class ExecutionContext {
     private List<Tasklet> tasklets = emptyList();
 
     // future which is completed only after all tasklets are completed and contains execution result
-    private volatile CompletableFuture<Void> executionFuture;
+    private volatile CompletableFuture<Tuple2<RawJobMetrics, Throwable>> executionFuture;
 
     // future which can only be used to cancel the local execution.
     private final CompletableFuture<Void> cancellationFuture = new CompletableFuture<>();
 
-    private final NodeEngine nodeEngine;
+    private final NodeEngineImpl nodeEngine;
     private final TaskletExecutionService taskletExecService;
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
     private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
-    public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
-                            long jobId, long executionId, Address coordinator, Set<Address> participants) {
+    public ExecutionContext(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecService,
+                            long jobId, long executionId, Address coordinator, Set<Address> participants,
+                            JobExecutionService jobExecutionService) {
         this.jobId = jobId;
         this.executionId = executionId;
         this.coordinator = coordinator;
         this.participants = participants;
         this.taskletExecService = taskletExecService;
         this.nodeEngine = nodeEngine;
+        this.jobExecutionService = jobExecutionService;
 
         this.jobName = idToString(jobId);
 
@@ -131,7 +141,7 @@ public class ExecutionContext {
      * future is completed immediately. The future returned can't be cancelled,
      * instead {@link #terminateExecution} should be used.
      */
-    public CompletableFuture<Void> beginExecution() {
+    public CompletableFuture<Tuple2<RawJobMetrics, Throwable>> beginExecution() {
         synchronized (executionLock) {
             if (executionFuture != null) {
                 // beginExecution was already called or execution was cancelled before it started.
@@ -149,11 +159,34 @@ public class ExecutionContext {
                                 throw new TerminatedWithSnapshotException();
                             }
                             return res;
-                        });
-
+                        })
+                        .handle(this::handleExecutionFutureCompleted);
             }
             return executionFuture;
         }
+    }
+
+    private Tuple2<RawJobMetrics, Throwable> handleExecutionFutureCompleted(Void result, Throwable t) {
+        JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
+        nodeEngine.getMetricsRegistry().render(metricsRenderer);
+        //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense
+        // at this point take for example MetricNames.LAST_FORWARDED_WM_LATENCY
+        RawJobMetrics metrics = metricsRenderer.getJobMetrics();
+
+        t = peel(t);
+        jobExecutionService.completeExecution(executionId, t);
+
+        if (t instanceof CancellationException) {
+            LoggingUtil.logFine(logger, "Execution of %s was cancelled", jobNameAndExecutionId());
+        } else if (t != null) {
+            if (logger.isFineEnabled()) {
+                logger.fine("Execution of " + jobNameAndExecutionId() + " completed with failure", t);
+            }
+        } else {
+            LoggingUtil.logFine(logger, "Execution of %s completed", jobNameAndExecutionId());
+        }
+
+        return tuple2(metrics, t);
     }
 
     /**
@@ -161,9 +194,6 @@ public class ExecutionContext {
      * called after execution has completed.
      */
     public void completeExecution(Throwable error) {
-        assert executionFuture == null || executionFuture.isDone()
-                : "If execution was begun, then completeExecution() should not be called before execution is done.";
-
         for (Tasklet tasklet : tasklets) {
             try {
                 tasklet.close();
@@ -181,7 +211,7 @@ public class ExecutionContext {
                         + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
             }
         }
-        MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
+        MetricsRegistry metricsRegistry = nodeEngine.getMetricsRegistry();
         processors.forEach(metricsRegistry::deregister);
         tasklets.forEach(metricsRegistry::deregister);
     }
@@ -191,7 +221,7 @@ public class ExecutionContext {
      * only completed when all tasklets are completed and contains the result
      * of the execution.
      */
-    public CompletableFuture<Void> terminateExecution(@Nullable TerminationMode mode) {
+    public CompletableFuture<Tuple2<RawJobMetrics, Throwable>> terminateExecution(@Nullable TerminationMode mode) {
         assert mode == null || !mode.isWithTerminalSnapshot()
                 : "terminating with a mode that should do a terminal snapshot";
 
@@ -203,8 +233,8 @@ public class ExecutionContext {
             }
             if (executionFuture == null) {
                 // if cancelled before execution started, then assign the already completed future.
-                executionFuture = cancellationFuture;
-                completeExecution(mode != null ? new JobTerminateRequestedException(mode) : new CancellationException());
+                executionFuture = cancellationFuture
+                        .handle(this::handleExecutionFutureCompleted);
             }
             snapshotContext.cancel();
             return executionFuture;
@@ -273,5 +303,40 @@ public class ExecutionContext {
 
     public void setJobMetrics(RawJobMetrics jobMetrics) {
         this.jobMetrics = jobMetrics;
+    }
+
+    private static class JobMetricsRenderer implements ProbeRenderer {
+
+        private final Long executionIdOfInterest;
+        private final Map<String, Long> jobMetrics = new HashMap<>();
+
+        JobMetricsRenderer(long executionId) {
+            this.executionIdOfInterest = executionId;
+        }
+
+        @Override
+        public void renderLong(String name, long value) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
+            if (executionIdOfInterest.equals(executionId)) {
+                jobMetrics.put(name, value);
+            }
+        }
+
+        @Override
+        public void renderDouble(String name, double value) {
+            renderLong(name, JobMetricsUtil.toLongMetricValue(value));
+        }
+
+        @Override
+        public void renderException(String name, Exception e) {
+        }
+
+        @Override
+        public void renderNoValue(String name) {
+        }
+
+        RawJobMetrics getJobMetrics() {
+            return RawJobMetrics.of(System.currentTimeMillis(), jobMetrics);
+        }
     }
 }

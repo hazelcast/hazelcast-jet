@@ -21,7 +21,6 @@ import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembershipManager;
 import com.hazelcast.internal.cluster.impl.operations.TriggerMemberListPublishOp;
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -32,7 +31,6 @@ import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
@@ -40,20 +38,15 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.jobIdAndExecutionId;
 import static java.util.Collections.newSetFromMap;
@@ -214,7 +207,7 @@ public class JobExecutionService {
 
         Set<Address> addresses = participants.stream().map(MemberInfo::getAddress).collect(toSet());
         ExecutionContext created = new ExecutionContext(nodeEngine, taskletExecutionService,
-                jobId, executionId, coordinator, addresses);
+                jobId, executionId, coordinator, addresses, this);
         try {
             ClassLoader jobCl = getClassLoader(plan.getJobConfig(), jobId);
             com.hazelcast.jet.impl.util.Util.doWithClassLoader(jobCl, () -> created.initialize(plan));
@@ -318,7 +311,7 @@ public class JobExecutionService {
     /**
      * Completes and cleans up execution of the given job
      */
-    private void completeExecution(long executionId, Throwable error) {
+    public void completeExecution(long executionId, Throwable error) {
         ExecutionContext executionContext = executionContexts.remove(executionId);
         if (executionContext != null) {
             JetClassLoader removed = classLoaders.remove(executionContext.jobId());
@@ -348,73 +341,10 @@ public class JobExecutionService {
                                                                               long executionId) {
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
-        return execCtx.beginExecution()
-              .handle((i, e) -> {
-                  RawJobMetrics metrics;
-                  try {
-                      e = peel(e);
-                      JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
-                      nodeEngine.getMetricsRegistry().render(metricsRenderer);
-                      //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense
-                      // at this point take for example MetricNames.LAST_FORWARDED_WM_LATENCY
-                      metrics = metricsRenderer.getJobMetrics();
-
-                      completeExecution(executionId, e);
-                      if (e instanceof CancellationException) {
-                          LoggingUtil.logFine(logger, "Execution of %s was cancelled",
-                                  execCtx.jobNameAndExecutionId());
-                      } else if (e != null) {
-                          if (logger.isFineEnabled()) {
-                              logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
-                                      + " completed with failure", e);
-                          }
-                      } else {
-                          LoggingUtil.logFine(logger, "Execution of %s completed", execCtx.jobNameAndExecutionId());
-                      }
-                      return tuple2(metrics, e);
-                  } catch (Throwable e2) {
-                      logger.severe("Exception during callback: " + e2, e2);
-                      throw sneakyThrow(e2);
-                  }
-              });
+        return execCtx.beginExecution();
     }
 
     int numberOfExecutions() {
         return executionContexts.size();
-    }
-
-    private static class JobMetricsRenderer implements ProbeRenderer {
-
-        private final Long executionIdOfInterest;
-        private final Map<String, Long> jobMetrics = new HashMap<>();
-
-        JobMetricsRenderer(long executionId) {
-            this.executionIdOfInterest = executionId;
-        }
-
-        @Override
-        public void renderLong(String name, long value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
-            if (executionIdOfInterest.equals(executionId)) {
-                jobMetrics.put(name, value);
-            }
-        }
-
-        @Override
-        public void renderDouble(String name, double value) {
-            renderLong(name, JobMetricsUtil.toLongMetricValue(value));
-        }
-
-        @Override
-        public void renderException(String name, Exception e) {
-        }
-
-        @Override
-        public void renderNoValue(String name) {
-        }
-
-        RawJobMetrics getJobMetrics() {
-            return RawJobMetrics.of(System.currentTimeMillis(), jobMetrics);
-        }
     }
 }

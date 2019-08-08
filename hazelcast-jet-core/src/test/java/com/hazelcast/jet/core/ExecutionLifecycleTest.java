@@ -400,7 +400,7 @@ public class ExecutionLifecycleTest extends TestInClusterSupport {
         executionContext.terminateExecution(null);
 
         // When
-        CompletableFuture<Void> future = executionContext.beginExecution();
+        CompletableFuture<?> future = executionContext.beginExecution();
 
         // Then
         expectedException.expect(CancellationException.class);
