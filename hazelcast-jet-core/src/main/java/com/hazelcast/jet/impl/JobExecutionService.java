@@ -346,30 +346,30 @@ public class JobExecutionService {
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
         return execCtx.beginExecution()
               .handle((i, e) -> {
-                  if (e != null) {
-                      completeExecution(executionId, e);
-                      if (e instanceof CancellationException) {
-                          LoggingUtil.logFine(logger, "Execution of %s was cancelled", execCtx.jobNameAndExecutionId());
-                      } else {
-                          if (logger.isFineEnabled()) {
-                              logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
-                                      + " completed with failure", e);
-                          }
-                      }
-                      throw sneakyThrow(e);
-                  }
-
                   try {
-                      JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
-                      nodeEngine.getMetricsRegistry().render(metricsRenderer);
-                      //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense at this point
-                      //  take for example MetricNames.LAST_FORWARDED_WM_LATENCY
-                      RawJobMetrics response = metricsRenderer.getJobMetrics();
-
-                      logger.info("aaa invoking completeExecution");
+                      RawJobMetrics response = null;
+                      if (e == null) {
+                          JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId);
+                          nodeEngine.getMetricsRegistry().render(metricsRenderer);
+                          //TODO: we should probably filter out some of the metrics for completed jobs, not all make sense
+                          // at this point take for example MetricNames.LAST_FORWARDED_WM_LATENCY
+                          response = metricsRenderer.getJobMetrics();
+                      }
                       completeExecution(executionId, e);
+                      if (e != null) {
+                          if (e instanceof CancellationException) {
+                              LoggingUtil.logFine(logger, "Execution of %s was cancelled",
+                                      execCtx.jobNameAndExecutionId());
+                          } else {
+                              if (logger.isFineEnabled()) {
+                                  logger.fine("Execution of " + execCtx.jobNameAndExecutionId()
+                                          + " completed with failure", e);
+                              }
+                          }
+                          throw sneakyThrow(e);
+                      }
+
                       LoggingUtil.logFine(logger, "Execution of %s completed", execCtx.jobNameAndExecutionId());
-                      logger.info("aaa returning response");
                       return response;
                   } catch (Throwable e2) {
                       logger.severe("Exception during callback: " + e2, e2);

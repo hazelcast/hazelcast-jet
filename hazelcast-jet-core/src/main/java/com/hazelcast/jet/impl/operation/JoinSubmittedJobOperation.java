@@ -30,7 +30,7 @@ public class JoinSubmittedJobOperation extends AsyncJobOperation {
     }
 
     @Override
-    protected CompletableFuture<?> doRun() {
+    protected CompletableFuture<Void> doRun() {
         return getJobCoordinationService().joinSubmittedJob(jobId());
     }
 
