@@ -25,8 +25,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
-import com.hazelcast.jet.impl.TerminationMode;
-import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.JetMetricsService;
@@ -39,6 +37,7 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
@@ -221,16 +220,9 @@ public class ExecutionContext {
      * only completed when all tasklets are completed and contains the result
      * of the execution.
      */
-    public CompletableFuture<Tuple2<RawJobMetrics, Throwable>> terminateExecution(@Nullable TerminationMode mode) {
-        assert mode == null || !mode.isWithTerminalSnapshot()
-                : "terminating with a mode that should do a terminal snapshot";
-
+    public CompletableFuture<Tuple2<RawJobMetrics, Throwable>> terminateExecution(@Nonnull Exception cause) {
         synchronized (executionLock) {
-            if (mode == null) {
-                cancellationFuture.cancel(true);
-            } else {
-                cancellationFuture.completeExceptionally(new JobTerminateRequestedException(mode));
-            }
+            cancellationFuture.completeExceptionally(cause);
             if (executionFuture == null) {
                 // if cancelled before execution started, then assign the already completed future.
                 executionFuture = cancellationFuture

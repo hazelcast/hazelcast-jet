@@ -117,7 +117,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             });
 
             assertEquals(clusterSize, MockPS.receivedCloseErrors.size());
-            MockPS.receivedCloseErrors.forEach(t -> assertTrue(t instanceof TopologyChangedException));
+            MockPS.receivedCloseErrors.forEach(t -> assertInstanceOf(TopologyChangedException.class, t));
 
             try {
                 minorityJobFutureRef[0].get();
@@ -177,7 +177,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
             });
 
             assertEquals(clusterSize, MockPS.receivedCloseErrors.size());
-            MockPS.receivedCloseErrors.forEach(t -> assertTrue(t instanceof TopologyChangedException));
+            MockPS.receivedCloseErrors.forEach(t -> assertInstanceOf(TopologyChangedException.class, t));
         };
 
         testSplitBrain(firstSubClusterSize, secondSubClusterSize, beforeSplit, onSplit, afterMerge);
@@ -219,7 +219,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
             assertEquals(clusterSize, MockPS.receivedCloseErrors.size());
             MockPS.receivedCloseErrors.forEach(t -> {
-                if (!(t instanceof TopologyChangedException)) {
+                if (!(t instanceof TopologyChangedException || t instanceof CancellationException))  {
                     t.printStackTrace();
                     fail("t=" + t);
                 }
@@ -245,7 +245,7 @@ public class SplitBrainTest extends JetSplitBrainTestSupport {
 
         Consumer<JetInstance[]> afterMerge = instances -> {
             assertTrueEventually(() -> assertEquals(secondSubClusterSize, MockPS.receivedCloseErrors.size()), 20);
-            MockPS.receivedCloseErrors.forEach(t -> assertTrue(t instanceof TopologyChangedException));
+            MockPS.receivedCloseErrors.forEach(t -> assertInstanceOf(TopologyChangedException.class, t));
 
             try {
                 jobRef[0].getFuture().get(30, TimeUnit.SECONDS);

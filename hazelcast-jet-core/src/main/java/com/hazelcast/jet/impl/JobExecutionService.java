@@ -36,6 +36,7 @@ import com.hazelcast.nio.Address;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import javax.annotation.Nonnull;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
@@ -151,12 +152,11 @@ public class JobExecutionService {
      * Cancel job execution and complete execution without waiting for coordinator
      * to send CompleteOperation.
      */
-    private void cancelAndComplete(ExecutionContext exeCtx, String message, Throwable t) {
+    private void cancelAndComplete(ExecutionContext exeCtx, String message, @Nonnull Exception cause) {
         try {
-            exeCtx.terminateExecution(null).whenComplete(withTryCatch(logger, (r, e) -> {
+            exeCtx.terminateExecution(cause).whenComplete(withTryCatch(logger, (r, e) -> {
                 long executionId = exeCtx.executionId();
                 logger.fine(message);
-                completeExecution(executionId, t);
             }));
         } catch (Throwable e) {
             logger.severe(String.format("Local cancellation of %s failed", exeCtx.jobNameAndExecutionId()), e);

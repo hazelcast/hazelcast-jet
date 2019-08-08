@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.operation;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.TerminationMode;
+import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.Address;
@@ -28,6 +29,7 @@ import com.hazelcast.spi.ExceptionAction;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.concurrent.CancellationException;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
@@ -58,7 +60,16 @@ public class TerminateExecutionOperation extends AbstractJobOperation {
         Address callerAddress = getCallerAddress();
         ExecutionContext ctx = executionService.assertExecutionContext(callerAddress, jobId(), executionId,
                 getClass().getSimpleName());
-        ctx.terminateExecution(mode);
+        assert mode == null || !mode.isWithTerminalSnapshot()
+                : "terminating with a mode that should do a terminal snapshot";
+
+        Exception cause;
+        if (mode == null) {
+            cause = new CancellationException();
+        } else {
+            cause = new JobTerminateRequestedException(mode);
+        }
+        ctx.terminateExecution(cause);
     }
 
     @Override
