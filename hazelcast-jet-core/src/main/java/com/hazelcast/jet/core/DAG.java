@@ -23,6 +23,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.util.StringUtil;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -395,38 +396,54 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         final StringBuilder builder = new StringBuilder(512);
         builder.append("digraph DAG {\n");
         int clusterCount = 0;
-        for (Vertex v : this) {
-            List<Edge> out = getOutboundEdges(v.getName());
-            List<Edge> in = getInboundEdges(v.getName());
 
-            if (out.isEmpty() && in.isEmpty()) {
-                // dangling vertex
-                String name = escapeGraphviz(vertexNameAndParallelism(defaultParallelism, v));
-                builder.append("\t")
-                       .append("\"").append(name).append("\"")
-                       .append(";\n");
-            }
+        for (Vertex v : this) {
+            int localParallelism = getLocalParallelism(defaultParallelism, v);
+            String parallelism = localParallelism == -1 ?
+                defaultParallelism == -1 ?
+                    "default"
+                    : String.valueOf(defaultParallelism)
+                : String.valueOf(localParallelism);
+            builder.append("\t\"")
+                   .append(escapeGraphviz(v.getName()))
+                   .append("\" [tooltip=\"local-parallelism=").append(parallelism).append("\"]")
+                   .append(";\n");
+        }
+
+        Map<String, int[]> inOutCounts = new HashMap<>();
+        for (Edge edge : edges) {
+            inOutCounts.computeIfAbsent(edge.getSourceName(), v -> new int[2])[0]++;
+            inOutCounts.computeIfAbsent(edge.getDestName(), v -> new int[2])[1]++;
+        }
+
+        for (Vertex v: this) {
+            List<Edge> out = getOutboundEdges(v.getName());
             for (Edge e : out) {
-                List<String> labels = new ArrayList<>();
-                if (e.isDistributed()) {
-                    labels.add("distributed");
+                List<String> attributes = new ArrayList<>();
+                String edgeLabel = getEdgeLabel(e);
+                if (!StringUtil.isNullOrEmpty(edgeLabel)) {
+                    attributes.add("label=\"" + edgeLabel + "\"");
                 }
-                if (e.getRoutingPolicy() != RoutingPolicy.UNICAST) {
-                    labels.add(e.getRoutingPolicy().toString().toLowerCase());
+                if (inOutCounts.get(e.getDestName())[1] > 1) {
+                    attributes.add("headlabel=" + e.getDestOrdinal());
                 }
+                if (inOutCounts.get(e.getSourceName())[0] > 1) {
+                    attributes.add("taillabel=" + e.getSourceOrdinal());
+                }
+
                 boolean inSubgraph = e.getSourceName().equals(e.getDestName() + FIRST_STAGE_VERTEX_NAME_SUFFIX);
                 if (inSubgraph) {
                     builder.append("\tsubgraph cluster_").append(clusterCount++).append(" {\n")
                            .append("\t");
                 }
-                String source = escapeGraphviz(vertexNameAndParallelism(defaultParallelism, e.getSource()));
-                String destination = escapeGraphviz(vertexNameAndParallelism(defaultParallelism, e.getDestination()));
+                String source = escapeGraphviz(e.getSourceName());
+                String destination = escapeGraphviz(e.getDestName());
                 builder.append("\t")
                        .append("\"").append(source).append("\"")
                        .append(" -> ")
                        .append("\"").append(destination).append("\"");
-                if (!labels.isEmpty()) {
-                    builder.append(labels.stream().collect(joining("-", " [label=\"", "\"]")));
+                if (attributes.size() > 0) {
+                    builder.append(attributes.stream().collect(joining(", ", " [", "]")));
                 }
                 builder.append(";\n");
                 if (inSubgraph) {
@@ -438,12 +455,15 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         return builder.toString();
     }
 
-    private String vertexNameAndParallelism(int defaultParallelism, Vertex v) {
-        int localParallelism = getLocalParallelism(defaultParallelism, v);
-        String parallelism = localParallelism == -1 ?
-            defaultParallelism == -1 ? "default" : String.valueOf(defaultParallelism)
-            : String.valueOf(localParallelism);
-        return v.getName() + "[parallelism=" + parallelism + "]";
+    private String getEdgeLabel(Edge e) {
+        List<String> labels = new ArrayList<>();
+        if (e.isDistributed()) {
+            labels.add("distributed");
+        }
+        if (e.getRoutingPolicy() != RoutingPolicy.UNICAST) {
+            labels.add(e.getRoutingPolicy().toString().toLowerCase());
+        }
+        return String.join("-", labels);
     }
 
     @Override
