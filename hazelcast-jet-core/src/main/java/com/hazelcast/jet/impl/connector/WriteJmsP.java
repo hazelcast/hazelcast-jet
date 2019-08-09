@@ -70,7 +70,8 @@ public final class WriteJmsP {
         checkSerializable(flushFn, "flushFn");
 
         return ProcessorMetaSupplier.of(
-            PREFERRED_LOCAL_PARALLELISM, new Supplier<>(newConnectionFn, newSessionFn, messageFn, sendFn, flushFn, name, isTopic)
+            PREFERRED_LOCAL_PARALLELISM,
+            new Supplier<>(newConnectionFn, newSessionFn, messageFn, sendFn, flushFn, name, isTopic)
         );
     }
 

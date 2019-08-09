@@ -57,16 +57,12 @@ public abstract class AbstractHazelcastWriterSupplier implements ProcessorSuppli
 
     protected abstract Processor createProcessor(HazelcastInstance instance, boolean isLocal);
 
-    protected HazelcastInstance instance() {
-        return instance;
-    }
-
-    protected boolean isLocal() {
+    private boolean isLocal() {
         return clientXml == null;
     }
 
     @Override
-    public void close(@Nullable Throwable error) throws Exception {
+    public void close(@Nullable Throwable error) {
         if (clientXml != null && instance != null) {
             instance.shutdown();
         }

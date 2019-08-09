@@ -55,7 +55,7 @@ import java.util.function.Consumer;
 
 import static com.hazelcast.util.MapUtil.createHashMap;
 
-public class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
+public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     private final String mapName;
     private final FunctionEx<? super T, ? extends K> toKeyFn;
@@ -70,10 +70,10 @@ public class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     // one map per partition to store the temporary values
     private Map<Data, Object>[] tmpMaps;
 
-    UpdateMapP(HazelcastInstance instance, boolean isLocal,
-               String mapName,
-               @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-               @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
+    private UpdateMapP(HazelcastInstance instance, boolean isLocal,
+                       String mapName,
+                       @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+                       @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
         super(instance, isLocal);
         this.mapName = mapName;
         this.toKeyFn = toKeyFn;

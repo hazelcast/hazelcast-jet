@@ -26,7 +26,7 @@ import com.hazelcast.map.EntryProcessor;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class EntryProcessorWriterP<T, K, V> extends AsyncHazelcastWriterP {
+public final class EntryProcessorWriterP<T, K, V> extends AsyncHazelcastWriterP {
 
     private final IMap<? super K, ? extends V> map;
     private final FunctionEx<? super T, ? extends K> toKeyFn;
