@@ -223,10 +223,16 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
 
     private boolean tryGetNextResultSet() {
         while (batch.size() == resultSetPosition && ++currentPartitionIndex < partitionIds.length) {
-            if (readOffsets[currentPartitionIndex] < 0) {
+
+            if (readOffsets[currentPartitionIndex] < 0) { //partition is dompleted
                 continue;
             }
+
             Future future = readFutures[currentPartitionIndex];
+            if (!future.isDone()) { //data for partition not yet available
+                continue;
+            }
+
             R result = reader.getBatchResults(future);
             int nextTableIndexToReadFrom = reader.getNextTableIndexToReadFrom(result);
 
