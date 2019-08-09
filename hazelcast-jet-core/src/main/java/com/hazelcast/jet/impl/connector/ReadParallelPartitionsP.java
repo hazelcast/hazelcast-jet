@@ -286,11 +286,6 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         }
 
         @Override
-        public int preferredLocalParallelism() {
-            return 2;
-        }
-
-        @Override
         public void init(@Nonnull ProcessorMetaSupplier.Context context) {
             addrToPartitions = getPartitions(context).stream()
                     .collect(groupingBy(p -> p.getOwner().getAddress(),
@@ -395,11 +390,6 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
                     .filter(i -> i % count == index)
                     .mapToObj(list::get)
                     .collect(toList());
-        }
-
-        @Override
-        public int preferredLocalParallelism() {
-            return 2;
         }
 
         @Override
