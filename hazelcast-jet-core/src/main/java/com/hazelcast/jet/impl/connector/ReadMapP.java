@@ -42,6 +42,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
+import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.MigrationWatcher;
 import com.hazelcast.map.impl.LazyMapEntry;
@@ -90,6 +91,13 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Private API, see methods in {@link SourceProcessors}.
+ * <p>
+ * The number of Hazelcast partitions should be configured to at least
+ * {@code localParallelism * clusterSize}, otherwise some processors will
+ * have no partitions assigned to them.
+ */
 public final class ReadMapP<R, E> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 16384;
