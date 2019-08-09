@@ -98,7 +98,7 @@ import static java.util.stream.Collectors.toList;
  * {@code localParallelism * clusterSize}, otherwise some processors will
  * have no partitions assigned to them.
  */
-public final class ReadMapP<R, E> extends AbstractProcessor {
+public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 16384;
     private final Reader<R, E> reader;
@@ -114,7 +114,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
     private int resultSetPosition;
     private int completedPartitions;
 
-    private ReadMapP(
+    private ReadParallelPartitionsP(
             @Nonnull Reader<R, E> reader,
             @Nonnull List<Integer> assignedPartitions,
             @Nonnull BooleanSupplier migrationWatcher
@@ -178,6 +178,23 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         checkSerializable(Objects.requireNonNull(projection), "projection");
 
         return new RemoteProcessorMetaSupplier<>(new RemoteMapQueryReader(mapName, predicate, projection), clientConfig);
+    }
+
+    private static <T> T translateFutureValue(Future future, Function<Object, T> transformation) {
+        try {
+            return transformation.apply(future.get());
+        } catch (ExecutionException e) {
+            Throwable ex = peel(e);
+            if (ex instanceof HazelcastSerializationException) {
+                throw new JetException("Serialization error when reading the map: are the key, value, " +
+                        "predicate and projection classes visible to IMDG? You need to use User Code " +
+                        "Deployment, adding the classes to JetConfig isn't enough", e);
+            } else {
+                throw rethrow(ex);
+            }
+        } catch (InterruptedException e) {
+            throw rethrow(e);
+        }
     }
 
     @Override
@@ -330,7 +347,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
             if (partitions.isEmpty()) {
                 return Processors.noopP().get();
             } else {
-                return new ReadMapP<>(
+                return new ReadParallelPartitionsP<>(
                         reader,
                         partitions,
                         migrationWatcher
@@ -465,7 +482,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
             if (partitions.isEmpty()) {
                 return Processors.noopP().get();
             } else {
-                return new ReadMapP<>(
+                return new ReadParallelPartitionsP<>(
                         reader,
                         partitions,
                         migrationWatcher.createWatcher()
@@ -474,27 +491,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         }
     }
 
-    protected interface Reader<R, E> extends Serializable {
-
-        void init(@Nonnull HazelcastInstance hzInstance);
-
-        @Nullable
-        Future startBatch(int partitionId, int offset);
-
-        @Nonnull
-        R getBatchResults(Future future);
-
-        @Nonnull
-        List<E> getBatch(R result);
-
-        int getNextTableIndexToReadFrom(R result);
-
-        @Nullable
-        Object getFromBatch(List<E> batch, int index);
-
-    }
-
-    private abstract static class AbstractReader<R, E> implements Reader<R, E> {
+    private abstract static class Reader<R, E> implements Serializable {
 
         protected transient InternalSerializationService serializationService;
 
@@ -502,7 +499,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         final Predicate predicate;
         final Projection projection;
 
-        AbstractReader(
+        Reader(
                 @Nonnull String sourceName,
                 @Nullable Predicate predicate,
                 @Nullable Projection projection
@@ -511,9 +508,25 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
             this.predicate = predicate;
             this.projection = projection;
         }
+
+        abstract void init(@Nonnull HazelcastInstance hzInstance);
+
+        @Nullable
+        abstract Future startBatch(int partitionId, int offset);
+
+        @Nonnull
+        abstract R getBatchResults(Future future);
+
+        @Nonnull
+        abstract List<E> getBatch(R result);
+
+        abstract int getNextTableIndexToReadFrom(R result);
+
+        @Nullable
+        abstract Object getFromBatch(List<E> batch, int index);
     }
 
-    private static class LocalCacheReader extends AbstractReader<CacheEntryIterationResult, Entry<Data, Data>> {
+    private static class LocalCacheReader extends Reader<CacheEntryIterationResult, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
 
@@ -527,7 +540,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         public void init(@Nonnull HazelcastInstance hzInstance) {
             this.cacheProxy = (CacheProxy) hzInstance.getCacheManager().getCache(sourceName);
             this.serializationService = (InternalSerializationService) cacheProxy.getNodeEngine()
-                                                                                .getSerializationService();
+                    .getSerializationService();
         }
 
         @Nullable
@@ -569,8 +582,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         }
     }
 
-    private static class RemoteCacheReader extends AbstractReader<CacheIterateEntriesCodec.ResponseParameters,
-                                                                                                Entry<Data, Data>> {
+    private static class RemoteCacheReader extends Reader<CacheIterateEntriesCodec.ResponseParameters, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
 
@@ -592,7 +604,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
             String name = clientCacheProxy.getPrefixedName();
             ClientMessage request = CacheIterateEntriesCodec.encodeRequest(name, partitionId, offset, MAX_FETCH_SIZE);
             HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) clientCacheProxy.getContext()
-                                                                                            .getHazelcastInstance();
+                    .getHazelcastInstance();
             ClientInvocation clientInvocation = new ClientInvocation(client, request, name, partitionId);
             return clientInvocation.invoke();
         }
@@ -622,24 +634,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         }
     }
 
-    private static <T> T translateFutureValue(Future future, Function<Object, T> transformation) {
-        try {
-            return transformation.apply(future.get());
-        } catch (ExecutionException e) {
-            Throwable ex = peel(e);
-            if (ex instanceof HazelcastSerializationException) {
-                throw new JetException("Serialization error when reading the map: are the key, value, " +
-                        "predicate and projection classes visible to IMDG? You need to use User Code " +
-                        "Deployment, adding the classes to JetConfig isn't enough", e);
-            } else {
-                throw rethrow(ex);
-            }
-        } catch (InterruptedException e) {
-            throw rethrow(e);
-        }
-    }
-
-    private static class LocalMapReader extends AbstractReader<MapEntriesWithCursor, Entry<Data, Data>> {
+    private static class LocalMapReader extends Reader<MapEntriesWithCursor, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
 
@@ -694,7 +689,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         }
     }
 
-    private static class LocalMapQueryReader extends AbstractReader<ResultSegment, QueryResultRow> {
+    private static class LocalMapQueryReader extends Reader<ResultSegment, QueryResultRow> {
 
         static final long serialVersionUID = 1L;
 
@@ -763,8 +758,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         }
     }
 
-    private static class RemoteMapReader extends AbstractReader<MapFetchEntriesCodec.ResponseParameters,
-                                                                                            Entry<Data, Data>> {
+    private static class RemoteMapReader extends Reader<MapFetchEntriesCodec.ResponseParameters, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
 
@@ -821,7 +815,7 @@ public final class ReadMapP<R, E> extends AbstractProcessor {
         }
     }
 
-    private static class RemoteMapQueryReader extends AbstractReader<MapFetchWithQueryCodec.ResponseParameters, Data> {
+    private static class RemoteMapQueryReader extends Reader<MapFetchWithQueryCodec.ResponseParameters, Data> {
 
         static final long serialVersionUID = 1L;
 

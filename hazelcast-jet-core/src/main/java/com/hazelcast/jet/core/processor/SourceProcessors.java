@@ -35,7 +35,7 @@ import com.hazelcast.jet.impl.connector.ConvenientSourceP.SourceBufferConsumerSi
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.ReadIListP;
 import com.hazelcast.jet.impl.connector.ReadJdbcP;
-import com.hazelcast.jet.impl.connector.ReadMapP;
+import com.hazelcast.jet.impl.connector.ReadParallelPartitionsP;
 import com.hazelcast.jet.impl.connector.StreamEventJournalP;
 import com.hazelcast.jet.impl.connector.StreamFilesP;
 import com.hazelcast.jet.impl.connector.StreamJmsP;
@@ -89,7 +89,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readMapP(@Nonnull String mapName) {
-        return ReadMapP.readLocalMapSupplier(mapName);
+        return ReadParallelPartitionsP.readLocalMapSupplier(mapName);
     }
 
     /**
@@ -102,7 +102,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadMapP.readLocalMapSupplier(mapName, predicate, projection);
+        return ReadParallelPartitionsP.readLocalMapSupplier(mapName, predicate, projection);
     }
 
     /**
@@ -115,7 +115,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadMapP.readLocalMapSupplier(mapName, predicate, toProjection(projection));
+        return ReadParallelPartitionsP.readLocalMapSupplier(mapName, predicate, toProjection(projection));
     }
 
 
@@ -153,7 +153,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
-        return ReadMapP.readRemoteMapSupplier(mapName, clientConfig);
+        return ReadParallelPartitionsP.readRemoteMapSupplier(mapName, clientConfig);
     }
 
     /**
@@ -167,7 +167,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
-        return ReadMapP.readRemoteMapSupplier(mapName, clientConfig, predicate, projection);
+        return ReadParallelPartitionsP.readRemoteMapSupplier(mapName, clientConfig, predicate, projection);
     }
 
     /**
@@ -181,7 +181,7 @@ public final class SourceProcessors {
             @Nonnull Predicate<? super K, ? super V> predicate,
             @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projectionFn
     ) {
-        return ReadMapP.readRemoteMapSupplier(mapName, clientConfig, predicate, toProjection(projectionFn));
+        return ReadParallelPartitionsP.readRemoteMapSupplier(mapName, clientConfig, predicate, toProjection(projectionFn));
     }
 
     /**
@@ -223,7 +223,7 @@ public final class SourceProcessors {
      */
     @Nonnull
     public static ProcessorMetaSupplier readCacheP(@Nonnull String cacheName) {
-        return ReadMapP.readLocalCacheSupplier(cacheName);
+        return ReadParallelPartitionsP.readLocalCacheSupplier(cacheName);
     }
 
     /**
@@ -264,7 +264,7 @@ public final class SourceProcessors {
     public static ProcessorMetaSupplier readRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig
     ) {
-        return ReadMapP.readRemoteCacheSupplier(cacheName, clientConfig);
+        return ReadParallelPartitionsP.readRemoteCacheSupplier(cacheName, clientConfig);
     }
 
     /**
