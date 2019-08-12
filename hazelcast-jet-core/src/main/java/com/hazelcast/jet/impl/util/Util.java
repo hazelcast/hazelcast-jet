@@ -349,6 +349,18 @@ public final class Util {
         return processorToPartitions;
     }
 
+    public static int[] roundRobinPart(int objectCount, int count, int index) {
+        if (objectCount < 0 || index < 0 || count < 1 || index >= count) {
+            throw new IllegalArgumentException("objectCount=" + objectCount + ", count=" + count + ", index=" + index);
+        }
+
+        int[] res = new int[objectCount / count + (objectCount % count > index ? 1 : 0)];
+        for (int i = 0, j = index; j < objectCount; i++, j += count) {
+            res[i] = j;
+        }
+        return res;
+    }
+
     private static class NullOutputStream extends OutputStream {
         @Override
         public void write(int b) {

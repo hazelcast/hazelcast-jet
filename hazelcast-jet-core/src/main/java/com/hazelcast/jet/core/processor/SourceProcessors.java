@@ -152,7 +152,7 @@ public final class SourceProcessors {
      * {@link Sources#remoteMap(String, ClientConfig)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier readRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
+    public static ProcessorSupplier readRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
         return ReadMapOrCacheP.readRemoteMapSupplier(mapName, clientConfig);
     }
 
@@ -161,7 +161,7 @@ public final class SourceProcessors {
      * {@link Sources#remoteMap(String, ClientConfig, Predicate, Projection)}.
      */
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier readRemoteMapP(
+    public static <T, K, V> ProcessorSupplier readRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<? super K, ? super V> predicate,
@@ -175,7 +175,7 @@ public final class SourceProcessors {
      * {@link Sources#remoteMap(String, ClientConfig, Predicate, FunctionEx)}.
      */
     @Nonnull
-    public static <T, K, V> ProcessorMetaSupplier readRemoteMapP(
+    public static <T, K, V> ProcessorSupplier readRemoteMapP(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
             @Nonnull Predicate<? super K, ? super V> predicate,
@@ -261,7 +261,7 @@ public final class SourceProcessors {
      * {@link Sources#remoteCache(String, ClientConfig)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier readRemoteCacheP(
+    public static ProcessorSupplier readRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig
     ) {
         return ReadMapOrCacheP.readRemoteCacheSupplier(cacheName, clientConfig);

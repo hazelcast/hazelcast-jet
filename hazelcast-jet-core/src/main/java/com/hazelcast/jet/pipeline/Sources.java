@@ -563,7 +563,8 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig
     ) {
-        return batchFromProcessor("remoteMapSource(" + mapName + ')', readRemoteMapP(mapName, clientConfig));
+        return batchFromProcessor("remoteMapSource(" + mapName + ')',
+                ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig)));
     }
 
     /**
@@ -626,7 +627,7 @@ public final class Sources {
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                readRemoteMapP(mapName, clientConfig, predicate, projection));
+                ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig, predicate, projection)));
     }
 
     /**
@@ -641,7 +642,7 @@ public final class Sources {
             @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                readRemoteMapP(mapName, clientConfig, predicate, projection));
+                ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig, predicate, projection)));
     }
 
     /**
@@ -843,9 +844,8 @@ public final class Sources {
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig
     ) {
-        return batchFromProcessor(
-                "remoteCacheSource(" + cacheName + ')', readRemoteCacheP(cacheName, clientConfig)
-        );
+        return batchFromProcessor("remoteCacheSource(" + cacheName + ')',
+                ProcessorMetaSupplier.of(readRemoteCacheP(cacheName, clientConfig)));
     }
 
     /**
