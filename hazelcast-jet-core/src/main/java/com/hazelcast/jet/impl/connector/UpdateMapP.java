@@ -57,7 +57,8 @@ import static com.hazelcast.util.MapUtil.createHashMap;
 
 public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
-    private static final int PENDING_ITEM_COUNT_LIMIT = 16_384;
+    private static final int PENDING_ITEM_COUNT_LIMIT = 1024;
+
     private final String mapName;
     private final FunctionEx<? super T, ? extends K> toKeyFn;
     private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
@@ -70,7 +71,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     // one map per partition to store the temporary values
     private Map<Data, Object>[] tmpMaps;
-    private int pendingItemCount = 0;
+    private int pendingItemCount;
 
     private UpdateMapP(HazelcastInstance instance, boolean isLocal,
                        String mapName,

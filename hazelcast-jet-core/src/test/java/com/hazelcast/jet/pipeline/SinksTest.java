@@ -36,6 +36,8 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.core.test.TestSupport;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -51,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
@@ -497,7 +500,7 @@ public class SinksTest extends PipelineTestSupport {
     }
 
     @Test
-    public void mapWithUpdating2_byRef() {
+    public void mapWithUpdating_withKeyFn_byRef() {
         // Given
         List<Integer> input = sequence(itemCount);
         putToBatchSrcMap(input);
@@ -730,6 +733,21 @@ public class SinksTest extends PipelineTestSupport {
         job.join();
     }
 
+    @Test
+    public void mapWithEntryProcessor_testBackpressure() {
+        String targetMap = randomMapName();
+
+        List<Integer> input = sequence(5_001);
+        p.drawFrom(TestSources.items(input))
+         .drainTo(Sinks.mapWithEntryProcessor(targetMap, FunctionEx.identity(), SleepingEntryProcessor::new));
+        execute();
+        Map<Integer, Integer> actual = new HashMap<>(jet().getMap(targetMap));
+        Map<Integer, Integer> expected =
+            input.stream()
+                 .collect(toMap(Function.identity(), Function.identity(), Integer::sum));
+        assertEquals(expected, actual);
+    }
+
     @Test(expected = IllegalStateException.class)
     public void when_usedTwice_then_throwException() {
         // Given
@@ -856,6 +874,21 @@ public class SinksTest extends PipelineTestSupport {
         @Override
         public int hashCode() {
             return value;
+        }
+    }
+
+    private static class SleepingEntryProcessor extends AbstractEntryProcessor<Integer, Object> {
+        private final int v;
+
+        private SleepingEntryProcessor(int v) {
+            this.v = v;
+        }
+
+        @Override
+        public Object process(Entry<Integer, Object> entry) {
+            sleepMillis(10);
+            entry.setValue(v);
+            return null;
         }
     }
 }
