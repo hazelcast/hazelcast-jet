@@ -32,7 +32,6 @@ import com.hazelcast.jet.function.BinaryOperatorEx;
 import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.impl.connector.EntryProcessorWriterP.EntryProcessorWriterSupplier;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
@@ -62,7 +61,7 @@ public final class HazelcastWriters {
     @SuppressWarnings("unchecked")
     public static ProcessorMetaSupplier writeMapSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
-        return ProcessorMetaSupplier.of(2, new HazelcastWriterSupplier<>(
+        return ProcessorMetaSupplier.of(2, new WriterSupplier<>(
             asXmlString(clientConfig),
             ArrayMap::new,
             ArrayMap::add,
@@ -130,7 +129,7 @@ public final class HazelcastWriters {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
 
-        return ProcessorMetaSupplier.of(new EntryProcessorWriterSupplier<>(
+        return ProcessorMetaSupplier.of(new EntryProcessorWriterP.Supplier(
             name, asXmlString(clientConfig), toKeyFn, toEntryProcessorFn
         ));
     }
@@ -138,7 +137,7 @@ public final class HazelcastWriters {
     @Nonnull
     public static ProcessorMetaSupplier writeCacheSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
-        return ProcessorMetaSupplier.of(2, new HazelcastWriterSupplier<>(
+        return ProcessorMetaSupplier.of(2, new WriterSupplier<>(
             asXmlString(clientConfig),
             ArrayMap::new,
             ArrayMap::add,
@@ -150,7 +149,7 @@ public final class HazelcastWriters {
     @Nonnull
     public static ProcessorMetaSupplier writeListSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
-        return preferLocalParallelismOne(new HazelcastWriterSupplier<>(
+        return preferLocalParallelismOne(new WriterSupplier<>(
             asXmlString(clientConfig),
             ArrayList::new,
             ArrayList::add,
@@ -236,7 +235,7 @@ public final class HazelcastWriters {
         }
     }
 
-    private static class HazelcastWriterSupplier<B, T> extends AbstractHazelcastWriterSupplier {
+    private static class WriterSupplier<B, T> extends AbstractHazelcastConnectorSupplier {
 
         static final long serialVersionUID = 1L;
 
@@ -245,7 +244,7 @@ public final class HazelcastWriters {
         private final BiConsumerEx<B, T> addToBufferFn;
         private final ConsumerEx<B> disposeBufferFn;
 
-        HazelcastWriterSupplier(
+        WriterSupplier(
             String clientXml,
             SupplierEx<B> newBufferFn,
             BiConsumerEx<B, T> addToBufferFn,

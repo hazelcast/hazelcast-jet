@@ -60,7 +60,7 @@ public final class EntryProcessorWriterP<T, K, V> extends AsyncHazelcastWriterP 
         }
     }
 
-    static final class EntryProcessorWriterSupplier<T, K, V> extends AbstractHazelcastWriterSupplier {
+    static final class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
 
         static final long serialVersionUID = 1L;
 
@@ -68,7 +68,7 @@ public final class EntryProcessorWriterP<T, K, V> extends AsyncHazelcastWriterP 
         private final FunctionEx<? super T, ? extends K> toKeyFn;
         private final FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn;
 
-        EntryProcessorWriterSupplier(
+        Supplier(
             @Nonnull String name,
             @Nullable String clientXml,
             @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,

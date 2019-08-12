@@ -29,12 +29,13 @@ import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.jet.impl.util.Util.asClientConfig;
 import static java.util.stream.Collectors.toList;
 
-public abstract class AbstractHazelcastWriterSupplier implements ProcessorSupplier {
-    private String clientXml;
+public abstract class AbstractHazelcastConnectorSupplier implements ProcessorSupplier {
+
+    private final String clientXml;
 
     private transient HazelcastInstance instance;
 
-    AbstractHazelcastWriterSupplier(@Nullable String clientXml) {
+    AbstractHazelcastConnectorSupplier(@Nullable String clientXml) {
         this.clientXml = clientXml;
     }
 
@@ -63,7 +64,7 @@ public abstract class AbstractHazelcastWriterSupplier implements ProcessorSuppli
 
     @Override
     public void close(@Nullable Throwable error) {
-        if (clientXml != null && instance != null) {
+        if (!isLocal() && instance != null) {
             instance.shutdown();
         }
     }

@@ -162,7 +162,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         }
     }
 
-    static class Supplier<T, K, V> extends AbstractHazelcastWriterSupplier {
+    static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
 
         static final long serialVersionUID = 1L;
 
