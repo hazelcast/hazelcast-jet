@@ -330,9 +330,10 @@ public final class Util {
     }
 
     /**
-     * Distributes the owned partitions to processors in a round-robin fashion
-     * If owned partition size is smaller than processor count
-     * an empty list is put for the rest of the processors
+     * Distributes the owned partitions to processors in a round-robin fashion.
+     * If owned partition size is smaller than processor count, an empty list
+     * is put for the rest of the processors.
+     *
      * @param count count of processors
      * @param ownedPartitions list of owned partitions
      * @return a map of which has partition index as key and list of partition ids as value

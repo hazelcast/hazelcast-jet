@@ -26,6 +26,7 @@ import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.CacheIterateEntriesCodec;
 import com.hazelcast.client.impl.protocol.codec.MapFetchEntriesCodec;
+import com.hazelcast.client.impl.protocol.codec.MapFetchEntriesCodec.ResponseParameters;
 import com.hazelcast.client.impl.protocol.codec.MapFetchWithQueryCodec;
 import com.hazelcast.client.proxy.ClientMapProxy;
 import com.hazelcast.client.spi.ClientPartitionService;
@@ -97,10 +98,14 @@ import static java.util.stream.Collectors.toList;
  * The number of Hazelcast partitions should be configured to at least
  * {@code localParallelism * clusterSize}, otherwise some processors will
  * have no partitions assigned to them.
+ *
+ * @param <R> reader's result type
+ * @param <E> reader's result element type
  */
-public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
+public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
 
     private static final int MAX_FETCH_SIZE = 16384;
+
     private final Reader<R, E> reader;
     private final int[] partitionIds;
     private final BooleanSupplier migrationWatcher;
@@ -108,13 +113,13 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
     private Future[] readFutures;
 
-    // currently processed batch, it's partitionId and iterating position
+    // currently processed batch, its partitionId and iterating position
     private List<E> batch = Collections.emptyList();
     private int currentPartitionIndex = -1;
     private int resultSetPosition;
     private int completedPartitions;
 
-    private ReadParallelPartitionsP(
+    private ReadMapOrCacheP(
             @Nonnull Reader<R, E> reader,
             @Nonnull List<Integer> assignedPartitions,
             @Nonnull BooleanSupplier migrationWatcher
@@ -213,7 +218,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
     private void initialRead() {
         readFutures = new Future[partitionIds.length];
         for (int i = 0; i < readFutures.length; i++) {
-            readFutures[i] = reader.startBatch(partitionIds[i], readOffsets[i]);
+            readFutures[i] = reader.readBatch(partitionIds[i], Integer.MAX_VALUE);
         }
     }
 
@@ -240,13 +245,13 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
     private boolean tryGetNextResultSet() {
         while (batch.size() == resultSetPosition && ++currentPartitionIndex < partitionIds.length) {
-
-            if (readOffsets[currentPartitionIndex] < 0) { //partition is dompleted
+            if (readOffsets[currentPartitionIndex] < 0) {  // partition is completed
+                assert readFutures[currentPartitionIndex] == null : "future not null";
                 continue;
             }
 
             Future future = readFutures[currentPartitionIndex];
-            if (!future.isDone()) { //data for partition not yet available
+            if (!future.isDone()) {  // data for partition not yet available
                 continue;
             }
 
@@ -265,7 +270,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
             readOffsets[currentPartitionIndex] = nextTableIndexToReadFrom;
             // make another read on the same partition
             readFutures[currentPartitionIndex] =
-                    reader.startBatch(partitionIds[currentPartitionIndex], readOffsets[currentPartitionIndex]);
+                    reader.readBatch(partitionIds[currentPartitionIndex], readOffsets[currentPartitionIndex]);
         }
 
         if (currentPartitionIndex == partitionIds.length) {
@@ -334,15 +339,15 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         public List<Processor> get(int count) {
             return processorToPartitions(count, ownedPartitions)
                     .values().stream()
-                    .map(this::processorForPartitions)
+                    .map(this::createProcessor)
                     .collect(toList());
         }
 
-        private Processor processorForPartitions(List<Integer> partitions) {
+        private Processor createProcessor(List<Integer> partitions) {
             if (partitions.isEmpty()) {
                 return Processors.noopP().get();
             } else {
-                return new ReadParallelPartitionsP<>(
+                return new ReadMapOrCacheP<>(
                         reader,
                         partitions,
                         migrationWatcher
@@ -394,16 +399,11 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Override
         public void init(@Nonnull ProcessorMetaSupplier.Context context) {
-            remotePartitionCount = getPartitionCount();
-
-        }
-
-        private int getPartitionCount() {
             HazelcastInstance client = newHazelcastClient(asClientConfig(clientXml));
             try {
                 HazelcastClientProxy clientProxy = (HazelcastClientProxy) client;
                 ClientPartitionService partitionService = clientProxy.client.getClientPartitionService();
-                return partitionService.getPartitionCount();
+                remotePartitionCount = partitionService.getPartitionCount();
             } finally {
                 client.shutdown();
             }
@@ -472,7 +472,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
             if (partitions.isEmpty()) {
                 return Processors.noopP().get();
             } else {
-                return new ReadParallelPartitionsP<>(
+                return new ReadMapOrCacheP<>(
                         reader,
                         partitions,
                         migrationWatcher.createWatcher()
@@ -481,6 +481,10 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         }
     }
 
+    /**
+     * @param <R> result type
+     * @param <E> result element type
+     */
     private abstract static class Reader<R, E> implements Serializable {
 
         protected transient InternalSerializationService serializationService;
@@ -502,7 +506,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         abstract void init(@Nonnull HazelcastInstance hzInstance);
 
         @Nullable
-        abstract Future startBatch(int partitionId, int offset);
+        abstract Future readBatch(int partitionId, int offset);
 
         @Nonnull
         abstract R getBatchResults(Future future);
@@ -535,7 +539,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Nullable
         @Override
-        public Future startBatch(int partitionId, int offset) {
+        public Future readBatch(int partitionId, int offset) {
             if (offset < 0) {
                 return null;
             }
@@ -575,6 +579,8 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
     private static class RemoteCacheReader extends Reader<CacheIterateEntriesCodec.ResponseParameters, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
+        private static final Function<Object, CacheIterateEntriesCodec.ResponseParameters> TRANSLATE_RESULT_FN =
+                o -> CacheIterateEntriesCodec.decodeResponse((ClientMessage) o);
 
         private transient ClientCacheProxy clientCacheProxy;
 
@@ -590,7 +596,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Nullable
         @Override
-        public Future startBatch(int partitionId, int offset) {
+        public Future readBatch(int partitionId, int offset) {
             String name = clientCacheProxy.getPrefixedName();
             ClientMessage request = CacheIterateEntriesCodec.encodeRequest(name, partitionId, offset, MAX_FETCH_SIZE);
             HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) clientCacheProxy.getContext()
@@ -602,7 +608,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         @Nonnull
         @Override
         public CacheIterateEntriesCodec.ResponseParameters getBatchResults(Future future) {
-            return translateFutureValue(future, o -> CacheIterateEntriesCodec.decodeResponse((ClientMessage) o));
+            return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
         @Nonnull
@@ -627,6 +633,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
     private static class LocalMapReader extends Reader<MapEntriesWithCursor, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
+        private static final Function<Object, MapEntriesWithCursor> TRANSLATE_RESULT_FN = o -> (MapEntriesWithCursor) o;
 
         private transient MapProxyImpl mapProxyImpl;
 
@@ -642,7 +649,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Nullable
         @Override
-        public Future startBatch(int partitionId, int offset) {
+        public Future readBatch(int partitionId, int offset) {
             if (offset < 0) {
                 return null;
             }
@@ -657,7 +664,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         @Nonnull
         @Override
         public MapEntriesWithCursor getBatchResults(Future future) {
-            return translateFutureValue(future, o -> (MapEntriesWithCursor) o);
+            return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
         @Nonnull
@@ -682,6 +689,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
     private static class LocalMapQueryReader extends Reader<ResultSegment, QueryResultRow> {
 
         static final long serialVersionUID = 1L;
+        private static final Function<Object, ResultSegment> TRANSLATE_RESULT_FN = o -> (ResultSegment) o;
 
         private transient MapProxyImpl mapProxyImpl;
 
@@ -701,7 +709,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Nullable
         @Override
-        public Future startBatch(int partitionId, int offset) {
+        public Future readBatch(int partitionId, int offset) {
             if (offset < 0) {
                 return null;
             }
@@ -726,7 +734,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         @Nonnull
         @Override
         public ResultSegment getBatchResults(Future future) {
-            return translateFutureValue(future, o -> (ResultSegment) o);
+            return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
         @Nonnull
@@ -751,6 +759,8 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
     private static class RemoteMapReader extends Reader<MapFetchEntriesCodec.ResponseParameters, Entry<Data, Data>> {
 
         static final long serialVersionUID = 1L;
+        private static final Function<Object, ResponseParameters> TRANSLATE_RESULT_FN =
+                o -> MapFetchEntriesCodec.decodeResponse((ClientMessage) o);
 
         private transient ClientMapProxy clientMapProxy;
 
@@ -766,7 +776,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Override
         @Nullable
-        public Future startBatch(int partitionId, int offset) {
+        public Future readBatch(int partitionId, int offset) {
             if (offset < 0) {
                 return null;
             }
@@ -783,7 +793,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         @Nonnull
         @Override
         public MapFetchEntriesCodec.ResponseParameters getBatchResults(Future future) {
-            return translateFutureValue(future, o -> MapFetchEntriesCodec.decodeResponse((ClientMessage) o));
+            return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
         @Nonnull
@@ -808,6 +818,8 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
     private static class RemoteMapQueryReader extends Reader<MapFetchWithQueryCodec.ResponseParameters, Data> {
 
         static final long serialVersionUID = 1L;
+        private static final Function<Object, MapFetchWithQueryCodec.ResponseParameters> TRANSLATE_RESULT_FN =
+                o -> MapFetchWithQueryCodec.decodeResponse((ClientMessage) o);
 
         private transient ClientMapProxy clientMapProxy;
 
@@ -827,7 +839,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
 
         @Override
         @Nullable
-        public Future startBatch(int partitionId, int offset) {
+        public Future readBatch(int partitionId, int offset) {
             if (offset < 0) {
                 return null;
             }
@@ -846,7 +858,7 @@ public final class ReadParallelPartitionsP<R, E> extends AbstractProcessor {
         @Nonnull
         @Override
         public MapFetchWithQueryCodec.ResponseParameters getBatchResults(Future future) {
-            return translateFutureValue(future, o -> MapFetchWithQueryCodec.decodeResponse((ClientMessage) o));
+            return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
         @Nonnull

@@ -37,7 +37,7 @@ import static com.hazelcast.jet.Util.entry;
 import static java.util.Collections.emptyList;
 
 @RunWith(HazelcastParallelClassRunner.class)
-public class ReadParallelPartitionsPTest extends JetTestSupport {
+public class ReadMapOrCachePTest extends JetTestSupport {
 
     private JetInstance jet;
 
