@@ -597,6 +597,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
         @Nullable
         @Override
         public Future readBatch(int partitionId, int offset) {
+            if (offset < 0) {
+                return null;
+            }
             String name = clientCacheProxy.getPrefixedName();
             ClientMessage request = CacheIterateEntriesCodec.encodeRequest(name, partitionId, offset, MAX_FETCH_SIZE);
             HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) clientCacheProxy.getContext()
