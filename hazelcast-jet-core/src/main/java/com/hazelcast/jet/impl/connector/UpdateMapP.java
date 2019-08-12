@@ -189,8 +189,8 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     @SuppressFBWarnings(value = {"SE_BAD_FIELD", "SE_NO_SERIALVERSIONID"},
         justification = "the class is never java-serialized")
     public static class ApplyFnEntryProcessor<K, V, T>
-        implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable,
-        SerializationServiceAware {
+            implements EntryProcessor<K, V>, EntryBackupProcessor<K, V>, IdentifiedDataSerializable,
+            SerializationServiceAware {
         private Map<Data, Object> keysToUpdate;
         private BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
         private SerializationService serializationService;

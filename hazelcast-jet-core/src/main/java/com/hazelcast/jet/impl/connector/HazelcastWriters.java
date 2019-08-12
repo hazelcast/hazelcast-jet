@@ -60,7 +60,8 @@ public final class HazelcastWriters {
 
     @Nonnull
     public static <K, V> ProcessorMetaSupplier writeMapSupplier(
-        @Nonnull String name, @Nullable ClientConfig clientConfig
+        @Nonnull String name,
+        @Nullable ClientConfig clientConfig
     ) {
         boolean isLocal = clientConfig == null;
         return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
@@ -181,7 +182,8 @@ public final class HazelcastWriters {
     private static class CacheFlush {
 
         static <K, V> FunctionEx<HazelcastInstance, ConsumerEx<ArrayMap<K, V>>> flushToCache(
-            String name, boolean isLocal
+            String name,
+            boolean isLocal
         ) {
             return instance -> {
                 ICache<K, V> cache = instance.getCacheManager().getCache(name);
@@ -263,6 +265,4 @@ public final class HazelcastWriters {
             return new WriteBufferedP<>(ctx -> newBufferFn.get(), addToBufferFn, flushBufferFn, disposeBufferFn);
         }
     }
-
-
 }
