@@ -57,6 +57,7 @@ import static com.hazelcast.util.MapUtil.createHashMap;
 
 public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
+    private static final int PENDING_ITEM_COUNT_LIMIT = 16_384;
     private final String mapName;
     private final FunctionEx<? super T, ? extends K> toKeyFn;
     private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
@@ -69,6 +70,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     // one map per partition to store the temporary values
     private Map<Data, Object>[] tmpMaps;
+    private int pendingItemCount = 0;
 
     private UpdateMapP(HazelcastInstance instance, boolean isLocal,
                        String mapName,
@@ -105,7 +107,10 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     @Override
     protected void processInternal(Inbox inbox) {
-        inbox.drain(addToBuffer);
+        if (pendingItemCount < PENDING_ITEM_COUNT_LIMIT) {
+            inbox.drain(addToBuffer);
+            pendingItemCount += inbox.size();
+        }
         submit();
     }
 
@@ -118,9 +123,10 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
                 return;
             }
 
-            ApplyFnEntryProcessor<K, V, T> entryProcessor =
-                new ApplyFnEntryProcessor<>(tmpMaps[partitionId], updateFn);
-            setCallback(submitToKeys(map, tmpMaps[partitionId].keySet(), entryProcessor));
+            Map<Data, Object> buffer = tmpMaps[partitionId];
+            ApplyFnEntryProcessor<K, V, T> entryProcessor = new ApplyFnEntryProcessor<>(buffer, updateFn);
+            setCallback(submitToKeys(map, buffer.keySet(), entryProcessor));
+            pendingItemCount -= buffer.size();
             tmpMaps[partitionId] = new HashMap<>();
         }
     }
