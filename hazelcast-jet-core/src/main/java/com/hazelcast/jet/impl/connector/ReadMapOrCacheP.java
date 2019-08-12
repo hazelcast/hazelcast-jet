@@ -42,10 +42,12 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.ToIntFunctionEx;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.MigrationWatcher;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.impl.LazyMapEntry;
+import com.hazelcast.map.impl.iterator.AbstractCursor;
 import com.hazelcast.map.impl.iterator.MapEntriesWithCursor;
 import com.hazelcast.map.impl.operation.MapOperation;
 import com.hazelcast.map.impl.operation.MapOperationProvider;
@@ -346,8 +348,15 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         protected final String objectName;
         protected InternalSerializationService serializationService;
 
-        Reader(@Nonnull String objectName) {
+        private final ToIntFunctionEx<B> toNextIndexFn;
+        private FunctionEx<B, List<R>> toRecordSetFn;
+
+        Reader(@Nonnull String objectName,
+               @Nonnull ToIntFunctionEx<B> toNextIndexFn,
+               @Nonnull FunctionEx<B, List<R>> toRecordSetFn) {
             this.objectName = objectName;
+            this.toNextIndexFn = toNextIndexFn;
+            this.toRecordSetFn = toRecordSetFn;
         }
 
         @Nonnull
@@ -356,10 +365,14 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         @Nonnull
         abstract B toBatchResult(@Nonnull F future) throws ExecutionException, InterruptedException;
 
-        abstract int toNextIndex(@Nonnull B result);
+        final int toNextIndex(@Nonnull B result) {
+            return toNextIndexFn.applyAsInt(result);
+        }
 
         @Nonnull
-        abstract List<R> toRecordSet(@Nonnull B result);
+        final List<R> toRecordSet(@Nonnull B result) {
+            return toRecordSetFn.apply(result);
+        }
 
         @Nullable
         abstract Object toObject(@Nonnull R record);
@@ -375,7 +388,9 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         private final CacheProxy cacheProxy;
 
         LocalCacheReader(HazelcastInstance hzInstance, @Nonnull String cacheName) {
-            super(cacheName);
+            super(cacheName,
+                CacheEntryIterationResult::getTableIndex,
+                CacheEntryIterationResult::getEntries);
 
             this.cacheProxy = (CacheProxy) hzInstance.getCacheManager().getCache(cacheName);
             this.serializationService = (InternalSerializationService)
@@ -399,16 +414,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
             return future.get();
         }
 
-        @Nonnull @Override
-        public List<Entry<Data, Data>> toRecordSet(@Nonnull CacheEntryIterationResult result) {
-            return result.getEntries();
-        }
-
-        @Override
-        public int toNextIndex(@Nonnull CacheEntryIterationResult result) {
-            return result.getTableIndex();
-        }
-
         @Nullable @Override
         public Object toObject(@Nonnull Entry<Data, Data> dataEntry) {
             return new LazyMapEntry(dataEntry.getKey(), dataEntry.getValue(), serializationService);
@@ -424,7 +429,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         private final ClientCacheProxy clientCacheProxy;
 
         RemoteCacheReader(HazelcastInstance hzInstance, @Nonnull String cacheName) {
-            super(cacheName);
+            super(cacheName,
+                r -> r.tableIndex,
+                r -> r.entries
+            );
             this.clientCacheProxy = (ClientCacheProxy) hzInstance.getCacheManager().getCache(cacheName);
             this.serializationService = clientCacheProxy.getContext().getSerializationService();
         }
@@ -446,16 +454,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
             return CacheIterateEntriesCodec.decodeResponse(future.get());
         }
 
-        @Nonnull @Override
-        public List<Entry<Data, Data>> toRecordSet(@Nonnull CacheIterateEntriesCodec.ResponseParameters result) {
-            return result.entries;
-        }
-
-        @Override
-        public int toNextIndex(@Nonnull CacheIterateEntriesCodec.ResponseParameters result) {
-            return result.tableIndex;
-        }
-
         @Nullable @Override
         public Object toObject(@Nonnull Entry<Data, Data> dataEntry) {
             return new LazyMapEntry(dataEntry.getKey(), dataEntry.getValue(), serializationService);
@@ -471,7 +469,9 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         private final MapProxyImpl mapProxyImpl;
 
         LocalMapReader(@Nonnull HazelcastInstance hzInstance, @Nonnull String mapName) {
-            super(mapName);
+            super(mapName,
+                AbstractCursor::getNextTableIndexToReadFrom,
+                AbstractCursor::getBatch);
             this.mapProxyImpl = (MapProxyImpl) hzInstance.getMap(mapName);
             this.serializationService = ((HazelcastInstanceImpl) hzInstance).getSerializationService();
         }
@@ -482,7 +482,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
             MapOperationProvider operationProvider = mapProxyImpl.getOperationProvider();
             Operation op = operationProvider.createFetchEntriesOperation(objectName, offset, MAX_FETCH_SIZE);
-
             OperationService operationService = mapProxyImpl.getOperationService();
             return operationService.invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
         }
@@ -491,16 +490,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         public MapEntriesWithCursor toBatchResult(@Nonnull InternalCompletableFuture<MapEntriesWithCursor> future)
             throws ExecutionException, InterruptedException {
             return future.get();
-        }
-
-        @Nonnull @Override
-        public List<Entry<Data, Data>> toRecordSet(@Nonnull MapEntriesWithCursor result) {
-            return result.getBatch();
-        }
-
-        @Override
-        public int toNextIndex(@Nonnull MapEntriesWithCursor result) {
-            return result.getNextTableIndexToReadFrom();
         }
 
         @Nullable @Override
@@ -525,10 +514,12 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
                 @Nonnull Predicate predicate,
                 @Nonnull Projection projection
         ) {
-            super(mapName);
+            super(mapName,
+                ResultSegment::getNextTableIndexToReadFrom,
+                r -> ((QueryResult) r.getResult()).getRows()
+            );
             this.predicate = predicate;
             this.projection = projection;
-
             this.mapProxyImpl = (MapProxyImpl) hzInstance.getMap(mapName);
             this.serializationService = ((HazelcastInstanceImpl) hzInstance).getSerializationService();
         }
@@ -560,17 +551,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
             return future.get();
         }
 
-        @Nonnull @Override
-        public List<QueryResultRow> toRecordSet(@Nonnull ResultSegment result) {
-            QueryResult queryResult = (QueryResult) result.getResult();
-            return queryResult.getRows();
-        }
-
-        @Override
-        public int toNextIndex(@Nonnull ResultSegment result) {
-            return result.getNextTableIndexToReadFrom();
-        }
-
         @Nullable @Override
         public Object toObject(@Nonnull QueryResultRow record) {
             return serializationService.toObject(record.getValue());
@@ -586,7 +566,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         private final ClientMapProxy clientMapProxy;
 
         RemoteMapReader(@Nonnull HazelcastInstance hzInstance, @Nonnull String mapName) {
-            super(mapName);
+            super(mapName, r -> r.tableIndex, r -> r.entries);
 
             this.clientMapProxy = (ClientMapProxy) hzInstance.getMap(mapName);
             this.serializationService = clientMapProxy.getContext().getSerializationService();
@@ -611,16 +591,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
             return MapFetchEntriesCodec.decodeResponse(future.get());
         }
 
-        @Nonnull @Override
-        public List<Entry<Data, Data>> toRecordSet(@Nonnull MapFetchEntriesCodec.ResponseParameters result) {
-            return result.entries;
-        }
-
-        @Override
-        public int toNextIndex(@Nonnull MapFetchEntriesCodec.ResponseParameters result) {
-            return result.tableIndex;
-        }
-
         @Nullable @Override
         public Entry<Data, Data> toObject(@Nonnull Entry<Data, Data> entry) {
             return new LazyMapEntry<>(entry.getKey(), entry.getValue(), serializationService);
@@ -643,7 +613,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
                 @Nonnull Predicate predicate,
                 @Nonnull Projection projection
         ) {
-            super(mapName);
+            super(mapName, r -> r.nextTableIndexToReadFrom, r -> r.results);
             this.predicate = predicate;
             this.projection = projection;
             this.clientMapProxy = (ClientMapProxy) hzInstance.getMap(mapName);
@@ -670,16 +640,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         public MapFetchWithQueryCodec.ResponseParameters toBatchResult(@Nonnull ClientInvocationFuture future)
             throws ExecutionException, InterruptedException {
             return MapFetchWithQueryCodec.decodeResponse(future.get());
-        }
-
-        @Nonnull @Override
-        public List<Data> toRecordSet(@Nonnull MapFetchWithQueryCodec.ResponseParameters result) {
-            return result.results;
-        }
-
-        @Override
-        public int toNextIndex(@Nonnull MapFetchWithQueryCodec.ResponseParameters result) {
-            return result.nextTableIndexToReadFrom;
         }
 
         @Nullable @Override
