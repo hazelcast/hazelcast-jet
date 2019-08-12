@@ -269,8 +269,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             resultSetPosition = 0;
             readOffsets[currentPartitionIndex] = nextTableIndexToReadFrom;
             // make another read on the same partition
-            readFutures[currentPartitionIndex] =
-                    reader.readBatch(partitionIds[currentPartitionIndex], readOffsets[currentPartitionIndex]);
+            readFutures[currentPartitionIndex] = readOffsets[currentPartitionIndex] >= 0
+                    ? reader.readBatch(partitionIds[currentPartitionIndex], readOffsets[currentPartitionIndex])
+                    : null;
         }
 
         if (currentPartitionIndex == partitionIds.length) {
@@ -505,7 +506,7 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
 
         abstract void init(@Nonnull HazelcastInstance hzInstance);
 
-        @Nullable
+        @Nonnull
         abstract Future readBatch(int partitionId, int offset);
 
         @Nonnull
@@ -537,12 +538,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
                     .getSerializationService();
         }
 
-        @Nullable
-        @Override
+        @Nonnull @Override
         public Future readBatch(int partitionId, int offset) {
-            if (offset < 0) {
-                return null;
-            }
+            assert offset >= 0 : "offset=" + offset;
 
             Operation op = new CacheEntryIteratorOperation(cacheProxy.getPrefixedName(), offset, MAX_FETCH_SIZE);
             //no access to CacheOperationProvider, have to be explicit
@@ -594,12 +592,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             this.serializationService = clientCacheProxy.getContext().getSerializationService();
         }
 
-        @Nullable
-        @Override
+        @Nonnull @Override
         public Future readBatch(int partitionId, int offset) {
-            if (offset < 0) {
-                return null;
-            }
+            assert offset >= 0 : "offset=" + offset;
             String name = clientCacheProxy.getPrefixedName();
             ClientMessage request = CacheIterateEntriesCodec.encodeRequest(name, partitionId, offset, MAX_FETCH_SIZE);
             HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) clientCacheProxy.getContext()
@@ -650,12 +645,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             this.serializationService = ((HazelcastInstanceImpl) hzInstance).getSerializationService();
         }
 
-        @Nullable
-        @Override
+        @Nonnull @Override
         public Future readBatch(int partitionId, int offset) {
-            if (offset < 0) {
-                return null;
-            }
+            assert offset >= 0 : "offset=" + offset;
 
             MapOperationProvider operationProvider = mapProxyImpl.getOperationProvider();
             Operation op = operationProvider.createFetchEntriesOperation(sourceName, offset, MAX_FETCH_SIZE);
@@ -710,12 +702,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             this.serializationService = ((HazelcastInstanceImpl) hzInstance).getSerializationService();
         }
 
-        @Nullable
-        @Override
+        @Nonnull @Override
         public Future readBatch(int partitionId, int offset) {
-            if (offset < 0) {
-                return null;
-            }
+            assert offset >= 0 : "offset=" + offset;
 
             MapOperationProvider operationProvider = mapProxyImpl.getOperationProvider();
             MapOperation op = operationProvider.createFetchWithQueryOperation(
@@ -777,12 +766,9 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             this.serializationService = clientMapProxy.getContext().getSerializationService();
         }
 
-        @Override
-        @Nullable
+        @Nonnull @Override
         public Future readBatch(int partitionId, int offset) {
-            if (offset < 0) {
-                return null;
-            }
+            assert offset >= 0 : "offset=" + offset;
             ClientMessage request = MapFetchEntriesCodec.encodeRequest(sourceName, partitionId, offset, MAX_FETCH_SIZE);
             ClientInvocation clientInvocation = new ClientInvocation(
                     (HazelcastClientInstanceImpl) clientMapProxy.getContext().getHazelcastInstance(),
@@ -840,12 +826,10 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             this.serializationService = clientMapProxy.getContext().getSerializationService();
         }
 
-        @Override
-        @Nullable
+        @Nonnull @Override
         public Future readBatch(int partitionId, int offset) {
-            if (offset < 0) {
-                return null;
-            }
+            assert offset >= 0 : "offset=" + offset;
+
             ClientMessage request = MapFetchWithQueryCodec.encodeRequest(sourceName, offset, MAX_FETCH_SIZE,
                     serializationService.toData(projection),
                     serializationService.toData(predicate));
