@@ -349,6 +349,22 @@ public final class Util {
         return processorToPartitions;
     }
 
+    /**
+     * From an imaginary set of integers {@code (0, 1, ..., objectCount-1)}
+     * returns {@code index}-th disjoint subset out of {@code count} subsets.
+     * The assignment of objects to subset is done in round-robin fashion.
+     * <p>
+     * For example, if {@code objectCount==3} and {@code count==2}, then for
+     * {@code index==0} it will return {@code {0, 2}} and for {@code index==1}
+     * it will return {@code {1}}.
+     * <p>
+     * It's used to assign partitions to processors.
+     *
+     * @param objectCount total number of objects to distribute
+     * @param count total number of subsets
+     * @param index index of the requested subset
+     * @return an array with assigned objects
+     */
     public static int[] roundRobinPart(int objectCount, int count, int index) {
         if (objectCount < 0 || index < 0 || count < 1 || index >= count) {
             throw new IllegalArgumentException("objectCount=" + objectCount + ", count=" + count + ", index=" + index);
