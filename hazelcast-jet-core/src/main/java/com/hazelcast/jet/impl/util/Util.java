@@ -183,7 +183,6 @@ public final class Util {
     /**
      * Atomically increment the {@code value} by {@code increment}, unless
      * the value after increment would exceed the {@code limit}.
-     * <p>
      *
      * @param limit maximum value the {@code value} can take (inclusive)
      * @return {@code true}, if successful, {@code false}, if {@code limit} would be exceeded.

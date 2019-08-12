@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -94,8 +95,28 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         future.andThen(callback);
     }
 
-    protected boolean acquirePermit() {
+    @CheckReturnValue
+    protected boolean tryAcquirePermit() {
         return tryIncrement(numConcurrentOps, 1, MAX_PARALLEL_ASYNC_OPS);
+    }
+
+    /**
+     * Acquires as many permits as we are able to immediately, up to
+     * desiredNumber. Returns the number of actually acquired permits. Can
+     * return 0.
+     */
+    @CheckReturnValue
+    protected int tryAcquirePermits(int desiredNumber) {
+        int prev;
+        int next;
+        do {
+            prev = numConcurrentOps.get();
+            next = Math.min(prev + desiredNumber, MAX_PARALLEL_ASYNC_OPS);
+            if (next == prev) {
+                return 0;
+            }
+        } while (!numConcurrentOps.compareAndSet(prev, next));
+        return next - prev;
     }
 
     private void checkError() {

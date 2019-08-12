@@ -47,10 +47,8 @@ public final class UpdateMapWithEntryProcessorP<T, K, V> extends AsyncHazelcastW
 
     @Override
     protected void processInternal(Inbox inbox) {
-        for (Object object; (object = inbox.peek()) != null; ) {
-            if (!acquirePermit()) {
-                return;
-            }
+        int permits = tryAcquirePermits(inbox.size());
+        for (Object object; permits > 0 && (object = inbox.peek()) != null; permits--) {
             @SuppressWarnings("unchecked")
             T item = (T) object;
             EntryProcessor<K, V> entryProcessor = toEntryProcessorFn.apply(item);
@@ -85,5 +83,4 @@ public final class UpdateMapWithEntryProcessorP<T, K, V> extends AsyncHazelcastW
             return new UpdateMapWithEntryProcessorP<>(instance, isLocal, name, toEntryProcessorFn, toKeyFn);
         }
     }
-
 }
