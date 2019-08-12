@@ -73,7 +73,9 @@ public final class SinkProcessors {
      * {@link Sinks#remoteMap(String, ClientConfig)}.
      */
     @Nonnull
-    public static <K, V> ProcessorMetaSupplier writeRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
+    public static <K, V> ProcessorMetaSupplier writeRemoteMapP(
+        @Nonnull String mapName, @Nonnull ClientConfig clientConfig
+    ) {
         return HazelcastWriters.<K, V>writeMapSupplier(mapName, clientConfig);
     }
 

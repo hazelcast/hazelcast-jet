@@ -59,7 +59,9 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    public static <K, V> ProcessorMetaSupplier writeMapSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
+    public static <K, V> ProcessorMetaSupplier writeMapSupplier(
+        @Nonnull String name, @Nullable ClientConfig clientConfig
+    ) {
         boolean isLocal = clientConfig == null;
         return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
             asXmlString(clientConfig),
@@ -132,7 +134,9 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    public static <K, V> ProcessorMetaSupplier writeCacheSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
+    public static <K, V> ProcessorMetaSupplier writeCacheSupplier(
+        @Nonnull String name, @Nullable ClientConfig clientConfig
+    ) {
         boolean isLocal = clientConfig == null;
         return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
             asXmlString(clientConfig),
