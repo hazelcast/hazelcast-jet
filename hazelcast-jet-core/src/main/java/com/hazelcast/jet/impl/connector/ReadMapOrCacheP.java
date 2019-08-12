@@ -549,14 +549,12 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return operationService.invokeOnPartition(cacheProxy.getServiceName(), op, partitionId);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public CacheEntryIterationResult getBatchResults(Future future) {
             return ((InternalCompletableFuture<CacheEntryIterationResult>) future).join();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Entry<Data, Data>> getBatch(CacheEntryIterationResult result) {
             return result.getEntries();
         }
@@ -603,14 +601,12 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return clientInvocation.invoke();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public CacheIterateEntriesCodec.ResponseParameters getBatchResults(Future future) {
             return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Entry<Data, Data>> getBatch(CacheIterateEntriesCodec.ResponseParameters result) {
             return result.entries;
         }
@@ -656,14 +652,12 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return operationService.invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public MapEntriesWithCursor getBatchResults(Future future) {
             return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Entry<Data, Data>> getBatch(MapEntriesWithCursor result) {
             return result.getBatch();
         }
@@ -723,14 +717,12 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return operationService.invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public ResultSegment getBatchResults(Future future) {
             return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<QueryResultRow> getBatch(ResultSegment result) {
             QueryResult queryResult = (QueryResult) result.getResult();
             return queryResult.getRows();
@@ -779,14 +771,12 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return clientInvocation.invoke();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public MapFetchEntriesCodec.ResponseParameters getBatchResults(Future future) {
             return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Entry<Data, Data>> getBatch(MapFetchEntriesCodec.ResponseParameters result) {
             return result.entries;
         }
@@ -842,14 +832,12 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return clientInvocation.invoke();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public MapFetchWithQueryCodec.ResponseParameters getBatchResults(Future future) {
             return translateFutureValue(future, TRANSLATE_RESULT_FN);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public List<Data> getBatch(MapFetchWithQueryCodec.ResponseParameters result) {
             return result.results;
         }
