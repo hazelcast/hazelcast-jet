@@ -184,7 +184,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
             }
 
             currentBatch = reader.toRecordSet(result);
-
             currentBatchPosition = 0;
             readOffsets[currentPartitionIndex] = nextIndex;
             // make another read on the same partition
@@ -363,7 +362,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         abstract F readBatch(int partitionId, int offset);
 
         @Nonnull
-        abstract B toBatchResult(@Nonnull F future) throws ExecutionException, InterruptedException;
+        @SuppressWarnings("unchecked")
+        B toBatchResult(@Nonnull F future) throws ExecutionException, InterruptedException {
+            return (B) future.get();
+        }
 
         final int toNextIndex(@Nonnull B result) {
             return toNextIndexFn.applyAsInt(result);
@@ -399,19 +401,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public InternalCompletableFuture<CacheEntryIterationResult> readBatch(int partitionId, int offset) {
-            assert offset >= 0 : "offset=" + offset;
-
             Operation op = new CacheEntryIteratorOperation(cacheProxy.getPrefixedName(), offset, MAX_FETCH_SIZE);
             //no access to CacheOperationProvider, have to be explicit
             OperationService operationService = cacheProxy.getOperationService();
             return operationService.invokeOnPartition(cacheProxy.getServiceName(), op, partitionId);
-        }
-
-        @Nonnull @Override
-        public CacheEntryIterationResult toBatchResult(
-            @Nonnull InternalCompletableFuture<CacheEntryIterationResult> future
-        ) throws ExecutionException, InterruptedException {
-            return future.get();
         }
 
         @Nullable @Override
@@ -439,13 +432,11 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public ClientInvocationFuture readBatch(int partitionId, int offset) {
-            assert offset >= 0 : "offset=" + offset;
             String name = clientCacheProxy.getPrefixedName();
             ClientMessage request = CacheIterateEntriesCodec.encodeRequest(name, partitionId, offset, MAX_FETCH_SIZE);
             HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) clientCacheProxy.getContext()
                     .getHazelcastInstance();
-            ClientInvocation clientInvocation = new ClientInvocation(client, request, name, partitionId);
-            return clientInvocation.invoke();
+            return new ClientInvocation(client, request, name, partitionId).invoke();
         }
 
         @Nonnull @Override
@@ -478,18 +469,9 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public InternalCompletableFuture<MapEntriesWithCursor> readBatch(int partitionId, int offset) {
-            assert offset >= 0 : "offset=" + offset;
-
             MapOperationProvider operationProvider = mapProxyImpl.getOperationProvider();
             Operation op = operationProvider.createFetchEntriesOperation(objectName, offset, MAX_FETCH_SIZE);
-            OperationService operationService = mapProxyImpl.getOperationService();
-            return operationService.invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
-        }
-
-        @Nonnull @Override
-        public MapEntriesWithCursor toBatchResult(@Nonnull InternalCompletableFuture<MapEntriesWithCursor> future)
-            throws ExecutionException, InterruptedException {
-            return future.get();
+            return mapProxyImpl.getOperationService().invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
         }
 
         @Nullable @Override
@@ -526,8 +508,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public InternalCompletableFuture<ResultSegment> readBatch(int partitionId, int offset) {
-            assert offset >= 0 : "offset=" + offset;
-
             MapOperationProvider operationProvider = mapProxyImpl.getOperationProvider();
             MapOperation op = operationProvider.createFetchWithQueryOperation(
                     objectName,
@@ -541,14 +521,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
                             .build()
             );
 
-            OperationService operationService = mapProxyImpl.getOperationService();
-            return operationService.invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
-        }
-
-        @Nonnull @Override
-        public ResultSegment toBatchResult(@Nonnull InternalCompletableFuture<ResultSegment> future)
-            throws ExecutionException, InterruptedException {
-            return future.get();
+            return mapProxyImpl.getOperationService().invokeOnPartition(mapProxyImpl.getServiceName(), op, partitionId);
         }
 
         @Nullable @Override
@@ -574,7 +547,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public ClientInvocationFuture readBatch(int partitionId, int offset) {
-            assert offset >= 0 : "offset=" + offset;
             ClientMessage request = MapFetchEntriesCodec.encodeRequest(objectName, partitionId, offset, MAX_FETCH_SIZE);
             ClientInvocation clientInvocation = new ClientInvocation(
                     (HazelcastClientInstanceImpl) clientMapProxy.getContext().getHazelcastInstance(),
@@ -604,7 +576,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         private final Predicate predicate;
         private final Projection projection;
-
         private final ClientMapProxy clientMapProxy;
 
         RemoteMapQueryReader(
@@ -622,8 +593,6 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public ClientInvocationFuture readBatch(int partitionId, int offset) {
-            assert offset >= 0 : "offset=" + offset;
-
             ClientMessage request = MapFetchWithQueryCodec.encodeRequest(objectName, offset, MAX_FETCH_SIZE,
                     serializationService.toData(projection),
                     serializationService.toData(predicate));
