@@ -26,13 +26,13 @@ import com.hazelcast.map.EntryProcessor;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public final class EntryProcessorWriterP<T, K, V> extends AsyncHazelcastWriterP {
+public final class UpdateMapWithEntryProcessorP<T, K, V> extends AsyncHazelcastWriterP {
 
     private final IMap<? super K, ? extends V> map;
     private final FunctionEx<? super T, ? extends K> toKeyFn;
     private final FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn;
 
-    private EntryProcessorWriterP(
+    private UpdateMapWithEntryProcessorP(
         @Nonnull HazelcastInstance instance,
         boolean isLocal,
         @Nonnull String name,
@@ -82,7 +82,7 @@ public final class EntryProcessorWriterP<T, K, V> extends AsyncHazelcastWriterP 
 
         @Override
         protected Processor createProcessor(HazelcastInstance instance, boolean isLocal) {
-            return new EntryProcessorWriterP<>(instance, isLocal, name, toEntryProcessorFn, toKeyFn);
+            return new UpdateMapWithEntryProcessorP<>(instance, isLocal, name, toEntryProcessorFn, toKeyFn);
         }
     }
 

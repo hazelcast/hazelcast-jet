@@ -103,7 +103,6 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
         @Nonnull String mapName,
         @Nullable ClientConfig clientConfig,
@@ -113,13 +112,12 @@ public final class HazelcastWriters {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(updateFn, "updateFn");
 
-        return ProcessorMetaSupplier.of(new UpdateMapP.Supplier(
+        return ProcessorMetaSupplier.of(new UpdateMapP.Supplier<>(
             asXmlString(clientConfig), mapName, toKeyFn, updateFn
         ));
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     public static <T, K, V> ProcessorMetaSupplier updateMapSupplier(
         @Nonnull String name,
         @Nullable ClientConfig clientConfig,
@@ -129,7 +127,7 @@ public final class HazelcastWriters {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
 
-        return ProcessorMetaSupplier.of(new UpdateMapWithEntryProcessorP.Supplier(
+        return ProcessorMetaSupplier.of(new UpdateMapWithEntryProcessorP.Supplier<>(
             name, asXmlString(clientConfig), toKeyFn, toEntryProcessorFn
         ));
     }
