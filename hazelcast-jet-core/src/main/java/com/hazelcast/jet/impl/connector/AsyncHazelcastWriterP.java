@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.hazelcast.jet.impl.connector.HazelcastWriters.handleInstanceNotActive;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
-import static com.hazelcast.jet.impl.util.Util.tryIncrement;
 
 public abstract class AsyncHazelcastWriterP implements Processor {
 
@@ -93,11 +92,6 @@ public abstract class AsyncHazelcastWriterP implements Processor {
 
     protected void setCallback(ICompletableFuture future) {
         future.andThen(callback);
-    }
-
-    @CheckReturnValue
-    protected boolean tryAcquirePermit() {
-        return tryIncrement(numConcurrentOps, 1, MAX_PARALLEL_ASYNC_OPS);
     }
 
     /**

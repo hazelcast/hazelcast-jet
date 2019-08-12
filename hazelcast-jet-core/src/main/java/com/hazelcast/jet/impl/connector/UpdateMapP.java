@@ -42,6 +42,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.spi.serialization.SerializationServiceAware;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -52,6 +53,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static com.hazelcast.util.MapUtil.createHashMap;
 
@@ -73,6 +75,13 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     private Map<Data, Object>[] tmpMaps;
     private int pendingItemCount;
 
+    /**
+     * Used to optimize {@link #submit()} that is called frequently from {@link
+     * #tryProcess()} when idle and to acquire permits in bulk.
+     */
+    private int nonEmptyMaps;
+    private int submitPartitionId;
+
     private UpdateMapP(HazelcastInstance instance, boolean isLocal,
                        String mapName,
                        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
@@ -84,7 +93,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     }
 
     @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         map = instance().getMap(mapName);
         int partitionCount;
         if (isLocal()) {
@@ -107,6 +116,12 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     }
 
     @Override
+    public boolean tryProcess() {
+        submit();
+        return super.tryProcess();
+    }
+
+    @Override
     protected void processInternal(Inbox inbox) {
         if (pendingItemCount < PENDING_ITEM_COUNT_LIMIT) {
             inbox.drain(addToBuffer);
@@ -116,19 +131,27 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     }
 
     private void submit() {
-        for (int partitionId = 0; partitionId < tmpMaps.length; partitionId++) {
-            if (tmpMaps[partitionId].isEmpty()) {
+        if (nonEmptyMaps == 0) {
+            return;
+        }
+        int permits = tryAcquirePermits(nonEmptyMaps);
+        assert nonEmptyMaps == Stream.of(tmpMaps).filter(m -> !m.isEmpty()).count() : "nonEmptyMaps is out of sync";
+        nonEmptyMaps -= permits;
+        for (int i = 0; permits > 0 && i < tmpMaps.length; submitPartitionId = roll(submitPartitionId, tmpMaps.length)) {
+            if (tmpMaps[submitPartitionId].isEmpty()) {
                 continue;
             }
-            if (!tryAcquirePermit()) {
-                return;
-            }
+            permits--;
 
-            Map<Data, Object> buffer = tmpMaps[partitionId];
+            Map<Data, Object> buffer = tmpMaps[submitPartitionId];
             ApplyFnEntryProcessor<K, V, T> entryProcessor = new ApplyFnEntryProcessor<>(buffer, updateFn);
             setCallback(submitToKeys(map, buffer.keySet(), entryProcessor));
             pendingItemCount -= buffer.size();
-            tmpMaps[partitionId] = new HashMap<>();
+            tmpMaps[submitPartitionId] = new HashMap<>();
+        }
+        assert permits == 0 : "didn't use all the permits, " + permits + " left";
+        if (submitPartitionId == tmpMaps.length) {
+            submitPartitionId = 0;
         }
     }
 
@@ -150,6 +173,9 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             partitionId = clientPartitionService.getPartitionId(keyData);
         }
         Data itemData = serializationService.toData(item);
+        if (tmpMaps[partitionId].isEmpty()) {
+            nonEmptyMaps++;
+        }
         tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n));
     }
 
@@ -166,6 +192,18 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         } else {
             throw new RuntimeException("Unexpected map class: " + map.getClass().getName());
         }
+    }
+
+    /**
+     * Returns {@code v+1} or 0, if {@code v+1 == limit}.
+     */
+    @CheckReturnValue
+    private static int roll(int v, int limit) {
+        v++;
+        if (v == limit) {
+            v = 0;
+        }
+        return v;
     }
 
     static class Supplier<T, K, V> extends AbstractHazelcastConnectorSupplier {
@@ -226,7 +264,9 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
                     "correctly implemented for the key? Key type: " + entry.getKey().getClass().getName());
             }
             if (item instanceof List) {
-                for (Data o : ((List<Data>) item)) {
+                @SuppressWarnings("unchecked")
+                List<Data> castedList = (List<Data>) item;
+                for (Data o : castedList) {
                     handle(entry, o);
                 }
             } else {
@@ -267,6 +307,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
                     out.writeInt(1);
                     out.writeData((Data) value);
                 } else if (value instanceof List) {
+                    @SuppressWarnings("unchecked")
                     List<Data> list = (List<Data>) value;
                     out.writeInt(list.size());
                     for (Data data : list) {
@@ -312,10 +353,11 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         }
 
         // used to group entries when more than one entry exists for the same key
+        @SuppressWarnings("unchecked")
         public static Object append(Object value, Data item) {
             List<Data> list;
             if (value instanceof List) {
-                list = (List) value;
+                list = (List<Data>) value;
             } else {
                 list = new ArrayList<>();
                 list.add((Data) value);
@@ -324,5 +366,4 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             return list;
         }
     }
-
 }
