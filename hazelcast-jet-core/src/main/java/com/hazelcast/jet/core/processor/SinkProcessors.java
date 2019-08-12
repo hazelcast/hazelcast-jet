@@ -64,8 +64,8 @@ public final class SinkProcessors {
      * {@link Sinks#map(String)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier writeMapP(@Nonnull String mapName) {
-        return HazelcastWriters.writeMapSupplier(mapName, null);
+    public static <K, V> ProcessorMetaSupplier writeMapP(@Nonnull String mapName) {
+        return HazelcastWriters.<K, V>writeMapSupplier(mapName, null);
     }
 
     /**
@@ -73,8 +73,8 @@ public final class SinkProcessors {
      * {@link Sinks#remoteMap(String, ClientConfig)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier writeRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
-        return HazelcastWriters.writeMapSupplier(mapName, clientConfig);
+    public static <K, V> ProcessorMetaSupplier writeRemoteMapP(@Nonnull String mapName, @Nonnull ClientConfig clientConfig) {
+        return HazelcastWriters.<K, V>writeMapSupplier(mapName, clientConfig);
     }
 
     /**
@@ -170,8 +170,8 @@ public final class SinkProcessors {
      * {@link Sinks#cache(String)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier writeCacheP(@Nonnull String cacheName) {
-        return HazelcastWriters.writeCacheSupplier(cacheName, null);
+    public static <K, V> ProcessorMetaSupplier writeCacheP(@Nonnull String cacheName) {
+        return HazelcastWriters.<K, V>writeCacheSupplier(cacheName, null);
     }
 
     /**
@@ -179,10 +179,10 @@ public final class SinkProcessors {
      * {@link Sinks#remoteCache(String, ClientConfig)}.
      */
     @Nonnull
-    public static ProcessorMetaSupplier writeRemoteCacheP(
+    public static <K, V> ProcessorMetaSupplier writeRemoteCacheP(
             @Nonnull String cacheName, @Nonnull ClientConfig clientConfig
     ) {
-        return HazelcastWriters.writeCacheSupplier(cacheName, clientConfig);
+        return HazelcastWriters.<K, V>writeCacheSupplier(cacheName, clientConfig);
     }
 
     /**

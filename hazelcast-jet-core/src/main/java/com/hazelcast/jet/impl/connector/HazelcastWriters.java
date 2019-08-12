@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
@@ -58,15 +59,14 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
-    public static ProcessorMetaSupplier writeMapSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
+    public static <K, V> ProcessorMetaSupplier writeMapSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
-        return ProcessorMetaSupplier.of(2, new WriterSupplier<>(
+        return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
             asXmlString(clientConfig),
             ArrayMap::new,
             ArrayMap::add,
             instance -> {
-                IMap map = instance.getMap(name);
+                IMap<K, V> map = instance.getMap(name);
                 return buffer -> {
                     try {
                         map.putAll(buffer);
@@ -81,7 +81,6 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     public static <T, K, V> ProcessorMetaSupplier mergeMapSupplier(
         @Nonnull String name,
         @Nullable ClientConfig clientConfig,
@@ -133,9 +132,9 @@ public final class HazelcastWriters {
     }
 
     @Nonnull
-    public static ProcessorMetaSupplier writeCacheSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
+    public static <K, V> ProcessorMetaSupplier writeCacheSupplier(@Nonnull String name, @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
-        return ProcessorMetaSupplier.of(2, new WriterSupplier<>(
+        return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
             asXmlString(clientConfig),
             ArrayMap::new,
             ArrayMap::add,
@@ -177,12 +176,11 @@ public final class HazelcastWriters {
      */
     private static class CacheFlush {
 
-        @SuppressWarnings("unchecked")
-        static FunctionEx<HazelcastInstance, ConsumerEx<ArrayMap>> flushToCache(
+        static <K, V> FunctionEx<HazelcastInstance, ConsumerEx<ArrayMap<K, V>>> flushToCache(
             String name, boolean isLocal
         ) {
             return instance -> {
-                ICache cache = instance.getCacheManager().getCache(name);
+                ICache<K, V> cache = instance.getCacheManager().getCache(name);
                 return buffer -> {
                     try {
                         cache.putAll(buffer);
@@ -195,29 +193,28 @@ public final class HazelcastWriters {
         }
     }
 
-    private static final class ArrayMap extends AbstractMap<Object, Object> {
+    private static final class ArrayMap<K, V> extends AbstractMap<K, V> {
 
-        private final List<Entry<Object, Object>> entries;
+        private final List<Entry<K, V>> entries;
         private final ArraySet set = new ArraySet();
 
         ArrayMap() {
             entries = new ArrayList<>();
         }
 
-        @Override
-        @Nonnull
-        public Set<Entry<Object, Object>> entrySet() {
+        @Override @Nonnull
+        public Set<Entry<K, V>> entrySet() {
             return set;
         }
 
-        public void add(Map.Entry entry) {
+        public void add(Map.Entry<K, V> entry) {
             entries.add(entry);
         }
 
-        private class ArraySet extends AbstractSet<Entry<Object, Object>> {
-            @Override
-            @Nonnull
-            public Iterator<Entry<Object, Object>> iterator() {
+        private class ArraySet extends AbstractSet<Entry<K, V>> {
+
+            @Override @Nonnull
+            public Iterator<Entry<K, V>> iterator() {
                 return entries.iterator();
             }
 
