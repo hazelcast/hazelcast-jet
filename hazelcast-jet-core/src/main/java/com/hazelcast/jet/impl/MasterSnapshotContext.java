@@ -21,7 +21,6 @@ import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
-import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.SnapshotOperation;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.logging.ILogger;
@@ -29,7 +28,6 @@ import com.hazelcast.spi.Operation;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
@@ -42,6 +40,7 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
+import static com.hazelcast.jet.impl.MasterContext.EXECUTION_COMPLETED;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 /**
@@ -88,6 +87,7 @@ class MasterSnapshotContext {
         this.logger = logger;
     }
 
+    @SuppressWarnings("SameParameterValue") // different values used in jet-enterprise
     void enqueueSnapshot(String snapshotMapName, boolean isTerminal, CompletableFuture<Void> future) {
         snapshotQueue.add(tuple3(snapshotMapName, isTerminal, future));
     }
@@ -155,8 +155,8 @@ class MasterSnapshotContext {
                 + (isTerminal ? ", terminal" : "")
                 + (isExport ? ", exporting to '" + snapshotMapName + '\'' : ""));
 
-        Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(mc.jobId(), mc.executionId(), newSnapshotId, finalMapName, isTerminal);
+        Function<MemberInfo, Operation> factory =
+                memberInfo -> new SnapshotOperation(mc.jobId(), mc.executionId(), newSnapshotId, finalMapName, isTerminal);
 
         // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
         // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
@@ -170,7 +170,7 @@ class MasterSnapshotContext {
     }
 
     private void onSnapshotCompleted(
-            Collection<Map.Entry<MemberInfo, Object>> responses,
+            Map<MemberInfo, Object> responses,
             long executionId,
             long snapshotId,
             String snapshotMapName,
@@ -182,10 +182,15 @@ class MasterSnapshotContext {
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
-        for (Map.Entry<MemberInfo, Object> entry : responses) {
-            // the response is either SnapshotOperationResult or an exception, see #invokeOnParticipants() method
-            Object response = entry.getValue();
-            if (response instanceof Throwable) {
+        for (Object response : responses.values()) {
+            // the response is either SnapshotOperationResult, EXECUTION_COMPLETED or an exception,
+            // see #invokeOnParticipants() method
+            if (response == EXECUTION_COMPLETED) {
+                // the execution on that member completed, ignore it. We don't correctly support snapshots for
+                // batch jobs, but this can happen if the job only has non-distributed source and has no distributed
+                // edge.
+                response = new SnapshotOperationResult(0, 0, 0, null);
+            } else if (response instanceof Throwable) {
                 response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
             }
             mergedResult.merge((SnapshotOperationResult) response);

@@ -67,20 +67,27 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -96,10 +103,11 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 public final class Util {
-
     private static final int BUFFER_SIZE = 1 << 15;
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
+    private static final Set<Collector.Characteristics> CH_ID
+            = Collections.unmodifiableSet(EnumSet.of(Collector.Characteristics.IDENTITY_FINISH));
 
     private Util() {
     }
@@ -627,5 +635,54 @@ public final class Util {
         } finally {
             currentThread.setContextClassLoader(previousCl);
         }
+    }
+
+    /**
+     * Just like standard {@code Collectors.toMap}, except that it can handle
+     * null values and keys. Throws if key is duplicately collected.
+     */
+    public static <T, K, V> Collector<T, ?, Map<K, V>> toMapNullSafe(
+            Function<? super T, ? extends K> keyMapper,
+            Function<? super T, ? extends V> valueMapper
+    ) {
+        return new Collector<T, Map<K, V>, Map<K, V>>() {
+            @Override
+            public Supplier<Map<K, V>> supplier() {
+                return HashMap::new;
+            }
+
+            @Override
+            public BiConsumer<Map<K, V>, T> accumulator() {
+                return (map, item) -> {
+                    K key = keyMapper.apply(item);
+                    V value = valueMapper.apply(item);
+                    if (map.put(key, value) != null) {
+                        throw new IllegalStateException(String.format("Duplicate key %s", key));
+                    }
+                };
+            }
+
+            @Override
+            public BinaryOperator<Map<K, V>> combiner() {
+                return (m1, m2) -> {
+                    for (Map.Entry<K, V> e : m2.entrySet()) {
+                        if (m1.put(e.getKey(), e.getValue()) != null) {
+                            throw new IllegalStateException(String.format("Duplicate key %s", e.getKey()));
+                        }
+                    }
+                    return m1;
+                };
+            }
+
+            @Override
+            public Function<Map<K, V>, Map<K, V>> finisher() {
+                return Function.identity();
+            }
+
+            @Override
+            public Set<Characteristics> characteristics() {
+                return CH_ID;
+            }
+        };
     }
 }

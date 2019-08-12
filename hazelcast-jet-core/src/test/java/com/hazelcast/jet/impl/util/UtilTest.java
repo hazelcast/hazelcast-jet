@@ -38,6 +38,7 @@ import static com.hazelcast.jet.impl.util.Util.addOrIncrementIndexInName;
 import static com.hazelcast.jet.impl.util.Util.gcd;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
+import static com.hazelcast.jet.impl.util.Util.toMapNullSafe;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -155,5 +156,17 @@ public class UtilTest extends JetTestSupport {
         assertEquals("a-1-2", addOrIncrementIndexInName("a-1"));
         assertEquals("a-1-3", addOrIncrementIndexInName("a-1-2"));
         assertEquals("a--1-2", addOrIncrementIndexInName("a--1"));
+    }
+
+    @Test
+    public void test_toMapNullSafe() {
+        Map<String, Object> actual = Stream.of((Object) null)
+                                           .collect(toMapNullSafe(
+                                                   i -> "key",
+                                                   i -> i
+                                           ));
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("key", null);
+        assertEquals(expected, actual);
     }
 }

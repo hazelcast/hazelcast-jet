@@ -941,6 +941,9 @@ public class JobCoordinationService {
             IS_JOB_COORDINATOR_THREAD.set(true);
             try {
                 return action.call();
+            } catch (Throwable t) {
+                logger.severe(null, t);
+                throw t;
             } finally {
                 IS_JOB_COORDINATOR_THREAD.set(false);
             }

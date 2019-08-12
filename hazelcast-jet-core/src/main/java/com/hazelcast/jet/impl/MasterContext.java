@@ -29,24 +29,24 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.Util.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
+import static java.util.Collections.newSetFromMap;
 
 /**
  * Data pertaining to single job on master member. There's one instance per job,
@@ -57,10 +57,15 @@ import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
  */
 public class MasterContext {
 
-    private static final Object NULL_OBJECT = new Object() {
+    /**
+     * Object found in {@code responses} passed to {@code completionCallback}
+     * {@link #invokeOnParticipants} to indicate that the operation wasn't sent
+     * to that member because the execution on that member already completed.
+     */
+    static final Object EXECUTION_COMPLETED = new Object() {
         @Override
         public String toString() {
-            return "NULL_OBJECT";
+            return "EXECUTION_COMPLETED";
         }
     };
 
@@ -77,6 +82,7 @@ public class MasterContext {
     private volatile JobStatus jobStatus = NOT_RUNNING;
     private volatile long executionId;
     private volatile Map<MemberInfo, ExecutionPlan> executionPlanMap;
+    private final Set<MemberInfo> membersWithCompletedExecution = newSetFromMap(new ConcurrentHashMap<>());
 
     private final MasterJobContext jobContext;
     private final MasterSnapshotContext snapshotContext;
@@ -99,6 +105,7 @@ public class MasterContext {
         snapshotContext = createMasterSnapshotContext(nodeEngine);
     }
 
+    @SuppressWarnings("WeakerAccess") // overridden in jet-enterprise
     MasterSnapshotContext createMasterSnapshotContext(NodeEngineImpl nodeEngine) {
         return new MasterSnapshotContext(this, nodeEngine.getLogger(MasterSnapshotContext.class));
     }
@@ -192,6 +199,10 @@ public class MasterContext {
         executionPlanMap = executionPlans;
     }
 
+    Set<MemberInfo> membersWithCompletedExecution() {
+        return membersWithCompletedExecution;
+    }
+
     void updateQuorumSize(int newQuorumSize) {
         // This method can be called in parallel if multiple members are added. We don't synchronize here,
         // but the worst that can happen is that we write the JobRecord out unnecessarily.
@@ -224,35 +235,45 @@ public class MasterContext {
      *                                exception thrown from the operation (the
      *                                pairs themselves will never be null); size
      *                                will be equal to participant count
-     * @param errorCallback           A callback that will be called after each
-     *                                failure of each individual operation
+     * @param responseCallback        A callback that will be called after a
+     *                                response from each individual operation
      * @param retryOnTimeoutException if true, operations that threw {@link
      *                                com.hazelcast.core.OperationTimeoutException}
      *                                will be retried
      */
     void invokeOnParticipants(
-            Function<ExecutionPlan, Operation> operationCtor,
-            @Nullable Consumer<Collection<Map.Entry<MemberInfo, Object>>> completionCallback,
-            @Nullable Consumer<Throwable> errorCallback,
+            Function<MemberInfo, Operation> operationCtor,
+            @Nullable Consumer<Map<MemberInfo, Object>> completionCallback,
+            @Nullable BiConsumer<MemberInfo, Object> responseCallback,
             boolean retryOnTimeoutException
     ) {
-        ConcurrentMap<MemberInfo, Object> responses = new ConcurrentHashMap<>();
-        AtomicInteger remainingCount = new AtomicInteger(executionPlanMap.size());
-        for (Entry<MemberInfo, ExecutionPlan> entry : executionPlanMap.entrySet()) {
-            MemberInfo memberInfo = entry.getKey();
-            Operation op = operationCtor.apply(entry.getValue());
-            invokeOnParticipant(memberInfo, op, completionCallback, errorCallback, retryOnTimeoutException, responses,
-                    remainingCount);
+        Map<MemberInfo, AtomicReference<Object>> responses = new HashMap<>();
+        for (MemberInfo m : executionPlanMap.keySet()) {
+            responses.put(m, new AtomicReference<>());
+        }
+        int remainingCountTmp = responses.size();
+        for (MemberInfo m : membersWithCompletedExecution) {
+            responses.get(m).set(EXECUTION_COMPLETED);
+            remainingCountTmp--;
+        }
+        AtomicInteger remainingCount = new AtomicInteger(remainingCountTmp);
+        for (Entry<MemberInfo, AtomicReference<Object>> response : responses.entrySet()) {
+            if (response.getValue().get() == EXECUTION_COMPLETED) {
+                continue;
+            }
+            Operation op = operationCtor.apply(response.getKey());
+            invokeOnParticipant(response.getKey(), op, completionCallback, responseCallback, retryOnTimeoutException,
+                    responses, remainingCount);
         }
     }
 
     private void invokeOnParticipant(
             MemberInfo memberInfo,
             Operation op,
-            @Nullable Consumer<Collection<Map.Entry<MemberInfo, Object>>> completionCallback,
-            @Nullable Consumer<Throwable> errorCallback,
+            @Nullable Consumer<Map<MemberInfo, Object>> completionCallback,
+            @Nullable BiConsumer<MemberInfo, Object> responseCallback,
             boolean retryOnTimeoutException,
-            ConcurrentMap<MemberInfo, Object> collectedResponses,
+            Map<MemberInfo, AtomicReference<Object>> collectedResponses,
             AtomicInteger remainingCount
     ) {
         InternalCompletableFuture<Object> future = nodeEngine.getOperationService()
@@ -260,24 +281,29 @@ public class MasterContext {
                 .invoke();
 
         future.andThen(callbackOf((r, throwable) -> {
-            Object response = r != null ? r : throwable != null ? peel(throwable) : NULL_OBJECT;
+            Object response = throwable != null ? throwable : r;
             if (retryOnTimeoutException && throwable instanceof OperationTimeoutException) {
                 logger.warning("Retrying " + op.getClass().getSimpleName() + " that failed with "
                         + OperationTimeoutException.class.getSimpleName() + " in " + jobIdString());
-                invokeOnParticipant(memberInfo, op, completionCallback, errorCallback, retryOnTimeoutException,
+                invokeOnParticipant(memberInfo, op, completionCallback, responseCallback, retryOnTimeoutException,
                         collectedResponses, remainingCount);
                 return;
             }
-            if (errorCallback != null && throwable != null) {
-                errorCallback.accept(throwable);
+            if (responseCallback != null) {
+                responseCallback.accept(memberInfo, response);
             }
-            Object oldResponse = collectedResponses.put(memberInfo, response);
+            Object oldResponse = collectedResponses.get(memberInfo).getAndSet(response);
             assert oldResponse == null :
                     "Duplicate response for " + memberInfo.getAddress() + ". Old=" + oldResponse + ", new=" + response;
             if (remainingCount.decrementAndGet() == 0 && completionCallback != null) {
-                completionCallback.accept(collectedResponses.entrySet().stream()
-                        .map(e -> e.getValue() == NULL_OBJECT ? entry(e.getKey(), null) : e)
-                        .collect(Collectors.toList()));
+                // unwrap the AtomicReferences
+                @SuppressWarnings("unchecked")
+                Map<MemberInfo, Object> collectedResponses2 = (Map<MemberInfo, Object>) (Map) collectedResponses;
+                for (Entry<MemberInfo, Object> en : collectedResponses2.entrySet()) {
+                    en.setValue(((AtomicReference) en.getValue()).get());
+                }
+
+                completionCallback.accept(collectedResponses2);
             }
         }));
     }
