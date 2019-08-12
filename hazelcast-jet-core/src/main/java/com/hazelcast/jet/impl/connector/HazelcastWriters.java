@@ -129,7 +129,7 @@ public final class HazelcastWriters {
         checkSerializable(toKeyFn, "toKeyFn");
         checkSerializable(toEntryProcessorFn, "toEntryProcessorFn");
 
-        return ProcessorMetaSupplier.of(new EntryProcessorWriterP.Supplier(
+        return ProcessorMetaSupplier.of(new UpdateMapWithEntryProcessorP.Supplier(
             name, asXmlString(clientConfig), toKeyFn, toEntryProcessorFn
         ));
     }
@@ -252,9 +252,9 @@ public final class HazelcastWriters {
             ConsumerEx<B> disposeBufferFn
         ) {
             super(clientXml);
-            this.instanceToFlushBufferFn = instanceToFlushBufferFn;
             this.newBufferFn = newBufferFn;
             this.addToBufferFn = addToBufferFn;
+            this.instanceToFlushBufferFn = instanceToFlushBufferFn;
             this.disposeBufferFn = disposeBufferFn;
         }
 
