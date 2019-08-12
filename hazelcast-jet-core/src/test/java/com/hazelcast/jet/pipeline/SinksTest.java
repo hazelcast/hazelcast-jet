@@ -394,12 +394,13 @@ public class SinksTest extends PipelineTestSupport {
          .drainTo(Sinks.mapWithMerging(targetMap, Integer::sum));
         execute();
         Map<String, Integer> actual = new HashMap<>(jet().getMap(targetMap));
-        Map<String, Integer> expected = input.stream()
-                                             .map(e -> {
-                                                 e = e % 100;
-                                                 return entry(e + "@" + e, e);
-                                             })
-                                             .collect(toMap(Entry::getKey, Entry::getValue, Integer::sum));
+        Map<String, Integer> expected =
+            input.stream()
+                 .map(e -> {
+                     e = e % 100;
+                     return entry(e + "@" + e, e);
+                 })
+                 .collect(toMap(Entry::getKey, Entry::getValue, Integer::sum));
         assertEquals(expected, actual);
     }
 

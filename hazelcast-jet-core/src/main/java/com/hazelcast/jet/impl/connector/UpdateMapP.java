@@ -105,7 +105,6 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     @Override
     protected void processInternal(Inbox inbox) {
-        //TODO: we may consider not draining here if tmpMaps is too big?
         inbox.drain(addToBuffer);
         submit();
     }

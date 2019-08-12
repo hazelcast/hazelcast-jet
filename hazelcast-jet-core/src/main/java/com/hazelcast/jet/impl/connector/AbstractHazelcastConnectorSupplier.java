@@ -48,8 +48,7 @@ public abstract class AbstractHazelcastConnectorSupplier implements ProcessorSup
         }
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public Collection<? extends Processor> get(int count) {
         return Stream.generate(() -> createProcessor(instance, isLocal()))
                      .limit(count)
