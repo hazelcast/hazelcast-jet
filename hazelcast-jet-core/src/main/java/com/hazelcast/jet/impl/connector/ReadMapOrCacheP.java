@@ -137,6 +137,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     private void initialRead() {
         readFutures = (F[]) new ICompletableFuture[partitionIds.length];
         for (int i = 0; i < readFutures.length; i++) {
@@ -206,8 +207,8 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
             Throwable ex = peel(e);
             if (ex instanceof HazelcastSerializationException) {
                 throw new JetException("Serialization error when reading the map: are the key, value, " +
-                    "predicate and projection classes visible to IMDG? You need to use User Code " +
-                    "Deployment, adding the classes to JetConfig isn't enough", e);
+                        "predicate and projection classes visible to IMDG? You need to use User Code " +
+                        "Deployment, adding the classes to JetConfig isn't enough", e);
             } else {
                 throw rethrow(ex);
             }
@@ -337,9 +338,9 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     /**
      * Stateless interface to read a map/cache.
      *
-     * @param <F> result of the future type
-     * @param <B> type of the batch result
-     * @param <R> type of record
+     * @param <F> type of the result future
+     * @param <B> type of the batch object
+     * @param <R> type of the record
      */
     abstract static class Reader<F extends ICompletableFuture, B, R> {
 
@@ -367,10 +368,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     }
 
     static class LocalCacheReader extends Reader<
-        InternalCompletableFuture<CacheEntryIterationResult>,
-        CacheEntryIterationResult,
-        Entry<Data, Data>
-        > {
+            InternalCompletableFuture<CacheEntryIterationResult>,
+            CacheEntryIterationResult,
+            Entry<Data, Data>
+            > {
 
         private final CacheProxy cacheProxy;
 
@@ -379,7 +380,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
             this.cacheProxy = (CacheProxy) hzInstance.getCacheManager().getCache(cacheName);
             this.serializationService = (InternalSerializationService)
-                cacheProxy.getNodeEngine().getSerializationService();
+                    cacheProxy.getNodeEngine().getSerializationService();
         }
 
         @Nonnull @Override
@@ -394,7 +395,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public CacheEntryIterationResult toBatchResult(
-            @Nonnull InternalCompletableFuture<CacheEntryIterationResult> future
+                @Nonnull InternalCompletableFuture<CacheEntryIterationResult> future
         ) throws ExecutionException, InterruptedException {
             return future.get();
         }
@@ -416,10 +417,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     }
 
     static class RemoteCacheReader extends Reader<
-        ClientInvocationFuture,
-        CacheIterateEntriesCodec.ResponseParameters,
-        Entry<Data, Data>
-        > {
+            ClientInvocationFuture,
+            CacheIterateEntriesCodec.ResponseParameters,
+            Entry<Data, Data>
+            > {
 
         private final ClientCacheProxy clientCacheProxy;
 
@@ -442,7 +443,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public CacheIterateEntriesCodec.ResponseParameters toBatchResult(@Nonnull ClientInvocationFuture future)
-            throws ExecutionException, InterruptedException {
+                throws ExecutionException, InterruptedException {
             return CacheIterateEntriesCodec.decodeResponse(future.get());
         }
 
@@ -463,10 +464,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     }
 
     static class LocalMapReader extends Reader<
-        InternalCompletableFuture<MapEntriesWithCursor>,
-        MapEntriesWithCursor,
-        Entry<Data, Data>
-        > {
+            InternalCompletableFuture<MapEntriesWithCursor>,
+            MapEntriesWithCursor,
+            Entry<Data, Data>
+            > {
 
         private final MapProxyImpl mapProxyImpl;
 
@@ -489,7 +490,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public MapEntriesWithCursor toBatchResult(@Nonnull InternalCompletableFuture<MapEntriesWithCursor> future)
-            throws ExecutionException, InterruptedException {
+                throws ExecutionException, InterruptedException {
             return future.get();
         }
 
@@ -510,10 +511,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     }
 
     static class LocalMapQueryReader extends Reader<
-        InternalCompletableFuture<ResultSegment>,
-        ResultSegment,
-        QueryResultRow
-        > {
+            InternalCompletableFuture<ResultSegment>,
+            ResultSegment,
+            QueryResultRow
+            > {
 
         private final Predicate predicate;
         private final Projection projection;
@@ -556,7 +557,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public ResultSegment toBatchResult(@Nonnull InternalCompletableFuture<ResultSegment> future)
-            throws ExecutionException, InterruptedException {
+                throws ExecutionException, InterruptedException {
             return future.get();
         }
 
@@ -578,10 +579,10 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     }
 
     static class RemoteMapReader extends Reader<
-        ClientInvocationFuture,
-        MapFetchEntriesCodec.ResponseParameters,
-        Entry<Data, Data>
-        > {
+            ClientInvocationFuture,
+            MapFetchEntriesCodec.ResponseParameters,
+            Entry<Data, Data>
+            > {
 
         private final ClientMapProxy clientMapProxy;
 
@@ -607,7 +608,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public MapFetchEntriesCodec.ResponseParameters toBatchResult(@Nonnull ClientInvocationFuture future)
-            throws ExecutionException, InterruptedException {
+                throws ExecutionException, InterruptedException {
             return MapFetchEntriesCodec.decodeResponse(future.get());
         }
 
@@ -628,9 +629,9 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
     }
 
     static class RemoteMapQueryReader extends Reader<
-        ClientInvocationFuture,
-        MapFetchWithQueryCodec.ResponseParameters,
-        Data> {
+            ClientInvocationFuture,
+            MapFetchWithQueryCodec.ResponseParameters,
+            Data> {
 
         private final Predicate predicate;
         private final Projection projection;
@@ -668,7 +669,7 @@ public final class ReadMapOrCacheP<F extends ICompletableFuture, B, R> extends A
 
         @Nonnull @Override
         public MapFetchWithQueryCodec.ResponseParameters toBatchResult(@Nonnull ClientInvocationFuture future)
-            throws ExecutionException, InterruptedException {
+                throws ExecutionException, InterruptedException {
             return MapFetchWithQueryCodec.decodeResponse(future.get());
         }
 
