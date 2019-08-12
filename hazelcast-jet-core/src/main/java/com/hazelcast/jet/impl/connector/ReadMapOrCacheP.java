@@ -134,74 +134,6 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
         assert partitionIds.length > 0 : "no partitions assigned";
     }
 
-    @Nonnull
-    public static ProcessorMetaSupplier readLocalCacheSupplier(@Nonnull String mapName) {
-        return new LocalProcessorMetaSupplier<>(new LocalCacheReader(mapName));
-    }
-
-    @Nonnull
-    public static ProcessorMetaSupplier readRemoteCacheSupplier(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig
-    ) {
-        return new RemoteProcessorMetaSupplier<>(new RemoteCacheReader(mapName), clientConfig);
-    }
-
-    @Nonnull
-    public static ProcessorMetaSupplier readLocalMapSupplier(@Nonnull String mapName) {
-        return new LocalProcessorMetaSupplier<>(new LocalMapReader(mapName));
-    }
-
-    @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readLocalMapSupplier(
-            @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        checkSerializable(Objects.requireNonNull(predicate), "predicate");
-        checkSerializable(Objects.requireNonNull(projection), "projection");
-
-        return new LocalProcessorMetaSupplier<>(new LocalMapQueryReader(mapName, predicate, projection));
-    }
-
-    @Nonnull
-    public static ProcessorMetaSupplier readRemoteMapSupplier(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig
-    ) {
-        return new RemoteProcessorMetaSupplier<>(new RemoteMapReader(mapName), clientConfig);
-    }
-
-    @Nonnull
-    public static <K, V, T> ProcessorMetaSupplier readRemoteMapSupplier(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        checkSerializable(Objects.requireNonNull(predicate), "predicate");
-        checkSerializable(Objects.requireNonNull(projection), "projection");
-
-        return new RemoteProcessorMetaSupplier<>(new RemoteMapQueryReader(mapName, predicate, projection), clientConfig);
-    }
-
-    private static <T> T translateFutureValue(Future future, Function<Object, T> transformation) {
-        try {
-            return transformation.apply(future.get());
-        } catch (ExecutionException e) {
-            Throwable ex = peel(e);
-            if (ex instanceof HazelcastSerializationException) {
-                throw new JetException("Serialization error when reading the map: are the key, value, " +
-                        "predicate and projection classes visible to IMDG? You need to use User Code " +
-                        "Deployment, adding the classes to JetConfig isn't enough", e);
-            } else {
-                throw rethrow(ex);
-            }
-        } catch (InterruptedException e) {
-            throw rethrow(e);
-        }
-    }
-
     @Override
     public boolean complete() {
         if (readFutures == null) {
@@ -279,6 +211,74 @@ public final class ReadMapOrCacheP<R, E> extends AbstractProcessor {
             return false;
         }
         return true;
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier readLocalCacheSupplier(@Nonnull String mapName) {
+        return new LocalProcessorMetaSupplier<>(new LocalCacheReader(mapName));
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier readRemoteCacheSupplier(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig
+    ) {
+        return new RemoteProcessorMetaSupplier<>(new RemoteCacheReader(mapName), clientConfig);
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier readLocalMapSupplier(@Nonnull String mapName) {
+        return new LocalProcessorMetaSupplier<>(new LocalMapReader(mapName));
+    }
+
+    @Nonnull
+    public static <K, V, T> ProcessorMetaSupplier readLocalMapSupplier(
+            @Nonnull String mapName,
+            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
+    ) {
+        checkSerializable(Objects.requireNonNull(predicate), "predicate");
+        checkSerializable(Objects.requireNonNull(projection), "projection");
+
+        return new LocalProcessorMetaSupplier<>(new LocalMapQueryReader(mapName, predicate, projection));
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier readRemoteMapSupplier(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig
+    ) {
+        return new RemoteProcessorMetaSupplier<>(new RemoteMapReader(mapName), clientConfig);
+    }
+
+    @Nonnull
+    public static <K, V, T> ProcessorMetaSupplier readRemoteMapSupplier(
+            @Nonnull String mapName,
+            @Nonnull ClientConfig clientConfig,
+            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
+    ) {
+        checkSerializable(Objects.requireNonNull(predicate), "predicate");
+        checkSerializable(Objects.requireNonNull(projection), "projection");
+
+        return new RemoteProcessorMetaSupplier<>(new RemoteMapQueryReader(mapName, predicate, projection), clientConfig);
+    }
+
+    private static <T> T translateFutureValue(Future future, Function<Object, T> transformation) {
+        try {
+            return transformation.apply(future.get());
+        } catch (ExecutionException e) {
+            Throwable ex = peel(e);
+            if (ex instanceof HazelcastSerializationException) {
+                throw new JetException("Serialization error when reading the map: are the key, value, " +
+                        "predicate and projection classes visible to IMDG? You need to use User Code " +
+                        "Deployment, adding the classes to JetConfig isn't enough", e);
+            } else {
+                throw rethrow(ex);
+            }
+        } catch (InterruptedException e) {
+            throw rethrow(e);
+        }
     }
 
     private static class LocalProcessorMetaSupplier<R, E> implements ProcessorMetaSupplier {
