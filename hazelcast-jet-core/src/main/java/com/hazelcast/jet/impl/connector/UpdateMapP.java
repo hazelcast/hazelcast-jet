@@ -155,6 +155,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         if (currentPartitionId == tmpMaps.length) {
             currentPartitionId = 0;
         }
+        assert pendingItemCount == 0 : "pending item count should be 0, but was " + pendingItemCount;
         return true;
     }
 
