@@ -72,6 +72,8 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     // one map per partition to store the temporary values
     private Map<Data, Object>[] tmpMaps;
+    private int[] tmpCounts;
+
     private int pendingItemCount;
     private int currentPartitionId;
 
@@ -104,6 +106,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             partitionCount = clientPartitionService.getPartitionCount();
         }
         tmpMaps = new Map[partitionCount];
+        tmpCounts = new int[partitionCount];
         for (int i = 0; i < partitionCount; i++) {
             tmpMaps[i] = new HashMap<>();
         }
@@ -144,7 +147,8 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             Map<Data, Object> buffer = tmpMaps[currentPartitionId];
             ApplyFnEntryProcessor<K, V, T> entryProcessor = new ApplyFnEntryProcessor<>(buffer, updateFn);
             setCallback(submitToKeys(map, buffer.keySet(), entryProcessor));
-            pendingItemCount -= buffer.size();
+            pendingItemCount -= tmpCounts[currentPartitionId];
+            tmpCounts[currentPartitionId] = 0;
             tmpMaps[currentPartitionId] = new HashMap<>();
         }
         if (currentPartitionId == tmpMaps.length) {
@@ -172,6 +176,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         }
         Data itemData = serializationService.toData(item);
         tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n));
+        tmpCounts[partitionId]++;
     }
 
     @SuppressWarnings("unchecked")

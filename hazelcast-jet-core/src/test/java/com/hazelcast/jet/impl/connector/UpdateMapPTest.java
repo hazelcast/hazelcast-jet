@@ -49,15 +49,23 @@ public class UpdateMapPTest extends JetTestSupport {
     @Parameterized.Parameter(0)
     public int asyncLimit;
 
+    @Parameterized.Parameter(1)
+    public int keyRange;
+
+    private static final int COUNT_PER_KEY = 16;
+
+
     private JetInstance jet;
     private HazelcastInstance client;
     private IMapJet<String, Integer> sinkMap;
 
-    @Parameterized.Parameters(name = "asyncLimit: {0} {1}")
+    @Parameterized.Parameters(name = "asyncLimit: {0}, keyRange: {1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
-            new Object[]{1},
-            new Object[]{MAX_PARALLEL_ASYNC_OPS_DEFAULT}
+            new Object[]{1, 4},
+            new Object[]{1, 1024},
+            new Object[]{MAX_PARALLEL_ASYNC_OPS_DEFAULT, 4},
+            new Object[]{MAX_PARALLEL_ASYNC_OPS_DEFAULT, 1024}
         );
     }
 
@@ -114,10 +122,8 @@ public class UpdateMapPTest extends JetTestSupport {
     }
 
     private void runTest(SupplierEx<Processor> sup) {
-        int range = 1024;
-        int countPerKey = 16;
-        List<Integer> input = IntStream.range(0, range * countPerKey)
-                                       .map(i -> i % range)
+        List<Integer> input = IntStream.range(0, keyRange * COUNT_PER_KEY)
+                                       .map(i -> i % keyRange)
                                        .boxed()
                                        .collect(Collectors.toList());
 
@@ -129,8 +135,8 @@ public class UpdateMapPTest extends JetTestSupport {
             .disableLogging()
             .disableProgressAssertion()
             .assertOutput(0, (mode, output) -> {
-                for (int i = 0; i < range; i++) {
-                    assertEquals(Integer.valueOf(countPerKey), sinkMap.get(String.valueOf(i)));
+                for (int i = 0; i < keyRange; i++) {
+                    assertEquals(Integer.valueOf(COUNT_PER_KEY), sinkMap.get(String.valueOf(i)));
                 }
                 sinkMap.clear();
             });
