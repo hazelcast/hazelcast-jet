@@ -19,6 +19,7 @@ package com.hazelcast.jet.core.test;
 import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -213,7 +214,7 @@ public final class TestSupport {
     private long runUntilOutputMatchesTimeoutMillis = -1;
     private long runUntilOutputMatchesExtraTimeMillis;
 
-    private BiConsumer<String, List<List<Object>>> assertOutputFn;
+    private BiConsumer<TestMode, List<List<Object>>> assertOutputFn;
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
 
@@ -337,7 +338,7 @@ public final class TestSupport {
      * @param outputOrdinalCount how many output ordinals should be created
      * @param assertFn an assertion function which takes the current mode and the collected output
      */
-    public void assertOutput(int outputOrdinalCount, BiConsumer<String, List<List<Object>>> assertFn) {
+    public void assertOutput(int outputOrdinalCount, BiConsumer<TestMode, List<List<Object>>> assertFn) {
         assertOutputFn = assertFn;
         this.outputOrdinalCount = outputOrdinalCount;
         try {
@@ -354,15 +355,16 @@ public final class TestSupport {
                 supplierContext.setJetInstance(jetInstance);
             }
             supplier.init(supplierContext);
-            runTest(false, 0, 1);
+            runTest(new TestMode(false, 0, 1));
             if (inputs.stream().mapToInt(List::size).sum() > 0) {
                 // only run this version if there is an input
-                runTest(false, 0, Integer.MAX_VALUE);
+                runTest(new TestMode(false, 0, EdgeConfig.DEFAULT_QUEUE_SIZE));
+                runTest(new TestMode(false, 0, Integer.MAX_VALUE));
             }
             if (doSnapshots) {
-                runTest(true, 1, 1);
-                runTest(true, 2, 1);
-                runTest(true, Integer.MAX_VALUE, 1);
+                runTest(new TestMode(true, 1, 1));
+                runTest(new TestMode(true, 2, 1));
+                runTest(new TestMode(true, Integer.MAX_VALUE, 1));
             }
             supplier.close(null);
         } catch (Exception e) {
@@ -484,30 +486,17 @@ public final class TestSupport {
         return this;
     }
 
-    private static String modeDescription(boolean doSnapshots, int doRestoreEvery, int inboxLimit) {
-        String sInboxSize = inboxLimit == Integer.MAX_VALUE ? "unlimited" : String.valueOf(inboxLimit);
-        if (!doSnapshots && doRestoreEvery == 0) {
-            return "snapshots disabled, inboxLimit=" + sInboxSize;
-        } else if (doSnapshots && doRestoreEvery == 1) {
-            assert inboxLimit == 1;
-            return "snapshots enabled, restoring every snapshot";
-        } else if (doSnapshots && doRestoreEvery == 2) {
-            assert inboxLimit == 1;
-            return "snapshots enabled, restoring every other snapshot";
-        } else if (doSnapshots && doRestoreEvery == Integer.MAX_VALUE) {
-            return "snapshots enabled, never restoring them, inboxLimit=" + sInboxSize;
-        } else {
-            throw new IllegalArgumentException("Unknown mode, doSnapshots=" + doSnapshots + ", doRestoreEvery="
-                    + doRestoreEvery);
-        }
-    }
+    private void runTest(TestMode testMode) throws Exception {
+        assert testMode.isSnapshotsEnabled() || testMode.snapshotRestoreInterval() == 0
+            : "Illegal combination: don't do snapshots, but do restore";
 
-    private void runTest(boolean doSnapshots, int doRestoreEvery, int inboxLimit) throws Exception {
-        assert doSnapshots || doRestoreEvery == 0 : "Illegal combination: don't do snapshots, but do restore";
+        boolean doSnapshots = testMode.doSnapshots;
+        int doRestoreEvery = testMode.restoreInterval;
+
         IdleStrategy idler = new BackoffIdleStrategy(0, 0, MICROSECONDS.toNanos(1),
                 MILLISECONDS.toNanos(1));
         int idleCount = 0;
-        System.out.println("### Running the test, mode=" + modeDescription(doSnapshots, doRestoreEvery, inboxLimit));
+        System.out.println("### Running the test, mode=" + testMode.toString());
 
         TestInbox inbox = new TestInbox();
         int inboxOrdinal = -1;
@@ -537,7 +526,7 @@ public final class TestSupport {
                 inboxOrdinal = input.get(inputPosition).ordinal;
                 for (int added = 0;
                         inputPosition < input.size()
-                                && added < inboxLimit
+                                && added < testMode.inboxSize()
                                 && inboxOrdinal == input.get(inputPosition).ordinal
                                 && (added == 0 || !(input.get(inputPosition).item instanceof Watermark));
                         added++
@@ -597,7 +586,7 @@ public final class TestSupport {
                 long now = System.nanoTime();
                 if (runUntilOutputMatchesTimeoutMillis >= 0) {
                     try {
-                        assertOutputFn.accept(modeDescription(doSnapshots, doRestoreEvery, inboxLimit), actualOutputs);
+                        assertOutputFn.accept(testMode, actualOutputs);
                         outputMatchedAt = Math.min(outputMatchedAt, now);
                     } catch (AssertionError e) {
                         if (outputMatchedAt < Long.MAX_VALUE) {
@@ -619,15 +608,15 @@ public final class TestSupport {
 
         processor[0].close();
 
-        assertOutputFn.accept(modeDescription(doSnapshots, doRestoreEvery, inboxLimit), actualOutputs);
+        assertOutputFn.accept(testMode, actualOutputs);
     }
 
-    private void assertExpectedOutput(String modeDescription, List<List<?>> expected , List<List<Object>> actual) {
+    private void assertExpectedOutput(TestMode mode, List<List<?>> expected , List<List<Object>> actual) {
         for (int i = 0; i < expected.size(); i++) {
             List<?> expectedOutput = expected.get(i);
             List<?> actualOutput = actual.get(i);
             if (!outputChecker.test(expectedOutput, actualOutput)) {
-                assertEquals("processor output in mode \"" + modeDescription
+                assertEquals("processor output in mode \"" + mode
                         + "\" doesn't match", listToString(expectedOutput), listToString(actualOutput));
             }
         }
@@ -874,6 +863,65 @@ public final class TestSupport {
         ObjectWithOrdinal(int ordinal, Object item) {
             this.ordinal = ordinal;
             this.item = item;
+        }
+    }
+
+    /**
+     *  Describes the current test mode
+     */
+    public static class TestMode {
+
+        private final boolean doSnapshots;
+        private final int restoreInterval;
+        private final int inboxLimit;
+
+        /**
+         * Construct a new instance
+         */
+        public TestMode(boolean doSnapshots, int restoreInterval, int inboxLimit) {
+            this.doSnapshots = doSnapshots;
+            this.restoreInterval = restoreInterval;
+            this.inboxLimit = inboxLimit;
+        }
+
+        /**
+         * Are snapshots enabled
+         */
+        public boolean isSnapshotsEnabled() {
+            return doSnapshots;
+        }
+
+        /**
+         * How often the snapshot is restored. 1 means restore every snapshot, 2 every other snapshot
+         */
+        public int snapshotRestoreInterval() {
+            return restoreInterval;
+        }
+
+        /**
+         * Size of the inbox
+         */
+        public int inboxSize() {
+            return inboxLimit;
+        }
+
+        @Override
+        public String toString() {
+            String sInboxSize = inboxLimit == Integer.MAX_VALUE ? "unlimited" : String.valueOf(inboxLimit);
+            if (!doSnapshots && restoreInterval == 0) {
+                return "snapshots disabled, inboxLimit=" + sInboxSize;
+            } else if (doSnapshots && restoreInterval == 1) {
+                assert inboxLimit == 1;
+                return "snapshots enabled, restoring every snapshot";
+            } else if (doSnapshots && restoreInterval == 2) {
+                assert inboxLimit == 1;
+                return "snapshots enabled, restoring every other snapshot";
+            } else if (doSnapshots && restoreInterval == Integer.MAX_VALUE) {
+                return "snapshots enabled, never restoring them, inboxLimit=" + sInboxSize;
+            } else {
+                throw new IllegalArgumentException("Unknown mode, doSnapshots=" + doSnapshots + ", restoreInterval="
+                    + restoreInterval);
+            }
         }
     }
 }
