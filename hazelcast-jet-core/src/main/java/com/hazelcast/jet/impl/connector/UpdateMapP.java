@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static com.hazelcast.util.MapUtil.createHashMap;
@@ -64,6 +65,8 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     private final FunctionEx<? super T, ? extends K> toKeyFn;
     private final BiFunctionEx<? super V, ? super T, ? extends V> updateFn;
     private final Consumer<T> addToBuffer = this::addToBuffer;
+    private final BiFunction<Object, Object, Object> remappingFunction =
+            (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n);
 
     private IPartitionService memberPartitionService;
     private ClientPartitionService clientPartitionService;
@@ -114,11 +117,6 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     }
 
     @Override
-    protected boolean processInternal() {
-        return submitPending();
-    }
-
-    @Override
     protected void processInternal(Inbox inbox) {
         if (pendingItemCount < PENDING_ITEM_COUNT_LIMIT) {
             pendingItemCount += inbox.size();
@@ -128,7 +126,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     }
 
     @Override
-    protected boolean completeInternal() {
+    protected boolean flushInternal() {
         return submitPending();
     }
 
@@ -177,7 +175,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             partitionId = clientPartitionService.getPartitionId(keyData);
         }
         Data itemData = serializationService.toData(item);
-        tmpMaps[partitionId].merge(keyData, itemData, (o, n) -> ApplyFnEntryProcessor.append(o, (Data) n));
+        tmpMaps[partitionId].merge(keyData, itemData, remappingFunction);
         tmpCounts[partitionId]++;
     }
 
@@ -358,7 +356,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
         // used to group entries when more than one entry exists for the same key
         @SuppressWarnings("unchecked")
-        public static Object append(Object value, Data item) {
+        static Object append(Object value, Data item) {
             List<Data> list;
             if (value instanceof List) {
                 list = (List<Data>) value;

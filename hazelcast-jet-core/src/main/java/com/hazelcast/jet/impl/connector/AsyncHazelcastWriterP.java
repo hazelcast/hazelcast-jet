@@ -37,38 +37,31 @@ import static com.hazelcast.jet.impl.util.Util.tryIncrement;
 
 public abstract class AsyncHazelcastWriterP implements Processor {
 
-    public static final int MAX_PARALLEL_ASYNC_OPS_DEFAULT = 1000;
+    static final int MAX_PARALLEL_ASYNC_OPS_DEFAULT = 1000;
 
     private final int maxParallelAsyncOps;
     private final AtomicInteger numConcurrentOps = new AtomicInteger();
-    private final AtomicReference<Throwable> lastError = new AtomicReference<>();
+    private final AtomicReference<Throwable> firstError = new AtomicReference<>();
+    private final HazelcastInstance instance;
+
     private final ExecutionCallback callback = callbackOf(
         response -> numConcurrentOps.decrementAndGet(),
         exception -> {
             numConcurrentOps.decrementAndGet();
             if (exception != null) {
-                lastError.compareAndSet(null, exception);
+                firstError.compareAndSet(null, exception);
             }
         });
-    private final HazelcastInstance instance;
 
-    AsyncHazelcastWriterP(
-        HazelcastInstance instance, int maxParallelAsyncOps
-    ) {
+    AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
         this.instance = instance;
         this.maxParallelAsyncOps = maxParallelAsyncOps;
     }
 
     @Override
     public final boolean tryProcess() {
-        checkError();
-        boolean result;
-        try {
-            result = processInternal();
-        } catch (HazelcastInstanceNotActiveException e) {
-            throw handleInstanceNotActive(e, isLocal());
-        }
-        return result;
+        flush();
+        return true;
     }
 
     @Override
@@ -88,32 +81,31 @@ public abstract class AsyncHazelcastWriterP implements Processor {
 
     @Override
     public final boolean saveToSnapshot() {
-        return complete();
+        return flush() && asyncCallsDone();
     }
 
     @Override
     public final boolean complete() {
+        return flush() && asyncCallsDone();
+    }
+
+    private boolean flush() {
         checkError();
         boolean result;
         try {
-            result = completeInternal();
+            result = flushInternal();
         } catch (HazelcastInstanceNotActiveException e) {
             throw handleInstanceNotActive(e, isLocal());
         }
-        return result && ensureAllWritten();
+        return result;
     }
 
     @CheckReturnValue
-    protected boolean processInternal() {
+    protected boolean flushInternal() {
         return true;
     }
 
     protected abstract void processInternal(Inbox inbox);
-
-    @CheckReturnValue
-    protected boolean completeInternal() {
-        return true;
-    }
 
     protected final void setCallback(ICompletableFuture future) {
         future.andThen(callback);
@@ -152,7 +144,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     private void checkError() {
-        Throwable t = lastError.get();
+        Throwable t = firstError.get();
         if (t instanceof HazelcastInstanceNotActiveException) {
             throw handleInstanceNotActive((HazelcastInstanceNotActiveException) t, isLocal());
         } else if (t != null) {
@@ -160,10 +152,9 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         }
     }
 
-    private boolean ensureAllWritten() {
+    private boolean asyncCallsDone() {
         boolean allWritten = numConcurrentOps.get() == 0;
         checkError();
         return allWritten;
     }
-
 }

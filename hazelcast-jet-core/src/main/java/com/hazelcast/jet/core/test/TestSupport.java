@@ -348,7 +348,7 @@ public final class TestSupport {
             }
             metaSupplier.init(metaSupplierContext);
             Address address = jetInstance != null
-                ? jetInstance.getHazelcastInstance().getCluster().getLocalMember().getAddress() : LOCAL_ADDRESS;
+                    ? jetInstance.getHazelcastInstance().getCluster().getLocalMember().getAddress() : LOCAL_ADDRESS;
             supplier = metaSupplier.get(singletonList(address)).apply(address);
             TestProcessorSupplierContext supplierContext = new TestProcessorSupplierContext();
             if (jetInstance != null) {
@@ -359,7 +359,6 @@ public final class TestSupport {
             if (inputs.stream().mapToInt(List::size).sum() > 0) {
                 // only run this version if there is an input
                 runTest(new TestMode(false, 0, EdgeConfig.DEFAULT_QUEUE_SIZE));
-                runTest(new TestMode(false, 0, Integer.MAX_VALUE));
             }
             if (doSnapshots) {
                 runTest(new TestMode(true, 1, 1));
@@ -867,39 +866,40 @@ public final class TestSupport {
     }
 
     /**
-     *  Describes the current test mode
+     * Describes the current test mode.
      */
-    public static class TestMode {
+    public static final class TestMode {
 
         private final boolean doSnapshots;
         private final int restoreInterval;
         private final int inboxLimit;
 
         /**
-         * Construct a new instance
+         * Construct a new instance.
          */
-        public TestMode(boolean doSnapshots, int restoreInterval, int inboxLimit) {
+        private TestMode(boolean doSnapshots, int restoreInterval, int inboxLimit) {
             this.doSnapshots = doSnapshots;
             this.restoreInterval = restoreInterval;
             this.inboxLimit = inboxLimit;
         }
 
         /**
-         * Are snapshots enabled
+         * Are snapshots enabled.
          */
         public boolean isSnapshotsEnabled() {
             return doSnapshots;
         }
 
         /**
-         * How often the snapshot is restored. 1 means restore every snapshot, 2 every other snapshot
+         * How often the snapshot is restored. 1 means restore every snapshot,
+         * 2 every other snapshot.
          */
         public int snapshotRestoreInterval() {
             return restoreInterval;
         }
 
         /**
-         * Size of the inbox
+         * Size limit of the inbox.
          */
         public int inboxSize() {
             return inboxLimit;
@@ -920,7 +920,7 @@ public final class TestSupport {
                 return "snapshots enabled, never restoring them, inboxLimit=" + sInboxSize;
             } else {
                 throw new IllegalArgumentException("Unknown mode, doSnapshots=" + doSnapshots + ", restoreInterval="
-                    + restoreInterval);
+                    + restoreInterval + ", inboxLimit=" + inboxLimit);
             }
         }
     }
