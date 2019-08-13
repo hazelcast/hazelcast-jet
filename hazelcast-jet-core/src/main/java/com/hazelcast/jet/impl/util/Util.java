@@ -19,7 +19,9 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConfigXmlGenerator;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.core.ExecutionCallback;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetException;
@@ -397,6 +399,10 @@ public final class Util {
                 return newValue;
             }
         };
+    }
+
+    public static boolean isLocalInstance(HazelcastInstance instance) {
+        return !(instance instanceof HazelcastClientProxy);
     }
 
     /**

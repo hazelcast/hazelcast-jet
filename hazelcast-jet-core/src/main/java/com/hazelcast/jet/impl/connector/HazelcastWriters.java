@@ -260,7 +260,7 @@ public final class HazelcastWriters {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance, boolean isLocal) {
+        protected Processor createProcessor(HazelcastInstance instance) {
             ConsumerEx<B> flushBufferFn = instanceToFlushBufferFn.apply(instance);
             return new WriteBufferedP<>(ctx -> newBufferFn.get(), addToBufferFn, flushBufferFn, disposeBufferFn);
         }

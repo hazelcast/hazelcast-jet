@@ -77,10 +77,10 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     UpdateMapP(HazelcastInstance instance,
                int maxParallelAsyncOps,
-               boolean isLocal, String mapName,
+               String mapName,
                @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
                @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
-        super(instance, maxParallelAsyncOps, isLocal);
+        super(instance, maxParallelAsyncOps);
         this.mapName = mapName;
         this.toKeyFn = toKeyFn;
         this.updateFn = updateFn;
@@ -221,9 +221,9 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         }
 
         @Override
-        protected Processor createProcessor(HazelcastInstance instance, boolean isLocal) {
+        protected Processor createProcessor(HazelcastInstance instance) {
             return new UpdateMapP<>(
-                instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, isLocal, name, toKeyFn, updateFn
+                instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, name, toKeyFn, updateFn
             );
         }
     }

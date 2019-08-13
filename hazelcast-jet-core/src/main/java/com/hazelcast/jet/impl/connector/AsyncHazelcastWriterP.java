@@ -23,6 +23,7 @@ import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -50,14 +51,12 @@ public abstract class AsyncHazelcastWriterP implements Processor {
             }
         });
     private final HazelcastInstance instance;
-    private boolean isLocal;
 
     AsyncHazelcastWriterP(
-        HazelcastInstance instance, int maxParallelAsyncOps, boolean isLocal
+        HazelcastInstance instance, int maxParallelAsyncOps
     ) {
         this.instance = instance;
         this.maxParallelAsyncOps = maxParallelAsyncOps;
-        this.isLocal = isLocal;
     }
 
     @Override
@@ -67,7 +66,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         try {
             result = processInternal();
         } catch (HazelcastInstanceNotActiveException e) {
-            throw handleInstanceNotActive(e, isLocal);
+            throw handleInstanceNotActive(e, isLocal());
         }
         return result;
     }
@@ -78,7 +77,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         try {
             processInternal(inbox);
         } catch (HazelcastInstanceNotActiveException e) {
-            throw handleInstanceNotActive(e, isLocal);
+            throw handleInstanceNotActive(e, isLocal());
         }
     }
 
@@ -99,7 +98,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         try {
             result = completeInternal();
         } catch (HazelcastInstanceNotActiveException e) {
-            throw handleInstanceNotActive(e, isLocal);
+            throw handleInstanceNotActive(e, isLocal());
         }
         return result && ensureAllWritten();
     }
@@ -149,13 +148,13 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     protected final boolean isLocal() {
-        return isLocal;
+        return Util.isLocalInstance(instance);
     }
 
     private void checkError() {
         Throwable t = lastError.get();
         if (t instanceof HazelcastInstanceNotActiveException) {
-            throw handleInstanceNotActive((HazelcastInstanceNotActiveException) t, isLocal);
+            throw handleInstanceNotActive((HazelcastInstanceNotActiveException) t, isLocal());
         } else if (t != null) {
             throw sneakyThrow(t);
         }

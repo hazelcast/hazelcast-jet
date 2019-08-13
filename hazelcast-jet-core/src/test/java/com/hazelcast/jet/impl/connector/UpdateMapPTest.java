@@ -25,24 +25,41 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.map.AbstractEntryProcessor;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.impl.connector.AsyncHazelcastWriterP.MAX_PARALLEL_ASYNC_OPS_DEFAULT;
 import static org.junit.Assert.assertEquals;
 
-@RunWith(HazelcastParallelClassRunner.class)
+@RunWith(Parameterized.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class UpdateMapPTest extends JetTestSupport {
 
+    @Parameterized.Parameter(0)
+    public int asyncLimit;
+
     private JetInstance jet;
-    private IMapJet<String, Integer> sinkMap;
     private HazelcastInstance client;
+    private IMapJet<String, Integer> sinkMap;
+
+    @Parameterized.Parameters(name = "asyncLimit: {0} {1}")
+    public static Collection<Object[]> parameters() {
+        return Arrays.asList(
+            new Object[]{1},
+            new Object[]{MAX_PARALLEL_ASYNC_OPS_DEFAULT}
+        );
+    }
 
     @Before
     public void setup() {
@@ -53,29 +70,30 @@ public class UpdateMapPTest extends JetTestSupport {
 
     @Test
     public void test_localMap() {
-        runTest(jet.getHazelcastInstance(), 1, true);
+        runTest(updateMap(jet.getHazelcastInstance()));
     }
 
     @Test
-    public void test_localMap_highAsync() {
-        runTest(jet.getHazelcastInstance(), MAX_PARALLEL_ASYNC_OPS_DEFAULT, true);
+    public void test_localMap_with_EP() {
+        runTest(updateMapWithEP(jet.getHazelcastInstance()));
     }
 
     @Test
     public void test_remoteMap() {
-        runTest(client, 1, false);
+        runTest(updateMap(client));
+
     }
 
     @Test
-    public void test_remoteMap_highAsync() {
-        runTest(client, MAX_PARALLEL_ASYNC_OPS_DEFAULT, false);
+    public void test_remoteMap_with_EP() {
+        runTest(updateMapWithEP(client));
+
     }
 
-    private void runTest(HazelcastInstance instance, int asyncLimit, boolean isLocal) {
-        SupplierEx<Processor> sup = () -> new UpdateMapP<Integer, String, Integer>(
+    private SupplierEx<Processor> updateMap(HazelcastInstance instance) {
+        return () -> new UpdateMapP<Integer, String, Integer>(
             instance,
             asyncLimit,
-            isLocal,
             sinkMap.getName(),
             Object::toString,
             (prev, next) -> {
@@ -84,7 +102,18 @@ public class UpdateMapPTest extends JetTestSupport {
                 }
                 return prev + 1;
             });
+    }
 
+    private SupplierEx<Processor> updateMapWithEP(HazelcastInstance instance) {
+        return () -> new UpdateMapWithEntryProcessorP<Integer, String, Integer>(
+                    instance,
+                    asyncLimit,
+                    sinkMap.getName(),
+                    Object::toString,
+                    i -> new IncrementEntryProcessor());
+    }
+
+    private void runTest(SupplierEx<Processor> sup) {
         int range = 1024;
         int countPerKey = 16;
         List<Integer> input = IntStream.range(0, range * countPerKey)
@@ -105,5 +134,15 @@ public class UpdateMapPTest extends JetTestSupport {
                 }
                 sinkMap.clear();
             });
+    }
+
+    private static class IncrementEntryProcessor extends AbstractEntryProcessor<String, Integer> {
+
+        @Override
+        public Object process(Entry<String, Integer> entry) {
+            Integer val = entry.getValue();
+            entry.setValue(val == null ? 1 : val + 1);
+            return null;
+        }
     }
 }

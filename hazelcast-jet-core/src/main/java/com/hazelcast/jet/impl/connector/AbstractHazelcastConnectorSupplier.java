@@ -50,12 +50,12 @@ public abstract class AbstractHazelcastConnectorSupplier implements ProcessorSup
 
     @Nonnull @Override
     public Collection<? extends Processor> get(int count) {
-        return Stream.generate(() -> createProcessor(instance, isLocal()))
+        return Stream.generate(() -> createProcessor(instance))
                      .limit(count)
                      .collect(toList());
     }
 
-    protected abstract Processor createProcessor(HazelcastInstance instance, boolean isLocal);
+    protected abstract Processor createProcessor(HazelcastInstance instance);
 
     private boolean isLocal() {
         return clientXml == null;
