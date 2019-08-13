@@ -57,13 +57,19 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     @Override
-    public boolean tryProcess() {
+    public final boolean tryProcess() {
         checkError();
-        return true;
+        boolean result;
+        try {
+            result = processInternal();
+        } catch (HazelcastInstanceNotActiveException e) {
+            throw handleInstanceNotActive(e, isLocal);
+        }
+        return result;
     }
 
     @Override
-    public void process(int ordinal, @Nonnull Inbox inbox) {
+    public final void process(int ordinal, @Nonnull Inbox inbox) {
         checkError();
         try {
             processInternal(inbox);
@@ -73,30 +79,45 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     @Override
-    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+    public final boolean tryProcessWatermark(@Nonnull Watermark watermark) {
         return true;
     }
 
     @Override
-    public boolean saveToSnapshot() {
-        checkError();
-        return ensureAllWritten();
+    public final boolean saveToSnapshot() {
+        return complete();
     }
 
     @Override
-    public boolean complete() {
+    public final boolean complete() {
         checkError();
-        return ensureAllWritten();
+        boolean result;
+        try {
+            result = completeInternal();
+        } catch (HazelcastInstanceNotActiveException e) {
+            throw handleInstanceNotActive(e, isLocal);
+        }
+        return result && ensureAllWritten();
+    }
+
+    @CheckReturnValue
+    protected boolean processInternal() {
+        return true;
     }
 
     protected abstract void processInternal(Inbox inbox);
 
-    protected void setCallback(ICompletableFuture future) {
+    @CheckReturnValue
+    protected boolean completeInternal() {
+        return true;
+    }
+
+    protected final void setCallback(ICompletableFuture future) {
         future.andThen(callback);
     }
 
     @CheckReturnValue
-    protected boolean tryAcquirePermit() {
+    protected final boolean tryAcquirePermit() {
         return tryIncrement(numConcurrentOps, 1, MAX_PARALLEL_ASYNC_OPS);
     }
 
@@ -106,7 +127,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
      * return 0.
      */
     @CheckReturnValue
-    protected int tryAcquirePermits(int desiredNumber) {
+    protected final int tryAcquirePermits(int desiredNumber) {
         int prev;
         int next;
         do {
@@ -117,6 +138,14 @@ public abstract class AsyncHazelcastWriterP implements Processor {
             }
         } while (!numConcurrentOps.compareAndSet(prev, next));
         return next - prev;
+    }
+
+    protected final HazelcastInstance instance() {
+        return instance;
+    }
+
+    protected final boolean isLocal() {
+        return isLocal;
     }
 
     private void checkError() {
@@ -134,11 +163,4 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         return allWritten;
     }
 
-    protected HazelcastInstance instance() {
-        return instance;
-    }
-
-    protected boolean isLocal() {
-        return isLocal;
-    }
 }

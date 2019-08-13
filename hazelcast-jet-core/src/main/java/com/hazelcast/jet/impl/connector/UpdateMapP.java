@@ -73,7 +73,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     private Map<Data, Object>[] tmpMaps;
     private int pendingItemCount;
 
-    private UpdateMapP(HazelcastInstance instance, boolean isLocal,
+    UpdateMapP(HazelcastInstance instance, boolean isLocal,
                        String mapName,
                        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
                        @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
@@ -107,21 +107,36 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     }
 
     @Override
-    protected void processInternal(Inbox inbox) {
-        if (pendingItemCount < PENDING_ITEM_COUNT_LIMIT) {
-            inbox.drain(addToBuffer);
-            pendingItemCount += inbox.size();
-        }
-        submit();
+    protected boolean processInternal() {
+        return submitPending();
     }
 
-    private void submit() {
+    @Override
+    protected void processInternal(Inbox inbox) {
+        if (pendingItemCount < PENDING_ITEM_COUNT_LIMIT) {
+            pendingItemCount += inbox.size();
+            inbox.drain(addToBuffer);
+        }
+        submitPending();
+    }
+
+
+    @Override
+    protected boolean completeInternal() {
+        return submitPending();
+    }
+
+    // returns if we were able to submit all pending items
+    private boolean submitPending() {
+        if (pendingItemCount == 0) {
+            return true;
+        }
         for (int partitionId = 0; partitionId < tmpMaps.length; partitionId++) {
             if (tmpMaps[partitionId].isEmpty()) {
                 continue;
             }
             if (!tryAcquirePermit()) {
-                return;
+                return false;
             }
 
             Map<Data, Object> buffer = tmpMaps[partitionId];
@@ -130,6 +145,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
             pendingItemCount -= buffer.size();
             tmpMaps[partitionId] = new HashMap<>();
         }
+        return true;
     }
 
     private void addToBuffer(T item) {
