@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.impl.connector.AsyncHazelcastWriterP.MAX_PARALLEL_ASYNC_OPS_DEFAULT;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -48,18 +49,18 @@ public class UpdateMapWithEntryProcessorPTest extends JetTestSupport {
     @Before
     public void setup() {
         jet = createJetMember();
-        client = new HazelcastClientProxy((HazelcastClientInstanceImpl)createJetClient().getHazelcastInstance());
+        client = new HazelcastClientProxy((HazelcastClientInstanceImpl) createJetClient().getHazelcastInstance());
         sinkMap = jet.getMap("results");
     }
 
     @Test
     public void test_localMap() {
-        runTest(jet.getHazelcastInstance(),  1,true);
+        runTest(jet.getHazelcastInstance(), 1, true);
     }
 
     @Test
     public void test_localMap_highAsync() {
-        runTest(jet.getHazelcastInstance(),  1024,true);
+        runTest(jet.getHazelcastInstance(), MAX_PARALLEL_ASYNC_OPS_DEFAULT, true);
     }
 
     @Test
@@ -69,7 +70,7 @@ public class UpdateMapWithEntryProcessorPTest extends JetTestSupport {
 
     @Test
     public void test_remoteMap_highAsync() {
-        runTest(client, 1024, false);
+        runTest(client, MAX_PARALLEL_ASYNC_OPS_DEFAULT, false);
     }
 
     private void runTest(HazelcastInstance instance, int asyncLimit, boolean isLocal) {
