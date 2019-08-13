@@ -369,6 +369,7 @@ public final class TestSupport {
             throw sneakyThrow(e);
         }
     }
+
     /**
      * Disables checking of progress of processing methods (see {@link
      * TestSupport class javadoc} for information on what is "progress").
