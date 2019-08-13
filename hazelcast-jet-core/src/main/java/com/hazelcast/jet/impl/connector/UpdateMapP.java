@@ -72,6 +72,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
     // one map per partition to store the temporary values
     private Map<Data, Object>[] tmpMaps;
+    // count how many pending actual items are in each map
     private int[] tmpCounts;
 
     private int pendingItemCount;
@@ -136,7 +137,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
         if (pendingItemCount == 0) {
             return true;
         }
-        for (int i = 0; i < tmpMaps.length; i++, currentPartitionId = roll(currentPartitionId, tmpMaps.length)) {
+        for (int i = 0; i < tmpMaps.length; i++, currentPartitionId = incrCircular(currentPartitionId, tmpMaps.length)) {
             if (tmpMaps[currentPartitionId].isEmpty()) {
                 continue;
             }
@@ -198,7 +199,7 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
      * Returns {@code v+1} or 0, if {@code v+1 == limit}.
      */
     @CheckReturnValue
-    private static int roll(int v, int limit) {
+    private static int incrCircular(int v, int limit) {
         v++;
         if (v == limit) {
             v = 0;
