@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -27,27 +30,51 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class UpdateMapPTest extends JetTestSupport {
 
     private JetInstance jet;
     private IMapJet<String, Integer> sinkMap;
+    private HazelcastInstance client;
 
     @Before
     public void setup() {
         jet = createJetMember();
+        client = new HazelcastClientProxy((HazelcastClientInstanceImpl)createJetClient().getHazelcastInstance());
         sinkMap = jet.getMap("results");
     }
 
     @Test
-    public void test() {
+    public void test_localMap() {
+        runTest(jet.getHazelcastInstance(),  1,true);
+    }
+
+    @Test
+    public void test_localMap_highAsync() {
+        runTest(jet.getHazelcastInstance(),  1024,true);
+    }
+
+    @Test
+    public void test_remoteMap() {
+        runTest(client, 1, false);
+    }
+
+    @Test
+    public void test_remoteMap_highAsync() {
+        runTest(client, 1024, false);
+    }
+
+    private void runTest(HazelcastInstance instance, int asyncLimit, boolean isLocal) {
         SupplierEx<Processor> sup = () -> new UpdateMapP<Integer, String, Integer>(
-            jet.getHazelcastInstance(),
-            1,
-            true,
+            instance,
+            asyncLimit,
+            isLocal,
             sinkMap.getName(),
             Object::toString,
             (prev, next) -> {
@@ -57,15 +84,25 @@ public class UpdateMapPTest extends JetTestSupport {
                 return prev + 1;
             });
 
+        int range = 1024;
+        int countPerKey = 16;
+        List<Integer> input = IntStream.range(0, range * countPerKey)
+                                       .map(i -> i % range)
+                                       .boxed()
+                                       .collect(Collectors.toList());
+
         TestSupport
             .verifyProcessor(sup)
             .jetInstance(jet)
-            .input(Arrays.asList(1, 2, 3, 4, 1, 2, 3, 4))
+            .input(input)
             .disableSnapshots()
             .disableLogging()
             .disableProgressAssertion()
-            .expectOutput(Collections.emptyList());
-
-        System.out.println(sinkMap.entrySet());
+            .assertOutput(0, (mode, output) -> {
+                for (int i = 0; i < range; i++) {
+                    assertEquals(Integer.valueOf(countPerKey), sinkMap.get(String.valueOf(i)));
+                }
+                sinkMap.clear();
+            });
     }
 }

@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -40,38 +43,38 @@ public class UpdateMapWithEntryProcessorPTest extends JetTestSupport {
 
     private JetInstance jet;
     private IMapJet<String, Integer> sinkMap;
-    private JetInstance client;
+    private HazelcastInstance client;
 
     @Before
     public void setup() {
         jet = createJetMember();
-        client = createJetClient();
+        client = new HazelcastClientProxy((HazelcastClientInstanceImpl)createJetClient().getHazelcastInstance());
         sinkMap = jet.getMap("results");
     }
 
     @Test
     public void test_localMap() {
-        runTest(jet,  1,true);
+        runTest(jet.getHazelcastInstance(),  1,true);
     }
 
     @Test
     public void test_localMap_highAsync() {
-        runTest(jet,  1024,true);
+        runTest(jet.getHazelcastInstance(),  1024,true);
     }
 
     @Test
     public void test_remoteMap() {
-        runTest(client, 1, true);
+        runTest(client, 1, false);
     }
 
     @Test
     public void test_remoteMap_highAsync() {
-        runTest(client, 1024, true);
+        runTest(client, 1024, false);
     }
 
-    private void runTest(JetInstance instance, int asyncLimit, boolean isLocal) {
+    private void runTest(HazelcastInstance instance, int asyncLimit, boolean isLocal) {
         SupplierEx<Processor> sup = () -> new UpdateMapWithEntryProcessorP<Integer, String, Integer>(
-            instance.getHazelcastInstance(),
+            instance,
             asyncLimit,
             isLocal,
             sinkMap.getName(),
@@ -79,7 +82,8 @@ public class UpdateMapWithEntryProcessorPTest extends JetTestSupport {
             i -> new IncrementEntryProcessor());
 
         int range = 1024;
-        List<Integer> input = IntStream.range(0, range * 2)
+        int countPerKey = 16;
+        List<Integer> input = IntStream.range(0, range * countPerKey)
                                        .map(i -> i % range)
                                        .boxed()
                                        .collect(Collectors.toList());
@@ -93,7 +97,7 @@ public class UpdateMapWithEntryProcessorPTest extends JetTestSupport {
             .disableProgressAssertion()
             .assertOutput(0, (mode, output) -> {
                 for (int i = 0; i < range; i++) {
-                    assertEquals(Integer.valueOf(2), sinkMap.get(String.valueOf(i)));
+                    assertEquals(Integer.valueOf(countPerKey), sinkMap.get(String.valueOf(i)));
                 }
                 sinkMap.clear();
             });
