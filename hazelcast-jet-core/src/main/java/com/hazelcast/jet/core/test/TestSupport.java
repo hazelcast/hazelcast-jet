@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -200,16 +201,19 @@ public final class TestSupport {
     private ProcessorMetaSupplier metaSupplier;
     private ProcessorSupplier supplier;
     private List<List<?>> inputs = emptyList();
-    private List<List<?>> expectedOutputs = emptyList();
     private int[] priorities = {};
     private boolean assertProgress = true;
     private boolean doSnapshots = true;
     private boolean logInputOutput = true;
     private boolean callComplete = true;
+    private int outputOrdinalCount;
+
     private JetInstance jetInstance;
     private long cooperativeTimeout = COOPERATIVE_TIME_LIMIT_MS_FAIL;
     private long runUntilOutputMatchesTimeoutMillis = -1;
     private long runUntilOutputMatchesExtraTimeMillis;
+
+    private BiConsumer<String, List<List<Object>>> assertOutputFn;
 
     private BiPredicate<? super List<?>, ? super List<?>> outputChecker = Objects::equals;
 
@@ -319,6 +323,23 @@ public final class TestSupport {
      * @throws AssertionError if some assertion does not hold
      */
     public void expectOutputs(@Nonnull List<List<?>> expectedOutputs) {
+        assertOutput(
+            expectedOutputs.size(), (mode, actual) -> assertExpectedOutput(mode, expectedOutputs, actual)
+        );
+    }
+
+    /**
+     * Runs the test with the specified custom assertion.
+     * <p>
+     * The consumer takes a list of collected output and the current test mode which
+     * can be used in the assertion message.
+     *
+     * @param outputOrdinalCount how many output ordinals should be created
+     * @param assertFn an assertion function which takes the current mode and the collected output
+     */
+    public void assertOutput(int outputOrdinalCount, BiConsumer<String, List<List<Object>>> assertFn) {
+        assertOutputFn = assertFn;
+        this.outputOrdinalCount = outputOrdinalCount;
         try {
             TestProcessorMetaSupplierContext metaSupplierContext = new TestProcessorMetaSupplierContext();
             if (jetInstance != null) {
@@ -326,14 +347,13 @@ public final class TestSupport {
             }
             metaSupplier.init(metaSupplierContext);
             Address address = jetInstance != null
-                    ? jetInstance.getHazelcastInstance().getCluster().getLocalMember().getAddress() : LOCAL_ADDRESS;
+                ? jetInstance.getHazelcastInstance().getCluster().getLocalMember().getAddress() : LOCAL_ADDRESS;
             supplier = metaSupplier.get(singletonList(address)).apply(address);
             TestProcessorSupplierContext supplierContext = new TestProcessorSupplierContext();
             if (jetInstance != null) {
                 supplierContext.setJetInstance(jetInstance);
             }
             supplier.init(supplierContext);
-            this.expectedOutputs = expectedOutputs;
             runTest(false, 0, 1);
             if (inputs.stream().mapToInt(List::size).sum() > 0) {
                 // only run this version if there is an input
@@ -349,7 +369,6 @@ public final class TestSupport {
             throw sneakyThrow(e);
         }
     }
-
     /**
      * Disables checking of progress of processing methods (see {@link
      * TestSupport class javadoc} for information on what is "progress").
@@ -496,9 +515,9 @@ public final class TestSupport {
 
         // we'll use 1-capacity outbox to test outbox rejection
         TestOutbox[] outbox = {createOutbox()};
-        List<List<Object>> actualOutputs = new ArrayList<>(expectedOutputs.size());
-        for (int i = 0; i < expectedOutputs.size(); i++) {
-            actualOutputs.add(new ArrayList());
+        List<List<Object>> actualOutputs = new ArrayList<>(outputOrdinalCount);
+        for (int i = 0; i < outputOrdinalCount; i++) {
+            actualOutputs.add(new ArrayList<>());
         }
 
         // create instance of your processor and call the init() method
@@ -533,10 +552,11 @@ public final class TestSupport {
             int lastInboxSize = inbox.size();
             String methodName;
             methodName = processInbox(inbox, inboxOrdinal, isCooperative, processor);
-            boolean madeProgress = inbox.size() < lastInboxSize || !outbox[0].queue(0).isEmpty();
+            boolean madeProgress = inbox.size() < lastInboxSize ||
+                (outbox[0].bucketCount() > 0 && !outbox[0].queue(0).isEmpty());
             assertTrue(methodName + "() call without progress", !assertProgress || madeProgress);
             idleCount = idle(idler, idleCount, madeProgress);
-            if (outbox[0].queue(0).size() == 1 && !inbox.isEmpty()) {
+            if (outbox[0].bucketCount() > 0 && outbox[0].queue(0).size() == 1 && !inbox.isEmpty()) {
                 // if the outbox is full, call the process() method again. Cooperative
                 // processor must be able to cope with this situation and not try to put
                 // more items to the outbox.
@@ -560,7 +580,8 @@ public final class TestSupport {
             boolean[] done = {false};
             do {
                 doCall("complete", isCooperative, () -> done[0] = processor[0].complete());
-                boolean madeProgress = done[0] || !outbox[0].queue(0).isEmpty();
+                boolean madeProgress = done[0] ||
+                    (outbox[0].bucketCount() > 0 && !outbox[0].queue(0).isEmpty());
                 assertTrue("complete() call without progress", !assertProgress || madeProgress);
                 outbox[0].drainQueuesAndReset(actualOutputs, logInputOutput);
                 if (outbox[0].hasUnfinishedItem()) {
@@ -575,7 +596,7 @@ public final class TestSupport {
                 long now = System.nanoTime();
                 if (runUntilOutputMatchesTimeoutMillis >= 0) {
                     try {
-                        assertOutput(doSnapshots, doRestoreEvery, inboxLimit, actualOutputs);
+                        assertOutputFn.accept(modeDescription(doSnapshots, doRestoreEvery, inboxLimit), actualOutputs);
                         outputMatchedAt = Math.min(outputMatchedAt, now);
                     } catch (AssertionError e) {
                         if (outputMatchedAt < Long.MAX_VALUE) {
@@ -597,16 +618,15 @@ public final class TestSupport {
 
         processor[0].close();
 
-        // assert the outbox
-        assertOutput(doSnapshots, doRestoreEvery, inboxLimit, actualOutputs);
+        assertOutputFn.accept(modeDescription(doSnapshots, doRestoreEvery, inboxLimit), actualOutputs);
     }
 
-    private void assertOutput(boolean doSnapshots, int doRestoreEvery, int inboxLimit, List<List<Object>> actualOutputs) {
-        for (int i = 0; i < expectedOutputs.size(); i++) {
-            List<?> expectedOutput = expectedOutputs.get(i);
-            List<?> actualOutput = actualOutputs.get(i);
+    private void assertExpectedOutput(String modeDescription, List<List<?>> expected , List<List<Object>> actual) {
+        for (int i = 0; i < expected.size(); i++) {
+            List<?> expectedOutput = expected.get(i);
+            List<?> actualOutput = actual.get(i);
             if (!outputChecker.test(expectedOutput, actualOutput)) {
-                assertEquals("processor output in mode \"" + modeDescription(doSnapshots, doRestoreEvery, inboxLimit)
+                assertEquals("processor output in mode \"" + modeDescription
                         + "\" doesn't match", listToString(expectedOutput), listToString(actualOutput));
             }
         }
@@ -648,7 +668,7 @@ public final class TestSupport {
     }
 
     private TestOutbox createOutbox() {
-        return new TestOutbox(IntStream.generate(() -> 1).limit(expectedOutputs.size()).toArray(), 1);
+        return new TestOutbox(IntStream.generate(() -> 1).limit(outputOrdinalCount).toArray(), 1);
     }
 
     private String processInbox(TestInbox inbox, int inboxOrdinal, boolean isCooperative, Processor[] processor) {

@@ -32,14 +32,15 @@ public final class UpdateMapWithEntryProcessorP<T, K, V> extends AsyncHazelcastW
     private final FunctionEx<? super T, ? extends K> toKeyFn;
     private final FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn;
 
-    private UpdateMapWithEntryProcessorP(
+    UpdateMapWithEntryProcessorP(
         @Nonnull HazelcastInstance instance,
+        int maxParallelAsyncOps,
         boolean isLocal,
         @Nonnull String name,
-        @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn,
-        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn
+        @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+        @Nonnull FunctionEx<? super T, ? extends EntryProcessor<K, V>> toEntryProcessorFn
     ) {
-        super(instance, isLocal);
+        super(instance, maxParallelAsyncOps, isLocal);
         this.map = instance.getMap(name);
         this.toKeyFn = toKeyFn;
         this.toEntryProcessorFn = toEntryProcessorFn;
@@ -80,7 +81,9 @@ public final class UpdateMapWithEntryProcessorP<T, K, V> extends AsyncHazelcastW
 
         @Override
         protected Processor createProcessor(HazelcastInstance instance, boolean isLocal) {
-            return new UpdateMapWithEntryProcessorP<>(instance, isLocal, name, toEntryProcessorFn, toKeyFn);
+            return new UpdateMapWithEntryProcessorP<>(
+                instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, isLocal, name, toKeyFn, toEntryProcessorFn
+            );
         }
     }
 }

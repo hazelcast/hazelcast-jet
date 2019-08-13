@@ -46,6 +46,7 @@ public class UpdateMapPTest extends JetTestSupport {
     public void test() {
         SupplierEx<Processor> sup = () -> new UpdateMapP<Integer, String, Integer>(
             jet.getHazelcastInstance(),
+            1,
             true,
             sinkMap.getName(),
             Object::toString,

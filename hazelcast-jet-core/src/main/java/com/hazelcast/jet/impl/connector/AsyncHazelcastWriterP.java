@@ -36,8 +36,9 @@ import static com.hazelcast.jet.impl.util.Util.tryIncrement;
 
 public abstract class AsyncHazelcastWriterP implements Processor {
 
-    private static final int MAX_PARALLEL_ASYNC_OPS = 1000;
+    public static final int MAX_PARALLEL_ASYNC_OPS_DEFAULT = 1000;
 
+    private final int maxParallelAsyncOps;
     private final AtomicInteger numConcurrentOps = new AtomicInteger();
     private final AtomicReference<Throwable> lastError = new AtomicReference<>();
     private final ExecutionCallback callback = callbackOf(
@@ -51,8 +52,11 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     private final HazelcastInstance instance;
     private boolean isLocal;
 
-    AsyncHazelcastWriterP(HazelcastInstance instance, boolean isLocal) {
+    AsyncHazelcastWriterP(
+        HazelcastInstance instance, int maxParallelAsyncOps, boolean isLocal
+    ) {
         this.instance = instance;
+        this.maxParallelAsyncOps = maxParallelAsyncOps;
         this.isLocal = isLocal;
     }
 
@@ -118,7 +122,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
 
     @CheckReturnValue
     protected final boolean tryAcquirePermit() {
-        return tryIncrement(numConcurrentOps, 1, MAX_PARALLEL_ASYNC_OPS);
+        return tryIncrement(numConcurrentOps, 1, maxParallelAsyncOps);
     }
 
     /**
@@ -132,7 +136,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
         int next;
         do {
             prev = numConcurrentOps.get();
-            next = Math.min(prev + desiredNumber, MAX_PARALLEL_ASYNC_OPS);
+            next = Math.min(prev + desiredNumber, maxParallelAsyncOps);
             if (next == prev) {
                 return 0;
             }

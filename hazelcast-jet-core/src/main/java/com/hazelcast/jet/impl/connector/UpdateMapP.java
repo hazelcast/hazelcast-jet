@@ -75,11 +75,12 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
     private int pendingItemCount;
     private int currentPartitionId;
 
-    UpdateMapP(HazelcastInstance instance, boolean isLocal,
-                       String mapName,
-                       @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
-                       @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
-        super(instance, isLocal);
+    UpdateMapP(HazelcastInstance instance,
+               int maxParallelAsyncOps,
+               boolean isLocal, String mapName,
+               @Nonnull FunctionEx<? super T, ? extends K> toKeyFn,
+               @Nonnull BiFunctionEx<? super V, ? super T, ? extends V> updateFn) {
+        super(instance, maxParallelAsyncOps, isLocal);
         this.mapName = mapName;
         this.toKeyFn = toKeyFn;
         this.updateFn = updateFn;
@@ -221,7 +222,9 @@ public final class UpdateMapP<T, K, V> extends AsyncHazelcastWriterP {
 
         @Override
         protected Processor createProcessor(HazelcastInstance instance, boolean isLocal) {
-            return new UpdateMapP<>(instance, isLocal, name, toKeyFn, updateFn);
+            return new UpdateMapP<>(
+                instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, isLocal, name, toKeyFn, updateFn
+            );
         }
     }
 
