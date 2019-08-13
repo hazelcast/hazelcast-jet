@@ -104,12 +104,6 @@ public class JobRepository {
     public static final String JOB_RECORDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "records";
 
     /**
-     * Name of internal IMap which stores {@link JobRecord}s.
-     */
-    public static final String JOB_METRICS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "metrics";
-
-
-    /**
      * Name of internal IMap which stores {@link JobExecutionRecord}s.
      */
     public static final String JOB_EXECUTION_RECORDS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "executionRecords";
@@ -118,6 +112,11 @@ public class JobRepository {
      * Name of internal IMap which stores job results
      */
     public static final String JOB_RESULTS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "results";
+
+    /**
+     * Name of internal IMap which stores {@link JobMetrics}s.
+     */
+    public static final String JOB_METRICS_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "results.metrics";
 
     /**
      * Prefix for internal IMaps which store snapshot data. Snapshot data for
