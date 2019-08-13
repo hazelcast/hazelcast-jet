@@ -46,14 +46,13 @@ import static org.junit.Assert.assertEquals;
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
 public class UpdateMapPTest extends JetTestSupport {
 
+    private static final int COUNT_PER_KEY = 16;
+
     @Parameterized.Parameter(0)
     public int asyncLimit;
 
     @Parameterized.Parameter(1)
     public int keyRange;
-
-    private static final int COUNT_PER_KEY = 16;
-
 
     private JetInstance jet;
     private HazelcastInstance client;

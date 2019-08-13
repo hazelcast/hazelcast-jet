@@ -148,7 +148,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     protected final boolean isLocal() {
-        return Util.isLocalInstance(instance);
+        return Util.isMemberInstance(instance);
     }
 
     private void checkError() {

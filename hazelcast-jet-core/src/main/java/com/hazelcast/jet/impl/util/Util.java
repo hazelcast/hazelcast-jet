@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConfigXmlGenerator;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
-import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.Member;
@@ -401,8 +400,8 @@ public final class Util {
         };
     }
 
-    public static boolean isLocalInstance(HazelcastInstance instance) {
-        return !(instance instanceof HazelcastClientProxy);
+    public static boolean isMemberInstance(HazelcastInstance instance) {
+        return instance.getLocalEndpoint() instanceof Member;
     }
 
     /**
