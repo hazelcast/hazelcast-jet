@@ -885,7 +885,7 @@ public class SinksTest extends PipelineTestSupport {
         }
     }
 
-    private static class SleepingEntryProcessor extends AbstractEntryProcessor<Integer, Object> {
+    private static final class SleepingEntryProcessor extends AbstractEntryProcessor<Integer, Object> {
         private final int v;
 
         private SleepingEntryProcessor(int v) {
