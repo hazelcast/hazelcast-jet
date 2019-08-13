@@ -735,6 +735,14 @@ public class SinksTest extends PipelineTestSupport {
 
     @Test
     public void mapWithEntryProcessor_testBackpressure() {
+        /*
+        NOTE TO THE TEST
+        This test tries to test that when a permit for async op is denied, the
+        processor correctly yields. We don't assert that it actually happened,
+        nor that the backpressure was applied to the upstream. We only try to
+        simulate a slow sink (using the SleepingEntryProcessor) and check that
+        the results are correct.
+         */
         String targetMap = randomMapName();
 
         List<Integer> input = sequence(5_001);
