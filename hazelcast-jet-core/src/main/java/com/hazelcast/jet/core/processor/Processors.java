@@ -48,6 +48,7 @@ import com.hazelcast.jet.impl.processor.RollingAggregateP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingContextP;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
@@ -55,6 +56,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.FunctionEx.identity;
@@ -691,9 +693,7 @@ public final class Processors {
      * @param <R> type of emitted item
      */
     @Nonnull
-    public static <T, R> SupplierEx<Processor> mapP(
-            @Nonnull FunctionEx<T, R> mapFn
-    ) {
+    public static <T, R> SupplierEx<Processor> mapP(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         return () -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
             return new TransformP<T, R>(item -> {
@@ -713,14 +713,8 @@ public final class Processors {
      * @param <T> type of received item
      */
     @Nonnull
-    public static <T> SupplierEx<Processor> filterP(@Nonnull PredicateEx<T> filterFn) {
-        return () -> {
-            final ResettableSingletonTraverser<T> trav = new ResettableSingletonTraverser<>();
-            return new TransformP<T, T>(item -> {
-                trav.accept(filterFn.test(item) ? item : null);
-                return trav;
-            });
-        };
+    public static <T> SupplierEx<Processor> filterP(@Nonnull PredicateEx<? super T> filterFn) {
+        return mapP((T t) -> filterFn.test(t) ? t : null);
     }
 
     /**
@@ -737,7 +731,7 @@ public final class Processors {
      */
     @Nonnull
     public static <T, R> SupplierEx<Processor> flatMapP(
-            @Nonnull FunctionEx<T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return () -> new TransformP<>(flatMapFn);
     }
