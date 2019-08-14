@@ -52,6 +52,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
      */
     private final AtomicLong timestamp = new AtomicLong();
     private final AtomicInteger quorumSize = new AtomicInteger();
+    private volatile boolean executed;
     private volatile boolean suspended;
     private volatile long snapshotId = NO_SNAPSHOT;
     private volatile int dataMapIndex = -1;
@@ -96,6 +97,14 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
 
     public void setSuspended(boolean suspended) {
         this.suspended = suspended;
+    }
+
+    public boolean executed() {
+        return executed;
+    }
+
+    public void markExecuted() {
+        executed = true;
     }
 
     @SuppressWarnings("NonAtomicOperationOnVolatileField")
@@ -244,6 +253,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         out.writeObject(snapshotStats);
         out.writeObject(exportedSnapshotMapName);
         out.writeBoolean(suspended);
+        out.writeBoolean(executed);
         out.writeLong(timestamp.get());
     }
 
@@ -259,6 +269,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
         snapshotStats = in.readObject();
         exportedSnapshotMapName = in.readObject();
         suspended = in.readBoolean();
+        executed = in.readBoolean();
         timestamp.set(in.readLong());
     }
 
@@ -269,6 +280,7 @@ public class JobExecutionRecord implements IdentifiedDataSerializable {
                 ", timestamp=" + toLocalTime(timestamp.get()) +
                 ", quorumSize=" + quorumSize +
                 ", suspended=" + suspended +
+                ", executed=" + executed +
                 ", dataMapIndex=" + dataMapIndex +
                 ", snapshotId=" + snapshotId +
                 ", ongoingSnapshotId=" + ongoingSnapshotId +

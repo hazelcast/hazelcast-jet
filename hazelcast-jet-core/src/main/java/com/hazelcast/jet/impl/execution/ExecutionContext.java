@@ -25,6 +25,8 @@ import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
 import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
+import com.hazelcast.jet.impl.metrics.JetMetricsService;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
@@ -84,6 +86,8 @@ public class ExecutionContext {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
+    private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
+
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
         this.jobId = jobId;
@@ -93,22 +97,25 @@ public class ExecutionContext {
         this.taskletExecService = taskletExecService;
         this.nodeEngine = nodeEngine;
 
+        this.jobName = idToString(jobId);
+
         logger = nodeEngine.getLogger(getClass());
     }
 
     public ExecutionContext initialize(ExecutionPlan plan) {
         jobConfig = plan.getJobConfig();
-        jobName = jobConfig.getName();
-        if (jobName == null) {
-            jobName = idToString(jobId);
-        }
+        jobName = jobConfig.getName() == null ? jobName : jobConfig.getName();
+
         // Must be populated early, so all processor suppliers are
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
         processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
+
+        JetMetricsService service = ((JetService) nodeEngine.getService(JetService.SERVICE_NAME)).getMetricsService();
+        boolean registerMetrics = jobConfig.isMetricsEnabled() && service.isEnabled();
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, registerMetrics);
         snapshotContext.initTaskletCount(plan.getPTaskletCount(), plan.getSsTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -272,13 +279,16 @@ public class ExecutionContext {
         return receiverMap;
     }
 
-    // visible for testing only
-    public SnapshotContext snapshotContext() {
-        return snapshotContext;
-    }
-
     @Nullable
     public String jobName() {
         return jobName;
+    }
+
+    public RawJobMetrics getJobMetrics() {
+        return jobMetrics;
+}
+
+    public void setJobMetrics(RawJobMetrics jobMetrics) {
+        this.jobMetrics = jobMetrics;
     }
 }

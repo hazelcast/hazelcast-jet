@@ -210,7 +210,7 @@ public final class TestProcessors {
 
         private boolean initCalled;
 
-        MockPS(SupplierEx<Processor> supplier, int nodeCount) {
+        public MockPS(SupplierEx<Processor> supplier, int nodeCount) {
             this.supplier = supplier;
             this.nodeCount = nodeCount;
         }

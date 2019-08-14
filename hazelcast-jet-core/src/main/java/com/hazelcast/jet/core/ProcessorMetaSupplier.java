@@ -120,11 +120,11 @@ public interface ProcessorMetaSupplier extends Serializable {
      * Factory method that wraps the given {@code ProcessorSupplier} and
      * returns the same instance for each given {@code Address}.
      *
-     * @param procSupplier the processor supplier
      * @param preferredLocalParallelism the value to return from {@link #preferredLocalParallelism()}
+     * @param procSupplier the processor supplier
      */
     @Nonnull
-    static ProcessorMetaSupplier of(@Nonnull ProcessorSupplier procSupplier, int preferredLocalParallelism) {
+    static ProcessorMetaSupplier of(int preferredLocalParallelism, @Nonnull ProcessorSupplier procSupplier) {
         return of((Address x) -> procSupplier, preferredLocalParallelism);
     }
 
@@ -135,7 +135,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     @Nonnull
     static ProcessorMetaSupplier of(@Nonnull ProcessorSupplier procSupplier) {
-        return of(procSupplier, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
+        return of(Vertex.LOCAL_PARALLELISM_USE_DEFAULT, procSupplier);
     }
 
     /**
@@ -152,7 +152,7 @@ public interface ProcessorMetaSupplier extends Serializable {
             @Nonnull SupplierEx<? extends Processor> procSupplier,
             int preferredLocalParallelism
     ) {
-        return of(ProcessorSupplier.of(procSupplier), preferredLocalParallelism);
+        return of(preferredLocalParallelism, ProcessorSupplier.of(procSupplier));
     }
 
     /**
@@ -219,7 +219,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     @Nonnull
     static ProcessorMetaSupplier preferLocalParallelismOne(@Nonnull ProcessorSupplier supplier) {
-        return of(supplier, 1);
+        return of(1, supplier);
     }
 
     /**
@@ -231,7 +231,7 @@ public interface ProcessorMetaSupplier extends Serializable {
     static ProcessorMetaSupplier preferLocalParallelismOne(
             @Nonnull SupplierEx<? extends Processor> procSupplier
     ) {
-        return of(ProcessorSupplier.of(procSupplier), 1);
+        return of(1, ProcessorSupplier.of(procSupplier));
     }
 
     /**
@@ -293,8 +293,8 @@ public interface ProcessorMetaSupplier extends Serializable {
                             protected boolean tryProcess(int ordinal, @Nonnull Object item) {
                                 throw new IllegalStateException(
                                         "This vertex has a total parallelism of one and as such only"
-                                                + " expects input on one node. Edge configuration must be adjusted to"
-                                                + " make sure that only the expected node receives any input."
+                                                + " expects input on a specific node. Edge configuration must be adjusted"
+                                                + " to make sure that only the expected node receives any input."
                                                 + " Unexpected input received from ordinal " + ordinal + ": " + item
                                 );
                             }

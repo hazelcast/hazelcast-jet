@@ -72,7 +72,7 @@
         <target.dir>target</target.dir>
         <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
-        <hazelcast.version>3.12.1</hazelcast.version>
+        <hazelcast.version>3.12.2</hazelcast.version>
         <hazelcast.protocol.version>1.8.0-5</hazelcast.protocol.version>
 
         <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
@@ -455,6 +455,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <argLine>
+                                ${argLine}
+                                -Dhazelcast.test.defaultTestTimeoutInSeconds=600
+                            </argLine>
                             <forkCount combine.self="override">1</forkCount>
                             <groups combine.self="override">
                                 com.hazelcast.test.annotation.NightlyTest,
@@ -555,6 +559,15 @@
                     <version>${hazelcast.version}</version>
                 </dependency>
             </dependencies>
+        </profile>
+        <profile>
+            <id>quick</id>
+            <properties>
+                <maven.javadoc.skip>true</maven.javadoc.skip>
+                <spotbugs.skip>true</spotbugs.skip>
+                <checkstyle.skip>true</checkstyle.skip>
+                <skipTests>true</skipTests>
+            </properties>
         </profile>
     </profiles>
 </project>

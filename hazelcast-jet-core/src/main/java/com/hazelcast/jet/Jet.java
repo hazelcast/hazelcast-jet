@@ -35,7 +35,6 @@ import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetNodeContext;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.jet.impl.metrics.JetMetricsService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
@@ -50,12 +49,13 @@ import java.util.Properties;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
+import static com.hazelcast.jet.impl.JobRepository.JOB_METRICS_MAP_NAME;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetClientConfig;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
-import static com.hazelcast.jet.impl.util.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
-import static com.hazelcast.jet.impl.util.JetProperties.JOB_RESULTS_TTL_SECONDS;
+import static com.hazelcast.jet.core.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
+import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 
 /**
@@ -185,12 +185,7 @@ public final class Jet {
                         .setEnabled(false)
                         .setName(JetService.SERVICE_NAME)
                         .setClassName(JetService.class.getName())
-                        .setConfigObject(jetConfig))
-                .addServiceConfig(new ServiceConfig()
-                        .setEnabled(true)
-                        .setName(JetMetricsService.SERVICE_NAME)
-                        .setClassName(JetMetricsService.class.getName())
-                        .setConfigObject(jetConfig.getMetricsConfig()));
+                        .setConfigObject(jetConfig));
 
         MapConfig internalMapConfig = new MapConfig(INTERNAL_JET_OBJECTS_PREFIX + '*')
                 .setBackupCount(jetConfig.getInstanceConfig().getBackupCount())
@@ -204,8 +199,13 @@ public final class Jet {
                 .setName(JOB_RESULTS_MAP_NAME)
                 .setTimeToLiveSeconds(properties.getSeconds(JOB_RESULTS_TTL_SECONDS));
 
+        MapConfig metricsMapConfig = new MapConfig(internalMapConfig)
+            .setName(JOB_METRICS_MAP_NAME)
+            .setTimeToLiveSeconds(properties.getSeconds(JOB_RESULTS_TTL_SECONDS));
+
         hzConfig.addMapConfig(internalMapConfig)
-                .addMapConfig(resultsMapConfig);
+                .addMapConfig(resultsMapConfig)
+                .addMapConfig(metricsMapConfig);
 
         if (jetConfig.getInstanceConfig().isLosslessRestartEnabled() &&
             !hzConfig.getHotRestartPersistenceConfig().isEnabled()) {

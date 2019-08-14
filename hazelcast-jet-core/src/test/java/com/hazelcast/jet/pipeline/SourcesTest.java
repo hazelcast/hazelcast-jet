@@ -20,9 +20,9 @@ import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
-import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.instance.HazelcastInstanceFactory;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -72,7 +72,7 @@ public class SourcesTest extends PipelineTestSupport {
 
     @AfterClass
     public static void afterClass() {
-        Hazelcast.shutdownAll();
+        HazelcastInstanceFactory.terminateAll();
     }
 
     @Test
@@ -275,7 +275,7 @@ public class SourcesTest extends PipelineTestSupport {
     }
 
     @Test
-    public void remoteMapWithUnknownValueClass() throws Exception {
+    public void remoteMapWithUnknownValueClass_whenQueryingIsNotNecessary() throws Exception {
         // Given
         URL jarResource = Thread.currentThread().getContextClassLoader()
                                 .getResource("deployment/sample-pojo-1.0-car.jar");

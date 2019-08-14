@@ -22,21 +22,22 @@ import com.hazelcast.jet.impl.ClusterMetadata;
 import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
 import com.hazelcast.jet.impl.JobRecord;
-import com.hazelcast.jet.impl.JobRepository.FilterExecutionIdByJobIdPredicate;
-import com.hazelcast.jet.impl.JobRepository.FilterJobIdPredicate;
 import com.hazelcast.jet.impl.JobRepository.FilterJobResultByNamePredicate;
 import com.hazelcast.jet.impl.JobRepository.UpdateJobExecutionRecordEntryProcessor;
 import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
+import com.hazelcast.jet.impl.aggregate.AggregateOpAggregator;
 import com.hazelcast.jet.impl.operation.CompleteExecutionOperation;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
+import com.hazelcast.jet.impl.operation.GetJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
 import com.hazelcast.jet.impl.operation.GetJobSubmissionTimeOperation;
 import com.hazelcast.jet.impl.operation.GetJobSummaryListOperation;
+import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
@@ -73,8 +74,7 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SNAPSHOT_OPERATION = 10;
     public static final int JOB_EXECUTION_RECORD = 11;
     public static final int SESSION_WINDOW_P_WINDOWS = 12;
-    public static final int FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE = 13;
-    public static final int FILTER_JOB_ID = 14;
+    // 13 and 14 are unused
     public static final int SLIDING_WINDOW_P_SNAPSHOT_KEY = 15;
     public static final int GET_JOB_IDS = 16;
     public static final int JOIN_SUBMITTED_JOB = 17;
@@ -97,7 +97,10 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
     public static final int SNAPSHOT_VALIDATION_RECORD = 35;
     public static final int CLUSTER_METADATA = 36;
     public static final int GET_CLUSTER_METADATA_OP = 37;
-    public static final int SNAPSHOT_COMPLETE_OPERATION = 38;
+    public static final int AGGREGATE_OP_AGGREGATOR = 38;
+    public static final int GET_JOB_METRICS_OP = 39;
+    public static final int GET_LOCAL_JOB_METRICS_OP = 40;
+    public static final int SNAPSHOT_COMPLETE_OPERATION = 41;
 
     public static final int FACTORY_ID = FactoryIdHelper.getFactoryId(JET_IMPL_DS_FACTORY, JET_IMPL_DS_FACTORY_ID);
 
@@ -142,10 +145,6 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new JobExecutionRecord();
                 case SESSION_WINDOW_P_WINDOWS:
                     return new SessionWindowP.Windows<>();
-                case FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE:
-                    return new FilterExecutionIdByJobIdPredicate();
-                case FILTER_JOB_ID:
-                    return new FilterJobIdPredicate();
                 case SLIDING_WINDOW_P_SNAPSHOT_KEY:
                     return new SnapshotKey();
                 case GET_JOB_IDS:
@@ -190,6 +189,12 @@ public final class JetInitDataSerializerHook implements DataSerializerHook {
                     return new ClusterMetadata();
                 case GET_CLUSTER_METADATA_OP:
                     return new GetClusterMetadataOperation();
+                case AGGREGATE_OP_AGGREGATOR:
+                    return new AggregateOpAggregator<>();
+                case GET_JOB_METRICS_OP:
+                    return new GetJobMetricsOperation();
+                case GET_LOCAL_JOB_METRICS_OP:
+                    return new GetLocalJobMetricsOperation();
                 case SNAPSHOT_COMPLETE_OPERATION:
                     return new SnapshotCompleteOperation();
                 default:

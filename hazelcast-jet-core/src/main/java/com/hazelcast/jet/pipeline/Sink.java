@@ -32,4 +32,5 @@ public interface Sink<T> {
      * Returns a descriptive name for this sink.
      */
     String name();
+
 }

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.DistributedObject;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -29,6 +28,7 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
+import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -41,10 +41,11 @@ import org.junit.runner.RunWith;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.hazelcast.jet.impl.JobRepository.RANDOM_IDS_MAP_NAME;
-import static com.hazelcast.jet.impl.util.JetProperties.JOB_SCAN_PERIOD;
+import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_MAX_SIZE;
+import static com.hazelcast.jet.core.JetProperties.JOB_SCAN_PERIOD;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -55,23 +56,22 @@ public class JobRepositoryTest extends JetTestSupport {
 
     private static final long RESOURCES_EXPIRATION_TIME_MILLIS = SECONDS.toMillis(1);
     private static final long JOB_SCAN_PERIOD_IN_MILLIS = HOURS.toMillis(1);
+    private static final int MAX_JOB_RESULTS_COUNT = 2;
 
     private JobConfig jobConfig = new JobConfig();
     private JetInstance instance;
     private JobRepository jobRepository;
-    private IMap<Long, Long> jobIds;
 
     @Before
     public void setup() {
         JetConfig config = new JetConfig();
         Properties properties = config.getProperties();
+        properties.setProperty(JOB_RESULTS_MAX_SIZE.getName(), Integer.toString(MAX_JOB_RESULTS_COUNT));
         properties.setProperty(JOB_SCAN_PERIOD.getName(), Long.toString(JOB_SCAN_PERIOD_IN_MILLIS));
 
         instance = createJetMember(config);
         jobRepository = new JobRepository(instance);
         jobRepository.setResourcesExpirationMillis(RESOURCES_EXPIRATION_TIME_MILLIS);
-
-        jobIds = instance.getMap(RANDOM_IDS_MAP_NAME);
 
         TestProcessors.reset(2);
     }
@@ -82,17 +82,15 @@ public class JobRepositoryTest extends JetTestSupport {
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobId, dag);
         jobRepository.putNewJobRecord(jobRecord);
-        long executionId1 = jobRepository.newExecutionId(jobId);
-        long executionId2 = jobRepository.newExecutionId(jobId);
+        jobRepository.newExecutionId();
+        jobRepository.newExecutionId();
 
         sleepUntilJobExpires();
 
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).isEmpty());
-        assertTrue(jobIds.containsKey(executionId1));
-        assertTrue(jobIds.containsKey(executionId2));
+        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).get().isEmpty());
     }
 
     @Test
@@ -101,17 +99,15 @@ public class JobRepositoryTest extends JetTestSupport {
         Data dag = createDAGData();
         JobRecord jobRecord = createJobRecord(jobId, dag);
         jobRepository.putNewJobRecord(jobRecord);
-        long executionId1 = jobRepository.newExecutionId(jobId);
-        long executionId2 = jobRepository.newExecutionId(jobId);
+        jobRepository.newExecutionId();
+        jobRepository.newExecutionId();
 
         sleepUntilJobExpires();
 
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse(jobRepository.getJobResources(jobId).isEmpty());
-        assertTrue(jobIds.containsKey(executionId1));
-        assertTrue(jobIds.containsKey(executionId2));
+        assertFalse(jobRepository.getJobResources(jobId).get().isEmpty());
     }
 
     @Test
@@ -122,7 +118,7 @@ public class JobRepositoryTest extends JetTestSupport {
 
         cleanup();
 
-        assertTrue(jobRepository.getJobResources(jobId).isEmpty());
+        assertTrue(jobRepository.getJobResources(jobId).get().isEmpty());
     }
 
     @Test
@@ -145,11 +141,25 @@ public class JobRepositoryTest extends JetTestSupport {
          .withoutTimestamps()
          .drainTo(Sinks.logger());
         Job job = instance.newJob(p, new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
-                .setSnapshotIntervalMillis(100));
+            .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+            .setSnapshotIntervalMillis(100));
         JobRepository jobRepository = new JobRepository(client);
         assertTrueEventually(() -> assertNotNull(jobRepository.getJobRecord(job.getId())));
         client.shutdown();
+    }
+
+    @Test
+    public void test_maxNumberOfJobResults() {
+        DAG dag = new DAG();
+        dag.newVertex("v", Processors.noopP());
+
+        // create max+1 jobs
+        for (int i = 0; i < MAX_JOB_RESULTS_COUNT + 1; i++) {
+            instance.newJob(dag).join();
+        }
+
+        jobRepository.cleanup(getNodeEngineImpl(instance));
+        assertEquals(MAX_JOB_RESULTS_COUNT, jobRepository.getJobResults().size());
     }
 
     private void cleanup() {
@@ -173,5 +183,6 @@ public class JobRepositoryTest extends JetTestSupport {
         sleepAtLeastMillis(2 * RESOURCES_EXPIRATION_TIME_MILLIS);
     }
 
-    private static class DummyClass { }
+    private static class DummyClass {
+    }
 }

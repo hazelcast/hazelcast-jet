@@ -30,7 +30,7 @@ public final class YamlJetMemberConfigLocator extends AbstractConfigLocator {
     private static final String HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_YAML = "hazelcast-jet-enterprise-member-default.yaml";
 
     public YamlJetMemberConfigLocator() {
-        super(true);
+        super(false);
     }
 
     @Override
@@ -45,13 +45,14 @@ public final class YamlJetMemberConfigLocator extends AbstractConfigLocator {
 
     @Override
     protected boolean locateOnClasspath() {
-        return loadConfigurationFromClasspath(HAZELCAST_MEMBER_YAML)
-                || loadConfigurationFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_YAML);
+        return loadConfigurationFromClasspath(HAZELCAST_MEMBER_YAML);
     }
 
     @Override
     public boolean locateDefault() {
-        loadDefaultConfigurationFromClasspath(HAZELCAST_MEMBER_DEFAULT_YAML);
+        if (!loadConfigurationFromClasspath(HAZELCAST_ENTERPRISE_MEMBER_DEFAULT_YAML)) {
+            loadDefaultConfigurationFromClasspath(HAZELCAST_MEMBER_DEFAULT_YAML);
+        }
         return true;
     }
 }

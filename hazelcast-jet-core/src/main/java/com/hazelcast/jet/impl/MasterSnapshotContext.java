@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
@@ -31,6 +32,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -150,9 +153,7 @@ class MasterSnapshotContext {
         boolean isExport = snapshotMapName != null;
         String finalMapName = isExport ? exportedSnapshotMapName(snapshotMapName)
                 : snapshotDataMapName(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
-        if (isExport) {
             mc.nodeEngine().getHazelcastInstance().getMap(finalMapName).clear();
-        }
         logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, mc.jobIdString())
                 + (isTerminal ? ", terminal" : "")
                 + (isExport ? ", exporting to '" + snapshotMapName + '\'' : ""));
@@ -172,7 +173,7 @@ class MasterSnapshotContext {
     }
 
     private void onSnapshotPhase1Complete(
-            Collection<Object> responses,
+            Collection<Map.Entry<MemberInfo, Object>> responses,
             long executionId,
             long snapshotId,
             String snapshotMapName,
@@ -184,8 +185,9 @@ class MasterSnapshotContext {
         // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
         // was successful.
         SnapshotOperationResult mergedResult = new SnapshotOperationResult();
-        for (Object response : responses) {
+        for (Map.Entry<MemberInfo, Object> entry : responses) {
             // the response is either SnapshotOperationResult or an exception, see #invokeOnParticipants() method
+            Object response = entry.getValue();
             if (response instanceof Throwable) {
                 response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
             }
@@ -257,17 +259,17 @@ class MasterSnapshotContext {
 
     private void onSnapshotPhase2Complete(
             String phase1Error,
-            Collection<Object> responses,
+            Collection<Entry<MemberInfo, Object>> responses,
             long executionId,
             long snapshotId,
             boolean wasExport,
             boolean wasTerminal,
             @Nullable CompletableFuture<Void> future,
             long startTime) {
-        for (Object response : responses) {
-            if (response instanceof Throwable) {
-                logger.warning("SnapshotCompleteOperation for snapshot " + snapshotId + " in " + mc.jobIdString()
-                        + " failed on member: " + response, (Throwable) response);
+        for (Entry<MemberInfo, Object> response : responses) {
+            if (response.getValue() instanceof Throwable) {
+                logger.warning(SnapshotCompleteOperation.class.getSimpleName() + " for snapshot " + snapshotId + " in "
+                        + mc.jobIdString() + " failed on member: " + response, (Throwable) response);
             }
         }
 
