@@ -43,6 +43,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     private final AtomicInteger numConcurrentOps = new AtomicInteger();
     private final AtomicReference<Throwable> firstError = new AtomicReference<>();
     private final HazelcastInstance instance;
+    private final boolean isLocal;
 
     private final ExecutionCallback callback = callbackOf(
         response -> numConcurrentOps.decrementAndGet(),
@@ -53,9 +54,11 @@ public abstract class AsyncHazelcastWriterP implements Processor {
             }
         });
 
+
     AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
         this.instance = instance;
         this.maxParallelAsyncOps = maxParallelAsyncOps;
+        this.isLocal = Util.isMemberInstance(instance);
     }
 
     @Override
@@ -140,7 +143,7 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     }
 
     protected final boolean isLocal() {
-        return Util.isMemberInstance(instance);
+        return isLocal;
     }
 
     private void checkError() {
