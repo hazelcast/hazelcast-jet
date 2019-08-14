@@ -414,7 +414,7 @@ public class JobCoordinationService {
                     cf.complete(JobMetrics.empty());
                     return;
                 }
-                
+
                 // no job result found,
                 // the job might not be yet discovered by job record scanning
                 JobExecutionRecord record = jobRepository.getJobExecutionRecord(jobId);
