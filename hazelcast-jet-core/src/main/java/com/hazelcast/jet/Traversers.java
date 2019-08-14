@@ -233,7 +233,7 @@ public final class Traversers {
     }
 
     private static class SingletonTraverser<T> implements Traverser<T> {
-        private Object item;
+        private T item;
 
         SingletonTraverser(@Nonnull T item) {
             this.item = item;
@@ -242,7 +242,7 @@ public final class Traversers {
         @Override
         public T next() {
             try {
-                return (T) item;
+                return item;
             } finally {
                 item = null;
             }
@@ -251,10 +251,12 @@ public final class Traversers {
         @Nonnull @Override
         // an optimized version to map in-place
         public <R> Traverser<R> map(@Nonnull Function<? super T, ? extends R> mapFn) {
+            @SuppressWarnings("unchecked")
+            SingletonTraverser<R> newThis = (SingletonTraverser<R>) this;
             if (item != null) {
-                item = mapFn.apply((T) item);
+                newThis.item = mapFn.apply(item);
             }
-            return (Traverser<R>) this;
+            return newThis;
         }
     }
 }
