@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.server;
 
+import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +47,12 @@ public final class StartServer {
      */
     public static void main(String[] args) throws Exception {
         configureLogging();
-        JetInstance jet = Jet.newJetInstance();
+        Config config = new Config();
+        config.getGroupConfig().setName("jet");
+        config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+        config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(true)
+              .addMember("localhost");
+        JetInstance jet = Jet.newJetInstance(new JetConfig().setHazelcastConfig(config));
         printMemberPort(jet.getHazelcastInstance());
     }
 
