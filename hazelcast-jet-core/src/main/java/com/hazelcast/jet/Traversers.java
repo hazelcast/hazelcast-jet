@@ -201,7 +201,17 @@ public final class Traversers {
 
         @Override
         public T next() {
-            return i >= 0 && i < array.length ? requireNonNull(array[i++], "Array contains a null element") : null;
+            while (i < array.length) {
+                try {
+                    T t = array[i];
+                    if (t != null) {
+                        return t;
+                    }
+                } finally {
+                    i++;
+                }
+            }
+            return null;
         }
     }
 
