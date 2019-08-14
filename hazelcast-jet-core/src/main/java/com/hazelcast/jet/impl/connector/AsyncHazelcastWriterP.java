@@ -54,7 +54,6 @@ public abstract class AsyncHazelcastWriterP implements Processor {
             }
         });
 
-
     AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
         this.instance = instance;
         this.maxParallelAsyncOps = maxParallelAsyncOps;

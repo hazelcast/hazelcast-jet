@@ -509,8 +509,8 @@ public final class Sinks {
             @Nonnull FunctionEx<? super E, ? extends K> toKeyFn,
             @Nonnull FunctionEx<? super E, ? extends EntryProcessor<K, V>> toEntryProcessorFn
     ) {
-        return new SinkImpl<>("mapWithEntryProcessorSink(" + mapName + ')',
-                updateMapP(mapName, toKeyFn, toEntryProcessorFn), false, toKeyFn);
+        return fromProcessor("mapWithEntryProcessorSink(" + mapName + ')',
+                updateMapP(mapName, toKeyFn, toEntryProcessorFn));
     }
 
     /**
