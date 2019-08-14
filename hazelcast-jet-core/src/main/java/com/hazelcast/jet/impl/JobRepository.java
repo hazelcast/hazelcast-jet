@@ -280,11 +280,11 @@ public class JobRepository {
      * @throws IllegalStateException if the JobResult is already present
      */
     void completeJob(
-        long jobId,
-        @Nullable JobMetrics terminalMetrics,
-        @Nonnull String coordinator,
-        long completionTime,
-        @Nullable Throwable error
+            long jobId,
+            @Nullable JobMetrics terminalMetrics,
+            @Nonnull String coordinator,
+            long completionTime,
+            @Nullable Throwable error
     ) {
         JobRecord jobRecord = getJobRecord(jobId);
         if (jobRecord == null) {

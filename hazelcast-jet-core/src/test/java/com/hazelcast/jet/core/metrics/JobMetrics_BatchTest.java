@@ -38,8 +38,7 @@ import static org.junit.Assert.assertNotEquals;
 
 public class JobMetrics_BatchTest extends TestInClusterSupport {
 
-    static final JobConfig JOB_CONFIG_WITH_METRICS =
-        new JobConfig().setStoreMetricsAfterJobCompletion(true);
+    static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
     private static final String SOURCE_VERTEX = "items";
     private static final String FLAT_MAP_AND_FILTER_VERTEX = "fused(flat-map, filter)";
@@ -63,7 +62,7 @@ public class JobMetrics_BatchTest extends TestInClusterSupport {
     }
 
     @Test
-    public void when_jobCompleted_without_savingMetricsOnCompletionEnabled_then_emptyMetrics() {
+    public void when_storeMetricsAfterJobCompletionDisabled_then_metricsEmpty() {
         Pipeline p = createPipeline();
 
         // When
