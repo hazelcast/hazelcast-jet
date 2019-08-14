@@ -68,6 +68,27 @@ public class FunctionAdapter {
     }
 
     @Nonnull
+    <S, T, R> BiFunctionEx<? super S, ?, ?> adaptStatefulMapFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+    ) {
+        return mapFn;
+    }
+
+    @Nonnull
+    <S, T, R> BiFunctionEx<? super S, ?, ? extends Traverser<?>> adaptStatefulFlatMapFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
+    ) {
+        return flatMapFn;
+    }
+
+    @Nonnull
+    <K, R, OUT> BiFunctionEx<? super K, ?, ?> adaptStatefulOutputFn(
+            @Nonnull BiFunctionEx<? super K, ? super R, ? extends OUT> outputFn
+    ) {
+        return outputFn;
+    }
+
+    @Nonnull
     <C, T, R> BiFunctionEx<? super C, ?, ?> adaptMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
@@ -220,10 +241,32 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     }
 
     @Nonnull @Override
-    <T, R> FunctionEx<? super JetEvent<T>, ? extends Traverser<?>> adaptFlatMapFn(
+    <T, R> FunctionEx<? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptFlatMapFn(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(e.timestamp(), r));
+    }
+
+    @Nonnull @Override
+    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T>, ? extends JetEvent<R>> adaptStatefulMapFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+    ) {
+        return (state, e) -> jetEvent(e.timestamp(), mapFn.apply(state, e.payload()));
+    }
+
+    @Nonnull @Override
+    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptStatefulFlatMapFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
+    ) {
+        return (state, e) -> flatMapFn.apply(state, e.payload())
+                                      .map(r -> jetEvent(e.timestamp(), r));
+    }
+
+    @Nonnull @Override
+    <K, R, OUT> BiFunctionEx<? super K, ? super JetEvent<R>, ? extends JetEvent<OUT>> adaptStatefulOutputFn(
+            @Nonnull BiFunctionEx<? super K, ? super R, ? extends OUT> outputFn
+    ) {
+        return (key, e) -> jetEvent(e.timestamp(), outputFn.apply(key, e.payload()));
     }
 
     @Nonnull @Override

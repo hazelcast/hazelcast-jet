@@ -1,0 +1,54 @@
+/*
+ * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.hazelcast.jet.impl.pipeline.transform;
+
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.impl.pipeline.Planner;
+import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.jet.impl.util.ConstantFunctionEx;
+
+import javax.annotation.Nonnull;
+import java.util.function.Supplier;
+
+import static com.hazelcast.jet.core.processor.Processors.mapStatefulP;
+
+public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
+
+    private final Supplier<? extends S> createFn;
+    private final BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn;
+    private BiFunctionEx<Integer, ? super R, ? extends R> mapToOutputFn;
+
+    public GlobalMapStatefulTransform(
+            @Nonnull Transform upstream,
+            @Nonnull Supplier<? extends S> createFn,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
+            @Nonnull BiFunctionEx<Integer, ? super R, ? extends R> mapToOutputFn
+    ) {
+        super("transform-stateful", upstream);
+        this.createFn = createFn;
+        this.statefulMapFn = statefulMapFn;
+        this.mapToOutputFn = mapToOutputFn;
+    }
+
+    @Override
+    public void addToDag(Planner p) {
+        ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
+        PlannerVertex pv = p.addVertex(this, name(), 1,
+                mapStatefulP(Long.MAX_VALUE, keyFn, createFn, statefulMapFn, mapToOutputFn));
+        p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
+    }
+}
