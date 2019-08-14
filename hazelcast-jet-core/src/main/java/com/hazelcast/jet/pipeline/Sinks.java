@@ -591,10 +591,10 @@ public final class Sinks {
      * <p>
      * The default local parallelism for this sink is 1.
      */
-    @SuppressWarnings("unchecked")
     @Nonnull
     public static <T extends Entry> Sink<T> cache(@Nonnull String cacheName) {
-        return new SinkImpl<>("cacheSink(" + cacheName + ')', writeCacheP(cacheName), false, entryKey());
+        //noinspection Convert2MethodRef (provokes a javac 9 bug)
+        return new SinkImpl<>("cacheSink(" + cacheName + ')', writeCacheP(cacheName), false, en -> en.getKey());
     }
 
     /**
