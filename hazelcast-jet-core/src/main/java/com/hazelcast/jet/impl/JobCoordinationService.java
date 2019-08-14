@@ -400,18 +400,21 @@ public class JobCoordinationService {
                     return;
                 }
 
-                // job is not running, check completed jobs
-                JobResult jobResult = jobRepository.getJobResult(jobId);
-                if (jobResult != null) {
-                    // check if there are any metrics saved
-                    JobMetrics metrics = jobRepository.getJobMetrics(jobId);
-                    cf.complete(metrics == null
-                        ? JobMetrics.empty()
-                        : metrics
-                    );
+                // is job completed with metrics?
+                JobMetrics metrics = jobRepository.getJobMetrics(jobId);
+                if (metrics != null) {
+                    cf.complete(metrics);
                     return;
                 }
 
+                // no metrics found, but job might still be completed without saving
+                // metrics enabled
+                JobResult jobResult = jobRepository.getJobResult(jobId);
+                if (jobResult != null) {
+                    cf.complete(JobMetrics.empty());
+                    return;
+                }
+                
                 // no job result found,
                 // the job might not be yet discovered by job record scanning
                 JobExecutionRecord record = jobRepository.getJobExecutionRecord(jobId);
