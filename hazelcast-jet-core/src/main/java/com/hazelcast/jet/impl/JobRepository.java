@@ -269,7 +269,7 @@ public class JobRepository {
     /**
      * Generates a new execution id for the given job id, guaranteed to be unique across the cluster
      */
-    long newExecutionId(long jobId) {
+    long newExecutionId() {
         return idGenerator.newId();
     }
 
@@ -291,9 +291,9 @@ public class JobRepository {
         JobResult jobResult = new JobResult(jobId, config, coordinator, creationTime, completionTime,
                 error != null ? error.toString() : null);
 
-        JobMetrics prevMetrics = jobMetrics.putIfAbsent(jobId, terminalMetrics);
+        JobMetrics prevMetrics = jobMetrics.put(jobId, terminalMetrics);
         if (prevMetrics != null) {
-            logger.warning("Overwrote job metrics for job " + jobResult);
+            logger.warning("Overwriting job metrics for job " + jobResult);
         }
         JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
         if (prev != null) {
@@ -366,8 +366,8 @@ public class JobRepository {
                       .map(JobResult::getJobId)
                       .collect(Collectors.toSet())
                       .forEach(id -> {
-                          jobResults.delete(id);
                           jobMetrics.delete(id);
+                          jobResults.delete(id);
                       });
         }
         long elapsed = System.nanoTime() - start;
