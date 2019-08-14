@@ -510,6 +510,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         storeMetricsAfterJobCompletion = in.readBoolean();
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -523,6 +524,7 @@ public class JobConfig implements IdentifiedDataSerializable {
             autoScaling == jobConfig.autoScaling &&
             splitBrainProtectionEnabled == jobConfig.splitBrainProtectionEnabled &&
             enableMetrics == jobConfig.enableMetrics &&
+            storeMetricsAfterJobCompletion == jobConfig.storeMetricsAfterJobCompletion &&
             Objects.equals(name, jobConfig.name) &&
             processingGuarantee == jobConfig.processingGuarantee &&
             Objects.equals(resourceConfigs, jobConfig.resourceConfigs) &&
@@ -533,8 +535,8 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Override
     public int hashCode() {
         return Objects.hash(name, processingGuarantee, snapshotIntervalMillis, autoScaling,
-            splitBrainProtectionEnabled, enableMetrics, resourceConfigs, classLoaderFactory, initialSnapshotName
+                splitBrainProtectionEnabled, enableMetrics, storeMetricsAfterJobCompletion, resourceConfigs,
+                classLoaderFactory, initialSnapshotName
         );
     }
-
 }
