@@ -214,6 +214,11 @@ public class FunctionAdapter {
             wrapped.remove();
         }
 
+        @Override
+        public int size() {
+            return wrapped.size();
+        }
+
         private static Object unwrapPayload(Object jetEvent) {
             return jetEvent != null ? ((JetEvent) jetEvent).payload() : null;
         }
