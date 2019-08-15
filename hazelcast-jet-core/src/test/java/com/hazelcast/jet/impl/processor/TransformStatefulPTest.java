@@ -16,11 +16,12 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.aggregate.AggregateOperation;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelTest;
 import org.junit.Test;
@@ -30,21 +31,25 @@ import org.junit.runner.RunWith;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.JetTestSupport.wm;
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static java.util.Arrays.asList;
 
 @Category(ParallelTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
-public class RollingAggregatePTest {
+public class TransformStatefulPTest {
 
     @Test
-    public void rollingAggregate() {
-        SupplierEx<Processor> supplier = Processors.rollingAggregateP(
+    public void mapStateful_noTTL() {
+        SupplierEx<Processor> supplier = Processors.mapStatefulP(
+                0,
                 Entry::getKey,
-                AggregateOperation
-                        .withCreate(() -> new long[1])
-                        .<Entry<String, Long>>andAccumulate((acc, t) -> acc[0] += t.getValue())
-                        .andExportFinish(acc -> acc[0]),
-                (item, key, result) -> entry(key, result));
+                () -> new long[1],
+                (long[] s, Entry<String, Long> e) -> {
+                    s[0] += e.getValue();
+                    return s[0];
+                },
+                Util::entry);
 
         TestSupport.verifyProcessor(supplier)
                 .input(asList(
@@ -62,25 +67,34 @@ public class RollingAggregatePTest {
     }
 
     @Test
-    public void rollingAggregate_withFiltering() {
-        SupplierEx<Processor> supplier = Processors.rollingAggregateP(
-                Entry::getKey,
-                AggregateOperation
-                        .withCreate(() -> new long[1])
-                        .<Entry<String, Long>>andAccumulate((acc, t) -> acc[0] += t.getValue())
-                        .andExportFinish(acc -> acc[0] > 2 ? acc[0] : null),
-                (item, key, result) -> result == null ? null : entry(key, result));
+    public void mapStateful_withTTL() {
+        SupplierEx<Processor> supplier = Processors.mapStatefulP(
+                2,
+                jetEvent -> jetEvent.payload().getKey(),
+                () -> new long[1],
+                (long[] s, JetEvent<Entry<String, Long>> e) -> {
+                    s[0] += e.payload().getValue();
+                    return jetEvent(e.timestamp(), s[0]);
+                },
+                (k, e) -> jetEvent(e.timestamp(), entry(k, e.payload()))
+        );
 
         TestSupport.verifyProcessor(supplier)
-                .input(asList(
-                        entry("a", 1L),
-                        entry("b", 2L),
-                        entry("a", 3L),
-                        entry("b", 4L)
-                ))
-                .expectOutput(asList(
-                        entry("a", 4L),
-                        entry("b", 6L)
-                ));
+                   .input(asList(
+                           jetEvent(0, entry("a", 1L)),
+                           jetEvent(1, entry("b", 2L)),
+                           wm(3), // evict a
+                           jetEvent(3, entry("a", 3L)),
+                           wm(4), // evict b
+                           jetEvent(4, entry("b", 4L))
+                   ))
+                   .expectOutput(asList(
+                           jetEvent(0, entry("a", 1L)),
+                           jetEvent(1, entry("b", 2L)),
+                           wm(3),
+                           jetEvent(3, entry("a", 3L)),
+                           wm(4),
+                           jetEvent(4, entry("b", 4L))
+                   ));
     }
 }

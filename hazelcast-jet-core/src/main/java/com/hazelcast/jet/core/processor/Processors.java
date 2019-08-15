@@ -39,12 +39,10 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
-import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
 import com.hazelcast.jet.impl.processor.InsertWatermarksP;
-import com.hazelcast.jet.impl.processor.RollingAggregateP;
 import com.hazelcast.jet.impl.processor.SessionWindowP;
 import com.hazelcast.jet.impl.processor.SlidingWindowP;
 import com.hazelcast.jet.impl.processor.TransformP;
@@ -1006,37 +1004,6 @@ public final class Processors {
         return contextFactory.hasOrderedAsyncResponses()
                 ? AsyncTransformUsingContextOrderedP.supplier(contextFactory, flatMapAsyncFn)
                 : AsyncTransformUsingContextUnorderedP.supplier(contextFactory, flatMapAsyncFn, extractKeyFn);
-    }
-
-    /**
-     * Returns a supplier of processors for a vertex that performs a rolling
-     * aggregation. Every time it receives an item, it passes is to the
-     * accumulator and then calls the `export` primitive to emit the current
-     * state of aggregation.
-     * <p>
-     * If the result after applying `mapToOutputFn` is {@code null}, the vertex
-     * emits nothing. Therefore it can be used to implement filtering semantics
-     * as well.
-     * <p>
-     * This vertex saves the state to snapshot so the state of the accumulators
-     * will survive a job restart.
-     *
-     * @param <T> type of the input item
-     * @param <K> type of the key
-     * @param <A> type of the accumulator
-     * @param <R> type of the output item
-     * @param keyFn function that computes the grouping key
-     * @param aggrOp the aggregate operation to perform
-     * @param mapToOutputFn function that takes the input item, the key and the aggregation result
-     *                      and returns the output item
-     */
-    @Nonnull
-    public static <T, K, A, R, OUT> SupplierEx<Processor> rollingAggregateP(
-            @Nonnull FunctionEx<? super T, ? extends K> keyFn,
-            @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp,
-            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
-    ) {
-        return () -> new RollingAggregateP<T, K, A, R, OUT>(keyFn, aggrOp, mapToOutputFn);
     }
 
     /**
