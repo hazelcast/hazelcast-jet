@@ -18,11 +18,13 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.RestartableException;
+import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
@@ -32,6 +34,7 @@ import com.hazelcast.jet.function.BinaryOperatorEx;
 import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
@@ -44,6 +47,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.Util.asXmlString;
@@ -63,24 +68,7 @@ public final class HazelcastWriters {
         @Nonnull String name,
         @Nullable ClientConfig clientConfig
     ) {
-        boolean isLocal = clientConfig == null;
-        return ProcessorMetaSupplier.of(2, new WriterSupplier<ArrayMap<K, V>, Entry<K, V>>(
-            asXmlString(clientConfig),
-            ArrayMap::new,
-            ArrayMap::add,
-            instance -> {
-                IMap<K, V> map = instance.getMap(name);
-                return buffer -> {
-                    try {
-                        map.putAll(buffer);
-                    } catch (HazelcastInstanceNotActiveException e) {
-                        throw handleInstanceNotActive(e, isLocal);
-                    }
-                    buffer.clear();
-                };
-            },
-            ConsumerEx.noop()
-        ));
+        return ProcessorMetaSupplier.of(new WriteMapUsingPutAllSupplier(asXmlString(clientConfig), name));
     }
 
     @Nonnull
@@ -263,6 +251,113 @@ public final class HazelcastWriters {
         protected Processor createProcessor(HazelcastInstance instance) {
             ConsumerEx<B> flushBufferFn = instanceToFlushBufferFn.apply(instance);
             return new WriteBufferedP<>(ctx -> newBufferFn.get(), addToBufferFn, flushBufferFn, disposeBufferFn);
+        }
+    }
+
+    private static final class WriteMapUsingPutAllSupplier extends AbstractHazelcastConnectorSupplier {
+        private static final long serialVersionUID = 1L;
+
+        private final String mapName;
+        private final int parallelOpsLimit;
+
+        private WriteMapUsingPutAllSupplier(String clientXml, String mapName) {
+            super(clientXml);
+            this.mapName = mapName;
+
+            parallelOpsLimit = Integer.parseInt(System.getProperty("bench.writerParallelOps"));
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        protected Processor createProcessor(HazelcastInstance instance) {
+            return new Processor() {
+                private final IMap map = instance.getMap(mapName);
+                private final AtomicInteger numParallelOps = new AtomicInteger();
+                private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
+                private Inbox inbox;
+
+                // Exposes this.inbox as a Map and only allows to do entrySet().iterator() once and removes
+                // items from inbox as the iterator is iterated.
+                private final Map inboxAsMap = new AbstractMap() {
+                    private Set<Entry> set = new AbstractSet<Entry>() {
+                        private DrainInboxIterator iterator = new DrainInboxIterator();
+
+                        @Override @Nonnull
+                        public Iterator<Entry> iterator() {
+                            try {
+                                iterator.setInbox(inbox);
+                                return iterator;
+                            } finally {
+                                inbox = null;
+                            }
+                        }
+
+                        @Override
+                        public int size() {
+                            return inbox.size();
+                        }
+                    };
+
+                    @Override @Nonnull
+                    public Set<Entry> entrySet() {
+                        if (inbox != null) {
+                            return set;
+                        } else {
+                            throw new RuntimeException("entrySet called without resetting inbox first");
+                        }
+                    }
+                };
+
+                private final ExecutionCallback callback = new ExecutionCallback() {
+                    @Override
+                    public void onResponse(Object response) {
+                        numParallelOps.decrementAndGet();
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        firstFailure.compareAndSet(null, t);
+                    }
+                };
+
+                @Override
+                public void process(int ordinal, @Nonnull Inbox inbox) {
+                    if (Util.tryIncrement(numParallelOps, 1, parallelOpsLimit)) {
+                        this.inbox = inbox;
+                        Util.mapPutAllAsync(map, inboxAsMap)
+                            .andThen(callback);
+                    }
+                }
+
+                @Override
+                public boolean saveToSnapshot() {
+                    return numParallelOps.get() == 0;
+                }
+
+                @Override
+                public boolean complete() {
+                    return numParallelOps.get() == 0;
+                }
+            };
+        }
+
+    }
+
+    private static class DrainInboxIterator implements Iterator<Entry> {
+        private Inbox inbox;
+
+        @Override
+        public boolean hasNext() {
+            return inbox.peek() != null;
+        }
+
+        @Override
+        public Entry next() {
+            return (Entry) inbox.poll();
+        }
+
+        void setInbox(Inbox inbox) {
+            this.inbox = inbox;
         }
     }
 }

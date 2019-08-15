@@ -19,10 +19,20 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConfigXmlGenerator;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
+import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.codec.MapPutAllCodec;
+import com.hazelcast.client.proxy.ClientMapProxy;
+import com.hazelcast.client.spi.ClientPartitionService;
+import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.core.IMap;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.util.SimpleCompletableFuture;
+import com.hazelcast.internal.util.SimpleCompletedFuture;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -38,14 +48,20 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.impl.MapEntries;
+import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.nio.BufferObjectDataOutput;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.OperationFactory;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.partition.IPartitionService;
+import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.CheckReturnValue;
@@ -66,13 +82,18 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.AbstractList;
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -89,7 +110,11 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
+import static com.hazelcast.util.Preconditions.checkNotNull;
 import static java.lang.Math.abs;
+import static java.lang.Math.ceil;
+import static java.lang.Math.log10;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -660,5 +685,171 @@ public final class Util {
         } finally {
             currentThread.setContextClassLoader(previousCl);
         }
+    }
+
+    public static <K, V> ICompletableFuture<Void> mapPutAllAsync(IMap<K, V> targetMap, Map<? extends K, ? extends V> items) {
+        if (items.isEmpty()) {
+            return new SimpleCompletedFuture<>(null);
+        }
+        if (items.size() == 1) {
+            Entry<? extends K, ? extends V> onlyEntry = items.entrySet().iterator().next();
+            return targetMap.setAsync(onlyEntry.getKey(), onlyEntry.getValue());
+        }
+
+        if (targetMap instanceof MapProxyImpl) {
+            return mapPutAllAsync((MapProxyImpl<K, V>) targetMap, items);
+        } else if (targetMap instanceof ClientMapProxy) {
+            return mapPutAllAsync((ClientMapProxy<K, V>) targetMap, items);
+        } else {
+            throw new RuntimeException("Unexpected map class: " + targetMap.getClass().getName());
+        }
+    }
+
+    private static <K, V> ICompletableFuture<Void> mapPutAllAsync(
+            @Nonnull MapProxyImpl<K, V> targetMap,
+            @Nonnull Map<? extends K, ? extends V> items
+    ) {
+        // TODO [viliam] if items.size < memberCount * 3 then probably plain setAsync would perform better
+        NodeEngine nodeEngine = targetMap.getNodeEngine();
+        SerializationService serializationService = nodeEngine.getSerializationService();
+        IPartitionService partitionService = nodeEngine.getPartitionService();
+        Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
+
+        MapEntries[] entries = new MapEntries[partitionService.getPartitionCount()];
+        // this is an educated guess for the initial size of the entries per partition, depending on the map size
+        int initialSize = (int) ceil(20f * items.size() / partitionService.getPartitionCount() / log10(items.size()));
+
+        for (Entry<? extends K, ? extends V> entry : items.entrySet()) {
+            checkNotNull(entry.getKey(), "Null key is not allowed");
+            checkNotNull(entry.getValue(), "Null value is not allowed");
+
+            Data keyData = serializationService.toData(entry.getKey(), targetMap.getPartitionStrategy());
+            int partitionId = partitionService.getPartitionId(keyData);
+            MapEntries partitionEntries = entries[partitionId];
+            if (partitionEntries == null) {
+                partitionEntries = new MapEntries(initialSize);
+                entries[partitionId] = partitionEntries;
+            }
+
+            partitionEntries.add(keyData, serializationService.toData(entry.getValue()));
+        }
+
+        int[] subPartitions = new int[memberPartitionsMap.values().stream().mapToInt(List::size).max().orElse(0)];
+        MapEntries[] subEntries = new MapEntries[subPartitions.length];
+        AtomicInteger completionCounter = new AtomicInteger(memberPartitionsMap.size());
+        final SimpleCompletableFuture<Void> resultFuture = new SimpleCompletableFuture<>(nodeEngine);
+        ExecutionCallback<Map<Integer, Object>> callback = new ExecutionCallback<Map<Integer, Object>>() {
+            @Override
+            public void onResponse(Map<Integer, Object> response) {
+                if (completionCounter.decrementAndGet() == 0) {
+                    resultFuture.complete(null);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                resultFuture.complete(t);
+            }
+        };
+
+        for (Entry<Address, List<Integer>> entry : memberPartitionsMap.entrySet()) {
+            List<Integer> memberPartitions = entry.getValue();
+            int count = 0;
+            for (int partitionId : memberPartitions) {
+                if (entries[partitionId] != null) {
+                    subPartitions[count] = partitionId;
+                    subEntries[count] = entries[partitionId];
+                    count++;
+                }
+            }
+            if (count == 0) {
+                callback.onResponse(null);
+                continue;
+            }
+            int[] subPartitionsTrimmed = Arrays.copyOf(subPartitions, count);
+            MapEntries[] subEntriesTrimmed = Arrays.copyOf(subEntries, count);
+
+            if (count > 0) {
+                OperationFactory factory = targetMap.getOperationProvider().createPutAllOperationFactory(
+                        targetMap.getName(), subPartitionsTrimmed, subEntriesTrimmed);
+                targetMap.getOperationService().invokeOnPartitionsAsync(SERVICE_NAME, factory,
+                                asIntegerList(subPartitionsTrimmed))
+                         .andThen(callback);
+            }
+        }
+
+        return resultFuture;
+    }
+
+    private static <K, V> ICompletableFuture<Void> mapPutAllAsync(
+            ClientMapProxy<K, V> targetMap,
+            Map<? extends K, ? extends V> items
+    ) {
+        if (items.isEmpty()) {
+            return new SimpleCompletedFuture<>(null);
+        }
+        checkNotNull(targetMap, "Null argument map is not allowed");
+        ClientPartitionService partitionService = targetMap.getContext().getPartitionService();
+        int partitionCount = partitionService.getPartitionCount();
+        Map<Integer, List<Map.Entry<Data, Data>>> entryMap = new HashMap<>(partitionCount);
+        InternalSerializationService serializationService = targetMap.getContext().getSerializationService();
+
+        for (Entry<? extends K, ? extends V> entry : items.entrySet()) {
+            checkNotNull(entry.getKey(), "Null key is not allowed");
+            checkNotNull(entry.getValue(), "Null value is not allowed");
+
+            Data keyData = serializationService.toData(entry.getKey());
+            int partitionId = partitionService.getPartitionId(keyData);
+            entryMap
+                    .computeIfAbsent(partitionId, k -> new ArrayList<>())
+                    .add(new AbstractMap.SimpleEntry<>(keyData, serializationService.toData(entry.getValue())));
+        }
+
+        HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) targetMap.getContext().getHazelcastInstance();
+        SimpleCompletableFuture<Void> resultFuture = new SimpleCompletableFuture<>(ForkJoinPool.commonPool(),
+                client.getLoggingService().getLogger(Util.class));
+        AtomicInteger completionCounter = new AtomicInteger(entryMap.size());
+        ExecutionCallback<ClientMessage> callback = new ExecutionCallback<ClientMessage>() {
+            @Override
+            public void onResponse(ClientMessage response) {
+                if (completionCounter.decrementAndGet() == 0) {
+                    resultFuture.complete(null);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                resultFuture.complete(t);
+            }
+        };
+        for (Entry<Integer, List<Map.Entry<Data, Data>>> partitionEntries : entryMap.entrySet()) {
+            Integer partitionId = partitionEntries.getKey();
+            // use setAsync if there's only one entry
+            if (partitionEntries.getValue().size() == 1) {
+                Entry<Data, Data> onlyEntry = partitionEntries.getValue().get(0);
+                // cast to raw so that we can pass serialized key and value
+                ((IMap) targetMap).setAsync(onlyEntry.getKey(), onlyEntry.getValue())
+                         .andThen(callback);
+            } else {
+                ClientMessage request = MapPutAllCodec.encodeRequest(targetMap.getName(), partitionEntries.getValue());
+                new ClientInvocation(client, request, targetMap.getName(), partitionId).invoke()
+                                                                                       .andThen(callback);
+            }
+        }
+        return resultFuture;
+    }
+
+    private static List<Integer> asIntegerList(int[] array) {
+        return new AbstractList<Integer>() {
+            @Override
+            public Integer get(int index) {
+                return array[index];
+            }
+
+            @Override
+            public int size() {
+                return array.length;
+            }
+        };
     }
 }
