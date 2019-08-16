@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.function.TriFunction;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -56,7 +57,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     private ToLongFunction<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final BiFunction<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private final BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn;
+    private final TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn;
     private final FlatMapper<T, OUT> flatMapper;
 
     private final Map<K, TimestampedItem<S>> keyToState = new LruHashMap();
@@ -70,7 +71,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunction<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         this.ttl = ttl > 0 ? ttl : Long.MAX_VALUE;
         this.keyFn = (Function<Object, ? extends K>) keyFn;
@@ -98,7 +99,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         }
         K key = keyFn.apply(event);
         S state = resolveState(key, timestamp);
-        return optimizeForResettableTraverser(event, statefulFlatMapFn.apply(state, event));
+        return optimizeForResettableTraverser(event, key, statefulFlatMapFn.apply(state, event));
     }
 
     @Nonnull
@@ -120,14 +121,14 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     }
 
     @Nonnull
-    private Traverser<OUT> optimizeForResettableTraverser(T event, Traverser<R> resultTrav) {
+    private Traverser<OUT> optimizeForResettableTraverser(T event, K key, Traverser<R> resultTrav) {
         if (!(resultTrav instanceof ResettableSingletonTraverser)) {
-            return resultTrav.map(r -> mapToOutputFn.apply(event, r));
+            return resultTrav.map(r -> mapToOutputFn.apply(event, key, r));
         }
         R r = resultTrav.next();
         if (r != null) {
             ResettableSingletonTraverser<OUT> rst = (ResettableSingletonTraverser<OUT>) resultTrav;
-            rst.accept(mapToOutputFn.apply(event, r));
+            rst.accept(mapToOutputFn.apply(event, key, r));
             return rst;
         } else {
             return Traversers.empty();

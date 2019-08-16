@@ -39,6 +39,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
@@ -769,7 +770,7 @@ public final class Processors {
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return () -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
@@ -820,7 +821,7 @@ public final class Processors {
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return () -> new TransformStatefulP<T, K, S, R, OUT>(
                 ttl,

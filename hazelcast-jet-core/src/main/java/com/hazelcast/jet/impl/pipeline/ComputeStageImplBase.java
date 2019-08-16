@@ -140,7 +140,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((key, result) -> result)
+                fnAdapter.adaptStatefulOutputFn((event, key, result) -> result)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -158,7 +158,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulFlatMapFn(flatMapFn),
-                fnAdapter.adaptStatefulOutputFn((event, result) -> result)
+                fnAdapter.adaptStatefulOutputFn((event, key, result) -> result)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -184,7 +184,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((T event, R r) -> entry(keyFn.apply(event), r)));
+                fnAdapter.adaptStatefulOutputFn((e, k, r) -> entry(k, r)));
         return (RET) attach(transform, fnAdapter);
     }
 
@@ -209,7 +209,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulFlatMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((T event, R r) -> entry(keyFn.apply(event), r)));
+                fnAdapter.adaptStatefulOutputFn((e, k, r) -> entry(k, r)));
         return (RET) attach(transform, fnAdapter);
     }
 

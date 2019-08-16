@@ -20,6 +20,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
@@ -37,7 +38,7 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn;
+    private final TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn;
 
     public FlatMapStatefulTransform(
             @Nonnull Transform upstream,
@@ -46,7 +47,7 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         super("transform-stateful", upstream);
         this.ttl = ttl;
@@ -65,7 +66,8 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
-                flatMapStatefulP(ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn));
+                flatMapStatefulP(
+                        ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }

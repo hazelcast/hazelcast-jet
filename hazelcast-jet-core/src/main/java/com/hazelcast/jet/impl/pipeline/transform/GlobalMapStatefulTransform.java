@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
@@ -32,13 +33,13 @@ public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
     private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn;
-    private final BiFunctionEx<? super T, ? super R, ? extends R> mapToOutputFn;
+    private final TriFunction<? super T, Integer, ? super R, ? extends R> mapToOutputFn;
 
     public GlobalMapStatefulTransform(
             @Nonnull Transform upstream,
             ToLongFunctionEx<? super T> timestampFn, @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends R> mapToOutputFn
+            @Nonnull TriFunction<? super T, Integer, ? super R, ? extends R> mapToOutputFn
     ) {
         super("transform-stateful", upstream);
         this.timestampFn = timestampFn;

@@ -90,8 +90,8 @@ public class FunctionAdapter {
     }
 
     @Nonnull
-    <T, R, OUT> BiFunctionEx<?, ? super R, ?> adaptStatefulOutputFn(
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> outputFn
+    <T, K, R, OUT> TriFunction<?, ? super K, ? super R, ?> adaptStatefulOutputFn(
+            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> outputFn
     ) {
         return outputFn;
     }
@@ -273,10 +273,10 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     }
 
     @Nonnull @Override
-    <T, R, OUT> BiFunctionEx<? super JetEvent<T>, ? super R, ? extends JetEvent<OUT>> adaptStatefulOutputFn(
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> outputFn
+    <T, K, R, OUT> TriFunction<? super JetEvent<T>, ? super K, ? super R, ? extends JetEvent<OUT>> adaptStatefulOutputFn(
+            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> outputFn
     ) {
-        return (event, r) -> jetEvent(event.timestamp(), outputFn.apply(event.payload(), r));
+        return (event, key, r) -> jetEvent(event.timestamp(), outputFn.apply(event.payload(), key, r));
     }
 
     @Nonnull @Override

@@ -49,7 +49,7 @@ public class TransformStatefulPTest {
                     s[0] += e.getValue();
                     return s[0];
                 },
-                (e, r) -> entry(e.getKey(), r));
+                (e, k, r) -> entry(k, r));
 
         TestSupport.verifyProcessor(supplier)
                    .input(asList(
@@ -77,9 +77,7 @@ public class TransformStatefulPTest {
                     s[0] += e.payload().getValue();
                     return s[0];
                 },
-                (event, r) ->
-                        jetEvent(event.timestamp(), entry(event.payload().getKey(), r))
-
+                (event, k, r) -> jetEvent(event.timestamp(), entry(k, r))
         );
 
         TestSupport.verifyProcessor(supplier)
