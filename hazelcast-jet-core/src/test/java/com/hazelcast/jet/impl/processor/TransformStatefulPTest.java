@@ -98,4 +98,32 @@ public class TransformStatefulPTest {
                            jetEvent(4, entry("b", 4L))
                    ));
     }
+
+    @Test
+    public void mapStateful_lateEvent() {
+        SupplierEx<Processor> supplier = Processors.mapStatefulP(
+                0,
+                jetEvent -> 0L,
+                JetEvent::timestamp,
+                () -> new long[1],
+                (long[] s, JetEvent<Long> e) -> {
+                    s[0] += e.payload();
+                    return s[0];
+                },
+                (event, k, r) -> jetEvent(event.timestamp(), r)
+        );
+
+        TestSupport.verifyProcessor(supplier)
+                   .input(asList(
+                           jetEvent(0, 1L),
+                           jetEvent(1, 2L),
+                           wm(3), // evict a
+                           jetEvent(0, 1L)
+                   ))
+                   .expectOutput(asList(
+                           jetEvent(0, 1L),
+                           jetEvent(1, 3L),
+                           wm(3)
+        ));
+    }
 }
