@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -51,6 +50,7 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
@@ -137,6 +137,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(mapFn, "mapFn");
         GlobalMapStatefulTransform<T, S, R> transform = new GlobalMapStatefulTransform(
                 this.transform,
+                fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
                 fnAdapter.adaptStatefulOutputFn((key, result) -> result)
@@ -152,11 +153,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(createFn, "createFn");
         checkSerializable(flatMapFn, "flatMapFn");
-        GlobalFlatMapStatefulTransform<T, S, R> transform = new GlobalFlatMapStatefulTransform(
+        GlobalFlatMapStatefulTransform<T, S, R, RET> transform = new GlobalFlatMapStatefulTransform(
                 this.transform,
+                fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulFlatMapFn(flatMapFn),
-                fnAdapter.adaptStatefulOutputFn((key, result) -> result)
+                fnAdapter.adaptStatefulOutputFn((event, result) -> result)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -179,9 +181,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 ttl,
                 fnAdapter.adaptKeyFn(keyFn),
+                fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn(Util::entry));
+                fnAdapter.adaptStatefulOutputFn((T event, R r) -> entry(keyFn.apply(event), r)));
         return (RET) attach(transform, fnAdapter);
     }
 
@@ -203,9 +206,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 ttl,
                 fnAdapter.adaptKeyFn(keyFn),
+                fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulFlatMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn(Util::entry));
+                fnAdapter.adaptStatefulOutputFn((T event, R r) -> entry(keyFn.apply(event), r)));
         return (RET) attach(transform, fnAdapter);
     }
 

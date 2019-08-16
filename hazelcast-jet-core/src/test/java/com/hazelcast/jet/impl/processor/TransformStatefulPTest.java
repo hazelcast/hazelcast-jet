@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.processor;
 
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
@@ -44,26 +43,27 @@ public class TransformStatefulPTest {
         SupplierEx<Processor> supplier = Processors.mapStatefulP(
                 0,
                 Entry::getKey,
+                e -> 0L,
                 () -> new long[1],
                 (long[] s, Entry<String, Long> e) -> {
                     s[0] += e.getValue();
                     return s[0];
                 },
-                Util::entry);
+                (e, r) -> entry(e.getKey(), r));
 
         TestSupport.verifyProcessor(supplier)
-                .input(asList(
-                        entry("a", 1L),
-                        entry("b", 2L),
-                        entry("a", 3L),
-                        entry("b", 4L)
-                ))
-                .expectOutput(asList(
-                        entry("a", 1L),
-                        entry("b", 2L),
-                        entry("a", 4L),
-                        entry("b", 6L)
-                ));
+                   .input(asList(
+                           entry("a", 1L),
+                           entry("b", 2L),
+                           entry("a", 3L),
+                           entry("b", 4L)
+                   ))
+                   .expectOutput(asList(
+                           entry("a", 1L),
+                           entry("b", 2L),
+                           entry("a", 4L),
+                           entry("b", 6L)
+                   ));
     }
 
     @Test
@@ -71,12 +71,15 @@ public class TransformStatefulPTest {
         SupplierEx<Processor> supplier = Processors.mapStatefulP(
                 2,
                 jetEvent -> jetEvent.payload().getKey(),
+                JetEvent::timestamp,
                 () -> new long[1],
                 (long[] s, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
-                    return jetEvent(e.timestamp(), s[0]);
+                    return s[0];
                 },
-                (k, e) -> jetEvent(e.timestamp(), entry(k, e.payload()))
+                (event, r) ->
+                        jetEvent(event.timestamp(), entry(event.payload().getKey(), r))
+
         );
 
         TestSupport.verifyProcessor(supplier)

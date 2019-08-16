@@ -766,15 +766,17 @@ public final class Processors {
     public static <T, K, S, R, OUT> SupplierEx<Processor> mapStatefulP(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
+            @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
-            @Nonnull BiFunctionEx<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return () -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
             return new TransformStatefulP<T, K, S, R, OUT>(
                     ttl,
                     keyFn,
+                    timestampFn,
                     createFn,
                     (state, item) -> {
                         trav.accept(statefulMapFn.apply(state, item));
@@ -815,13 +817,15 @@ public final class Processors {
     public static <T, K, S, R, OUT> SupplierEx<Processor> flatMapStatefulP(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
+            @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunctionEx<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return () -> new TransformStatefulP<T, K, S, R, OUT>(
                 ttl,
                 keyFn,
+                timestampFn,
                 createFn,
                 statefulFlatMapFn,
                 mapToOutputFn);
@@ -836,7 +840,7 @@ public final class Processors {
      * If the mapping result is {@code null}, the vertex emits nothing.
      * Therefore it can be used to implement filtering semantics as well.
      * <p>
-     * Unlike {@link #rollingAggregateP} (with the "{@code Keyed}" part),
+     * Unlike {@link #mapStatefulP} (with the "{@code Keyed}" part),
      * this method creates one context object per processor (or per member, if
      * {@linkplain ContextFactory#withLocalSharing() shared}).
      * <p>

@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
@@ -32,21 +33,24 @@ public class MapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform {
     private static final int TTL_TO_WM_STRIDE_RATIO = 4;
     private final long ttl;
     private final FunctionEx<? super T, ? extends K> keyFn;
+    private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn;
-    private BiFunctionEx<? super K, ? super R, ? extends OUT> mapToOutputFn;
+    private final BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn;
 
     public MapStatefulTransform(
             @Nonnull Transform upstream,
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
+            @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
-            @Nonnull BiFunctionEx<? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
     ) {
         super("transform-stateful", upstream);
         this.ttl = ttl;
         this.keyFn = keyFn;
+        this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulMapFn = statefulMapFn;
         this.mapToOutputFn = mapToOutputFn;
@@ -60,7 +64,7 @@ public class MapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform {
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
-                mapStatefulP(ttl, keyFn, createFn, statefulMapFn, mapToOutputFn));
+                mapStatefulP(ttl, keyFn, timestampFn, createFn, statefulMapFn, mapToOutputFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }

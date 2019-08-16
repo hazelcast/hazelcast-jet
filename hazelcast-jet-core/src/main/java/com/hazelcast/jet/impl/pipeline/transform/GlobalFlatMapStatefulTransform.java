@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
@@ -27,19 +28,22 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.processor.Processors.flatMapStatefulP;
 
-public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform {
+public class GlobalFlatMapStatefulTransform<T, S, R, OUT> extends AbstractTransform {
 
     private final Supplier<? extends S> createFn;
     private final BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private BiFunctionEx<Integer, ? super R, ? extends R> mapToOutputFn;
+    private final ToLongFunctionEx<? super T> timestampFn;
+    private final BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn;
 
     public GlobalFlatMapStatefulTransform(
             @Nonnull Transform upstream,
+            @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunctionEx<Integer, ? super R, ? extends R> mapToOutputFn
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
     ) {
         super("transform-stateful", upstream);
+        this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulFlatMapFn = statefulFlatMapFn;
         this.mapToOutputFn = mapToOutputFn;
@@ -49,7 +53,7 @@ public class GlobalFlatMapStatefulTransform<T, S, R> extends AbstractTransform {
     public void addToDag(Planner p) {
         ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
         PlannerVertex pv = p.addVertex(this, name(), 1,
-                flatMapStatefulP(Long.MAX_VALUE, keyFn, createFn, statefulFlatMapFn, mapToOutputFn));
+                flatMapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }
