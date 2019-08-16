@@ -38,6 +38,7 @@
         <module>hazelcast-jet-reference-manual</module>
         <module>hazelcast-jet-spring</module>
         <module>hazelcast-jet-avro</module>
+        <module>examples</module>
     </modules>
 
     <repositories>
@@ -65,7 +66,6 @@
             -Dhazelcast.test.use.network=false
             -Djava.net.preferIPv4Stack=true
         </argLine>
-        <main.basedir>${project.basedir}</main.basedir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <jdk.version>1.8</jdk.version>
@@ -361,7 +361,7 @@
                 </executions>
                 <configuration>
                     <failOnError>true</failOnError>
-                    <excludeFilterFile>${main.basedir}/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
+                    <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs/spotbugs-exclude.xml</excludeFilterFile>
                     <spotbugsXmlOutput>true</spotbugsXmlOutput>
                     <xmlOutput>true</xmlOutput>
                 </configuration>
@@ -412,9 +412,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <configLocation>${main.basedir}/checkstyle/checkstyle.xml</configLocation>
-                    <suppressionsLocation>${main.basedir}/checkstyle/suppressions.xml</suppressionsLocation>
-                    <headerLocation>${main.basedir}/checkstyle/ClassHeader.txt</headerLocation>
+                    <configLocation>${maven.multiModuleProjectDirectory}/checkstyle/checkstyle.xml</configLocation>
+                    <suppressionsLocation>${maven.multiModuleProjectDirectory}/checkstyle/suppressions.xml</suppressionsLocation>
+                    <headerLocation>${maven.multiModuleProjectDirectory}/checkstyle/ClassHeader.txt</headerLocation>
                     <enableRSS>false</enableRSS>
                     <linkXRef>true</linkXRef>
                     <consoleOutput>true</consoleOutput>
@@ -422,7 +422,7 @@
                     <failOnViolation>true</failOnViolation>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <enableRulesSummary>true</enableRulesSummary>
-                    <propertyExpansion>main.basedir=${main.basedir}</propertyExpansion>
+                    <propertyExpansion>main.basedir=${maven.multiModuleProjectDirectory}</propertyExpansion>
                 </configuration>
             </plugin>
         </plugins>
