@@ -54,11 +54,11 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
 
     private final long ttl;
     private final Function<Object, ? extends K> keyFn;
-    private ToLongFunction<? super T> timestampFn;
+    private final ToLongFunction<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final BiFunction<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
     private final TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn;
-    private final FlatMapper<T, OUT> flatMapper;
+    private final FlatMapper<T, OUT> flatMapper = flatMapper(this::flatMapEvent);
 
     private final Map<K, TimestampedItem<S>> keyToState = new LruHashMap();
     private long currentWm = Long.MIN_VALUE;
@@ -79,7 +79,6 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         this.createFn = createFn;
         this.statefulFlatMapFn = statefulFlatMapFn;
         this.mapToOutputFn = mapToOutputFn;
-        this.flatMapper = flatMapper(this::flatMapEvent);
     }
 
     @Override
@@ -89,7 +88,6 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     private Traverser<OUT> flatMapEvent(T event) {
         long timestamp = timestampFn.applyAsLong(event);
         if (timestamp < currentWm) {
@@ -99,7 +97,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         }
         K key = keyFn.apply(event);
         S state = resolveState(key, timestamp);
-        return optimizeForResettableTraverser(event, key, statefulFlatMapFn.apply(state, event));
+        return applyOutputFnOptimized(event, key, statefulFlatMapFn.apply(state, event));
     }
 
     @Nonnull
@@ -121,7 +119,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     }
 
     @Nonnull
-    private Traverser<OUT> optimizeForResettableTraverser(T event, K key, Traverser<R> resultTrav) {
+    private Traverser<OUT> applyOutputFnOptimized(T event, K key, Traverser<R> resultTrav) {
         if (!(resultTrav instanceof ResettableSingletonTraverser)) {
             return resultTrav.map(r -> mapToOutputFn.apply(event, key, r));
         }
