@@ -65,7 +65,7 @@ public class AggregateOpAggregator<T, A, R> extends Aggregator<T, R> implements 
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.AGGREGATE_OP_AGGREGATOR;
     }
 

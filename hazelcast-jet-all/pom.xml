@@ -87,15 +87,6 @@
                         <dependencySourceInclude>com.hazelcast:hazelcast-client</dependencySourceInclude>
                         <dependencySourceInclude>com.hazelcast.jet:hazelcast-jet-core</dependencySourceInclude>
                     </dependencySourceIncludes>
-                    <additionalDependencies>
-                        <!-- This dependency is only referenced from some internal packages and not used during runtime
-                        but JDK9 seems to try to resolve the dependency anyway when building javadoc -->
-                        <additionalDependency>
-                            <groupId>com.hazelcast</groupId>
-                            <artifactId>hazelcast-code-generator</artifactId>
-                            <version>${hazelcast.protocol.version}</version>
-                        </additionalDependency>
-                    </additionalDependencies>
                 </configuration>
             </plugin>
         </plugins>

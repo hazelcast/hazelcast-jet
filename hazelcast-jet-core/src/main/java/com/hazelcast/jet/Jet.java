@@ -37,7 +37,6 @@ import com.hazelcast.jet.impl.JetNodeContext;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.map.merge.IgnoreMergingEntryMapMergePolicy;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Preconditions;
 
@@ -48,14 +47,14 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Function;
 
+import static com.hazelcast.jet.core.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
+import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.JOB_METRICS_MAP_NAME;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetClientConfig;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
 import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
-import static com.hazelcast.jet.core.JetProperties.JET_SHUTDOWNHOOK_ENABLED;
-import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 
 /**
@@ -192,7 +191,7 @@ public final class Jet {
                 // we query creationTime of resources maps
                 .setStatisticsEnabled(true);
 
-        internalMapConfig.getMergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName());
+//        internalMapConfig.getMergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName());
 
         HazelcastProperties properties = new HazelcastProperties(hzProperties);
         MapConfig resultsMapConfig = new MapConfig(internalMapConfig)

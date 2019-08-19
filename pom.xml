@@ -31,7 +31,6 @@
     <modules>
         <module>hazelcast-jet-all</module>
         <module>hazelcast-jet-distribution</module>
-        <module>hazelcast-jet-client-protocol</module>
         <module>hazelcast-jet-core</module>
         <module>hazelcast-jet-kafka</module>
         <module>hazelcast-jet-hadoop</module>
@@ -73,7 +72,6 @@
         <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
         <hazelcast.version>4.0-SNAPSHOT</hazelcast.version>
-        <hazelcast.protocol.version>2.0.0-2</hazelcast.protocol.version>
 
         <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
         <maven.jar.plugin.version>2.4</maven.jar.plugin.version>
@@ -171,11 +169,6 @@
             <dependency>
                 <groupId>com.hazelcast</groupId>
                 <artifactId>hazelcast</artifactId>
-                <version>${hazelcast.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.hazelcast</groupId>
-                <artifactId>hazelcast-client</artifactId>
                 <version>${hazelcast.version}</version>
             </dependency>
         </dependencies>

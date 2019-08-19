@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.impl.serialization.SerializerHookConstants;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.nio.ObjectDataInput;
@@ -24,7 +25,6 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.SerializerHook;
 import com.hazelcast.nio.serialization.StreamSerializer;
-import com.hazelcast.spi.serialization.SerializationService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import java.io.IOException;

@@ -16,36 +16,36 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.client.impl.ClientDelegatingFuture;
 import com.hazelcast.client.impl.client.DistributedObjectInfo;
 import com.hazelcast.client.impl.clientside.ClientMessageDecoder;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
-import com.hazelcast.client.impl.protocol.codec.JetExistsDistributedObjectCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetClusterMetadataCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetClusterMetadataCodec.ResponseParameters;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsByNameCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobIdsCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetJobSummaryListCodec;
-import com.hazelcast.client.impl.protocol.codec.JetGetMemberXmlConfigurationCodec;
-import com.hazelcast.client.impl.protocol.codec.JetReadMetricsCodec;
-import com.hazelcast.client.spi.impl.ClientInvocation;
-import com.hazelcast.client.util.ClientDelegatingFuture;
+import com.hazelcast.client.impl.spi.impl.ClientInvocation;
+import com.hazelcast.cluster.Cluster;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryXmlConfig;
-import com.hazelcast.cluster.Cluster;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.cluster.Member;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.impl.client.protocol.codec.JetExistsDistributedObjectCodec;
+import com.hazelcast.jet.impl.client.protocol.codec.JetGetClusterMetadataCodec;
+import com.hazelcast.jet.impl.client.protocol.codec.JetGetClusterMetadataCodec.ResponseParameters;
+import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsByNameCodec;
+import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsCodec;
+import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobSummaryListCodec;
+import com.hazelcast.jet.impl.client.protocol.codec.JetGetMemberXmlConfigurationCodec;
+import com.hazelcast.jet.impl.client.protocol.codec.JetReadMetricsCodec;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer.RingbufferSlice;
 import com.hazelcast.jet.impl.metrics.management.MetricsResultSet;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
-import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -80,12 +80,14 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         ExceptionUtil.registerJetExceptions(hazelcastInstance.getClientExceptionFactory());
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public JetConfig getConfig() {
         throw new UnsupportedOperationException("Jet Configuration is not available on the client");
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public List<Job> getJobs() {
         ClientInvocation invocation = new ClientInvocation(
                 client, JetGetJobIdsCodec.encodeRequest(), null, masterAddress(client.getCluster())
@@ -128,13 +130,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     public ClusterMetadata getClusterMetadata() {
         return invokeRequestOnMasterAndDecodeResponse(JetGetClusterMetadataCodec.encodeRequest(),
                 response -> {
-                    ResponseParameters parameters = JetGetClusterMetadataCodec.decodeResponse(response);
-                    ClusterMetadata metadata = new ClusterMetadata();
-                    metadata.setClusterTime(parameters.clusterTime);
-                    metadata.setName(parameters.name);
-                    metadata.setState(parameters.state);
-                    metadata.setVersion(parameters.version);
-                    return metadata;
+                    ResponseParameters responseParameters = JetGetClusterMetadataCodec.decodeResponse(response);
+                    return responseParameters.response;
                 });
     }
 

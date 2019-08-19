@@ -38,7 +38,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngine;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -539,72 +539,6 @@ public class JobRepository {
             jobId = in.readLong();
             jobExecutionRecord = in.readObject();
             canCreate = in.readBoolean();
-        }
-    }
-
-    public static class FilterExecutionIdByJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
-
-        private long jobId;
-
-        public FilterExecutionIdByJobIdPredicate() {
-        }
-
-        FilterExecutionIdByJobIdPredicate(long jobId) {
-            this.jobId = jobId;
-        }
-
-        @Override
-        public boolean apply(Entry<Long, Long> mapEntry) {
-            return mapEntry.getKey() != jobId && mapEntry.getValue() == jobId;
-        }
-
-        @Override
-        public int getFactoryId() {
-            return JetInitDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getClassId() {
-            return JetInitDataSerializerHook.FILTER_EXECUTION_ID_BY_JOB_ID_PREDICATE;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-            out.writeLong(jobId);
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
-            jobId = in.readLong();
-        }
-    }
-
-    public static class FilterJobIdPredicate implements Predicate<Long, Long>, IdentifiedDataSerializable {
-
-        public FilterJobIdPredicate() {
-        }
-
-        @Override
-        public boolean apply(Entry<Long, Long> mapEntry) {
-            return mapEntry.getKey().equals(mapEntry.getValue());
-        }
-
-        @Override
-        public int getFactoryId() {
-            return JetInitDataSerializerHook.FACTORY_ID;
-        }
-
-        @Override
-        public int getClassId() {
-            return JetInitDataSerializerHook.FILTER_JOB_ID;
-        }
-
-        @Override
-        public void writeData(ObjectDataOutput out) throws IOException {
-        }
-
-        @Override
-        public void readData(ObjectDataInput in) throws IOException {
         }
     }
 

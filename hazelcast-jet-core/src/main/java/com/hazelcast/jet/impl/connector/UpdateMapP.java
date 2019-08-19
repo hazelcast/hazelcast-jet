@@ -17,11 +17,13 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
-import com.hazelcast.client.proxy.ClientMapProxy;
-import com.hazelcast.client.spi.ClientPartitionService;
+import com.hazelcast.client.impl.proxy.ClientMapProxy;
+import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
+import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.serialization.SerializationServiceAware;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.JetDataSerializerHook;
@@ -35,8 +37,6 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.partition.IPartitionService;
-import com.hazelcast.spi.serialization.SerializationService;
-import com.hazelcast.spi.serialization.SerializationServiceAware;
 import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.FunctionEx;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;

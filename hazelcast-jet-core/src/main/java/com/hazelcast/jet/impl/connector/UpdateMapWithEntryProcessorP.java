@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 
 public final class UpdateMapWithEntryProcessorP<T, K, V, R> extends AsyncHazelcastWriterP {
 
-    private final IMap<? super K, ? extends V> map;
+    private final IMap<K, V> map;
     private final FunctionEx<? super T, ? extends K> toKeyFn;
     private final FunctionEx<? super T, ? extends EntryProcessor<K, V, R>> toEntryProcessorFn;
 

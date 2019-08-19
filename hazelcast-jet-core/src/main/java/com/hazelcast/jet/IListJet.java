@@ -17,10 +17,10 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.collection.IList;
-import com.hazelcast.map.IMap;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 
 /**
  * A concurrent, in-memory concurrent list implementation.

@@ -22,11 +22,11 @@ import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.impl.journal.MapEventJournalFunctions;
 import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;

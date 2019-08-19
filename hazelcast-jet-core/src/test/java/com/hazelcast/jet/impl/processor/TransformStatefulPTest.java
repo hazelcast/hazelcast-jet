@@ -19,10 +19,10 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.annotation.ParallelJVMTest;
+import com.hazelcast.util.function.SupplierEx;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -34,7 +34,7 @@ import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static java.util.Arrays.asList;
 
-@Category(ParallelTest.class)
+@Category(ParallelJVMTest.class)
 @RunWith(HazelcastParallelClassRunner.class)
 public class TransformStatefulPTest {
 

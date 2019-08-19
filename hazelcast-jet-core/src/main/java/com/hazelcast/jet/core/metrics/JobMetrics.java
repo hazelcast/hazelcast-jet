@@ -190,7 +190,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return MetricsDataSerializerHook.JOB_METRICS;
     }
 

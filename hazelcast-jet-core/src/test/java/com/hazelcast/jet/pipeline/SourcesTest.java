@@ -22,7 +22,6 @@ import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
@@ -44,11 +43,11 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.projection.Projections.singleAttribute;
 import static com.hazelcast.query.impl.predicates.TruePredicate.truePredicate;
-import static com.hazelcast.query.Predicates.alwaysTrue;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -88,7 +87,7 @@ public class SourcesTest extends PipelineTestSupport {
 
         // When
         BatchSource<Integer> source = Sources.batchFromProcessor("test",
-                readMapP(srcName, alwaysTrue(), Entry::getValue));
+                readMapP(srcName, truePredicate(), Entry::getValue));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -139,7 +138,7 @@ public class SourcesTest extends PipelineTestSupport {
         putToBatchSrcMap(input);
 
         // When
-        BatchSource<Object> source = Sources.map(srcName, alwaysTrue(), singleAttribute("value"));
+        BatchSource<Object> source = Sources.map(srcName, truePredicate(), singleAttribute("value"));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -154,7 +153,7 @@ public class SourcesTest extends PipelineTestSupport {
         putToBatchSrcMap(input);
 
         // When
-        BatchSource<Integer> source = Sources.map(srcMap, alwaysTrue(), Projections.singleAttribute("value"));
+        BatchSource<Integer> source = Sources.map(srcMap, truePredicate(), Projections.singleAttribute("value"));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -171,7 +170,7 @@ public class SourcesTest extends PipelineTestSupport {
         // When
         BatchSource<Integer> source = Sources.map(
                 srcName,
-                alwaysTrue(),
+                truePredicate(),
                 Entry<String, Integer>::getValue);
 
         // Then
@@ -189,7 +188,7 @@ public class SourcesTest extends PipelineTestSupport {
         // When
         BatchSource<Integer> source = Sources.map(
                 srcMap,
-                alwaysTrue(),
+                truePredicate(),
                 Entry::getValue);
 
         // Then
@@ -206,7 +205,7 @@ public class SourcesTest extends PipelineTestSupport {
         range(0, itemCount).forEach(i -> sourceMap.put(i, entry(i, i % 2 == 0 ? null : String.valueOf(i))));
 
         // when
-        BatchSource<String> source = Sources.map(mapName, alwaysTrue(), singleAttribute("value"));
+        BatchSource<String> source = Sources.map(mapName, truePredicate(), singleAttribute("value"));
 
         // then
         p.drawFrom(source).drainTo(sink);
@@ -250,7 +249,7 @@ public class SourcesTest extends PipelineTestSupport {
 
         // When
         BatchSource<Object> source = Sources.remoteMap(
-                srcName, clientConfig, alwaysTrue(), singleAttribute("value"));
+                srcName, clientConfig, truePredicate(), singleAttribute("value"));
 
         // Then
         p.drawFrom(source).drainTo(sink);
@@ -266,7 +265,7 @@ public class SourcesTest extends PipelineTestSupport {
 
         // When
         BatchSource<Integer> source = Sources.remoteMap(
-                srcName, clientConfig, alwaysTrue(), Entry<String, Integer>::getValue);
+                srcName, clientConfig, truePredicate(), Entry<String, Integer>::getValue);
 
         // Then
         p.drawFrom(source).drainTo(sink);

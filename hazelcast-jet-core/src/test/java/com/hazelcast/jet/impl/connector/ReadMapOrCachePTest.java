@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.map.IMap;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.util.function.FunctionEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

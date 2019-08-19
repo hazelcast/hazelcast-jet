@@ -26,7 +26,7 @@ import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.impl.execution.init.Contexts.ProcCtx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.spi.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nonnull;
 import java.util.BitSet;

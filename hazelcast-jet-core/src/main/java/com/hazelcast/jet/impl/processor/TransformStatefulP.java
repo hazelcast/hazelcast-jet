@@ -24,9 +24,9 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.TimestampedItem;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;

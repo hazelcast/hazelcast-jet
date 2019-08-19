@@ -43,7 +43,7 @@ import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.exception.TargetNotMemberException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.impl.executionservice.InternalExecutionService;
+import com.hazelcast.spi.impl.executionservice.ExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Clock;
 
@@ -140,7 +140,7 @@ public class JobCoordinationService {
     }
 
     void startScanningForJobs() {
-        InternalExecutionService executionService = nodeEngine.getExecutionService();
+        ExecutionService executionService = nodeEngine.getExecutionService();
         HazelcastProperties properties = new HazelcastProperties(config.getProperties());
         long jobScanPeriodInMillis = properties.getMillis(JOB_SCAN_PERIOD);
         executionService.register(COORDINATOR_EXECUTOR_NAME, 2, Integer.MAX_VALUE, CACHED);
@@ -665,7 +665,7 @@ public class JobCoordinationService {
 
     void scheduleSnapshot(MasterContext mc, long executionId) {
         long snapshotInterval = mc.jobConfig().getSnapshotIntervalMillis();
-        InternalExecutionService executionService = nodeEngine.getExecutionService();
+        ExecutionService executionService = nodeEngine.getExecutionService();
         if (logger.isFineEnabled()) {
             logger.fine(mc.jobIdString() + " snapshot is scheduled in " + snapshotInterval + "ms");
         }

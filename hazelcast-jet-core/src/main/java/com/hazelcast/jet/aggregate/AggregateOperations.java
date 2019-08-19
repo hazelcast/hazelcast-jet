@@ -17,7 +17,6 @@
 package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.aggregation.Aggregator;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.accumulator.DoubleAccumulator;
 import com.hazelcast.jet.accumulator.LinTrendAccumulator;
@@ -28,6 +27,7 @@ import com.hazelcast.jet.accumulator.MutableReference;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.map.IMap;
 import com.hazelcast.util.function.BiConsumerEx;
 import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.BinaryOperatorEx;

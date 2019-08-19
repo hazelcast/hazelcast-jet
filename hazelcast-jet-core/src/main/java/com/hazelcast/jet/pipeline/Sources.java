@@ -258,7 +258,7 @@ public final class Sources {
     @Nonnull
     public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
@@ -328,39 +328,8 @@ public final class Sources {
     @Nonnull
     public static <T, K, V> BatchSource<T> map(
             @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return map(map.getName(), predicate, projection);
-    }
-
-    /**
-     * Convenience for {@link #map(String, Predicate, Projection)}
-     * which uses a {@link FunctionEx} as the projection function.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> map(
-            @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
-    }
-
-    /**
-     * Convenience for {@link #map(IMap, Predicate, Projection)} which uses a
-     * {@link FunctionEx} as the projection function.
-     * <p>
-     * <strong>NOTE:</strong> Jet only remembers the name of the map you supply
-     * and acquires a map with that name on the local cluster. If you supply a
-     * map instance from another cluster, no error will be thrown to indicate
-     * this.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> map(
-            @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return map(map.getName(), predicate, projection);
     }
@@ -624,23 +593,8 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig, predicate, projection)));
-    }
-
-    /**
-     * Convenience for {@link #remoteMap(String, ClientConfig, Predicate, Projection)}
-     * which use a {@link FunctionEx} as the projection function.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> remoteMap(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
                 ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig, predicate, projection)));
