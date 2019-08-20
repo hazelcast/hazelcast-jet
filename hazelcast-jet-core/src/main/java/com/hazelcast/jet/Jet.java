@@ -37,6 +37,7 @@ import com.hazelcast.jet.impl.JetNodeContext;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.spi.merge.DiscardMergePolicy;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.util.Preconditions;
 
@@ -191,7 +192,7 @@ public final class Jet {
                 // we query creationTime of resources maps
                 .setStatisticsEnabled(true);
 
-//        internalMapConfig.getMergePolicyConfig().setPolicy(IgnoreMergingEntryMapMergePolicy.class.getName());
+        internalMapConfig.getMergePolicyConfig().setPolicy(DiscardMergePolicy.class.getName());
 
         HazelcastProperties properties = new HazelcastProperties(hzProperties);
         MapConfig resultsMapConfig = new MapConfig(internalMapConfig)
