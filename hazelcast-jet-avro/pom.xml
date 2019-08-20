@@ -74,13 +74,6 @@
             <scope>test</scope>
             <classifier>tests</classifier>
         </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client</artifactId>
-            <scope>test</scope>
-            <version>${hazelcast.version}</version>
-            <classifier>tests</classifier>
-        </dependency>
     </dependencies>
 
 </project>
