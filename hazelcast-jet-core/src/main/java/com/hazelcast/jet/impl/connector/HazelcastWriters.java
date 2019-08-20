@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
@@ -301,7 +302,14 @@ public final class HazelcastWriters {
                 }
 
                 @Override
+                public boolean tryProcess() {
+                    checkFailure();
+                    return true;
+                }
+
+                @Override
                 public void process(int ordinal, @Nonnull Inbox inbox) {
+                    checkFailure();
                     if (Util.tryIncrement(numParallelOps, 1, parallelOpsLimit)) {
                         ArrayMap inboxAsMap = new ArrayMap(inbox.size());
                         inbox.drain(inboxAsMap::add);
@@ -312,12 +320,31 @@ public final class HazelcastWriters {
 
                 @Override
                 public boolean saveToSnapshot() {
-                    return numParallelOps.get() == 0;
+                    return ensureAllSuccessfullyWritten();
                 }
 
                 @Override
                 public boolean complete() {
-                    return numParallelOps.get() == 0;
+                    return ensureAllSuccessfullyWritten();
+                }
+
+                private void checkFailure() {
+                    Throwable failure = firstFailure.get();
+                    if (failure != null) {
+                        if (failure instanceof HazelcastInstanceNotActiveException) {
+                            System.out.println("here");
+                            failure = handleInstanceNotActive((HazelcastInstanceNotActiveException) failure, isLocal());
+                        }
+                        throw sneakyThrow(failure);
+                    }
+                }
+
+                private boolean ensureAllSuccessfullyWritten() {
+                    try {
+                        return numParallelOps.get() == 0;
+                    } finally {
+                        checkFailure();
+                    }
                 }
             };
         }

@@ -57,7 +57,7 @@ public abstract class AbstractHazelcastConnectorSupplier implements ProcessorSup
 
     protected abstract Processor createProcessor(HazelcastInstance instance);
 
-    private boolean isLocal() {
+    boolean isLocal() {
         return clientXml == null;
     }
 
