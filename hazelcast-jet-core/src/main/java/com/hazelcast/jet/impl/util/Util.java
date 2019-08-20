@@ -125,6 +125,7 @@ public final class Util {
     private static final int BUFFER_SIZE = 1 << 15;
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
+    public static final float PUT_ALL_INITIAL_SIZE_MAGIC = 20f;
 
     private Util() {
     }
@@ -726,7 +727,8 @@ public final class Util {
 
         MapEntries[] entries = new MapEntries[partitionService.getPartitionCount()];
         // this is an educated guess for the initial size of the entries per partition, depending on the map size
-        int initialSize = (int) ceil(20f * items.size() / partitionService.getPartitionCount() / log10(items.size()));
+        int initialSize = (int) ceil(PUT_ALL_INITIAL_SIZE_MAGIC * items.size() /
+                partitionService.getPartitionCount() / log10(items.size()));
 
         for (Entry<? extends K, ? extends V> entry : items.entrySet()) {
             checkNotNull(entry.getKey(), "Null key is not allowed");
