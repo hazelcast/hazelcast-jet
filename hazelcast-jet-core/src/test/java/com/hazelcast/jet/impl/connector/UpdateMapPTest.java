@@ -25,7 +25,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import com.hazelcast.util.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +43,7 @@ import static com.hazelcast.jet.impl.connector.AsyncHazelcastWriterP.MAX_PARALLE
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastParallelParametersRunnerFactory.class)
 public class UpdateMapPTest extends JetTestSupport {
 
     private static final int COUNT_PER_KEY = 16;

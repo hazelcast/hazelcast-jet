@@ -86,8 +86,6 @@ public abstract class TestInClusterSupport extends JetTestSupport {
         hzConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
         hzConfig.getMapConfig(JOURNALED_MAP_PREFIX + '*').getEventJournalConfig().setEnabled(true);
         hzConfig.getCacheConfig(JOURNALED_CACHE_PREFIX + '*').getEventJournalConfig().setEnabled(true);
-        member = createCluster(MEMBER_COUNT, config);
-        client = factory.newClient();
         return config;
     }
 
