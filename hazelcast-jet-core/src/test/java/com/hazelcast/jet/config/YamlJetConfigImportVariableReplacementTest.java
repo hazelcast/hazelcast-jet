@@ -20,7 +20,6 @@ import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.Identity
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.TestReplacer;
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
-import com.hazelcast.core.HazelcastException;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -210,26 +209,29 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         JetConfig.loadYamlFromString(yaml);
     }
 
-    @Test(expected = HazelcastException.class)
-    public void testImportFromNonHazelcastJetConfigThrowsException() throws Exception {
+    @Test
+    public void testImportNoHazelcastJetRootNode() throws Exception {
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigStr = ""
-                + "non-jet:\n"
-                + "  metrics:\n"
-                + "    enabled: false\n"
-                + "    jmx-enabled: false\n"
-                + "    collection-interval-seconds: 101\n";
-        writeStringToStreamAndClose(os, metricsConfigStr);
+        String importedYaml = ""
+                + "properties:\n"
+                + "  prop1: value1\n"
+                + "  prop2: value2\n";
+        writeStringToStreamAndClose(os, importedYaml);
 
         String yaml = ""
-                + "hazelcast-jet:\n"
-                + "  import:\n"
-                + "    - file:///" + file.getAbsolutePath();
-
+                + "import:\n"
+                + "  - file:///" + file.getAbsolutePath() + "\n"
+                + "metrics:\n"
+                + "  enabled: false\n"
+                + "  jmx-enabled: false\n"
+                + "  collection-interval-seconds: 101\n";
         JetConfig config = JetConfig.loadYamlFromString(yaml);
-        assertTrue(config.getMetricsConfig().isEnabled());
-        assertTrue(config.getMetricsConfig().isJmxEnabled());
+        assertEquals("value1", config.getProperties().getProperty("prop1"));
+        assertEquals("value2", config.getProperties().getProperty("prop2"));
+        assertFalse(config.getMetricsConfig().isEnabled());
+        assertFalse(config.getMetricsConfig().isJmxEnabled());
+
     }
 
     @Override

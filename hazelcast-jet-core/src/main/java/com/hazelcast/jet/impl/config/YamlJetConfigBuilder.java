@@ -84,8 +84,7 @@ public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder {
 
         YamlNode jetRoot = yamlRootNode.childAsMapping(JetConfigSections.HAZELCAST_JET.name);
         if (jetRoot == null) {
-            throw new InvalidConfigurationException("No mapping with hazelcast-jet key is" +
-                    " found in the provided configuration");
+            jetRoot = yamlRootNode;
         }
 
         YamlDomChecker.check(jetRoot);

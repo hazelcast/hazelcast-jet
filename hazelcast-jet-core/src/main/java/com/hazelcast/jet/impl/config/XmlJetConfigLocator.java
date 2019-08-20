@@ -39,7 +39,7 @@ public final class XmlJetConfigLocator extends AbstractConfigLocator {
     }
 
     @Override
-    public boolean locateFromSystemPropertyOrFailOnUnacceptedSuffix() {
+    protected boolean locateFromSystemPropertyOrFailOnUnacceptedSuffix() {
         return loadFromSystemPropertyOrFailOnUnacceptedSuffix(SYSPROP_JET_CONFIG, XML_ACCEPTED_SUFFIXES);
     }
 

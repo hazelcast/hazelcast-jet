@@ -210,7 +210,6 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         JetConfig.loadXmlFromString(xml);
     }
 
-    @Override
     @Test(expected = HazelcastException.class)
     public void testImportFromNonHazelcastJetConfigThrowsException() throws Exception {
         //Given

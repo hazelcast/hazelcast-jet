@@ -39,17 +39,6 @@ public class YamlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
         new YamlJetConfigBuilder((InputStream) null);
     }
 
-    @Test(expected = InvalidConfigurationException.class)
-    public void testInvalidRootElement() {
-        //Given
-        String yaml = ""
-                + "hazelcast-jet1:\n"
-                + "  test:\n"
-                + "    name: dev\n";
-
-        //When
-        buildConfig(yaml);
-    }
 
     @Test(expected = InvalidConfigurationException.class)
     public void testHazelcastJetTagAppearsTwice() {
@@ -151,6 +140,32 @@ public class YamlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
     }
 
     @Test
+    public void testWithoutRootHazelcastJetNode() {
+        //Given
+        String yaml = ""
+                + "properties:\n"
+                + "  property1: value1\n"
+                + "  property2: value2\n"
+                + "edge-defaults:\n"
+                + "  queue-size: 999\n"
+                + "  packet-size-limit: 997\n"
+                + "  receive-window-multiplier: 996\n";
+
+        //When
+        JetConfig jetConfig = buildConfig(yaml);
+
+        //Then
+        Properties properties = jetConfig.getProperties();
+        assertEquals("value1", properties.getProperty("property1"));
+        assertEquals("value2", properties.getProperty("property2"));
+        EdgeConfig edgeConfig = jetConfig.getDefaultEdgeConfig();
+        assertEquals("queueSize", 999, edgeConfig.getQueueSize());
+        assertEquals("packetSizeLimit", 997, edgeConfig.getPacketSizeLimit());
+        assertEquals("receiveWindowMultiplier", 996, edgeConfig.getReceiveWindowMultiplier());
+
+    }
+
+        @Test
     public void testNullInMapThrows() {
         //Given
         String yaml = ""

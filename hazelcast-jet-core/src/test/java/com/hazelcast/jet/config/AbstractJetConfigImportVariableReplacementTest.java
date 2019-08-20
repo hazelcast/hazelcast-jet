@@ -17,7 +17,6 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.core.HazelcastException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -83,9 +82,6 @@ public abstract class AbstractJetConfigImportVariableReplacementTest {
 
     @Test
     public abstract void testImportNotExistingResourceThrowsException();
-
-    @Test(expected = HazelcastException.class)
-    public abstract void testImportFromNonHazelcastJetConfigThrowsException() throws Exception;
 
     @Test
     public abstract void testImportMetricsConfigFromFile() throws Exception;

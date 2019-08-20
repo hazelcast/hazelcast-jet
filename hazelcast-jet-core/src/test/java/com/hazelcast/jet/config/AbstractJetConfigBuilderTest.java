@@ -42,9 +42,6 @@ public abstract class AbstractJetConfigBuilderTest {
     public abstract void testConfiguration_withNullInputStream();
 
     @Test(expected = InvalidConfigurationException.class)
-    public abstract void testInvalidRootElement();
-
-    @Test(expected = InvalidConfigurationException.class)
     public abstract void testHazelcastJetTagAppearsTwice();
 
     @Test
