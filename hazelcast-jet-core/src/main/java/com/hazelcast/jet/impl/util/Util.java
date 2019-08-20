@@ -27,12 +27,9 @@ import com.hazelcast.client.spi.ClientPartitionService;
 import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.util.SimpleCompletableFuture;
-import com.hazelcast.internal.util.SimpleCompletedFuture;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -93,7 +90,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -106,6 +103,7 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
@@ -116,6 +114,7 @@ import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.log10;
 import static java.util.Collections.emptyList;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -687,29 +686,39 @@ public final class Util {
         }
     }
 
-    public static <K, V> ICompletableFuture<Void> mapPutAllAsync(IMap<K, V> targetMap, Map<? extends K, ? extends V> items) {
+    /**
+     * Async version of {@code IMap.putAll()}. This is based on IMDG's code and
+     * currently does not invalidate the near cache.
+     *
+     * TODO remove this method once https://github.com/hazelcast/hazelcast/pull/15463 is released
+
+     * @param targetIMap imap to write to
+     * @param items      items to add
+     */
+    public static <K, V> CompletionStage<Void> mapPutAllAsync(
+            @Nonnull IMap<K, V> targetIMap, Map<? extends K, ? extends V> items
+    ) {
         if (items.isEmpty()) {
-            return new SimpleCompletedFuture<>(null);
+            return completedFuture(null);
         }
         if (items.size() == 1) {
             Entry<? extends K, ? extends V> onlyEntry = items.entrySet().iterator().next();
-            return targetMap.setAsync(onlyEntry.getKey(), onlyEntry.getValue());
+            return toCompletableFuture(targetIMap.setAsync(onlyEntry.getKey(), onlyEntry.getValue()));
         }
 
-        if (targetMap instanceof MapProxyImpl) {
-            return mapPutAllAsync((MapProxyImpl<K, V>) targetMap, items);
-        } else if (targetMap instanceof ClientMapProxy) {
-            return mapPutAllAsync((ClientMapProxy<K, V>) targetMap, items);
+        if (targetIMap instanceof MapProxyImpl) {
+            return mapPutAllAsync((MapProxyImpl<K, V>) targetIMap, items);
+        } else if (targetIMap instanceof ClientMapProxy) {
+            return mapPutAllAsync((ClientMapProxy<K, V>) targetIMap, items);
         } else {
-            throw new RuntimeException("Unexpected map class: " + targetMap.getClass().getName());
+            throw new RuntimeException("Unexpected map class: " + targetIMap.getClass().getName());
         }
     }
 
-    private static <K, V> ICompletableFuture<Void> mapPutAllAsync(
+    private static <K, V> CompletionStage<Void> mapPutAllAsync(
             @Nonnull MapProxyImpl<K, V> targetMap,
             @Nonnull Map<? extends K, ? extends V> items
     ) {
-        // TODO [viliam] if items.size < memberCount * 3 then probably plain setAsync would perform better
         NodeEngine nodeEngine = targetMap.getNodeEngine();
         SerializationService serializationService = nodeEngine.getSerializationService();
         IPartitionService partitionService = nodeEngine.getPartitionService();
@@ -737,7 +746,7 @@ public final class Util {
         int[] subPartitions = new int[memberPartitionsMap.values().stream().mapToInt(List::size).max().orElse(0)];
         MapEntries[] subEntries = new MapEntries[subPartitions.length];
         AtomicInteger completionCounter = new AtomicInteger(memberPartitionsMap.size());
-        final SimpleCompletableFuture<Void> resultFuture = new SimpleCompletableFuture<>(nodeEngine);
+        final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
         ExecutionCallback<Map<Integer, Object>> callback = new ExecutionCallback<Map<Integer, Object>>() {
             @Override
             public void onResponse(Map<Integer, Object> response) {
@@ -748,7 +757,7 @@ public final class Util {
 
             @Override
             public void onFailure(Throwable t) {
-                resultFuture.complete(t);
+                resultFuture.completeExceptionally(t);
             }
         };
 
@@ -781,12 +790,12 @@ public final class Util {
         return resultFuture;
     }
 
-    private static <K, V> ICompletableFuture<Void> mapPutAllAsync(
+    private static <K, V> CompletionStage<Void> mapPutAllAsync(
             ClientMapProxy<K, V> targetMap,
             Map<? extends K, ? extends V> items
     ) {
         if (items.isEmpty()) {
-            return new SimpleCompletedFuture<>(null);
+            return completedFuture(null);
         }
         checkNotNull(targetMap, "Null argument map is not allowed");
         ClientPartitionService partitionService = targetMap.getContext().getPartitionService();
@@ -806,8 +815,7 @@ public final class Util {
         }
 
         HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) targetMap.getContext().getHazelcastInstance();
-        SimpleCompletableFuture<Void> resultFuture = new SimpleCompletableFuture<>(ForkJoinPool.commonPool(),
-                client.getLoggingService().getLogger(Util.class));
+        CompletableFuture<Void> resultFuture = new CompletableFuture<>();
         AtomicInteger completionCounter = new AtomicInteger(entryMap.size());
         ExecutionCallback<ClientMessage> callback = new ExecutionCallback<ClientMessage>() {
             @Override
@@ -819,7 +827,7 @@ public final class Util {
 
             @Override
             public void onFailure(Throwable t) {
-                resultFuture.complete(t);
+                resultFuture.completeExceptionally(t);
             }
         };
         for (Entry<Integer, List<Map.Entry<Data, Data>>> partitionEntries : entryMap.entrySet()) {

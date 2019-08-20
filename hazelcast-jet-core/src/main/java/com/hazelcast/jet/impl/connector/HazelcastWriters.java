@@ -18,13 +18,13 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
@@ -49,6 +49,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.Util.asXmlString;
@@ -196,6 +197,10 @@ public final class HazelcastWriters {
             entries = new ArrayList<>();
         }
 
+        ArrayMap(int size) {
+            entries = new ArrayList<>(size);
+        }
+
         @Override @Nonnull
         public Set<Entry<K, V>> entrySet() {
             return set;
@@ -203,6 +208,11 @@ public final class HazelcastWriters {
 
         public void add(Map.Entry<K, V> entry) {
             entries.add(entry);
+        }
+
+        @Override
+        public V get(Object key) {
+            throw new UnsupportedOperationException();
         }
 
         private class ArraySet extends AbstractSet<Entry<K, V>> {
@@ -256,15 +266,13 @@ public final class HazelcastWriters {
 
     private static final class WriteMapUsingPutAllSupplier extends AbstractHazelcastConnectorSupplier {
         private static final long serialVersionUID = 1L;
+        private static final int MAX_LOCAL_PARALLEL_OPS = 8;
 
         private final String mapName;
-        private final int parallelOpsLimit;
 
         private WriteMapUsingPutAllSupplier(String clientXml, String mapName) {
             super(clientXml);
             this.mapName = mapName;
-
-            parallelOpsLimit = Integer.parseInt(System.getProperty("bench.writerParallelOps"));
         }
 
         @SuppressWarnings("unchecked")
@@ -274,58 +282,31 @@ public final class HazelcastWriters {
                 private final IMap map = instance.getMap(mapName);
                 private final AtomicInteger numParallelOps = new AtomicInteger();
                 private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
-                private Inbox inbox;
+                private int parallelOpsLimit;
 
-                // Exposes this.inbox as a Map and only allows to do entrySet().iterator() once and removes
-                // items from inbox as the iterator is iterated.
-                private final Map inboxAsMap = new AbstractMap() {
-                    private Set<Entry> set = new AbstractSet<Entry>() {
-                        private DrainInboxIterator iterator = new DrainInboxIterator();
-
-                        @Override @Nonnull
-                        public Iterator<Entry> iterator() {
-                            try {
-                                iterator.setInbox(inbox);
-                                return iterator;
-                            } finally {
-                                inbox = null;
-                            }
-                        }
-
-                        @Override
-                        public int size() {
-                            return inbox.size();
-                        }
-                    };
-
-                    @Override @Nonnull
-                    public Set<Entry> entrySet() {
-                        if (inbox != null) {
-                            return set;
-                        } else {
-                            throw new RuntimeException("entrySet called without resetting inbox first");
-                        }
-                    }
-                };
-
-                private final ExecutionCallback callback = new ExecutionCallback() {
-                    @Override
-                    public void onResponse(Object response) {
-                        numParallelOps.decrementAndGet();
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t) {
+                private final BiConsumer<Object, Throwable> callback = (r, t) -> {
+                    if (t != null) {
                         firstFailure.compareAndSet(null, t);
                     }
+                    numParallelOps.decrementAndGet();
                 };
+
+                @Override
+                public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+                    // We distribute the local limit to processors. If there's 1 local processor, it
+                    // will take the entire maximum. If there are many local processors, each will
+                    // get 1. The putAll operation is already bulky, it doesn't help to have many in
+                    // parallel.
+                    parallelOpsLimit = Math.max(1, MAX_LOCAL_PARALLEL_OPS / context.localParallelism());
+                }
 
                 @Override
                 public void process(int ordinal, @Nonnull Inbox inbox) {
                     if (Util.tryIncrement(numParallelOps, 1, parallelOpsLimit)) {
-                        this.inbox = inbox;
+                        ArrayMap inboxAsMap = new ArrayMap(inbox.size());
+                        inbox.drain(inboxAsMap::add);
                         Util.mapPutAllAsync(map, inboxAsMap)
-                            .andThen(callback);
+                            .whenComplete(callback);
                     }
                 }
 
@@ -339,25 +320,6 @@ public final class HazelcastWriters {
                     return numParallelOps.get() == 0;
                 }
             };
-        }
-
-    }
-
-    private static class DrainInboxIterator implements Iterator<Entry> {
-        private Inbox inbox;
-
-        @Override
-        public boolean hasNext() {
-            return inbox.peek() != null;
-        }
-
-        @Override
-        public Entry next() {
-            return (Entry) inbox.poll();
-        }
-
-        void setInbox(Inbox inbox) {
-            this.inbox = inbox;
         }
     }
 }
