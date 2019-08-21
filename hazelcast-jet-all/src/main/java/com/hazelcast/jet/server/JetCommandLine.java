@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
@@ -380,13 +381,15 @@ public class JetCommandLine implements Runnable {
         runWithJet(verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-24s %-15s %-23s %-24s%n", "NAME", "SIZE (bytes)", "TIME", "JOB NAME");
-            snapshots.forEach(ss -> {
-                String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
-                jobName = shorten(jobName, MAX_STR_LENGTH);
-                String ssName = shorten(ss.name(), MAX_STR_LENGTH);
-                LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
-                printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
-            });
+            snapshots.stream()
+                     .sorted(Comparator.comparing(JobStateSnapshot::name))
+                     .forEach(ss -> {
+                         String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
+                         jobName = shorten(jobName, MAX_STR_LENGTH);
+                         String ssName = shorten(ss.name(), MAX_STR_LENGTH);
+                         LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
+                         printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
+                     });
         });
     }
 
