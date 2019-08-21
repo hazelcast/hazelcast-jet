@@ -125,7 +125,7 @@ public final class Util {
     private static final int BUFFER_SIZE = 1 << 15;
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
-    public static final float PUT_ALL_INITIAL_SIZE_MAGIC = 20f;
+    private static final float PUT_ALL_INITIAL_SIZE_MAGIC = 20f;
 
     private Util() {
     }
