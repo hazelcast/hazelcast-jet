@@ -165,9 +165,7 @@ public class JetCommandLine implements Runnable {
         // top-level command, do nothing
     }
 
-    @Command(description = "Submits a job to the cluster",
-            mixinStandardHelpOptions = true
-    )
+    @Command(description = "Submits a job to the cluster")
     public void submit(
             @Mixin(name = "verbosity") Verbosity verbosity,
             @Option(names = {"-s", "--snapshot"},
@@ -205,10 +203,7 @@ public class JetCommandLine implements Runnable {
         JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
     }
 
-    @Command(
-            description = "Suspends a running job",
-            mixinStandardHelpOptions = true
-    )
+    @Command(description = "Suspends a running job")
     public void suspend(
             @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
