@@ -150,14 +150,16 @@ public class JetCommandLineTest extends JetTestSupport {
     @Test
     public void test_listJobs_dirtyName() {
         // Given
-        Job job = newJob("job\n\tname\u0000");
+        String jobName = "job\n\tname\u0000";
+        Job job = newJob(jobName);
 
         // When
         run("list-jobs");
 
         // Then
         String actual = captureOut();
-        assertContains(actual, "job  name?*              " + job.getIdString());
+        assertContains(actual, jobName);
+        assertContains(actual, job.getIdString());
         assertContains(actual, job.getStatus().toString());
     }
 

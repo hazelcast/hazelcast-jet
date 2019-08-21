@@ -352,17 +352,14 @@ public class JetCommandLine implements Runnable {
         runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
-            String format = "%-24s %-19s %-18s %-23s%n";
-            printf(format, "NAME", "ID", "STATUS", "SUBMISSION TIME");
+            String format = "%-19s %-18s %-23s %s%n";
+            printf(format, "ID", "STATUS", "SUBMISSION TIME", "NAME");
             summaries.stream()
                      .filter(job -> listAll || isActive(job.getStatus()))
                      .forEach(job -> {
                          String idString = idToString(job.getJobId());
-                         String name = job.getName().equals(idString) ? "N/A"
-                                 : shortenAndSanitize(job.getName(), MAX_STR_LENGTH);
-                         printf(format,
-                                 name, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime())
-                         );
+                         String name = job.getName().equals(idString) ? "N/A" : job.getName();
+                         printf(format, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime()), name);
                      });
         });
     }
@@ -376,15 +373,14 @@ public class JetCommandLine implements Runnable {
     ) throws IOException {
         runWithJet(verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
-            printf("%-24s %-15s %-23s %-24s%n", "NAME", "SIZE (bytes)", "TIME", "JOB NAME");
+            printf("%-23s %-15s %-24s %s%n", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
             snapshots.stream()
                      .sorted(Comparator.comparing(JobStateSnapshot::name))
                      .forEach(ss -> {
-                         String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
-                         jobName = shortenAndSanitize(jobName, MAX_STR_LENGTH);
-                         String ssName = shortenAndSanitize(ss.name(), MAX_STR_LENGTH);
                          LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
-                         printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
+                         String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
+                         String ssName = shortenAndSanitize(ss.name(), MAX_STR_LENGTH);
+                         printf("%-23s %-,15d %-24s %s%n", creationTime, ss.payloadSize(), jobName, ssName);
                      });
         });
     }
