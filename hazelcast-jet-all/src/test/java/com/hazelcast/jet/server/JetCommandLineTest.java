@@ -148,6 +148,20 @@ public class JetCommandLineTest extends JetTestSupport {
     }
 
     @Test
+    public void test_listJobs_dirtyName() {
+        // Given
+        Job job = newJob("job\n\tname\u0000");
+
+        // When
+        run("list-jobs");
+
+        // Then
+        String actual = captureOut();
+        assertContains(actual, "job  name?*              " + job.getIdString());
+        assertContains(actual, job.getStatus().toString());
+    }
+
+    @Test
     public void test_cancelJob_byJobName() {
         // Given
         Job job = newJob();
@@ -469,11 +483,15 @@ public class JetCommandLineTest extends JetTestSupport {
     }
 
     private Job newJob() {
+        return newJob("job-infinite-pipeline");
+    }
+
+    private Job newJob(String jobName) {
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.mapJournal(SOURCE_NAME, START_FROM_OLDEST))
          .withoutTimestamps()
          .drainTo(Sinks.list(SINK_NAME));
-        Job job = jet.newJob(p, new JobConfig().setName("job-infinite-pipeline"));
+        Job job = jet.newJob(p, new JobConfig().setName(jobName));
         assertJobStatusEventually(job, JobStatus.RUNNING);
         return job;
     }

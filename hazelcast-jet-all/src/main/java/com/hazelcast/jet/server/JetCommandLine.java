@@ -358,7 +358,8 @@ public class JetCommandLine implements Runnable {
                      .filter(job -> listAll || isActive(job.getStatus()))
                      .forEach(job -> {
                          String idString = idToString(job.getJobId());
-                         String name = job.getName().equals(idString) ? "N/A" : shorten(job.getName(), MAX_STR_LENGTH);
+                         String name = job.getName().equals(idString) ? "N/A"
+                                 : shortenAndSanitize(job.getName(), MAX_STR_LENGTH);
                          printf(format,
                                  name, idString, job.getStatus(), toLocalDateTime(job.getSubmissionTime())
                          );
@@ -380,8 +381,8 @@ public class JetCommandLine implements Runnable {
                      .sorted(Comparator.comparing(JobStateSnapshot::name))
                      .forEach(ss -> {
                          String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
-                         jobName = shorten(jobName, MAX_STR_LENGTH);
-                         String ssName = shorten(ss.name(), MAX_STR_LENGTH);
+                         jobName = shortenAndSanitize(jobName, MAX_STR_LENGTH);
+                         String ssName = shortenAndSanitize(ss.name(), MAX_STR_LENGTH);
                          LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
                          printf("%-24s %-,15d %-23s %-24s%n", ssName, ss.payloadSize(), creationTime, jobName);
                      });
@@ -480,8 +481,16 @@ public class JetCommandLine implements Runnable {
         out.println(msg);
     }
 
-    private static String shorten(String name, int length) {
-        return name.substring(0, Math.min(name.length(), length));
+    private static String shortenAndSanitize(String name, int length) {
+        String result = name
+                .substring(0, Math.min(name.length(), length))
+                .replaceAll("\\s", " ")
+                .replaceAll("[^\\p{Print}]", "?");
+        // if the name was changed, add an asterisk
+        if (!result.equals(name)) {
+            result = (name.length() == length ? result.substring(0, length - 1) : result) + "*";
+        }
+        return result;
     }
 
     private static String formatJob(Job job) {
