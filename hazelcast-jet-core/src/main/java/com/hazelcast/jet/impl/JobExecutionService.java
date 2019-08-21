@@ -328,11 +328,11 @@ public class JobExecutionService {
         }
     }
 
-    public void updateMetrics(long timestamp, Map<Long, Map<String, Long>> metrics) {
-        for (Entry<Long, Map<String, Long>> entry : metrics.entrySet()) {
+    public void updateMetrics(Map<Long, RawJobMetrics> metrics) {
+        for (Entry<Long, RawJobMetrics> entry : metrics.entrySet()) {
             ExecutionContext executionContext = executionContexts.get(entry.getKey());
             if (executionContext != null) {
-                executionContext.setJobMetrics(RawJobMetrics.of(timestamp, entry.getValue()));
+                executionContext.setJobMetrics(entry.getValue());
             }
         }
     }

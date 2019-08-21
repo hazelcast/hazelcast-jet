@@ -23,6 +23,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.metrics.JobMetrics;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.GetJobConfigOperation;
 import com.hazelcast.jet.impl.operation.GetJobMetricsOperation;
 import com.hazelcast.jet.impl.operation.GetJobStatusOperation;
@@ -39,6 +40,7 @@ import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
@@ -68,7 +70,12 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     @Nonnull @Override
     public JobMetrics getMetrics() {
         try {
-            return this.<JobMetrics>invokeOp(new GetJobMetricsOperation(getId())).get();
+            List<RawJobMetrics> shards = this.<List<RawJobMetrics>>invokeOp(new GetJobMetricsOperation(getId())).get();
+            JobMetrics metrics = JobMetrics.empty();
+            for (RawJobMetrics shard : shards) {
+                metrics = metrics.merge(JobMetrics.of(shard.getTimestamp(), shard.getValues()));
+            }
+            return metrics;
         } catch (Throwable t) {
             throw rethrow(t);
         }

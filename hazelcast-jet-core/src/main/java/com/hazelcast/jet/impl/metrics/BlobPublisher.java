@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.metrics.management;
+package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.metrics.MetricsPublisher;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Bits;
 
 import javax.annotation.Nonnull;
@@ -28,7 +26,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.function.ObjLongConsumer;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -39,10 +39,14 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static java.lang.Math.multiplyExact;
 
 /**
- * Renderer to serialize metrics to byte[] to be read by Management Center.
- * Additionally, it converts legacy metric names to {@code [metric=<oldName>]}.
+ * Implementation of {@link MetricsPublisher} which compresses metrics
+ * into a byte[] BLOB to be read by various consumers. The consumer itself
+ * is passed in as a parameter.
+ * <p>
+ * Before compressing it also converts legacy metric names to
+ * {@code [metric=<oldName>]}.
  */
-public class ManagementCenterPublisher implements MetricsPublisher {
+public class BlobPublisher implements MetricsPublisher {
 
     private static final int INITIAL_BUFFER_SIZE = 2 << 11; // 2kB
     private static final int SIZE_FACTOR_NUMERATOR = 11;
@@ -67,12 +71,12 @@ public class ManagementCenterPublisher implements MetricsPublisher {
     private String lastName;
     private int count;
 
-    public ManagementCenterPublisher(
-            @Nonnull LoggingService loggingService,
+    public BlobPublisher(
+            @Nonnull ILogger logger,
             @Nonnull ObjLongConsumer<byte[]> writeFn
     ) {
         this.consumer = writeFn;
-        logger = loggingService.getLogger(getClass());
+        this.logger = logger;
         reset(INITIAL_BUFFER_SIZE);
     }
 
@@ -161,14 +165,8 @@ public class ManagementCenterPublisher implements MetricsPublisher {
         return baos.toByteArray();
     }
 
-    static Iterator<Metric> decompressingIterator(byte[] bytes) {
-        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-        int version = (bais.read() << BITS_IN_BYTE) + bais.read();
-        if (version != BINARY_FORMAT_VERSION) {
-            throw new RuntimeException("Incorrect format, expected version " + BINARY_FORMAT_VERSION
-                    + ", got " + version);
-        }
-        DataInputStream dis = new DataInputStream(new InflaterInputStream(bais));
+    public static Iterator<Metric> decompressingIterator(byte[] bytes) {
+        DataInputStream dis = getInputStream(bytes);
 
         return new Iterator<Metric>() {
             String lastName = "";
@@ -209,6 +207,41 @@ public class ManagementCenterPublisher implements MetricsPublisher {
                 }
             }
         };
+    }
+
+    public static Map<String, Long> decompress(byte[] bytes) {
+        Map<String, Long> map = new HashMap<>();
+
+        DataInputStream dis = getInputStream(bytes);
+
+        String lastName = "";
+        do {
+            try {
+                int equalPrefixLen;
+                try {
+                    equalPrefixLen = dis.readUnsignedShort();
+                } catch (EOFException ignored) {
+                    dis.close();
+                    break;
+                }
+                lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
+                map.put(lastName, dis.readLong());
+            } catch (IOException e) {
+                throw new RuntimeException(e); // unexpected EOFException can occur here
+            }
+        } while (true);
+
+        return map;
+    }
+
+    private static DataInputStream getInputStream(byte[] bytes) {
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        int version = (bais.read() << BITS_IN_BYTE) + bais.read();
+        if (version != BINARY_FORMAT_VERSION) {
+            throw new RuntimeException("Incorrect format, expected version " + BINARY_FORMAT_VERSION
+                    + ", got " + version);
+        }
+        return new DataInputStream(new InflaterInputStream(bais));
     }
 
     private static class MorePublicByteArrayOutputStream extends ByteArrayOutputStream {

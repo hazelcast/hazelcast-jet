@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.core.Member;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
@@ -27,7 +28,6 @@ import com.hazelcast.jet.impl.LiveOperationRegistry;
 import com.hazelcast.jet.impl.metrics.jmx.JmxPublisher;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer.RingbufferSlice;
-import com.hazelcast.jet.impl.metrics.management.ManagementCenterPublisher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.LiveOperations;
 import com.hazelcast.spi.LiveOperationsTracker;
@@ -61,7 +61,7 @@ public class JetMetricsService implements LiveOperationsTracker {
     private final LiveOperationRegistry liveOperationRegistry;
     // Holds futures for pending read metrics operations
     private final ConcurrentMap<CompletableFuture<RingbufferSlice<Map.Entry<Long, byte[]>>>, Long>
-        pendingReads = new ConcurrentHashMap<>();
+            pendingReads = new ConcurrentHashMap<>();
 
     /**
      * Ringbuffer which stores a bounded history of metrics. For each round of collection,
@@ -101,8 +101,8 @@ public class JetMetricsService implements LiveOperationsTracker {
         }
 
         logger.info("Configuring metrics collection, collection interval=" + config.getCollectionIntervalSeconds()
-            + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
-            + publishers.stream().map(MetricsPublisher::name).collect(joining(", ", "[", "]")));
+                + " seconds, retention=" + config.getRetentionSeconds() + " seconds, publishers="
+                + publishers.stream().map(MetricsPublisher::name).collect(joining(", ", "[", "]")));
 
         ProbeRenderer renderer = new PublisherProbeRenderer();
         scheduledFuture = nodeEngine.getExecutionService().scheduleWithRepetition("MetricsPublisher", () -> {
@@ -178,19 +178,23 @@ public class JetMetricsService implements LiveOperationsTracker {
     private List<MetricsPublisher> getPublishers(NodeEngine nodeEngine, JobExecutionService jobExecutionService) {
         List<MetricsPublisher> publishers = new ArrayList<>();
         if (config.isEnabled()) {
+            ILogger logger = this.nodeEngine.getLogger(BlobPublisher.class);
+
             int journalSize = Math.max(
-                1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
+                    1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
             );
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
-            ManagementCenterPublisher publisher = new ManagementCenterPublisher(this.nodeEngine.getLoggingService(),
-                (blob, ts) -> {
-                    metricsJournal.add(entry(ts, blob));
-                    pendingReads.forEach(this::tryCompleteRead);
-                }
+            publishers.add(
+                    new BlobPublisher(
+                            logger,
+                            (blob, ts) -> {
+                                metricsJournal.add(entry(ts, blob));
+                                pendingReads.forEach(this::tryCompleteRead);
+                            }
+                    )
             );
-            publishers.add(publisher);
 
-            publishers.add(new InternalJobMetricsPublisher(jobExecutionService));
+            publishers.add(new InternalJobMetricsPublisher(jobExecutionService, nodeEngine.getLocalMember(), logger));
         }
         if (config.isJmxEnabled()) {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
@@ -205,36 +209,96 @@ public class JetMetricsService implements LiveOperationsTracker {
     public static class InternalJobMetricsPublisher implements MetricsPublisher {
 
         private final JobExecutionService jobExecutionService;
-        private final Map<Long, Map<String, Long>> metrics = new HashMap<>();
+        private final String namePrefix;
+        private final ILogger logger;
+        private final PublisherProvider publisherProvider = new PublisherProvider();
+        private final Map<Long, RawJobMetrics> jobMetrics = new HashMap<>();
 
-        InternalJobMetricsPublisher(@Nonnull JobExecutionService jobExecutionService) {
+        InternalJobMetricsPublisher(
+                @Nonnull JobExecutionService jobExecutionService,
+                @Nonnull Member member,
+                @Nonnull ILogger logger
+        ) {
             Objects.requireNonNull(jobExecutionService, "jobExecutionService");
+            Objects.requireNonNull(member, "member");
+            Objects.requireNonNull(logger, "logger");
+
             this.jobExecutionService = jobExecutionService;
+            this.namePrefix = JobMetricsUtil.getMemberPrefix(member);
+            this.logger = logger;
         }
 
         @Override
         public void publishLong(String name, long value) {
             Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
             if (executionId != null) {
-                metrics.computeIfAbsent(executionId, x -> new HashMap<>())
-                        .put(name, value);
+                BlobPublisher blobPublisher = publisherProvider.get(executionId);
+                String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
+                blobPublisher.publishLong(prefixedName, value);
             }
         }
 
         @Override
         public void publishDouble(String name, double value) {
-            publishLong(name, JobMetricsUtil.toLongMetricValue(value));
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
+            if (executionId != null) {
+                BlobPublisher blobPublisher = publisherProvider.get(executionId);
+                String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
+                blobPublisher.publishDouble(prefixedName, value);
+            }
+        }
+
+        private BlobPublisher newBlobPublisher(Long executionId) {
+            return new BlobPublisher(
+                    logger,
+                    (blob, ts) -> {
+                        jobMetrics.put(executionId, RawJobMetrics.of(ts, blob));
+                    }
+            );
         }
 
         @Override
         public void whenComplete() {
-            jobExecutionService.updateMetrics(System.currentTimeMillis(), metrics);
-            metrics.clear();
+            publisherProvider.complete();
+
+            jobExecutionService.updateMetrics(jobMetrics);
+            jobMetrics.clear();
         }
 
         @Override
         public String name() {
             return "Internal Publisher";
+        }
+
+        private class PublisherProvider {
+
+            private final Map<Long, BlobPublisher> currentPublishers = new HashMap<>();
+            private final Map<Long, BlobPublisher> previousPublishers = new HashMap<>();
+
+            BlobPublisher get(Long executionId) {
+                return currentPublishers.computeIfAbsent(
+                        executionId,
+                        x -> {
+                            //check if we have a cached publisher
+                            BlobPublisher blobPublisher = previousPublishers.remove(executionId);
+
+                            //create a new one if we don't
+                            blobPublisher = blobPublisher == null ? newBlobPublisher(executionId) : blobPublisher;
+
+                            return blobPublisher;
+                        }
+                );
+            }
+
+            void complete() {
+                currentPublishers.values().forEach(BlobPublisher::whenComplete);
+
+                previousPublishers.clear();
+                previousPublishers.putAll(currentPublishers);
+
+                currentPublishers.clear();
+            }
+
         }
     }
 

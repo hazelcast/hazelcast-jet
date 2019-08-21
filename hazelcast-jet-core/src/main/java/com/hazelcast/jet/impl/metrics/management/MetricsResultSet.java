@@ -16,13 +16,15 @@
 
 package com.hazelcast.jet.impl.metrics.management;
 
+import com.hazelcast.jet.impl.metrics.Metric;
+
 import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.impl.metrics.management.ManagementCenterPublisher.decompressingIterator;
+import static com.hazelcast.jet.impl.metrics.BlobPublisher.decompressingIterator;
 
 public class MetricsResultSet  {
 
@@ -55,7 +57,7 @@ public class MetricsResultSet  {
         private final long timestamp;
         private final byte[] bytes;
 
-        public MetricsCollection(long timestamp, byte[] bytes) {
+        MetricsCollection(long timestamp, byte[] bytes) {
             this.timestamp = timestamp;
             this.bytes = bytes;
         }

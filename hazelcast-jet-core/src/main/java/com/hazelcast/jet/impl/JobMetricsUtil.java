@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.internal.cluster.MemberInfo;
+import com.hazelcast.core.Member;
 import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.metrics.MetricTags;
@@ -33,11 +33,6 @@ public final class JobMetricsUtil {
     private static final Pattern METRIC_KEY_EXEC_ID_PATTERN =
             Pattern.compile("\\[module=jet,job=[^,]+,exec=([^,]+),.*");
 
-    // required precision after the decimal point for doubles
-    private static final int CONVERSION_PRECISION = 4;
-    // coefficient for converting doubles to long
-    private static final double DOUBLE_TO_LONG = Math.pow(10, CONVERSION_PRECISION);
-
     private JobMetricsUtil() {
     }
 
@@ -50,10 +45,6 @@ public final class JobMetricsUtil {
             return null;
         }
         return Util.idFromString(m.group(1));
-    }
-
-    public static long toLongMetricValue(double value) {
-        return Math.round(value * DOUBLE_TO_LONG);
     }
 
     public static Map<String, String> parseMetricDescriptor(@Nonnull String descriptor) {
@@ -74,11 +65,11 @@ public final class JobMetricsUtil {
         return "[" + prefix + descriptor.substring(1);
     }
 
-    static String getMemberPrefix(@Nonnull MemberInfo memberInfo) {
-        Objects.requireNonNull(memberInfo, "memberInfo");
+    public static String getMemberPrefix(@Nonnull Member member) {
+        Objects.requireNonNull(member, "member");
 
-        String uuid = memberInfo.getUuid();
-        String address = memberInfo.getAddress().toString();
+        String uuid = member.getUuid();
+        String address = member.getAddress().toString();
         return MetricTags.MEMBER + "=" + MetricsUtil.escapeMetricNamePart(uuid) + "," +
                 MetricTags.ADDRESS + "=" + MetricsUtil.escapeMetricNamePart(address) + ",";
     }
