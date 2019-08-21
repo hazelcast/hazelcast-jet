@@ -20,7 +20,6 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -47,6 +46,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.core.TestUtil.assertExceptionInCauses;
+import static com.hazelcast.jet.core.metrics.JobMetrics_BatchTest.JOB_CONFIG_WITH_METRICS;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -67,7 +67,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         DAG dag = new DAG();
         dag.newVertex("v1", MockP::new);
         dag.newVertex("v2", (SupplierEx<Processor>) NoOutputSourceP::new);
-        Job job = testMode.getJet().newJob(dag);
+        Job job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
 
         //when
         NoOutputSourceP.executionStarted.await();
@@ -89,7 +89,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         // sent. That is before any member ever knew of the job.
         dag.newVertex("v1", new MockPS(MockP::new, 1).setInitError(exc));
 
-        Job job = testMode.getJet().newJob(dag);
+        Job job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
         try {
             job.join();
             fail("job didn't fail");
@@ -106,7 +106,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         BlockingInInitMetaSupplier.latch = new CountDownLatch(1);
         dag.newVertex("v1", new BlockingInInitMetaSupplier());
 
-        Job job = testMode.getJet().newJob(dag);
+        Job job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
         assertTrueAllTheTime(() -> assertEmptyJobMetrics(job), 2);
         BlockingInInitMetaSupplier.latch.countDown();
         assertTrueEventually(() -> assertJobHasMetrics(job));
@@ -123,7 +123,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         Vertex v1 = dag.newVertex("v1", Processors.noopP());
         Vertex v2 = dag.newVertex("v2", Processors.noopP());
         dag.edge(between(v1, v2).distributed());
-        Job job = testMode.getJet().newJob(dag);
+        Job job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
         job.join();
         assertJobHasMetrics(job);
         // If there would be multiple metrics with the same name, then an
@@ -137,7 +137,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
         dag.edge(between(v1, v2));
 
-        Job job = testMode.getJet().newJob(dag);
+        Job job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
         TestProcessors.NoOutputSourceP.executionStarted.await();
         assertJobStatusEventually(job, JobStatus.RUNNING);
         assertTrueEventually(() -> assertJobHasMetrics(job));
@@ -163,12 +163,12 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         Vertex v2 = dag.newVertex("v2", (SupplierEx<Processor>) TestProcessors.NoOutputSourceP::new);
         dag.edge(between(v1, v2));
 
-        Job job = testMode.getJet().newJob(dag);
+        Job job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
         TestProcessors.NoOutputSourceP.executionStarted.await();
         assertJobStatusEventually(job, JobStatus.RUNNING);
 
         job.restart();
-        JetTestSupport.assertEqualsEventually(job::getStatus, JobStatus.RUNNING);
+        assertJobStatusEventually(job, JobStatus.RUNNING);
         assertTrueEventually(() -> assertJobHasMetrics(job));
 
         TestProcessors.NoOutputSourceP.proceedLatch.countDown();
@@ -194,9 +194,8 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
         dag.newVertex("v1", MockP::new);
         dag.newVertex("v2", (SupplierEx<Processor>) NoOutputSourceP::new);
 
-        JobConfig config = new JobConfig();
-        config.setMetricsEnabled(false);
-        Job job = testMode.getJet().newJob(dag, config);
+        JobConfig config = new JobConfig().setMetricsEnabled(false);
+        Job job = jet().newJob(dag, config);
 
         //when
         NoOutputSourceP.executionStarted.await();
@@ -215,7 +214,7 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
     private Job runJobExpectFailure(@Nonnull DAG dag, @Nonnull RuntimeException expectedException) {
         Job job = null;
         try {
-            job = testMode.getJet().newJob(dag);
+            job = jet().newJob(dag, JOB_CONFIG_WITH_METRICS);
             job.join();
             fail("Job execution should have failed");
         } catch (Exception actual) {

@@ -64,6 +64,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
@@ -181,7 +182,7 @@ public class MasterJobContext {
      * If there was a membership change and the partition table is not completely
      * fixed yet, reschedules the job restart.
      */
-    void tryStartJob(Function<Long, Long> executionIdSupplier) {
+    void tryStartJob(Supplier<Long> executionIdSupplier) {
         executionStartTime = System.nanoTime();
         try {
             JobExecutionRecord jobExecRec = mc.jobExecutionRecord();
@@ -231,7 +232,7 @@ public class MasterJobContext {
     }
 
     @Nullable
-    private Tuple2<DAG, ClassLoader> resolveDagAndCL(Function<Long, Long> executionIdSupplier)
+    private Tuple2<DAG, ClassLoader> resolveDagAndCL(Supplier<Long> executionIdSupplier)
             throws UserCausedException {
         mc.lock();
         try {
@@ -275,7 +276,7 @@ public class MasterJobContext {
             // save a copy of the vertex list because it is going to change
             vertices = new HashSet<>();
             dag.iterator().forEachRemaining(vertices::add);
-            mc.setExecutionId(executionIdSupplier.apply(mc.jobId()));
+            mc.setExecutionId(executionIdSupplier.get());
             mc.snapshotContext().onExecutionStarted();
             executionCompletionFuture = new CompletableFuture<>();
             return tuple2(dag, classLoader);
@@ -303,9 +304,7 @@ public class MasterJobContext {
      *      SUSPENDED_EXPORTING_SNAPSHOT, termination will be rejected
      */
     @Nonnull
-    Tuple2<CompletableFuture<Void>, String> requestTermination(
-            TerminationMode mode, boolean allowWhileExportingSnapshot
-    ) {
+    Tuple2<CompletableFuture<Void>, String> requestTermination(TerminationMode mode, boolean allowWhileExportingSnapshot) {
         // Switch graceful method to forceful if we don't do snapshots, except for graceful
         // cancellation, which is allowed even if not snapshotting.
         if (mc.jobConfig().getProcessingGuarantee() == NONE && mode != CANCEL_GRACEFUL) {
@@ -633,6 +632,7 @@ public class MasterJobContext {
             // reset state for the next execution
             mc.membersWithCompletedExecution().clear();
             partialMetrics.clear();
+            boolean wasCancelled = isCancelled();
             requestedTerminationMode = null;
             executionCompletionCallback = null;
             ActionAfterTerminate terminationModeAction = failure instanceof JobTerminateRequestedException
@@ -643,12 +643,13 @@ public class MasterJobContext {
             if (terminationModeAction == RESTART) {
                 mc.setJobStatus(NOT_RUNNING);
                 nonSynchronizedAction = () -> mc.coordinationService().restartJob(mc.jobId());
-            } else if (isRestartableException(failure) && mc.jobConfig().isAutoScaling()) {
+            } else if (!wasCancelled && isRestartableException(failure) && mc.jobConfig().isAutoScaling()) {
                 // if restart is due to a failure, schedule a restart after a delay
                 scheduleRestart();
                 nonSynchronizedAction = NO_OP;
             } else if (terminationModeAction == SUSPEND
                     || isRestartableException(failure)
+                    && !wasCancelled
                     && !mc.jobConfig().isAutoScaling()
                     && mc.jobConfig().getProcessingGuarantee() != NONE
             ) {
@@ -718,7 +719,7 @@ public class MasterJobContext {
         }
     }
 
-    void resumeJob(Function<Long, Long> executionIdSupplier) {
+    void resumeJob(Supplier<Long> executionIdSupplier) {
         mc.lock();
         try {
             if (mc.jobStatus() != SUSPENDED) {

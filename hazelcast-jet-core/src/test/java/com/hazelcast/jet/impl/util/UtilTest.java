@@ -37,9 +37,11 @@ import static com.hazelcast.jet.impl.util.Util.addClamped;
 import static com.hazelcast.jet.impl.util.Util.addOrIncrementIndexInName;
 import static com.hazelcast.jet.impl.util.Util.gcd;
 import static com.hazelcast.jet.impl.util.Util.memoizeConcurrent;
+import static com.hazelcast.jet.impl.util.Util.roundRobinPart;
 import static com.hazelcast.jet.impl.util.Util.subtractClamped;
 import static com.hazelcast.jet.impl.util.Util.toMapNullSafe;
 import static java.util.stream.Collectors.toMap;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -168,5 +170,27 @@ public class UtilTest extends JetTestSupport {
         Map<String, Object> expected = new HashMap<>();
         expected.put("key", null);
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void test_roundRobinPart() {
+        assertArrayEquals(new int[] {},
+                roundRobinPart(0, 2, 0));
+        assertArrayEquals(new int[] {0},
+                roundRobinPart(1, 1, 0));
+        assertArrayEquals(new int[] {0},
+                roundRobinPart(1, 2, 0));
+        assertArrayEquals(new int[] {},
+                roundRobinPart(1, 2, 1));
+        assertArrayEquals(new int[] {0, 1},
+                roundRobinPart(2, 1, 0));
+        assertArrayEquals(new int[] {0},
+                roundRobinPart(2, 2, 0));
+        assertArrayEquals(new int[] {1},
+                roundRobinPart(2, 2, 1));
+        assertArrayEquals(new int[] {0, 2},
+                roundRobinPart(3, 2, 0));
+        assertArrayEquals(new int[] {1},
+                roundRobinPart(3, 2, 1));
     }
 }

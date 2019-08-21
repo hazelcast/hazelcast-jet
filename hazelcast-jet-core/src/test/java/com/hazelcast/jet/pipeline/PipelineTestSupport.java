@@ -24,9 +24,10 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
+import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.nio.Address;
 import org.junit.Before;
 
@@ -79,17 +80,17 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         sinkList = jet().getList(sinkName);
     }
 
-    protected JetInstance jet() {
-        return testMode.getJet();
+    protected Job execute() {
+        return execute(new JobConfig());
     }
 
-    protected void execute() {
-        jet().newJob(p).join();
+    protected Job execute(JobConfig config) {
+        return execute(p, config);
     }
 
-    protected void executeAndPeel() throws Throwable {
+    protected Job executeAndPeel() throws Throwable {
         try {
-            execute();
+            return execute();
         } catch (CompletionException e) {
             Throwable t = peel(e);
             if (t instanceof JetException && t.getCause() != null) {
@@ -104,14 +105,7 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
     }
 
     protected BatchStage<Integer> batchStageFromList(List<Integer> input) {
-        BatchSource<Integer> source = SourceBuilder
-                .batch("sequence", x -> null)
-                .<Integer>fillBufferFn((x, buf) -> {
-                    input.forEach(buf::add);
-                    buf.close();
-                })
-                .build();
-        return p.drawFrom(source);
+        return p.drawFrom(TestSources.items(input));
     }
 
     protected static String journaledMapName() {
