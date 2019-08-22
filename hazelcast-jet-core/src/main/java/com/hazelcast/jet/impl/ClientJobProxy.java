@@ -37,20 +37,19 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.metrics.JobMetrics;
-import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.serialization.SerializationService;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static com.hazelcast.jet.impl.JobMetricsUtil.toJobMetrics;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 
 /**
@@ -84,8 +83,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
         try {
             ClientMessage response = invocation(request, masterAddress()).invoke().get();
             JetGetJobMetricsCodec.ResponseParameters parameters = JetGetJobMetricsCodec.decodeResponse(response);
-            List<RawJobMetrics> shards = serializationService().toObject(parameters.response);
-            return JobMetricsUtil.toJobMetrics(shards);
+            return toJobMetrics(serializationService().toObject(parameters.response));
         } catch (Exception e) {
             throw rethrow(e);
         }

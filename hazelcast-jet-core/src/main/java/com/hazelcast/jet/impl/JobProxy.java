@@ -42,6 +42,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import javax.annotation.Nonnull;
 import java.util.List;
 
+import static com.hazelcast.jet.impl.JobMetricsUtil.toJobMetrics;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 
@@ -71,7 +72,7 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     public JobMetrics getMetrics() {
         try {
             List<RawJobMetrics> shards = this.<List<RawJobMetrics>>invokeOp(new GetJobMetricsOperation(getId())).get();
-            return JobMetricsUtil.toJobMetrics(shards);
+            return toJobMetrics(shards);
         } catch (Throwable t) {
             throw rethrow(t);
         }

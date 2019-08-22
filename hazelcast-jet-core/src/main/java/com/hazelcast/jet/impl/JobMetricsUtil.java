@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -81,20 +80,12 @@ public final class JobMetricsUtil {
     static JobMetrics toJobMetrics(List<RawJobMetrics> rawJobMetrics) {
         return JobMetrics.of(
                 rawJobMetrics.stream()
-                .flatMap(
-                        (Function<RawJobMetrics, Stream<Measurement>>) r -> {
-                            if (r.getBlob() == null) {
-                                return Stream.of();
-                            } else {
-                                return toMetricStream(r).map(metric -> toMeasurement(r.getTimestamp(), metric));
-                            }
-                        }
-                )
-                .collect(Collectors.toList())
+                         .filter(r -> r.getBlob() != null)
+                         .flatMap(r -> metricStream(r).map(metric -> toMeasurement(r.getTimestamp(), metric)))
         );
     }
 
-    private static Stream<Metric> toMetricStream(RawJobMetrics r) {
+    private static Stream<Metric> metricStream(RawJobMetrics r) {
         return StreamSupport.stream(
                 Spliterators.spliteratorUnknownSize(
                         BlobPublisher.decompressingIterator(r.getBlob()),

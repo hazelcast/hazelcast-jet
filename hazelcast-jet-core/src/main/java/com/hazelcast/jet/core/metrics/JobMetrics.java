@@ -19,6 +19,7 @@ package com.hazelcast.jet.core.metrics;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -34,6 +35,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -68,19 +70,20 @@ public final class JobMetrics implements IdentifiedDataSerializable {
     }
 
     /**
-     * Builds a {@link JobMetrics} object based on a list of
+     * Builds a {@link JobMetrics} object based on a stream of
      * {@link Measurement}s.
      */
     @Nonnull
-    public static JobMetrics of(List<Measurement> measurements) {
-        HashMap<String, List<Measurement>> parsed = new HashMap<>();
-        for (Measurement measurement : measurements) {
-            String metricName = measurement.getTag(MetricTags.METRIC);
+    @PrivateApi
+    public static JobMetrics of(Stream<Measurement> measurements) {
+        Map<String, List<Measurement>> parsed = new HashMap<>();
+        measurements.forEach(m -> {
+            String metricName = m.getTag(MetricTags.METRIC);
             if (metricName == null || metricName.isEmpty()) {
                 throw new IllegalArgumentException("Metric name missing");
             }
-            parsed.computeIfAbsent(metricName, mn -> new ArrayList<>()).add(measurement);
-        }
+            parsed.computeIfAbsent(metricName, mn -> new ArrayList<>()).add(m);
+        });
         return new JobMetrics(parsed);
     }
 
