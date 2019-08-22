@@ -930,18 +930,19 @@ public class BatchStageTest extends PipelineTestSupport {
     @Test
     public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamDoesntHavePreferredLocalParallelism() {
         // Given
-        BatchSource<Integer> items = TestSources.items(1, 2, 3);
+        BatchSource<Object> src = Sources.batchFromProcessor("src",
+                ProcessorMetaSupplier.of(noopP()));
 
         // When
-        p.drawFrom(items)
+        p.drawFrom(src)
          .addTimestamps(o -> 0L, 0)
          .drainTo(Sinks.noop());
         DAG dag = p.toDag();
 
         // Then
         Vertex tsVertex = dag.getVertex("add-timestamps");
-        Vertex itemsVertex = dag.getVertex("items");
-        int lp1 = itemsVertex.determineLocalParallelism(-1);
+        Vertex srcVertex = dag.getVertex("src");
+        int lp1 = srcVertex.determineLocalParallelism(-1);
         int lp2 = tsVertex.determineLocalParallelism(-1);
         assertEquals(lp1, lp2);
     }
