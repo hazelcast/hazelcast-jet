@@ -126,8 +126,10 @@ public class Vertex implements IdentifiedDataSerializable {
     }
 
     /**
-     * Says whether the given integer is valid as the value of {@link
-     * #localParallelism(int) localParallelism}.
+     * Determines the local parallelism value for the vertex by looking
+     * it's local parallelism and meta supplier's preferred local parallelism.
+     *
+     * If none of them is set, returns the provided default parallelism
      */
     public static int determineLocalParallelism(Vertex vertex, int defaultParallelism) {
         int localParallelism = vertex.localParallelism;
