@@ -408,8 +408,7 @@ public class JobCoordinationService {
                     return;
                 }
 
-                // no metrics found, but job might still be completed without saving
-                // metrics enabled
+                // no metrics found, but job might be completed with disabled metrics saving
                 JobResult jobResult = jobRepository.getJobResult(jobId);
                 if (jobResult != null) {
                     cf.complete(Collections.emptyList());

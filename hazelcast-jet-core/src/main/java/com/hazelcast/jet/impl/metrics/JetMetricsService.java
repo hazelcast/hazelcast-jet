@@ -194,7 +194,7 @@ public class JetMetricsService implements LiveOperationsTracker {
                     )
             );
 
-            publishers.add(new InternalJobMetricsPublisher(jobExecutionService, nodeEngine.getLocalMember(), logger));
+            publishers.add(new JobMetricsPublisher(jobExecutionService, nodeEngine.getLocalMember(), logger));
         }
         if (config.isJmxEnabled()) {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
@@ -206,7 +206,7 @@ public class JetMetricsService implements LiveOperationsTracker {
      * Internal publisher which notifies the {@link JobExecutionService} about
      * the latest metric values.
      */
-    public static class InternalJobMetricsPublisher implements MetricsPublisher {
+    public static class JobMetricsPublisher implements MetricsPublisher {
 
         private final JobExecutionService jobExecutionService;
         private final String namePrefix;
@@ -214,7 +214,7 @@ public class JetMetricsService implements LiveOperationsTracker {
         private final PublisherProvider publisherProvider = new PublisherProvider();
         private final Map<Long, RawJobMetrics> jobMetrics = new HashMap<>();
 
-        InternalJobMetricsPublisher(
+        JobMetricsPublisher(
                 @Nonnull JobExecutionService jobExecutionService,
                 @Nonnull Member member,
                 @Nonnull ILogger logger
@@ -267,7 +267,7 @@ public class JetMetricsService implements LiveOperationsTracker {
 
         @Override
         public String name() {
-            return "Internal Publisher";
+            return "Job Metrics Publisher";
         }
 
         private class PublisherProvider {

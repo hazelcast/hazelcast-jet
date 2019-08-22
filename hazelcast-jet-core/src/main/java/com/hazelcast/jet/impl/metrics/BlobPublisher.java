@@ -40,7 +40,7 @@ import static java.lang.Math.multiplyExact;
 
 /**
  * Implementation of {@link MetricsPublisher} which compresses metrics
- * into a byte[] BLOB to be read by various consumers. The consumer itself
+ * into a byte[] blob to be read by various consumers. The consumer itself
  * is passed in as a parameter.
  * <p>
  * Before compressing it also converts legacy metric names to
