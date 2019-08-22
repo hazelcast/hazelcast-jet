@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -180,33 +179,5 @@ public class UtilTest extends JetTestSupport {
                 roundRobinPart(3, 2, 0));
         assertArrayEquals(new int[] {1},
                 roundRobinPart(3, 2, 1));
-    }
-
-    @Test
-    public void test_mapPutAllAsync_member() {
-        JetInstance inst = createJetMember();
-        createJetMember();
-
-        IMap<Object, Object> map = inst.getHazelcastInstance().getMap("map");
-        Map<String, String> tmpMap = new HashMap<>();
-        tmpMap.put("k1", "v1");
-        tmpMap.put("k2", "v1");
-        Util.mapPutAllAsync(map, tmpMap);
-
-        assertEquals(tmpMap, new HashMap<>(map));
-    }
-
-    @Test
-    public void test_mapPutAllAsync_client() {
-        createJetMember();
-        JetInstance client = createJetClient();
-
-        IMap<Object, Object> map = client.getHazelcastInstance().getMap("map");
-        Map<String, String> tmpMap = new HashMap<>();
-        tmpMap.put("k1", "v1");
-        tmpMap.put("k2", "v1");
-        Util.mapPutAllAsync(map, tmpMap);
-
-        assertEquals(tmpMap, new HashMap<>(map));
     }
 }
