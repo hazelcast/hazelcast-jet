@@ -30,6 +30,7 @@ import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -869,5 +870,20 @@ public class BatchStageTest extends PipelineTestSupport {
         // Each processor emitted distinct keys it observed. If groupingKey isn't correctly partitioning,
         // multiple processors will observe the same keys and the counts won't match.
         assertEquals("0\n1", streamToString(sinkStreamOf(Integer.class), Object::toString));
+    }
+
+    @Test
+    public void batchAddTimestampPreserveOrderTest() {
+        // Given
+        List<Integer> items = IntStream.range(0, 10).boxed().collect(toList());
+        BatchSource<Integer> source = TestSources.items(items);
+
+        // When
+        p.drawFrom(source)
+         .addTimestamps(t -> System.currentTimeMillis(), 1000)
+         .drainTo(assertOrdered(items));
+
+        // Then
+        execute();
     }
 }
