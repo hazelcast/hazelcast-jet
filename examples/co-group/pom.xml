@@ -20,12 +20,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <artifactId>hazelcast-jet-examples-co-group</artifactId>
+
     <parent>
         <groupId>com.hazelcast.jet.examples</groupId>
         <artifactId>hazelcast-jet-examples</artifactId>
         <version>3.2-SNAPSHOT</version>
     </parent>
-
-    <artifactId>hazelcast-jet-examples-co-group</artifactId>
 
 </project>
