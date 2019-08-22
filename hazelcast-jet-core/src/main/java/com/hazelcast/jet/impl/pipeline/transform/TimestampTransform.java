@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Vertex.determineLocalParallelism;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.util.Preconditions.checkNotNull;
@@ -48,7 +48,7 @@ public class TimestampTransform<T> extends AbstractTransform {
         PlannerVertex pv = p.addVertex(
                 this, name(), localParallelism, insertWatermarksP(eventTimePolicy)
         );
-        p.dag.edge(between(upstream.v, pv.v).isolated());
+        p.addEdges(this, pv.v, Edge::isolated);
     }
 
     @Nonnull

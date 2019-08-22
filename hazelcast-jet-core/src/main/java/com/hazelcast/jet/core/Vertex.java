@@ -127,8 +127,8 @@ public class Vertex implements IdentifiedDataSerializable {
 
     /**
      * Determines the local parallelism value for the vertex by looking
-     * it's local parallelism and meta supplier's preferred local parallelism.
-     *
+     * its local parallelism and meta supplier's preferred local parallelism.
+     * <p>
      * If none of them is set, returns the provided default parallelism
      */
     public static int determineLocalParallelism(Vertex vertex, int defaultParallelism) {
