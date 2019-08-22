@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.Vertex.determineLocalParallelism;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
@@ -305,7 +305,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     @Override
     @Nonnull
     public String toString() {
-        return toString(-1);
+        return toString(LOCAL_PARALLELISM_USE_DEFAULT);
     }
 
     /**
@@ -321,8 +321,8 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         final StringBuilder b = new StringBuilder("dag\n");
         for (Vertex v : this) {
             b.append("    .vertex(\"").append(v.getName()).append("\")");
-            int localParallelism = determineLocalParallelism(v, defaultLocalParallelism);
-            if (localParallelism != -1) {
+            int localParallelism = v.determineLocalParallelism(defaultLocalParallelism);
+            if (localParallelism != LOCAL_PARALLELISM_USE_DEFAULT) {
                 b.append(".localParallelism(").append(localParallelism).append(')');
             }
             b.append('\n');
@@ -348,7 +348,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         for (Vertex v : this) {
             JsonObject vertex = new JsonObject();
             vertex.add("name", v.getName());
-            vertex.add("parallelism", determineLocalParallelism(v, defaultLocalParallelism));
+            vertex.add("parallelism", v.determineLocalParallelism(defaultLocalParallelism));
             vertices.add(vertex);
         }
         dag.add("vertices", vertices);
@@ -375,7 +375,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
      */
     @Nonnull
     public String toDotString() {
-        return toDotString(-1);
+        return toDotString(LOCAL_PARALLELISM_USE_DEFAULT);
     }
 
     /**
@@ -389,9 +389,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
         int clusterCount = 0;
 
         for (Vertex v : this) {
-            int localParallelism = determineLocalParallelism(v, defaultParallelism);
-            String parallelism = localParallelism == -1 ?
-                defaultParallelism == -1 ?
+            int localParallelism = v.determineLocalParallelism(defaultParallelism);
+            String parallelism = localParallelism == LOCAL_PARALLELISM_USE_DEFAULT ?
+                defaultParallelism == LOCAL_PARALLELISM_USE_DEFAULT ?
                     "default"
                     : String.valueOf(defaultParallelism)
                 : String.valueOf(localParallelism);

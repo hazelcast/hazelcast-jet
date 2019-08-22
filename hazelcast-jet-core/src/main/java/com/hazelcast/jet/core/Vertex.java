@@ -131,15 +131,15 @@ public class Vertex implements IdentifiedDataSerializable {
      * <p>
      * If none of them is set, returns the provided default parallelism
      */
-    public static int determineLocalParallelism(Vertex vertex, int defaultParallelism) {
-        int localParallelism = vertex.localParallelism;
-        int preferredLocalParallelism = vertex.metaSupplier.preferredLocalParallelism();
-        Vertex.checkLocalParallelism(preferredLocalParallelism);
-        Vertex.checkLocalParallelism(localParallelism);
+    public int determineLocalParallelism(int defaultParallelism) {
+        int localParallelism = this.localParallelism;
+        int preferredLocalParallelism = this.metaSupplier.preferredLocalParallelism();
+        checkLocalParallelism(preferredLocalParallelism);
+        checkLocalParallelism(localParallelism);
         return localParallelism != LOCAL_PARALLELISM_USE_DEFAULT
                 ? localParallelism
                 : preferredLocalParallelism != LOCAL_PARALLELISM_USE_DEFAULT
-                    ? defaultParallelism == -1
+                    ? defaultParallelism == LOCAL_PARALLELISM_USE_DEFAULT
                         ? preferredLocalParallelism
                         : min(preferredLocalParallelism, defaultParallelism)
                     : defaultParallelism;

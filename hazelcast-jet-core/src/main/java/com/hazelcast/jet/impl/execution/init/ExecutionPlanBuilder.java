@@ -76,7 +76,7 @@ public final class ExecutionPlanBuilder {
             final Vertex vertex = dag.getVertex(entry.getKey());
             final ProcessorMetaSupplier metaSupplier = vertex.getMetaSupplier();
             final int vertexId = entry.getValue();
-            final int localParallelism = Vertex.determineLocalParallelism(vertex, defaultParallelism);
+            final int localParallelism = vertex.determineLocalParallelism(defaultParallelism);
             final int totalParallelism = localParallelism * clusterSize;
             final List<EdgeDef> inbound = toEdgeDefs(dag.getInboundEdges(vertex.getName()), defaultEdgeConfig,
                     e -> vertexIdMap.get(e.getSourceName()), isJobDistributed);
