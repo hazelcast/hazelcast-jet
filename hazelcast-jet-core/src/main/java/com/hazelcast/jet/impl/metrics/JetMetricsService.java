@@ -174,21 +174,15 @@ public class JetMetricsService implements LiveOperationsTracker {
         List<MetricsPublisher> publishers = new ArrayList<>();
         if (config.isEnabled()) {
             ILogger logger = this.nodeEngine.getLogger(BlobPublisher.class);
-
             int journalSize = Math.max(
                     1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
             );
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
-            publishers.add(
-                    new BlobPublisher(
-                            logger,
-                            (blob, ts) -> {
-                                metricsJournal.add(entry(ts, blob));
-                                pendingReads.forEach(this::tryCompleteRead);
-                            }
-                    )
+            publishers.add(new BlobPublisher(logger, (blob, ts) -> {
+                        metricsJournal.add(entry(ts, blob));
+                        pendingReads.forEach(this::tryCompleteRead);
+                    })
             );
-
             publishers.add(new JobMetricsPublisher(jobExecutionService, nodeEngine.getLocalMember(), logger));
         }
         if (config.isJmxEnabled()) {
