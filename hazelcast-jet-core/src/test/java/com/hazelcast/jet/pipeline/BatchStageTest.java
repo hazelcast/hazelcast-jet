@@ -22,6 +22,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.datamodel.ItemsByTag;
@@ -51,6 +53,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.Functions.wholeItem;
@@ -882,7 +885,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         p.drawFrom(source)
-         .addTimestamps(t -> System.currentTimeMillis(), 1000)
+         .addTimestamps(o -> 0L, 0)
          .drainTo(assertOrdered(items));
 
         // Then
@@ -890,9 +893,26 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void batchAddTimestampPreserveOrderTest_whenUpstreamHavePreferredLocalParallelism() {
+    public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamHavePreferredLocalParallelism() {
         // Given
-        int lp = 20;
+        int lp = 11;
+
+        // When
+        p.drawFrom(Sources.batchFromProcessor("src",
+                ProcessorMetaSupplier.of(lp, ProcessorSupplier.of(noopP()))))
+         .addTimestamps(o -> 0L, 0)
+         .drainTo(Sinks.noop());
+        DAG dag = p.toDag();
+
+        // Then
+        Vertex tsVertex = dag.getVertex("add-timestamps");
+        assertEquals(lp, tsVertex.getLocalParallelism());
+    }
+
+    @Test
+    public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamHaveExplicitParallelism() {
+        // Given
+        int lp = 11;
 
         // When
         p.drawFrom(source)
@@ -906,14 +926,15 @@ public class BatchStageTest extends PipelineTestSupport {
         assertEquals(lp, tsVertex.getLocalParallelism());
     }
 
+
     @Test
-    public void batchAddTimestampPreserveOrderTest_whenUpstreamDoesntHavePreferredLocalParallelism() {
+    public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamDoesntHavePreferredLocalParallelism() {
         // Given
         BatchSource<Integer> items = TestSources.items(1, 2, 3);
 
         // When
         p.drawFrom(items)
-         .addTimestamps(t -> System.currentTimeMillis(), 1000)
+         .addTimestamps(o -> 0L, 0)
          .drainTo(Sinks.noop());
         DAG dag = p.toDag();
 
