@@ -17,13 +17,11 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.core.Member;
 import com.hazelcast.internal.diagnostics.Diagnostics;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JobExecutionService;
-import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.LiveOperationRegistry;
 import com.hazelcast.jet.impl.metrics.jmx.JmxPublisher;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer;
@@ -34,12 +32,9 @@ import com.hazelcast.spi.LiveOperationsTracker;
 import com.hazelcast.spi.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -200,107 +195,6 @@ public class JetMetricsService implements LiveOperationsTracker {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));
         }
         return publishers;
-    }
-
-    /**
-     * Internal publisher which notifies the {@link JobExecutionService} about
-     * the latest metric values.
-     */
-    public static class JobMetricsPublisher implements MetricsPublisher {
-
-        private final JobExecutionService jobExecutionService;
-        private final String namePrefix;
-        private final ILogger logger;
-        private final PublisherProvider publisherProvider = new PublisherProvider();
-        private final Map<Long, RawJobMetrics> jobMetrics = new HashMap<>();
-
-        JobMetricsPublisher(
-                @Nonnull JobExecutionService jobExecutionService,
-                @Nonnull Member member,
-                @Nonnull ILogger logger
-        ) {
-            Objects.requireNonNull(jobExecutionService, "jobExecutionService");
-            Objects.requireNonNull(member, "member");
-            Objects.requireNonNull(logger, "logger");
-
-            this.jobExecutionService = jobExecutionService;
-            this.namePrefix = JobMetricsUtil.getMemberPrefix(member);
-            this.logger = logger;
-        }
-
-        @Override
-        public void publishLong(String name, long value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
-            if (executionId != null) {
-                BlobPublisher blobPublisher = publisherProvider.get(executionId);
-                String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
-                blobPublisher.publishLong(prefixedName, value);
-            }
-        }
-
-        @Override
-        public void publishDouble(String name, double value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
-            if (executionId != null) {
-                BlobPublisher blobPublisher = publisherProvider.get(executionId);
-                String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
-                blobPublisher.publishDouble(prefixedName, value);
-            }
-        }
-
-        private BlobPublisher newBlobPublisher(Long executionId) {
-            return new BlobPublisher(
-                    logger,
-                    (blob, ts) -> jobMetrics.put(executionId, RawJobMetrics.of(ts, blob))
-            );
-        }
-
-        @Override
-        public void whenComplete() {
-            publisherProvider.complete();
-
-            jobExecutionService.updateMetrics(jobMetrics);
-            jobMetrics.clear();
-        }
-
-        @Override
-        public String name() {
-            return "Job Metrics Publisher";
-        }
-
-        private class PublisherProvider {
-
-            private Map<Long, BlobPublisher> currentPublishers = new HashMap<>();
-            private Map<Long, BlobPublisher> previousPublishers = new HashMap<>();
-
-            BlobPublisher get(Long executionId) {
-                return currentPublishers.computeIfAbsent(
-                        executionId,
-                        x -> {
-                            //check if we have a cached publisher
-                            BlobPublisher blobPublisher = previousPublishers.remove(executionId);
-
-                            //create a new one if we don't
-                            blobPublisher = blobPublisher == null ? newBlobPublisher(executionId) : blobPublisher;
-
-                            return blobPublisher;
-                        }
-                );
-            }
-
-            void complete() {
-                currentPublishers.values().forEach(BlobPublisher::whenComplete);
-
-                //throw away previous publishers that haven't been used
-                previousPublishers.clear();
-
-                //swap the two set of publishers
-                Map<Long, BlobPublisher> p = previousPublishers;
-                previousPublishers = currentPublishers;
-                currentPublishers = p;
-            }
-
-        }
     }
 
     /**
