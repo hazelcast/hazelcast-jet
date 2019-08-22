@@ -251,9 +251,7 @@ public class JetMetricsService implements LiveOperationsTracker {
         private BlobPublisher newBlobPublisher(Long executionId) {
             return new BlobPublisher(
                     logger,
-                    (blob, ts) -> {
-                        jobMetrics.put(executionId, RawJobMetrics.of(ts, blob));
-                    }
+                    (blob, ts) -> jobMetrics.put(executionId, RawJobMetrics.of(ts, blob))
             );
         }
 
@@ -272,8 +270,8 @@ public class JetMetricsService implements LiveOperationsTracker {
 
         private class PublisherProvider {
 
-            private final Map<Long, BlobPublisher> currentPublishers = new HashMap<>();
-            private final Map<Long, BlobPublisher> previousPublishers = new HashMap<>();
+            private Map<Long, BlobPublisher> currentPublishers = new HashMap<>();
+            private Map<Long, BlobPublisher> previousPublishers = new HashMap<>();
 
             BlobPublisher get(Long executionId) {
                 return currentPublishers.computeIfAbsent(
@@ -293,10 +291,13 @@ public class JetMetricsService implements LiveOperationsTracker {
             void complete() {
                 currentPublishers.values().forEach(BlobPublisher::whenComplete);
 
+                //throw away previous publishers that haven't been used
                 previousPublishers.clear();
-                previousPublishers.putAll(currentPublishers);
 
-                currentPublishers.clear();
+                //swap the two set of publishers
+                Map<Long, BlobPublisher> p = previousPublishers;
+                previousPublishers = currentPublishers;
+                currentPublishers = p;
             }
 
         }

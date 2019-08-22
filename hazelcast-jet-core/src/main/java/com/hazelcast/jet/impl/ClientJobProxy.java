@@ -85,11 +85,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
             ClientMessage response = invocation(request, masterAddress()).invoke().get();
             JetGetJobMetricsCodec.ResponseParameters parameters = JetGetJobMetricsCodec.decodeResponse(response);
             List<RawJobMetrics> shards = serializationService().toObject(parameters.response);
-            JobMetrics metrics = JobMetrics.empty();
-            for (RawJobMetrics shard : shards) {
-                metrics = metrics.merge(JobMetrics.of(shard.getTimestamp(), shard.getValues()));
-            }
-            return metrics;
+            return JobMetricsUtil.toJobMetrics(shards);
         } catch (Exception e) {
             throw rethrow(e);
         }

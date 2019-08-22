@@ -26,9 +26,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.function.ObjLongConsumer;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
@@ -207,31 +205,6 @@ public class BlobPublisher implements MetricsPublisher {
                 }
             }
         };
-    }
-
-    public static Map<String, Long> decompress(byte[] bytes) {
-        Map<String, Long> map = new HashMap<>();
-
-        DataInputStream dis = getInputStream(bytes);
-
-        String lastName = "";
-        do {
-            try {
-                int equalPrefixLen;
-                try {
-                    equalPrefixLen = dis.readUnsignedShort();
-                } catch (EOFException ignored) {
-                    dis.close();
-                    break;
-                }
-                lastName = lastName.substring(0, equalPrefixLen) + dis.readUTF();
-                map.put(lastName, dis.readLong());
-            } catch (IOException e) {
-                throw new RuntimeException(e); // unexpected EOFException can occur here
-            }
-        } while (true);
-
-        return map;
     }
 
     private static DataInputStream getInputStream(byte[] bytes) {

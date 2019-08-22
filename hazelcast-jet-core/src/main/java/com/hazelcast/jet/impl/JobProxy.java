@@ -71,11 +71,7 @@ public class JobProxy extends AbstractJobProxy<NodeEngineImpl> {
     public JobMetrics getMetrics() {
         try {
             List<RawJobMetrics> shards = this.<List<RawJobMetrics>>invokeOp(new GetJobMetricsOperation(getId())).get();
-            JobMetrics metrics = JobMetrics.empty();
-            for (RawJobMetrics shard : shards) {
-                metrics = metrics.merge(JobMetrics.of(shard.getTimestamp(), shard.getValues()));
-            }
-            return metrics;
+            return JobMetricsUtil.toJobMetrics(shards);
         } catch (Throwable t) {
             throw rethrow(t);
         }

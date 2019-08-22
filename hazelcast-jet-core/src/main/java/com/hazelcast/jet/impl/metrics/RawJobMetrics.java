@@ -23,8 +23,6 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
 
 public final class RawJobMetrics implements IdentifiedDataSerializable {
 
@@ -51,8 +49,9 @@ public final class RawJobMetrics implements IdentifiedDataSerializable {
         return timestamp;
     }
 
-    public Map<String, Long> getValues() {
-        return blob == null ? Collections.emptyMap() : BlobPublisher.decompress(blob);
+    @Nullable
+    public byte[] getBlob() {
+        return blob;
     }
 
     @Override

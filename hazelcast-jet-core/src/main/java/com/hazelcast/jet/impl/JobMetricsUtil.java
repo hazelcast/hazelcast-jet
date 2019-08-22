@@ -19,14 +19,25 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.core.Member;
 import com.hazelcast.internal.metrics.MetricsUtil;
 import com.hazelcast.jet.Util;
+import com.hazelcast.jet.core.metrics.JobMetrics;
+import com.hazelcast.jet.core.metrics.Measurement;
 import com.hazelcast.jet.core.metrics.MetricTags;
+import com.hazelcast.jet.impl.metrics.BlobPublisher;
+import com.hazelcast.jet.impl.metrics.Metric;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public final class JobMetricsUtil {
 
@@ -45,13 +56,6 @@ public final class JobMetricsUtil {
             return null;
         }
         return Util.idFromString(m.group(1));
-    }
-
-    public static Map<String, String> parseMetricDescriptor(@Nonnull String descriptor) {
-        Objects.requireNonNull(descriptor, "descriptor");
-
-        return MetricsUtil.parseMetricName(descriptor).stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public static String addPrefixToDescriptor(@Nonnull String descriptor, @Nonnull String prefix) {
@@ -73,4 +77,37 @@ public final class JobMetricsUtil {
         return MetricTags.MEMBER + "=" + MetricsUtil.escapeMetricNamePart(uuid) + "," +
                 MetricTags.ADDRESS + "=" + MetricsUtil.escapeMetricNamePart(address) + ",";
     }
+
+    static JobMetrics toJobMetrics(List<RawJobMetrics> rawJobMetrics) {
+        return JobMetrics.of(
+                rawJobMetrics.stream()
+                .flatMap(
+                        (Function<RawJobMetrics, Stream<Measurement>>) r -> {
+                            if (r.getBlob() == null) {
+                                return Stream.of();
+                            } else {
+                                return toMetricStream(r).map(metric -> toMeasurement(r.getTimestamp(), metric));
+                            }
+                        }
+                )
+                .collect(Collectors.toList())
+        );
+    }
+
+    private static Stream<Metric> toMetricStream(RawJobMetrics r) {
+        return StreamSupport.stream(
+                Spliterators.spliteratorUnknownSize(
+                        BlobPublisher.decompressingIterator(r.getBlob()),
+                        Spliterator.NONNULL
+                ), false
+        );
+    }
+
+    private static Measurement toMeasurement(long timestamp, Metric metric) {
+        String descriptor = metric.key();
+        Map<String, String> tags = MetricsUtil.parseMetricName(descriptor).stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return Measurement.of(metric.value(), timestamp, tags);
+    }
+
 }
