@@ -946,4 +946,17 @@ public class BatchStageTest extends PipelineTestSupport {
         int lp2 = tsVertex.determineLocalParallelism(-1);
         assertEquals(lp1, lp2);
     }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void addTimestamps_when_HasExplicitLocalParallelism_then_throwsException() {
+        // Given
+        int lp = 11;
+
+        // When
+        p.drawFrom(source)
+         .addTimestamps(o -> 0L, 0)
+         .setLocalParallelism(lp)
+         .drainTo(Sinks.noop());
+    }
+
 }

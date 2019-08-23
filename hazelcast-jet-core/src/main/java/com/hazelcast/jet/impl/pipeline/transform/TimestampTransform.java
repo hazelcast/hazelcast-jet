@@ -41,6 +41,11 @@ public class TimestampTransform<T> extends AbstractTransform {
     }
 
     @Override
+    public void localParallelism(int localParallelism) {
+        throw new UnsupportedOperationException("Explicit local parallelism for addTimestamps() is not supported");
+    }
+
+    @Override
     public void addToDag(Planner p) {
         PlannerVertex upstream = p.xform2vertex.get(this.upstream().get(0));
         int localParallelism = upstream.v.determineLocalParallelism(upstream.v.getLocalParallelism());
