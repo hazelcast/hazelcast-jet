@@ -30,6 +30,7 @@ import java.util.function.Function;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
+import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.insertWatermarksP;
 import static com.hazelcast.util.Preconditions.checkNotNegative;
 import static java.util.Collections.emptyList;
@@ -85,6 +86,9 @@ public class StreamSourceTransform<T> extends AbstractTransform implements Strea
             String v1name = name();
             Vertex v1 = p.dag.newVertex(v1name, metaSupplierFn.apply(eventTimePolicy))
                              .localParallelism(localParallelism());
+            if (localParallelism() == LOCAL_PARALLELISM_USE_DEFAULT) {
+                localParallelism(v1.determineLocalParallelism(LOCAL_PARALLELISM_USE_DEFAULT));
+            }
             PlannerVertex pv2 = p.addVertex(
                     this, v1name + "-add-timestamps", localParallelism(), insertWatermarksP(eventTimePolicy)
             );
