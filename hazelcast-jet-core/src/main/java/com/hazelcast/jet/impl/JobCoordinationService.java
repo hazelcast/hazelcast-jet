@@ -67,6 +67,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
@@ -257,7 +258,7 @@ public class JobCoordinationService {
 
     public CompletableFuture<Void> joinSubmittedJob(long jobId) {
         checkOperationalState();
-        CompletableFuture<CompletableFuture<Void>> future = doWithJob(jobId,
+        CompletableFuture<CompletableFuture<Void>> future = doWithJobAndReturn(jobId,
                 mc -> mc.jobContext().jobCompletionFuture(),
                 null,
                 jobRecord -> {
@@ -292,7 +293,6 @@ public class JobCoordinationService {
                     if (terminationResult != null) {
                         throw new IllegalStateException("Cannot " + terminationMode + ": " + terminationResult);
                     }
-                    return null;
                 },
                 null,
                 jobRecord -> {
@@ -302,12 +302,11 @@ public class JobCoordinationService {
                 },
                 null,
                 jobResult -> {
-                    if (terminationMode == CANCEL_FORCEFUL) {
-                        logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
-                        return null;
+                    if (terminationMode != CANCEL_FORCEFUL) {
+                        throw new IllegalStateException("Cannot " + terminationMode + " job " + idToString(jobId)
+                                + " because it already has a result: " + jobResult);
                     }
-                    throw new IllegalStateException("Cannot " + terminationMode + " job " + idToString(jobId)
-                            + " because it already has a result: " + jobResult);
+                    logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
                 });
     }
 
@@ -349,7 +348,7 @@ public class JobCoordinationService {
      * if the requested job is not found.
      */
     public CompletableFuture<JobStatus> getJobStatus(long jobId) {
-        return doWithJob(jobId,
+        return doWithJobAndReturn(jobId,
                 mc -> {
                     JobStatus jobStatus = mc.jobStatus();
                     return jobStatus == RUNNING && mc.jobContext().requestedTerminationMode() != null
@@ -369,23 +368,11 @@ public class JobCoordinationService {
     public CompletableFuture<JobMetrics> getJobMetrics(long jobId) {
         CompletableFuture<JobMetrics> cf = new CompletableFuture<>();
         doWithJob(jobId,
-                mc -> {
-                    mc.jobContext().collectMetrics(cf);
-                    return null;
-                },
-                record -> {
-                    cf.complete(JobMetrics.empty());
-                    return null;
-                },
+                mc -> mc.jobContext().collectMetrics(cf),
+                record -> cf.complete(JobMetrics.empty()),
                 null,
-                metrics -> {
-                    cf.complete(metrics);
-                    return null;
-                },
-                jobResult -> {
-                    cf.complete(JobMetrics.empty());
-                    return null;
-                });
+                cf::complete,
+                jobResult -> cf.complete(JobMetrics.empty()));
         return cf;
     }
 
@@ -394,7 +381,7 @@ public class JobCoordinationService {
      * if the requested job is not found.
      */
     public CompletableFuture<Long> getJobSubmissionTime(long jobId) {
-        return doWithJob(jobId,
+        return doWithJobAndReturn(jobId,
                 mc -> mc.jobRecord().getCreationTime(),
                 null,
                 JobRecord::getCreationTime,
@@ -404,10 +391,7 @@ public class JobCoordinationService {
 
     public void resumeJob(long jobId) {
         doWithJob(jobId,
-                masterContext -> {
-                    masterContext.jobContext().resumeJob(jobRepository::newExecutionId);
-                    return null;
-                },
+                masterContext -> masterContext.jobContext().resumeJob(jobRepository::newExecutionId),
                 jobExecutionRecord -> {
                     throw new RetryableHazelcastException("Job " + idToString(jobId) + " not yet discovered");
                 },
@@ -507,7 +491,26 @@ public class JobCoordinationService {
                 && !partitionService.hasOnGoingMigrationLocal();
     }
 
-    private <T> CompletableFuture<T> doWithJob(
+    private CompletableFuture<Void> doWithJob(
+            long jobId,
+            @Nonnull Consumer<MasterContext> masterContextHandler,
+            @Nullable Consumer<JobExecutionRecord> jobExecutionRecordHandler,
+            @Nullable Consumer<JobRecord> jobRecordHandler,
+            @Nullable Consumer<JobMetrics> jobMetricsHandler,
+            @Nonnull Consumer<JobResult> jobResultHandler
+    ) {
+        return doWithJobAndReturn(jobId, toNullFunction(masterContextHandler), toNullFunction(jobExecutionRecordHandler),
+                toNullFunction(jobRecordHandler), toNullFunction(jobMetricsHandler), toNullFunction(jobResultHandler));
+    }
+
+    private <T, R> Function<T, R> toNullFunction(Consumer<T> consumer) {
+        return val -> {
+            consumer.accept(val);
+            return null;
+        };
+    }
+
+    private <T> CompletableFuture<T> doWithJobAndReturn(
             long jobId,
             @Nonnull Function<MasterContext, T> masterContextHandler,
             @Nullable Function<JobExecutionRecord, T> jobExecutionRecordHandler,
