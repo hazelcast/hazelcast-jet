@@ -26,6 +26,7 @@ import com.hazelcast.jet.impl.LiveOperationRegistry;
 import com.hazelcast.jet.impl.metrics.jmx.JmxPublisher;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer;
 import com.hazelcast.jet.impl.metrics.management.ConcurrentArrayRingbuffer.RingbufferSlice;
+import com.hazelcast.jet.impl.metrics.management.ManagementCenterPublisher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.LiveOperations;
 import com.hazelcast.spi.LiveOperationsTracker;
@@ -173,17 +174,17 @@ public class JetMetricsService implements LiveOperationsTracker {
     private List<MetricsPublisher> getPublishers(NodeEngine nodeEngine, JobExecutionService jobExecutionService) {
         List<MetricsPublisher> publishers = new ArrayList<>();
         if (config.isEnabled()) {
-            ILogger logger = this.nodeEngine.getLogger(BlobPublisher.class);
             int journalSize = Math.max(
                     1, (int) Math.ceil((double) config.getRetentionSeconds() / config.getCollectionIntervalSeconds())
             );
             metricsJournal = new ConcurrentArrayRingbuffer<>(journalSize);
-            publishers.add(new BlobPublisher(logger, (blob, ts) -> {
+            publishers.add(new ManagementCenterPublisher(this.nodeEngine.getLoggingService(),
+                    (blob, ts) -> {
                         metricsJournal.add(entry(ts, blob));
                         pendingReads.forEach(this::tryCompleteRead);
-                    })
-            );
-            publishers.add(new JobMetricsPublisher(jobExecutionService, nodeEngine.getLocalMember(), logger));
+                    }
+            ));
+            publishers.add(new JobMetricsPublisher(jobExecutionService, nodeEngine.getLocalMember()));
         }
         if (config.isJmxEnabled()) {
             publishers.add(new JmxPublisher(nodeEngine.getHazelcastInstance().getName(), "com.hazelcast"));

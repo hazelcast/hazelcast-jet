@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.impl.metrics.BlobPublisher.decompressingIterator;
+import static com.hazelcast.jet.impl.MetricsCompressor.decompressingIterator;
 
 public class MetricsResultSet  {
 

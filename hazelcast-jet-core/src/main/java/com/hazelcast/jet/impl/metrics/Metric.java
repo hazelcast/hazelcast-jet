@@ -21,7 +21,7 @@ public class Metric {
     private final String key;
     private final long value;
 
-    Metric(String key, long value) {
+    public Metric(String key, long value) {
         this.key = key;
         this.value = value;
     }

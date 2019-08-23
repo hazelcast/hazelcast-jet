@@ -21,8 +21,8 @@ import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
+import com.hazelcast.jet.impl.MetricsCompressor;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.metrics.BlobPublisher;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;
@@ -120,7 +120,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
         private final Long executionIdOfInterest;
         private final String namePrefix;
-        private final BlobPublisher blobPublisher;
+        private final MetricsCompressor compressor;
 
         private RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
@@ -130,10 +130,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
             this.executionIdOfInterest = executionId;
             this.namePrefix = JobMetricsUtil.getMemberPrefix(member);
-            this.blobPublisher = new BlobPublisher(
-                    logger,
-                    (bytes, timeStamp) -> jobMetrics = RawJobMetrics.of(timeStamp, bytes)
-            );
+            this.compressor = new MetricsCompressor();
         }
 
         @Override
@@ -141,7 +138,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
             Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
             if (executionIdOfInterest.equals(executionId)) {
                 String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
-                blobPublisher.publishLong(prefixedName, value);
+                compressor.addLong(prefixedName, value);
             }
         }
 
@@ -150,7 +147,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
             Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
             if (executionIdOfInterest.equals(executionId)) {
                 String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
-                blobPublisher.publishDouble(prefixedName, value);
+                compressor.addDouble(prefixedName, value);
             }
         }
 
@@ -163,7 +160,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         }
 
         public void whenComplete() {
-            blobPublisher.whenComplete();
+            jobMetrics = RawJobMetrics.of(compressor.compress());
         }
 
         @Nonnull

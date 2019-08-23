@@ -19,13 +19,14 @@ package com.hazelcast.jet.impl.metrics;
 import com.hazelcast.core.Member;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
-import com.hazelcast.logging.ILogger;
+import com.hazelcast.jet.impl.MetricsCompressor;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.hazelcast.jet.impl.JobMetricsUtil.addPrefixToDescriptor;
 
@@ -37,49 +38,50 @@ public class JobMetricsPublisher implements MetricsPublisher {
 
     private final JobExecutionService jobExecutionService;
     private final String namePrefix;
-    private final ILogger logger;
     private final Map<Long, RawJobMetrics> jobMetrics = new HashMap<>();
-    private final Map<Long, BlobPublisher> executionIdToPublisher = new HashMap<>();
+    private final Map<Long, MetricsCompressor> executionIdToCompressor = new HashMap<>();
 
     JobMetricsPublisher(
             @Nonnull JobExecutionService jobExecutionService,
-            @Nonnull Member member,
-            @Nonnull ILogger logger
+            @Nonnull Member member
     ) {
         Objects.requireNonNull(jobExecutionService, "jobExecutionService");
         Objects.requireNonNull(member, "member");
-        Objects.requireNonNull(logger, "logger");
 
         this.jobExecutionService = jobExecutionService;
         this.namePrefix = JobMetricsUtil.getMemberPrefix(member);
-        this.logger = logger;
     }
 
     @Override
     public void publishLong(String name, long value) {
-        BlobPublisher blobPublisher = getPublisher(name);
-        if (blobPublisher != null) {
-            blobPublisher.publishLong(addPrefixToDescriptor(name, namePrefix), value);
+        MetricsCompressor metricsCompressor = getCompressor(name);
+        if (metricsCompressor != null) {
+            metricsCompressor.addLong(addPrefixToDescriptor(name, namePrefix), value);
         }
     }
 
     @Override
     public void publishDouble(String name, double value) {
-        BlobPublisher blobPublisher = getPublisher(name);
-        if (blobPublisher != null) {
-            blobPublisher.publishDouble(addPrefixToDescriptor(name, namePrefix), value);
+        MetricsCompressor metricsCompressor = getCompressor(name);
+        if (metricsCompressor != null) {
+            metricsCompressor.addDouble(addPrefixToDescriptor(name, namePrefix), value);
         }
     }
 
     @Override
     public void whenComplete() {
-        for (Iterator<BlobPublisher> it = executionIdToPublisher.values().iterator(); it.hasNext(); ) {
-            BlobPublisher publisher = it.next();
-            // remove publisher that didn't receive any metrics
-            if (publisher.getCount() == 0) {
+        Set<Map.Entry<Long, MetricsCompressor>> compressorEntries = executionIdToCompressor.entrySet();
+        for (Iterator<Map.Entry<Long, MetricsCompressor>> it = compressorEntries.iterator(); it.hasNext();) {
+            Map.Entry<Long, MetricsCompressor> entry = it.next();
+
+            MetricsCompressor compressor = entry.getValue();
+            // remove compressors that didn't receive any metrics
+            if (compressor.size() == 0) {
                 it.remove();
             }
-            publisher.whenComplete();
+
+            Long executionId = entry.getKey();
+            jobMetrics.put(executionId, RawJobMetrics.of(compressor.compress()));
         }
 
         jobExecutionService.updateMetrics(jobMetrics);
@@ -91,13 +93,9 @@ public class JobMetricsPublisher implements MetricsPublisher {
         return "Job Metrics Publisher";
     }
 
-    private BlobPublisher getPublisher(String name) {
+    private MetricsCompressor getCompressor(String name) {
         Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
-        return executionId != null ?
-                executionIdToPublisher.computeIfAbsent(executionId,
-                        ignored -> new BlobPublisher(logger,
-                                (blob, ts) -> jobMetrics.put(executionId, RawJobMetrics.of(ts, blob))
-                        ))
-                : null;
+        return executionId == null ? null :
+                executionIdToCompressor.computeIfAbsent(executionId, id -> new MetricsCompressor());
     }
 }

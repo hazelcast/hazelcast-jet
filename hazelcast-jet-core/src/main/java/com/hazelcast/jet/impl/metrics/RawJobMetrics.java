@@ -38,7 +38,11 @@ public final class RawJobMetrics implements IdentifiedDataSerializable {
     }
 
     public static RawJobMetrics empty() {
-        return RawJobMetrics.of(System.currentTimeMillis(), null);
+        return of(null);
+    }
+
+    public static RawJobMetrics of(@Nullable byte[] blob) {
+        return of(System.currentTimeMillis(), blob);
     }
 
     public static RawJobMetrics of(long timestamp, @Nullable byte[] blob) {

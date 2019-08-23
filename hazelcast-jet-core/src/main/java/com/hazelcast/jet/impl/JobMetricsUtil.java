@@ -22,7 +22,6 @@ import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.core.metrics.Measurement;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.impl.metrics.BlobPublisher;
 import com.hazelcast.jet.impl.metrics.Metric;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 
@@ -88,7 +87,7 @@ public final class JobMetricsUtil {
     private static Stream<Metric> metricStream(RawJobMetrics r) {
         return StreamSupport.stream(
                 Spliterators.spliteratorUnknownSize(
-                        BlobPublisher.decompressingIterator(r.getBlob()),
+                        MetricsCompressor.decompressingIterator(r.getBlob()),
                         Spliterator.NONNULL
                 ), false
         );

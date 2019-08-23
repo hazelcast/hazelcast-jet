@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.metrics;
+package com.hazelcast.jet.impl;
 
-import com.hazelcast.logging.ILogger;
+import com.hazelcast.jet.impl.metrics.Metric;
 import com.hazelcast.nio.Bits;
 
-import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -27,24 +26,25 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.function.ObjLongConsumer;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 import static com.hazelcast.internal.metrics.MetricsUtil.escapeMetricNamePart;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static java.lang.Math.multiplyExact;
 
 /**
- * Implementation of {@link MetricsPublisher} which compresses metrics
- * into a byte[] blob to be read by various consumers. The consumer itself
- * is passed in as a parameter.
+ * Helper class for compressing metrics into a byte[] blob to be read by
+ * various consumers. The consumer itself is passed in as a parameter.
+ * <p>
+ * Most efficient when the metrics to be compressed are fed in sorted by
+ * name. It will work even if this condition is violated, but it won't
+ * nearly be as efficient.
  * <p>
  * Before compressing it also converts legacy metric names to
  * {@code [metric=<oldName>]}.
  */
-public class BlobPublisher implements MetricsPublisher {
+public class MetricsCompressor {
 
     private static final int INITIAL_BUFFER_SIZE = 2 << 11; // 2kB
     private static final int SIZE_FACTOR_NUMERATOR = 11;
@@ -61,45 +61,16 @@ public class BlobPublisher implements MetricsPublisher {
 
     private static final short BINARY_FORMAT_VERSION = 1;
 
-    private final ILogger logger;
-    private final ObjLongConsumer<byte[]> consumer;
-
     private DataOutputStream dos;
     private MorePublicByteArrayOutputStream baos = new MorePublicByteArrayOutputStream(INITIAL_BUFFER_SIZE);
     private String lastName;
     private int count;
 
-    public BlobPublisher(
-            @Nonnull ILogger logger,
-            @Nonnull ObjLongConsumer<byte[]> writeFn
-    ) {
-        this.consumer = writeFn;
-        this.logger = logger;
+    public MetricsCompressor() {
         reset(INITIAL_BUFFER_SIZE);
     }
 
-    @Override
-    public String name() {
-        return "Management Center Publisher";
-    }
-
-    private void reset(int estimatedBytes) {
-        Deflater compressor = new Deflater();
-        compressor.setLevel(Deflater.BEST_SPEED);
-        // shrink the `baos` if capacity is more than 50% larger than estimated size
-        if (baos.capacity() > multiplyExact(estimatedBytes, 3) / 2) {
-            baos = new MorePublicByteArrayOutputStream(estimatedBytes);
-        }
-        baos.reset();
-        baos.write((BINARY_FORMAT_VERSION >>> BITS_IN_BYTE) & BYTE_MASK);
-        baos.write(BINARY_FORMAT_VERSION & BYTE_MASK);
-        dos = new DataOutputStream(new DeflaterOutputStream(baos, compressor));
-        count = 0;
-        lastName = "";
-    }
-
-    @Override
-    public void publishLong(String name, long value) {
+    public void addLong(String name, long value) {
         try {
             writeName(name);
             dos.writeLong(value);
@@ -108,8 +79,7 @@ public class BlobPublisher implements MetricsPublisher {
         }
     }
 
-    @Override
-    public void publishDouble(String name, double value) {
+    public void addDouble(String name, double value) {
         try {
             writeName(name);
             // convert to long with specified precision
@@ -117,6 +87,16 @@ public class BlobPublisher implements MetricsPublisher {
         } catch (IOException e) {
             throw new RuntimeException(e); // should never be thrown
         }
+    }
+
+    public byte[] compress() {
+        byte[] blob = getRenderedBlob();
+        reset(blob.length * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
+        return blob;
+    }
+
+    public int size() {
+        return count;
     }
 
     private void writeName(String name) throws IOException {
@@ -142,16 +122,19 @@ public class BlobPublisher implements MetricsPublisher {
         count++;
     }
 
-    @Override
-    public void whenComplete() {
-        byte[] blob = getRenderedBlob();
-        consumer.accept(blob, System.currentTimeMillis());
-        logFinest(logger, "Collected %,d metrics, %,d bytes", getCount(), blob.length);
-        reset(blob.length * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
-    }
-
-    public int getCount() {
-        return count;
+    private void reset(int estimatedBytes) {
+        Deflater compressor = new Deflater();
+        compressor.setLevel(Deflater.BEST_SPEED);
+        // shrink the `baos` if capacity is more than 50% larger than estimated size
+        if (baos.capacity() > multiplyExact(estimatedBytes, 3) / 2) {
+            baos = new MorePublicByteArrayOutputStream(estimatedBytes);
+        }
+        baos.reset();
+        baos.write((BINARY_FORMAT_VERSION >>> BITS_IN_BYTE) & BYTE_MASK);
+        baos.write(BINARY_FORMAT_VERSION & BYTE_MASK);
+        dos = new DataOutputStream(new DeflaterOutputStream(baos, compressor));
+        count = 0;
+        lastName = "";
     }
 
     private byte[] getRenderedBlob() {
@@ -222,4 +205,5 @@ public class BlobPublisher implements MetricsPublisher {
             return buf.length;
         }
     }
+
 }
