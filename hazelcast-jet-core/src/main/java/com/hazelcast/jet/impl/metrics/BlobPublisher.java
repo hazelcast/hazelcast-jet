@@ -164,7 +164,13 @@ public class BlobPublisher implements MetricsPublisher {
     }
 
     public static Iterator<Metric> decompressingIterator(byte[] bytes) {
-        DataInputStream dis = getInputStream(bytes);
+        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        int version = (bais.read() << BITS_IN_BYTE) + bais.read();
+        if (version != BINARY_FORMAT_VERSION) {
+            throw new RuntimeException("Incorrect format, expected version " + BINARY_FORMAT_VERSION
+                    + ", got " + version);
+        }
+        DataInputStream dis = new DataInputStream(new InflaterInputStream(bais));
 
         return new Iterator<Metric>() {
             String lastName = "";
@@ -205,16 +211,6 @@ public class BlobPublisher implements MetricsPublisher {
                 }
             }
         };
-    }
-
-    private static DataInputStream getInputStream(byte[] bytes) {
-        ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-        int version = (bais.read() << BITS_IN_BYTE) + bais.read();
-        if (version != BINARY_FORMAT_VERSION) {
-            throw new RuntimeException("Incorrect format, expected version " + BINARY_FORMAT_VERSION
-                    + ", got " + version);
-        }
-        return new DataInputStream(new InflaterInputStream(bais));
     }
 
     private static class MorePublicByteArrayOutputStream extends ByteArrayOutputStream {
