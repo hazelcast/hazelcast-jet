@@ -369,8 +369,10 @@ public class JetCommandLine implements Runnable {
             description = "Lists exported snapshots on the cluster"
     )
     public void listSnapshots(
-            @Mixin(name = "verbosity") Verbosity verbosity
-    ) throws IOException {
+            @Mixin(name = "verbosity") Verbosity verbosity,
+            @Option(names = {"-F", "--full-job-name"},
+                    description = "Don't trim job name to fit, can break layout")
+                    boolean fullJobName) throws IOException {
         runWithJet(verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
             printf("%-23s %-15s %-24s %s%n", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
@@ -379,8 +381,10 @@ public class JetCommandLine implements Runnable {
                      .forEach(ss -> {
                          LocalDateTime creationTime = toLocalDateTime(ss.creationTime());
                          String jobName = ss.jobName() == null ? Util.idToString(ss.jobId()) : ss.jobName();
-                         String ssName = shortenAndSanitize(ss.name(), MAX_STR_LENGTH);
-                         printf("%-23s %-,15d %-24s %s%n", creationTime, ss.payloadSize(), jobName, ssName);
+                         if (!fullJobName) {
+                             jobName = shorten(jobName);
+                         }
+                         printf("%-23s %-,15d %-24s %s%n", creationTime, ss.payloadSize(), jobName, ss.name());
                      });
         });
     }
@@ -477,16 +481,15 @@ public class JetCommandLine implements Runnable {
         out.println(msg);
     }
 
-    private static String shortenAndSanitize(String name, int length) {
-        String result = name
-                .substring(0, Math.min(name.length(), length))
-                .replaceAll("\\s", " ")
-                .replaceAll("[^\\p{Print}]", "?");
-        // if the name was changed, add an asterisk
-        if (!result.equals(name)) {
-            result = (name.length() == length ? result.substring(0, length - 1) : result) + "*";
+    /**
+     * If name is longer than the {@code length}, shorten it and add an
+     * asterisk so that the resulting string has {@code length} length.
+     */
+    private static String shorten(String name) {
+        if (name.length() <= MAX_STR_LENGTH) {
+            return name;
         }
-        return result;
+        return name.substring(0, Math.min(name.length(), MAX_STR_LENGTH - 1)) + "*";
     }
 
     private static String formatJob(Job job) {
