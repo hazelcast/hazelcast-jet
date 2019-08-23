@@ -893,7 +893,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamHavePreferredLocalParallelism() {
+    public void addTimestamps_when_upstreamHasPreferredLocalParallelism_then_lpMatchUpstream() {
         // Given
         int lp = 11;
 
@@ -910,7 +910,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamHaveExplicitParallelism() {
+    public void addTimestamps_when_upstreamHasExplicitLocalParallelism_then_lpMatchUpstream() {
         // Given
         int lp = 11;
 
@@ -928,7 +928,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
 
     @Test
-    public void batchAddTimestampMatchingUpstreamParallelism_whenUpstreamDoesntHavePreferredLocalParallelism() {
+    public void addTimestamps_when_upstreamHasNoPreferredLocalParallelism_then_lpMatchUpstream() {
         // Given
         BatchSource<Object> src = Sources.batchFromProcessor("src",
                 ProcessorMetaSupplier.of(noopP()));
