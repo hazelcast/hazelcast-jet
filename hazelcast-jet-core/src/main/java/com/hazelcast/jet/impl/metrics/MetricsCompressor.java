@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl;
+package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.impl.metrics.Metric;
 import com.hazelcast.nio.Bits;
 
 import java.io.ByteArrayInputStream;
@@ -95,7 +94,7 @@ public class MetricsCompressor {
         return blob;
     }
 
-    public int size() {
+    public int count() {
         return count;
     }
 

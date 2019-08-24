@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.core.metrics.Measurement;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.metrics.Metric;
+import com.hazelcast.jet.impl.metrics.MetricsCompressor;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 
 import javax.annotation.Nonnull;

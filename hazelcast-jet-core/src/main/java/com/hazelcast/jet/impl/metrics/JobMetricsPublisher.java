@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.metrics;
 import com.hazelcast.core.Member;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
-import com.hazelcast.jet.impl.MetricsCompressor;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -76,7 +75,7 @@ public class JobMetricsPublisher implements MetricsPublisher {
 
             MetricsCompressor compressor = entry.getValue();
             // remove compressors that didn't receive any metrics
-            if (compressor.size() == 0) {
+            if (compressor.count() == 0) {
                 it.remove();
             }
 

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.metrics.management;
 
-import com.hazelcast.jet.impl.MetricsCompressor;
+import com.hazelcast.jet.impl.metrics.MetricsCompressor;
 import com.hazelcast.jet.impl.metrics.MetricsPublisher;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingService;
@@ -66,13 +66,13 @@ public class ManagementCenterPublisher implements MetricsPublisher {
 
     @Override
     public void whenComplete() {
-        int count = compressor.size();
+        int count = compressor.count();
         byte[] blob = compressor.compress();
         consumer.accept(blob, System.currentTimeMillis());
         logFinest(logger, "Collected %,d metrics, %,d bytes", count, blob.length);
     }
 
     public int getCount() {
-        return compressor.size();
+        return compressor.count();
     }
 }
