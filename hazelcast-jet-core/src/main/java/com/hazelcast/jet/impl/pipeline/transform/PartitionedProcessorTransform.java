@@ -64,7 +64,8 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("mapUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(mapUsingContextP(contextFactory, mapFn)), partitionKeyFn, contextFactory.isCooperative());
+                upstream, ProcessorMetaSupplier.of(mapUsingContextP(contextFactory, mapFn)), partitionKeyFn,
+                contextFactory.isCooperative());
     }
 
     public static <C, T, K> PartitionedProcessorTransform<T, K> filterUsingPartitionedContextTransform(
@@ -74,7 +75,8 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("filterUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(filterUsingContextP(contextFactory, filterFn)), partitionKeyFn, contextFactory.isCooperative());
+                upstream, ProcessorMetaSupplier.of(filterUsingContextP(contextFactory, filterFn)), partitionKeyFn,
+                contextFactory.isCooperative());
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextTransform(
@@ -84,7 +86,8 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("flatMapUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(flatMapUsingContextP(contextFactory, flatMapFn)), partitionKeyFn, contextFactory.isCooperative());
+                upstream, ProcessorMetaSupplier.of(flatMapUsingContextP(contextFactory, flatMapFn)), partitionKeyFn,
+                contextFactory.isCooperative());
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextAsyncTransform(

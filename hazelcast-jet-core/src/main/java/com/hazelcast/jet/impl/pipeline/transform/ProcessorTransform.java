@@ -94,7 +94,8 @@ public class ProcessorTransform extends AbstractTransform {
         //      be sent to a random member. We keep it this way for simplicity:
         //      the number of in-flight items is limited (maxAsyncOps)
         return new ProcessorTransform(operationName + "UsingContextAsync", upstream,
-                ProcessorMetaSupplier.of(flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn)), contextFactory.isCooperative());
+                ProcessorMetaSupplier.of(flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn)),
+                contextFactory.isCooperative());
     }
 
     @Override
