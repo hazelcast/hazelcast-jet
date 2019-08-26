@@ -300,12 +300,13 @@ public class JobCoordinationService {
                                 + " because it already has a result: " + jobResult);
                     }
                     logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
-                }, jobRecord -> {
+                },
+                null,
+                jobExecutionRecord -> {
                     // we'll eventually learn of the job through scanning of records or from a join operation
                     throw new RetryableHazelcastException("No MasterContext found for job " + idToString(jobId) + " for "
                             + terminationMode);
-                },
-                null
+                }
         );
     }
 
