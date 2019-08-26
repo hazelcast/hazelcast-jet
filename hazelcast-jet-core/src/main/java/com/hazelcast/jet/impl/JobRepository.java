@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.EntryBackupProcessor;
@@ -258,7 +259,7 @@ public class JobRepository {
      * newQuorumSize}.
      */
     void updateJobQuorumSizeIfSmaller(long jobId, int newQuorumSize) {
-        jobExecutionRecords.executeOnKey(jobId, Util.<Long, JobExecutionRecord>entryProcessor((key, value) -> {
+        jobExecutionRecords.executeOnKey(jobId, ImdgUtil.<Long, JobExecutionRecord>entryProcessor((key, value) -> {
             if (value == null) {
                 return null;
             }

@@ -21,13 +21,9 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.RestartableException;
-import com.hazelcast.jet.core.Inbox;
-import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
@@ -35,7 +31,6 @@ import com.hazelcast.jet.function.BinaryOperatorEx;
 import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
@@ -48,13 +43,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.asXmlString;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
@@ -71,7 +62,7 @@ public final class HazelcastWriters {
         @Nonnull String name,
         @Nullable ClientConfig clientConfig
     ) {
-        return ProcessorMetaSupplier.of(new WriteMapUsingPutAllSupplier(asXmlString(clientConfig), name));
+        return ProcessorMetaSupplier.of(new WriteMapP.Supplier<>(asXmlString(clientConfig), name));
     }
 
     @Nonnull
@@ -190,7 +181,7 @@ public final class HazelcastWriters {
         }
     }
 
-    private static final class ArrayMap<K, V> extends AbstractMap<K, V> {
+    static final class ArrayMap<K, V> extends AbstractMap<K, V> {
 
         private final List<Entry<K, V>> entries;
         private final ArraySet set = new ArraySet();
@@ -263,96 +254,6 @@ public final class HazelcastWriters {
         protected Processor createProcessor(HazelcastInstance instance) {
             ConsumerEx<B> flushBufferFn = instanceToFlushBufferFn.apply(instance);
             return new WriteBufferedP<>(ctx -> newBufferFn.get(), addToBufferFn, flushBufferFn, disposeBufferFn);
-        }
-    }
-
-    private static final class WriteMapUsingPutAllSupplier extends AbstractHazelcastConnectorSupplier {
-        private static final long serialVersionUID = 1L;
-        private static final int MAX_LOCAL_PARALLEL_OPS = 8;
-
-        private final String mapName;
-
-        private WriteMapUsingPutAllSupplier(String clientXml, String mapName) {
-            super(clientXml);
-            this.mapName = mapName;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        protected Processor createProcessor(HazelcastInstance instance) {
-            return new Processor() {
-                private final IMap map = instance.getMap(mapName);
-                private final AtomicInteger numParallelOps = new AtomicInteger();
-                private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
-                private int parallelOpsLimit;
-
-                private final BiConsumer<Object, Throwable> callback = (r, t) -> {
-                    if (t != null) {
-                        firstFailure.compareAndSet(null, t);
-                    }
-                    numParallelOps.decrementAndGet();
-                };
-
-                @Override
-                public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-                    // We distribute the local limit to processors. If there's 1 local processor, it
-                    // will take the entire maximum. If there are many local processors, each will
-                    // get 1. The putAll operation is already bulky, it doesn't help to have many in
-                    // parallel.
-                    parallelOpsLimit = Math.max(1, MAX_LOCAL_PARALLEL_OPS / context.localParallelism());
-                }
-
-                @Override
-                public boolean tryProcess() {
-                    checkFailure();
-                    return true;
-                }
-
-                @Override
-                public void process(int ordinal, @Nonnull Inbox inbox) {
-                    checkFailure();
-                    if (Util.tryIncrement(numParallelOps, 1, parallelOpsLimit)) {
-                        ArrayMap inboxAsMap = new ArrayMap(inbox.size());
-                        inbox.drain(inboxAsMap::add);
-                        Util.mapPutAllAsync(map, inboxAsMap)
-                            .whenComplete(callback);
-                    }
-                }
-
-                @Override
-                public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-                    return true;
-                }
-
-                @Override
-                public boolean saveToSnapshot() {
-                    return ensureAllSuccessfullyWritten();
-                }
-
-                @Override
-                public boolean complete() {
-                    return ensureAllSuccessfullyWritten();
-                }
-
-                private void checkFailure() {
-                    Throwable failure = firstFailure.get();
-                    if (failure != null) {
-                        if (failure instanceof HazelcastInstanceNotActiveException) {
-                            System.out.println("here");
-                            failure = handleInstanceNotActive((HazelcastInstanceNotActiveException) failure, isLocal());
-                        }
-                        throw sneakyThrow(failure);
-                    }
-                }
-
-                private boolean ensureAllSuccessfullyWritten() {
-                    try {
-                        return numParallelOps.get() == 0;
-                    } finally {
-                        checkFailure();
-                    }
-                }
-            };
         }
     }
 }
