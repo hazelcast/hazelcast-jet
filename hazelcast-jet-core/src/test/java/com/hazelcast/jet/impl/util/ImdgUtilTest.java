@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.core.DistributedObject;
@@ -58,10 +59,13 @@ public class ImdgUtilTest extends JetTestSupport {
     @BeforeClass
     public static void setupCluster() {
         JetConfig jetConfig = new JetConfig();
-        jetConfig.getHazelcastConfig().getMapConfig(NEAR_CACHED_SERIALIZED_MAP).setNearCacheConfig(new NearCacheConfig()
-                .setInMemoryFormat(InMemoryFormat.BINARY));
-        jetConfig.getHazelcastConfig().getMapConfig(NEAR_CACHED_NON_SERIALIZED_MAP).setNearCacheConfig(new NearCacheConfig()
-                .setInMemoryFormat(InMemoryFormat.OBJECT));
+        Config hzConfig = jetConfig.getHazelcastConfig();
+        hzConfig.getMapConfig(NEAR_CACHED_SERIALIZED_MAP).setNearCacheConfig(
+                new NearCacheConfig().setInMemoryFormat(InMemoryFormat.BINARY)
+        );
+        hzConfig.getMapConfig(NEAR_CACHED_NON_SERIALIZED_MAP).setNearCacheConfig(
+                new NearCacheConfig().setInMemoryFormat(InMemoryFormat.OBJECT)
+        );
         instance1 = factory.newMember(jetConfig);
         instance2 = factory.newMember(jetConfig);
 
