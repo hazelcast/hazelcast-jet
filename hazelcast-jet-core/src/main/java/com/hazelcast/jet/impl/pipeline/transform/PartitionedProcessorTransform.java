@@ -41,9 +41,10 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull String name,
             @Nonnull Transform upstream,
             @Nonnull ProcessorMetaSupplier processorSupplier,
-            @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
+            @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
+            @Nonnull boolean isCooperative
     ) {
-        super(name, upstream, processorSupplier);
+        super(name, upstream, processorSupplier, isCooperative);
         this.partitionKeyFn = partitionKeyFn;
     }
 
@@ -53,7 +54,7 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull ProcessorMetaSupplier processorSupplier,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
-        return new PartitionedProcessorTransform<>(name, upstream, processorSupplier, partitionKeyFn);
+        return new PartitionedProcessorTransform<>(name, upstream, processorSupplier, partitionKeyFn, true);
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> mapUsingContextPartitionedTransform(
@@ -63,7 +64,7 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("mapUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(mapUsingContextP(contextFactory, mapFn)), partitionKeyFn);
+                upstream, ProcessorMetaSupplier.of(mapUsingContextP(contextFactory, mapFn)), partitionKeyFn, contextFactory.isCooperative());
     }
 
     public static <C, T, K> PartitionedProcessorTransform<T, K> filterUsingPartitionedContextTransform(
@@ -73,7 +74,7 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("filterUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(filterUsingContextP(contextFactory, filterFn)), partitionKeyFn);
+                upstream, ProcessorMetaSupplier.of(filterUsingContextP(contextFactory, filterFn)), partitionKeyFn, contextFactory.isCooperative());
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextTransform(
@@ -83,7 +84,7 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("flatMapUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(flatMapUsingContextP(contextFactory, flatMapFn)), partitionKeyFn);
+                upstream, ProcessorMetaSupplier.of(flatMapUsingContextP(contextFactory, flatMapFn)), partitionKeyFn, contextFactory.isCooperative());
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextAsyncTransform(
@@ -95,12 +96,12 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
     ) {
         return new PartitionedProcessorTransform<>(operationName + "UsingPartitionedContextAsync", upstream,
                 ProcessorMetaSupplier.of(flatMapUsingContextAsyncP(contextFactory, partitionKeyFn, flatMapAsyncFn)),
-                partitionKeyFn);
+                partitionKeyFn, contextFactory.isCooperative());
     }
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), processorSupplier);
+        PlannerVertex pv = p.addVertex(this, name(), determineLocalParallelism(), processorSupplier);
         p.addEdges(this, pv.v, e -> e.partitioned(partitionKeyFn).distributed());
     }
 }
