@@ -65,6 +65,7 @@ public final class JobMetrics implements IdentifiedDataSerializable {
      * Returns an empty {@link JobMetrics} object.
      */
     @Nonnull
+    @PrivateApi
     public static JobMetrics empty() {
         return EMPTY;
     }

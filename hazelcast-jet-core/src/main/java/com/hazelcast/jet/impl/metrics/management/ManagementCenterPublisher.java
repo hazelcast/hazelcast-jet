@@ -27,12 +27,8 @@ import java.util.function.ObjLongConsumer;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 
 /**
- * Implementation of {@link MetricsPublisher} which compresses metrics
- * into a byte[] BLOB to be read by various consumers. The consumer itself
- * is passed in as a parameter.
- * <p>
- * Before compressing it also converts legacy metric names to
- * {@code [metric=<oldName>]}.
+ * Renderer to serialize metrics to byte[] to be read by Management Center.
+ * Additionally, it converts legacy metric names to {@code [metric=<oldName>]}.
  */
 public class ManagementCenterPublisher implements MetricsPublisher {
 
@@ -67,7 +63,7 @@ public class ManagementCenterPublisher implements MetricsPublisher {
     @Override
     public void whenComplete() {
         int count = compressor.count();
-        byte[] blob = compressor.compress();
+        byte[] blob = compressor.getBlobAndReset();
         consumer.accept(blob, System.currentTimeMillis());
         logFinest(logger, "Collected %,d metrics, %,d bytes", count, blob.length);
     }

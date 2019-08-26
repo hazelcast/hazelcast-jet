@@ -121,12 +121,13 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         private final Long executionIdOfInterest;
         private final String namePrefix;
         private final MetricsCompressor compressor;
+        private final ILogger logger;
 
         private RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
         JobMetricsRenderer(long executionId, @Nonnull Member member, @Nonnull ILogger logger) {
             Objects.requireNonNull(member, "member");
-            Objects.requireNonNull(logger, "logger");
+            this.logger = Objects.requireNonNull(logger, "logger");
 
             this.executionIdOfInterest = executionId;
             this.namePrefix = JobMetricsUtil.getMemberPrefix(member);
@@ -153,14 +154,19 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
         @Override
         public void renderException(String name, Exception e) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
+            if (executionIdOfInterest.equals(executionId)) {
+                logger.warning("Exception when rendering job metrics: " + e, e);
+            }
         }
 
         @Override
         public void renderNoValue(String name) {
+            throw new UnsupportedOperationException();
         }
 
         public void whenComplete() {
-            jobMetrics = RawJobMetrics.of(compressor.compress());
+            jobMetrics = RawJobMetrics.of(compressor.getBlobAndReset());
         }
 
         @Nonnull

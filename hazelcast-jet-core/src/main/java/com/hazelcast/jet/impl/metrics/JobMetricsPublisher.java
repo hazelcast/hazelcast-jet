@@ -30,14 +30,13 @@ import java.util.Set;
 import static com.hazelcast.jet.impl.JobMetricsUtil.addPrefixToDescriptor;
 
 /**
- * Internal publisher which notifies the {@link JobExecutionService} about
- * the latest metric values.
+ * A publisher which updates the latest metric values in {@link
+ * JobExecutionService}.
  */
 public class JobMetricsPublisher implements MetricsPublisher {
 
     private final JobExecutionService jobExecutionService;
     private final String namePrefix;
-    private final Map<Long, RawJobMetrics> jobMetrics = new HashMap<>();
     private final Map<Long, MetricsCompressor> executionIdToCompressor = new HashMap<>();
 
     JobMetricsPublisher(
@@ -80,11 +79,9 @@ public class JobMetricsPublisher implements MetricsPublisher {
             }
 
             Long executionId = entry.getKey();
-            jobMetrics.put(executionId, RawJobMetrics.of(compressor.compress()));
+            byte[] blob = compressor.getBlobAndReset();
+            jobExecutionService.updateMetrics(executionId, RawJobMetrics.of(blob));
         }
-
-        jobExecutionService.updateMetrics(jobMetrics);
-        jobMetrics.clear();
     }
 
     @Override

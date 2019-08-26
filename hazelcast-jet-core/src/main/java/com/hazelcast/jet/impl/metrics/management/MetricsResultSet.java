@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.metrics.MetricsCompressor.decompressingIterator;
 
-public class MetricsResultSet  {
+public class MetricsResultSet {
 
     private final long nextSequence;
     private final List<MetricsCollection> collections;

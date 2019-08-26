@@ -42,6 +42,10 @@ import static java.lang.Math.multiplyExact;
  * <p>
  * Before compressing it also converts legacy metric names to
  * {@code [metric=<oldName>]}.
+ * <p>
+ * The utility is optimized to repeatedly compress similar set of metrics: it
+ * reuses the buffer and keeps it about 10% bigger than what was needed the
+ * last time.
  */
 public class MetricsCompressor {
 
@@ -88,7 +92,7 @@ public class MetricsCompressor {
         }
     }
 
-    public byte[] compress() {
+    public byte[] getBlobAndReset() {
         byte[] blob = getRenderedBlob();
         reset(blob.length * SIZE_FACTOR_NUMERATOR / SIZE_FACTOR_DENOMINATOR);
         return blob;
@@ -124,7 +128,7 @@ public class MetricsCompressor {
     private void reset(int estimatedBytes) {
         Deflater compressor = new Deflater();
         compressor.setLevel(Deflater.BEST_SPEED);
-        // shrink the `baos` if capacity is more than 50% larger than estimated size
+        // shrink the `baos` if capacity is more than 50% larger than the estimated size
         if (baos.capacity() > multiplyExact(estimatedBytes, 3) / 2) {
             baos = new MorePublicByteArrayOutputStream(estimatedBytes);
         }
