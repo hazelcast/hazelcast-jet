@@ -389,8 +389,8 @@ public class JobCoordinationService {
                 JobResult::getCreationTime);
     }
 
-    public void resumeJob(long jobId) {
-        doWithJob(jobId,
+    public CompletableFuture<Void> resumeJob(long jobId) {
+        return doWithJob(jobId,
                 masterContext -> masterContext.jobContext().resumeJob(jobRepository::newExecutionId),
                 jobExecutionRecord -> {
                     throw new RetryableHazelcastException("Job " + idToString(jobId) + " not yet discovered");
