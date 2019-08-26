@@ -38,7 +38,6 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -174,7 +173,7 @@ public final class Util {
 
     // Hacker's Delight, 2nd Ed, 2-13: overflow has occurred iff operands have
     // opposite signs and result has opposite sign of left-hand operand
-    public static boolean diffHadOverflow(long a, long b, long diff) {
+    private static boolean diffHadOverflow(long a, long b, long diff) {
         return ((a ^ b) & (a ^ diff)) < 0;
     }
 
@@ -259,18 +258,6 @@ public final class Util {
         }
     }
 
-    /*
- * The random number generator used by this class to create random
- * based UUIDs. In a holder class to defer initialization until needed.
- */
-    private static class Holder {
-        static final SecureRandom NUMBER_GENERATOR = new SecureRandom();
-    }
-
-    public static long secureRandomNextLong() {
-        return Holder.NUMBER_GENERATOR.nextLong();
-    }
-
     public static String jobNameAndExecutionId(String jobName, long executionId) {
         return "job '" + jobName + "', execution " + idToString(executionId);
     }
@@ -279,7 +266,7 @@ public final class Util {
         return "job " + idToString(jobId) + ", execution " + idToString(executionId);
     }
 
-    public static ZonedDateTime toZonedDateTime(long timestamp) {
+    private static ZonedDateTime toZonedDateTime(long timestamp) {
         return Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault());
     }
 
@@ -407,6 +394,7 @@ public final class Util {
         return value.replace("\"", "\\\"");
     }
 
+    @SuppressWarnings("WeakerAccess")  // used in jet-enterprise
     public static CompletableFuture<Void> copyMapUsingJob(JetInstance instance, int queueSize,
                                                           String sourceMap, String targetMap) {
         DAG dag = new DAG();

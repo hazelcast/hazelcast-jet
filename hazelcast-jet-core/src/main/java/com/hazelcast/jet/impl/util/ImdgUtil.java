@@ -23,12 +23,14 @@ import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.MapPutAllCodec;
 import com.hazelcast.client.proxy.ClientMapProxy;
+import com.hazelcast.client.proxy.NearCachedClientMapProxy;
 import com.hazelcast.client.spi.ClientPartitionService;
 import com.hazelcast.client.spi.impl.ClientInvocation;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.Member;
+import com.hazelcast.internal.nearcache.NearCache;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
@@ -37,6 +39,7 @@ import com.hazelcast.map.AbstractEntryProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.impl.MapEntries;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
+import com.hazelcast.map.impl.proxy.NearCachedMapProxyImpl;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.nio.BufferObjectDataOutput;
@@ -52,6 +55,7 @@ import com.hazelcast.spi.serialization.SerializationService;
 import com.hazelcast.util.function.Predicate;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -63,11 +67,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
@@ -81,7 +88,6 @@ public final class ImdgUtil {
     private static final float PUT_ALL_INITIAL_SIZE_MAGIC = 20f;
 
     private ImdgUtil() {
-
     }
 
     public static boolean existsDistributedObject(NodeEngine nodeEngine, String serviceName, String objectName) {
@@ -175,6 +181,7 @@ public final class ImdgUtil {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static <K, V> CompletionStage<Void> mapPutAllAsync(
             @Nonnull MapProxyImpl<K, V> targetMap,
             @Nonnull Map<? extends K, ? extends V> items
@@ -206,21 +213,13 @@ public final class ImdgUtil {
 
         int[] subPartitions = new int[memberPartitionsMap.values().stream().mapToInt(List::size).max().orElse(0)];
         MapEntries[] subEntries = new MapEntries[subPartitions.length];
-        AtomicInteger completionCounter = new AtomicInteger(memberPartitionsMap.size());
         final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-        ExecutionCallback<Map<Integer, Object>> callback = new ExecutionCallback<Map<Integer, Object>>() {
-            @Override
-            public void onResponse(Map<Integer, Object> response) {
-                if (completionCounter.decrementAndGet() == 0) {
-                    resultFuture.complete(null);
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                resultFuture.completeExceptionally(t);
-            }
-        };
+        ExecutionCallback callback = createPutAllCallback(
+                memberPartitionsMap.size(),
+                targetMap instanceof NearCachedMapProxyImpl ? ((NearCachedMapProxyImpl) targetMap).getNearCache() : null,
+                items.keySet(),
+                Stream.of(entries).filter(Objects::nonNull).flatMap(e -> e.entries().stream()).map(Entry::getKey),
+                resultFuture);
 
         for (Entry<Address, List<Integer>> entry : memberPartitionsMap.entrySet()) {
             List<Integer> memberPartitions = entry.getValue();
@@ -243,7 +242,7 @@ public final class ImdgUtil {
                 OperationFactory factory = targetMap.getOperationProvider().createPutAllOperationFactory(
                         targetMap.getName(), subPartitionsTrimmed, subEntriesTrimmed);
                 targetMap.getOperationService().invokeOnPartitionsAsync(SERVICE_NAME, factory,
-                                asIntegerList(subPartitionsTrimmed))
+                        asIntegerList(subPartitionsTrimmed))
                          .andThen(callback);
             }
         }
@@ -251,6 +250,7 @@ public final class ImdgUtil {
         return resultFuture;
     }
 
+    @SuppressWarnings("unchecked")
     private static <K, V> CompletionStage<Void> mapPutAllAsync(
             ClientMapProxy<K, V> targetMap,
             Map<? extends K, ? extends V> items
@@ -261,7 +261,7 @@ public final class ImdgUtil {
         checkNotNull(targetMap, "Null argument map is not allowed");
         ClientPartitionService partitionService = targetMap.getContext().getPartitionService();
         int partitionCount = partitionService.getPartitionCount();
-        Map<Integer, List<Entry<Data, Data>>> entryMap = new HashMap<>(partitionCount);
+        Map<Integer, List<Map.Entry<Data, Data>>> entryMap = new HashMap<>(partitionCount);
         InternalSerializationService serializationService = targetMap.getContext().getSerializationService();
 
         for (Entry<? extends K, ? extends V> entry : items.entrySet()) {
@@ -277,28 +277,23 @@ public final class ImdgUtil {
 
         HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) targetMap.getContext().getHazelcastInstance();
         CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-        AtomicInteger completionCounter = new AtomicInteger(entryMap.size());
-        ExecutionCallback<ClientMessage> callback = new ExecutionCallback<ClientMessage>() {
-            @Override
-            public void onResponse(ClientMessage response) {
-                if (completionCounter.decrementAndGet() == 0) {
-                    resultFuture.complete(null);
-                }
-            }
 
-            @Override
-            public void onFailure(Throwable t) {
-                resultFuture.completeExceptionally(t);
-            }
-        };
-        for (Entry<Integer, List<Entry<Data, Data>>> partitionEntries : entryMap.entrySet()) {
+        ExecutionCallback callback = createPutAllCallback(
+                entryMap.size(),
+                targetMap instanceof NearCachedClientMapProxy ? ((NearCachedClientMapProxy) targetMap).getNearCache()
+                        : null,
+                items.keySet(),
+                entryMap.values().stream().flatMap(List::stream).map(Entry::getKey),
+                resultFuture);
+
+        for (Entry<Integer, List<Map.Entry<Data, Data>>> partitionEntries : entryMap.entrySet()) {
             Integer partitionId = partitionEntries.getKey();
             // use setAsync if there's only one entry
             if (partitionEntries.getValue().size() == 1) {
                 Entry<Data, Data> onlyEntry = partitionEntries.getValue().get(0);
                 // cast to raw so that we can pass serialized key and value
                 ((IMap) targetMap).setAsync(onlyEntry.getKey(), onlyEntry.getValue())
-                         .andThen(callback);
+                                  .andThen(callback);
             } else {
                 ClientMessage request = MapPutAllCodec.encodeRequest(targetMap.getName(), partitionEntries.getValue());
                 new ClientInvocation(client, request, targetMap.getName(), partitionId).invoke()
@@ -306,6 +301,41 @@ public final class ImdgUtil {
             }
         }
         return resultFuture;
+    }
+
+    private static ExecutionCallback<Object> createPutAllCallback(
+            int participantCount,
+            @Nullable NearCache<Object, Object> nearCache,
+            @Nonnull Set<?> nonSerializedKeys,
+            @Nonnull Stream<Data> serializedKeys,
+            CompletableFuture<Void> resultFuture
+    ) {
+        AtomicInteger completionCounter = new AtomicInteger(participantCount);
+
+        return new ExecutionCallback<Object>() {
+            @Override
+            public void onResponse(Object response) {
+                if (completionCounter.decrementAndGet() > 0) {
+                    return;
+                }
+
+                if (nearCache != null) {
+                    if (nearCache.isSerializeKeys()) {
+                        serializedKeys.forEach(nearCache::invalidate);
+                    } else {
+                        for (Object key : nonSerializedKeys) {
+                            nearCache.invalidate(key);
+                        }
+                    }
+                }
+                resultFuture.complete(null);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                resultFuture.completeExceptionally(t);
+            }
+        };
     }
 
     private static List<Integer> asIntegerList(int[] array) {
