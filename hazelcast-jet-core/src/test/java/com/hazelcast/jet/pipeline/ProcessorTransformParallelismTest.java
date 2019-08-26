@@ -64,146 +64,134 @@ public class ProcessorTransformParallelismTest {
     @SuppressWarnings(value = {"checkstyle:LineLength", "checkstyle:MethodLength"})
     public static Collection<Object[]> data() {
         return Arrays.asList(
-                new Object[][] {
-                        {
+                new Object[][] {{
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContext(withCreateFn(x -> null), (c, t) -> t)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContext(withCreateFn(x -> null), (c, t) -> t),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> t)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> t),
+                        "mapUsingContext"
+                }, {
 
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContext(withCreateFn(x -> null), (c, t) -> t)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContext(withCreateFn(x -> null), (c, t) -> t),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> t)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> t),
-                                "mapUsingContext"
-                        },
-                        {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContext(withCreateFn(x -> null), (c, k, t) -> t)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContext(withCreateFn(x -> null), (c, k, t) -> t),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> t)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> t),
+                        "mapUsingPartitionedContext"
+                }, {
 
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContext(withCreateFn(x -> null), (c, k, t) -> t)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContext(withCreateFn(x -> null), (c, k, t) -> t),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> t)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> t),
-                                "mapUsingPartitionedContext"
-                        }
-                        ,
-                        {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> t))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> t)),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> t))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> t)),
+                        "mapUsingContextAsync"
+                }, {
 
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> t))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> t)),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> t))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> t)),
-                                "mapUsingContextAsync"
-                        },
-                        {
-
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(() -> t))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(() -> t)),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(() -> t))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(() -> t)),
-                                "mapUsingPartitionedContextAsync"
-                        },
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContext(withCreateFn(x -> null), (c, t) -> false)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContext(withCreateFn(x -> null), (c, t) -> false),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> false)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> false),
-                                "filterUsingContext"
-                        }
-                        ,
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .filterUsingContext(withCreateFn(x -> null), (c, k, t) -> false)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .filterUsingContext(withCreateFn(x -> null), (c, k, t) -> false),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> false)
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> false),
-                                "filterUsingPartitionedContext"
-                        }
-                        ,
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> false))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> false)),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> false))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .filterUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> false)),
-                                "filterUsingContextAsync"
-                        }
-                        , {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(() -> t))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(() -> t)),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(() -> t))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .mapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(() -> t)),
+                        "mapUsingPartitionedContextAsync"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContext(withCreateFn(x -> null), (c, t) -> false)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContext(withCreateFn(x -> null), (c, t) -> false),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> false)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> false),
+                        "filterUsingContext"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .filterUsingContext(withCreateFn(x -> null), (c, k, t) -> false)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .filterUsingContext(withCreateFn(x -> null), (c, k, t) -> false),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> false)
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .filterUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> false),
+                        "filterUsingPartitionedContext"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> false))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(() -> false)),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> false))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .filterUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(() -> false)),
+                        "filterUsingContextAsync"
+                }, {
                         (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
                                 stage -> stage
                                         .groupingKey(i -> i)
@@ -223,89 +211,82 @@ public class ProcessorTransformParallelismTest {
                                         .groupingKey(i -> i)
                                         .filterUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(() -> false)),
                         "filterUsingPartitionedContextAsync"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContext(withCreateFn(x -> null), (c, t) -> Traversers.<Integer>empty())
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContext(withCreateFn(x -> null), (c, t) -> Traversers.<Integer>empty()),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> Traversers.<Integer>empty())
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> Traversers.<Integer>empty()),
+                        "flatMapUsingContext"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContext(withCreateFn(x -> null), (c, k, t) -> Traversers.<Integer>empty())
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContext(withCreateFn(x -> null), (c, k, t) -> Traversers.<Integer>empty()),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> Traversers.<Integer>empty())
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> Traversers.<Integer>empty()),
+                        "flatMapUsingPartitionedContext"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(Traversers::<Integer>empty))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(Traversers::<Integer>empty)),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(Traversers::<Integer>empty))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(Traversers::<Integer>empty)),
+
+                        "flatMapUsingContextAsync"
+                }, {
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(Traversers::<Integer>empty)),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
+                                        .setLocalParallelism(localParallelism),
+                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
+                                stage -> stage
+                                        .groupingKey(i -> i)
+                                        .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(Traversers::<Integer>empty)),
+
+                        "flatMapUsingPartitionedContextAsync"
                 }
-                        ,
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContext(withCreateFn(x -> null), (c, t) -> Traversers.<Integer>empty())
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContext(withCreateFn(x -> null), (c, t) -> Traversers.<Integer>empty()),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> Traversers.<Integer>empty())
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, t) -> Traversers.<Integer>empty()),
-                                "flatMapUsingContext"
-                        },
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContext(withCreateFn(x -> null), (c, k, t) -> Traversers.<Integer>empty())
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContext(withCreateFn(x -> null), (c, k, t) -> Traversers.<Integer>empty()),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> Traversers.<Integer>empty())
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContext(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> Traversers.<Integer>empty()),
-                                "flatMapUsingPartitionedContext"
-                        },
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(Traversers::<Integer>empty))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null), (c, t) -> supplyAsync(Traversers::<Integer>empty)),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(Traversers::<Integer>empty))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, t) -> supplyAsync(Traversers::<Integer>empty)),
-
-                                "flatMapUsingContextAsync"
-                        },
-                        {
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null), (c, k, t) -> supplyAsync(Traversers::<Integer>empty)),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
-                                                .setLocalParallelism(localParallelism),
-                                (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                        stage -> stage
-                                                .groupingKey(i -> i)
-                                                .flatMapUsingContextAsync(withCreateFn(x -> null).toNonCooperative(), (c, k, t) -> supplyAsync(Traversers::<Integer>empty)),
-
-                                "flatMapUsingPartitionedContextAsync"
-                        }
-
-                }
-        );
+                });
     }
 
     @Test
