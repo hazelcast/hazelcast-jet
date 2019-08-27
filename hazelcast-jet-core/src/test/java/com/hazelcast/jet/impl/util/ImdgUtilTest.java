@@ -109,7 +109,7 @@ public class ImdgUtilTest extends JetTestSupport {
 
     @Test
     public void mapPutAllAsync_noNearCache_member() throws Exception {
-        IMap<Object, Object> map = instance1.getHazelcastInstance().getMap("map");
+        IMap<Object, Object> map = instance1.getHazelcastInstance().getMap(randomMapName());
         Map<String, String> tmpMap = new HashMap<>();
         tmpMap.put("k1", "v1");
         tmpMap.put("k2", "v1");
@@ -121,7 +121,7 @@ public class ImdgUtilTest extends JetTestSupport {
 
     @Test
     public void mapPutAllAsync_noNearCache_client() throws Exception {
-        IMap<Object, Object> map = client.getHazelcastInstance().getMap("map");
+        IMap<Object, Object> map = client.getHazelcastInstance().getMap(randomMapName());
         Map<String, String> tmpMap = new HashMap<>();
         tmpMap.put("k1", "v1");
         tmpMap.put("k2", "v1");
@@ -133,7 +133,7 @@ public class ImdgUtilTest extends JetTestSupport {
 
     @Test
     public void mapPutAllAsync_large_member() throws Exception {
-        IMap<Object, Object> map = instance1.getHazelcastInstance().getMap("map");
+        IMap<Object, Object> map = instance1.getHazelcastInstance().getMap(randomMapName());
         Map<Integer, Integer> tmpMap = new HashMap<>();
         for (int i = 0; i < 32_768; i++) {
             tmpMap.put(i, i);
@@ -146,7 +146,7 @@ public class ImdgUtilTest extends JetTestSupport {
 
     @Test
     public void mapPutAllAsync_large_client() throws Exception {
-        IMap<Object, Object> map = client.getHazelcastInstance().getMap("map");
+        IMap<Object, Object> map = client.getHazelcastInstance().getMap(randomMapName());
         Map<Integer, Integer> tmpMap = new HashMap<>();
         for (int i = 0; i < 32_768; i++) {
             tmpMap.put(i, i);
