@@ -64,6 +64,25 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
     }
 
     @Test
+    public void when_jobMetricsDisabled_then_emptyMetrics() throws Throwable {
+        DAG dag = new DAG();
+        dag.newVertex("v1", MockP::new);
+        dag.newVertex("v2", (SupplierEx<Processor>) NoOutputSourceP::new);
+        Job job = jet().newJob(dag);
+
+        //when
+        NoOutputSourceP.executionStarted.await();
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+        //then
+        assertTrueAllTheTime(() -> assertEmptyJobMetrics(job), 1);
+
+        NoOutputSourceP.proceedLatch.countDown();
+        job.join();
+        assertJobStatusEventually(job, JobStatus.COMPLETED);
+        assertEmptyJobMetrics(job);
+    }
+
+    @Test
     public void when_jobRunning_then_nonEmptyMetrics() throws Throwable {
         DAG dag = new DAG();
         dag.newVertex("v1", MockP::new);
