@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
@@ -45,9 +46,9 @@ import static com.hazelcast.jet.impl.util.Util.logLateEvent;
 import static java.lang.Math.min;
 
 public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
+    static final int MAX_ITEMS_TO_EVICT = 100;
     private static final int HASH_MAP_INITIAL_CAPACITY = 16;
     private static final float HASH_MAP_LOAD_FACTOR = 0.75f;
-    private static final int MAX_ITEMS_TO_EVICT = 100;
 
     @Probe
     private final AtomicLong lateEventsDropped = new AtomicLong();
@@ -105,7 +106,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         TimestampedItem<S> tsAndState = keyToState.get(key);
         if (tsAndState != null) {
             long lastTouched = tsAndState.timestamp();
-            if (currentWm != Long.MIN_VALUE && lastTouched < currentWm - ttl) {
+            if (lastTouched < Util.subtractClamped(currentWm, ttl)) {
                 tsAndState = null;
             } else if (timestamp > lastTouched) {
                 tsAndState.setTimestamp(timestamp);
@@ -184,7 +185,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
 
         @Override
         protected boolean removeEldestEntry(@Nonnull Entry<K, TimestampedItem<S>> eldest) {
-            return currentWm != Long.MIN_VALUE && eldest.getValue().timestamp() < currentWm - ttl;
+            return eldest.getValue().timestamp() < Util.subtractClamped(currentWm, ttl);
         }
     }
 }

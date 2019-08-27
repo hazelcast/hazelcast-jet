@@ -44,6 +44,7 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.JobRepository.EXPORTED_SNAPSHOTS_PREFIX;
 import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
@@ -154,9 +155,8 @@ class MasterSnapshotContext {
         String finalMapName = isExport ? exportedSnapshotMapName(snapshotMapName)
                 : snapshotDataMapName(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
             mc.nodeEngine().getHazelcastInstance().getMap(finalMapName).clear();
-        logger.info(String.format("Starting snapshot %d for %s", newSnapshotId, mc.jobIdString())
-                + (isTerminal ? ", terminal" : "")
-                + (isExport ? ", exporting to '" + snapshotMapName + '\'' : ""));
+        logFine(logger, "Starting snapshot %d for %s, terminal: %s, writing to: %s",
+                newSnapshotId, mc.jobIdString(), isTerminal ? "yes" : "no", snapshotMapName);
 
         Function<ExecutionPlan, Operation> factory =
                 plan -> new SnapshotOperation(mc.jobId(), mc.executionId(), newSnapshotId, finalMapName, isTerminal);
@@ -307,9 +307,11 @@ class MasterSnapshotContext {
         } finally {
             mc.unlock();
         }
-        logger.info("Snapshot " + snapshotId + " for " + mc.jobIdString() + " completed in "
-                + NANOSECONDS.toMillis(System.nanoTime() - startTime) + "ms, status="
-                + (phase1Error == null ? "success" : "failure: " + phase1Error));
+        if (logger.isFineEnabled()) {
+            logger.fine("Snapshot " + snapshotId + " for " + mc.jobIdString() + " completed in "
+                    + NANOSECONDS.toMillis(System.nanoTime() - startTime) + "ms, status="
+                    + (phase1Error == null ? "success" : "failure: " + phase1Error));
+        }
 
         tryBeginSnapshotPhase1();
     }

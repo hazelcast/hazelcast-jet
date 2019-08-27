@@ -33,8 +33,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
-import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
@@ -51,6 +51,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -278,6 +279,28 @@ public class JobCoordinationService {
         assertIsMaster("Cannot " + terminationMode + " job " + idToString(jobId) + " on non-master node");
 
         return submitToCoordinatorThread(() -> {
+            MasterContext masterContext = masterContexts.get(jobId);
+            if (masterContext != null) {
+                // User can cancel in any state, other terminations are allowed only when running.
+                // This is not technically required (we can request termination in any state),
+                // but this method is only called by the user. It would be weird for the client to
+                // request a restart if the job didn't start yet etc.
+                // Also, it would be weird to restart the job during STARTING: as soon as it will start,
+                // it will restart.
+                // In any case, it doesn't make sense to restart a suspended job.
+                JobStatus jobStatus = masterContext.jobStatus();
+                if (jobStatus != RUNNING && terminationMode != CANCEL_FORCEFUL) {
+                    throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
+                            + ", should be " + RUNNING);
+                }
+
+                String terminationResult = masterContext.jobContext().requestTermination(terminationMode, false).f1();
+                if (terminationResult != null) {
+                    throw new IllegalStateException("Cannot " + terminationMode + ": " + terminationResult);
+                }
+                return;
+            }
+
             JobResult jobResult = jobRepository.getJobResult(jobId);
             if (jobResult != null) {
                 if (terminationMode == CANCEL_FORCEFUL) {
@@ -288,34 +311,14 @@ public class JobCoordinationService {
                         + " because it already has a result: " + jobResult);
             }
 
-            MasterContext masterContext = masterContexts.get(jobId);
-            if (masterContext == null) {
-                JobRecord jobRecord = jobRepository.getJobRecord(jobId);
-                String message = "No MasterContext found for job " + idToString(jobId) + " for " + terminationMode;
-                if (jobRecord != null) {
-                    // we'll eventually learn of the job through scanning of records or from a join operation
-                    throw new RetryableHazelcastException(message);
-                }
-                throw new JobNotFoundException(jobId);
+            JobRecord jobRecord = jobRepository.getJobRecord(jobId);
+            if (jobRecord != null) {
+                // we'll eventually learn of the job through scanning of records or from a join operation
+                throw new RetryableHazelcastException("No MasterContext found for job " + idToString(jobId) + " for "
+                        + terminationMode);
             }
 
-            // User can cancel in any state, other terminations are allowed only when running.
-            // This is not technically required (we can request termination in any state),
-            // but this method is only called from client. It would be weird for the client to
-            // request a restart if the job didn't start yet etc.
-            // Also, it would be weird to restart the job during STARTING: as soon as it will start,
-            // it will restart.
-            // In any case, it doesn't make sense to restart a suspended job.
-            JobStatus jobStatus = masterContext.jobStatus();
-            if (jobStatus != RUNNING && terminationMode != CANCEL_FORCEFUL) {
-                throw new IllegalStateException("Cannot " + terminationMode + ", job status is " + jobStatus
-                        + ", should be " + RUNNING);
-            }
-
-            String terminationResult = masterContext.jobContext().requestTermination(terminationMode, false).f1();
-            if (terminationResult != null) {
-                throw new IllegalStateException("Cannot " + terminationMode + ": " + terminationResult);
-            }
+            throw new JobNotFoundException(jobId);
         });
     }
 
@@ -389,8 +392,8 @@ public class JobCoordinationService {
      * Returns the latest metrics for a job or fails with {@link JobNotFoundException}
      * if the requested job is not found.
      */
-    public CompletableFuture<JobMetrics> getJobMetrics(long jobId) {
-        CompletableFuture<JobMetrics> cf = new CompletableFuture<>();
+    public CompletableFuture<List<RawJobMetrics>> getJobMetrics(long jobId) {
+        CompletableFuture<List<RawJobMetrics>> cf = new CompletableFuture<>();
         submitToCoordinatorThread(
             () -> {
                 // check if there is a running job
@@ -401,17 +404,16 @@ public class JobCoordinationService {
                 }
 
                 // is job completed with metrics?
-                JobMetrics metrics = jobRepository.getJobMetrics(jobId);
+                List<RawJobMetrics> metrics = jobRepository.getJobMetrics(jobId);
                 if (metrics != null) {
                     cf.complete(metrics);
                     return;
                 }
 
-                // no metrics found, but job might still be completed without saving
-                // metrics enabled
+                // no metrics found, but job might be completed with disabled metrics saving
                 JobResult jobResult = jobRepository.getJobResult(jobId);
                 if (jobResult != null) {
-                    cf.complete(JobMetrics.empty());
+                    cf.complete(Collections.emptyList());
                     return;
                 }
 
@@ -419,7 +421,7 @@ public class JobCoordinationService {
                 // the job might not be yet discovered by job record scanning
                 JobExecutionRecord record = jobRepository.getJobExecutionRecord(jobId);
                 if (record != null) {
-                    cf.complete(JobMetrics.empty());
+                    cf.complete(Collections.emptyList());
                     return;
                 }
 
@@ -629,7 +631,7 @@ public class JobCoordinationService {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             long jobId = masterContext.jobId();
-            JobMetrics jobMetrics =
+            List<RawJobMetrics> jobMetrics =
                     masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
                             ? masterContext.jobContext().jobMetrics()
                             : null;
