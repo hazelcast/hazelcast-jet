@@ -6,8 +6,8 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "	-s, --state 	    : Updates state of the cluster to new state. New state can be 'active', 'frozen', 'passive'"
     echo "	-a, --address  	    : Defines which ip address hazelcast is running. Default value is '127.0.0.1'."
    	echo "	-p, --port  	    : Defines which port hazelcast is running. Default value is '5701'."
-   	echo "	-g, --groupname     : Defines groupname of the cluster. Default value is 'dev'."
-   	echo "	-P, --password      : Defines password of the cluster. Default value is 'dev-pass'."
+   	echo "	-g, --groupname     : Defines groupname of the cluster. Default value is 'jet'."
+   	echo "	-P, --password      : Defines password of the cluster. Default value is 'jet-pass'."
    	echo "	-v, --version       : Defines the cluster version to change to. To be used in conjunction with '-o change-cluster-version'."
    	exit 0
 fi
@@ -60,13 +60,13 @@ if [ -z "$PORT" ]; then
 fi
 
 if [ -z "$GROUPNAME" ]; then
-    echo "No groupname is defined, running script with default groupname : 'dev'."
-    GROUPNAME="dev"
+    echo "No groupname is defined, running script with default groupname : 'jet'."
+    GROUPNAME="jet"
 fi
 
 if [ -z "$PASSWORD" ]; then
-    echo "No password is defined, running script with default password : 'dev-pass'."
-    PASSWORD="dev-pass"
+    echo "No password is defined, running script with default password : 'jet-pass'."
+    PASSWORD="jet-pass"
 fi
 
 if [ -z "$ADDRESS" ]; then
@@ -74,7 +74,7 @@ if [ -z "$ADDRESS" ]; then
     ADDRESS="127.0.0.1"
 fi
 
-command -v curl >/dev/null 2>&1 || { echo >&2 "Cluster state script requires curl but it's not installed. Aborting."; exit -1; }
+command -v curl >/dev/null 2>&1 || { echo >&2 "Cluster state script requires curl but it's not installed. Aborting."; exit 255; }
 
 if [ "$OPERATION" != "get-state" ] && [ "$OPERATION" != "change-state" ] && [ "$OPERATION" != "shutdown" ] &&  [ "$OPERATION" != "force-start" ] && [ "$OPERATION" != "partial-start" ] && [ "$OPERATION" != "get-cluster-version" ] && [ "$OPERATION" != "change-cluster-version" ]; then
     echo "Not a valid cluster operation, valid operations  are 'get-state' || 'change-state' || 'shutdown' || 'force-start' || 'partial-start' || 'get-cluster-version' || 'change-cluster-version'"
