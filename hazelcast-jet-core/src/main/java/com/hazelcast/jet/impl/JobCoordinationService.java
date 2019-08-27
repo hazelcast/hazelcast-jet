@@ -33,8 +33,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
-import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
+import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
@@ -87,6 +87,7 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.util.executor.ExecutorType.CACHED;
+import static java.util.Collections.emptyList;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -365,16 +366,13 @@ public class JobCoordinationService {
      * Returns the latest metrics for a job or fails with {@link JobNotFoundException}
      * if the requested job is not found.
      */
-    public CompletableFuture<JobMetrics> getJobMetrics(long jobId) {
-        CompletableFuture<JobMetrics> cf = new CompletableFuture<>();
+    public CompletableFuture<List<RawJobMetrics>> getJobMetrics(long jobId) {
+        CompletableFuture<List<RawJobMetrics>> cf = new CompletableFuture<>();
         runWithJob(jobId,
                 mc -> mc.jobContext().collectMetrics(cf),
-                jobResult -> {
-                    JobMetrics metrics = jobRepository.getJobMetrics(jobId);
-                    cf.complete(metrics == null ? JobMetrics.empty() : metrics);
-                },
+                jobResult -> cf.complete(jobRepository.getJobMetrics(jobId)),
                 null,
-                record -> cf.complete(JobMetrics.empty())
+                record -> cf.complete(emptyList())
         );
         return cf;
     }
@@ -652,7 +650,7 @@ public class JobCoordinationService {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             long jobId = masterContext.jobId();
-            JobMetrics jobMetrics =
+            List<RawJobMetrics> jobMetrics =
                     masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
                             ? masterContext.jobContext().jobMetrics()
                             : null;
