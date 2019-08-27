@@ -18,9 +18,9 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.ContextFactory;
@@ -41,10 +41,9 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull String name,
             @Nonnull Transform upstream,
             @Nonnull ProcessorMetaSupplier processorSupplier,
-            @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
-            @Nonnull boolean isCooperative
+            @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
-        super(name, upstream, processorSupplier, isCooperative);
+        super(name, upstream, processorSupplier);
         this.partitionKeyFn = partitionKeyFn;
     }
 
@@ -54,7 +53,7 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull ProcessorMetaSupplier processorSupplier,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
-        return new PartitionedProcessorTransform<>(name, upstream, processorSupplier, partitionKeyFn, true);
+        return new PartitionedProcessorTransform<>(name, upstream, processorSupplier, partitionKeyFn);
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> mapUsingContextPartitionedTransform(
@@ -64,8 +63,8 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("mapUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(mapUsingContextP(contextFactory, mapFn)), partitionKeyFn,
-                contextFactory.isCooperative());
+                upstream, ProcessorMetaSupplier.of(getPreferredLP(contextFactory),
+                mapUsingContextP(contextFactory, mapFn)), partitionKeyFn);
     }
 
     public static <C, T, K> PartitionedProcessorTransform<T, K> filterUsingPartitionedContextTransform(
@@ -75,8 +74,8 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("filterUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(filterUsingContextP(contextFactory, filterFn)), partitionKeyFn,
-                contextFactory.isCooperative());
+                upstream, ProcessorMetaSupplier.of(getPreferredLP(contextFactory),
+                filterUsingContextP(contextFactory, filterFn)), partitionKeyFn);
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextTransform(
@@ -86,8 +85,8 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>("flatMapUsingPartitionedContext",
-                upstream, ProcessorMetaSupplier.of(flatMapUsingContextP(contextFactory, flatMapFn)), partitionKeyFn,
-                contextFactory.isCooperative());
+                upstream, ProcessorMetaSupplier.of(getPreferredLP(contextFactory),
+                flatMapUsingContextP(contextFactory, flatMapFn)), partitionKeyFn);
     }
 
     public static <C, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingPartitionedContextAsyncTransform(
@@ -98,13 +97,14 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>(operationName + "UsingPartitionedContextAsync", upstream,
-                ProcessorMetaSupplier.of(flatMapUsingContextAsyncP(contextFactory, partitionKeyFn, flatMapAsyncFn)),
-                partitionKeyFn, contextFactory.isCooperative());
+                ProcessorMetaSupplier.of(getPreferredLP(contextFactory),
+                        flatMapUsingContextAsyncP(contextFactory, partitionKeyFn, flatMapAsyncFn)), partitionKeyFn);
     }
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), determineLocalParallelism(), processorSupplier);
+        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), processorSupplier);
+        pv.v.localParallelism(pv.v.determineLocalParallelism(localParallelism()));
         p.addEdges(this, pv.v, e -> e.partitioned(partitionKeyFn).distributed());
     }
 }

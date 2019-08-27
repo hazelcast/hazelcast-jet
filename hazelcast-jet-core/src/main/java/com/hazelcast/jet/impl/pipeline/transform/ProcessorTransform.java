@@ -36,17 +36,14 @@ import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 public class ProcessorTransform extends AbstractTransform {
     public static final int NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM = 2;
     final ProcessorMetaSupplier processorSupplier;
-    final boolean isCooperative;
 
     ProcessorTransform(
             @Nonnull String name,
             @Nonnull Transform upstream,
-            @Nonnull ProcessorMetaSupplier processorSupplier,
-            @Nonnull boolean isCooperative
+            @Nonnull ProcessorMetaSupplier processorSupplier
     ) {
         super(name, upstream);
         this.processorSupplier = processorSupplier;
-        this.isCooperative = isCooperative;
     }
 
     public static ProcessorTransform customProcessorTransform(
@@ -54,7 +51,7 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull Transform upstream,
             @Nonnull ProcessorMetaSupplier createProcessorFn
     ) {
-        return new ProcessorTransform(name, upstream, createProcessorFn, true);
+        return new ProcessorTransform(name, upstream, createProcessorFn);
     }
 
     public static <C, T, R> ProcessorTransform mapUsingContextTransform(
@@ -63,7 +60,7 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
         return new ProcessorTransform("mapUsingContext", upstream,
-                ProcessorMetaSupplier.of(mapUsingContextP(contextFactory, mapFn)), contextFactory.isCooperative());
+                ProcessorMetaSupplier.of(getPreferredLP(contextFactory), mapUsingContextP(contextFactory, mapFn)));
     }
 
     public static <C, T> ProcessorTransform filterUsingContextTransform(
@@ -72,7 +69,7 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     ) {
         return new ProcessorTransform("filterUsingContext", upstream,
-                ProcessorMetaSupplier.of(filterUsingContextP(contextFactory, filterFn)), contextFactory.isCooperative());
+                ProcessorMetaSupplier.of(getPreferredLP(contextFactory), filterUsingContextP(contextFactory, filterFn)));
     }
 
     public static <C, T, R> ProcessorTransform flatMapUsingContextTransform(
@@ -81,7 +78,7 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return new ProcessorTransform("flatMapUsingContext", upstream,
-                ProcessorMetaSupplier.of(flatMapUsingContextP(contextFactory, flatMapFn)), contextFactory.isCooperative());
+                ProcessorMetaSupplier.of(getPreferredLP(contextFactory), flatMapUsingContextP(contextFactory, flatMapFn)));
     }
 
     public static <C, T, R> ProcessorTransform flatMapUsingContextAsyncTransform(
@@ -94,23 +91,18 @@ public class ProcessorTransform extends AbstractTransform {
         //      be sent to a random member. We keep it this way for simplicity:
         //      the number of in-flight items is limited (maxAsyncOps)
         return new ProcessorTransform(operationName + "UsingContextAsync", upstream,
-                ProcessorMetaSupplier.of(flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn)),
-                contextFactory.isCooperative());
+                ProcessorMetaSupplier.of(getPreferredLP(contextFactory), flatMapUsingContextAsyncP(contextFactory,
+                        Object::hashCode, flatMapAsyncFn)));
+    }
+
+    protected static <C> int getPreferredLP(@Nonnull ContextFactory<C> contextFactory) {
+        return contextFactory.isCooperative() ? LOCAL_PARALLELISM_USE_DEFAULT : NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
     }
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), determineLocalParallelism(), processorSupplier);
+        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), processorSupplier);
+        pv.v.localParallelism(pv.v.determineLocalParallelism(localParallelism()));
         p.addEdges(this, pv.v);
-    }
-
-    protected int determineLocalParallelism() {
-        if (!isCooperative) {
-            return localParallelism() != LOCAL_PARALLELISM_USE_DEFAULT
-                    ? localParallelism()
-                    : NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
-        } else {
-            return localParallelism();
-        }
     }
 }
