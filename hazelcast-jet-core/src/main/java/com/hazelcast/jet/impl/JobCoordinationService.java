@@ -631,7 +631,10 @@ public class JobCoordinationService {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             long jobId = masterContext.jobId();
-            List<RawJobMetrics> jobMetrics = masterContext.jobContext().jobMetrics();
+            List<RawJobMetrics> jobMetrics =
+                    masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
+                            ? masterContext.jobContext().jobMetrics()
+                            : null;
             String coordinator = nodeEngine.getNode().getThisUuid();
             jobRepository.completeJob(jobId, jobMetrics, coordinator, completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {

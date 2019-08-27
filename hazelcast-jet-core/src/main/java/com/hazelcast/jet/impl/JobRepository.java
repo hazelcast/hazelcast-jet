@@ -282,7 +282,7 @@ public class JobRepository {
      */
     void completeJob(
             long jobId,
-            @Nonnull List<RawJobMetrics> terminalMetrics,
+            @Nullable List<RawJobMetrics> terminalMetrics,
             @Nonnull String coordinator,
             long completionTime,
             @Nullable Throwable error
@@ -297,9 +297,11 @@ public class JobRepository {
         JobResult jobResult = new JobResult(jobId, config, coordinator, creationTime, completionTime,
                 error != null ? error.toString() : null);
 
-        List<RawJobMetrics> prevMetrics = jobMetrics.put(jobId, terminalMetrics);
-        if (prevMetrics != null) {
-            logger.warning("Overwriting job metrics for job " + jobResult);
+        if (terminalMetrics != null) {
+            List<RawJobMetrics> prevMetrics = jobMetrics.put(jobId, terminalMetrics);
+            if (prevMetrics != null) {
+                logger.warning("Overwriting job metrics for job " + jobResult);
+            }
         }
         JobResult prev = jobResults.putIfAbsent(jobId, jobResult);
         if (prev != null) {

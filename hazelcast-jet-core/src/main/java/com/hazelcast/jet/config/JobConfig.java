@@ -451,7 +451,14 @@ public class JobConfig implements IdentifiedDataSerializable {
 
     /**
      * Returns whether metrics should be stored in the cluster after the job
-     * completes. If enabled, metrics can be retrieved by calling {@link Job#getMetrics()}.
+     * completes. If enabled, metrics can be retrieved for all non-running
+     * jobs (have completed successfully, have failed, have been cancelled
+     * or suspended) by calling {@link Job#getMetrics()}.
+     * <p>
+     * If disabled {@link Job#getMetrics()} will always return empty metrics
+     * for all non-running jobs, regardless of the settings for
+     * {@link MetricsConfig#setEnabled global metrics collection} and
+     * {@link JobConfig#isMetricsEnabled() per job metrics collection}.
      *
      * @since 3.2
      */
