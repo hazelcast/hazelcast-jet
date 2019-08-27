@@ -66,224 +66,186 @@ public class ProcessorTransformParallelismTest {
     @SuppressWarnings(value = {"checkstyle:LineLength", "checkstyle:MethodLength"})
     public static Collection<Object[]> data() {
         return Arrays.asList(
-                new Object[][] {{
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContext(CONTEXT_FACTORY, (c, t) -> t)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContext(CONTEXT_FACTORY, (c, t) -> t),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> t)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> t),
-                        "mapUsingContext"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContext(CONTEXT_FACTORY, (c, k, t) -> t)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContext(CONTEXT_FACTORY, (c, k, t) -> t),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> t)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> t),
-                        "mapUsingPartitionedContext"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t)),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t)),
-                        "mapUsingContextAsync"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t)),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t)),
-                        "mapUsingPartitionedContextAsync"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContext(CONTEXT_FACTORY, (c, t) -> false)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContext(CONTEXT_FACTORY, (c, t) -> false),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContext(NC_CONTEXT_FACTORY, (c, t) -> false)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContext(NC_CONTEXT_FACTORY, (c, t) -> false),
-                        "filterUsingContext"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContext(CONTEXT_FACTORY, (c, k, t) -> false)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContext(CONTEXT_FACTORY, (c, k, t) -> false),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> false)
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> false),
-                        "filterUsingPartitionedContext"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false)),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false)),
-                        "filterUsingContextAsync"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false)),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false)),
-                        "filterUsingPartitionedContextAsync"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContext(CONTEXT_FACTORY, (c, t) -> Traversers.<Integer>empty())
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContext(CONTEXT_FACTORY, (c, t) -> Traversers.<Integer>empty()),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> Traversers.<Integer>empty())
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> Traversers.<Integer>empty()),
-                        "flatMapUsingContext"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContext(CONTEXT_FACTORY, (c, k, t) -> Traversers.<Integer>empty())
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContext(CONTEXT_FACTORY, (c, k, t) -> Traversers.<Integer>empty()),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> Traversers.<Integer>empty())
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> Traversers.<Integer>empty()),
-                        "flatMapUsingPartitionedContext"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty)),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty)),
-                        "flatMapUsingContextAsync"
-                }, {
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty)),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
-                                        .setLocalParallelism(LOCAL_PARALLELISM),
-                        (FunctionEx<StreamStage<Integer>, StreamStage<Integer>>)
-                                stage -> stage
-                                        .groupingKey(i -> i)
-                                        .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty)),
-                        "flatMapUsingPartitionedContextAsync"
-                }
-                });
+                createParamSet(
+                        stage -> stage
+                                .mapUsingContext(CONTEXT_FACTORY, (c, t) -> t)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .mapUsingContext(CONTEXT_FACTORY, (c, t) -> t),
+                        stage -> stage
+                                .mapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> t)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .mapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> t),
+                        "mapUsingContext"),
+                createParamSet(
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContext(CONTEXT_FACTORY, (c, k, t) -> t)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContext(CONTEXT_FACTORY, (c, k, t) -> t),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> t)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> t),
+                        "mapUsingPartitionedContext"),
+                createParamSet(
+                        stage -> stage
+                                .mapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .mapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t)),
+                        stage -> stage
+                                .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> t)),
+                        "mapUsingContextAsync"),
+                createParamSet(
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t)),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .mapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> t)),
+                        "mapUsingPartitionedContextAsync"),
+                createParamSet(
+                        stage -> stage
+                                .filterUsingContext(CONTEXT_FACTORY, (c, t) -> false)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .filterUsingContext(CONTEXT_FACTORY, (c, t) -> false),
+                        stage -> stage
+                                .filterUsingContext(NC_CONTEXT_FACTORY, (c, t) -> false)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .filterUsingContext(NC_CONTEXT_FACTORY, (c, t) -> false),
+                        "filterUsingContext"),
+                createParamSet(
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContext(CONTEXT_FACTORY, (c, k, t) -> false)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContext(CONTEXT_FACTORY, (c, k, t) -> false),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> false)
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> false),
+                        "filterUsingPartitionedContext"),
+                createParamSet(
+                        stage -> stage
+                                .filterUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .filterUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false)),
+                        stage -> stage
+                                .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(() -> false)),
+                        "filterUsingContextAsync"),
+                createParamSet(
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false)),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .filterUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(() -> false)),
+                        "filterUsingPartitionedContextAsync"),
+                createParamSet(
+                        stage -> stage
+                                .flatMapUsingContext(CONTEXT_FACTORY, (c, t) -> Traversers.<Integer>empty())
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .flatMapUsingContext(CONTEXT_FACTORY, (c, t) -> Traversers.empty()),
+                        stage -> stage
+                                .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> Traversers.<Integer>empty())
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, t) -> Traversers.empty()),
+                        "flatMapUsingContext"),
+                createParamSet(
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContext(CONTEXT_FACTORY, (c, k, t) -> Traversers.<Integer>empty())
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContext(CONTEXT_FACTORY, (c, k, t) -> Traversers.empty()),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> Traversers.<Integer>empty())
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContext(NC_CONTEXT_FACTORY, (c, k, t) -> Traversers.empty()),
+                        "flatMapUsingPartitionedContext"),
+                createParamSet(
+                        stage -> stage
+                                .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::empty)),
+                        stage -> stage
+                                .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, t) -> supplyAsync(Traversers::empty)),
+                        "flatMapUsingContextAsync"),
+                createParamSet(
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContextAsync(CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::empty)),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
+                                .setLocalParallelism(LOCAL_PARALLELISM),
+                        stage -> stage
+                                .groupingKey(i -> i)
+                                .flatMapUsingContextAsync(NC_CONTEXT_FACTORY, (c, k, t) -> supplyAsync(Traversers::empty)),
+                        "flatMapUsingPartitionedContextAsync")
+        );
+    }
+
+    private static Object[] createParamSet(
+            FunctionEx<StreamStage<Integer>, StreamStage<Integer>> cooperative_defaultLP,
+            FunctionEx<StreamStage<Integer>, StreamStage<Integer>> cooperative_explicitLP,
+            FunctionEx<StreamStage<Integer>, StreamStage<Integer>> nonCooperative_defaultLP,
+            FunctionEx<StreamStage<Integer>, StreamStage<Integer>> nonCooperative_explicitLP,
+            String transformName
+    ) {
+        return new Object[]{cooperative_defaultLP, cooperative_explicitLP, nonCooperative_defaultLP,
+                nonCooperative_explicitLP, transformName};
     }
 
     @Test
