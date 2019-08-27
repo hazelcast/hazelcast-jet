@@ -35,6 +35,7 @@ import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
 
 public class ProcessorTransform extends AbstractTransform {
     public static final int NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM = 2;
+
     final ProcessorMetaSupplier processorSupplier;
 
     ProcessorTransform(
@@ -91,18 +92,17 @@ public class ProcessorTransform extends AbstractTransform {
         //      be sent to a random member. We keep it this way for simplicity:
         //      the number of in-flight items is limited (maxAsyncOps)
         return new ProcessorTransform(operationName + "UsingContextAsync", upstream,
-                ProcessorMetaSupplier.of(getPreferredLP(contextFactory), flatMapUsingContextAsyncP(contextFactory,
-                        Object::hashCode, flatMapAsyncFn)));
+                ProcessorMetaSupplier.of(getPreferredLP(contextFactory),
+                        flatMapUsingContextAsyncP(contextFactory, Object::hashCode, flatMapAsyncFn)));
     }
 
-    protected static <C> int getPreferredLP(@Nonnull ContextFactory<C> contextFactory) {
+    static <C> int getPreferredLP(@Nonnull ContextFactory<C> contextFactory) {
         return contextFactory.isCooperative() ? LOCAL_PARALLELISM_USE_DEFAULT : NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
     }
 
     @Override
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(), processorSupplier);
-        pv.v.localParallelism(pv.v.determineLocalParallelism(localParallelism()));
         p.addEdges(this, pv.v);
     }
 }
