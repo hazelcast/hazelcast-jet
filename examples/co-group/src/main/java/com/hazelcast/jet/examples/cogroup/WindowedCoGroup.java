@@ -20,9 +20,11 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
+import com.hazelcast.jet.examples.cogroup.datamodel.AddToCart;
+import com.hazelcast.jet.examples.cogroup.datamodel.PageVisit;
+import com.hazelcast.jet.examples.cogroup.datamodel.Payment;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -30,9 +32,6 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder;
-import com.hazelcast.jet.examples.cogroup.datamodel.AddToCart;
-import com.hazelcast.jet.examples.cogroup.datamodel.PageVisit;
-import com.hazelcast.jet.examples.cogroup.datamodel.Payment;
 
 import java.util.concurrent.locks.LockSupport;
 
@@ -52,15 +51,12 @@ public final class WindowedCoGroup {
     private static final String PAYMENT = "payment";
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
         // All IMap partitions must receive updates for the watermark to advance
         // correctly. Since we use just a handful of keys in this sample, we set a
         // low partition count.
         System.setProperty("hazelcast.partition.count", "1");
 
-        JetConfig cfg = new JetConfig();
-        cfg.getHazelcastConfig().getMapEventJournalConfig("*").setEnabled(true);
-        JetInstance jet = Jet.newJetInstance(cfg);
+        JetInstance jet = Jet.newJetInstance();
         ProducerTask producer = new ProducerTask(jet);
 
         try {

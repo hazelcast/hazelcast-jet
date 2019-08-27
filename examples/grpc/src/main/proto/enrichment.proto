@@ -7,8 +7,11 @@ option objc_class_prefix = "HLW";
 
 package helloworld;
 
-service EnrichmentService {
+service ProductService {
   rpc ProductInfo (ProductInfoRequest) returns (ProductInfoReply) {}
+}
+
+service BrokerService {
   rpc BrokerInfo (BrokerInfoRequest) returns (BrokerInfoReply) {}
 }
 

@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.util.Properties;
+import java.util.UUID;
 
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -79,15 +80,16 @@ public class KafkaAvroSource {
                 "key.deserializer", IntegerDeserializer.class.getName(),
                 "value.deserializer", KafkaAvroDeserializer.class.getName(),
                 "specific.avro.reader", "true",
+                "group.id", UUID.randomUUID().toString(),
                 "schema.registry.url", "http://localhost:8081",
-                "auto.offset.reset", AUTO_OFFSET_RESET), TOPIC))
+                "auto.offset.reset", AUTO_OFFSET_RESET
+        ), TOPIC))
          .withoutTimestamps()
          .drainTo(Sinks.logger());
         return p;
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
         new KafkaAvroSource().go();
     }
 

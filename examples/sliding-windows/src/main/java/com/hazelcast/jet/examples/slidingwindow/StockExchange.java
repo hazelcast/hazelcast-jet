@@ -62,7 +62,6 @@ public class StockExchange {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         try {

@@ -16,15 +16,13 @@
 
 package com.hazelcast.jet.examples.kafka;
 
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.kafka.KafkaSources;
-import com.hazelcast.jet.config.InstanceConfig;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.IMapJet;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
@@ -45,8 +43,8 @@ import org.apache.kafka.common.utils.Time;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Properties;
+import java.util.UUID;
 
-import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static kafka.admin.AdminUtils.createTopic;
 
@@ -72,28 +70,24 @@ public class KafkaSource {
                 "bootstrap.servers", BOOTSTRAP_SERVERS,
                 "key.deserializer", StringDeserializer.class.getCanonicalName(),
                 "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
-                "auto.offset.reset", AUTO_OFFSET_RESET), "t1", "t2"))
+                "group.id", UUID.randomUUID().toString(),
+                "auto.offset.reset", AUTO_OFFSET_RESET)
+                , "t1", "t2"))
          .withoutTimestamps()
          .drainTo(Sinks.map(SINK_NAME));
         return p;
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
         new KafkaSource().run();
     }
 
     private void run() throws Exception {
-        JetConfig cfg = new JetConfig();
-        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
-                Math.max(1, getRuntime().availableProcessors() / 2)));
-
         try {
             createKafkaCluster();
             fillTopics();
 
-            JetInstance instance = Jet.newJetInstance(cfg);
-            Jet.newJetInstance(cfg);
+            JetInstance instance = Jet.newJetInstance();
             IMapJet<String, Integer> sinkMap = instance.getMap(SINK_NAME);
 
             Pipeline p = buildPipeline();

@@ -59,9 +59,9 @@ public class EventGenerator extends Thread {
 
     void generateEventsForFiveSeconds() throws InterruptedException {
         enabled = true;
-        System.out.println("\n\nGenerating trade events\n");
+        System.out.println("\nGenerating trade events\n");
         Thread.sleep(5000);
-        System.out.println("\n\nStopped trade events\n");
+        System.out.println("\nStopped trade events\n");
         enabled = false;
     }
 

@@ -22,7 +22,6 @@ import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -35,12 +34,13 @@ import com.hazelcast.jet.examples.enrichment.datamodel.Broker;
 import com.hazelcast.jet.examples.enrichment.datamodel.Product;
 import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Stream;
 
@@ -245,12 +245,8 @@ public final class Enrichment {
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        JetConfig cfg = new JetConfig();
-        cfg.getHazelcastConfig().getMapEventJournalConfig(TRADES).setEnabled(true);
-        JetInstance jet = Jet.newJetInstance(cfg);
-        Jet.newJetInstance(cfg);
+        JetInstance jet = Jet.newJetInstance();
+        Jet.newJetInstance();
 
         new Enrichment(jet).go();
     }
@@ -279,8 +275,9 @@ public final class Enrichment {
 
     private static Stream<Map.Entry<Integer, String>> readLines(String file) {
         try {
-            return Files.lines(Paths.get(Enrichment.class.getResource(file).toURI()))
-                    .map(Enrichment::splitLine);
+            InputStream stream = Enrichment.class.getResourceAsStream("/" + file);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+            return reader.lines().map(Enrichment::splitLine);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

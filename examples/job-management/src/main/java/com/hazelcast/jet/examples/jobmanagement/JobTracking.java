@@ -19,7 +19,6 @@ package com.hazelcast.jet.examples.jobmanagement;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -38,12 +37,8 @@ import static java.util.Objects.requireNonNull;
 public class JobTracking {
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        JetConfig config = new JetConfig();
-        config.getHazelcastConfig().getMapEventJournalConfig("source").setEnabled(true);
-        JetInstance instance1 = Jet.newJetInstance(config);
-        JetInstance instance2 = Jet.newJetInstance(config);
+        JetInstance instance1 = Jet.newJetInstance();
+        JetInstance instance2 = Jet.newJetInstance();
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
@@ -82,7 +77,6 @@ public class JobTracking {
         Job trackedJob2 = requireNonNull(instance1.getJob(jobName));
         System.out.println("Tracked job status: " + trackedJob2.getStatus());
 
-        instance1.shutdown();
-        instance2.shutdown();
+        instance1.getCluster().shutdown();
     }
 }

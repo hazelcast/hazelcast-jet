@@ -43,7 +43,7 @@ import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 /**
  * Shows how to use the {@link SourceBuilder} to build a source connector for
  * the Jet pipeline. It starts a simple {@linkplain
- * com.hazelcast.jet.examples.sourcebuilder.support.SystemMonitorHttpService system-monitoring HTTP service}. The
+ * SystemMonitorHttpService system-monitoring HTTP service}. The
  * connector polls it for events that contain the measurement of the used JVM
  * heap.
  * <p>
@@ -132,7 +132,6 @@ public class HttpSource {
      * Jet, and runs the stream job on it.
      */
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         Undertow server = new SystemMonitorHttpService().httpServer();
         server.start();
         try {

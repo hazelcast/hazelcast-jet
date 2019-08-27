@@ -19,8 +19,6 @@ package com.hazelcast.jet.examples.wordcount;
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.config.InstanceConfig;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -38,7 +36,6 @@ import java.util.regex.Pattern;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.Functions.wholeItem;
-import static java.lang.Runtime.getRuntime;
 import static java.util.Comparator.comparingLong;
 
 /**
@@ -68,7 +65,6 @@ public class WordCount {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         new WordCount().go();
     }
 
@@ -95,13 +91,10 @@ public class WordCount {
     }
 
     private void setup() {
-        JetConfig cfg = new JetConfig();
-        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
-                Math.max(1, getRuntime().availableProcessors() / 2)));
         System.out.println("Creating Jet instance 1");
-        jet = Jet.newJetInstance(cfg);
+        jet = Jet.newJetInstance();
         System.out.println("Creating Jet instance 2");
-        Jet.newJetInstance(cfg);
+        Jet.newJetInstance();
         System.out.println("Loading The Complete Works of William Shakespeare");
         try {
             long[] lineNum = {0};

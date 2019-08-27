@@ -16,15 +16,13 @@
 
 package com.hazelcast.jet.examples.hadoop;
 
-import com.hazelcast.jet.hadoop.HdfsSinks;
-import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.config.InstanceConfig;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.hadoop.HdfsSinks;
+import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.pipeline.Pipeline;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +35,6 @@ import java.util.regex.Pattern;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.Functions.wholeItem;
-import static java.lang.Runtime.getRuntime;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
@@ -85,18 +82,13 @@ public class HadoopWordCount {
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        Path inputPath = new Path(HadoopWordCount.class.getClassLoader().getResource("books").getPath());
+        Path inputPath = new Path(HadoopWordCount.class.getResource("/books").getPath());
         Path outputPath = new Path(OUTPUT_PATH);
         // delete the output directory, if already exists
         FileSystem.get(new Configuration()).delete(outputPath, true);
-        JetConfig cfg = new JetConfig();
-        cfg.setInstanceConfig(new InstanceConfig().setCooperativeThreadCount(
-                Math.max(1, getRuntime().availableProcessors() / 2)));
         try {
-            JetInstance jet = Jet.newJetInstance(cfg);
-            Jet.newJetInstance(cfg);
+            JetInstance jet = Jet.newJetInstance();
+            Jet.newJetInstance();
             System.out.print("\nCounting words from " + inputPath);
             long start = nanoTime();
             Pipeline p = buildPipeline(inputPath, outputPath);

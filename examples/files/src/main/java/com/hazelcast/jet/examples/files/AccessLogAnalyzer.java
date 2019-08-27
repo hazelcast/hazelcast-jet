@@ -70,8 +70,6 @@ public class AccessLogAnalyzer {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
         if (args.length != 2) {
             System.err.println("Usage:");
             System.err.println("  " + AccessLogAnalyzer.class.getSimpleName() + " <sourceDir> <targetDir>");

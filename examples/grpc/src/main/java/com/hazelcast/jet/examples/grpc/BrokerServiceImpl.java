@@ -16,32 +16,22 @@
 
 package com.hazelcast.jet.examples.grpc;
 
+import com.hazelcast.jet.examples.grpc.BrokerServiceGrpc.BrokerServiceImplBase;
 import com.hazelcast.jet.examples.grpc.datamodel.Broker;
-import com.hazelcast.jet.examples.grpc.datamodel.Product;
 import io.grpc.stub.StreamObserver;
 
 import java.util.Map;
 
 /**
- * Server-side implementation of the gRPC service. See {@link
- * Enrichment#enrichUsingGRPC()}.
+ * Server-side implementation of a gRPC service. See {@link
+ * GRPCEnrichment#enrichUsingGRPC()}.
  */
-public class EnrichmentServiceImpl extends EnrichmentServiceGrpc.EnrichmentServiceImplBase {
+public class BrokerServiceImpl extends BrokerServiceImplBase {
 
-    private final Map<Integer, Product> products;
     private final Map<Integer, Broker> brokers;
 
-    public EnrichmentServiceImpl(Map<Integer, Product> products, Map<Integer, Broker> brokers) {
-        this.products = products;
+    public BrokerServiceImpl(Map<Integer, Broker> brokers) {
         this.brokers = brokers;
-    }
-
-    @Override
-    public void productInfo(ProductInfoRequest request, StreamObserver<ProductInfoReply> responseObserver) {
-        String productName = products.get(request.getId()).name();
-        ProductInfoReply reply = ProductInfoReply.newBuilder().setProductName(productName).build();
-        responseObserver.onNext(reply);
-        responseObserver.onCompleted();
     }
 
     @Override

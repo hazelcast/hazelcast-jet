@@ -70,7 +70,6 @@ public class JmsTopicSample {
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
         new JmsTopicSample().go();
     }
 

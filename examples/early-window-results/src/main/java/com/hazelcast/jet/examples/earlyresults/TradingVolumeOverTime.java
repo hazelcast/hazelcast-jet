@@ -69,7 +69,6 @@ public final class TradingVolumeOverTime {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = Jet.newJetInstance();
         new TradingVolumeGui(jet.getList(VOLUME_LIST_NAME));
         Jet.newJetInstance();

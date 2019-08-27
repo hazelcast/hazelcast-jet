@@ -60,7 +60,6 @@ public class TopicSink {
      * Creates a Hazelcast Jet cluster, attaches a topic listener and runs the pipeline
      */
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             System.out.println("Creating Jet instance 1");
             JetInstance jet = Jet.newJetInstance();
@@ -85,7 +84,7 @@ public class TopicSink {
      */
     private static String getBooksPath() {
         try {
-            return Paths.get(TopicSink.class.getResource("books/").toURI()).toString();
+            return Paths.get(TopicSink.class.getResource("/books").toURI()).toString();
         } catch (URISyntaxException e) {
             throw rethrow(e);
         }

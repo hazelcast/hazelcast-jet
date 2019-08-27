@@ -41,8 +41,6 @@ public class StreamTextSocket {
     private static final AtomicInteger COUNTER = new AtomicInteger(100_000);
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
         NettyServer nettyServer = new NettyServer(PORT, channel -> {
             for (int i; (i = COUNTER.getAndDecrement()) > 0; ) {
                 channel.writeAndFlush(i + "\n");

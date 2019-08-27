@@ -20,7 +20,6 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -102,10 +101,10 @@ public class TfIdf {
     private JetInstance jet;
 
     private static Pipeline buildPipeline() {
-        Path bookDirectory = getClasspathDirectory("books");
+        Path bookDirectory = getClasspathDirectory("/books");
         // This set will be serialized as a part of the Pipeline definition that is
         // sent for execution.
-        Set<String> stopwords = docLines("stopwords.txt").collect(toSet());
+        Set<String> stopwords = docLines("/stopwords.txt").collect(toSet());
         Pipeline p = Pipeline.create();
 
         // (filename, line) pairs
@@ -168,7 +167,6 @@ public class TfIdf {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         try {
             new TfIdf().go();
         } catch (Throwable t) {
@@ -178,12 +176,11 @@ public class TfIdf {
     }
 
     private void go() {
-        JetConfig cfg = new JetConfig();
         System.out.println("Creating Jet instance 1");
-        jet = Jet.newJetInstance(cfg);
+        jet = Jet.newJetInstance();
         buildInvertedIndex();
         System.out.println("size=" + jet.getMap(INVERTED_INDEX).size());
-        new SearchGui(jet.getMap(INVERTED_INDEX), docLines("stopwords.txt").collect(toSet()));
+        new SearchGui(jet.getMap(INVERTED_INDEX), docLines("/stopwords.txt").collect(toSet()));
     }
 
     private void buildInvertedIndex() {

@@ -19,7 +19,6 @@ package com.hazelcast.jet.examples.jobmanagement;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -37,12 +36,8 @@ import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDES
 public class JobSuspendResume {
 
     public static void main(String[] args) throws InterruptedException {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        JetConfig config = new JetConfig();
-        config.getHazelcastConfig().getMapEventJournalConfig("source").setEnabled(true);
-        JetInstance instance1 = Jet.newJetInstance(config);
-        JetInstance instance2 = Jet.newJetInstance(config);
+        JetInstance instance1 = Jet.newJetInstance();
+        JetInstance instance2 = Jet.newJetInstance();
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
@@ -90,14 +85,13 @@ public class JobSuspendResume {
         // let's query the job status again. Now the status is COMPLETED
         System.out.println("Status: " + job.getStatus());
 
-        instance1.shutdown();
-        instance2.shutdown();
+        instance1.getCluster().shutdown();
     }
 
     private static void waitForStatus(Job job, JobStatus expectedStatus) throws InterruptedException {
         for (JobStatus status; (status = job.getStatus()) != expectedStatus;) {
             System.out.println("Job is " + status + "...");
-            Thread.sleep(1);
+            Thread.sleep(10);
         }
         System.out.println("Job is " + expectedStatus + ".");
     }

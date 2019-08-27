@@ -129,7 +129,6 @@ public final class BatchCoGroup {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = Jet.newJetInstance();
         Jet.newJetInstance();
         new BatchCoGroup(jet).go();

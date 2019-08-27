@@ -51,7 +51,6 @@ public class TradingVolume {
     }
 
     public static void main(String[] args) {
-        System.setProperty("hazelcast.logging.type", "log4j");
         JetInstance jet = Jet.newJetInstance();
         new TradingVolumeGui(jet.getMap(VOLUME_MAP_NAME));
         Jet.newJetInstance();

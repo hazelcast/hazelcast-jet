@@ -76,8 +76,6 @@ public class AccessLogStreamAnalyzer {
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
         Path tempDir = Files.createTempDirectory(AccessLogStreamAnalyzer.class.getSimpleName());
         Pipeline p = buildPipeline(tempDir);
 

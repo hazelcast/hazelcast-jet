@@ -44,5 +44,10 @@
             <artifactId>jfreechart</artifactId>
             <version>1.5.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet.examples</groupId>
+            <artifactId>hazelcast-jet-examples-wordcount</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

@@ -87,8 +87,6 @@ public class TopNStocks {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
         JetInstance[] instances = new JetInstance[2];
         Arrays.parallelSetAll(instances, i -> Jet.newJetInstance());
         try {

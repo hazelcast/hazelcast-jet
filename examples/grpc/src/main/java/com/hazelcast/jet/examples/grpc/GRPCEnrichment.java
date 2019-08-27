@@ -22,8 +22,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.examples.grpc.EnrichmentServiceGrpc.EnrichmentServiceFutureStub;
+import com.hazelcast.jet.examples.grpc.BrokerServiceGrpc.BrokerServiceFutureStub;
+import com.hazelcast.jet.examples.grpc.ProductServiceGrpc.ProductServiceFutureStub;
 import com.hazelcast.jet.examples.grpc.datamodel.Broker;
 import com.hazelcast.jet.examples.grpc.datamodel.Product;
 import com.hazelcast.jet.examples.grpc.datamodel.Trade;
@@ -36,10 +36,12 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.ServerBuilder;
+import io.grpc.stub.AbstractStub;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
@@ -61,30 +63,18 @@ import static java.util.stream.Collectors.toMap;
  * are stored in files. The goal is to enrich the trades with the actual
  * name of the products and the brokers.
  * <p>
- * This example shows different ways of achieving this goal:
- * <ol>
- *     <li>Using Hazelcast {@code IMap}</li>
- *     <li>Using Hazelcast {@code ReplicatedMap}</li>
- *     <li>Using an external service (gRPC in this sample)</li>
- *     <li>Using the pipeline {@code hashJoin} operation</li>
- * </ol>
- * <p>
- * The details of each approach are documented with the associated method.
- * <p>
  * We generate the stream of trade events by updating a single key in the
  * {@code trades} map which has the Event Journal enabled. The event
  * journal emits a stream of update events.
  */
-public final class Enrichment {
+public final class GRPCEnrichment {
 
     private static final String TRADES = "trades";
-    private static final String PRODUCTS = "products";
-    private static final String BROKERS = "brokers";
+    private static final int PORT = 50051;
 
     private final JetInstance jet;
 
-
-    private Enrichment(JetInstance jet) {
+    private GRPCEnrichment(JetInstance jet) {
         this.jet = jet;
     }
 
@@ -104,12 +94,12 @@ public final class Enrichment {
         Map<Integer, Broker> brokerMap = readLines("brokers.txt")
                 .collect(toMap(Entry::getKey, e -> new Broker(e.getKey(), e.getValue())));
 
-        int port = 50051;
-        ServerBuilder.forPort(port)
-                     .addService(new EnrichmentServiceImpl(productMap, brokerMap))
+        ServerBuilder.forPort(PORT)
+                     .addService(new ProductServiceImpl(productMap))
+                     .addService(new BrokerServiceImpl(brokerMap))
                      .build()
                      .start();
-        System.out.println("*** Server started, listening on " + port);
+        System.out.println("*** Server started, listening on " + PORT);
 
         // The stream to be enriched: trades
         Pipeline p = Pipeline.create();
@@ -118,46 +108,37 @@ public final class Enrichment {
                 .withoutTimestamps()
                 .map(entryValue());
 
-        // The context factory is the same for both enrichment steps
-        ContextFactory<EnrichmentServiceFutureStub> contextFactory = ContextFactory
-                .withCreateFn(x -> {
-                    ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", port)
-                                                                  .usePlaintext().build();
-                    return EnrichmentServiceGrpc.newFutureStub(channel);
+        ContextFactory<ProductServiceFutureStub> productService = ContextFactory
+                .withCreateFn(x -> ProductServiceGrpc.newFutureStub(getLocalChannel()))
+                .withDestroyFn(stub -> shutdownClient(stub));
+
+        ContextFactory<BrokerServiceFutureStub> brokerService = ContextFactory
+                .withCreateFn(x -> BrokerServiceGrpc.newFutureStub(getLocalChannel()))
+                .withDestroyFn(stub -> shutdownClient(stub));
+
+        // Enrich the trade by querying the product and broker name from the gRPC services
+        trades.mapUsingContextAsync(productService,
+                (service, trade) -> {
+                    ProductInfoRequest request = ProductInfoRequest.newBuilder().setId(trade.productId()).build();
+                    return toCompletableFuture(service.productInfo(request))
+                            .thenApply(productReply -> tuple2(trade, productReply.getProductName()));
                 })
-                .withDestroyFn(stub -> {
-                    ManagedChannel channel = (ManagedChannel) stub.getChannel();
-                    channel.shutdown().awaitTermination(5, SECONDS);
-                });
-
-        // Enrich the trade by querying the product and broker name from the gRPC service
-        trades
-                .mapUsingContextAsync(contextFactory,
-                        (stub, t) -> {
-                            ProductInfoRequest request = ProductInfoRequest.newBuilder().setId(t.productId()).build();
-                            return toCompletableFuture(stub.productInfo(request))
-                                    .thenApply(productReply -> tuple2(t, productReply.getProductName()));
-                        })
-                .mapUsingContextAsync(contextFactory,
-                        (stub, t) -> {
-                            BrokerInfoRequest request = BrokerInfoRequest.newBuilder().setId(t.f0().brokerId()).build();
-                            return toCompletableFuture(stub.brokerInfo(request))
-                                    .thenApply(brokerReply -> tuple3(t.f0(), t.f1(), brokerReply.getBrokerName()));
-                        })
-                .drainTo(Sinks.logger());
-
+              // input is (trade, product)
+              .mapUsingContextAsync(brokerService,
+                      (stub, t) -> {
+                          BrokerInfoRequest request = BrokerInfoRequest.newBuilder().setId(t.f0().brokerId()).build();
+                          return toCompletableFuture(stub.brokerInfo(request))
+                                  .thenApply(brokerReply -> tuple3(t.f0(), t.f1(), brokerReply.getBrokerName()));
+                      })
+              // output is (trade, productName, brokerName)
+              .drainTo(Sinks.logger());
         return p;
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
+        JetInstance jet = Jet.newJetInstance();
 
-        JetConfig cfg = new JetConfig();
-        cfg.getHazelcastConfig().getMapEventJournalConfig(TRADES).setEnabled(true);
-        JetInstance jet = Jet.newJetInstance(cfg);
-        Jet.newJetInstance(cfg);
-
-        new Enrichment(jet).go();
+        new GRPCEnrichment(jet).go();
     }
 
     private void go() throws Exception {
@@ -179,10 +160,21 @@ public final class Enrichment {
         }
     }
 
+    private static void shutdownClient(AbstractStub stub) throws InterruptedException {
+        ManagedChannel managedChannel = (ManagedChannel) stub.getChannel();
+        managedChannel.shutdown().awaitTermination(5, SECONDS);
+    }
+
+    private static ManagedChannel getLocalChannel() {
+        return ManagedChannelBuilder.forAddress("localhost", PORT)
+                                    .usePlaintext().build();
+    }
+
     private static Stream<Map.Entry<Integer, String>> readLines(String file) {
         try {
-            return Files.lines(Paths.get(Enrichment.class.getResource(file).toURI()))
-                    .map(Enrichment::splitLine);
+            InputStream stream = GRPCEnrichment.class.getResourceAsStream("/" + file);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+            return reader.lines().map(GRPCEnrichment::splitLine);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

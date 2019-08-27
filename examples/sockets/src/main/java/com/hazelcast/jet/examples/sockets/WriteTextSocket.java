@@ -44,8 +44,6 @@ public class WriteTextSocket {
     private static final AtomicInteger COUNTER = new AtomicInteger();
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
         NettyServer nettyServer = new NettyServer(PORT, ConsumerEx.noop(), msg -> COUNTER.incrementAndGet());
         nettyServer.start();
 

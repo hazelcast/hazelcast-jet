@@ -16,14 +16,11 @@
 
 package com.hazelcast.jet.examples.faulttolerance;
 
-import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.datamodel.Tuple2;
@@ -64,10 +61,7 @@ public class FaultTolerance {
     private static final long SHUTDOWN_DELAY_SECONDS = 20;
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
         JobConfig config = new JobConfig();
-
 
         ////////////////////////////////////////////////////////////////////////////////
         // Configure this option to observe the output with different processing
@@ -91,8 +85,8 @@ public class FaultTolerance {
         config.setSnapshotIntervalMillis(2000);
 
         // create two instances
-        JetInstance instance1 = createNode();
-        JetInstance instance2 = createNode();
+        JetInstance instance1 = Jet.newJetInstance();
+        JetInstance instance2 = Jet.newJetInstance();
 
         // create a client and submit the price analyzer DAG
         JetInstance client = Jet.newJetClient();
@@ -129,22 +123,6 @@ public class FaultTolerance {
          .aggregate(AggregateOperations.counting())
          .drainTo(Sinks.logger());
         return p;
-    }
-
-    private static JetInstance createNode() {
-        JetConfig config = new JetConfig();
-
-        // configure event journal and backups for the prices map
-        EventJournalConfig journalConfig = new EventJournalConfig()
-                .setMapName(PRICES_MAP_NAME)
-                .setCapacity(100_000)
-                .setEnabled(true);
-
-        MapConfig mapConfig = new MapConfig(PRICES_MAP_NAME)
-                .setBackupCount(1);
-        config.getHazelcastConfig().addMapConfig(mapConfig);
-        config.getHazelcastConfig().addEventJournalConfig(journalConfig);
-        return Jet.newJetInstance(config);
     }
 
     private static void updatePrices(JetInstance jet) {

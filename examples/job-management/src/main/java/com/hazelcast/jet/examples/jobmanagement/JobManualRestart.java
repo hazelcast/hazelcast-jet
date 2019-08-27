@@ -19,7 +19,6 @@ package com.hazelcast.jet.examples.jobmanagement;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -36,12 +35,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class JobManualRestart {
 
     public static void main(String[] args) throws InterruptedException {
-        System.setProperty("hazelcast.logging.type", "log4j");
-
-        JetConfig config = new JetConfig();
-        config.getHazelcastConfig().getMapEventJournalConfig("source").setEnabled(true);
-        JetInstance instance1 = Jet.newJetInstance(config);
-        JetInstance instance2 = Jet.newJetInstance(config);
+        JetInstance instance1 = Jet.newJetInstance();
+        JetInstance instance2 = Jet.newJetInstance();
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.<Integer, Integer>mapJournal("source", START_FROM_OLDEST))
@@ -57,7 +52,7 @@ public class JobManualRestart {
         }
 
         // we add a new node to the cluster.
-        JetInstance instance3 = Jet.newJetInstance(config);
+        JetInstance instance3 = Jet.newJetInstance();
 
         // we call the restart() method to scale up the job
         job.restart();
@@ -67,8 +62,6 @@ public class JobManualRestart {
 
         job.cancel();
 
-        instance1.shutdown();
-        instance2.shutdown();
-        instance3.shutdown();
+        instance1.getCluster().shutdown();
     }
 }
