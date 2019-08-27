@@ -230,7 +230,7 @@ public interface Processor {
      *     completed when {@link #onSnapshotCompleted} with {@code
      *     commitTransactions == true} is called
      *
-     *     <li>store IDs of the pending transaction(s) to she snapshot. Note
+     *     <li>store IDs of the pending transaction(s) to the snapshot. Note
      *     that there can be multiple pending transactions if the previous
      *     snapshot completed with {@code commitTransactions == false}
      *
