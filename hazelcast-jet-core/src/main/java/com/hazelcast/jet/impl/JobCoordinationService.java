@@ -370,7 +370,10 @@ public class JobCoordinationService {
         CompletableFuture<List<RawJobMetrics>> cf = new CompletableFuture<>();
         runWithJob(jobId,
                 mc -> mc.jobContext().collectMetrics(cf),
-                jobResult -> cf.complete(jobRepository.getJobMetrics(jobId)),
+                jobResult -> {
+                    List<RawJobMetrics> metrics = jobRepository.getJobMetrics(jobId);
+                    cf.complete(metrics != null ? metrics : emptyList());
+                },
                 null,
                 record -> cf.complete(emptyList())
         );
