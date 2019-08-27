@@ -35,11 +35,9 @@ import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.TruePredicate;
-import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.Map;
 import java.util.Map.Entry;
