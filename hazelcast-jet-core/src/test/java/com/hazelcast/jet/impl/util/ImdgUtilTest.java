@@ -108,47 +108,51 @@ public class ImdgUtilTest extends JetTestSupport {
     }
 
     @Test
-    public void mapPutAllAsync_noNearCache_member() {
+    public void mapPutAllAsync_noNearCache_member() throws Exception {
         IMap<Object, Object> map = instance1.getHazelcastInstance().getMap("map");
         Map<String, String> tmpMap = new HashMap<>();
         tmpMap.put("k1", "v1");
         tmpMap.put("k2", "v1");
-        ImdgUtil.mapPutAllAsync(map, tmpMap);
+        ImdgUtil.mapPutAllAsync(map, tmpMap)
+                .toCompletableFuture().get();
 
         assertEquals(tmpMap, new HashMap<>(map));
     }
 
     @Test
-    public void mapPutAllAsync_noNearCache_client() {
+    public void mapPutAllAsync_noNearCache_client() throws Exception {
         IMap<Object, Object> map = client.getHazelcastInstance().getMap("map");
         Map<String, String> tmpMap = new HashMap<>();
         tmpMap.put("k1", "v1");
         tmpMap.put("k2", "v1");
-        ImdgUtil.mapPutAllAsync(map, tmpMap);
+        ImdgUtil.mapPutAllAsync(map, tmpMap)
+                .toCompletableFuture().get();
 
         assertEquals(tmpMap, new HashMap<>(map));
     }
 
     @Test
-    public void mapPutAllAsync_large_member() {
+    public void mapPutAllAsync_large_member() throws Exception {
         IMap<Object, Object> map = instance1.getHazelcastInstance().getMap("map");
         Map<Integer, Integer> tmpMap = new HashMap<>();
         for (int i = 0; i < 32_768; i++) {
             tmpMap.put(i, i);
         }
-        ImdgUtil.mapPutAllAsync(map, tmpMap);
+        ImdgUtil.mapPutAllAsync(map, tmpMap)
+                .toCompletableFuture().get();
 
         assertEquals(tmpMap, new HashMap<>(map));
     }
 
     @Test
-    public void mapPutAllAsync_large_client() {
+    public void mapPutAllAsync_large_client() throws Exception {
         IMap<Object, Object> map = client.getHazelcastInstance().getMap("map");
         Map<Integer, Integer> tmpMap = new HashMap<>();
         for (int i = 0; i < 32_768; i++) {
             tmpMap.put(i, i);
         }
-        ImdgUtil.mapPutAllAsync(map, tmpMap);
+        ImdgUtil.mapPutAllAsync(map, tmpMap)
+                .toCompletableFuture().get();
 
         assertEquals(tmpMap, new HashMap<>(map));
     }
