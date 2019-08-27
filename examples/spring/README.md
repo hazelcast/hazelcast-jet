@@ -3,15 +3,15 @@
 This sample aims to show how to configure Hazelcast Jet 
 as a Spring bean. There are two ways to achieve this:
 
-1. [Programmatic](src/main/java/com/hazelcast/jet/examples/spring/spring/AnnotationBasedConfigurationSample.java)
+1. [Programmatic](src/main/java/com/hazelcast/jet/examples/spring/AnnotationBasedConfigurationSample.java)
 (annotation-based) configuration. This is the easiest way 
 to configure Hazelcast Jet, simply create a 
-[config class](src/main/java/com/hazelcast/jet/examples/spring/spring/config/AppConfig.java)
+[config class](src/main/java/com/hazelcast/jet/examples/spring/config/AppConfig.java)
 which you can provide `JetInstance` as a bean with `@Bean` annotation.
 Inside the method annotated with `@Bean` you can create and configure
 `JetInstance` programmatically.
 
-2. [Declarative](src/main/java/com/hazelcast/jet/examples/spring/spring/XmlConfigurationWithSchemaSample.java)
+2. [Declarative](src/main/java/com/hazelcast/jet/examples/spring/XmlConfigurationWithSchemaSample.java)
 (xml) configuration. You can configure Hazelcast Jet using 
 an xml file too. Here you have 2 choices:
  
@@ -36,7 +36,7 @@ an xml file too. Here you have 2 choices:
 You can integrate Hazelcast Jet with Spring Boot easily.
 The approach is very similar to the programmatic configuration.
 You need to have a 
-[config class](src/main/java/com/hazelcast/jet/examples/spring/spring/config/AppConfig.java)
+[config class](src/main/java/com/hazelcast/jet/examples/spring/config/AppConfig.java)
 which has `@SpringBootApplication` annotation. 
 
 ```java
@@ -72,7 +72,7 @@ means creation and initialization of processors are done on each
 member without any interference of spring context. If you want to
 inject spring context to your processors you should mark them with
 `@SpringAware` annotation. Here is a custom source 
-[example](src/main/java/com/hazelcast/jet/examples/spring/spring/source/CustomSourceP.java).
+[example](src/main/java/com/hazelcast/jet/examples/spring/source/CustomSourceP.java).
 
 You have to configure Hazelcast Jet to use `SpringManagedContext`
 to enable `@SpringAware` annotation. If configured, the `SpringManagedContext`

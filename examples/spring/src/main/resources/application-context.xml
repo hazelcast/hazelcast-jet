@@ -27,7 +27,7 @@
 		http://www.springframework.org/schema/context
         http://www.springframework.org/schema/context/spring-context.xsd">
 
-    <context:component-scan base-package="com.hazelcast.jet.examples.spring.spring"/>
+    <context:component-scan base-package="com.hazelcast.jet.examples.spring"/>
 
     <bean id="instance" class="com.hazelcast.jet.Jet" factory-method="newJetInstance">
         <constructor-arg>
