@@ -44,16 +44,16 @@ import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
 public class CompleteExecutionOperation extends Operation implements IdentifiedDataSerializable {
 
     private long executionId;
-    private boolean saveMetrics;
+    private boolean collectMetrics;
     private Throwable error;
     private RawJobMetrics response;
 
     public CompleteExecutionOperation() {
     }
 
-    public CompleteExecutionOperation(long executionId, boolean saveMetrics, Throwable error) {
+    public CompleteExecutionOperation(long executionId, boolean collectMetrics, Throwable error) {
         this.executionId = executionId;
-        this.saveMetrics = saveMetrics;
+        this.collectMetrics = collectMetrics;
         this.error = error;
     }
 
@@ -74,7 +74,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         }
 
         JobExecutionService jobExecutionService = service.getJobExecutionService();
-        if (saveMetrics) {
+        if (collectMetrics) {
             JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId, nodeEngine.getLocalMember(), logger);
             nodeEngine.getMetricsRegistry().render(metricsRenderer);
             metricsRenderer.whenComplete();
@@ -110,7 +110,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
     protected void writeInternal(ObjectDataOutput out) throws IOException {
         super.writeInternal(out);
         out.writeLong(executionId);
-        out.writeBoolean(saveMetrics);
+        out.writeBoolean(collectMetrics);
         out.writeObject(error);
     }
 
@@ -118,7 +118,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
     protected void readInternal(ObjectDataInput in) throws IOException {
         super.readInternal(in);
         executionId = in.readLong();
-        saveMetrics = in.readBoolean();
+        collectMetrics = in.readBoolean();
         error = in.readObject();
     }
 

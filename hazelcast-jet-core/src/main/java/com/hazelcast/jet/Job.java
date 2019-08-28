@@ -95,8 +95,7 @@ public interface Job {
      * are enabled. Otherwise empty metrics will be returned.
      * <p>
      * Keep in mind that the collections may occur at different times on
-     * each member, metrics from various members aren't from the same instant
-     * of time.
+     * each member, metrics from various members aren't from the same instant.
      * <p>
      * When a job is restarted (or resumed after being previously suspended)
      * the metrics are reset too, their values will reflect only updates
