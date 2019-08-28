@@ -74,7 +74,7 @@ if [ -z "$ADDRESS" ]; then
     ADDRESS="127.0.0.1"
 fi
 
-command -v curl >/dev/null 2>&1 || { echo >&2 "Cluster state script requires curl but it's not installed. Aborting."; exit 255; }
+command -v curl >/dev/null 2>&1 || { echo >&2 "Cluster state script requires curl but it's not installed. Aborting."; exit 1; }
 
 if [ "$OPERATION" != "get-state" ] && [ "$OPERATION" != "change-state" ] && [ "$OPERATION" != "shutdown" ] &&  [ "$OPERATION" != "force-start" ] && [ "$OPERATION" != "partial-start" ] && [ "$OPERATION" != "get-cluster-version" ] && [ "$OPERATION" != "change-cluster-version" ]; then
     echo "Not a valid cluster operation, valid operations  are 'get-state' || 'change-state' || 'shutdown' || 'force-start' || 'partial-start' || 'get-cluster-version' || 'change-cluster-version'"
