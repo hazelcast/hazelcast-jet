@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.spring.spring.dao;
+package com.hazelcast.jet.examples.spring.dao;
 
-import com.hazelcast.jet.examples.spring.spring.model.User;
+import com.hazelcast.jet.examples.spring.model.User;
 
 import java.util.List;
 

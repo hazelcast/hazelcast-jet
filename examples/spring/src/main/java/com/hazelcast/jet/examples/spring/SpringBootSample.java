@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.spring.spring;
+package com.hazelcast.jet.examples.spring;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.examples.spring.spring.config.AppConfig;
-import com.hazelcast.jet.examples.spring.spring.source.CustomSourceP;
+import com.hazelcast.jet.examples.spring.config.AppConfig;
+import com.hazelcast.jet.examples.spring.source.CustomSourceP;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.spring.spring.config;
+package com.hazelcast.jet.examples.spring.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.ManagedContext;
@@ -37,7 +37,7 @@ import javax.sql.DataSource;
  */
 @Configuration
 @SpringBootApplication
-@ComponentScan({"com.hazelcast.jet.examples.spring.spring"})
+@ComponentScan({"com.hazelcast.jet.examples.spring"})
 public class AppConfig {
 
     /**

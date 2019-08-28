@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.spring.spring.model;
+package com.hazelcast.jet.examples.spring.model;
 
 public class User {
 
