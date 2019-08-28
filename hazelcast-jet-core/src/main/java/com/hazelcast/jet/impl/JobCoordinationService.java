@@ -703,12 +703,14 @@ public class JobCoordinationService {
      * Otherwise, it reschedules the restart task.
      */
     void restartJob(long jobId) {
-        MasterContext masterContext = masterContexts.get(jobId);
-        if (masterContext == null) {
-            logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
-            return;
-        }
-        tryStartJob(masterContext);
+        submitToCoordinatorThread(() -> {
+            MasterContext masterContext = masterContexts.get(jobId);
+            if (masterContext == null) {
+                logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
+                return;
+            }
+            tryStartJob(masterContext);
+        });
     }
 
     private void checkOperationalState() {

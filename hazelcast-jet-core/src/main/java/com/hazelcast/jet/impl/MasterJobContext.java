@@ -621,7 +621,8 @@ public class MasterJobContext {
             // if restart was requested, restart immediately
             if (terminationModeAction == RESTART) {
                 mc.setJobStatus(NOT_RUNNING);
-                nonSynchronizedAction = () -> mc.coordinationService().restartJob(mc.jobId());
+                mc.coordinationService().restartJob(mc.jobId());
+                nonSynchronizedAction = NO_OP;
             } else if (!wasCancelled && isRestartableException(failure) && mc.jobConfig().isAutoScaling()) {
                 // if restart is due to a failure, schedule a restart after a delay
                 scheduleRestart();
