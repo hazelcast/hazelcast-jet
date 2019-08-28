@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.examples.cogroup.datamodel;
 
+import com.hazelcast.jet.impl.util.Util;
+
 public class Payment extends Event {
 
     private final int amount;
@@ -49,6 +51,10 @@ public class Payment extends Event {
 
     @Override
     public String toString() {
-        return "Payment{" + amount + '}';
+        return "Payment{" +
+                "amount=" + amount +
+                ", userId=" + userId() +
+                ", timestamp=" + Util.toLocalTime(timestamp()) +
+                '}';
     }
 }

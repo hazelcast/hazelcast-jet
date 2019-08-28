@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.examples.cogroup.datamodel;
 
+import com.hazelcast.jet.impl.util.Util;
+
 public class AddToCart extends Event {
 
     private final int quantity;
@@ -49,6 +51,10 @@ public class AddToCart extends Event {
 
     @Override
     public String toString() {
-        return "AddToCart{" + quantity + '}';
+        return "AddToCart{" +
+                "quantity=" + quantity +
+                ", userId=" + userId() +
+                ", timestamp=" + Util.toLocalTime(timestamp()) +
+                '}';
     }
 }

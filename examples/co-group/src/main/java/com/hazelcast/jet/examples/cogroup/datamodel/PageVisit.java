@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.examples.cogroup.datamodel;
 
+import com.hazelcast.jet.impl.util.Util;
+
 public class PageVisit extends Event {
 
     private final int loadTime;
@@ -49,6 +51,10 @@ public class PageVisit extends Event {
 
     @Override
     public String toString() {
-        return "PageVisit{" + loadTime + '}';
+        return "PageVisit{" +
+                "loadTime=" + loadTime +
+                ", userId=" + userId() +
+                ", timestamp=" + Util.toLocalTime(timestamp()) +
+                '}';
     }
 }
