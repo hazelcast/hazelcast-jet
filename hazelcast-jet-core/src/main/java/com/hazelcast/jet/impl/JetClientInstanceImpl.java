@@ -130,8 +130,13 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     public ClusterMetadata getClusterMetadata() {
         return invokeRequestOnMasterAndDecodeResponse(JetGetClusterMetadataCodec.encodeRequest(),
                 response -> {
-                    ResponseParameters responseParameters = JetGetClusterMetadataCodec.decodeResponse(response);
-                    return responseParameters.response;
+                    ResponseParameters parameters = JetGetClusterMetadataCodec.decodeResponse(response);
+                    ClusterMetadata metadata = new ClusterMetadata();
+                    metadata.setClusterTime(parameters.clusterTime);
+                    metadata.setName(parameters.name);
+                    metadata.setState(parameters.state);
+                    metadata.setVersion(parameters.version);
+                    return metadata;
                 });
     }
 

@@ -31,7 +31,11 @@ public class JetGetClusterMetadataMessageTask
                                                Connection connection) {
         super(clientMessage, node, connection,
                 JetGetClusterMetadataCodec::decodeRequest,
-                JetGetClusterMetadataCodec::encodeResponse
+                o -> JetGetClusterMetadataCodec.encodeResponse(
+                        o.getName(),
+                        o.getVersion(),
+                        o.getClusterTime(),
+                        o.getStateOrdinal())
         );
     }
 
