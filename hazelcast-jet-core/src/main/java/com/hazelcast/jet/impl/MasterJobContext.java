@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -591,7 +592,7 @@ public class MasterJobContext {
         mc.nodeEngine().getExecutionService().execute(ExecutionService.ASYNC_EXECUTOR, () ->
                 mc.invokeOnParticipants(plan -> new TerminateExecutionOperation(jobId, executionId, mode),
                         responses -> {
-                            if (responses.stream().anyMatch(Objects::nonNull)) {
+                            if (responses.stream().map(Entry::getValue).anyMatch(Objects::nonNull)) {
                                 // log errors
                                 logger.severe(mc.jobIdString() + ": some TerminateExecutionOperation invocations " +
                                         "failed, execution might remain stuck: " + responses);
