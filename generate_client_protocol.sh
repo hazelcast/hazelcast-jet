@@ -15,7 +15,7 @@ if [ -z "$PYTHON" ]; then
 fi
 
 if [ -z "$PIP3" ]; then
-    echo "Python 3 could not be found in your system."
+    echo "PIP 3 could not be found in your system."
     exit 1
 fi
 
