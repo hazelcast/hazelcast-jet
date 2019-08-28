@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.config.EventJournalConfig;
-import com.hazelcast.map.IMap;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -32,6 +31,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.map.IMap;
 import com.hazelcast.spi.properties.GroupProperty;
 import org.junit.Before;
 import org.junit.Test;

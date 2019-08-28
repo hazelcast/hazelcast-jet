@@ -17,8 +17,8 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.nio.Address;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;

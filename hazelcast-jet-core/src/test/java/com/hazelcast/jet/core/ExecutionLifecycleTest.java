@@ -17,7 +17,6 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.core.DistributedObject;
-import com.hazelcast.map.IMap;
 import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.internal.cluster.impl.ClusterServiceImpl;
 import com.hazelcast.internal.cluster.impl.MembersView;
@@ -36,6 +35,7 @@ import com.hazelcast.jet.impl.JobResult;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.spi.impl.NodeEngineImpl;

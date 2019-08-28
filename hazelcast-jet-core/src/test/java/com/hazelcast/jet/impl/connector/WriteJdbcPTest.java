@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.SupplierEx;
 import org.h2.tools.DeleteDbFiles;
 import org.junit.Before;
 import org.junit.BeforeClass;

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.benchmark;
 
 import com.hazelcast.cluster.Member;
-import com.hazelcast.partition.Partition;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.JetConfig;
@@ -29,6 +28,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.nio.Address;
+import com.hazelcast.partition.Partition;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;

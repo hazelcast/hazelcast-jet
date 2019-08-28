@@ -17,8 +17,8 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
+import com.hazelcast.util.function.SupplierEx;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

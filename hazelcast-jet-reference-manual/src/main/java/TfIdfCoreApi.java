@@ -21,9 +21,9 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;

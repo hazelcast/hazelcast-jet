@@ -18,10 +18,10 @@ package com.hazelcast.jet.aggregate;
 
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.util.function.BiConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

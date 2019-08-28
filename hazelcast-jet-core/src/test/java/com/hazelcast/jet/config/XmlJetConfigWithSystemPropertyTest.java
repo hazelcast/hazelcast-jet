@@ -17,8 +17,8 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.core.HazelcastException;
-import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastSerialClassRunner;

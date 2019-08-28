@@ -17,10 +17,10 @@
 package com.hazelcast.jet.hadoop;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsP;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsP;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;

@@ -17,11 +17,11 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.collection.IList;
-import com.hazelcast.map.IMap;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.BeforeClass;
@@ -32,9 +32,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
 
-import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
+import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;

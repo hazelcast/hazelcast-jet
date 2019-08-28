@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.hazelcast.map.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
@@ -24,6 +23,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.map.IMap;
 
 import java.util.Map.Entry;
 import java.util.regex.Pattern;

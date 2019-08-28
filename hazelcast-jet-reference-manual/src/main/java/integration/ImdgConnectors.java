@@ -34,9 +34,9 @@ import datamodel.Person;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.util.function.FunctionEx.identity;
 import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 public class ImdgConnectors {
     static void s1() {

@@ -17,10 +17,10 @@
 package com.hazelcast.jet.avro;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.impl.connector.ReadFilesP;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.SupplierEx;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;

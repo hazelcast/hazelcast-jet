@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.config.Config;
-import com.hazelcast.map.IMap;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.serialization.InternalSerializationService;
@@ -31,6 +30,7 @@ import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.CustomByteArrayOutputStream;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataKey;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl.SnapshotDataValueTerminator;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.Bits;
 import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.nio.serialization.Data;

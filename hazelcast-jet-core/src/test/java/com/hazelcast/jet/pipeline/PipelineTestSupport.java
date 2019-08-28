@@ -18,16 +18,16 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.collection.IList;
-import com.hazelcast.map.IMap;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.TestInClusterSupport;
-import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.Address;
 import org.junit.Before;
 

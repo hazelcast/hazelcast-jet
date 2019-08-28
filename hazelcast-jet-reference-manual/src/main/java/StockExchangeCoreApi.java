@@ -22,11 +22,11 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.ToLongFunctionEx;
 import datamodel.Trade;
 
 import java.time.Instant;
