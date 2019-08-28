@@ -45,7 +45,7 @@ import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.JobStatus.NOT_RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
-import static com.hazelcast.jet.impl.util.Util.callbackOf;
+import static com.hazelcast.jet.impl.util.ImdgUtil.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.jobNameAndExecutionId;
 
 /**
@@ -144,7 +144,7 @@ public class MasterContext {
         return jobRecord.getConfig();
     }
 
-    JobRecord jobRecord() {
+    public JobRecord jobRecord() {
         return jobRecord;
     }
 

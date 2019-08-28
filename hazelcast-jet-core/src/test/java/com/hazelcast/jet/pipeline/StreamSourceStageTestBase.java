@@ -56,11 +56,11 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
     public ExpectedException expectedException = ExpectedException.none();
 
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withoutTimestampsFn =
-            s -> s.withoutTimestamps().addTimestamps(i -> i + 1, 0).setLocalParallelism(1);
+            s -> s.withoutTimestamps().addTimestamps(i -> i + 1, 0);
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withNativeTimestampsFn =
             s -> s.withNativeTimestamps(0);
     protected final Function<StreamSourceStage<Integer>, StreamStage<Integer>> withTimestampsFn =
-            s -> s.withTimestamps(i -> i + 1, 0).setLocalParallelism(1);
+            s -> s.withTimestamps(i -> i + 1, 0);
 
     @Before
     public void before() {
@@ -102,7 +102,6 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
             return;
         }
         stageWithTimestamps
-                .setLocalParallelism(1)
                 .peek()
                 .window(WindowDefinition.tumbling(1))
                 .aggregate(counting())

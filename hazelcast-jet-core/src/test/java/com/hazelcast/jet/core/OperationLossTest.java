@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.nio.Connection;
 import com.hazelcast.spi.properties.GroupProperty;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -174,9 +174,9 @@ public class OperationLossTest extends JetTestSupport {
         dag.edge(between(source, sink).distributed());
         Job job = instance1.newJob(dag);
         assertJobStatusEventually(job, RUNNING);
-        assertEquals(2, NoOutputSourceP.initCount.get());
+        assertTrueEventually(() -> assertEquals(2, NoOutputSourceP.initCount.get()));
 
-        Connection connection = Util.getMemberConnection(getNodeEngineImpl(instance1),
+        Connection connection = ImdgUtil.getMemberConnection(getNodeEngineImpl(instance1),
                 instance2.getHazelcastInstance().getCluster().getLocalMember().getAddress());
         // When
         connection.close(null, null);

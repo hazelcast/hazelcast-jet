@@ -53,8 +53,8 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
-import static com.hazelcast.jet.impl.util.Util.asClientConfig;
-import static com.hazelcast.jet.impl.util.Util.asXmlString;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asClientConfig;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.processorToPartitions;
 import static java.util.stream.Collectors.groupingBy;
