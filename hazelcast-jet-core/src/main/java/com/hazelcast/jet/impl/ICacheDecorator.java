@@ -20,7 +20,6 @@ import com.hazelcast.cache.CacheStatistics;
 import com.hazelcast.cache.ICache;
 import com.hazelcast.cache.impl.event.CachePartitionLostListener;
 import com.hazelcast.core.ICompletableFuture;
-import com.hazelcast.jet.ICacheJet;
 import com.hazelcast.jet.JetInstance;
 
 import javax.cache.CacheManager;
@@ -38,7 +37,7 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 
 @SuppressWarnings({"checkstyle:methodcount", "deprecation"})
-public class ICacheDecorator<K, V> implements ICacheJet<K, V> {
+public class ICacheDecorator<K, V> implements ICache<K, V> {
 
     private final ICache<K, V> cache;
     private final JetInstance instance;

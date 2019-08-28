@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.Node;
-import com.hazelcast.jet.ICacheJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
@@ -107,7 +107,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         return instance.getMap(randomName());
     }
 
-    protected static <K, V> ICacheJet<K, V> getCache(JetInstance instance) {
+    protected static <K, V> ICache<K, V> getCache(JetInstance instance) {
         return instance.getCacheManager().getCache(randomName());
     }
 

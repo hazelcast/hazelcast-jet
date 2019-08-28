@@ -22,7 +22,6 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.jet.ICacheJet;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
@@ -294,7 +293,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         Job job = jetInstance.newJob(dag);
 
-        ICacheJet<Integer, Integer> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
+        ICache<Integer, Integer> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceCache.put(i, i));
 
         assertSizeEventually(ENTRY_COUNT, jetInstance.getList(streamSinkName));
@@ -313,7 +312,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         Job job = jetInstance.newJob(dag);
 
-        ICacheJet<Integer, Integer> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
+        ICache<Integer, Integer> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
         range(0, ENTRY_COUNT).forEach(i -> sourceCache.put(i, i));
 
         assertSizeEventually(ENTRY_COUNT - 1, jetInstance.getList(streamSinkName));
@@ -381,7 +380,7 @@ public class HazelcastConnectorTest extends JetTestSupport {
 
         Job job = jetInstance.newJob(dag);
 
-        ICacheJet<Object, Object> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
+        ICache<Object, Object> sourceCache = jetInstance.getCacheManager().getCache(streamSourceName);
         sourceCache.put(1, 1); // ADDED
         sourceCache.remove(1); // REMOVED - filtered out
         sourceCache.put(1, 2); // UPDATED

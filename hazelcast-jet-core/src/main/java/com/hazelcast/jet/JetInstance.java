@@ -26,7 +26,10 @@ import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
 import com.hazelcast.jet.pipeline.GeneralStage;
+import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.replicatedmap.ReplicatedMap;
@@ -253,6 +256,11 @@ public interface JetInstance {
 
     /**
      * Returns the distributed map instance with the specified name.
+     * <p>
+     * It's possible to use the map as a data source or sink in a Jet {@link
+     * Pipeline}, using {@link Sources#map(String)} or {@link
+     * Sinks#map(String)} and the change stream of the map can be read using
+     * {@link Sources#mapJournal(String, JournalInitialPosition)}.
      *
      * @param name name of the distributed map
      * @return distributed map instance with the specified name
@@ -275,6 +283,10 @@ public interface JetInstance {
 
     /**
      * Returns the distributed list instance with the specified name.
+     * <p>
+     * It's possible to use the link as a data source or sink in a Jet {@link
+     * Pipeline}, using {@link Sources#list(String)} or {@link
+     * Sinks#list(String)}.
      *
      * @param name name of the distributed list
      * @return distributed list instance with the specified name
