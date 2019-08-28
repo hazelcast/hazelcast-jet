@@ -162,7 +162,6 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
         @Override
         public void renderNoValue(String name) {
-            throw new UnsupportedOperationException();
         }
 
         public void whenComplete() {
