@@ -28,10 +28,10 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;

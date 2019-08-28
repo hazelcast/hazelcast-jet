@@ -26,7 +26,6 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.map.EntryProcessor;
-import com.hazelcast.map.IMap;
 import com.hazelcast.util.function.BiConsumerEx;
 import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.BinaryOperatorEx;

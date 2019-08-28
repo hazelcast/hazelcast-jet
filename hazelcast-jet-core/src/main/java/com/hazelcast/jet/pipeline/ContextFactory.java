@@ -18,8 +18,8 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;

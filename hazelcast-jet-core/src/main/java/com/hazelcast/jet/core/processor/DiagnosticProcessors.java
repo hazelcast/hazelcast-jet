@@ -20,20 +20,20 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
-import com.hazelcast.util.function.SupplierEx;
 import com.hazelcast.jet.impl.connector.WriteLoggerP;
 import com.hazelcast.jet.impl.processor.PeekWrappedP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
+import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.util.function.PredicateEx;
+import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
-import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
 
 /**
  * Static utility class with factories of sinks and wrappers that log

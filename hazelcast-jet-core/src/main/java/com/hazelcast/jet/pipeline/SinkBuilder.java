@@ -20,11 +20,11 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.util.Preconditions;
 import com.hazelcast.util.function.BiConsumerEx;
 import com.hazelcast.util.function.ConsumerEx;
 import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.util.function.SupplierEx;
-import com.hazelcast.util.Preconditions;
 
 import javax.annotation.Nonnull;
 

@@ -18,8 +18,8 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
@@ -28,7 +28,6 @@ import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
-
 import java.util.function.Function;
 
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsQueueP;

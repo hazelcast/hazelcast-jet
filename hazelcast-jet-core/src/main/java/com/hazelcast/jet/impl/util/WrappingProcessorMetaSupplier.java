@@ -19,8 +19,8 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.nio.Address;
+import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;

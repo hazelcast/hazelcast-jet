@@ -18,10 +18,10 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -31,9 +31,9 @@ import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.accumulateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
-import static com.hazelcast.util.function.Functions.entryKey;
 import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
+import static com.hazelcast.util.function.Functions.entryKey;
 
 public class GroupTransform<K, A, R, OUT> extends AbstractTransform {
     @Nonnull

@@ -19,8 +19,8 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
+import com.hazelcast.util.function.BiFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

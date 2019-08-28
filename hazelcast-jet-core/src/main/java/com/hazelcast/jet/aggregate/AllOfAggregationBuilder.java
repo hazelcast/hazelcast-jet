@@ -26,8 +26,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.hazelcast.jet.datamodel.Tag.tag;
-import static com.hazelcast.util.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.util.function.FunctionEx.identity;
 
 /**
  * Offers a step-by-step API to create a composite of multiple aggregate

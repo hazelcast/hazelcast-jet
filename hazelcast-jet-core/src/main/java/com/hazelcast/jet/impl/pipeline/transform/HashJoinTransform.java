@@ -18,14 +18,14 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP;
 import com.hazelcast.jet.impl.processor.HashJoinP;
 import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
