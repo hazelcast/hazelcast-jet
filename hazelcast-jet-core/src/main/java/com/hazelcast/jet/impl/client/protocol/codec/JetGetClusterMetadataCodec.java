@@ -17,18 +17,12 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.jet.impl.client.protocol.codec.builtin.ClusterMetadataCodec;
+import com.hazelcast.client.impl.protocol.codec.builtin.*;
 
 import java.util.ListIterator;
 
-import static com.hazelcast.client.impl.protocol.ClientMessage.CORRELATION_ID_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.Frame;
-import static com.hazelcast.client.impl.protocol.ClientMessage.PARTITION_ID_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.TYPE_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.UNFRAGMENTED_MESSAGE;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.INT_SIZE_IN_BYTES;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.LONG_SIZE_IN_BYTES;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.encodeInt;
+import static com.hazelcast.client.impl.protocol.ClientMessage.*;
+import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
 
 /**
  * TODO doc
@@ -39,7 +33,9 @@ public final class JetGetClusterMetadataCodec {
     //hex: 0x1A0E01
     public static final int RESPONSE_MESSAGE_TYPE = 1707521;
     private static final int REQUEST_INITIAL_FRAME_SIZE = PARTITION_ID_FIELD_OFFSET + INT_SIZE_IN_BYTES;
-    private static final int RESPONSE_INITIAL_FRAME_SIZE = CORRELATION_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_CLUSTER_TIME_FIELD_OFFSET = CORRELATION_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_STATE_FIELD_OFFSET = RESPONSE_CLUSTER_TIME_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_INITIAL_FRAME_SIZE = RESPONSE_STATE_FIELD_OFFSET + INT_SIZE_IN_BYTES;
 
     private JetGetClusterMetadataCodec() {
     }
@@ -53,14 +49,14 @@ public final class JetGetClusterMetadataCodec {
         clientMessage.setRetryable(true);
         clientMessage.setAcquiresResource(false);
         clientMessage.setOperationName("Jet.GetClusterMetadata");
-        Frame initialFrame = new Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, REQUEST_MESSAGE_TYPE);
         clientMessage.add(initialFrame);
         return clientMessage;
     }
 
-    public static RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<Frame> iterator = clientMessage.listIterator();
+    public static JetGetClusterMetadataCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
+        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
         RequestParameters request = new RequestParameters();
         //empty initial frame
         iterator.next();
@@ -73,25 +69,45 @@ public final class JetGetClusterMetadataCodec {
         /**
          * TODO doc
          */
-        public com.hazelcast.jet.impl.ClusterMetadata response;
+        public java.lang.String name;
+
+        /**
+         * TODO doc
+         */
+        public java.lang.String version;
+
+        /**
+         * TODO doc
+         */
+        public long clusterTime;
+
+        /**
+         * TODO doc
+         */
+        public int state;
     }
 
-    public static ClientMessage encodeResponse(com.hazelcast.jet.impl.ClusterMetadata response) {
+    public static ClientMessage encodeResponse(java.lang.String name, java.lang.String version, long clusterTime, int state) {
         ClientMessage clientMessage = ClientMessage.createForEncode();
-        Frame initialFrame = new Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, RESPONSE_MESSAGE_TYPE);
         clientMessage.add(initialFrame);
 
-        ClusterMetadataCodec.encode(clientMessage, response);
+        encodeLong(initialFrame.content, RESPONSE_CLUSTER_TIME_FIELD_OFFSET, clusterTime);
+        encodeInt(initialFrame.content, RESPONSE_STATE_FIELD_OFFSET, state);
+        StringCodec.encode(clientMessage, name);
+        StringCodec.encode(clientMessage, version);
         return clientMessage;
     }
 
-    public static ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<Frame> iterator = clientMessage.listIterator();
+    public static JetGetClusterMetadataCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
+        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
         ResponseParameters response = new ResponseParameters();
-        //empty initial frame
-        iterator.next();
-        response.response = ClusterMetadataCodec.decode(iterator);
+        ClientMessage.Frame initialFrame = iterator.next();
+        response.clusterTime = decodeLong(initialFrame.content, RESPONSE_CLUSTER_TIME_FIELD_OFFSET);
+        response.state = decodeInt(initialFrame.content, RESPONSE_STATE_FIELD_OFFSET);
+        response.name = StringCodec.decode(iterator);
+        response.version = StringCodec.decode(iterator);
         return response;
     }
 

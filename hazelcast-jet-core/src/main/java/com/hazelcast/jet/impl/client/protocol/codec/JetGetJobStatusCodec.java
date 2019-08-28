@@ -17,20 +17,12 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.codec.builtin.*;
 
 import java.util.ListIterator;
 
-import static com.hazelcast.client.impl.protocol.ClientMessage.CORRELATION_ID_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.Frame;
-import static com.hazelcast.client.impl.protocol.ClientMessage.PARTITION_ID_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.TYPE_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.UNFRAGMENTED_MESSAGE;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.INT_SIZE_IN_BYTES;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.LONG_SIZE_IN_BYTES;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.decodeInt;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.decodeLong;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.encodeInt;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.encodeLong;
+import static com.hazelcast.client.impl.protocol.ClientMessage.*;
+import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
 
 /**
  * TODO doc
@@ -62,17 +54,17 @@ public final class JetGetJobStatusCodec {
         clientMessage.setRetryable(false);
         clientMessage.setAcquiresResource(false);
         clientMessage.setOperationName("Jet.GetJobStatus");
-        Frame initialFrame = new Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, REQUEST_MESSAGE_TYPE);
         encodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET, jobId);
         clientMessage.add(initialFrame);
         return clientMessage;
     }
 
-    public static RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<Frame> iterator = clientMessage.listIterator();
+    public static JetGetJobStatusCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
+        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
         RequestParameters request = new RequestParameters();
-        Frame initialFrame = iterator.next();
+        ClientMessage.Frame initialFrame = iterator.next();
         request.jobId = decodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET);
         return request;
     }
@@ -88,7 +80,7 @@ public final class JetGetJobStatusCodec {
 
     public static ClientMessage encodeResponse(int response) {
         ClientMessage clientMessage = ClientMessage.createForEncode();
-        Frame initialFrame = new Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, RESPONSE_MESSAGE_TYPE);
         clientMessage.add(initialFrame);
 
@@ -96,10 +88,10 @@ public final class JetGetJobStatusCodec {
         return clientMessage;
     }
 
-    public static ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<Frame> iterator = clientMessage.listIterator();
+    public static JetGetJobStatusCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
+        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
         ResponseParameters response = new ResponseParameters();
-        Frame initialFrame = iterator.next();
+        ClientMessage.Frame initialFrame = iterator.next();
         response.response = decodeInt(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET);
         return response;
     }

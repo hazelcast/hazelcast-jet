@@ -17,18 +17,12 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.builtin.StringCodec;
+import com.hazelcast.client.impl.protocol.codec.builtin.*;
 
 import java.util.ListIterator;
 
-import static com.hazelcast.client.impl.protocol.ClientMessage.CORRELATION_ID_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.Frame;
-import static com.hazelcast.client.impl.protocol.ClientMessage.PARTITION_ID_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.TYPE_FIELD_OFFSET;
-import static com.hazelcast.client.impl.protocol.ClientMessage.UNFRAGMENTED_MESSAGE;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.INT_SIZE_IN_BYTES;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.LONG_SIZE_IN_BYTES;
-import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.encodeInt;
+import static com.hazelcast.client.impl.protocol.ClientMessage.*;
+import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
 
 /**
  * TODO doc
@@ -53,14 +47,14 @@ public final class JetGetMemberXmlConfigurationCodec {
         clientMessage.setRetryable(true);
         clientMessage.setAcquiresResource(false);
         clientMessage.setOperationName("Jet.GetMemberXmlConfiguration");
-        Frame initialFrame = new Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, REQUEST_MESSAGE_TYPE);
         clientMessage.add(initialFrame);
         return clientMessage;
     }
 
-    public static RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<Frame> iterator = clientMessage.listIterator();
+    public static JetGetMemberXmlConfigurationCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
+        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
         RequestParameters request = new RequestParameters();
         //empty initial frame
         iterator.next();
@@ -73,12 +67,12 @@ public final class JetGetMemberXmlConfigurationCodec {
         /**
          * TODO doc
          */
-        public String response;
+        public java.lang.String response;
     }
 
-    public static ClientMessage encodeResponse(String response) {
+    public static ClientMessage encodeResponse(java.lang.String response) {
         ClientMessage clientMessage = ClientMessage.createForEncode();
-        Frame initialFrame = new Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
+        ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, RESPONSE_MESSAGE_TYPE);
         clientMessage.add(initialFrame);
 
@@ -86,8 +80,8 @@ public final class JetGetMemberXmlConfigurationCodec {
         return clientMessage;
     }
 
-    public static ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<Frame> iterator = clientMessage.listIterator();
+    public static JetGetMemberXmlConfigurationCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
+        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
         ResponseParameters response = new ResponseParameters();
         //empty initial frame
         iterator.next();
