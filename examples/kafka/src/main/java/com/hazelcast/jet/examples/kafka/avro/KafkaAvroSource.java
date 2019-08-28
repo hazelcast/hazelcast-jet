@@ -164,7 +164,7 @@ public class KafkaAvroSource {
 
     private static void cancel(Job job) {
         job.cancel();
-        while (job.getStatus() != JobStatus.COMPLETED) {
+        while (job.getStatus() != JobStatus.FAILED) {
             uncheckRun(() -> SECONDS.sleep(1));
         }
     }
