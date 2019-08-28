@@ -82,7 +82,7 @@ public class HazelcastConnectorTest extends SimpleTestInClusterSupport {
         hazelcastConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
         hazelcastConfig.addEventJournalConfig(new EventJournalConfig().setCacheName("stream*").setMapName("stream*"));
 
-        SimpleTestInClusterSupport.initialize(2, jetConfig);
+        initialize(2, jetConfig);
     }
 
     @Before

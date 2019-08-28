@@ -59,7 +59,7 @@ public class OperationLossTest extends SimpleTestInClusterSupport {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().setProperty(GroupProperty.OPERATION_CALL_TIMEOUT_MILLIS.getName(), "1000");
 
-        SimpleTestInClusterSupport.initialize(2, config);
+        initialize(2, config);
     }
 
     @Before

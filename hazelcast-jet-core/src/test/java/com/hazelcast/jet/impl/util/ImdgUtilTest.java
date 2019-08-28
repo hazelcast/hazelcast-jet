@@ -57,7 +57,7 @@ public class ImdgUtilTest extends SimpleTestInClusterSupport {
         clientConfig.addNearCacheConfig(new NearCacheConfig(NEAR_CACHED_NON_SERIALIZED_MAP)
                 .setInMemoryFormat(InMemoryFormat.OBJECT));
 
-        SimpleTestInClusterSupport.initializeWithClient(2, jetConfig, clientConfig);
+        initializeWithClient(2, jetConfig, clientConfig);
     }
 
     @Test

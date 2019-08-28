@@ -100,7 +100,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
                 .setMapName("journaledMap*")
                 .setCapacity(100_000));
 
-        SimpleTestInClusterSupport.initialize(1, config);
+        initialize(1, config);
     }
 
     @Before
