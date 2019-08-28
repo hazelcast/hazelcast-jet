@@ -34,7 +34,7 @@ public class SlowSourceYieldTest extends SimpleTestInClusterSupport {
 
     @Before
     public void before() {
-        SimpleTestInClusterSupport.beforeClass(1, null);
+        SimpleTestInClusterSupport.initialize(1, null);
     }
 
     @Test

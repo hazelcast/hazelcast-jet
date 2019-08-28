@@ -62,7 +62,7 @@ public class VertexDef_HigherPrioritySourceTest extends SimpleTestInClusterSuppo
 
     @BeforeClass
     public static void beforeClass() {
-        SimpleTestInClusterSupport.beforeClass(1, null);
+        SimpleTestInClusterSupport.initialize(1, null);
         nodeEngineImpl = getNodeEngineImpl(instance().getHazelcastInstance());
         ClusterServiceImpl clusterService = (ClusterServiceImpl) nodeEngineImpl.getClusterService();
         membersView = clusterService.getMembershipManager().getMembersView();

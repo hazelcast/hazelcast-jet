@@ -30,17 +30,18 @@ import javax.annotation.Nullable;
 
 /**
  * Base class for tests that share the cluster for all jobs. The subclass must
- * call {@link #beforeClassWithClient} method.
+ * call {@link #initialize} or {@link #initializeWithClient} method.
  */
 @RunWith(HazelcastSerialClassRunner.class)
-public class SimpleTestInClusterSupport extends JetTestSupport {
+public abstract class SimpleTestInClusterSupport extends JetTestSupport {
 
     private static JetTestInstanceFactory factory;
     private static JetConfig jetConfig;
     private static JetInstance[] instances;
     private static JetInstance client;
 
-    protected static void beforeClass(int memberCount, @Nullable JetConfig jetConfig) {
+    protected static void initialize(int memberCount, @Nullable JetConfig jetConfig) {
+        assert factory == null : "already initialized";
         factory = new JetTestInstanceFactory();
         instances = new JetInstance[memberCount];
         if (jetConfig == null) {
@@ -53,12 +54,12 @@ public class SimpleTestInClusterSupport extends JetTestSupport {
         }
     }
 
-    protected static void beforeClassWithClient(
+    protected static void initializeWithClient(
             int memberCount,
             @Nullable JetConfig config,
             @Nullable JetClientConfig clientConfig
     ) {
-        beforeClass(memberCount, config);
+        initialize(memberCount, config);
 
         if (clientConfig == null) {
             clientConfig = new JetClientConfig();
