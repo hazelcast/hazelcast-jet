@@ -26,6 +26,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,7 +41,7 @@ import static com.amazonaws.regions.Regions.US_EAST_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class SinkTest extends JetTestSupport {
+public class S3SinkTest extends JetTestSupport {
 
     private static String bucketName = "jet-s3-connector-test-bucket-sink";
     private static String accessKeyId;
@@ -55,8 +56,8 @@ public class SinkTest extends JetTestSupport {
     }
 
     @Before
+    @After
     public void deleteObjects() {
-        client.createBucket(bucketName);
         String[] keys = client
                 .listObjects(bucketName)
                 .getObjectSummaries()
@@ -94,7 +95,7 @@ public class SinkTest extends JetTestSupport {
         long totalLineCount = objectSummaries
                 .stream()
                 .map(summary -> client.getObject(bucketName, summary.getKey()))
-                .mapToLong(SinkTest::lineCount)
+                .mapToLong(S3SinkTest::lineCount)
                 .sum();
 
         assertEquals(itemCount, totalLineCount);

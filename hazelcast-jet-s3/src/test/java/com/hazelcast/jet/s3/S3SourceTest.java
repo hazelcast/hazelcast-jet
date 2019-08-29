@@ -27,10 +27,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static com.amazonaws.regions.Regions.US_EAST_1;
-import static com.hazelcast.jet.s3.SinkTest.getSystemPropertyOrEnv;
+import static com.hazelcast.jet.s3.S3SinkTest.getSystemPropertyOrEnv;
 import static org.junit.Assert.assertEquals;
 
-public class SourceTest extends JetTestSupport {
+public class S3SourceTest extends JetTestSupport {
 
 
     private static String bucketName = "jet-s3-connector-test-bucket-source";
