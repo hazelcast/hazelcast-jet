@@ -46,10 +46,10 @@ public class MetricsConfig {
     private int intervalSeconds = DEFAULT_METRICS_COLLECTION_SECONDS;
 
     /**
-     * Master switch for all metrics related functionality. Enabling it is
-     * a prerequisite for all types of metrics publishing ({@link
-     * #isJmxEnabled() JMX}, Management Center & {@link JobConfig#isMetricsEnabled()
-     * Jobs}). It's enabled by default.
+     * Sets whether metrics collection should be enabled for the node. If
+     * enabled, Hazelcast Jet Management Center will be able to connect to this
+     * member. This option is also required for other metrics related
+     * functionality. It's enabled by default.
      */
     @Nonnull
     public MetricsConfig setEnabled(boolean enabled) {
@@ -58,7 +58,7 @@ public class MetricsConfig {
     }
 
     /**
-     * Returns if metrics related functionality is turned on.
+     * Returns if metrics collection is enabled.
      */
     public boolean isEnabled() {
         return enabled;
