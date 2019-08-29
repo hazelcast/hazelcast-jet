@@ -36,6 +36,8 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
@@ -47,6 +49,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
@@ -57,6 +60,8 @@ import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
+import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
+import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
 import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
@@ -87,10 +92,11 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Integer> stage = streamStageFromList(emptyList());
-        stage.setLocalParallelism(localParallelism);
+        StreamStage<Integer> filter = stage.filter(i -> i < 10)
+                                           .setLocalParallelism(localParallelism);
 
         // Then
-        assertEquals(localParallelism, transformOf(stage).localParallelism());
+        assertEquals(localParallelism, transformOf(filter).localParallelism());
     }
 
     @Test
@@ -108,6 +114,25 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         assertEquals(
                 streamToString(input.stream().map(mapFn), identity()),
                 streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
+    public void mapAsFilter() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        PredicateEx<Integer> filterFn = i -> i % 2 == 1;
+        Function<Integer, String> formatFn = i -> String.format("%04d", i);
+
+        // When
+        StreamStage<Integer> filtered = streamStageFromList(input)
+                .map(i -> filterFn.test(i) ? i : null);
+
+        // Then
+        filtered.drainTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().filter(filterFn), formatFn),
+                streamToString(sinkStreamOf(Integer.class), formatFn));
     }
 
     @Test
@@ -528,6 +553,210 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 streamToString(
                         this.<Integer, String>sinkStreamOfEntry(),
                         e -> String.format("(%04d, %s)", e.getKey(), e.getValue())));
+    }
+
+    @Test
+    public void mapStateful_global() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Long> stage = streamStageFromList(input)
+                .mapStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    return acc.get();
+                });
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Long, String> formatFn = i -> String.format("%04d", i);
+        assertEquals(
+                streamToString(input.stream().map(i -> i * (i + 1L) / 2), formatFn),
+                streamToString(sinkStreamOf(Long.class), formatFn)
+        );
+    }
+
+    @Test
+    public void mapStateful_global_returningNull() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Long> stage = streamStageFromList(input)
+            .mapStateful(LongAccumulator::new, (acc, i) -> {
+                acc.add(1);
+                return (acc.get() == input.size()) ? acc.get() : null;
+            });
+        // Then
+        stage.drainTo(assertOrdered(Collections.singletonList((long) itemCount)));
+        execute();
+    }
+
+    @Test
+    public void mapStateful_keyed() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Entry<Integer, Long>> stage = streamStageFromList(input)
+                .groupingKey(i -> i % 2)
+                .mapStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    return acc.get();
+                });
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Entry<Integer, Long>, String> formatFn = e -> String.format("%d %04d", e.getKey(), e.getValue());
+        assertEquals(
+                streamToString(input.stream().map(i -> {
+                    int key = i % 2;
+                    long n = i / 2 + 1;
+                    return entry(key, (key + i) * n / 2);
+                }), formatFn),
+                streamToString(sinkStreamOfEntry(), formatFn)
+        );
+    }
+
+    @Test
+    public void mapStateful_keyed_returningNull() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Entry<Integer, Long>> stage = streamStageFromList(input)
+            .groupingKey(i -> i % 2)
+            .mapStateful(LongAccumulator::new, (acc, i) -> {
+                acc.addAllowingOverflow(1);
+                if (acc.get() == input.size() / 2) {
+                    return acc.get();
+                }
+                return null;
+            });
+
+        // Then
+        long expectedCount = itemCount / 2;
+        stage.drainTo(assertAnyOrder(Arrays.asList(entry(0, expectedCount), entry(1, expectedCount))));
+        execute();
+    }
+
+    @Test
+    public void filterStateful_global() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Integer> stage = streamStageFromList(input)
+                .filterStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    return acc.get() % 2 == 0;
+                });
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Integer, String> formatFn = i -> String.format("%04d", i);
+        assertEquals(
+                streamToString(
+                        input.stream()
+                             .filter(i -> {
+                                 int sum = i * (i + 1) / 2;
+                                 return sum % 2 == 0;
+                             }),
+                        formatFn),
+                streamToString(sinkStreamOf(Integer.class), formatFn)
+        );
+    }
+
+    @Test
+    public void filterStateful_keyed() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Entry<Integer, Integer>> stage = streamStageFromList(input)
+                .groupingKey(i -> i % 2)
+                .filterStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    return acc.get() % 2 == 0;
+                });
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Entry<Integer, Integer>, String> formatFn = e ->
+                String.format("%d %04d", e.getKey(), e.getValue());
+        assertEquals(
+                streamToString(
+                        input.stream()
+                             .map(i -> {
+                                 int key = i % 2;
+                                 long n = i / 2 + 1;
+                                 long sum = (key + i) * n / 2;
+                                 return sum % 2 == 0 ? entry(key, i) : null;
+                             })
+                             .filter(Objects::nonNull),
+                        formatFn),
+                streamToString(sinkStreamOfEntry(), formatFn)
+        );
+    }
+
+    @Test
+    public void flatMapStateful_global() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Long> stage = streamStageFromList(input)
+                .flatMapStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    return traverseItems(acc.get(), acc.get());
+                });
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Long, String> formatFn = i -> String.format("%04d", i);
+        assertEquals(
+                streamToString(
+                        input.stream()
+                             .flatMap(i -> {
+                                 long sum = i * (i + 1) / 2;
+                                 return Stream.of(sum, sum);
+                             }),
+                        formatFn),
+                streamToString(sinkStreamOf(Long.class), formatFn)
+        );
+    }
+
+    @Test
+    public void flatMapStateful_keyed() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+
+        // When
+        StreamStage<Entry<Integer, Long>> stage = streamStageFromList(input)
+                .groupingKey(i -> i % 2)
+                .flatMapStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    return traverseItems(acc.get(), acc.get());
+                });
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Entry<Integer, Long>, String> formatFn = e -> String.format("%d %04d", e.getKey(), e.getValue());
+        assertEquals(
+                streamToString(input.stream().flatMap(i -> {
+                    int key = i % 2;
+                    long n = i / 2 + 1;
+                    long sum = (key + i) * n / 2;
+                    return Stream.of(entry(key, sum), entry(key, sum));
+                }), formatFn),
+                streamToString(sinkStreamOfEntry(), formatFn)
+        );
     }
 
     @Test
