@@ -109,6 +109,7 @@ public class JobCoordinationService {
      */
     private static final long RETRY_DELAY_IN_MILLIS = SECONDS.toMillis(2);
     private static final ThreadLocal<Boolean> IS_JOB_COORDINATOR_THREAD = ThreadLocal.withInitial(() -> false);
+    private static final int COORDINATOR_THREADS_POOL_SIZE = 4;
 
     private final NodeEngineImpl nodeEngine;
     private final JetService jetService;
@@ -147,7 +148,7 @@ public class JobCoordinationService {
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         HazelcastProperties properties = new HazelcastProperties(config.getProperties());
         long jobScanPeriodInMillis = properties.getMillis(JOB_SCAN_PERIOD);
-        executionService.register(COORDINATOR_EXECUTOR_NAME, 4, Integer.MAX_VALUE, CACHED);
+        executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
         executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME, this::scanJobs,
                 0, jobScanPeriodInMillis, MILLISECONDS);
     }
