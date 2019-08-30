@@ -92,26 +92,24 @@ For more information about logging when using the Core API, see the
 [[metrics-monitoring]]
 == Monitor Metrics
 
-Jet exposes various metrics to facilitate monitoring of cluster state and
-running jobs. The set of available metrics is fixed for now, but they
-should cover a wide rage of needs and support for custom user metrics is
-planned for future versions.
+Jet exposes various metrics to facilitate monitoring of the cluster
+state and of running jobs.
 
-Each metric provided by Jet has a specific name which conceptually
-identifies what it's being used to measure. Besides their name metrics
-also have a description made up by tags, but those are more like
-attributes which describe a specific instance of the metric and are not
-directly part of the semantics of the metric.
+Metrics have associated tags which describe which object the metric
+applies to. The tags for job metrics typically indicate the specific
+vertex and processor the metric belongs to.
 
 Each metric instance provided belongs to a particular Jet cluster member, so
 different cluster members can have their own versions of the same metric
 with different values.
 
-Also important to note that metric collection from
-different cluster members can take place at different moments in time.
+The metric collection runs in regular intervals on each member, but note
+that the metric collection on different cluster members happens at
+different moments in time. So if you try to correlate metrics from
+different members, they can be from different moments of time.
 
-There are two broad categories of metrics, as follows. For clarity we will
-group them based on significant tags which define their granularity.
+There are two broad categories of metrics. For clarity we will group
+them based on significant tags which define their granularity.
 
 === Cluster metrics ===
 
@@ -123,16 +121,15 @@ group them based on significant tags which define their granularity.
 | **none** +
 Each Jet cluster member will have one instance of this metric.
 
-
-
 | **iterationCount**: The total number of iterations the driver of tasklets in cooperative
-thread N makes. It should increase by at least 250 iterations/s. Lower
+thread N mde. It should increase by at least 250 iterations/s. Lower
 value means some of the cooperative processors blocks for too long.
+Somewhat lower value is normal if there are many tasklets assigned to
+the processor. Lower value affects the latency.
 
- **taskletCount**:The number of assigned tasklets to cooperative thread N.
+ **taskletCount**: The number of assigned tasklets to cooperative thread N.
 | **cooperativeWorker=<N>** +
-Each Jet cluster member will have N instances of this metric, where
-N is the number of cooperative threads it employs for task execution.
+N is the number of the cooperative thread.
 |===
 
 === Job specific metrics ===
@@ -158,9 +155,9 @@ members. +
 members. +
 **distributedItemsOut**: Total number of items sent to remote members.
 
-Values in this section are 0 for non-distributed edges, they only
-account for data actually transmitted over the network between members.
-This numbers include watermarks, snapshot barriers etc.
+These values are only present for distributed edges, they only account
+for data actually transmitted over the network between members. This
+numbers include watermarks, snapshot barriers etc.
 |**ordinal=<N>** +
 Each Jet member will have an instance of these metrics
 for each ordinal of each vertex of each job execution.
@@ -185,7 +182,7 @@ exhausted edges with the next lower priority will be reflected and so
 on.
 |**proc=<N>, ordinal=<not specified>** +
 Each Jet member will have one instances of these metrics for each each processor
-instance N,where N denotes the global processor index. Processor is the
+instance _N_, the _N_ denotes the global processor index. Processor is the
 parallel worker doing the work of the vertex.
 
 |**topObservedWm**: The highest received watermark from _any_ input on
@@ -213,17 +210,17 @@ written to state snapshot.
 
 === Hazelcast IMDG Metrics
 Since Jet is built on top of Hazelcast IMDG the metrics exposed by IMDG are also
-available. For further information on the IMDG metrics please consult the
+available. For further information on IMDG metrics please consult the
 {hz-refman}[Hazelcast IMDG Reference Manual].
 
 === Exposing metrics ===
-The main method Jet has for exposing metrics to the outside world is the
+The main method Jet has for exposing the metrics to the outside world is the
 JVM's standard JMX interface. Since Jet 3.2 there is also an alternative to JMX
 for monitoring metrics, via the `Job API`, albeit only the job-specific ones.
 
 ==== Over JMX ====
 Jet exposes all of its metrics using the JVM's standard JMX interface. You can use
-tools such as Java Mission Control or JConsole to display them. All
+tools such as _Java Mission Control_ or _JConsole_ to display them. All
 Jet-related beans are stored under
 `com.hazelcast.jet/Metrics/<instanceName>/` node and the various tags they
 have form further sub-nodes in the resulting tree structure.
@@ -231,42 +228,36 @@ have form further sub-nodes in the resulting tree structure.
 IMDG metrics are stored under the `com.hazelcast/Metrics/<instanceName>/` node.
 
 ==== Via Job API ====
-Since version 3.2 Jet also exposes job related metrics via its client API.
-`{jet-javadoc}/Job.html[Job]` objects have a `{jet-javadoc}/Job.html#getMetrics--[getMetrics()]`
-method now, which returns `{jet-javadoc}/core/metrics/JobMetrics.html[JobMetrics]` instances
-and those contain the latest known metric values for their source jobs.
+
+The `Job` class has a
+`{jet-javadoc}/Job.html#getMetrics--[getMetrics()]` method which returns
+a `{jet-javadoc}/core/metrics/JobMetrics.html[JobMetrics]` instance. It
+contains the latest known metric values for the job.
 
 This functionality has been developed primarily for giving access to metrics of
-finished jobs, but can in fact be used for jobs with any {jet-javadoc}/core/JobStatus.html[status].
+finished jobs, but can in fact be used for jobs in any {jet-javadoc}/core/JobStatus.html[state].
 
-When exposing metrics in this way the relationship between metric instance and source Jet member
-is made explicit by adding the `{jet-javadoc}/core/metrics/MetricTags.html#MEMBER[member]` and
-`{jet-javadoc}/core/metrics/MetricTags.html#ADDRESS[address]` tags to them.
-
-While the job is running the metric values are updated periodically (according to a
+While the job is running, the metric values are updated periodically (according to a
 {jet-javadoc}/config/MetricsConfig.html#setCollectionIntervalSeconds-int-[configured collection interval]),
 assuming that both
 {jet-javadoc}/config/MetricsConfig.html#setEnabled-boolean-[generic metrics functionality] and
 {jet-javadoc}/config/JobConfig.html#setMetricsEnabled-boolean-[job metrics] are enabled.
 Otherwise empty metrics will be returned.
 
-Keep in mind that the collections may occur at different times on each member,
-metrics from various members aren't from the same instant.
-
-When a job is restarted (or resumed after being previously suspended) the metrics
-are reset too, their values will reflect only updates from the latest execution of the job.
+When a job is restarted (or resumed after being previously suspended), the metrics
+are reset; their values will reflect only updates from the latest execution of the job.
 
 Once a job stops executing (successfully, after a failure, cancellation,
-or temporarily while suspended) the metrics will have their most
-recent values (i.e. the last metric values from the moment before the
-job completed), assuming that
-{jet-javadoc}/config/JobConfig.html#setStoreMetricsAfterJobCompletion-boolean-[metrics storage]
-was enabled. Otherwise empty metrics will be returned.
+or temporarily while suspended) the metrics will have values taken at
+the moment just before the job completed), assuming that
+{jet-javadoc}/config/JobConfig.html#setStoreMetricsAfterJobCompletion-boolean-[metrics storing]
+was enabled. Otherwise, empty metrics will be returned.
 
-For details on how to use and filter the metric values provided consult
-the {jet-javadoc}/core/metrics/JobMetrics.html[JobMetrics API docs]. A simple example for
-computing the number of data items emitted by a certain vertex (let's call it `filter`),
-excluding saved snapshots, would look like this:
+For details on how to use and filter the metric values consult the
+{jet-javadoc}/core/metrics/JobMetrics.html[JobMetrics API docs]. A
+simple example for computing the number of data items emitted by a
+certain vertex (let's call it `vertexA`), excluding items emitted to the
+snapshot, would look like this:
 
 [source]
 ----
