@@ -281,7 +281,7 @@ public class TaskletExecutionService {
 
         @Probe(name = "taskletCount")
         private final CopyOnWriteArrayList<TaskletTracker> trackers;
-        @Probe
+        @Probe(name = "iterationCount")
         private final AtomicLong iterationCount = new AtomicLong();
 
         private final ProgressTracker progressTracker = new ProgressTracker();
