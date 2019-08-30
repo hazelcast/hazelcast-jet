@@ -164,9 +164,8 @@ class MasterSnapshotContext {
             long localExecutionId = mc.executionId();
             mc.invokeOnParticipants(
                     factory,
-                    responses ->
-                            onSnapshotCompleted(responses, localExecutionId, newSnapshotId, finalMapName, isExport, isTerminal,
-                                    future),
+                    responses -> onSnapshotCompleted(responses, localExecutionId, newSnapshotId, finalMapName, isExport,
+                            isTerminal, future),
                     null, true);
         });
     }
