@@ -147,7 +147,7 @@ public class JobCoordinationService {
         InternalExecutionService executionService = nodeEngine.getExecutionService();
         HazelcastProperties properties = new HazelcastProperties(config.getProperties());
         long jobScanPeriodInMillis = properties.getMillis(JOB_SCAN_PERIOD);
-        executionService.register(COORDINATOR_EXECUTOR_NAME, 2, Integer.MAX_VALUE, CACHED);
+        executionService.register(COORDINATOR_EXECUTOR_NAME, 4, Integer.MAX_VALUE, CACHED);
         executionService.scheduleWithRepetition(COORDINATOR_EXECUTOR_NAME, this::scanJobs,
                 0, jobScanPeriodInMillis, MILLISECONDS);
     }
@@ -204,7 +204,7 @@ public class JobCoordinationService {
             jobRepository.putNewJobRecord(jobRecord);
 
             logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request");
-            nodeEngine.getExecutionService().execute(COORDINATOR_EXECUTOR_NAME, () -> tryStartJob(masterContext));
+            tryStartJob(masterContext);
         });
     }
 
@@ -232,11 +232,13 @@ public class JobCoordinationService {
         synchronized (lock) {
             isClusterEnteringPassiveState = true;
         }
-        CompletableFuture[] futures = masterContexts
-                .values().stream()
-                .map(mc -> mc.jobContext().gracefullyTerminate())
-                .toArray(CompletableFuture[]::new);
-        return CompletableFuture.allOf(futures);
+        return submitToCoordinatorThread(() -> {
+            CompletableFuture[] futures = masterContexts
+                    .values().stream()
+                    .map(mc -> mc.jobContext().gracefullyTerminate())
+                    .toArray(CompletableFuture[]::new);
+            return CompletableFuture.allOf(futures);
+        }).thenCompose(identity());
     }
 
     void clusterChangeDone() {
@@ -703,14 +705,12 @@ public class JobCoordinationService {
      * Otherwise, it reschedules the restart task.
      */
     void restartJob(long jobId) {
-        submitToCoordinatorThread(() -> {
-            MasterContext masterContext = masterContexts.get(jobId);
-            if (masterContext == null) {
-                logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
-                return;
-            }
-            tryStartJob(masterContext);
-        });
+        MasterContext masterContext = masterContexts.get(jobId);
+        if (masterContext == null) {
+            logger.severe("Master context for job " + idToString(jobId) + " not found to restart");
+            return;
+        }
+        tryStartJob(masterContext);
     }
 
     private void checkOperationalState() {
@@ -735,18 +735,20 @@ public class JobCoordinationService {
             return;
         }
 
-        boolean allSucceeded = true;
-        int dataMembersCount = nodeEngine.getClusterService().getMembers(DATA_MEMBER_SELECTOR).size();
-        int partitionCount = nodeEngine.getPartitionService().getPartitionCount();
-        // If the number of partitions is lower than the data member count, some members won't have
-        // any partitions assigned. Jet doesn't use such members.
-        int dataMembersWithPartitionsCount = Math.min(dataMembersCount, partitionCount);
-        for (MasterContext mc : masterContexts.values()) {
-            allSucceeded &= mc.jobContext().maybeScaleUp(dataMembersWithPartitionsCount);
-        }
-        if (!allSucceeded) {
-            scheduleScaleUp(RETRY_DELAY_IN_MILLIS);
-        }
+        submitToCoordinatorThread(() -> {
+            boolean allSucceeded = true;
+            int dataMembersCount = nodeEngine.getClusterService().getMembers(DATA_MEMBER_SELECTOR).size();
+            int partitionCount = nodeEngine.getPartitionService().getPartitionCount();
+            // If the number of partitions is lower than the data member count, some members won't have
+            // any partitions assigned. Jet doesn't use such members.
+            int dataMembersWithPartitionsCount = Math.min(dataMembersCount, partitionCount);
+            for (MasterContext mc : masterContexts.values()) {
+                allSucceeded &= mc.jobContext().maybeScaleUp(dataMembersWithPartitionsCount);
+            }
+            if (!allSucceeded) {
+                scheduleScaleUp(RETRY_DELAY_IN_MILLIS);
+            }
+        });
     }
 
     /**
@@ -948,7 +950,7 @@ public class JobCoordinationService {
         });
     }
 
-    private <T> CompletableFuture<T> submitToCoordinatorThread(Callable<T> action) {
+    <T> CompletableFuture<T> submitToCoordinatorThread(Callable<T> action) {
         // if we are on our thread already, execute directly in a blocking way
         if (IS_JOB_COORDINATOR_THREAD.get()) {
             try {
@@ -968,5 +970,9 @@ public class JobCoordinationService {
             }
         });
         return Util.toCompletableFuture(nodeEngine.getExecutionService().asCompletableFuture(future));
+    }
+
+    void assertOnCoordinatorThread() {
+        assert IS_JOB_COORDINATOR_THREAD.get() : "not on coordinator thread";
     }
 }

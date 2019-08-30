@@ -115,6 +115,7 @@ class MasterSnapshotContext {
     }
 
     void tryBeginSnapshot() {
+        mc.coordinationService().assertOnCoordinatorThread();
         boolean isTerminal;
         String snapshotMapName;
         CompletableFuture<Void> future;
@@ -163,9 +164,9 @@ class MasterSnapshotContext {
         long localExecutionId = mc.executionId();
         mc.invokeOnParticipants(
                 factory,
-                responses -> mc.coordinationService().submitToCoordinatorThread(() ->
+                responses ->
                         onSnapshotCompleted(responses, localExecutionId, newSnapshotId, finalMapName, isExport, isTerminal,
-                                future)),
+                                future),
                 null, true);
     }
 
@@ -178,100 +179,102 @@ class MasterSnapshotContext {
             boolean wasTerminal,
             @Nullable CompletableFuture<Void> future
     ) {
-        // Note: this method can be called after finalizeJob() is called or even after new execution started.
-        // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
-        // was successful.
-        SnapshotOperationResult mergedResult = new SnapshotOperationResult();
-        for (Map.Entry<MemberInfo, Object> entry : responses) {
-            // the response is either SnapshotOperationResult or an exception, see #invokeOnParticipants() method
-            Object response = entry.getValue();
-            if (response instanceof Throwable) {
-                response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
-            }
-            mergedResult.merge((SnapshotOperationResult) response);
-        }
-
-        IMap<Object, Object> snapshotMap = mc.nodeEngine().getHazelcastInstance().getMap(snapshotMapName);
-        try {
-            SnapshotValidationRecord validationRecord = new SnapshotValidationRecord(snapshotId,
-                    mergedResult.getNumChunks(), mergedResult.getNumBytes(),
-                    mc.jobExecutionRecord().ongoingSnapshotStartTime(), mc.jobId(), mc.jobName(),
-                    mc.jobRecord().getDagJson());
-            Object oldValue = snapshotMap.put(SnapshotValidationRecord.KEY, validationRecord);
-            if (snapshotMapName.startsWith(EXPORTED_SNAPSHOTS_PREFIX)) {
-                String snapshotName = snapshotMapName.substring(EXPORTED_SNAPSHOTS_PREFIX.length());
-                mc.jobRepository().cacheValidationRecord(snapshotName, validationRecord);
-            }
-            if (oldValue != null) {
-                logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
-                        + mc.jobIdString() + ": snapshot data might be corrupted");
-            }
-        } catch (Exception e) {
-            mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
-        }
-
-        boolean isSuccess = mergedResult.getError() == null;
-        if (!isSuccess) {
-            logger.warning(mc.jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
-                    "one of the failures: " + mergedResult.getError());
-            try {
-                snapshotMap.clear();
-            } catch (Exception e) {
-                logger.warning(mc.jobIdString() + ": failed to clear snapshot map '" + snapshotMapName
-                                + "' after a failure", e);
-            }
-        }
-        SnapshotStats stats = mc.jobExecutionRecord().ongoingSnapshotDone(
-                mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
-                mergedResult.getError());
-        mc.writeJobExecutionRecord(false);
-        if (logger.isFineEnabled()) {
-            logger.fine(String.format("Snapshot %d for %s completed with status %s in %dms, " +
-                            "%,d bytes, %,d keys in %,d chunks, stored in '%s'",
-                    snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                    stats.duration(), stats.numBytes(),
-                    stats.numKeys(), stats.numChunks(),
-                    snapshotMapName));
-        }
-        if (!wasExport) {
-            mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
-        }
-        if (future != null) {
-            if (isSuccess) {
-                future.complete(null);
-            } else {
-                future.completeExceptionally(new JetException(mergedResult.getError()));
-            }
-        }
-
-        mc.lock();
-        try {
-            if (mc.executionId() != executionId) {
-                logger.fine("Not completing terminalSnapshotFuture on " + mc.jobIdString() + ", new execution " +
-                        "already started, snapshot was for executionId=" + idToString(executionId));
-                return;
-            }
-            assert snapshotInProgress : "snapshot not in progress";
-            snapshotInProgress = false;
-            if (wasTerminal) {
-                // after a terminal snapshot, no more snapshots are scheduled in this execution
-                boolean completedNow = terminalSnapshotFuture.complete(null);
-                assert completedNow : "terminalSnapshotFuture was already completed";
-                if (!isSuccess) {
-                    // If the terminal snapshot failed, the executions might not terminate on some members
-                    // normally and we don't care if it does - the snapshot is done, though unsuccessfully, and
-                    // we have to bring the execution down.
-                    // Let's execute the CompleteExecutionOperation to terminate them.
-                    mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null);
+        mc.coordinationService().submitToCoordinatorThread(() -> {
+            // Note: this method can be called after finalizeJob() is called or even after new execution started.
+            // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
+            // was successful.
+            SnapshotOperationResult mergedResult = new SnapshotOperationResult();
+            for (Map.Entry<MemberInfo, Object> entry : responses) {
+                // the response is either SnapshotOperationResult or an exception, see #invokeOnParticipants() method
+                Object response = entry.getValue();
+                if (response instanceof Throwable) {
+                    response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
                 }
-            } else if (!wasExport) {
-                // if this snapshot was an automatic snapshot, schedule the next one
-                mc.coordinationService().scheduleSnapshot(mc, executionId);
+                mergedResult.merge((SnapshotOperationResult) response);
             }
-        } finally {
-            mc.unlock();
-        }
-        tryBeginSnapshot();
+
+            IMap<Object, Object> snapshotMap = mc.nodeEngine().getHazelcastInstance().getMap(snapshotMapName);
+            try {
+                SnapshotValidationRecord validationRecord = new SnapshotValidationRecord(snapshotId,
+                        mergedResult.getNumChunks(), mergedResult.getNumBytes(),
+                        mc.jobExecutionRecord().ongoingSnapshotStartTime(), mc.jobId(), mc.jobName(),
+                        mc.jobRecord().getDagJson());
+                Object oldValue = snapshotMap.put(SnapshotValidationRecord.KEY, validationRecord);
+                if (snapshotMapName.startsWith(EXPORTED_SNAPSHOTS_PREFIX)) {
+                    String snapshotName = snapshotMapName.substring(EXPORTED_SNAPSHOTS_PREFIX.length());
+                    mc.jobRepository().cacheValidationRecord(snapshotName, validationRecord);
+                }
+                if (oldValue != null) {
+                    logger.severe("SnapshotValidationRecord overwritten after writing to '" + snapshotMapName + "' for "
+                            + mc.jobIdString() + ": snapshot data might be corrupted");
+                }
+            } catch (Exception e) {
+                mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
+            }
+
+            boolean isSuccess = mergedResult.getError() == null;
+            if (!isSuccess) {
+                logger.warning(mc.jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
+                        "one of the failures: " + mergedResult.getError());
+                try {
+                    snapshotMap.clear();
+                } catch (Exception e) {
+                    logger.warning(mc.jobIdString() + ": failed to clear snapshot map '" + snapshotMapName
+                            + "' after a failure", e);
+                }
+            }
+            SnapshotStats stats = mc.jobExecutionRecord().ongoingSnapshotDone(
+                    mergedResult.getNumBytes(), mergedResult.getNumKeys(), mergedResult.getNumChunks(),
+                    mergedResult.getError());
+            mc.writeJobExecutionRecord(false);
+            if (logger.isFineEnabled()) {
+                logger.fine(String.format("Snapshot %d for %s completed with status %s in %dms, " +
+                                "%,d bytes, %,d keys in %,d chunks, stored in '%s'",
+                        snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
+                        stats.duration(), stats.numBytes(),
+                        stats.numKeys(), stats.numChunks(),
+                        snapshotMapName));
+            }
+            if (!wasExport) {
+                mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
+            }
+            if (future != null) {
+                if (isSuccess) {
+                    future.complete(null);
+                } else {
+                    future.completeExceptionally(new JetException(mergedResult.getError()));
+                }
+            }
+
+            mc.lock();
+            try {
+                if (mc.executionId() != executionId) {
+                    logger.fine("Not completing terminalSnapshotFuture on " + mc.jobIdString() + ", new execution " +
+                            "already started, snapshot was for executionId=" + idToString(executionId));
+                    return;
+                }
+                assert snapshotInProgress : "snapshot not in progress";
+                snapshotInProgress = false;
+                if (wasTerminal) {
+                    // after a terminal snapshot, no more snapshots are scheduled in this execution
+                    boolean completedNow = terminalSnapshotFuture.complete(null);
+                    assert completedNow : "terminalSnapshotFuture was already completed";
+                    if (!isSuccess) {
+                        // If the terminal snapshot failed, the executions might not terminate on some members
+                        // normally and we don't care if it does - the snapshot is done, though unsuccessfully, and
+                        // we have to bring the execution down.
+                        // Let's execute the CompleteExecutionOperation to terminate them.
+                        mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null);
+                    }
+                } else if (!wasExport) {
+                    // if this snapshot was an automatic snapshot, schedule the next one
+                    mc.coordinationService().scheduleSnapshot(mc, executionId);
+                }
+            } finally {
+                mc.unlock();
+            }
+            tryBeginSnapshot();
+        });
     }
 
     CompletableFuture<Void> terminalSnapshotFuture() {
