@@ -17,14 +17,12 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.collection.IList;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkPolicy;
@@ -36,11 +34,9 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
+import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.FunctionEx;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,12 +55,10 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
-import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
-import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextAsyncP;
@@ -80,13 +74,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport {
+@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int NUM_ITEMS = 100;
-
-    private static JetTestInstanceFactory factory = new JetTestInstanceFactory();
-    private static JetInstance inst;
 
     @Parameter
     public boolean ordered;
@@ -104,45 +95,25 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
     @BeforeClass
     public static void beforeClass() {
         JetConfig config = new JetConfig();
-        config.getHazelcastConfig().getMapConfig("journaledMap*").getEventJournalConfig()
+        config.getHazelcastConfig()
+              .getMapConfig("journaledMap*")
+              .getEventJournalConfig()
               .setEnabled(true)
               .setCapacity(100_000);
-        inst = factory.newMember(config);
-        factory.newMember(config);
-    }
 
-    @AfterClass
-    public static void afterClass() {
-        factory.terminateAll();
+        initialize(1, config);
     }
 
     @Before
     public void before() {
-        journaledMap = inst.getMap(randomMapName("journaledMap"));
+        journaledMap = instance().getMap(randomMapName("journaledMap"));
         journaledMap.putAll(IntStream.range(0, NUM_ITEMS).boxed().collect(toMap(i -> i, i -> i)));
-        sinkList = inst.getList(randomMapName("sinkList"));
+        sinkList = instance().getList(randomMapName("sinkList"));
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
         contextFactory = ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).withLocalSharing();
         if (!ordered) {
             contextFactory = contextFactory.withUnorderedAsyncResponses();
-        }
-    }
-
-    @After
-    public void after() {
-        journaledMap.destroy();
-        sinkList.destroy();
-        for (Job job : inst.getJobs()) {
-            assertTrueEventually(() -> {
-                logger.info("Cancelling job " + idToString(job.getId()));
-                try {
-                    job.cancel();
-                } catch (Exception e) {
-                    logger.warning("Failed to cancel the job, will retry", e);
-                }
-                assertJobStatusEventually(job, FAILED, 3);
-            });
         }
     }
 
@@ -177,7 +148,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         Vertex map = dag.newVertex("map",
                 flatMapUsingContextAsyncP(contextFactory, identity(), transformNotPartitionedFn(
                         item -> traverseItems(item + "-1", item + "-2", item + "-3", item + "-4", item + "-5"))))
-                .localParallelism(2);
+                        .localParallelism(2);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(sinkList.getName()));
 
         // Use a shorter queue to not block the barrier from the source for too long due to
@@ -189,7 +160,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
         dag.edge(between(source, map).setConfig(edgeToMapperConfig))
            .edge(between(map, sink).setConfig(edgeFromMapperConfig));
 
-        Job job = inst.newJob(dag, jobConfig);
+        Job job = instance().newJob(dag, jobConfig);
         for (int i = 0; restart && i < 5; i++) {
             assertNotNull(job);
             assertTrueEventually(() -> {
@@ -217,7 +188,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 
-        inst.newJob(p, jobConfig);
+        instance().newJob(p, jobConfig);
         assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"), NUM_ITEMS);
     }
 
@@ -231,7 +202,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 
-        inst.newJob(p, jobConfig);
+        instance().newJob(p, jobConfig);
         assertResult(i -> Stream.of(i + "-1"), NUM_ITEMS);
     }
 
@@ -245,7 +216,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 
-        inst.newJob(p, jobConfig);
+        instance().newJob(p, jobConfig);
         assertResult(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty(), NUM_ITEMS);
     }
 
@@ -260,7 +231,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 
-        inst.newJob(p, jobConfig);
+        instance().newJob(p, jobConfig);
         assertResult(i -> Stream.of(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"), NUM_ITEMS);
     }
 
@@ -275,7 +246,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 
-        inst.newJob(p, jobConfig);
+        instance().newJob(p, jobConfig);
         assertResult(i -> Stream.of(i + "-1"), NUM_ITEMS);
     }
 
@@ -290,7 +261,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 
-        inst.newJob(p, jobConfig);
+        instance().newJob(p, jobConfig);
         assertResult(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty(), NUM_ITEMS);
     }
 
@@ -325,10 +296,10 @@ public class AsyncTransformUsingContextP_IntegrationTest extends JetTestSupport 
 
     private void assertResult(Function<Integer, Stream<? extends String>> transformFn, int numItems) {
         String expected = IntStream.range(0, numItems)
-                                         .boxed()
-                                         .flatMap(transformFn)
-                                         .sorted()
-                                         .collect(joining("\n"));
+                                   .boxed()
+                                   .flatMap(transformFn)
+                                   .sorted()
+                                   .collect(joining("\n"));
         assertTrueEventually(() -> assertEquals(expected, sinkList.stream().map(Object::toString).sorted()
                                                                   .collect(joining("\n"))));
     }

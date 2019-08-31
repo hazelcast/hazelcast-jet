@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
@@ -29,11 +30,10 @@ import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.map.IMap;
-import datamodel.PageVisit;
-import datamodel.Payment;
-import datamodel.StockInfo;
-import datamodel.Trade;
+import com.hazelcast.jet.examples.enrichment.datamodel.PageVisit;
+import com.hazelcast.jet.examples.enrichment.datamodel.Payment;
+import com.hazelcast.jet.examples.enrichment.datamodel.StockInfo;
+import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -44,12 +44,12 @@ import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
+import static com.hazelcast.jet.function.ComparatorEx.comparing;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.Sources.list;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
-import static com.hazelcast.util.function.ComparatorEx.comparing;
 
 public class CheatSheet {
     static Pipeline p;
