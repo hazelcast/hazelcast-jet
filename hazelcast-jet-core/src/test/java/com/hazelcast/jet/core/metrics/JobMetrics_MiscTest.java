@@ -126,7 +126,6 @@ public class JobMetrics_MiscTest extends TestInClusterSupport {
             fail("job didn't fail");
         } catch (Exception e) {
             assertContains(e.toString(), expected.toString());
-            e.printStackTrace();
         }
 
         assertEmptyJobMetrics(job, true);
