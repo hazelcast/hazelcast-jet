@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.cache.ICache;
 import com.hazelcast.cache.journal.EventJournalCacheEvent;
 import com.hazelcast.collection.IList;
-import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.Job;
@@ -77,7 +76,7 @@ public class HazelcastConnectorTest extends SimpleTestInClusterSupport {
     public static void beforeClass() {
         JetConfig jetConfig = new JetConfig();
         Config hazelcastConfig = jetConfig.getHazelcastConfig();
-        hazelcastConfig.addCacheConfig(new CacheSimpleConfig().setName("*"));
+        hazelcastConfig.getCacheConfig("*").getEventJournalConfig().setEnabled(true);
         hazelcastConfig.getMapConfig("stream*").getEventJournalConfig().setEnabled(true);
 
         initialize(2, jetConfig);

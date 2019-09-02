@@ -34,7 +34,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.FunctionEx;
 import org.junit.Before;
@@ -74,7 +74,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int NUM_ITEMS = 100;
