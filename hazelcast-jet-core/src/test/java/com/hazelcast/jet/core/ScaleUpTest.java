@@ -111,6 +111,8 @@ public class ScaleUpTest extends JetTestSupport {
     public void when_manyJobs() {
         setup(1000);
         List<Job> jobs = new ArrayList<>();
+        // we need to disable metrics due to https://github.com/hazelcast/hazelcast/pull/15504
+        // TODO remove, after https://github.com/hazelcast/hazelcast/pull/15504 is merged
         JobConfig jobConfig = new JobConfig()
                 .setMetricsEnabled(false);
         for (int i = 0; i < Runtime.getRuntime().availableProcessors() * 4; i++) {
