@@ -108,10 +108,30 @@ that the metric collection on different cluster members happens at
 different moments in time. So if you try to correlate metrics from
 different members, they can be from different moments of time.
 
-There are two broad categories of metrics. For clarity we will group
+There are two broad categories of Jet metrics. For clarity we will group
 them based on significant tags which define their granularity.
 
-=== Cluster metrics ===
+Last but not least let's not forget about the fact that each Jet member is
+also an IMDG member, so Jet also exposes all the metrics available in IMDG.
+
+Let's look at these 3 broad categories of metrics in detail.
+
+=== IMDG Metrics ===
+There is a wide range of metrics and statistics provided by IMDG:
+
+* statistics of distributed data structures (see
+{hz-refman}#getting-member-statistics[IMDG Reference Manual])
+* executor statistics (see {hz-refman}#executor-statistics[IMDG Reference Manual])
+* partition related statistics (state, migration, replication)
+* garbage collection statistics (see {hz-javadoc}/memory/GarbageCollectorStats.html[IMDG API Docs])
+* memory statistics for the JVM which current IMDG member belongs to (total
+physical/free OS memory, max/committed/used/free heap memory and
+max/committed/used/free native memory)
+* network traffic related statistics (traffic and queue sizes)
+* class loading related statistics
+* thread count information (current, peak and deamon thread counts)
+
+=== Jet Cluster metrics ===
 
 [cols="3,2"]
 |===
@@ -122,7 +142,7 @@ them based on significant tags which define their granularity.
 Each Jet cluster member will have one instance of this metric.
 
 | **iterationCount**: The total number of iterations the driver of tasklets in cooperative
-thread N mde. It should increase by at least 250 iterations/s. Lower
+thread N made. It should increase by at least 250 iterations/s. Lower
 value means some of the cooperative processors blocks for too long.
 Somewhat lower value is normal if there are many tasklets assigned to
 the processor. Lower value affects the latency.
@@ -132,7 +152,7 @@ the processor. Lower value affects the latency.
 N is the number of the cooperative thread.
 |===
 
-=== Job specific metrics ===
+=== Jet Job metrics ===
 
 All job specific metrics have their `{jet-javadoc}/core/metrics/MetricTags.html#JOB[job=<jobId>]`,
 `{jet-javadoc}/core/metrics/MetricTags.html#EXECUTION[exec=<executionId>]` and
@@ -181,7 +201,7 @@ edges with the highest priority will be reflected, after those are
 exhausted edges with the next lower priority will be reflected and so
 on.
 |**proc=<N>, ordinal=<not specified>** +
-Each Jet member will have one instances of these metrics for each each processor
+Each Jet member will have one instances of these metrics for each processor
 instance _N_, the _N_ denotes the global processor index. Processor is the
 parallel worker doing the work of the vertex.
 
@@ -206,12 +226,39 @@ Each Jet member will have one instance of these metrics for each edge _M_ (input
 output) of each processor _N_. _N_ is the global processor index and _M_ is either
 the ordinal of the edge or has the value _snapshot_ for output items
 written to state snapshot.
-|===
 
-=== Hazelcast IMDG Metrics
-Since Jet is built on top of Hazelcast IMDG the metrics exposed by IMDG are also
-available. For further information on IMDG metrics please consult the
-{hz-refman}[Hazelcast IMDG Reference Manual].
+|**numInFlightOps**: The number of pending (in flight) operations when using
+asynchronous flat-mapping processors. +
+See
+`{jet-javadoc}/core/processor/Processors.html#flatMapUsingContextAsyncP-com.hazelcast.jet.pipeline.ContextFactory-com.hazelcast.jet.function.FunctionEx-com.hazelcast.jet.function.BiFunctionEx-[
+Processors.flatMapUsingContextAsyncP]`.
+
+** totalKeys **: The number of active keys being tracked by a session window
+processor. +
+** totalWindows **: The number of active windows being tracked by a session window
+processor. +
+ See
+`{jet-javadoc}/core/processor/Processors.html#aggregateToSessionWindowP-long-long-java.util.List-java.util.List-com.hazelcast.jet.aggregate.AggregateOperation-com.hazelcast.jet.core.function.KeyedWindowResultFunction-[
+Processors.aggregateToSessionWindowP]`.
+
+** totalFrames **: The number of active frames being tracked by a sliding window
+processor. +
+** totalKeysInFrames **: The number of grouping keys associated with the current
+active frames of a sliding window processor. +
+ See
+`{jet-javadoc}/core/processor/Processors.html#aggregateToSlidingWindowP-java.util.List-java.util.List-com.hazelcast.jet.core.TimestampKind-com.hazelcast.jet.core.SlidingWindowPolicy-long-com.hazelcast.jet.aggregate.AggregateOperation-com.hazelcast.jet.core.function.KeyedWindowResultFunction-[
+Processors.aggregateToSlidingWindowP]`.
+
+** lateEventsDropped **: The number of late events dropped by various
+processor, due to the watermark already having passed their windows. +
+|**proc=<N>, procType=<set>** +
+Processor specific metrics, only certain types of processors have them. The
+__procType__ tag can be used to indentify the exact type of processor sourcing
+them. +
+Like all processor metrics, each Jet member will have one instances of
+these metrics for each processor instance _N_, the _N_ denotes the global
+processor index.
+|===
 
 === Exposing metrics ===
 The main method Jet has for exposing the metrics to the outside world is the
