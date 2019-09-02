@@ -69,6 +69,10 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         }
     }
 
+    public JetTestInstanceFactory instanceFactory() {
+        return instanceFactory;
+    }
+
     protected JetInstance createJetClient() {
         return instanceFactory.newClient();
     }

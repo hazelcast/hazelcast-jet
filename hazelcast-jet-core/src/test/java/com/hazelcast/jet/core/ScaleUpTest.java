@@ -123,5 +123,10 @@ public class ScaleUpTest extends JetTestSupport {
         for (Job job : jobs) {
             assertJobStatusEventually(job, RUNNING, 30);
         }
+
+        // todo [viliam] remove
+        if (instanceFactory() != null) {
+            instanceFactory().terminateAll();
+        }
     }
 }
