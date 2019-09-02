@@ -111,8 +111,10 @@ public class ScaleUpTest extends JetTestSupport {
     public void when_manyJobs() {
         setup(1000);
         List<Job> jobs = new ArrayList<>();
-        for (int i = 0; i < Runtime.getRuntime().availableProcessors() * 4; i++) {
-            jobs.add(instances[0].newJob(dag));
+        JobConfig jobConfig = new JobConfig()
+                .setMetricsEnabled(false);
+        for (int i = 0; i < Runtime.getRuntime().availableProcessors() * 40; i++) {
+            jobs.add(instances[0].newJob(dag, jobConfig));
         }
         for (Job job : jobs) {
             assertJobStatusEventually(job, RUNNING);
