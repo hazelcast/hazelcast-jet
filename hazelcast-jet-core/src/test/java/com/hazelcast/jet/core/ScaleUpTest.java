@@ -23,7 +23,6 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -53,7 +52,6 @@ public class ScaleUpTest extends JetTestSupport {
     }
 
     @Test
-    @Ignore
     public void when_memberAdded_then_jobScaledUp() {
         setup(1000);
         instances[0].newJob(dag);
@@ -64,7 +62,6 @@ public class ScaleUpTest extends JetTestSupport {
     }
 
     @Test
-    @Ignore
     public void when_memberAddedAndAutoScalingDisabled_then_jobNotRestarted() {
         setup(1000);
         instances[0].newJob(dag, new JobConfig().setAutoScaling(false));
@@ -75,7 +72,6 @@ public class ScaleUpTest extends JetTestSupport {
     }
 
     @Test
-    @Ignore
     public void when_liteMemberAdded_then_jobNotRestarted() {
         setup(1000);
         instances[0].newJob(dag);
@@ -88,7 +84,6 @@ public class ScaleUpTest extends JetTestSupport {
     }
 
     @Test
-    @Ignore
     public void when_memberAddedAndAnotherAddedBeforeDelay_then_jobRestartedOnce() {
         setup(10_000);
         instances[0].newJob(dag);
@@ -101,7 +96,6 @@ public class ScaleUpTest extends JetTestSupport {
     }
 
     @Test
-    @Ignore
     public void when_memberAddedAndRemovedBeforeDelay_then_jobNotRestarted() {
         setup(12_000);
         instances[0].newJob(dag);
@@ -130,11 +124,6 @@ public class ScaleUpTest extends JetTestSupport {
         sleepSeconds(2);
         for (Job job : jobs) {
             assertJobStatusEventually(job, RUNNING, 30);
-        }
-
-        // todo [viliam] remove
-        if (instanceFactory() != null) {
-            instanceFactory().terminateAll();
         }
     }
 }

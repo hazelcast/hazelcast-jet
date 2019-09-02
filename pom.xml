@@ -336,8 +336,7 @@
                         ${argLine}
                     </argLine>
                     <includes>
-<!--                        <include>/com/hazelcast/jet/**/**.java</include>-->
-                        <include>/com/hazelcast/jet/core/ScaleUpTest.java</include>
+                        <include>/com/hazelcast/jet/**/**.java</include>
                     </includes>
                     <excludedGroups>
                         com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest
