@@ -50,6 +50,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -65,9 +66,10 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
     private JetTestInstanceFactory instanceFactory;
 
     @After
-    public void shutdownFactory() {
+    public void shutdownFactory() throws Exception {
         if (instanceFactory != null) {
-            instanceFactory.terminateAll();
+            spawn(() -> instanceFactory.terminateAll())
+                    .get(1, TimeUnit.MINUTES);
         }
     }
 
