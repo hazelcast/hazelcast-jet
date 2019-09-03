@@ -104,7 +104,7 @@ public class S3SinkTest extends JetTestSupport {
         assertEquals(itemCount, totalLineCount);
     }
 
-    private static long lineCount(S3Object s3Object) {
+    static long lineCount(S3Object s3Object) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
             return reader.lines().count();
         } catch (IOException e) {
