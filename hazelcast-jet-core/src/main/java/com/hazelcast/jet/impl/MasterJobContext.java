@@ -39,7 +39,6 @@ import com.hazelcast.jet.impl.operation.GetLocalJobMetricsOperation.ExecutionNot
 import com.hazelcast.jet.impl.operation.InitExecutionOperation;
 import com.hazelcast.jet.impl.operation.StartExecutionOperation;
 import com.hazelcast.jet.impl.operation.TerminateExecutionOperation;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.Util;
@@ -526,18 +525,22 @@ public class MasterJobContext {
             return mode == CANCEL_GRACEFUL ? new CancellationException() : new JobTerminateRequestedException(mode);
         }
 
-        // If there is no user-code exception, it means at least one job
-        // participant has left the cluster. In that case, all remaining
-        // participants return a TopologyChangedException.
-        return failures
-                .stream()
-                .map(entry -> (Throwable) entry)
-                .filter(e -> !(e instanceof CancellationException
-                        || e instanceof TerminatedWithSnapshotException
-                        || isTopologyException(e)))
-                .findFirst()
-                .map(ExceptionUtil::peel)
-                .orElseGet(TopologyChangedException::new);
+        // If all exceptions are of certain type, treat it as TopologyChangedException
+        Map<Boolean, List<Throwable>> splitFailures = failures.stream()
+                                                              .map(entry -> (Throwable) entry)
+                                                              .collect(Collectors.groupingBy(
+                                                                      e -> e instanceof CancellationException
+                                                                              || e instanceof TerminatedWithSnapshotException
+                                                                              || isTopologyException(e),
+                                                                      Collectors.toList()));
+        List<Throwable> topologyFailures = splitFailures.getOrDefault(true, emptyList());
+        List<Throwable> otherFailures = splitFailures.getOrDefault(false, emptyList());
+
+        if (!otherFailures.isEmpty()) {
+            return otherFailures.get(0);
+        } else {
+            return new TopologyChangedException("Causes from members: " + topologyFailures);
+        }
     }
 
     private void invokeCompleteExecution(Throwable error) {
