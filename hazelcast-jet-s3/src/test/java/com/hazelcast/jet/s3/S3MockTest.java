@@ -50,14 +50,14 @@ import static org.junit.Assert.assertTrue;
 
 public class S3MockTest extends JetTestSupport {
 
-    private static final String SOURCE_BUCKET = "source-bucket";
-    private static final String SINK_BUCKET = "sink-bucket";
-
     @ClassRule
     public static S3MockContainer s3MockContainer = new S3MockContainer();
 
+    private static final String SOURCE_BUCKET = "source-bucket";
+    private static final String SINK_BUCKET = "sink-bucket";
     private static AmazonS3 s3Client;
     private static long totalLineCount;
+
     private JetInstance jet;
 
     @BeforeClass

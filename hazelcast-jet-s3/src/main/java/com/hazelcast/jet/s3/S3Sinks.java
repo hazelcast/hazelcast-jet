@@ -16,22 +16,13 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
-import com.hazelcast.jet.pipeline.Sources;
 
 import javax.annotation.Nonnull;
-import java.util.Map;
-
-import static com.hazelcast.query.Predicates.alwaysTrue;
 
 /**
  * Contains factory methods for creating AWS S3 sinks.
@@ -105,25 +96,6 @@ public final class S3Sinks {
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
     ) {
-        Sink<? super Object> sink = S3Sinks.s3(
-                "bucket",
-                1024,
-                () -> {
-                    BasicAWSCredentials credentials =
-                            new BasicAWSCredentials("accessKey", "accessKeySecret");
-                    return AmazonS3ClientBuilder
-                            .standard()
-                            .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                            .withRegion(Regions.US_EAST_1)
-                            .build();
-                },
-                Object::toString
-        );
-        Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map("map", alwaysTrue(), Map.Entry::getValue))
-         .drainTo(sink);
-
-
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, context.globalProcessorIndex(),
@@ -133,7 +105,7 @@ public final class S3Sinks {
                 .build();
     }
 
-    private static class S3Context<T> {
+    private static final class S3Context<T> {
 
         private final String bucketName;
         private final int processorIndex;
