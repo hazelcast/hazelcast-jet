@@ -41,7 +41,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
 import static java.util.Collections.newSetFromMap;
