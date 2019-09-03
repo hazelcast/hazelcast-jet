@@ -137,6 +137,7 @@ samples using the Core API.
     running
 - [File Sink](file-io/src/main/java/com/hazelcast/jet/examples/AccessLogAnalyzer.java)
   - variant with [Avro serialization](file-io/src/main/java/com/hazelcast/jet/examples/avro/AvroSink.java)
+- [Amazon AWS S3 Source and Sink](/s3/src/main/java/com/hazelcast/jet/examples/s3/S3WordCount.java)
 
 ## Custom Sources and Sinks
 - [Custom Source](source-sink-builder/src/main/java/com/hazelcast/jet/examples/sourcebuilder/HttpSource.java):

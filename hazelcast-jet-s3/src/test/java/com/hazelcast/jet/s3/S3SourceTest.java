@@ -23,15 +23,17 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static com.amazonaws.regions.Regions.US_EAST_1;
 import static com.hazelcast.jet.s3.S3SinkTest.getSystemPropertyOrEnv;
 import static org.junit.Assert.assertEquals;
 
+@Category(NightlyTest.class)
 public class S3SourceTest extends JetTestSupport {
-
 
     private static String bucketName = "jet-s3-connector-test-bucket-source";
     private static String accessKeyId;
@@ -39,8 +41,8 @@ public class S3SourceTest extends JetTestSupport {
 
     @BeforeClass
     public static void setup() {
-        accessKeyId = getSystemPropertyOrEnv("S3_ACCESS_KEY_ID");
-        accessKeySecret = getSystemPropertyOrEnv("S3_ACCESS_KEY_SECRET");
+        accessKeyId = getSystemPropertyOrEnv("AWS_ACCESS_KEY_ID");
+        accessKeySecret = getSystemPropertyOrEnv("AWS_SECRET_ACCESS_KEY");
     }
 
     @Test

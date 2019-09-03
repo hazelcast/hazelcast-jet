@@ -26,10 +26,12 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,6 +43,7 @@ import static com.amazonaws.regions.Regions.US_EAST_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@Category(NightlyTest.class)
 public class S3SinkTest extends JetTestSupport {
 
     private static String bucketName = "jet-s3-connector-test-bucket-sink";
@@ -50,8 +53,8 @@ public class S3SinkTest extends JetTestSupport {
 
     @BeforeClass
     public static void setup() {
-        accessKeyId = getSystemPropertyOrEnv("S3_ACCESS_KEY_ID");
-        accessKeySecret = getSystemPropertyOrEnv("S3_ACCESS_KEY_SECRET");
+        accessKeyId = getSystemPropertyOrEnv("AWS_ACCESS_KEY_ID");
+        accessKeySecret = getSystemPropertyOrEnv("AWS_SECRET_ACCESS_KEY");
         client = S3Utils.client(accessKeyId, accessKeySecret, US_EAST_1);
     }
 
