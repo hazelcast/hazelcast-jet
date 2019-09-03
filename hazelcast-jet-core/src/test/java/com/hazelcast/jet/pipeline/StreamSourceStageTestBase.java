@@ -104,9 +104,6 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
         }
         stageWithTimestamps
                 .peek()
-                .window(WindowDefinition.tumbling(1))
-                .aggregate(counting())
-                .peek()
                 .drainTo(Sinks.fromProcessor("wmCollector",
                         ProcessorMetaSupplier.of(WatermarkCollector::new, 1))
                 );
