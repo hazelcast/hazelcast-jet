@@ -20,6 +20,7 @@ import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -103,6 +104,14 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
             return;
         }
         stageWithTimestamps
+                .peek()
+                // we use a tumbling window of size 1 to force maximum watermark gap to be 1
+                // this should be removed once https://github.com/hazelcast/hazelcast-jet/issues/1365
+                // fixed. local parallelism should be 1 to make sure watermarks don't get
+                // coalesced
+                .window(WindowDefinition.tumbling(1))
+                .aggregate(AggregateOperations.counting())
+                .setLocalParallelism(1)
                 .peek()
                 .drainTo(Sinks.fromProcessor("wmCollector",
                         ProcessorMetaSupplier.of(WatermarkCollector::new, 1))
