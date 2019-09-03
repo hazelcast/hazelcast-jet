@@ -16,20 +16,30 @@
 
 package com.hazelcast.jet.examples.s3;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.s3.S3Parameters;
 import com.hazelcast.jet.s3.S3Sinks;
 import com.hazelcast.jet.s3.S3Sources;
 
+import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.function.Functions.wholeItem;
 import static java.lang.System.nanoTime;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
@@ -38,12 +48,12 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * For more details about the word count pipeline itself, please see the JavaDoc
  * for the {@code WordCount} class in {@code wordcount} sample.
  * <p>
- * {@link S3Sources#s3(String, String, S3Parameters)}
+ * {@link S3Sources#s3(List, String, Charset, SupplierEx, BiFunctionEx)}
  * is a source that can be used for reading from an S3 bucket with the given
  * credentials. The files in the input bucket will be split among Jet
  * processors.
  * <p>
- * {@link S3Sinks#s3(String, S3Parameters)}
+ * {@link S3Sinks#s3(String, int, SupplierEx, FunctionEx)}
  * writes the output to the given output bucket, with each
  * processor writing to a batch of files within the bucket. The files are
  * identified by the global processor index and an incremented value.
@@ -51,18 +61,32 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 public class S3WordCount {
 
     private static Pipeline buildPipeline(
-            String secretAccessKey, String accessKeySecret, Regions region,
+            String accessKey, String secretKey, Regions region,
             String inputBucket, String outputBucket
     ) {
-        S3Parameters s3Parameters = S3Parameters.create(secretAccessKey, accessKeySecret, region);
         final Pattern regex = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(inputBucket, null, s3Parameters))
+        p.drawFrom(S3Sources.s3(
+                Collections.singletonList(inputBucket),
+                null,
+                UTF_8,
+                () -> client(accessKey, secretKey, region),
+                (name, line) -> line))
          .flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(S3Sinks.s3(outputBucket, s3Parameters));
+         .drainTo(S3Sinks.s3(outputBucket, 1024, () -> client(accessKey, secretKey, region), Object::toString));
         return p;
+    }
+
+    private static AmazonS3 client(String accessKey, String secretKey, Regions region) {
+        BasicAWSCredentials credentials =
+                new BasicAWSCredentials(accessKey, secretKey);
+        return AmazonS3ClientBuilder
+                .standard()
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withRegion(region)
+                .build();
     }
 
     public static void main(String[] args) {
@@ -85,4 +109,5 @@ public class S3WordCount {
             Jet.shutdownAll();
         }
     }
+
 }

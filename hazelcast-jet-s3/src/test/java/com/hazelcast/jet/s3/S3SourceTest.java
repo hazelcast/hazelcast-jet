@@ -24,26 +24,18 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.test.annotation.NightlyTest;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static com.amazonaws.regions.Regions.US_EAST_1;
-import static com.hazelcast.jet.s3.S3SinkTest.getSystemPropertyOrEnv;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
 @Category(NightlyTest.class)
 public class S3SourceTest extends JetTestSupport {
 
-    private static String bucketName = "jet-s3-connector-test-bucket-source";
-    private static String accessKeyId;
-    private static String accessKeySecret;
+    private static final String BUCKET_NAME = "jet-s3-connector-test-bucket-source";
 
-    @BeforeClass
-    public static void setup() {
-        accessKeyId = getSystemPropertyOrEnv("AWS_ACCESS_KEY_ID");
-        accessKeySecret = getSystemPropertyOrEnv("AWS_SECRET_ACCESS_KEY");
-    }
 
     @Test
     public void test() {
@@ -57,7 +49,7 @@ public class S3SourceTest extends JetTestSupport {
         JetInstance instance2 = createJetMember();
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(bucketName, null, S3Parameters.create(accessKeyId, accessKeySecret, US_EAST_1)))
+        p.drawFrom(S3Sources.s3(singletonList(BUCKET_NAME), null, UTF_8, S3SinkTest::client, (name, line) -> line))
          .drainTo(counterSink);
 
         instance1.newJob(p).join();
@@ -67,7 +59,7 @@ public class S3SourceTest extends JetTestSupport {
 
     }
 
-    static class Counter {
+    private static class Counter {
 
         final IAtomicLong atomicLong;
         long counter;

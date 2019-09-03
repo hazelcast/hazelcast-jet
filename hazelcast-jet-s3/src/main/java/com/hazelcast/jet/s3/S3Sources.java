@@ -33,13 +33,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -53,49 +50,6 @@ public final class S3Sources {
     }
 
     /**
-     * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
-     * Creates an S3 client with given parameters. Source emits lines to
-     * downstream without any transformation.
-     */
-    @Nonnull
-    public static BatchSource<String> s3(
-            @Nonnull String bucketName,
-            @Nullable String prefix,
-            @Nonnull S3Parameters parameters
-    ) {
-        return s3(singletonList(bucketName), prefix, parameters);
-    }
-
-    /**
-     * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
-     * Creates an S3 client with given parameters. Source emits lines to
-     * downstream without any transformation.
-     */
-    @Nonnull
-    public static BatchSource<String> s3(
-            @Nonnull List<String> bucketNames,
-            @Nullable String prefix,
-            @Nonnull S3Parameters parameters
-    ) {
-        return s3(bucketNames, prefix, parameters, (objectName, line) -> line);
-    }
-
-    /**
-     * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
-     * Creates an S3 client with given parameters. Uses {@link
-     * StandardCharsets#UTF_8}.
-     */
-    @Nonnull
-    public static <T> BatchSource<T> s3(
-            @Nonnull List<String> bucketNames,
-            @Nullable String prefix,
-            @Nonnull S3Parameters parameters,
-            @Nonnull BiFunctionEx<String, String, ? extends T> mapFn
-    ) {
-        return s3(bucketNames, prefix, UTF_8, () -> S3Utils.client(parameters), mapFn);
-    }
-
-    /**
      * Creates an AWS S3 {@link BatchSource} which lists all the objects in the
      * bucket-list using given {@code prefix}, reads them line by line,
      * transforms each line to the desired output object using given {@code
@@ -105,6 +59,30 @@ public final class S3Sources {
      * it will re-emit all entries.
      * <p>
      * The default local parallelism for this processor is 2.
+     * <p>
+     * Here is an example which reads the objects from a single bucket with
+     * applying the given prefix.
+     *
+     * <pre>{@code
+     * BatchSource<String> batchSource =
+     *      S3Sources.s3(
+     *          Collections.singletonList("input-bucket"),
+     *          "prefix",
+     *          StandardCharsets.UTF_8,
+     *          () -> {
+     *              BasicAWSCredentials credentials =
+     *                  new BasicAWSCredentials("accessKey", "accessKeySecret");
+     *              return AmazonS3ClientBuilder
+     *                     .standard()
+     *                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
+     *                     .withRegion(Regions.US_EAST_1)
+     *                     .build();
+     *          },
+     *          (name, line) -> line
+     *      );
+     * Pipeline p = Pipeline.create();
+     * BatchStage<Document> srcStage = p.drawFrom(batchSource);
+     * }</pre>
      *
      * @param bucketNames    list of bucket-names
      * @param prefix         the prefix to filter the objects

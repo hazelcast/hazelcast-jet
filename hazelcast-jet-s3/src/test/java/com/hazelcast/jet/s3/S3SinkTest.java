@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.s3;
 
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
@@ -39,7 +41,6 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
 
-import static com.amazonaws.regions.Regions.US_EAST_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -47,15 +48,11 @@ import static org.junit.Assert.assertTrue;
 public class S3SinkTest extends JetTestSupport {
 
     private static String bucketName = "jet-s3-connector-test-bucket-sink";
-    private static String accessKeyId;
-    private static String accessKeySecret;
     private static AmazonS3 client;
 
     @BeforeClass
     public static void setup() {
-        accessKeyId = getSystemPropertyOrEnv("AWS_ACCESS_KEY_ID");
-        accessKeySecret = getSystemPropertyOrEnv("AWS_SECRET_ACCESS_KEY");
-        client = S3Utils.client(S3Parameters.create(accessKeyId, accessKeySecret, US_EAST_1));
+        client = client();
     }
 
     @Before
@@ -87,8 +84,7 @@ public class S3SinkTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(bucketName, batchSize,
-                 S3Parameters.create(accessKeyId, accessKeySecret, US_EAST_1), Map.Entry::getValue));
+         .drainTo(S3Sinks.s3(bucketName, batchSize, S3SinkTest::client, Map.Entry::getValue));
 
         instance1.newJob(p).join();
 
@@ -105,6 +101,13 @@ public class S3SinkTest extends JetTestSupport {
         assertEquals(itemCount, totalLineCount);
     }
 
+    static AmazonS3 client() {
+        return AmazonS3ClientBuilder
+                .standard()
+                .withRegion(Regions.US_EAST_1)
+                .build();
+    }
+
     static long lineCount(S3Object s3Object) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
             return reader.lines().count();
@@ -112,10 +115,5 @@ public class S3SinkTest extends JetTestSupport {
             e.printStackTrace();
             return -1;
         }
-    }
-
-    static String getSystemPropertyOrEnv(String key) {
-        String property = System.getProperty(key);
-        return property != null ? property : System.getenv(key);
     }
 }

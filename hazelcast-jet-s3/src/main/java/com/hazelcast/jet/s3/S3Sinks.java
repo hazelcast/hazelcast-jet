@@ -16,49 +16,30 @@
 
 package com.hazelcast.jet.s3;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
+import java.util.Map;
+
+import static com.hazelcast.query.Predicates.alwaysTrue;
 
 /**
  * Contains factory methods for creating AWS S3 sinks.
  */
 public final class S3Sinks {
 
-    private static final int DEFAULT_LINES_PER_FILE = 10240;
-
     private S3Sinks() {
-    }
-
-    /**
-     * Convenience for {@link #s3(String, int, SupplierEx, FunctionEx)}.
-     * Creates an S3 client with given parameters. Uses {@link
-     * Object#toString()} for {@code toStringFn}.
-     */
-    @Nonnull
-    public static <T> Sink<? super T> s3(
-            @Nonnull String bucketName,
-            @Nonnull S3Parameters parameters
-    ) {
-        return s3(bucketName, DEFAULT_LINES_PER_FILE, parameters, Object::toString);
-    }
-
-    /**
-     * Convenience for {@link #s3(String, int, SupplierEx, FunctionEx)}.
-     * Creates an S3 client with given parameters.
-     */
-    @Nonnull
-    public static <T> Sink<? super T> s3(
-            @Nonnull String bucketName,
-            int linesPerFile,
-            @Nonnull S3Parameters parameters,
-            @Nonnull FunctionEx<? super T, String> toStringFn
-    ) {
-        return s3(bucketName, linesPerFile, () -> S3Utils.client(parameters), toStringFn);
     }
 
     /**
@@ -73,6 +54,30 @@ public final class S3Sinks {
      * previously written files will be overwritten.
      * <p>
      * The default local parallelism for this sink is 1.
+     * <p>
+     * Here is an example which reads from a map and writes the values of the
+     * entries to given bucket using {@link Object#toString()} to convert the
+     * values to a line.
+     *
+     * <pre>{@code
+     * Sink<? super Object> sink = S3Sinks.s3(
+     *         "bucket",
+     *         1024,
+     *         () -> {
+     *             BasicAWSCredentials credentials =
+     *                     new BasicAWSCredentials("accessKey", "accessKeySecret");
+     *             return AmazonS3ClientBuilder
+     *                     .standard()
+     *                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
+     *                     .withRegion(Regions.US_EAST_1)
+     *                     .build();
+     *         },
+     *         Object::toString
+     * );
+     * Pipeline p = Pipeline.create();
+     * p.drawFrom(Sources.map("map", alwaysTrue(), Map.Entry::getValue))
+     *  .drainTo(sink);
+     * }</pre>
      *
      * @param bucketName     the name of the bucket
      * @param linesPerFile   the number of lines per file
@@ -88,6 +93,25 @@ public final class S3Sinks {
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
     ) {
+        Sink<? super Object> sink = S3Sinks.s3(
+                "bucket",
+                1024,
+                () -> {
+                    BasicAWSCredentials credentials =
+                            new BasicAWSCredentials("accessKey", "accessKeySecret");
+                    return AmazonS3ClientBuilder
+                            .standard()
+                            .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                            .withRegion(Regions.US_EAST_1)
+                            .build();
+                },
+                Object::toString
+        );
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.map("map", alwaysTrue(), Map.Entry::getValue))
+         .drainTo(sink);
+
+
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, context.globalProcessorIndex(),
