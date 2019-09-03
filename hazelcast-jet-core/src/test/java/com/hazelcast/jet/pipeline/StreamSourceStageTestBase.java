@@ -34,16 +34,13 @@ import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nonnull;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.spi.properties.GroupProperty.PARTITION_COUNT;
-import static java.util.Collections.newSetFromMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -107,20 +104,17 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
                 .peek()
                 // we use a tumbling window of size 1 to force maximum watermark gap to be 1
                 // this should be removed once https://github.com/hazelcast/hazelcast-jet/issues/1365
-                // fixed. local parallelism should be 1 to make sure watermarks don't get
-                // coalesced
+                // fixed. local parallelism should be 1 for the sources to make sure
+                // watermarks don't get coalesced
                 .window(WindowDefinition.tumbling(1))
                 .aggregate(AggregateOperations.counting())
-                .setLocalParallelism(1)
                 .peek()
                 .drainTo(Sinks.fromProcessor("wmCollector",
                         ProcessorMetaSupplier.of(WatermarkCollector::new, 1))
                 );
         Job job = instance.newJob(p);
 
-        HashSet<Long> expectedWmsSet = new HashSet<>(expectedWms);
-
-        RunnableExc assertTask = () -> assertEquals(expectedWmsSet, WatermarkCollector.watermarks);
+        RunnableExc assertTask = () -> assertEquals(expectedWms, WatermarkCollector.watermarks);
         assertTrueEventually(assertTask, 24);
         assertTrueAllTheTime(assertTask, 1);
         assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
@@ -130,7 +124,7 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
     }
 
     private static class WatermarkCollector extends AbstractProcessor {
-        static Set<Long> watermarks = newSetFromMap(new ConcurrentHashMap<>());
+        static List<Long> watermarks = new CopyOnWriteArrayList<>();
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
