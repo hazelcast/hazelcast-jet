@@ -55,7 +55,7 @@ public class S3SinkTest extends JetTestSupport {
     public static void setup() {
         accessKeyId = getSystemPropertyOrEnv("AWS_ACCESS_KEY_ID");
         accessKeySecret = getSystemPropertyOrEnv("AWS_SECRET_ACCESS_KEY");
-        client = S3Utils.client(accessKeyId, accessKeySecret, US_EAST_1);
+        client = S3Utils.client(S3Parameters.create(accessKeyId, accessKeySecret, US_EAST_1));
     }
 
     @Before
@@ -87,7 +87,8 @@ public class S3SinkTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(bucketName, batchSize, accessKeyId, accessKeySecret, US_EAST_1, Map.Entry::getValue));
+         .drainTo(S3Sinks.s3(bucketName, batchSize,
+                 S3Parameters.create(accessKeyId, accessKeySecret, US_EAST_1), Map.Entry::getValue));
 
         instance1.newJob(p).join();
 

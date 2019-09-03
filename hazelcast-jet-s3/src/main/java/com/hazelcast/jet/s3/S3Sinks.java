@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
@@ -30,40 +29,36 @@ import javax.annotation.Nonnull;
  */
 public final class S3Sinks {
 
-    private static final int DEFAULT_BATCH_SIZE = 1024;
+    private static final int DEFAULT_LINES_PER_FILE = 10240;
 
     private S3Sinks() {
     }
 
     /**
      * Convenience for {@link #s3(String, int, SupplierEx, FunctionEx)}.
-     * Creates an S3 client with given credentials and region. Uses {@link
+     * Creates an S3 client with given parameters. Uses {@link
      * Object#toString()} for {@code toStringFn}.
      */
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
-            @Nonnull String accessKeyId,
-            @Nonnull String accessKeySecret,
-            @Nonnull Regions region
+            @Nonnull S3Parameters parameters
     ) {
-        return s3(bucketName, DEFAULT_BATCH_SIZE, accessKeyId, accessKeySecret, region, Object::toString);
+        return s3(bucketName, DEFAULT_LINES_PER_FILE, parameters, Object::toString);
     }
 
     /**
      * Convenience for {@link #s3(String, int, SupplierEx, FunctionEx)}.
-     * Creates an S3 client with given credentials and region.
+     * Creates an S3 client with given parameters.
      */
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
-            int batchSize,
-            @Nonnull String accessKeyId,
-            @Nonnull String accessKeySecret,
-            @Nonnull Regions region,
+            int linesPerFile,
+            @Nonnull S3Parameters parameters,
             @Nonnull FunctionEx<? super T, String> toStringFn
     ) {
-        return s3(bucketName, batchSize, () -> S3Utils.client(accessKeyId, accessKeySecret, region), toStringFn);
+        return s3(bucketName, linesPerFile, () -> S3Utils.client(parameters), toStringFn);
     }
 
     /**
@@ -80,7 +75,7 @@ public final class S3Sinks {
      * The default local parallelism for this sink is 1.
      *
      * @param bucketName     the name of the bucket
-     * @param batchSize      the size of the batch
+     * @param linesPerFile   the number of lines per file
      * @param clientSupplier S3 client supplier
      * @param toStringFn     the function which converts each item to its
      *                       string representation
@@ -89,13 +84,14 @@ public final class S3Sinks {
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
-            int batchSize,
+            int linesPerFile,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
     ) {
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
-                        new S3Context<>(bucketName, context.globalProcessorIndex(), batchSize, clientSupplier, toStringFn))
+                        new S3Context<>(bucketName, context.globalProcessorIndex(),
+                                linesPerFile, clientSupplier, toStringFn))
                 .<T>receiveFn(S3Context::receive)
                 .destroyFn(S3Context::close)
                 .build();
@@ -103,46 +99,48 @@ public final class S3Sinks {
 
     private static class S3Context<T> {
 
-        final String bucketName;
-        final int processorIndex;
-        final int batchSize;
-        final AmazonS3 amazonS3;
-        final FunctionEx<? super T, String> toStringFn;
+        private final String bucketName;
+        private final int processorIndex;
+        private final int linesPerFile;
+        private final AmazonS3 amazonS3;
+        private final FunctionEx<? super T, String> toStringFn;
 
+        private int itemCounter;
+        private long objectCounter;
+        private StringBuilder buffer = new StringBuilder();
 
-        int itemCounter;
-        long objectCounter;
-        StringBuilder buffer = new StringBuilder();
-
-        S3Context(
+        private S3Context(
                 String bucketName,
                 int processorIndex,
-                int batchSize,
+                int linesPerFile,
                 SupplierEx<? extends AmazonS3> clientSupplier,
-                FunctionEx<T, String> toStringFn
+                FunctionEx<? super T, String> toStringFn
         ) {
             this.bucketName = bucketName;
             this.processorIndex = processorIndex;
-            this.batchSize = batchSize;
+            this.linesPerFile = linesPerFile;
             this.amazonS3 = clientSupplier.get();
             this.toStringFn = toStringFn;
         }
 
-        void receive(T item) {
-            buffer.append(toStringFn.apply(item));
-            buffer.append(System.lineSeparator());
-            if (++itemCounter == batchSize) {
+        private void receive(T item) {
+            buffer.append(toStringFn.apply(item))
+                  .append(System.lineSeparator());
+            if (++itemCounter == linesPerFile) {
                 amazonS3.putObject(bucketName, nextKey(), buffer.toString());
-                buffer = new StringBuilder();
+                buffer.setLength(0);
                 itemCounter = 0;
             }
         }
 
-        void close() {
-            if (buffer.length() > 0) {
-                amazonS3.putObject(bucketName, nextKey(), buffer.toString());
+        private void close() {
+            try {
+                if (buffer.length() > 0) {
+                    amazonS3.putObject(bucketName, nextKey(), buffer.toString());
+                }
+            } finally {
+                amazonS3.shutdown();
             }
-            amazonS3.shutdown();
         }
 
 

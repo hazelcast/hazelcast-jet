@@ -57,7 +57,7 @@ public class S3SourceTest extends JetTestSupport {
         JetInstance instance2 = createJetMember();
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(bucketName, null, accessKeyId, accessKeySecret, US_EAST_1))
+        p.drawFrom(S3Sources.s3(bucketName, null, S3Parameters.create(accessKeyId, accessKeySecret, US_EAST_1)))
          .drainTo(counterSink);
 
         instance1.newJob(p).join();

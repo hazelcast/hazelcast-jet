@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
@@ -48,58 +47,52 @@ import static java.util.stream.Collectors.toMap;
  */
 public final class S3Sources {
 
-    private static final int LOCAL_PARALLELISM = 1;
+    private static final int LOCAL_PARALLELISM = 2;
 
     private S3Sources() {
     }
 
     /**
      * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
-     * Creates an S3 client with given credentials and region. Source emits
-     * lines to downstream without any transformation.
+     * Creates an S3 client with given parameters. Source emits lines to
+     * downstream without any transformation.
      */
     @Nonnull
     public static BatchSource<String> s3(
             @Nonnull String bucketName,
             @Nullable String prefix,
-            @Nonnull String accessKeyId,
-            @Nonnull String accessKeySecret,
-            @Nonnull Regions region
+            @Nonnull S3Parameters parameters
     ) {
-        return s3(singletonList(bucketName), prefix, accessKeyId, accessKeySecret, region);
+        return s3(singletonList(bucketName), prefix, parameters);
     }
 
     /**
      * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
-     * Creates an S3 client with given credentials and region. Source emits
-     * lines to downstream without any transformation.
+     * Creates an S3 client with given parameters. Source emits lines to
+     * downstream without any transformation.
      */
     @Nonnull
     public static BatchSource<String> s3(
             @Nonnull List<String> bucketNames,
             @Nullable String prefix,
-            @Nonnull String accessKeyId,
-            @Nonnull String accessKeySecret,
-            @Nonnull Regions region
+            @Nonnull S3Parameters parameters
     ) {
-        return s3(bucketNames, prefix, accessKeyId, accessKeySecret, region, (objectName, line) -> line);
+        return s3(bucketNames, prefix, parameters, (objectName, line) -> line);
     }
 
     /**
      * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
-     * Creates an S3 client with given credentials and region. Uses {@link
+     * Creates an S3 client with given parameters. Uses {@link
      * StandardCharsets#UTF_8}.
      */
     @Nonnull
     public static <T> BatchSource<T> s3(
             @Nonnull List<String> bucketNames,
             @Nullable String prefix,
-            @Nonnull String accessKeyId,
-            @Nonnull String accessKeySecret,
-            @Nonnull Regions region,
+            @Nonnull S3Parameters parameters,
             @Nonnull BiFunctionEx<String, String, ? extends T> mapFn
     ) {
-        return s3(bucketNames, prefix, UTF_8, () -> S3Utils.client(accessKeyId, accessKeySecret, region), mapFn);
+        return s3(bucketNames, prefix, UTF_8, () -> S3Utils.client(parameters), mapFn);
     }
 
     /**
@@ -111,7 +104,7 @@ public final class S3Sources {
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
      * <p>
-     * The default local parallelism for this processor is 1.
+     * The default local parallelism for this processor is 2.
      *
      * @param bucketNames    list of bucket-names
      * @param prefix         the prefix to filter the objects
@@ -141,19 +134,18 @@ public final class S3Sources {
     private static final class S3Context<T> {
 
         private static final ObjectListing EMPTY_LISTING = new ObjectListing();
-        private static final int BATCH_COUNT = 10;
+        private static final int BATCH_COUNT = 1024;
 
-        final String prefix;
-        final AmazonS3 amazonS3;
-        final Map<String, ObjectListing> listingMap;
-        final BiFunctionEx<String, String, ? extends T> mapFn;
-        final Charset charset;
-        final int processorIndex;
-        final int totalParallelism;
+        private final AmazonS3 amazonS3;
+        private final Map<String, ObjectListing> listingMap;
+        private final BiFunctionEx<String, String, ? extends T> mapFn;
+        private final Charset charset;
+        private final int processorIndex;
+        private final int totalParallelism;
 
-        Iterator<S3ObjectSummary> iterator;
-        BufferedReader reader;
-        String objectName;
+        private Iterator<S3ObjectSummary> iterator;
+        private BufferedReader reader;
+        private String objectName;
 
         private S3Context(
                 List<String> bucketNames,
@@ -164,7 +156,6 @@ public final class S3Sources {
                 BiFunctionEx<String, String, ? extends T> mapFn
         ) {
             this.amazonS3 = clientSupplier.get();
-            this.prefix = prefix;
             this.mapFn = mapFn;
             this.charset = Charset.forName(charsetName);
             this.processorIndex = context.globalProcessorIndex();
@@ -174,7 +165,7 @@ public final class S3Sources {
                     .collect(toMap(key -> key, key -> amazonS3.listObjects(key, prefix)));
         }
 
-        void fillBuffer(SourceBuffer<? super T> buffer) throws IOException {
+        private void fillBuffer(SourceBuffer<? super T> buffer) throws IOException {
             if (reader != null) {
                 addBatchToBuffer(buffer);
                 return;
@@ -192,7 +183,8 @@ public final class S3Sources {
             }
 
             if (iterator.hasNext()) {
-                S3Object s3Object = nextObject();
+                S3ObjectSummary summary = iterator.next();
+                S3Object s3Object = amazonS3.getObject(summary.getBucketName(), summary.getKey());
                 objectName = s3Object.getKey();
                 reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent(), charset));
                 addBatchToBuffer(buffer);
@@ -202,7 +194,7 @@ public final class S3Sources {
             }
         }
 
-        void addBatchToBuffer(SourceBuffer<? super T> buffer) throws IOException {
+        private void addBatchToBuffer(SourceBuffer<? super T> buffer) throws IOException {
             for (int i = 0; i < BATCH_COUNT; i++) {
                 String line = reader.readLine();
                 if (line == null) {
@@ -214,12 +206,7 @@ public final class S3Sources {
             }
         }
 
-        S3Object nextObject() {
-            S3ObjectSummary summary = iterator.next();
-            return amazonS3.getObject(summary.getBucketName(), summary.getKey());
-        }
-
-        Iterator<S3ObjectSummary> createIterator() {
+        private Iterator<S3ObjectSummary> createIterator() {
             return listingMap
                     .values()
                     .stream()
@@ -229,11 +216,11 @@ public final class S3Sources {
         }
 
 
-        boolean belongsToThisProcessor(String key) {
+        private boolean belongsToThisProcessor(String key) {
             return Math.floorMod(key.hashCode(), totalParallelism) == processorIndex;
         }
 
-        void close() {
+        private void close() {
             amazonS3.shutdown();
         }
     }

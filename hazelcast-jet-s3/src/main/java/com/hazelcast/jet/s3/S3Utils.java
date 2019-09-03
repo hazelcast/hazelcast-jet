@@ -33,11 +33,12 @@ public final class S3Utils {
     /**
      * Creates an S3 client with given credentials
      */
-    public static AmazonS3 client(String accessKeyId, String accessKeySecret, Regions region) {
+    public static AmazonS3 client(S3Parameters params) {
+        BasicAWSCredentials credentials = new BasicAWSCredentials(params.getAccessKeyId(), params.getAccessKeySecret());
         return AmazonS3ClientBuilder
                 .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKeyId, accessKeySecret)))
-                .withRegion(region)
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .withRegion(params.getRegion())
                 .build();
     }
 }
