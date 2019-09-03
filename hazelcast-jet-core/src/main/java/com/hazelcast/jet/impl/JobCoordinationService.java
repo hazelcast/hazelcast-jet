@@ -154,59 +154,69 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> submitJob(long jobId, Data dag, Data serializedConfig) {
-        return submitToCoordinatorThread(() -> {
-            JobConfig config = nodeEngine.getSerializationService().toObject(serializedConfig);
-            assertIsMaster("Cannot submit job " + idToString(jobId) + " to non-master node");
-            checkOperationalState();
-
-            // the order of operations is important.
-
-            // first, check if the job is already completed
-            JobResult jobResult = jobRepository.getJobResult(jobId);
-            if (jobResult != null) {
-                logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: "
-                        + jobResult);
-                return;
-            }
-
-            int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-            String dagJson = dagToJson(jobId, config, dag);
-            JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config);
-            JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
-            MasterContext masterContext = createMasterContext(jobRecord, jobExecutionRecord);
-
-            boolean hasDuplicateJobName;
-            synchronized (lock) {
+        CompletableFuture<Void> res = new CompletableFuture<>();
+        submitToCoordinatorThread(() -> {
+            MasterContext masterContext;
+            try {
+                JobConfig config = nodeEngine.getSerializationService().toObject(serializedConfig);
                 assertIsMaster("Cannot submit job " + idToString(jobId) + " to non-master node");
                 checkOperationalState();
-                hasDuplicateJobName = config.getName() != null && hasActiveJobWithName(config.getName());
-                if (!hasDuplicateJobName) {
-                    // just try to initiate the coordination
-                    MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
-                    if (prev != null) {
-                        logger.fine("Joining to already existing masterContext " + prev.jobIdString());
-                        return;
+
+                // the order of operations is important.
+
+                // first, check if the job is already completed
+                JobResult jobResult = jobRepository.getJobResult(jobId);
+                if (jobResult != null) {
+                    logger.fine("Not starting job " + idToString(jobId) + " since already completed with result: "
+                            + jobResult);
+                    return;
+                }
+
+                int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
+                String dagJson = dagToJson(jobId, config, dag);
+                JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config);
+                JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
+                masterContext = createMasterContext(jobRecord, jobExecutionRecord);
+
+                boolean hasDuplicateJobName;
+                synchronized (lock) {
+                    assertIsMaster("Cannot submit job " + idToString(jobId) + " to non-master node");
+                    checkOperationalState();
+                    hasDuplicateJobName = config.getName() != null && hasActiveJobWithName(config.getName());
+                    if (!hasDuplicateJobName) {
+                        // just try to initiate the coordination
+                        MasterContext prev = masterContexts.putIfAbsent(jobId, masterContext);
+                        if (prev != null) {
+                            logger.fine("Joining to already existing masterContext " + prev.jobIdString());
+                            return;
+                        }
                     }
                 }
+
+                if (hasDuplicateJobName) {
+                    jobRepository.deleteJob(jobId);
+                    throw new JobAlreadyExistsException("Another active job with equal name (" + config.getName()
+                            + ") exists: " + idToString(jobId));
+                }
+
+                // If job is not currently running, it might be that it is just completed
+                if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
+                    return;
+                }
+
+                // If there is no master context and job result at the same time, it means this is the first submission
+                jobRepository.putNewJobRecord(jobRecord);
+
+                logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request");
+            } catch (Throwable e) {
+                res.completeExceptionally(e);
+                throw e;
+            } finally {
+                res.complete(null);
             }
-
-            if (hasDuplicateJobName) {
-                jobRepository.deleteJob(jobId);
-                throw new JobAlreadyExistsException("Another active job with equal name (" + config.getName()
-                        + ") exists: " + idToString(jobId));
-            }
-
-            // If job is not currently running, it might be that it is just completed
-            if (completeMasterContextIfJobAlreadyCompleted(masterContext)) {
-                return;
-            }
-
-            // If there is no master context and job result at the same time, it means this is the first submission
-            jobRepository.putNewJobRecord(jobRecord);
-
-            logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request");
             tryStartJob(masterContext);
         });
+        return res;
     }
 
     @SuppressWarnings("WeakerAccess") // used by jet-enterprise
