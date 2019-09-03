@@ -527,12 +527,12 @@ public class MasterJobContext {
 
         // If all exceptions are of certain type, treat it as TopologyChangedException
         Map<Boolean, List<Throwable>> splitFailures = failures.stream()
-                                                              .map(entry -> (Throwable) entry)
-                                                              .collect(Collectors.groupingBy(
-                                                                      e -> e instanceof CancellationException
-                                                                              || e instanceof TerminatedWithSnapshotException
-                                                                              || isTopologyException(e),
-                                                                      Collectors.toList()));
+                .map(entry -> (Throwable) entry)
+                .collect(Collectors.groupingBy(
+                        e -> e instanceof CancellationException
+                                || e instanceof TerminatedWithSnapshotException
+                                || isTopologyException(e),
+                        Collectors.toList()));
         List<Throwable> topologyFailures = splitFailures.getOrDefault(true, emptyList());
         List<Throwable> otherFailures = splitFailures.getOrDefault(false, emptyList());
 
