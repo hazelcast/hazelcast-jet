@@ -65,7 +65,7 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
 
     @Before
     public void before() {
-        WatermarkLogger.watermarks.clear();
+        WatermarkCollector.watermarks.clear();
     }
 
     @BeforeClass
@@ -107,12 +107,14 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
                 .window(WindowDefinition.tumbling(1))
                 .aggregate(counting())
                 .peek()
-                .drainTo(Sinks.fromProcessor("s", ProcessorMetaSupplier.of(WatermarkLogger::new)));
+                .drainTo(Sinks.fromProcessor("wmCollector",
+                        ProcessorMetaSupplier.of(WatermarkCollector::new, 1))
+                );
         Job job = instance.newJob(p);
 
         HashSet<Long> expectedWmsSet = new HashSet<>(expectedWms);
 
-        RunnableExc assertTask = () -> assertEquals(expectedWmsSet, WatermarkLogger.watermarks);
+        RunnableExc assertTask = () -> assertEquals(expectedWmsSet, WatermarkCollector.watermarks);
         assertTrueEventually(assertTask, 24);
         assertTrueAllTheTime(assertTask, 1);
         assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
@@ -121,8 +123,8 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
         job.join();
     }
 
-    private static class WatermarkLogger extends AbstractProcessor {
-        private static Set<Long> watermarks = newSetFromMap(new ConcurrentHashMap<>());
+    private static class WatermarkCollector extends AbstractProcessor {
+        static Set<Long> watermarks = newSetFromMap(new ConcurrentHashMap<>());
 
         @Override
         protected boolean tryProcess(int ordinal, @Nonnull Object item) {
@@ -132,7 +134,7 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
         @Override
         public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
             watermarks.add(watermark.timestamp());
-            return tryEmit(watermark);
+            return true;
         }
     }
 }
