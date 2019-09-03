@@ -33,10 +33,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
 
 /**
@@ -47,6 +49,20 @@ public final class S3Sources {
     private static final int LOCAL_PARALLELISM = 2;
 
     private S3Sources() {
+    }
+
+    /**
+     * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
+     * Emits lines to downstream without any transformation and uses {@link
+     * StandardCharsets#UTF_8}.
+     */
+    @Nonnull
+    public static BatchSource<String> s3(
+            @Nonnull List<String> bucketNames,
+            @Nullable String prefix,
+            @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
+    ) {
+        return s3(bucketNames, prefix, UTF_8, clientSupplier, (name, line) -> line);
     }
 
     /**

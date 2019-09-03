@@ -49,7 +49,7 @@ public class S3SourceTest extends JetTestSupport {
         JetInstance instance2 = createJetMember();
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(singletonList(BUCKET_NAME), null, UTF_8, S3SinkTest::client, (name, line) -> line))
+        p.drawFrom(S3Sources.s3(singletonList(BUCKET_NAME), null, S3SinkTest::client))
          .drainTo(counterSink);
 
         instance1.newJob(p).join();

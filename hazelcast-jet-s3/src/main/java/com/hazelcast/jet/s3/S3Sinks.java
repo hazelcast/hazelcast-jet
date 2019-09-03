@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
@@ -40,6 +39,19 @@ import static com.hazelcast.query.Predicates.alwaysTrue;
 public final class S3Sinks {
 
     private S3Sinks() {
+    }
+
+    /**
+     * Convenience for {@link #s3(String, int, SupplierEx, FunctionEx)}
+     * Uses {@link Object#toString()} to convert the items to lines.
+     */
+    @Nonnull
+    public static <T> Sink<? super T> s3(
+            @Nonnull String bucketName,
+            int linesPerFile,
+            @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
+    ) {
+        return s3(bucketName, linesPerFile, clientSupplier, Object::toString);
     }
 
     /**

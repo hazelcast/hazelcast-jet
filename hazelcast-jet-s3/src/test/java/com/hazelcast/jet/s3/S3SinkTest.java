@@ -41,6 +41,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.query.Predicates.alwaysTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -83,8 +84,8 @@ public class S3SinkTest extends JetTestSupport {
         }
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(bucketName, batchSize, S3SinkTest::client, Map.Entry::getValue));
+        p.drawFrom(Sources.map(map, alwaysTrue(), Map.Entry::getValue))
+         .drainTo(S3Sinks.s3(bucketName, batchSize, S3SinkTest::client));
 
         instance1.newJob(p).join();
 
