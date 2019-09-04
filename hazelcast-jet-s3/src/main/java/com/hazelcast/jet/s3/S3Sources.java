@@ -101,7 +101,8 @@ public final class S3Sources {
      * }</pre>
      *
      * @param bucketNames    list of bucket-names
-     * @param prefix         the prefix to filter the objects
+     * @param prefix         the prefix to filter the objects. Optional, passing
+     *                       {@code null} will list all objects.
      * @param clientSupplier S3 client supplier
      * @param mapFn          the function which creates output object from each
      *                       line. Gets the object name and line as parameters

@@ -36,7 +36,6 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.s3.S3MockContainer.client;
@@ -49,12 +48,10 @@ import static org.junit.Assert.assertTrue;
 
 public class S3MockTest extends JetTestSupport {
 
-    @ClassRule
-    public static S3MockContainer s3MockContainer = new S3MockContainer();
-
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String SINK_BUCKET = "sink-bucket";
-
+    @ClassRule
+    public static S3MockContainer s3MockContainer = new S3MockContainer();
     private static AmazonS3 s3Client;
 
     private JetInstance jet;
@@ -104,8 +101,9 @@ public class S3MockTest extends JetTestSupport {
 
     @Test
     public void testSource() {
-        int totalLineCount = generateAndUploadObjects();
-
+        int objectCount = 20;
+        int lineCount = 100;
+        generateAndUploadObjects(objectCount, lineCount);
 
         String endpointURL = s3MockContainer.endpointURL();
         Pipeline p = Pipeline.create();
@@ -114,7 +112,7 @@ public class S3MockTest extends JetTestSupport {
          .aggregate(AggregateOperations.counting())
          .drainTo(AssertionSinks.assertCollectedEventually(10, list -> {
              long sum = list.stream().mapToLong(l -> l).sum();
-             Assert.assertEquals(totalLineCount, sum);
+             Assert.assertEquals(objectCount * lineCount, sum);
          }));
 
         try {
@@ -124,18 +122,12 @@ public class S3MockTest extends JetTestSupport {
         }
     }
 
-    private int generateAndUploadObjects() {
-        Random random = new Random();
-        int objectCount = random.nextInt(10) + 5;
-        int totalLineCount = 0;
+    private void generateAndUploadObjects(int objectCount, int lineCount) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < objectCount; i++) {
-            int lineCount = random.nextInt(200) + 50;
             range(0, lineCount).forEach(j -> builder.append(j).append(lineSeparator()));
             s3Client.putObject(SOURCE_BUCKET, "object-" + i, builder.toString());
-            totalLineCount += lineCount;
             builder.setLength(0);
         }
-        return totalLineCount;
     }
 }
