@@ -30,7 +30,11 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.s3.S3Sinks;
 import com.hazelcast.jet.s3.S3Sources;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -43,7 +47,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
- * Word count example adapted to read from and write to S3 bucket.
+ * Word count example adapted to read from and write to S3 bucket. The example
+ * uploads some books to the given input bucket and result of the word count
+ * is written to output bucket. Set credentials and region information to run
+ * the example.
  * <p>
  * For more details about the word count pipeline itself, please see the JavaDoc
  * for the {@code WordCount} class in {@code wordcount} sample.
@@ -57,56 +64,73 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * writes the output to the given output bucket, with each
  * processor writing to a batch of files within the bucket. The files are
  * identified by the global processor index and an incremented value.
+ * <p>
  */
 public class S3WordCount {
 
-    private static Pipeline buildPipeline(
-            String accessKey, String secretKey, Regions region,
-            String inputBucket, String outputBucket
-    ) {
+    private static final String AWS_ACCESS_KEY = "";
+    private static final String AWS_SECRET_KEY = "";
+    private static final Regions REGION = Regions.US_EAST_1;
+
+    private static final String INPUT_BUCKET = "jet-s3-example-input-bucket";
+    private static final String OUTPUT_BUCKET = "jet-s3-example-output-bucket";
+
+    private static Pipeline buildPipeline() {
         final Pattern regex = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
         p.drawFrom(S3Sources.s3(
-                Collections.singletonList(inputBucket),
+                Collections.singletonList(INPUT_BUCKET),
                 null,
                 UTF_8,
-                () -> client(accessKey, secretKey, region),
+                S3WordCount::client,
                 (name, line) -> line))
          .flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(S3Sinks.s3(outputBucket, 1024, () -> client(accessKey, secretKey, region), Object::toString));
+         .drainTo(S3Sinks.s3(OUTPUT_BUCKET, 1024, S3WordCount::client, Object::toString));
         return p;
     }
-
-    private static AmazonS3 client(String accessKey, String secretKey, Regions region) {
+    private static AmazonS3 client() {
         BasicAWSCredentials credentials =
-                new BasicAWSCredentials(accessKey, secretKey);
+                new BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY);
         return AmazonS3ClientBuilder
                 .standard()
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                .withRegion(region)
+                .withRegion(REGION)
                 .build();
     }
 
-    public static void main(String[] args) {
-        String secretAccessKey = "";
-        String accessKeySecret = "";
-        Regions region = Regions.US_EAST_1;
-
-        String inputBucket = "";
-        String outputBucket = "";
+    public static void main(String[] args) throws IOException {
         try {
+            uploadBooks();
             JetInstance jet = Jet.newJetInstance();
             Jet.newJetInstance();
-            System.out.print("\nCounting words from " + inputBucket);
+            System.out.print("\nCounting words from " + INPUT_BUCKET);
             long start = nanoTime();
-            Pipeline p = buildPipeline(secretAccessKey, accessKeySecret, region, inputBucket, outputBucket);
+            Pipeline p = buildPipeline();
             jet.newJob(p).join();
             System.out.println("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
-            System.out.println("Output written to " + outputBucket);
+            System.out.println("Output written to " + OUTPUT_BUCKET);
         } finally {
             Jet.shutdownAll();
+        }
+    }
+
+    private static void uploadBooks() throws IOException {
+        AmazonS3 s3Client = null;
+        try {
+            s3Client = client();
+            AmazonS3 localClient = s3Client;
+            Path path = Paths.get(S3WordCount.class.getResource("/books").getPath());
+            Files.list(path)
+                 .filter(book -> book.getFileName().toString().startsWith("a"))
+                 .forEach(book -> {
+                     localClient.putObject(INPUT_BUCKET, book.getFileName().toString(), book.toFile());
+                 });
+        } finally {
+            if (s3Client != null) {
+                s3Client.shutdown();
+            }
         }
     }
 
