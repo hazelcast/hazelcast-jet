@@ -436,7 +436,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
 
         NoOutputSourceP.proceedLatch.countDown();
 
-        expectedException.expectMessage(CancellationException.class.getName());
+        expectedException.expect(CancellationException.class);
         job.join();
 
         assertEquals("PS.close not called after execution finished", MEMBER_COUNT, MockPS.closeCount.get());
