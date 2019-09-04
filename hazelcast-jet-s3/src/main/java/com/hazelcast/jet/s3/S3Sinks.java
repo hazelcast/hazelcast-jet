@@ -129,6 +129,14 @@ public final class S3Sinks {
             this.linesPerFile = linesPerFile;
             this.amazonS3 = clientSupplier.get();
             this.toStringFn = toStringFn;
+
+            checkIfBucketExists();
+        }
+
+        private void checkIfBucketExists() {
+            if (!amazonS3.doesBucketExistV2(bucketName)) {
+                throw new IllegalArgumentException("Bucket [" + bucketName + "] does not exist");
+            }
         }
 
         private void receive(T item) {
