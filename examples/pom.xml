@@ -55,7 +55,6 @@
         <module>spring</module>
         <module>wordcount</module>
         <module>tf-idf</module>
-        <module>s3</module>
     </modules>
 
     <properties>
