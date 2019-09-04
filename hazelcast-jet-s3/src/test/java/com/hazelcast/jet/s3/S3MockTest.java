@@ -34,17 +34,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.CompletionException;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.s3.S3MockContainer.client;
+import static java.lang.System.lineSeparator;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.Collections.singletonList;
+import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -55,8 +54,8 @@ public class S3MockTest extends JetTestSupport {
 
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String SINK_BUCKET = "sink-bucket";
+
     private static AmazonS3 s3Client;
-    private static long totalLineCount;
 
     private JetInstance jet;
 
@@ -65,7 +64,6 @@ public class S3MockTest extends JetTestSupport {
         s3Client = s3MockContainer.client();
         s3Client.createBucket(SOURCE_BUCKET);
         s3Client.createBucket(SINK_BUCKET);
-        uploadBooks();
     }
 
     @Before
@@ -106,7 +104,8 @@ public class S3MockTest extends JetTestSupport {
 
     @Test
     public void testSource() {
-        long localTotalLineCount = totalLineCount;
+        int totalLineCount = generateAndUploadObjects();
+
 
         String endpointURL = s3MockContainer.endpointURL();
         Pipeline p = Pipeline.create();
@@ -115,7 +114,7 @@ public class S3MockTest extends JetTestSupport {
          .aggregate(AggregateOperations.counting())
          .drainTo(AssertionSinks.assertCollectedEventually(10, list -> {
              long sum = list.stream().mapToLong(l -> l).sum();
-             Assert.assertEquals(localTotalLineCount, sum);
+             Assert.assertEquals(totalLineCount, sum);
          }));
 
         try {
@@ -125,15 +124,18 @@ public class S3MockTest extends JetTestSupport {
         }
     }
 
-    private static void uploadBooks() throws IOException {
-        Path path = Paths.get(S3MockTest.class.getResource("/books").getPath());
-        Files.list(path)
-             .filter(book -> book.getFileName().toString().startsWith("a"))
-             .forEach(book -> {
-                 s3Client.putObject(SOURCE_BUCKET, book.getFileName().toString(), book.toFile());
-                 totalLineCount += uncheckCall(() -> Files.lines(book).count());
-                 System.out.println("uploaded file " + book.getFileName().toString() + " path: " + book);
-             });
+    private int generateAndUploadObjects() {
+        Random random = new Random();
+        int objectCount = random.nextInt(10) + 5;
+        int totalLineCount = 0;
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < objectCount; i++) {
+            int lineCount = random.nextInt(200) + 50;
+            range(0, lineCount).forEach(j -> builder.append(j).append(lineSeparator()));
+            s3Client.putObject(SOURCE_BUCKET, "object-" + i, builder.toString());
+            totalLineCount += lineCount;
+            builder.setLength(0);
+        }
+        return totalLineCount;
     }
-
 }
