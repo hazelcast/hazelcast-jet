@@ -365,7 +365,8 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
             job.cancel();
             job.join();
             fail("Job execution should fail");
-        } catch (CancellationException ignored) {
+        } catch (Exception e) {
+            assertContains(e.toString(), CancellationException.class.getName());
         }
 
         assertTrueEventually(() -> {
@@ -435,7 +436,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
 
         NoOutputSourceP.proceedLatch.countDown();
 
-        expectedException.expect(CancellationException.class);
+        expectedException.expectMessage(CancellationException.class.getName());
         job.join();
 
         assertEquals("PS.close not called after execution finished", MEMBER_COUNT, MockPS.closeCount.get());
