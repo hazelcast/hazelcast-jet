@@ -102,6 +102,7 @@ public class S3WordCount {
 
     public static void main(String[] args) throws IOException {
         try {
+            System.out.println("Uploading books to bucket " + INPUT_BUCKET);
             uploadBooks();
             JetInstance jet = Jet.newJetInstance();
             Jet.newJetInstance();
@@ -125,6 +126,7 @@ public class S3WordCount {
             Files.list(path)
                  .filter(book -> book.getFileName().toString().startsWith("a"))
                  .forEach(book -> {
+                     System.out.println("Uploading file " + book.getFileName().toString() + "...");
                      localClient.putObject(INPUT_BUCKET, book.getFileName().toString(), book.toFile());
                  });
         } finally {

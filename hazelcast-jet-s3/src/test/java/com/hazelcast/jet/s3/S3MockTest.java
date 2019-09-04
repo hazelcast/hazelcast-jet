@@ -101,7 +101,7 @@ public class S3MockTest extends JetTestSupport {
 
     @Test
     public void testSource() {
-        int objectCount = 20;
+        int objectCount = 5000;
         int lineCount = 100;
         generateAndUploadObjects(objectCount, lineCount);
 
