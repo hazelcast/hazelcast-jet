@@ -106,10 +106,10 @@ restart the members for which the property is modified.
 
 |`jet.job.scan.period`
 |5000
-|long
+|long [milliseconds]
 |Jet will periodically check for new jobs to start and perform cleanup
 of unused resources. This property configures how often this check and
-cleanup will be done.
+cleanup will be done. Value is in milliseconds.
 
 |`jet.shutdownhook.enabled`
 |true
@@ -121,7 +121,7 @@ way that is equivalent to calling JetInstance.shutdown().
 
 |`jet.job.results.ttl.seconds`
 |604800 (7 days)
-|long
+|long [seconds]
 |Maximum number of time in seconds the job results will be kept in the
 cluster. They will be automatically deleted after this period is
 reached.
@@ -141,7 +141,7 @@ the Jet installation path.
 
 |`jet.idle.cooperative.min.microseconds`
 |25
-|long
+|long [microseconds]
 |The minimum time in microseconds the cooperative worker threads will
 sleep if none of the tasklets made any progress. Lower values increase
 idle CPU usage but may result in decreased latency. Higher values will
@@ -156,7 +156,7 @@ blog post] about this subject  for more details.
 
 |`jet.idle.cooperative.max.microseconds`
 |500
-|long
+|long [microseconds]
 |The maximum time in microseconds the cooperative worker threads will
 sleep if none of the tasklets made any progress. Lower values increase
 idle CPU usage but may result in decreased latency. Higher values will
@@ -171,7 +171,7 @@ blog post] about this subject  for more details.
 
 |`jet.idle.noncooperative.min.microseconds`
 |25
-|long
+|long [microseconds]
 |The minimum time in microseconds the non-cooperative worker threads
 will sleep if none of the tasklets made any progress. Lower values
 increase idle CPU usage but may result in decreased latency. Higher
@@ -186,7 +186,7 @@ blog post] about this subject  for more details.
 
 |`jet.idle.noncooperative.max.microseconds`
 |5000
-|long
+|long [microseconds]
 |The maximum time in microseconds the non-cooperative worker threads
 will sleep if none of the tasklets made any progress. Lower values
 increase idle CPU usage but may result in decreased latency. Higher
