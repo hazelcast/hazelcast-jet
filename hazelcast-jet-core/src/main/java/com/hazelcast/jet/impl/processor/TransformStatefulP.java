@@ -63,7 +63,8 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     private final BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn;
     @Nullable
     private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
-    private final Map<K, TimestampedItem<S>> keyToState = new LruHashMap();
+    private final Map<K, TimestampedItem<S>> keyToState =
+            new LinkedHashMap<>(HASH_MAP_INITIAL_CAPACITY, HASH_MAP_LOAD_FACTOR, true);
     private final FlatMapper<T, OUT> flatMapper = flatMapper(this::flatMapEvent);
 
     private final FlatMapper<Watermark, Object> wmFlatMapper = flatMapper(this::flatMapWm);
@@ -197,18 +198,6 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
             @SuppressWarnings("unchecked")
             TimestampedItem<S> old = keyToState.put((K) key, (TimestampedItem<S>) value);
             assert old == null : "Duplicate key '" + key + '\'';
-        }
-    }
-
-    private class LruHashMap extends LinkedHashMap<K, TimestampedItem<S>> {
-        LruHashMap() {
-            super(HASH_MAP_INITIAL_CAPACITY, HASH_MAP_LOAD_FACTOR, true);
-        }
-
-        @Override
-        protected boolean removeEldestEntry(@Nonnull Entry<K, TimestampedItem<S>> eldest) {
-            long eldestTimestamp = eldest.getValue().timestamp();
-            return eldestTimestamp != Long.MIN_VALUE && eldestTimestamp < Util.subtractClamped(currentWm, ttl);
         }
     }
 }
