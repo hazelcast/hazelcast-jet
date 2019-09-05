@@ -43,7 +43,6 @@ import java.util.Map;
 
 import static com.hazelcast.query.Predicates.alwaysTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category(NightlyTest.class)
 public class S3SinkTest extends JetTestSupport {
@@ -77,7 +76,6 @@ public class S3SinkTest extends JetTestSupport {
         IMapJet<Integer, String> map = instance1.getMap("map");
 
         int itemCount = 1000;
-        int batchSize = 100;
 
         for (int i = 0; i < itemCount; i++) {
             map.put(i, "foo-" + i);
@@ -85,13 +83,13 @@ public class S3SinkTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map, alwaysTrue(), Map.Entry::getValue))
-         .drainTo(S3Sinks.s3(bucketName, batchSize, S3SinkTest::client));
+         .drainTo(S3Sinks.s3(bucketName, S3SinkTest::client));
 
         instance1.newJob(p).join();
 
         ObjectListing listing = client.listObjects(bucketName);
         List<S3ObjectSummary> objectSummaries = listing.getObjectSummaries();
-        assertTrue(objectSummaries.size() >= itemCount / batchSize);
+        assertEquals(2, objectSummaries.size());
 
         long totalLineCount = objectSummaries
                 .stream()

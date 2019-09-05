@@ -17,6 +17,12 @@
 package com.hazelcast.jet.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
+import com.amazonaws.services.s3.model.PartETag;
+import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.amazonaws.services.s3.model.UploadPartResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
@@ -25,6 +31,9 @@ import com.hazelcast.util.StringUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Contains factory methods for creating AWS S3 sinks.
@@ -35,16 +44,15 @@ public final class S3Sinks {
     }
 
     /**
-     * Convenience for {@link #s3(String, int, String, SupplierEx, FunctionEx)}
+     * Convenience for {@link #s3(String, String, SupplierEx, FunctionEx)}
      * Uses {@link Object#toString()} to convert the items to lines.
      */
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
-            int linesPerFile,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
     ) {
-        return s3(bucketName, linesPerFile, null, clientSupplier, Object::toString);
+        return s3(bucketName,null, clientSupplier, Object::toString);
     }
 
     /**
@@ -85,7 +93,6 @@ public final class S3Sinks {
      * }</pre>
      *
      * @param bucketName     the name of the bucket
-     * @param linesPerFile   the number of lines per file
      * @param clientSupplier S3 client supplier
      * @param toStringFn     the function which converts each item to its
      *                       string representation
@@ -94,7 +101,6 @@ public final class S3Sinks {
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
-            int linesPerFile,
             @Nullable String prefix,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
@@ -102,8 +108,9 @@ public final class S3Sinks {
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
-                                linesPerFile, clientSupplier, toStringFn))
+                                clientSupplier, toStringFn))
                 .<T>receiveFn(S3Context::receive)
+                .flushFn(S3Context::flush)
                 .destroyFn(S3Context::close)
                 .build();
     }
@@ -113,34 +120,39 @@ public final class S3Sinks {
         private final String bucketName;
         private final String prefix;
         private final int processorIndex;
-        private final int linesPerFile;
-        private final AmazonS3 amazonS3;
+        private final AmazonS3 s3Client;
         private final FunctionEx<? super T, String> toStringFn;
+        private final String uploadId;
 
-        private int itemCounter;
-        private long objectCounter;
+        private int partCounter;
+        private int filePosition;
+        private int partSize;
         private StringBuilder buffer = new StringBuilder();
+        private final List<PartETag> partETags;
 
         private S3Context(
                 String bucketName,
                 String prefix,
                 int processorIndex,
-                int linesPerFile,
                 SupplierEx<? extends AmazonS3> clientSupplier,
                 FunctionEx<? super T, String> toStringFn
         ) {
             this.bucketName = bucketName;
             this.prefix = StringUtil.isNullOrEmptyAfterTrim(prefix) ? "" : prefix;
             this.processorIndex = processorIndex;
-            this.linesPerFile = linesPerFile;
-            this.amazonS3 = clientSupplier.get();
+            this.s3Client = clientSupplier.get();
             this.toStringFn = toStringFn;
 
             checkIfBucketExists();
+
+            partETags = new ArrayList<>();
+            InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, key());
+            InitiateMultipartUploadResult initResponse = s3Client.initiateMultipartUpload(initRequest);
+            uploadId = initResponse.getUploadId();
         }
 
         private void checkIfBucketExists() {
-            if (!amazonS3.doesBucketExistV2(bucketName)) {
+            if (!s3Client.doesBucketExistV2(bucketName)) {
                 throw new IllegalArgumentException("Bucket [" + bucketName + "] does not exist");
             }
         }
@@ -148,26 +160,39 @@ public final class S3Sinks {
         private void receive(T item) {
             buffer.append(toStringFn.apply(item))
                   .append(System.lineSeparator());
-            if (++itemCounter == linesPerFile) {
-                amazonS3.putObject(bucketName, nextKey(), buffer.toString());
+        }
+
+        private void flush() {
+            if (buffer.length() > 0) {
+                byte[] bytes = buffer.toString().getBytes();
+                partSize = bytes.length;
+                UploadPartRequest uploadRequest = new UploadPartRequest()
+                        .withBucketName(bucketName)
+                        .withKey(key())
+                        .withUploadId(uploadId)
+                        .withFileOffset(filePosition)
+                        .withPartNumber(++partCounter)
+                        .withInputStream(new ByteArrayInputStream(bytes))
+                        .withPartSize(partSize);
+                UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
+                partETags.add(uploadResult.getPartETag());
+                filePosition += partSize;
                 buffer.setLength(0);
-                itemCounter = 0;
             }
         }
 
         private void close() {
             try {
-                if (buffer.length() > 0) {
-                    amazonS3.putObject(bucketName, nextKey(), buffer.toString());
-                }
+                CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucketName, key(),
+                        uploadId, partETags);
+                s3Client.completeMultipartUpload(compRequest);
             } finally {
-                amazonS3.shutdown();
+                s3Client.shutdown();
             }
         }
 
-
-        private String nextKey() {
-            return prefix + processorIndex + "-" + (++objectCounter);
+        private String key() {
+            return prefix + processorIndex;
         }
     }
 }

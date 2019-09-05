@@ -87,7 +87,6 @@ public class S3MockTest extends JetTestSupport {
         IMapJet<Integer, String> map = jet.getMap("map");
 
         int itemCount = 1000;
-        int batchSize = 100;
         String prefix = "my-objects-";
 
         for (int i = 0; i < itemCount; i++) {
@@ -96,13 +95,13 @@ public class S3MockTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(SINK_BUCKET, batchSize, prefix, S3MockTest::client, Map.Entry::getValue));
+         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, S3MockTest::client, Map.Entry::getValue));
 
         jet.newJob(p).join();
 
         ObjectListing listing = s3Client.listObjects(SINK_BUCKET);
         List<S3ObjectSummary> objectSummaries = listing.getObjectSummaries();
-        assertTrue(objectSummaries.size() >= itemCount / batchSize);
+        assertEquals(2, objectSummaries.size());
 
         long totalLineCount = objectSummaries
                 .stream()
