@@ -161,7 +161,7 @@ public class TransformStatefulPTest {
         );
 
         // use more keys than MAX_ITEMS_TO_EVICT
-        int numKeys = TransformStatefulP.MAX_ITEMS_TO_EVICT + 1;
+        int numKeys = 100;
 
         // Build the input. First add entries with keys 0..max, then with keys max..0.
         // The reason is that the eviction goes in the order items were processed so
