@@ -48,7 +48,6 @@ import static java.lang.Math.min;
 import static java.util.function.Function.identity;
 
 public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
-    static final int MAX_ITEMS_TO_EVICT = 100;
     private static final int HASH_MAP_INITIAL_CAPACITY = 16;
     private static final float HASH_MAP_LOAD_FACTOR = 0.75f;
 
