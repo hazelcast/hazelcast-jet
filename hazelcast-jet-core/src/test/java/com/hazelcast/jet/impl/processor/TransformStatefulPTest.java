@@ -44,7 +44,7 @@ import static java.util.Collections.singletonList;
 public class TransformStatefulPTest {
 
     @Test
-    public void mapStateful_noTTL() {
+    public void mapStateful_noTtl() {
         SupplierEx<Processor> supplier = Processors.mapStatefulP(
                 0,
                 Entry::getKey,
@@ -108,7 +108,7 @@ public class TransformStatefulPTest {
     }
 
     @Test
-    public void mapStateful_withTTL() {
+    public void mapStateful_withTtl() {
         SupplierEx<Processor> supplier = Processors.mapStatefulP(
                 2,
                 jetEvent -> jetEvent.payload().getKey(),
@@ -142,9 +142,46 @@ public class TransformStatefulPTest {
     }
 
     @Test
-    public void mapStateful_withTTL_manyKeys() {
+    public void mapStateful_withTtlAndEvict() {
+        SupplierEx<Processor> supplier = Processors.mapStatefulP(
+                2,
+                jetEvent -> jetEvent.payload().getKey(),
+                JetEvent::timestamp,
+                () -> new long[1],
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
+                    s[0] += e.payload().getValue();
+                    return entry(k, s[0]);
+                },
+                (e, r) -> jetEvent(e.timestamp(), r),
+                (key, state, eventTime) -> entry(key, "evict")
+        );
+
+        TestSupport.verifyProcessor(supplier)
+                   .input(asList(
+                           jetEvent(0, entry("a", 1L)),
+                           jetEvent(1, entry("b", 2L)),
+                           wm(3), // evict a
+                           jetEvent(3, entry("a", 3L)),
+                           wm(4), // evict b
+                           jetEvent(4, entry("b", 4L))
+                   ))
+                   .expectOutput(asList(
+                           jetEvent(0, entry("a", 1L)),
+                           jetEvent(1, entry("b", 2L)),
+                           entry("a", "evict"),
+                           wm(3),
+                           jetEvent(3, entry("a", 3L)),
+                           entry("b", "evict"),
+                           wm(4),
+                           jetEvent(4, entry("b", 4L))
+                   ));
+    }
+
+    @Test
+    public void mapStateful_withTtl_manyKeys() {
         /*
-        This test is designed to test TTL handling if not all items are evicted in tryProcessWatermark
+        This test is designed to test TTL
+        handling if not all items are evicted in tryProcessWatermark
         due to the MAX_ITEMS_TO_EVICT.
          */
         SupplierEx<Processor> supplier = Processors.mapStatefulP(
