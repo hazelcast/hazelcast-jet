@@ -26,6 +26,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
+import com.hazelcast.nio.IOUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -216,6 +217,7 @@ public final class S3Sources {
         }
 
         private void close() {
+            IOUtil.closeResource(reader);
             amazonS3.shutdown();
         }
     }
