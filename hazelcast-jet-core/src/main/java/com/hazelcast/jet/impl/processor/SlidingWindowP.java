@@ -109,11 +109,11 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     private final LongFunction<Map<K, A>> createMapPerTsFunction;
     private final Function<K, A> createAccFunction;
 
-    @Probe
+    @Probe(name = "lateEventsDropped")
     private final AtomicLong lateEventsDropped = new AtomicLong();
-    @Probe
+    @Probe(name = "totalFrames")
     private final AtomicLong totalFrames = new AtomicLong();
-    @Probe
+    @Probe(name = "totalKeysInFrames")
     private final AtomicLong totalKeysInFrames = new AtomicLong();
 
     // Fields for early results emission

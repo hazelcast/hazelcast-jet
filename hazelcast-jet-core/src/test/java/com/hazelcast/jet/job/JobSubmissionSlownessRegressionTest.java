@@ -17,6 +17,7 @@
 package com.hazelcast.jet.job;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -124,7 +125,7 @@ public final class JobSubmissionSlownessRegressionTest extends JetTestSupport {
         DAG dag = new DAG();
         Vertex v1 = dag.newVertex("v", noopP());
         Vertex v2 = dag.newVertex("v2", noopP());
-        dag.edge(Edge.between(v1, v2));
+        dag.edge(Edge.between(v1, v2).setConfig(new EdgeConfig().setQueueSize(1)));
         return dag;
     }
 
