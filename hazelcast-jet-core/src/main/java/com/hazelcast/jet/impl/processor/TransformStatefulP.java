@@ -45,6 +45,7 @@ import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.function.Function.identity;
 
 public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     static final int MAX_ITEMS_TO_EVICT = 100;
@@ -65,18 +66,9 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     private final Map<K, TimestampedItem<S>> keyToState = new LruHashMap();
     private final FlatMapper<T, OUT> flatMapper = flatMapper(this::flatMapEvent);
 
-    private final ResettableSingletonTraverser<Watermark> wmSingletonTrav = new ResettableSingletonTraverser<>();
-    private Iterator<Entry<K, TimestampedItem<S>>> keyToStateIterator = keyToState.entrySet().iterator();
-    private boolean wmEmitted = true;
-    private final Traverser<?> evictingFlatmappingTraverser = new EvictingTraverser()
-            .flatMap(Function.identity());
-    private final FlatMapper<Watermark, Object> wmFlatMapper = flatMapper(wm -> {
-        currentWm = wm.timestamp();
-        wmSingletonTrav.accept(wm);
-        wmEmitted = false;
-        keyToStateIterator = keyToState.entrySet().iterator();
-        return evictingFlatmappingTraverser;
-    });
+    private final FlatMapper<Watermark, Object> wmFlatMapper = flatMapper(this::flatMapWm);
+    private final EvictingTraverser evictingTraverser = new EvictingTraverser();
+    private final Traverser<?> evictingTraverserFlattened = evictingTraverser.flatMap(identity());
 
     private long currentWm = Long.MIN_VALUE;
     private Traverser<? extends Entry<?, ?>> snapshotTraverser;
@@ -141,6 +133,46 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         return wmFlatMapper.tryProcess(watermark);
     }
 
+    private Traverser<?> flatMapWm(Watermark wm) {
+        currentWm = wm.timestamp();
+        evictingTraverser.reset(wm);
+        return evictingTraverserFlattened;
+    }
+
+    private class EvictingTraverser implements Traverser<Traverser<?>> {
+        private Iterator<Entry<K, TimestampedItem<S>>> keyToStateIterator;
+        private final ResettableSingletonTraverser<Watermark> wmTraverser = new ResettableSingletonTraverser<>();
+
+        void reset(Watermark wm) {
+            keyToStateIterator = keyToState.entrySet().iterator();
+            wmTraverser.accept(wm);
+        }
+
+        @Override
+        public Traverser<?> next() {
+            if (keyToStateIterator == null) {
+                return null;
+            }
+            while (keyToStateIterator.hasNext()) {
+                Entry<K, TimestampedItem<S>> entry = keyToStateIterator.next();
+                long lastTouched = entry.getValue().timestamp();
+                if (lastTouched >= Util.subtractClamped(currentWm, ttl)) {
+                    break;
+                }
+                keyToStateIterator.remove();
+                if (onEvictFn == null) {
+                    continue;
+                }
+                Traverser<R> outTrav = onEvictFn.apply(entry.getKey(), entry.getValue().item(), currentWm);
+                if (outTrav != null) {
+                    return outTrav;
+                }
+            }
+            keyToStateIterator = null;
+            return wmTraverser;
+        }
+    }
+
     private enum SnapshotKeys {
         WATERMARK
     }
@@ -175,33 +207,8 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
 
         @Override
         protected boolean removeEldestEntry(@Nonnull Entry<K, TimestampedItem<S>> eldest) {
-            return eldest.getValue().timestamp() < Util.subtractClamped(currentWm, ttl);
-        }
-    }
-
-    private class EvictingTraverser implements Traverser<Traverser<?>> {
-        @Override
-        public Traverser<?> next() {
-            while (keyToStateIterator.hasNext()) {
-                Entry<K, TimestampedItem<S>> entry = keyToStateIterator.next();
-                long lastTouched = entry.getValue().timestamp();
-                if (lastTouched >= Util.subtractClamped(currentWm, ttl)) {
-                    break;
-                }
-                keyToStateIterator.remove();
-                if (onEvictFn == null) {
-                    continue;
-                }
-                Traverser<R> outTrav = onEvictFn.apply(entry.getKey(), entry.getValue().item(), currentWm);
-                if (outTrav != null) {
-                    return outTrav;
-                }
-            }
-            if (!wmEmitted) {
-                wmEmitted = true;
-                return wmSingletonTrav;
-            }
-            return null;
+            long eldestTimestamp = eldest.getValue().timestamp();
+            return eldestTimestamp != Long.MIN_VALUE && eldestTimestamp < Util.subtractClamped(currentWm, ttl);
         }
     }
 }

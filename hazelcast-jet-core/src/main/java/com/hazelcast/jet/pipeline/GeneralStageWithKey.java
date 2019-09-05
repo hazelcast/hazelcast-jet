@@ -69,6 +69,7 @@ public interface GeneralStageWithKey<T, K> {
      * the cumulative latency of all handled requests so far, for each
      * server separately:
      * <pre>{@code
+     * GeneralStage<Entry<String, Long>> latencies;
      * GeneralStage<Entry<String, Long>> cumulativeLatencies = latencies
      *         .groupingKey(Entry::getKey)
      *         .mapStateful(

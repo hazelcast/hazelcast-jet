@@ -37,6 +37,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
  * An intermediate step while constructing a pieline transform that
@@ -67,32 +68,44 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * survives job restarts. For this reason it must be serializable.
      * <p>
      * If the given {@code ttl} is greater than zero, Jet will consider the
-     * state object stale if its time-to-live has expired. The state object
-     * has a timestamp attached to it: the top timestamp of any event with the
-     * same key seen so far. Upon seeing another event, Jet compares the state
-     * timestamp with the current watermark. If it is less than {@code wm - ttl},
-     * it discards the state object and creates a new one before processing the
-     * event.
+     * state object stale if its time-to-live has expired. The state object for
+     * a given key has a timestamp attached to it: the top timestamp of any
+     * event with that key seen so far. Whenever the watermark advances, Jet
+     * discards all state objects with a timestamp less than {@code wm - ttl}.
+     * Just before discarding the state object, Jet calls {@code onEvictFn} on
+     * it. The function can return an output item that will be emitted, or
+     * {@code null} if it doesn't need to emit an item.
      * <p>
-     * Sample usage:
+     * This sample takes a stream of pairs {@code (serverId, latency)}
+     * representing the latencies of serving individual requests and keeps
+     * track, separately for each server, of the total latency accumulated over
+     * individual sessions &mdash; bursts of server activity separated
+     * by quiet periods of one minute or more. For each input item it outputs
+     * the accumulated latency so far and when a session ends, it outputs a
+     * special entry that reports the total latency for that session.
      * <pre>{@code
-     * GeneralStage<Entry<String, Long>> latencies;
-     * GeneralStage<Entry<String, Long>> cumulativeLatencies = latencies
+     * StreamStage<Entry<String, Long>> latencies = null;
+     * StreamStage<Entry<String, Long>> cumulativeLatencies = latencies
      *         .groupingKey(Entry::getKey)
      *         .mapStateful(
+     *                 MINUTES.toMillis(1),
      *                 LongAccumulator::new,
      *                 (sum, key, entry) -> {
      *                     sum.add(entry.getValue());
      *                     return entry(key, sum.get());
-     *                 }
+     *                 },
+     *                 (sum, key, time) -> entry(String.format(
+     *                         "%s:totalForSession:%d", key, time), sum.get())
      *         );
      * }</pre>
      *
-     * @param createFn the function that returns the state object
-     * @param mapFn    the function that receives the state object and the input item and
-     *                 outputs the result item. It may modify the state object.
-     * @param <S>      type of the state object
-     * @param <R>      type of the result
+     * @param ttl        the time-to-live for each state object
+     * @param createFn   the function that returns the state object
+     * @param mapFn      the function that receives the state object and the input item and
+     *                   outputs the result item. It may modify the state object.
+     * @param onEvictFn  the function that Jet calls when evicting a state object
+     * @param <S>        type of the state object
+     * @param <R>        type of the result
      */
     @Nonnull
     <S, R> StreamStage<R> mapStateful(
@@ -126,9 +139,22 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * <p>
      * Sample usage:
      * <pre>{@code
-     *
+     * StreamStage<Entry<String, Long>> latencies = null;
+     * StreamStage<Entry<String, Long>> topLatencies = latencies
+     *         .groupingKey(Entry::getKey)
+     *         .filterStateful(
+     *                 MINUTES.toMillis(1),
+     *                 LongAccumulator::new,
+     *                 (topLatencyState, entry) -> {
+     *                     long currLatency = entry.getValue();
+     *                     long topLatency = topLatencyState.get();
+     *                     topLatencyState.set(Math.max(currLatency, topLatency));
+     *                     return currLatency > topLatency;
+     *                 }
+     *         );
      * }</pre>
      *
+     * @param ttl      the time-to-live for each state object
      * @param createFn the function that returns the state object
      * @param filterFn predicate that receives the state object and the input item and
      *                 outputs a boolean value. It may modify the state object.
