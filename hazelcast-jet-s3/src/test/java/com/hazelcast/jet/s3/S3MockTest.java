@@ -88,6 +88,7 @@ public class S3MockTest extends JetTestSupport {
 
         int itemCount = 1000;
         int batchSize = 100;
+        String prefix = "my-objects-";
 
         for (int i = 0; i < itemCount; i++) {
             map.put(i, "foo-" + i);
@@ -95,7 +96,7 @@ public class S3MockTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(SINK_BUCKET, batchSize, S3MockTest::client, Map.Entry::getValue));
+         .drainTo(S3Sinks.s3(SINK_BUCKET, batchSize, prefix, S3MockTest::client, Map.Entry::getValue));
 
         jet.newJob(p).join();
 
@@ -105,6 +106,7 @@ public class S3MockTest extends JetTestSupport {
 
         long totalLineCount = objectSummaries
                 .stream()
+                .filter(summary -> summary.getKey().startsWith(prefix))
                 .map(summary -> s3Client.getObject(SINK_BUCKET, summary.getKey()))
                 .mapToLong(S3SinkTest::lineCount)
                 .sum();
@@ -119,7 +121,7 @@ public class S3MockTest extends JetTestSupport {
         generateAndUploadObjects(objectCount, lineCount);
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(singletonList(SOURCE_BUCKET), null, defaultCharset(),
+        p.drawFrom(S3Sources.s3(singletonList(SOURCE_BUCKET), "object-", defaultCharset(),
                 S3MockTest::client, (name, line) -> line))
          .aggregate(AggregateOperations.counting())
          .drainTo(AssertionSinks.assertCollectedEventually(10, list -> {

@@ -21,8 +21,10 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.util.StringUtil;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Contains factory methods for creating AWS S3 sinks.
@@ -33,7 +35,7 @@ public final class S3Sinks {
     }
 
     /**
-     * Convenience for {@link #s3(String, int, SupplierEx, FunctionEx)}
+     * Convenience for {@link #s3(String, int, String, SupplierEx, FunctionEx)}
      * Uses {@link Object#toString()} to convert the items to lines.
      */
     @Nonnull
@@ -42,7 +44,7 @@ public final class S3Sinks {
             int linesPerFile,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
     ) {
-        return s3(bucketName, linesPerFile, clientSupplier, Object::toString);
+        return s3(bucketName, linesPerFile, null, clientSupplier, Object::toString);
     }
 
     /**
@@ -93,12 +95,13 @@ public final class S3Sinks {
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
             int linesPerFile,
+            @Nullable String prefix,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
     ) {
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
-                        new S3Context<>(bucketName, context.globalProcessorIndex(),
+                        new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
                                 linesPerFile, clientSupplier, toStringFn))
                 .<T>receiveFn(S3Context::receive)
                 .destroyFn(S3Context::close)
@@ -108,6 +111,7 @@ public final class S3Sinks {
     private static final class S3Context<T> {
 
         private final String bucketName;
+        private final String prefix;
         private final int processorIndex;
         private final int linesPerFile;
         private final AmazonS3 amazonS3;
@@ -119,12 +123,14 @@ public final class S3Sinks {
 
         private S3Context(
                 String bucketName,
+                String prefix,
                 int processorIndex,
                 int linesPerFile,
                 SupplierEx<? extends AmazonS3> clientSupplier,
                 FunctionEx<? super T, String> toStringFn
         ) {
             this.bucketName = bucketName;
+            this.prefix = StringUtil.isNullOrEmptyAfterTrim(prefix) ? "" : prefix;
             this.processorIndex = processorIndex;
             this.linesPerFile = linesPerFile;
             this.amazonS3 = clientSupplier.get();
@@ -161,7 +167,7 @@ public final class S3Sinks {
 
 
         private String nextKey() {
-            return processorIndex + "-" + (++objectCounter);
+            return prefix + processorIndex + "-" + (++objectCounter);
         }
     }
 }
