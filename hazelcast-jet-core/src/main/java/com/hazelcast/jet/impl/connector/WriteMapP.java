@@ -36,6 +36,7 @@ import static com.hazelcast.jet.impl.connector.HazelcastWriters.handleInstanceNo
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 public final class WriteMapP<K, V> implements Processor {
+    private static final int MAX_LOCAL_PARALLEL_OPS = 1;
     private final AtomicInteger numParallelOps = new AtomicInteger();
     private final AtomicReference<Throwable> firstFailure = new AtomicReference<>();
     private final HazelcastInstance instance;
@@ -48,7 +49,6 @@ public final class WriteMapP<K, V> implements Processor {
         numParallelOps.decrementAndGet();
     };
 
-    private int parallelOpsLimit;
     private IMap<K, V> map;
 
     private WriteMapP(HazelcastInstance instance, String mapName) {
@@ -64,7 +64,6 @@ public final class WriteMapP<K, V> implements Processor {
         // get 1. The putAll operation is already bulky, it doesn't help to have many in
         // parallel.
         map = instance.getMap(mapName);
-        parallelOpsLimit = Math.max(1, Supplier.MAX_LOCAL_PARALLEL_OPS / context.localParallelism());
     }
 
     @Override
@@ -76,7 +75,7 @@ public final class WriteMapP<K, V> implements Processor {
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         checkFailure();
-        if (Util.tryIncrement(numParallelOps, 1, parallelOpsLimit)) {
+        if (Util.tryIncrement(numParallelOps, 1, MAX_LOCAL_PARALLEL_OPS)) {
             ArrayMap<K, V> inboxAsMap = new ArrayMap<>(inbox.size());
             inbox.drain(inboxAsMap::add);
             ImdgUtil.mapPutAllAsync(map, inboxAsMap)
@@ -119,7 +118,6 @@ public final class WriteMapP<K, V> implements Processor {
 
     public static class Supplier<K, V> extends AbstractHazelcastConnectorSupplier {
         private static final long serialVersionUID = 1L;
-        private static final int MAX_LOCAL_PARALLEL_OPS = 8;
 
         private final String mapName;
 
