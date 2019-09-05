@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -75,7 +76,16 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * <p>
      * Sample usage:
      * <pre>{@code
-     *
+     * GeneralStage<Entry<String, Long>> latencies;
+     * GeneralStage<Entry<String, Long>> cumulativeLatencies = latencies
+     *         .groupingKey(Entry::getKey)
+     *         .mapStateful(
+     *                 LongAccumulator::new,
+     *                 (sum, key, entry) -> {
+     *                     sum.add(entry.getValue());
+     *                     return entry(key, sum.get());
+     *                 }
+     *         );
      * }</pre>
      *
      * @param createFn the function that returns the state object
@@ -194,14 +204,13 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * the accumulator and outputs the current result of aggregation (as
      * returned by the {@link AggregateOperation1#exportFn() export} primitive).
      * <p>
-     * Sample usage:
+     * This sample takes a stream of items and gives rolling counts of items of
+     * each color:
      * <pre>{@code
      * StreamStage<Entry<Color, Long>> aggregated = items
      *         .groupingKey(Item::getColor)
      *         .rollingAggregate(AggregateOperations.counting());
      * }</pre>
-     * For example, if your input is {@code {2, 7, 8, -5}}, the output will be
-     * {@code {2, 9, 17, 12}}.
      * <p>
      * If the given {@code ttl} is greater than zero, Jet will consider the
      * accumulator object stale if its time-to-live has expired. The

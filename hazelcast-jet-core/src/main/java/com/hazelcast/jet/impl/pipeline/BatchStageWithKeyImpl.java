@@ -23,6 +23,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
@@ -61,9 +62,9 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     @Nonnull @Override
     public <S> BatchStage<T> filterStateful(
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull TriPredicate<? super S, ? super K, ? super T> filterFn
+            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
-        return attachMapStateful(0, createFn, (s, k, t) -> filterFn.test(s, k, t) ? t : null, null);
+        return attachMapStateful(0, createFn, (s, k, t) -> filterFn.test(s, t) ? t : null, null);
     }
 
     @Nonnull @Override

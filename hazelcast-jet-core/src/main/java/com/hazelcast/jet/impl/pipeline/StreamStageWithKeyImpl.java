@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.pipeline;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
@@ -67,9 +68,9 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
     public <S> StreamStage<T> filterStateful(
             long ttl,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull TriPredicate<? super S, ? super K, ? super T> filterFn
+            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
-        return attachMapStateful(ttl, createFn, (s, k, t) -> filterFn.test(s, k, t) ? t : null, null);
+        return attachMapStateful(ttl, createFn, (s, k, t) -> filterFn.test(s, t) ? t : null, null);
     }
 
     @Nonnull @Override

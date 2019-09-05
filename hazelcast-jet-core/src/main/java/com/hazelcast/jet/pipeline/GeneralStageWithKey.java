@@ -18,7 +18,6 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -70,13 +69,13 @@ public interface GeneralStageWithKey<T, K> {
      * the cumulative latency of all handled requests so far, for each
      * server separately:
      * <pre>{@code
-     * GeneralStage<Entry<String, Long>> cumulativeLatency = latencies
+     * GeneralStage<Entry<String, Long>> cumulativeLatencies = latencies
      *         .groupingKey(Entry::getKey)
      *         .mapStateful(
      *                 LongAccumulator::new,
-     *                 (sum, latency) -> {
-     *                     sum.add(latency.getValue());
-     *                     return sum.get();
+     *                 (sum, key, entry) -> {
+     *                     sum.add(entry.getValue());
+     *                     return entry(key, sum.get());
      *                 }
      *         );
      * }</pre>
@@ -128,19 +127,6 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     );
 
-    default void x() {
-        GeneralStage<Entry<Long, String>> input = null;
-        GeneralStage<Entry<Long, String>> decimated = input
-                .groupingKey(Entry::getKey)
-                .filterStateful(
-                        LongAccumulator::new,
-                        (counter,  entry) -> {
-                            counter.add(1);
-                            return counter.get() % 10 == 0;
-                        }
-                );
-    }
-
     /**
      * Attaches a stage that performs a stateful flat-mapping operation. {@code
      * createFn} returns the object that holds the state. Jet passes this
@@ -150,21 +136,18 @@ public interface GeneralStageWithKey<T, K> {
      * snapshot, so it survives job restarts. For this reason it must be
      * serializable.
      * <p>
-     * This sample groups the stream of {@code (key, value)} pairs and inserts
-     * a punctuation value (a special string) after every 10th item of each
-     * group:
+     * This sample groups a stream of strings by length and inserts punctuation
+     * (a special string) after every 10th string in each group:
      * <pre>{@code
-     * GeneralStage<Entry<Long, String>> punctuated = input
-     *         .groupingKey(Entry::getKey)
+     * GeneralStage<String> punctuated = input
+     *         .groupingKey(String::length)
      *         .flatMapStateful(
      *                 LongAccumulator::new,
-     *                 (counter, key, entry) -> {
+     *                 (counter, key, item) -> {
      *                     counter.add(1);
-     *                     String val = entry.getValue();
-     *                     Traverser<String> output = counter.get() % 10 == 0
-     *                             ? Traversers.traverseItems("punctuation", val)
-     *                             : Traversers.singleton(val);
-     *                     return output.map(s -> entry(key, s));
+     *                     return counter.get() % 10 == 0
+     *                             ? Traversers.traverseItems("punctuation" + key, item)
+     *                             : Traversers.singleton(item);
      *                 }
      *         );
      * }</pre>

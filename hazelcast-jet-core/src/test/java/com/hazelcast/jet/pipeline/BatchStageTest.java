@@ -489,7 +489,7 @@ public class BatchStageTest extends PipelineTestSupport {
         // When
         BatchStage<Integer> stage = batchStageFromList(input)
                 .groupingKey(i -> i % 2)
-                .filterStateful(LongAccumulator::new, (acc, k, i) -> {
+                .filterStateful(LongAccumulator::new, (acc, i) -> {
                     acc.add(i);
                     return acc.get() % 2 == 0;
                 });
