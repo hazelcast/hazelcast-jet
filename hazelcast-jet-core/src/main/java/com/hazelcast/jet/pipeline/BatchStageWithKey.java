@@ -27,7 +27,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
@@ -65,21 +64,21 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     BatchStage<T> distinct();
 
     @Nonnull @Override
-    <S, R> BatchStage<Entry<K, R>> mapStateful(
+    <S, R> BatchStage<R> mapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
     );
 
     @Nonnull @Override
-    <S> BatchStage<Entry<K, T>> filterStateful(
+    <S> BatchStage<T> filterStateful(
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
+            @Nonnull TriPredicate<? super S, ? super K, ? super T> filterFn
     );
 
     @Nonnull @Override
-    <S, R> BatchStage<Entry<K, R>> flatMapStateful(
+    <S, R> BatchStage<R> flatMapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     @Nonnull @Override

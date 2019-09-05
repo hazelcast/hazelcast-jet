@@ -25,6 +25,7 @@ import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.processor.Processors.flatMapStatefulP;
@@ -37,8 +38,9 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     private final FunctionEx<? super T, ? extends K> keyFn;
     private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
-    private final BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private final TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn;
+    private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
+    private final BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn;
+    private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
 
     public FlatMapStatefulTransform(
             @Nonnull Transform upstream,
@@ -46,16 +48,18 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn,
+            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         super("transform-stateful", upstream);
         this.ttl = ttl;
         this.keyFn = keyFn;
         this.timestampFn = timestampFn;
         this.createFn = createFn;
-        this.statefulFlatMapFn = statefulFlatMapFn;
+        this.statefulFlatMapFn = flatMapFn;
         this.mapToOutputFn = mapToOutputFn;
+        this.onEvictFn = onEvictFn;
     }
 
     @Override
@@ -67,7 +71,7 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 flatMapStatefulP(
-                        ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn));
+                        ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn, onEvictFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }

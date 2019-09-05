@@ -52,6 +52,7 @@ import com.hazelcast.jet.impl.processor.TransformUsingContextP;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -769,21 +770,28 @@ public final class Processors {
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
-            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn,
+            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends R> onEvictFn
     ) {
         return () -> {
-            final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
+            final ResettableSingletonTraverser<R> mainTrav = new ResettableSingletonTraverser<>();
+            final ResettableSingletonTraverser<R> evictTrav = new ResettableSingletonTraverser<>();
             return new TransformStatefulP<T, K, S, R, OUT>(
                     ttl,
                     keyFn,
                     timestampFn,
                     createFn,
-                    (state, item) -> {
-                        trav.accept(statefulMapFn.apply(state, item));
-                        return trav;
+                    (state, key, item) -> {
+                        mainTrav.accept(statefulMapFn.apply(state, key, item));
+                        return mainTrav;
                     },
-                    mapToOutputFn);
+                    mapToOutputFn,
+                    onEvictFn != null ? (k, s, wm) -> {
+                        evictTrav.accept(onEvictFn.apply(k, s, wm));
+                        return evictTrav;
+                    } : null
+            );
         };
     }
 
@@ -820,8 +828,9 @@ public final class Processors {
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn,
+            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         return () -> new TransformStatefulP<T, K, S, R, OUT>(
                 ttl,
@@ -829,7 +838,9 @@ public final class Processors {
                 timestampFn,
                 createFn,
                 statefulFlatMapFn,
-                mapToOutputFn);
+                mapToOutputFn,
+                onEvictFn
+        );
     }
 
     /**

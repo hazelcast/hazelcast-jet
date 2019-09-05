@@ -106,17 +106,28 @@ public interface GeneralStage<T> extends Stage {
     <R> GeneralStage<R> flatMap(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     );
-
+    
     /**
      * Attaches a stage that performs a stateful mapping operation. {@code
      * createFn} returns the object that holds the state. Jet passes this
      * object along with each input item to {@code mapFn}, which can update
      * the object's state. The state object will be included in the state
-     * snapshot, so it survives job restarts. For this reason the object must
-     * be serializable.
+     * snapshot, so it survives job restarts. For this reason it must be
+     * serializable.
      * <p>
-     * Sample usage:
-     * <pre>{<code
+     * This sample takes a stream of {@code long} numbers representing request
+     * latencies and outputs the cumulative latency of all requests so far:
+     * <pre>{@code
+     * StreamStage<Long> cumulativeLatency = latencies.mapStateful(
+     *         LongAccumulator::new,
+     *         (sum, latency) -> {
+     *             sum.add(latency);
+     *             return sum.get();
+     *         }
+     * );
+     * }</pre>
+     * This code has the same result as {@link #rollingAggregate 
+     * latencies.rollingAggregate(summing())}.
      *
      * @param createFn the function that returns the state object
      * @param mapFn    the function that receives the state object and the input item and
@@ -135,11 +146,19 @@ public interface GeneralStage<T> extends Stage {
      * createFn} returns the object that holds the state. Jet passes this
      * object along with each input item to {@code filterFn}, which can update
      * the object's state. The state object will be included in the state
-     * snapshot, so it survives job restarts. For this reason the object must
-     * be serializable.
+     * snapshot, so it survives job restarts. For this reason it must be
+     * serializable.
      * <p>
-     * Sample usage:
-     * <pre>{<code
+     * This sample decimates the input (throws out every 10th item):
+     * <pre>{@code
+     * GeneralStage<String> decimated = input.filterStateful(
+     *         LongAccumulator::new,
+     *         (counter, item) -> {
+     *             counter.add(1);
+     *             return counter.get() % 10 != 0;
+     *         }
+     * );
+     * }</pre>
      *
      * @param createFn the function that returns the state object
      * @param filterFn the function that receives the state object and the input item and
@@ -157,11 +176,22 @@ public interface GeneralStage<T> extends Stage {
      * createFn} returns the object that holds the state. Jet passes this
      * object along with each input item to {@code flatMapFn}, which can update
      * the object's state. The state object will be included in the state
-     * snapshot, so it survives job restarts. For this reason the object must
-     * be serializable.
+     * snapshot, so it survives job restarts. For this reason it must be
+     * serializable.
      * <p>
-     * Sample usage:
-     * <pre>{<code
+     * This sample inserts a punctuation mark (a special string) after every
+     * 10th input string:
+     * <pre>{@code
+     * GeneralStage<String> punctuated = input.flatMapStateful(
+     *         LongAccumulator::new,
+     *         (counter, item) -> {
+     *             counter.add(1);
+     *             return counter.get() % 10 == 0
+     *                     ? Traversers.traverseItems("punctuation", item)
+     *                     : Traversers.singleton(item);
+     *         }
+     * );
+     * }</pre>
      *
      * @param createFn  the function that returns the state object
      * @param flatMapFn the function that receives the state object and the input item and

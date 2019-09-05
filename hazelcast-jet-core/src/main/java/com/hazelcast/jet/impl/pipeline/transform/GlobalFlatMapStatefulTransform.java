@@ -32,16 +32,16 @@ import static com.hazelcast.jet.core.processor.Processors.flatMapStatefulP;
 public class GlobalFlatMapStatefulTransform<T, S, R, OUT> extends AbstractTransform {
 
     private final Supplier<? extends S> createFn;
-    private final BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
+    private final TriFunction<? super S, Object, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
     private final ToLongFunctionEx<? super T> timestampFn;
-    private final TriFunction<? super T, Integer, ? super R, ? extends OUT> mapToOutputFn;
+    private final BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn;
 
     public GlobalFlatMapStatefulTransform(
             @Nonnull Transform upstream,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull TriFunction<? super T, Integer, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super S, Object, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
+            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn
     ) {
         super("transform-stateful", upstream);
         this.timestampFn = timestampFn;
@@ -54,7 +54,7 @@ public class GlobalFlatMapStatefulTransform<T, S, R, OUT> extends AbstractTransf
     public void addToDag(Planner p) {
         ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
         PlannerVertex pv = p.addVertex(this, name(), 1,
-                flatMapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn));
+                flatMapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn, null));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }

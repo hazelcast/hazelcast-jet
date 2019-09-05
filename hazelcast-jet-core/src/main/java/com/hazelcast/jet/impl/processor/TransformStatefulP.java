@@ -24,13 +24,15 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.TimestampedItem;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,10 +41,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
+import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
@@ -56,10 +60,14 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     private final long ttl;
     private final Function<Object, ? extends K> keyFn;
     private final ToLongFunction<? super T> timestampFn;
-    private final Supplier<? extends S> createFn;
-    private final BiFunction<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private final TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn;
+    private final Function<K, TimestampedItem<S>> createIfAbsentFn;
+    private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
+    private final BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn;
+    @Nullable
+    private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
     private final FlatMapper<T, OUT> flatMapper = flatMapper(this::flatMapEvent);
+    private final FlatMapper<Watermark, Object> wmFlatMapper = flatMapper(this::flatMapWm);
+    private final ResettableSingletonTraverser<Watermark> wmSingletonTrav = new ResettableSingletonTraverser<>();
 
     private final Map<K, TimestampedItem<S>> keyToState = new LruHashMap();
     private long currentWm = Long.MIN_VALUE;
@@ -69,17 +77,19 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     public TransformStatefulP(
             long ttl,
             @Nonnull Function<? super T, ? extends K> keyFn,
-            @Nonnull ToLongFunctionEx<? super T> timestampFn,
+            @Nonnull ToLongFunction<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
-            @Nonnull BiFunction<? super S, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull TriFunction<? super T, ? super K, ? super R, ? extends OUT> mapToOutputFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
+            @Nonnull BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn,
+            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         this.ttl = ttl > 0 ? ttl : Long.MAX_VALUE;
         this.keyFn = (Function<Object, ? extends K>) keyFn;
         this.timestampFn = timestampFn;
-        this.createFn = createFn;
+        this.createIfAbsentFn = k -> new TimestampedItem<>(Long.MIN_VALUE, createFn.get());
         this.statefulFlatMapFn = statefulFlatMapFn;
         this.mapToOutputFn = mapToOutputFn;
+        this.onEvictFn = onEvictFn;
     }
 
     @Override
@@ -97,37 +107,21 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
             return Traversers.empty();
         }
         K key = keyFn.apply(event);
-        S state = resolveState(key, timestamp);
-        return applyOutputFnOptimized(event, key, statefulFlatMapFn.apply(state, event));
+        TimestampedItem<S> tsAndState = keyToState.computeIfAbsent(key, createIfAbsentFn);
+        tsAndState.setTimestamp(max(tsAndState.timestamp(), timestamp));
+        S state = tsAndState.item();
+        return applyOutputFnOptimized(event, statefulFlatMapFn.apply(state, key, event));
     }
 
     @Nonnull
-    private S resolveState(K key, long timestamp) {
-        TimestampedItem<S> tsAndState = keyToState.get(key);
-        if (tsAndState != null) {
-            long lastTouched = tsAndState.timestamp();
-            if (lastTouched < Util.subtractClamped(currentWm, ttl)) {
-                tsAndState = null;
-            } else if (timestamp > lastTouched) {
-                tsAndState.setTimestamp(timestamp);
-            }
-        }
-        if (tsAndState == null) {
-            tsAndState = new TimestampedItem<>(timestamp, createFn.get());
-            keyToState.put(key, tsAndState);
-        }
-        return tsAndState.item();
-    }
-
-    @Nonnull
-    private Traverser<OUT> applyOutputFnOptimized(T event, K key, Traverser<R> resultTrav) {
+    private Traverser<OUT> applyOutputFnOptimized(T event, Traverser<R> resultTrav) {
         if (!(resultTrav instanceof ResettableSingletonTraverser)) {
-            return resultTrav.map(r -> mapToOutputFn.apply(event, key, r));
+            return resultTrav.map(r -> mapToOutputFn.apply(event, r));
         }
         R r = resultTrav.next();
         if (r != null) {
             ResettableSingletonTraverser<OUT> rst = (ResettableSingletonTraverser<OUT>) resultTrav;
-            rst.accept(mapToOutputFn.apply(event, key, r));
+            rst.accept(mapToOutputFn.apply(event, r));
             return rst;
         } else {
             return Traversers.empty();
@@ -136,19 +130,44 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
 
     @Override
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-        currentWm = watermark.timestamp();
-        long countEvicted = 0;
+        return wmFlatMapper.tryProcess(watermark);
+    }
+
+    private Traverser<?> flatMapWm(Watermark wm) {
+        currentWm = wm.timestamp();
+        List<Object> output = null;
         for (Iterator<Entry<K, TimestampedItem<S>>> iter = keyToState.entrySet().iterator(); iter.hasNext();) {
-            long timestamp = iter.next().getValue().timestamp();
-            if (timestamp >= currentWm - ttl) {
+            Entry<K, TimestampedItem<S>> entry = iter.next();
+            long lastTouched = entry.getValue().timestamp();
+            System.out.format("lastTouched %d currentWm %d ttl %d%n", lastTouched, currentWm, ttl);
+            if (lastTouched >= currentWm - ttl) {
+                System.out.println("break");
                 break;
             }
+            System.out.format("remove %s%n", entry.getValue());
             iter.remove();
-            if (++countEvicted == MAX_ITEMS_TO_EVICT) {
-                break;
+            if (onEvictFn == null) {
+                continue;
+            }
+            Traverser<R> outTrav = onEvictFn.apply(entry.getKey(), entry.getValue().item(), currentWm);
+            if (outTrav != null) {
+                if (output == null) {
+                    output = new ArrayList<>();
+                }
+                // We drain the traverser eagerly to allow for the optimization where
+                // `onEvictFn` reuses the same singleton traverser:
+                for (R r; (r = outTrav.next()) != null;) {
+                    output.add(r);
+                }
             }
         }
-        return super.tryProcessWatermark(watermark);
+        if (output != null) {
+            output.add(wm);
+            return traverseIterable(output);
+        } else {
+            wmSingletonTrav.accept(wm);
+            return wmSingletonTrav;
+        }
     }
 
     private enum SnapshotKeys {

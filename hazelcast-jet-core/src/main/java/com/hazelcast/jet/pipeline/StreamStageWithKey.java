@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
@@ -33,6 +34,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+
+import static com.hazelcast.jet.Util.entry;
 
 /**
  * An intermediate step while constructing a pieline transform that
@@ -60,7 +63,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * object along with each input item to {@code mapFn}, which can update
      * the object's state. For each grouping key there's a separate state
      * object. The state object will be included in the state snapshot, so it
-     * survives job restarts. For this reason the object must be serializable.
+     * survives job restarts. For this reason it must be serializable.
      * <p>
      * If the given {@code ttl} is greater than zero, Jet will consider the
      * state object stale if its time-to-live has expired. The state object
@@ -71,7 +74,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * event.
      * <p>
      * Sample usage:
-     * <pre>{<code
+     * <pre>{@code
      *
      * }</pre>
      *
@@ -82,19 +85,18 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <R>      type of the result
      */
     @Nonnull
-    <S, R> StreamStage<Entry<K, R>> mapStateful(
+    <S, R> StreamStage<R> mapStateful(
             long ttl,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn,
+            @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     );
 
     @Nonnull @Override
-    default <S, R> StreamStage<Entry<K, R>> mapStateful(
+    <S, R> StreamStage<R> mapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
-    ) {
-        return mapStateful(0, createFn, mapFn);
-    }
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
+    );
 
     /**
      * Attaches a stage that performs a stateful filtering operation. {@code
@@ -102,7 +104,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * object along with each input item to {@code filterFn}, which can update
      * the object's state. For each grouping key there's a separate state
      * object. The state object will be included in the state snapshot, so it
-     * survives job restarts. For this reason the object must be serializable.
+     * survives job restarts. For this reason it must be serializable.
      * <p>
      * If the given {@code ttl} is greater than zero, Jet will consider the
      * state object stale if its time-to-live has expired. The state object
@@ -113,7 +115,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * event.
      * <p>
      * Sample usage:
-     * <pre>{<code
+     * <pre>{@code
      *
      * }</pre>
      *
@@ -123,14 +125,14 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <S>      type of the state object
      */
     @Nonnull
-    <S> StreamStage<Entry<K, T>> filterStateful(
+    <S> StreamStage<T> filterStateful(
             long ttl,
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     );
 
     @Nonnull @Override
-    default <S> StreamStage<Entry<K, T>> filterStateful(
+    default <S> StreamStage<T> filterStateful(
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
@@ -143,7 +145,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * object along with each input item to {@code flatMapFn}, which can update
      * the object's state. For each grouping key there's a separate state
      * object. The state object will be included in the state snapshot, so it
-     * survives job restarts. For this reason the object must be serializable.
+     * survives job restarts. For this reason it must be serializable.
      * <p>
      * If the given {@code ttl} is greater than zero, Jet will consider the
      * state object stale if its time-to-live has expired. The state object
@@ -154,7 +156,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * event.
      * <p>
      * Sample usage:
-     * <pre>{<code
+     * <pre>{@code
      *
      * }</pre>
      *
@@ -165,19 +167,18 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <R>      type of the result
      */
     @Nonnull
-    <S, R> StreamStage<Entry<K, R>> flatMapStateful(
+    <S, R> StreamStage<R> flatMapStateful(
             long ttl,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
+            @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     );
 
     @Nonnull @Override
-    default <S, R> StreamStage<Entry<K, R>> flatMapStateful(
+     <S, R> StreamStage<R> flatMapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
-    ) {
-        return flatMapStateful(0, createFn, flatMapFn);
-    }
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
+    );
 
     @Nonnull @Override
     default <A, R> StreamStage<Entry<K, R>> rollingAggregate(
@@ -223,10 +224,11 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     ) {
         BiConsumer<? super A, ? super T> accumulateFn = aggrOp.accumulateFn();
         Function<? super A, ? extends R> exportFn = aggrOp.exportFn();
-        return mapStateful(ttl, aggrOp.createFn(), (acc, item) -> {
+        FunctionEx<? super T, ? extends K> keyFn = keyFn();
+        return mapStateful(ttl, aggrOp.createFn(), (acc, key, item) -> {
             accumulateFn.accept(acc, item);
-            return exportFn.apply(acc);
-        });
+            return entry(keyFn.apply(item), exportFn.apply(acc));
+        }, (state, key, wm) -> null);
     }
 
     @Nonnull @Override

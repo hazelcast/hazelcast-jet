@@ -50,11 +50,12 @@ public class TransformStatefulPTest {
                 Entry::getKey,
                 e -> 0L,
                 () -> new long[1],
-                (long[] s, Entry<String, Long> e) -> {
+                (long[] s, Object k, Entry<String, Long> e) -> {
                     s[0] += e.getValue();
-                    return s[0];
+                    return entry(k, s[0]);
                 },
-                (e, k, r) -> entry(k, r));
+                (e, r) -> r,
+                null);
 
         TestSupport.verifyProcessor(supplier)
                    .input(asList(
@@ -78,11 +79,12 @@ public class TransformStatefulPTest {
                 Entry::getKey,
                 e -> 0L,
                 () -> new long[1],
-                (long[] s, Entry<String, Long> e) -> {
+                (long[] s, Object k, Entry<String, Long> e) -> {
                     s[0] += e.getValue();
-                    return s[0];
+                    return entry(k, s[0]);
                 },
-                (e, k, r) -> null);
+                (e, r) -> null,
+                null);
 
         TestSupport.verifyProcessor(supplier)
                    .input(singletonList(entry("a", 1L)))
@@ -96,8 +98,9 @@ public class TransformStatefulPTest {
                 Entry::getKey,
                 e -> 0L,
                 () -> new long[1],
-                (long[] s, Entry<String, Long> e) -> null,
-                (e, k, r) -> entry(k, r));
+                (long[] s, Object k, Entry<String, Long> e) -> null,
+                (e, r) -> r,
+                null);
 
         TestSupport.verifyProcessor(supplier)
                    .input(singletonList(entry("a", 1L)))
@@ -111,11 +114,12 @@ public class TransformStatefulPTest {
                 jetEvent -> jetEvent.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, JetEvent<Entry<String, Long>> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
-                    return s[0];
+                    return entry(k, s[0]);
                 },
-                (event, k, r) -> jetEvent(event.timestamp(), entry(k, r))
+                (e, r) -> jetEvent(e.timestamp(), r),
+                null
         );
 
         TestSupport.verifyProcessor(supplier)
@@ -148,11 +152,12 @@ public class TransformStatefulPTest {
                 jetEvent -> jetEvent.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, JetEvent<Entry<String, Long>> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
-                    return s[0];
+                    return entry(k, s[0]);
                 },
-                (event, k, r) -> jetEvent(event.timestamp(), entry(k, r))
+                (event, r) -> jetEvent(event.timestamp(), r),
+                null
         );
 
         // use more keys than MAX_ITEMS_TO_EVICT
@@ -185,11 +190,12 @@ public class TransformStatefulPTest {
                 jetEvent -> 0L,
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, JetEvent<Long> e) -> {
+                (long[] s, Object k, JetEvent<Long> e) -> {
                     s[0] += e.payload();
                     return s[0];
                 },
-                (event, k, r) -> jetEvent(event.timestamp(), r)
+                (e, r) -> jetEvent(e.timestamp(), r),
+                null
         );
 
         TestSupport.verifyProcessor(supplier)
@@ -213,11 +219,12 @@ public class TransformStatefulPTest {
                 jetEvent -> jetEvent.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, JetEvent<Entry<String, Long>> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
-                    return s[0];
+                    return entry(k, s[0]);
                 },
-                (event, k, r) -> jetEvent(event.timestamp(), entry(k, r))
+                (inputEvent, r) -> jetEvent(inputEvent.timestamp(), r),
+                null
         );
 
         TestSupport.verifyProcessor(supplier)
@@ -248,11 +255,12 @@ public class TransformStatefulPTest {
                 Entry::getKey,
                 e -> 0L,
                 () -> new long[1],
-                (long[] s, Entry<String, Long> e) -> {
+                (long[] s, Object k, Entry<String, Long> e) -> {
                     s[0] += e.getValue();
-                    return Traversers.traverseItems(s[0], -s[0]);
+                    return Traversers.traverseItems(entry(k, s[0]), entry(k, -s[0]));
                 },
-                (e, k, r) -> entry(k, r));
+                (e, r) -> r,
+                null);
 
         TestSupport.verifyProcessor(supplier)
                    .input(asList(

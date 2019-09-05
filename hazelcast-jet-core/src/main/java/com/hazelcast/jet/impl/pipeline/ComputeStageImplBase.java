@@ -47,10 +47,10 @@ import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
@@ -139,8 +139,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.adaptStatefulMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((event, key, result) -> result)
+                fnAdapter.<S, Object, T, R>adaptStatefulMapFn((s, k, t) -> mapFn.apply(s, t)),
+                fnAdapter.adaptStatefulOutputFn((t, r) -> r)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -157,8 +157,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.adaptStatefulFlatMapFn(flatMapFn),
-                fnAdapter.adaptStatefulOutputFn((event, key, result) -> result)
+                fnAdapter.<S, Object, T, R>adaptStatefulFlatMapFn((s, k, t) -> flatMapFn.apply(s, t)),
+                fnAdapter.adaptStatefulOutputFn((t, r) -> r)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -169,7 +169,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
         checkSerializable(keyFn, "keyFn");
         checkSerializable(createFn, "createFn");
@@ -184,7 +185,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((e, k, r) -> entry(k, r)));
+                fnAdapter.adaptStatefulOutputFn((t, r) -> r),
+                onEvictFn);
         return (RET) attach(transform, fnAdapter);
     }
 
@@ -194,11 +196,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         checkSerializable(keyFn, "keyFn");
         checkSerializable(createFn, "createFn");
-        checkSerializable(mapFn, "mapFn");
+        checkSerializable(flatMapFn, "mapFn");
         if (ttl > 0 && fnAdapter == DO_NOT_ADAPT) {
             throw new IllegalStateException("Cannot use time-to-live on a non-timestamped stream");
         }
@@ -208,8 +211,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptKeyFn(keyFn),
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.adaptStatefulFlatMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((e, k, r) -> entry(k, r)));
+                fnAdapter.adaptStatefulFlatMapFn(flatMapFn),
+                fnAdapter.adaptStatefulOutputFn((t, r) -> r),
+                onEvictFn);
         return (RET) attach(transform, fnAdapter);
     }
 
