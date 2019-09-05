@@ -54,7 +54,7 @@ public class S3SourceTest extends JetTestSupport {
         instance1.newJob(p).join();
 
         IAtomicLong a = instance1.getHazelcastInstance().getAtomicLong("a");
-        assertEquals(20_000, a.get());
+        assertEquals(1_100_000, a.get());
 
     }
 
