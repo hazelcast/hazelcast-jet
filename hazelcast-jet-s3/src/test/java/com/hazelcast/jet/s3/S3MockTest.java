@@ -59,7 +59,7 @@ public class S3MockTest extends JetTestSupport {
     private JetInstance jet;
 
     @BeforeClass
-    public static void setupS3() throws IOException {
+    public static void setupS3() {
         s3Client = s3MockContainer.client();
         s3Client.createBucket(SOURCE_BUCKET);
         s3Client.createBucket(SINK_BUCKET);
@@ -103,7 +103,7 @@ public class S3MockTest extends JetTestSupport {
 
     @Test
     public void testSource() {
-        int objectCount = 5000;
+        int objectCount = 20;
         int lineCount = 100;
         generateAndUploadObjects(objectCount, lineCount);
 
