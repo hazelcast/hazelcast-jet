@@ -17,6 +17,7 @@
 package com.hazelcast.jet.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
@@ -27,11 +28,13 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.util.ExceptionUtil;
 import com.hazelcast.util.StringUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +47,7 @@ public final class S3Sinks {
     }
 
     /**
-     * Convenience for {@link #s3(String, String, SupplierEx, FunctionEx)}
+     * Convenience for {@link #s3(String, String, SupplierEx, FunctionEx, String)}
      * Uses {@link Object#toString()} to convert the items to lines.
      */
     @Nonnull
@@ -52,7 +55,7 @@ public final class S3Sinks {
             @Nonnull String bucketName,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
     ) {
-        return s3(bucketName,null, clientSupplier, Object::toString);
+        return s3(bucketName, null, clientSupplier, Object::toString, "UTF-8");
     }
 
     /**
@@ -93,9 +96,12 @@ public final class S3Sinks {
      * }</pre>
      *
      * @param bucketName     the name of the bucket
+     * @param prefix         the prefix to be included in the file name
      * @param clientSupplier S3 client supplier
      * @param toStringFn     the function which converts each item to its
      *                       string representation
+     * @param charset        the name of the charset to be used when encoding
+     *                       the strings
      * @param <T>            type of the items the sink accepts
      */
     @Nonnull
@@ -103,12 +109,14 @@ public final class S3Sinks {
             @Nonnull String bucketName,
             @Nullable String prefix,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
-            @Nonnull FunctionEx<? super T, String> toStringFn
+            @Nonnull FunctionEx<? super T, String> toStringFn,
+            @Nonnull String charset
+
     ) {
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
-                                clientSupplier, toStringFn))
+                                clientSupplier, toStringFn, charset))
                 .<T>receiveFn(S3Context::receive)
                 .flushFn(S3Context::flush)
                 .destroyFn(S3Context::close)
@@ -122,29 +130,36 @@ public final class S3Sinks {
         private final int processorIndex;
         private final AmazonS3 s3Client;
         private final FunctionEx<? super T, String> toStringFn;
-        private final String uploadId;
+        private final String charsetName;
+        private final long partSize = 5 * 1024 * 1024; // Set part size to 5 MB.
 
         private int partCounter;
-        private int filePosition;
-        private int partSize;
+        private int fileCounter;
+        private boolean firstPartSent;
+
         private StringBuilder buffer = new StringBuilder();
-        private final List<PartETag> partETags;
+        private List<PartETag> partETags;
+        private String uploadId;
 
         private S3Context(
                 String bucketName,
                 String prefix,
                 int processorIndex,
                 SupplierEx<? extends AmazonS3> clientSupplier,
-                FunctionEx<? super T, String> toStringFn
-        ) {
+                FunctionEx<? super T, String> toStringFn,
+                String charsetName) {
             this.bucketName = bucketName;
             this.prefix = StringUtil.isNullOrEmptyAfterTrim(prefix) ? "" : prefix;
             this.processorIndex = processorIndex;
             this.s3Client = clientSupplier.get();
             this.toStringFn = toStringFn;
+            this.charsetName = charsetName;
 
             checkIfBucketExists();
+            initUploadRequest();
+        }
 
+        private void initUploadRequest() {
             partETags = new ArrayList<>();
             InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, key());
             InitiateMultipartUploadResult initResponse = s3Client.initiateMultipartUpload(initRequest);
@@ -163,36 +178,63 @@ public final class S3Sinks {
         }
 
         private void flush() {
-            if (buffer.length() > 0) {
-                byte[] bytes = buffer.toString().getBytes();
-                partSize = bytes.length;
-                UploadPartRequest uploadRequest = new UploadPartRequest()
-                        .withBucketName(bucketName)
-                        .withKey(key())
-                        .withUploadId(uploadId)
-                        .withFileOffset(filePosition)
-                        .withPartNumber(++partCounter)
-                        .withInputStream(new ByteArrayInputStream(bytes))
-                        .withPartSize(partSize);
-                UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
-                partETags.add(uploadResult.getPartETag());
-                filePosition += partSize;
-                buffer.setLength(0);
+            if (partCounter == 10000) {
+                completeActiveRequest();
+                fileCounter++;
+                partCounter = 0;
+                firstPartSent = false;
+                initUploadRequest();
             }
+            if (buffer.length() <= partSize) {
+                return;
+            }
+            UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
+            UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
+            partETags.add(uploadResult.getPartETag());
+            buffer.setLength(0);
+            firstPartSent = true;
         }
+
 
         private void close() {
             try {
-                CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucketName, key(),
-                        uploadId, partETags);
-                s3Client.completeMultipartUpload(compRequest);
+                completeActiveRequest();
             } finally {
                 s3Client.shutdown();
             }
         }
 
+        private void completeActiveRequest() {
+            try {
+                if (!firstPartSent) {
+                    UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
+                    uploadRequest.withLastPart(true);
+                    UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
+                    partETags.add(uploadResult.getPartETag());
+                }
+                CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucketName, key(),
+                        uploadId, partETags);
+                s3Client.completeMultipartUpload(compRequest);
+            } catch (Exception e) {
+                s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key(), uploadId));
+                ExceptionUtil.rethrow(e);
+            }
+        }
+
+        private UploadPartRequest createUploadRequestFromBuffer() {
+            byte[] bytes = buffer.toString().getBytes(Charset.forName(charsetName));
+            int partSize = bytes.length;
+            return new UploadPartRequest()
+                    .withBucketName(bucketName)
+                    .withKey(key())
+                    .withUploadId(uploadId)
+                    .withPartNumber(++partCounter)
+                    .withInputStream(new ByteArrayInputStream(bytes))
+                    .withPartSize(partSize);
+        }
+
         private String key() {
-            return prefix + processorIndex;
+            return prefix + processorIndex + (fileCounter == 0 ? "" : "-" + fileCounter);
         }
     }
 }

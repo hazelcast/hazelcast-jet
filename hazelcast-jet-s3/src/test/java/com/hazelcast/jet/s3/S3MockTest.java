@@ -86,7 +86,7 @@ public class S3MockTest extends JetTestSupport {
     public void testSink() {
         IMapJet<Integer, String> map = jet.getMap("map");
 
-        int itemCount = 1000;
+        int itemCount = 10000;
         String prefix = "my-objects-";
 
         for (int i = 0; i < itemCount; i++) {
@@ -95,7 +95,7 @@ public class S3MockTest extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, S3MockTest::client, Map.Entry::getValue));
+         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, S3MockTest::client, Map.Entry::getValue, "UTF-8"));
 
         jet.newJob(p).join();
 
