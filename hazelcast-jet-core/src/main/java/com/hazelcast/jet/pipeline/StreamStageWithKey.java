@@ -137,9 +137,13 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * it discards the state object and creates a new one before processing the
      * event.
      * <p>
-     * Sample usage:
+     * This sample receives a stream of pairs {@code (serverId, requestLatency)}
+     * that represent the latencies of individual requests served by a cluster
+     * of servers. It emits the record-breaking latencies for each server
+     * independently and resets the score after one minute of inactivity on a
+     * given server.
      * <pre>{@code
-     * StreamStage<Entry<String, Long>> latencies = null;
+     * StreamStage<Entry<String, Long>> latencies;
      * StreamStage<Entry<String, Long>> topLatencies = latencies
      *         .groupingKey(Entry::getKey)
      *         .filterStateful(
