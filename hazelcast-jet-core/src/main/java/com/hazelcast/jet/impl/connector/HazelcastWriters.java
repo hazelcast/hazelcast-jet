@@ -208,11 +208,6 @@ public final class HazelcastWriters {
             throw new UnsupportedOperationException();
         }
 
-        @Override
-        public void clear() {
-            entries.clear();
-        }
-
         private class ArraySet extends AbstractSet<Entry<K, V>> {
 
             @Override @Nonnull
@@ -223,6 +218,11 @@ public final class HazelcastWriters {
             @Override
             public int size() {
                 return entries.size();
+            }
+
+            @Override
+            public void clear() {
+                entries.clear();
             }
         }
 
