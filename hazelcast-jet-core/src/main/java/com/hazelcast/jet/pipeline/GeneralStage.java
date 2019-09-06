@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -98,7 +99,9 @@ public interface GeneralStage<T> extends Stage {
      * }</pre>
      *
      * @param flatMapFn a stateless flatmapping function, whose result type is
-     *                  Jet's {@link Traverser}
+     *                  Jet's {@link Traverser}. It must not return null
+     *                  traverser, but can return an {@linkplain
+     *                  Traversers#empty() empty traverser}.
      * @param <R> the type of items in the result's traversers
      * @return the newly attached stage
      */
@@ -195,7 +198,9 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param createFn  the function that returns the state object
      * @param flatMapFn the function that receives the state object and the input item and
-     *                  outputs the result items. It may modify the state object.
+     *                  outputs the result items. It may modify the state
+     *                  object. It must not return null traverser, but can
+     *                  return an {@linkplain Traversers#empty() empty traverser}.
      * @param <S>       type of the state object
      * @param <R>       type of the result
      */
@@ -429,7 +434,9 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param contextFactory the context factory
      * @param flatMapFn a stateless flatmapping function, whose result type is
-     *                  Jet's {@link Traverser}
+     *                  Jet's {@link Traverser}. It must not return null
+     *                  traverser, but can return {@linkplain an
+     *                  Traversers#empty() empty traverser}.
      * @param <C> type of context object
      * @param <R> the type of items in the result's traversers
      * @return the newly attached stage
@@ -473,7 +480,9 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param contextFactory the context factory
      * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
-     *      (return a null future)
+     *      (return a null future). The future must not return a null
+     *      traverser, but can return an {@linkplain Traversers#empty() empty
+     *      traverser}.
      * @param <C> type of context object
      * @param <R> the type of the returned stage
      * @return the newly attached stage

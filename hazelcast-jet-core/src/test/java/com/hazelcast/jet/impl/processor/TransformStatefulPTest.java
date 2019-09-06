@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.Processors;
@@ -201,10 +202,10 @@ public class TransformStatefulPTest {
                    .expectOutput(asExpandedList(expandJetEvent,
                            jetEvent(0, entry("a", 1L)),
                            jetEvent(1, entry("b", 2L)),
-                           entry("a", 99L),
+                           jetEvent(3, entry("a", 99L)),
                            wm(3),
                            jetEvent(3, entry("a", 3L)),
-                           entry("b", 99L),
+                           jetEvent(4, entry("b", 99L)),
                            wm(4),
                            jetEvent(4, entry("b", 4L))
                    ));
@@ -348,13 +349,13 @@ public class TransformStatefulPTest {
             return Processors.<T, K, S, R, OUT>flatMapStatefulP(ttl, keyFn, timestampFn, createFn,
                     (s, k, t) -> {
                         R r = statefulMapFn.apply(s, k, t);
-                        return r != null ? flatMapExpandFn.apply(r) : null;
+                        return r != null ? flatMapExpandFn.apply(r) : Traversers.empty();
                     },
                     mapToOutputFn,
                     onEvictFn != null
                             ? (k, s, time) -> {
                                 R r = onEvictFn.apply(k, s, time);
-                                return r != null ? flatMapExpandFn.apply(r) : null;
+                                return r != null ? flatMapExpandFn.apply(r) : Traversers.empty();
                             }
                             : null);
         } else {

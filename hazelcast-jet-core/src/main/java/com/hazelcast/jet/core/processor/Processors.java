@@ -725,7 +725,10 @@ public final class Processors {
      * <p>
      * This processor is stateless.
      *
-     * @param flatMapFn a stateless function that maps the received item to a traverser over output items
+     * @param flatMapFn a stateless function that maps the received item
+     *                 to a traverser over output items. It must not return
+     *                 null traverser, but can return an {@linkplain
+     *                 Traversers#empty() empty traverser}.
      * @param <T> received item type
      * @param <R> emitted item type
      */

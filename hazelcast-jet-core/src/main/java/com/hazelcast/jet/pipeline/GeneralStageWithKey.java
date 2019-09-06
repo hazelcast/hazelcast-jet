@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -155,7 +156,9 @@ public interface GeneralStageWithKey<T, K> {
      *
      * @param createFn  the function that returns the state object
      * @param flatMapFn the function that receives the state object and the input item and
-     *                  outputs the result items. It may modify the state object.
+     *                  outputs the result items. It may modify the state
+     *                  object. It must not return null traverser, but can
+     *                  return an {@linkplain Traversers#empty() empty traverser}.
      * @param <S>       type of the state object
      * @param <R>       type of the result
      */
@@ -385,7 +388,9 @@ public interface GeneralStageWithKey<T, K> {
      * @param <C> type of context object
      * @param <R> type of the output items
      * @param contextFactory the context factory
-     * @param flatMapFn a stateless flatmapping function
+     * @param flatMapFn a stateless flatmapping function. It must not return
+     *                 null traverser, but can return an {@linkplain
+     *                 Traversers#empty() empty traverser}.
      * @return the newly attached stage
      */
     @Nonnull
@@ -420,7 +425,9 @@ public interface GeneralStageWithKey<T, K> {
      * @param <R> the type of the returned stage
      * @param contextFactory the context factory
      * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
-     *      (return a null future)
+     *                      (return a null future), but the future must not
+     *                      return null traverser, but can return an {@linkplain
+     *                      Traversers#empty() empty traverser}.
      * @return the newly attached stage
      */
     @Nonnull
