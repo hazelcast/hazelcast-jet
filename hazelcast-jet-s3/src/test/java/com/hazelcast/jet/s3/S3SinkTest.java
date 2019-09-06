@@ -76,8 +76,7 @@ public class S3SinkTest extends JetTestSupport {
         IMapJet<Integer, String> map = instance1.getMap("map");
 
         int itemCount = 20000;
-        char[] data = new char[1_000];
-        String payload = new String(data);
+        String payload = generateRandomString(1_000);
 
         for (int i = 0; i < itemCount; i++) {
             map.put(i, payload);
@@ -96,7 +95,7 @@ public class S3SinkTest extends JetTestSupport {
         long totalLineCount = objectSummaries
                 .stream()
                 .map(summary -> client.getObject(bucketName, summary.getKey()))
-                .mapToLong(S3SinkTest::lineCount)
+                .mapToLong(value -> assertPayloadAndCount(value, payload))
                 .sum();
 
         assertEquals(itemCount, totalLineCount);
@@ -109,9 +108,9 @@ public class S3SinkTest extends JetTestSupport {
                 .build();
     }
 
-    static long lineCount(S3Object s3Object) {
+    static long assertPayloadAndCount(S3Object s3Object, String expectedPayload) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
-            return reader.lines().count();
+            return reader.lines().peek(s -> assertEquals(s, expectedPayload)).count();
         } catch (IOException e) {
             e.printStackTrace();
             return -1;

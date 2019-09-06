@@ -39,6 +39,7 @@ import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollected;
 import static com.hazelcast.jet.s3.S3MockContainer.client;
+import static com.hazelcast.jet.s3.S3SinkTest.assertPayloadAndCount;
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.Collections.singletonList;
@@ -79,8 +80,7 @@ public class S3MockTest extends JetTestSupport {
 
         int itemCount = 20000;
         String prefix = "my-objects-";
-        char[] data = new char[1_000];
-        String payload = new String(data);
+        String payload = generateRandomString(1_000);
 
         for (int i = 0; i < itemCount; i++) {
             map.put(i, payload);
@@ -101,7 +101,7 @@ public class S3MockTest extends JetTestSupport {
                 .stream()
                 .filter(summary -> summary.getKey().startsWith(prefix))
                 .map(summary -> s3Client.getObject(SINK_BUCKET, summary.getKey()))
-                .mapToLong(S3SinkTest::lineCount)
+                .mapToLong(value -> assertPayloadAndCount(value, payload))
                 .sum();
 
         assertEquals(itemCount, totalLineCount);
@@ -117,10 +117,11 @@ public class S3MockTest extends JetTestSupport {
         Pipeline p = Pipeline.create();
         p.drawFrom(S3Sources.s3(singletonList(SOURCE_BUCKET), "object-", defaultCharset(),
                 () -> client(endpointURL), (name, line) -> line))
+         .groupingKey(s -> s)
          .aggregate(AggregateOperations.counting())
          .drainTo(assertCollected(list -> {
-             long sum = list.stream().mapToLong(l -> l).sum();
-             assertEquals(objectCount * lineCount, sum);
+             assertTrue(list.stream().allMatch(e -> e.getValue() == objectCount && e.getKey().matches("^line\\-\\d+$")));
+             assertEquals(lineCount, list.size());
          }));
 
         try {
@@ -133,7 +134,7 @@ public class S3MockTest extends JetTestSupport {
     private void generateAndUploadObjects(int objectCount, int lineCount) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < objectCount; i++) {
-            range(0, lineCount).forEach(j -> builder.append(j).append(lineSeparator()));
+            range(0, lineCount).forEach(j -> builder.append("line-").append(j).append(lineSeparator()));
             s3Client.putObject(SOURCE_BUCKET, "object-" + i, builder.toString());
             builder.setLength(0);
         }
