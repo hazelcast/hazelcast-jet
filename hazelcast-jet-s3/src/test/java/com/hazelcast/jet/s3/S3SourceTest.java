@@ -16,21 +16,17 @@
 
 package com.hazelcast.jet.s3;
 
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.aggregate.AggregateOperations;
-import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.test.Assertions;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static java.util.Collections.singletonList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 @Category(NightlyTest.class)
-public class S3SourceTest extends JetTestSupport {
+public class S3SourceTest extends S3TestBase {
 
     private static final String BUCKET_NAME = "jet-s3-connector-test-bucket-source";
 
@@ -38,16 +34,14 @@ public class S3SourceTest extends JetTestSupport {
     public void test() {
         JetInstance instance1 = createJetMember();
         JetInstance instance2 = createJetMember();
-
-        Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(singletonList(BUCKET_NAME), null, S3SinkTest::client))
-         .groupingKey(s -> s)
-         .aggregate(AggregateOperations.counting())
-         .apply(Assertions.assertCollected(entries -> {
-             assertTrue(entries.stream().allMatch(e -> e.getValue() == 1100 && e.getKey().matches("^line\\-\\d+$")));
-             assertEquals(1000, entries.size());
-         }));
-
-        instance1.newJob(p).join();
+        testSource(instance1, BUCKET_NAME, null, 1100, 1000);
     }
+
+    SupplierEx<AmazonS3> client() {
+        return () -> AmazonS3ClientBuilder
+                .standard()
+                .withRegion(Regions.US_EAST_1)
+                .build();
+    }
+
 }
