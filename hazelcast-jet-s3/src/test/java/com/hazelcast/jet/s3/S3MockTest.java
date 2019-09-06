@@ -26,29 +26,33 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.AssertionCompletedException;
-import com.hazelcast.jet.pipeline.test.AssertionSinks;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
+import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollected;
 import static com.hazelcast.jet.s3.S3MockContainer.client;
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.Collections.singletonList;
 import static java.util.stream.IntStream.range;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class S3MockTest extends JetTestSupport {
 
     @ClassRule
     public static S3MockContainer s3MockContainer = new S3MockContainer();
+
+    @Rule
+    public ExpectedException expected = ExpectedException.none();
 
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String SINK_BUCKET = "sink-bucket";
@@ -114,9 +118,9 @@ public class S3MockTest extends JetTestSupport {
         p.drawFrom(S3Sources.s3(singletonList(SOURCE_BUCKET), "object-", defaultCharset(),
                 () -> client(endpointURL), (name, line) -> line))
          .aggregate(AggregateOperations.counting())
-         .drainTo(AssertionSinks.assertCollectedEventually(10, list -> {
+         .drainTo(assertCollected(list -> {
              long sum = list.stream().mapToLong(l -> l).sum();
-             Assert.assertEquals(objectCount * lineCount, sum);
+             assertEquals(objectCount * lineCount, sum);
          }));
 
         try {
