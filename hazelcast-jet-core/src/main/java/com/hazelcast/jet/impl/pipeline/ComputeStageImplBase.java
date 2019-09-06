@@ -139,8 +139,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.<S, Object, T, R>adaptStatefulMapFn((s, k, t) -> mapFn.apply(s, t)),
-                fnAdapter.adaptStatefulOutputFn((t, r) -> r)
+                fnAdapter.<S, Object, T, R>adaptStatefulMapFn((s, k, t) -> mapFn.apply(s, t))
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -157,8 +156,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.<S, Object, T, R>adaptStatefulFlatMapFn((s, k, t) -> flatMapFn.apply(s, t)),
-                fnAdapter.adaptStatefulOutputFn((t, r) -> r)
+                fnAdapter.<S, Object, T, R>adaptStatefulFlatMapFn((s, k, t) -> flatMapFn.apply(s, t))
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -185,8 +183,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulMapFn(mapFn),
-                fnAdapter.adaptStatefulOutputFn((t, r) -> r),
-                onEvictFn);
+                onEvictFn != null ? fnAdapter.adaptOnEvictFn(onEvictFn) : null);
         return (RET) attach(transform, fnAdapter);
     }
 
@@ -212,8 +209,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 fnAdapter.adaptTimestampFn(),
                 createFn,
                 fnAdapter.adaptStatefulFlatMapFn(flatMapFn),
-                fnAdapter.adaptStatefulOutputFn((t, r) -> r),
-                onEvictFn);
+                onEvictFn != null ? fnAdapter.adaptOnEvictFlatMapFn(onEvictFn) : null);
         return (RET) attach(transform, fnAdapter);
     }
 

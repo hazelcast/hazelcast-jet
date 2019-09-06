@@ -34,7 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
@@ -47,7 +46,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.function.Function.identity;
 
-public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
+public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     private static final int HASH_MAP_INITIAL_CAPACITY = 16;
     private static final float HASH_MAP_LOAD_FACTOR = 0.75f;
 
@@ -59,12 +58,11 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     private final ToLongFunction<? super T> timestampFn;
     private final Function<K, TimestampedItem<S>> createIfAbsentFn;
     private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private final BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn;
     @Nullable
     private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
     private final Map<K, TimestampedItem<S>> keyToState =
             new LinkedHashMap<>(HASH_MAP_INITIAL_CAPACITY, HASH_MAP_LOAD_FACTOR, true);
-    private final FlatMapper<T, OUT> flatMapper = flatMapper(this::flatMapEvent);
+    private final FlatMapper<T, R> flatMapper = flatMapper(this::flatMapEvent);
 
     private final FlatMapper<Watermark, Object> wmFlatMapper = flatMapper(this::flatMapWm);
     private final EvictingTraverser evictingTraverser = new EvictingTraverser();
@@ -80,7 +78,6 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
             @Nonnull ToLongFunction<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunction<? super T, ? super R, ? extends OUT> mapToOutputFn,
             @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         this.ttl = ttl > 0 ? ttl : Long.MAX_VALUE;
@@ -88,7 +85,6 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         this.timestampFn = timestampFn;
         this.createIfAbsentFn = k -> new TimestampedItem<>(Long.MIN_VALUE, createFn.get());
         this.statefulFlatMapFn = statefulFlatMapFn;
-        this.mapToOutputFn = mapToOutputFn;
         this.onEvictFn = onEvictFn;
     }
 
@@ -99,7 +95,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
     }
 
     @Nonnull
-    private Traverser<OUT> flatMapEvent(T event) {
+    private Traverser<R> flatMapEvent(T event) {
         long timestamp = timestampFn.applyAsLong(event);
         if (timestamp < currentWm) {
             logLateEvent(getLogger(), currentWm, event);
@@ -110,22 +106,7 @@ public class TransformStatefulP<T, K, S, R, OUT> extends AbstractProcessor {
         TimestampedItem<S> tsAndState = keyToState.computeIfAbsent(key, createIfAbsentFn);
         tsAndState.setTimestamp(max(tsAndState.timestamp(), timestamp));
         S state = tsAndState.item();
-        return applyOutputFnOptimized(event, statefulFlatMapFn.apply(state, key, event));
-    }
-
-    @Nonnull
-    private Traverser<OUT> applyOutputFnOptimized(T event, Traverser<R> resultTrav) {
-        if (!(resultTrav instanceof ResettableSingletonTraverser)) {
-            return resultTrav.map(r -> mapToOutputFn.apply(event, r));
-        }
-        R r = resultTrav.next();
-        if (r != null) {
-            ResettableSingletonTraverser<OUT> rst = (ResettableSingletonTraverser<OUT>) resultTrav;
-            rst.accept(mapToOutputFn.apply(event, r));
-            return rst;
-        } else {
-            return Traversers.empty();
-        }
+        return statefulFlatMapFn.apply(state, key, event);
     }
 
     @Override

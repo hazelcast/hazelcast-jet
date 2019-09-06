@@ -765,22 +765,20 @@ public final class Processors {
      * @param <K>               type of the key
      * @param <S>               type of the state object
      * @param <R>               type of the mapping function's result
-     * @param <OUT>             type of the vertex's output
      */
     @Nonnull
-    public static <T, K, S, R, OUT> SupplierEx<Processor> mapStatefulP(
+    public static <T, K, S, R> SupplierEx<Processor> mapStatefulP(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn,
             @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends R> onEvictFn
     ) {
         return () -> {
             final ResettableSingletonTraverser<R> mainTrav = new ResettableSingletonTraverser<>();
             final ResettableSingletonTraverser<R> evictTrav = new ResettableSingletonTraverser<>();
-            return new TransformStatefulP<T, K, S, R, OUT>(
+            return new TransformStatefulP<T, K, S, R>(
                     ttl,
                     keyFn,
                     timestampFn,
@@ -789,7 +787,6 @@ public final class Processors {
                         mainTrav.accept(statefulMapFn.apply(state, key, item));
                         return mainTrav;
                     },
-                    mapToOutputFn,
                     onEvictFn != null ? (k, s, wm) -> {
                         evictTrav.accept(onEvictFn.apply(k, s, wm));
                         return evictTrav;
@@ -823,25 +820,22 @@ public final class Processors {
      * @param <K>               type of the key
      * @param <S>               type of the state object
      * @param <R>               type of the mapping function's result
-     * @param <OUT>             type of the vertex's output
      */
     @Nonnull
-    public static <T, K, S, R, OUT> SupplierEx<Processor> flatMapStatefulP(
+    public static <T, K, S, R> SupplierEx<Processor> flatMapStatefulP(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn,
             @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
-        return () -> new TransformStatefulP<T, K, S, R, OUT>(
+        return () -> new TransformStatefulP<>(
                 ttl,
                 keyFn,
                 timestampFn,
                 createFn,
                 statefulFlatMapFn,
-                mapToOutputFn,
                 onEvictFn
         );
     }

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
@@ -39,7 +38,6 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private final BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn;
     private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
 
     public FlatMapStatefulTransform(
@@ -49,7 +47,6 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
-            @Nonnull BiFunctionEx<? super T, ? super R, ? extends OUT> mapToOutputFn,
             @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         super("transform-stateful", upstream);
@@ -58,7 +55,6 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
         this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulFlatMapFn = flatMapFn;
-        this.mapToOutputFn = mapToOutputFn;
         this.onEvictFn = onEvictFn;
     }
 
@@ -71,7 +67,7 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     public void addToDag(Planner p) {
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
                 flatMapStatefulP(
-                        ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, mapToOutputFn, onEvictFn));
+                        ttl, keyFn, timestampFn, createFn, statefulFlatMapFn, onEvictFn));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }
