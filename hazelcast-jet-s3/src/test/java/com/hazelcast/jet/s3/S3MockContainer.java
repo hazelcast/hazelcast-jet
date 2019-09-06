@@ -38,7 +38,7 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * todo add proper javadoc
+ * A mock implementation of the AWS S3 API started as a test container.
  */
 public class S3MockContainer extends GenericContainer<S3MockContainer> {
 

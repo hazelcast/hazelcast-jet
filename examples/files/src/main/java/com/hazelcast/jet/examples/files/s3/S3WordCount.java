@@ -24,7 +24,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.s3.S3Sinks;
@@ -60,7 +59,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * credentials. The files in the input bucket will be split among Jet
  * processors.
  * <p>
- * {@link S3Sinks#s3(String, int, SupplierEx, FunctionEx)}
+ * {@link S3Sinks#s3(String, SupplierEx)}
  * writes the output to the given output bucket, with each
  * processor writing to a batch of files within the bucket. The files are
  * identified by the global processor index and an incremented value.
@@ -87,7 +86,7 @@ public class S3WordCount {
          .flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(S3Sinks.s3(OUTPUT_BUCKET, 1024, S3WordCount::client, Object::toString));
+         .drainTo(S3Sinks.s3(OUTPUT_BUCKET, S3WordCount::client));
         return p;
     }
     private static AmazonS3 client() {

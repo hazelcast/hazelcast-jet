@@ -38,6 +38,9 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.amazonaws.services.s3.internal.Constants.MAXIMUM_UPLOAD_PARTS;
+import static com.amazonaws.services.s3.internal.Constants.MB;
+
 /**
  * Contains factory methods for creating AWS S3 sinks.
  */
@@ -125,13 +128,13 @@ public final class S3Sinks {
 
     private static final class S3Context<T> {
 
+        private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = 5 * MB;
         private final String bucketName;
         private final String prefix;
         private final int processorIndex;
         private final AmazonS3 s3Client;
         private final FunctionEx<? super T, String> toStringFn;
         private final String charsetName;
-        private final long partSize = 5 * 1024 * 1024; // Set part size to 5 MB.
 
         private int partCounter;
         private int fileCounter;
@@ -177,13 +180,13 @@ public final class S3Sinks {
         }
 
         private void flush() {
-            if (partCounter == 10000) {
+            if (partCounter == MAXIMUM_UPLOAD_PARTS) {
                 completeActiveRequest();
                 fileCounter++;
                 partCounter = 0;
                 initUploadRequest();
             }
-            if (buffer.length() <= partSize) {
+            if (buffer.length() <= DEFAULT_MINIMUM_UPLOAD_PART_SIZE) {
                 return;
             }
             UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
