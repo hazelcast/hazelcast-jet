@@ -17,7 +17,6 @@
 package com.hazelcast.jet.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.hazelcast.jet.IMapJet;
@@ -33,27 +32,23 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.localstack.LocalStackContainer;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 
+import static com.hazelcast.jet.s3.S3MockContainer.client;
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.Charset.defaultCharset;
 import static java.util.Collections.singletonList;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.testcontainers.containers.localstack.LocalStackContainer.Service.S3;
 
 public class S3MockTest extends JetTestSupport {
 
     @ClassRule
-    public static LocalStackContainer localstack = new LocalStackContainer()
-            .withServices(S3)
-            .withNetwork(Network.newNetwork());
+    public static S3MockContainer s3MockContainer = new S3MockContainer();
 
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String SINK_BUCKET = "sink-bucket";
@@ -64,17 +59,9 @@ public class S3MockTest extends JetTestSupport {
 
     @BeforeClass
     public static void setupS3() {
-        s3Client = client();
+        s3Client = s3MockContainer.client();
         s3Client.createBucket(SOURCE_BUCKET);
         s3Client.createBucket(SINK_BUCKET);
-    }
-
-    static AmazonS3 client() {
-        return AmazonS3ClientBuilder
-                .standard()
-                .withEndpointConfiguration(localstack.getEndpointConfiguration(S3))
-                .withCredentials(localstack.getDefaultCredentialsProvider())
-                .build();
     }
 
     @Before
@@ -86,16 +73,19 @@ public class S3MockTest extends JetTestSupport {
     public void testSink() {
         IMapJet<Integer, String> map = jet.getMap("map");
 
-        int itemCount = 10000;
+        int itemCount = 20000;
         String prefix = "my-objects-";
+        char[] data = new char[1_000];
+        String payload = new String(data);
 
         for (int i = 0; i < itemCount; i++) {
-            map.put(i, "foo-" + i);
+            map.put(i, payload);
         }
 
+        String endpointURL = s3MockContainer.endpointURL();
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, S3MockTest::client, Map.Entry::getValue, "UTF-8"));
+         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, () -> client(endpointURL), Map.Entry::getValue, "UTF-8"));
 
         jet.newJob(p).join();
 
@@ -119,9 +109,10 @@ public class S3MockTest extends JetTestSupport {
         int lineCount = 100;
         generateAndUploadObjects(objectCount, lineCount);
 
+        String endpointURL = s3MockContainer.endpointURL();
         Pipeline p = Pipeline.create();
         p.drawFrom(S3Sources.s3(singletonList(SOURCE_BUCKET), "object-", defaultCharset(),
-                S3MockTest::client, (name, line) -> line))
+                () -> client(endpointURL), (name, line) -> line))
          .aggregate(AggregateOperations.counting())
          .drainTo(AssertionSinks.assertCollectedEventually(10, list -> {
              long sum = list.stream().mapToLong(l -> l).sum();

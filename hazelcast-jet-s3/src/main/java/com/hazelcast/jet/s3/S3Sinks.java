@@ -135,7 +135,6 @@ public final class S3Sinks {
 
         private int partCounter;
         private int fileCounter;
-        private boolean firstPartSent;
 
         private StringBuilder buffer = new StringBuilder();
         private List<PartETag> partETags;
@@ -182,7 +181,6 @@ public final class S3Sinks {
                 completeActiveRequest();
                 fileCounter++;
                 partCounter = 0;
-                firstPartSent = false;
                 initUploadRequest();
             }
             if (buffer.length() <= partSize) {
@@ -192,7 +190,6 @@ public final class S3Sinks {
             UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
             partETags.add(uploadResult.getPartETag());
             buffer.setLength(0);
-            firstPartSent = true;
         }
 
 
@@ -206,7 +203,7 @@ public final class S3Sinks {
 
         private void completeActiveRequest() {
             try {
-                if (!firstPartSent) {
+                if (buffer.length() > 0) {
                     UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
                     uploadRequest.withLastPart(true);
                     UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);

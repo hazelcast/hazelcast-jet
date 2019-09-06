@@ -75,10 +75,12 @@ public class S3SinkTest extends JetTestSupport {
         JetInstance instance2 = createJetMember();
         IMapJet<Integer, String> map = instance1.getMap("map");
 
-        int itemCount = 10000;
+        int itemCount = 20000;
+        char[] data = new char[1_000];
+        String payload = new String(data);
 
         for (int i = 0; i < itemCount; i++) {
-            map.put(i, "foo-" + i);
+            map.put(i, payload);
         }
 
         Pipeline p = Pipeline.create();
