@@ -31,10 +31,11 @@ import static java.util.stream.IntStream.range;
 
 public class S3MockTest extends S3TestBase {
 
-    private static ILogger logger = Logger.getLogger(S3MockTest.class);
-
     @ClassRule
     public static S3MockContainer s3MockContainer = new S3MockContainer();
+
+    private static ILogger logger = Logger.getLogger(S3MockTest.class);
+
 
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String SINK_BUCKET = "sink-bucket";
