@@ -34,6 +34,7 @@ import com.hazelcast.util.StringUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +51,7 @@ public final class S3Sinks {
     }
 
     /**
-     * Convenience for {@link #s3(String, String, SupplierEx, FunctionEx, String)}
+     * Convenience for {@link #s3(String, String, String, SupplierEx, FunctionEx)}
      * Uses {@link Object#toString()} to convert the items to lines.
      */
     @Nonnull
@@ -58,7 +59,7 @@ public final class S3Sinks {
             @Nonnull String bucketName,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
     ) {
-        return s3(bucketName, null, clientSupplier, Object::toString, "UTF-8");
+        return s3(bucketName, null, "UTF-8", clientSupplier, Object::toString);
     }
 
     /**
@@ -98,28 +99,28 @@ public final class S3Sinks {
      *  .drainTo(sink);
      * }</pre>
      *
+     * @param <T>            type of the items the sink accepts
      * @param bucketName     the name of the bucket
      * @param prefix         the prefix to be included in the file name
+     * @param charsetName    the name of the charset to be used when encoding
+     *                       the strings
      * @param clientSupplier S3 client supplier
      * @param toStringFn     the function which converts each item to its
      *                       string representation
-     * @param charset        the name of the charset to be used when encoding
-     *                       the strings
-     * @param <T>            type of the items the sink accepts
      */
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
             @Nullable String prefix,
+            @Nonnull String charsetName,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
-            @Nonnull FunctionEx<? super T, String> toStringFn,
-            @Nonnull String charset
+            @Nonnull FunctionEx<? super T, String> toStringFn
 
     ) {
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
-                                clientSupplier, toStringFn, charset))
+                                clientSupplier, toStringFn, charsetName))
                 .<T>receiveFn(S3Context::receive)
                 .flushFn(S3Context::flush)
                 .destroyFn(S3Context::close)
@@ -134,12 +135,13 @@ public final class S3Sinks {
         private final int processorIndex;
         private final AmazonS3 s3Client;
         private final FunctionEx<? super T, String> toStringFn;
-        private final String charsetName;
+        private final Charset charset;
+        private final byte[] lineSeparator;
 
         private int partCounter;
         private int fileCounter;
 
-        private StringBuilder buffer = new StringBuilder();
+        private ByteBuffer buffer = ByteBuffer.allocateDirect(2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
         private List<PartETag> partETags;
         private String uploadId;
 
@@ -155,7 +157,8 @@ public final class S3Sinks {
             this.processorIndex = processorIndex;
             this.s3Client = clientSupplier.get();
             this.toStringFn = toStringFn;
-            this.charsetName = charsetName;
+            this.charset = Charset.forName(charsetName);
+            this.lineSeparator = System.lineSeparator().getBytes(charset);
 
             checkIfBucketExists();
             initUploadRequest();
@@ -175,8 +178,8 @@ public final class S3Sinks {
         }
 
         private void receive(T item) {
-            buffer.append(toStringFn.apply(item))
-                  .append(System.lineSeparator());
+            buffer.put(toStringFn.apply(item).getBytes(charset));
+            buffer.put(lineSeparator);
         }
 
         private void flush() {
@@ -186,13 +189,12 @@ public final class S3Sinks {
                 partCounter = 0;
                 initUploadRequest();
             }
-            if (buffer.length() <= DEFAULT_MINIMUM_UPLOAD_PART_SIZE) {
+            if (buffer.position() <= DEFAULT_MINIMUM_UPLOAD_PART_SIZE) {
                 return;
             }
             UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
             UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
             partETags.add(uploadResult.getPartETag());
-            buffer.setLength(0);
         }
 
 
@@ -206,7 +208,7 @@ public final class S3Sinks {
 
         private void completeActiveRequest() {
             try {
-                if (buffer.length() > 0) {
+                if (buffer.position() > 0) {
                     UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
                     uploadRequest.withLastPart(true);
                     UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
@@ -222,7 +224,10 @@ public final class S3Sinks {
         }
 
         private UploadPartRequest createUploadRequestFromBuffer() {
-            byte[] bytes = buffer.toString().getBytes(Charset.forName(charsetName));
+            buffer.flip();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            buffer.clear();
             int partSize = bytes.length;
             return new UploadPartRequest()
                     .withBucketName(bucketName)

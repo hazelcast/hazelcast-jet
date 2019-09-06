@@ -85,7 +85,7 @@ public class S3MockTest extends JetTestSupport {
         String endpointURL = s3MockContainer.endpointURL();
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map))
-         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, () -> client(endpointURL), Map.Entry::getValue, "UTF-8"));
+         .drainTo(S3Sinks.s3(SINK_BUCKET, prefix, "UTF-8", () -> client(endpointURL), Map.Entry::getValue));
 
         jet.newJob(p).join();
 
