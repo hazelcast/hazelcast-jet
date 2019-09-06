@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,7 +52,7 @@ public final class S3Sinks {
     }
 
     /**
-     * Convenience for {@link #s3(String, String, String, SupplierEx, FunctionEx)}
+     * Convenience for {@link #s3(String, String, Charset, SupplierEx, FunctionEx)}
      * Uses {@link Object#toString()} to convert the items to lines.
      */
     @Nonnull
@@ -59,16 +60,18 @@ public final class S3Sinks {
             @Nonnull String bucketName,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
     ) {
-        return s3(bucketName, null, "UTF-8", clientSupplier, Object::toString);
+        return s3(bucketName, null, StandardCharsets.UTF_8, clientSupplier, Object::toString);
     }
 
     /**
      * Creates an AWS S3 {@link Sink} which writes items to files into the
      * given bucket. Sink converts each item to string using given {@code
-     * toStringFn} and writes it as a line. Each processor will create a file
-     * for a batch of items. Name of the file will be processor's global index
-     * followed by an incremented counter, for example the processor having the
-     * index 2 will create these consecutive files {@code 2-0, 2-1, 2-2 ...}.
+     * toStringFn} and writes it as a line. The sink creates a file
+     * in the bucket for each processor instance. Name of the file will include
+     * an user provided prefix (if defined) and processor's global index,
+     * for example the processor having the
+     * index 2 with prefix {@code my-object-} will create the object
+     * {@code my-object-2}.
      * <p>
      * No state is saved to snapshot for this sink. If the job is restarted
      * previously written files will be overwritten.
@@ -82,7 +85,8 @@ public final class S3Sinks {
      * <pre>{@code
      * Sink<? super Object> sink = S3Sinks.s3(
      *         "bucket",
-     *         1024,
+     *         "my-objects-",
+     *         StandardCharsets.UTF_8,
      *         () -> {
      *             BasicAWSCredentials credentials =
      *                     new BasicAWSCredentials("accessKey", "accessKeySecret");
@@ -102,8 +106,7 @@ public final class S3Sinks {
      * @param <T>            type of the items the sink accepts
      * @param bucketName     the name of the bucket
      * @param prefix         the prefix to be included in the file name
-     * @param charsetName    the name of the charset to be used when encoding
-     *                       the strings
+     * @param charset        the charset to be used when encoding the strings
      * @param clientSupplier S3 client supplier
      * @param toStringFn     the function which converts each item to its
      *                       string representation
@@ -112,7 +115,7 @@ public final class S3Sinks {
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
             @Nullable String prefix,
-            @Nonnull String charsetName,
+            @Nonnull Charset charset,
             @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
 
@@ -120,7 +123,7 @@ public final class S3Sinks {
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
-                                clientSupplier, toStringFn, charsetName))
+                                clientSupplier, toStringFn, charset.name()))
                 .<T>receiveFn(S3Context::receive)
                 .flushFn(S3Context::flush)
                 .destroyFn(S3Context::close)

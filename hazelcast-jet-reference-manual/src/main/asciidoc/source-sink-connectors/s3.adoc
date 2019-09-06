@@ -34,7 +34,7 @@ include::{javasource}/integration/S3.java[tag=s1]
 
 S3 sink writes items to the specified bucket by transforming each item
 to a line using given transform function. The sink creates an object
-in bucket for processor instance. Name of the file will include an user provided
+in the bucket for each processor instance. Name of the file will include an user provided
 prefix (if defined) and followed by the processor's global index, for example the
 processor having the index `2` with prefix `my-object-` will create the object
 `my-object-2`.

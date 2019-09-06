@@ -16,6 +16,7 @@ import com.hazelcast.jet.pipeline.test.Assertions;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +40,7 @@ abstract class S3TestBase extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map, alwaysTrue(), Map.Entry::getValue))
-         .drainTo(S3Sinks.s3(bucketName, prefix, "UTF-8", client(), Object::toString));
+         .drainTo(S3Sinks.s3(bucketName, prefix, StandardCharsets.UTF_8, client(), Object::toString));
 
         jet.newJob(p).join();
 

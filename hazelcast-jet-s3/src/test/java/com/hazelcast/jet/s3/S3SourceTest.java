@@ -28,13 +28,13 @@ import org.junit.experimental.categories.Category;
 @Category(NightlyTest.class)
 public class S3SourceTest extends S3TestBase {
 
-    private static final String BUCKET_NAME = "jet-s3-connector-test-bucket-source";
+    private static final String bucketName = "jet-s3-connector-test-bucket-source";
 
     @Test
     public void test() {
         JetInstance instance1 = createJetMember();
         JetInstance instance2 = createJetMember();
-        testSource(instance1, BUCKET_NAME, null, 1100, 1000);
+        testSource(instance1, bucketName, null, 1100, 1000);
     }
 
     SupplierEx<AmazonS3> client() {
