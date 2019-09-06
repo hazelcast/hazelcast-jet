@@ -16,7 +16,10 @@
 
 package integration;
 
-import com.amazonaws.regions.Regions;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
@@ -30,6 +33,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 
+import static java.util.Collections.singletonList;
+
 public class S3 {
 
     static void s1() {
@@ -38,9 +43,14 @@ public class S3 {
         String accessKeySecret = "";
         String prefix = "";
 
+        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
+        AmazonS3 s3 = AmazonS3ClientBuilder
+                .standard()
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .build();
+
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3("input-bucket", prefix,
-                accessKeyId, accessKeySecret, Regions.US_EAST_1))
+        p.drawFrom(S3Sources.s3(singletonList("input-bucket"), prefix, () -> s3))
          .drainTo(Sinks.logger());
         //end::s1[]
     }
@@ -50,10 +60,15 @@ public class S3 {
         String accessKeyId = "";
         String accessKeySecret = "";
 
+        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
+        AmazonS3 s3 = AmazonS3ClientBuilder
+                .standard()
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .build();
+
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.list("input-list"))
-         .drainTo(S3Sinks.s3("output-bucket", accessKeyId,
-                 accessKeySecret, Regions.US_EAST_1));
+         .drainTo(S3Sinks.s3("output-bucket", () -> s3));
         //end::s2[]
     }
 
@@ -64,7 +79,6 @@ public class S3 {
         jobConfig.setOutputFormat(TextOutputFormat.class);
         TextInputFormat.addInputPath(jobConfig, new Path("s3a://input-bucket"));
         TextOutputFormat.setOutputPath(jobConfig, new Path("s3a://output-bucket"));
-
 
 
         Pipeline p = Pipeline.create();

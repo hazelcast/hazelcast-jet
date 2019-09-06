@@ -61,8 +61,8 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * <p>
  * {@link S3Sinks#s3(String, SupplierEx)}
  * writes the output to the given output bucket, with each
- * processor writing to a batch of files within the bucket. The files are
- * identified by the global processor index and an incremented value.
+ * processor writing to a file within the bucket. The files are
+ * identified by a prefix (if provided) and followed by the global processor index.
  * <p>
  */
 public class S3WordCount {
