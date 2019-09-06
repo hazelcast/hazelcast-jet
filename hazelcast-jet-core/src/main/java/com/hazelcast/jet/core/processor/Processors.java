@@ -50,6 +50,7 @@ import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.impl.processor.TransformStatefulP;
 import com.hazelcast.jet.impl.processor.TransformUsingContextP;
 import com.hazelcast.jet.pipeline.ContextFactory;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -767,6 +768,7 @@ public final class Processors {
      * @param <R>               type of the mapping function's result
      */
     @Nonnull
+    @SuppressFBWarnings(value = "NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE", justification = "SpotBugs bug")
     public static <T, K, S, R> SupplierEx<Processor> mapStatefulP(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,

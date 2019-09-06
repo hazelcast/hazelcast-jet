@@ -109,7 +109,7 @@ public interface GeneralStage<T> extends Stage {
     <R> GeneralStage<R> flatMap(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     );
-    
+
     /**
      * Attaches a stage that performs a stateful mapping operation. {@code
      * createFn} returns the object that holds the state. Jet passes this
@@ -129,7 +129,7 @@ public interface GeneralStage<T> extends Stage {
      *         }
      * );
      * }</pre>
-     * This code has the same result as {@link #rollingAggregate 
+     * This code has the same result as {@link #rollingAggregate
      * latencies.rollingAggregate(summing())}.
      *
      * @param createFn the function that returns the state object
@@ -433,10 +433,9 @@ public interface GeneralStage<T> extends Stage {
      * duplicate updates.
      *
      * @param contextFactory the context factory
-     * @param flatMapFn a stateless flatmapping function, whose result type is
-     *                  Jet's {@link Traverser}. It must not return null
-     *                  traverser, but can return {@linkplain an
-     *                  Traversers#empty() empty traverser}.
+     * @param flatMapFn a stateless flatmapping function, whose result type is Jet's {@link
+     *                  Traverser}. It must not return null traverser, but can return an
+     *                  {@linkplain Traversers#empty() empty traverser}.
      * @param <C> type of context object
      * @param <R> the type of items in the result's traversers
      * @return the newly attached stage

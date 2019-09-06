@@ -56,6 +56,7 @@ import static java.util.Collections.singletonList;
 @Category(ParallelTest.class)
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@SuppressWarnings("checkstyle:declarationorder")
 public class TransformStatefulPTest {
 
     private final Function<Entry<Object, Long>, Traverser<Entry<Object, Long>>> expandEntryFn =
@@ -320,7 +321,7 @@ public class TransformStatefulPTest {
         if (flatMap) {
             return Processors.<T, K, S, R>flatMapStatefulP(ttl, keyFn, timestampFn, createFn,
                     (s, k, t) -> {
-                        R r = statefulMapFn.apply(s ,k, t);
+                        R r = statefulMapFn.apply(s, k, t);
                         return r != null ? flatMapExpandFn.apply(r) : Traversers.empty();
                     },
                     onEvictFn != null

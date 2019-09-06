@@ -60,9 +60,9 @@ public interface GeneralStageWithKey<T, K> {
     /**
      * Attaches a stage that performs a stateful mapping operation. {@code
      * createFn} returns the object that holds the state. Jet passes this
-     * object along with each input item and its key to {@code mapFn}, which 
-     * can update the object's state. For each grouping key there's a separate 
-     * state object. The state object will be included in the state snapshot, 
+     * object along with each input item and its key to {@code mapFn}, which
+     * can update the object's state. For each grouping key there's a separate
+     * state object. The state object will be included in the state snapshot,
      * so it survives job restarts. For this reason it must be serializable.
      * <p>
      * This sample takes a stream of pairs {@code (serverId, latency)}
