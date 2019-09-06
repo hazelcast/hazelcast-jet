@@ -120,10 +120,11 @@ public final class S3Sinks {
             @Nonnull FunctionEx<? super T, String> toStringFn
 
     ) {
+        String charsetName = charset.name();
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
                         new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
-                                clientSupplier, toStringFn, charset.name()))
+                                clientSupplier, toStringFn, charsetName))
                 .<T>receiveFn(S3Context::receive)
                 .flushFn(S3Context::flush)
                 .destroyFn(S3Context::close)

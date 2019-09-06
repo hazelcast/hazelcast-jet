@@ -19,6 +19,8 @@ package com.hazelcast.jet.s3;
 import com.amazonaws.services.s3.AmazonS3;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -28,6 +30,8 @@ import static java.lang.System.lineSeparator;
 import static java.util.stream.IntStream.range;
 
 public class S3MockTest extends S3TestBase {
+
+    private static ILogger logger = Logger.getLogger(S3MockTest.class);
 
     @ClassRule
     public static S3MockContainer s3MockContainer = new S3MockContainer();
@@ -41,6 +45,7 @@ public class S3MockTest extends S3TestBase {
 
     @BeforeClass
     public static void setupS3() {
+        s3MockContainer.followOutput(outputFrame -> logger.info(outputFrame.getUtf8String().trim()));
         s3Client = s3MockContainer.client();
         s3Client.createBucket(SOURCE_BUCKET);
         s3Client.createBucket(SINK_BUCKET);
