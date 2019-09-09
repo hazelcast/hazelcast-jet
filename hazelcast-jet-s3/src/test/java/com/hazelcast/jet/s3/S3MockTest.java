@@ -41,7 +41,7 @@ public class S3MockTest extends S3TestBase {
 
     @BeforeClass
     public static void setupS3() {
-        S3SinkContext.MAXIMUM_PART_NUMBER = 1;
+        S3SinkContext.maximumPartNumber = 1;
         s3MockContainer.followOutput(outputFrame -> logger.info(outputFrame.getUtf8String().trim()));
         s3Client = s3MockContainer.client();
         s3Client.createBucket(SOURCE_BUCKET);

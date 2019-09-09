@@ -122,7 +122,7 @@ public final class S3Sinks {
 
         static final int MINIMUM_PART_NUMBER = 1;
         // visible for testing
-        static int MAXIMUM_PART_NUMBER = MAXIMUM_UPLOAD_PARTS;
+        static int maximumPartNumber = MAXIMUM_UPLOAD_PARTS;
 
         private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = 5 * MB;
 
@@ -136,7 +136,7 @@ public final class S3Sinks {
         private final ByteBuffer buffer = ByteBuffer.allocateDirect(2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
         private final List<PartETag> partETags = new ArrayList<>();
 
-        private int partNumber = MINIMUM_PART_NUMBER; // must be between 1 and MAXIMUM_PART_NUMBER
+        private int partNumber = MINIMUM_PART_NUMBER; // must be between 1 and maximumPartNumber
         private int fileNumber;
         private String uploadId;
 
@@ -179,7 +179,7 @@ public final class S3Sinks {
                 initiateUpload();
             }
             if (buffer.position() > DEFAULT_MINIMUM_UPLOAD_PART_SIZE) {
-                boolean isLastPart = partNumber == MAXIMUM_PART_NUMBER;
+                boolean isLastPart = partNumber == maximumPartNumber;
                 flushBuffer(isLastPart);
             }
         }
