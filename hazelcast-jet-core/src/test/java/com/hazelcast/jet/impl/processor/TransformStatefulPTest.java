@@ -163,7 +163,7 @@ public class TransformStatefulPTest {
                     s[0] += e.payload().getValue();
                     return jetEvent(e.timestamp(), entry(k, s[0]));
                 },
-                (key, state, wm) -> jetEvent(wm, entry(key, evictSignal)),
+                (state, key, wm) -> jetEvent(wm, entry(key, evictSignal)),
                 expandJetEventFn
         );
 
