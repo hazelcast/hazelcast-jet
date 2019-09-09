@@ -54,7 +54,7 @@ import static java.util.stream.Collectors.toMap;
 @SuppressWarnings("WeakerAccess")
 public abstract class PipelineTestSupport extends TestInClusterSupport {
 
-    protected int itemCount = 1_009;
+    protected int itemCount = 1024;
     protected final String srcName = journaledMapName();
     protected final String sinkName = randomName();
 
