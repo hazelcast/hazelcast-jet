@@ -16,14 +16,12 @@
 
 package com.hazelcast.jet.examples.files.s3;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.s3.S3Sinks;
@@ -59,7 +57,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * credentials. The files in the input bucket will be split among Jet
  * processors.
  * <p>
- * {@link S3Sinks#s3(String, SupplierEx)}
+ * {@link S3Sinks#s3(String, String, Charset, SupplierEx, FunctionEx)}
  * writes the output to the given output bucket, with each
  * processor writing to a file within the bucket. The files are
  * identified by a prefix (if provided) and followed by the global processor index.
@@ -67,42 +65,34 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  */
 public class S3WordCount {
 
-    private static final String AWS_ACCESS_KEY = "";
-    private static final String AWS_SECRET_KEY = "";
-    private static final Regions REGION = Regions.US_EAST_1;
-
     private static final String INPUT_BUCKET = "jet-s3-example-input-bucket";
     private static final String OUTPUT_BUCKET = "jet-s3-example-output-bucket";
+    private static final String PREFIX = "books/";
 
     private static Pipeline buildPipeline() {
         final Pattern regex = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
         p.drawFrom(S3Sources.s3(
                 Collections.singletonList(INPUT_BUCKET),
-                null,
+                PREFIX,
                 UTF_8,
-                S3WordCount::client,
-                (name, line) -> line))
-         .flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
+                S3WordCount::createClient,
+                (name, line) -> line)
+        ).flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(S3Sinks.s3(OUTPUT_BUCKET, S3WordCount::client));
+         .drainTo(S3Sinks.s3(OUTPUT_BUCKET, PREFIX, UTF_8, S3WordCount::createClient, Object::toString));
         return p;
     }
-    private static AmazonS3 client() {
-        BasicAWSCredentials credentials =
-                new BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY);
-        return AmazonS3ClientBuilder
-                .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(credentials))
-                .withRegion(REGION)
-                .build();
+
+    private static AmazonS3 createClient() {
+        return AmazonS3ClientBuilder.standard().build();
     }
 
     public static void main(String[] args) throws IOException {
         try {
             System.out.println("Uploading books to bucket " + INPUT_BUCKET);
-            uploadBooks();
+            uploadBooks(PREFIX);
             JetInstance jet = Jet.newJetInstance();
             Jet.newJetInstance();
             System.out.print("\nCounting words from " + INPUT_BUCKET);
@@ -116,22 +106,18 @@ public class S3WordCount {
         }
     }
 
-    private static void uploadBooks() throws IOException {
-        AmazonS3 s3Client = null;
+    private static void uploadBooks(String prefix) throws IOException {
+        AmazonS3 s3Client = createClient();
         try {
-            s3Client = client();
-            AmazonS3 localClient = s3Client;
             Path path = Paths.get(S3WordCount.class.getResource("/books").getPath());
             Files.list(path)
-                 .filter(book -> book.getFileName().toString().startsWith("a"))
+                 .limit(10)
                  .forEach(book -> {
                      System.out.println("Uploading file " + book.getFileName().toString() + "...");
-                     localClient.putObject(INPUT_BUCKET, book.getFileName().toString(), book.toFile());
+                     s3Client.putObject(INPUT_BUCKET, prefix + book.getFileName().toString(), book.toFile());
                  });
         } finally {
-            if (s3Client != null) {
-                s3Client.shutdown();
-            }
+            s3Client.shutdown();
         }
     }
 
