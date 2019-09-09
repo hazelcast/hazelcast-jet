@@ -71,10 +71,7 @@ abstract class S3TestBase extends JetTestSupport {
 
         AmazonS3 client = clientSupplier().get();
         ObjectListing listing = client.listObjects(bucketName);
-        List<S3ObjectSummary> objectSummaries = listing.getObjectSummaries();
-        assertEquals(2, objectSummaries.size());
-
-        long totalLineCount = objectSummaries
+        long totalLineCount = listing.getObjectSummaries()
                 .stream()
                 .filter(summary -> summary.getKey().startsWith(prefix))
                 .map(summary -> client.getObject(bucketName, summary.getKey()))

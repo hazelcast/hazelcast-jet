@@ -118,7 +118,7 @@ public final class S3Sinks {
                 .build();
     }
 
-    private static final class S3SinkContext<T> {
+    static final class S3SinkContext<T> {
 
         static final int MINIMUM_PART_NUMBER = 1;
         // visible for testing

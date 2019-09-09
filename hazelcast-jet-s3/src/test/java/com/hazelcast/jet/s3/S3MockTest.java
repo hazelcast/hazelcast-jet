@@ -18,6 +18,7 @@ package com.hazelcast.jet.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import org.junit.BeforeClass;
@@ -40,6 +41,7 @@ public class S3MockTest extends S3TestBase {
 
     @BeforeClass
     public static void setupS3() {
+        S3SinkContext.MAXIMUM_PART_NUMBER = 1;
         s3MockContainer.followOutput(outputFrame -> logger.info(outputFrame.getUtf8String().trim()));
         s3Client = s3MockContainer.client();
         s3Client.createBucket(SOURCE_BUCKET);
