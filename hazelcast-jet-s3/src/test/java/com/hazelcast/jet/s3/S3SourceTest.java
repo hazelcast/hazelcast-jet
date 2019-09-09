@@ -16,10 +16,8 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
@@ -32,16 +30,11 @@ public class S3SourceTest extends S3TestBase {
 
     @Test
     public void test() {
-        JetInstance instance1 = createJetMember();
-        JetInstance instance2 = createJetMember();
-        testSource(instance1, bucketName, null, 1100, 1000);
+        testSource(jet, bucketName, null, 1100, 1000);
     }
 
-    SupplierEx<AmazonS3> client() {
-        return () -> AmazonS3ClientBuilder
-                .standard()
-                .withRegion(Regions.US_EAST_1)
-                .build();
+    SupplierEx<AmazonS3> clientSupplier() {
+        return () -> AmazonS3ClientBuilder.standard().build();
     }
 
 }

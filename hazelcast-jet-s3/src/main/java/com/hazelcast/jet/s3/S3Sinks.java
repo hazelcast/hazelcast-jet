@@ -78,29 +78,17 @@ public final class S3Sinks {
      * <p>
      * The default local parallelism for this sink is 1.
      * <p>
-     * Here is an example which reads from a map and writes the values of the
-     * entries to given bucket using {@link Object#toString()} to convert the
+     * Here is an example which reads from a map and writes the entries
+     * to given bucket using {@link Object#toString()} to convert the
      * values to a line.
      *
      * <pre>{@code
-     * Sink<? super Object> sink = S3Sinks.s3(
-     *         "bucket",
-     *         "my-objects-",
-     *         StandardCharsets.UTF_8,
-     *         () -> {
-     *             BasicAWSCredentials credentials =
-     *                     new BasicAWSCredentials("accessKey", "accessKeySecret");
-     *             return AmazonS3ClientBuilder
-     *                     .standard()
-     *                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
-     *                     .withRegion(Regions.US_EAST_1)
-     *                     .build();
-     *         },
-     *         Object::toString
-     * );
      * Pipeline p = Pipeline.create();
-     * p.drawFrom(Sources.map("map", alwaysTrue(), Map.Entry::getValue))
-     *  .drainTo(sink);
+     * p.drawFrom(Sources.map("map"))
+     *  .drainTo(S3Sinks.s3("bucket", "my-map-", StandardCharsets.UTF_8,
+     *      () -> AmazonS3ClientBuilder.standard().build(),
+     *      Object::toString
+     * ));
      * }</pre>
      *
      * @param <T>            type of the items the sink accepts
@@ -123,15 +111,15 @@ public final class S3Sinks {
         String charsetName = charset.name();
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
-                        new S3Context<>(bucketName, prefix, context.globalProcessorIndex(),
+                        new S3SinkContext<>(bucketName, prefix, context.globalProcessorIndex(),
                                 clientSupplier, toStringFn, charsetName))
-                .<T>receiveFn(S3Context::receive)
-                .flushFn(S3Context::flush)
-                .destroyFn(S3Context::close)
+                .<T>receiveFn(S3SinkContext::receive)
+                .flushFn(S3SinkContext::flush)
+                .destroyFn(S3SinkContext::close)
                 .build();
     }
 
-    private static final class S3Context<T> {
+    private static final class S3SinkContext<T> {
 
         private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = 5 * MB;
         private final String bucketName;
@@ -149,7 +137,7 @@ public final class S3Sinks {
         private List<PartETag> partETags;
         private String uploadId;
 
-        private S3Context(
+        private S3SinkContext(
                 String bucketName,
                 String prefix,
                 int processorIndex,

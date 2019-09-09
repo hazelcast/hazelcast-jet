@@ -21,7 +21,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
@@ -37,7 +36,7 @@ public class S3SinkTest extends S3TestBase {
     @Before
     @After
     public void deleteObjects() {
-        AmazonS3 client = client().get();
+        AmazonS3 client = clientSupplier().get();
         String[] keys = client
                 .listObjects(bucketName)
                 .getObjectSummaries()
@@ -51,12 +50,10 @@ public class S3SinkTest extends S3TestBase {
 
     @Test
     public void test() {
-        JetInstance instance1 = createJetMember();
-        JetInstance instance2 = createJetMember();
-        testSink(instance2, bucketName);
+        testSink(jet, bucketName);
     }
 
-    SupplierEx<AmazonS3> client() {
+    SupplierEx<AmazonS3> clientSupplier() {
         return () -> AmazonS3ClientBuilder
                 .standard()
                 .withRegion(Regions.US_EAST_1)

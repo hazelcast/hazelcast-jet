@@ -81,30 +81,21 @@ public final class S3Sources {
      * applying the given prefix.
      *
      * <pre>{@code
-     * BatchSource<String> batchSource =
-     *      S3Sources.s3(
-     *          Collections.singletonList("input-bucket"),
-     *          "prefix",
-     *          StandardCharsets.UTF_8,
-     *          () -> {
-     *              BasicAWSCredentials credentials =
-     *                  new BasicAWSCredentials("accessKey", "accessKeySecret");
-     *              return AmazonS3ClientBuilder
-     *                     .standard()
-     *                     .withCredentials(new AWSStaticCredentialsProvider(credentials))
-     *                     .withRegion(Regions.US_EAST_1)
-     *                     .build();
-     *          },
-     *          (name, line) -> line
-     *      );
      * Pipeline p = Pipeline.create();
-     * BatchStage<Document> srcStage = p.drawFrom(batchSource);
+     * BatchStage<String> srcStage = p.drawFrom(S3Sources.s3(
+     *      Arrays.asList("bucket1", "bucket2"),
+     *      "prefix",
+     *      StandardCharsets.UTF_8,
+     *      () -> AmazonS3ClientBuilder.standard().build(),
+     *      (filename, line) -> line
+     * ));
      * }</pre>
      *
      * @param bucketNames    list of bucket-names
      * @param prefix         the prefix to filter the objects. Optional, passing
      *                       {@code null} will list all objects.
-     * @param clientSupplier S3 client supplier
+     * @param clientSupplier function which returns the s3 client to use
+     *                       one client per processor instance is used
      * @param mapFn          the function which creates output object from each
      *                       line. Gets the object name and line as parameters
      * @param <T>            the type of the items the source emits
@@ -120,14 +111,14 @@ public final class S3Sources {
         String charsetName = charset.name();
         return SourceBuilder
                 .batch("s3-source", context ->
-                        new S3Context<>(bucketNames, prefix, charsetName, context, clientSupplier, mapFn))
-                .<T>fillBufferFn(S3Context::fillBuffer)
+                        new S3SourceContext<>(bucketNames, prefix, charsetName, context, clientSupplier, mapFn))
+                .<T>fillBufferFn(S3SourceContext::fillBuffer)
                 .distributed(LOCAL_PARALLELISM)
-                .destroyFn(S3Context::close)
+                .destroyFn(S3SourceContext::close)
                 .build();
     }
 
-    private static final class S3Context<T> {
+    private static final class S3SourceContext<T> {
 
         private static final ObjectListing EMPTY_LISTING = new ObjectListing();
         private static final int BATCH_COUNT = 1024;
@@ -143,7 +134,7 @@ public final class S3Sources {
         private BufferedReader reader;
         private String objectName;
 
-        private S3Context(
+        private S3SourceContext(
                 List<String> bucketNames,
                 String prefix,
                 String charsetName,

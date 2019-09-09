@@ -28,6 +28,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.Assertions;
+import org.junit.Before;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -43,6 +44,14 @@ import static org.junit.Assert.assertTrue;
 
 abstract class S3TestBase extends JetTestSupport {
 
+    protected JetInstance jet;
+
+    @Before
+    public void setupCluster() {
+        jet = createJetMember();
+        createJetMember();
+    }
+
     void testSink(JetInstance jet, String bucketName) {
         IMapJet<Integer, String> map = jet.getMap("map");
 
@@ -56,11 +65,11 @@ abstract class S3TestBase extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map, alwaysTrue(), Map.Entry::getValue))
-         .drainTo(S3Sinks.s3(bucketName, prefix, StandardCharsets.UTF_8, client(), Object::toString));
+         .drainTo(S3Sinks.s3(bucketName, prefix, StandardCharsets.UTF_8, clientSupplier(), Object::toString));
 
         jet.newJob(p).join();
 
-        AmazonS3 client = client().get();
+        AmazonS3 client = clientSupplier().get();
         ObjectListing listing = client.listObjects(bucketName);
         List<S3ObjectSummary> objectSummaries = listing.getObjectSummaries();
         assertEquals(2, objectSummaries.size());
@@ -77,7 +86,7 @@ abstract class S3TestBase extends JetTestSupport {
 
     void testSource(JetInstance jet, String bucketName, String prefix, int objectCount, int lineCount) {
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(singletonList(bucketName), prefix, client()))
+        p.drawFrom(S3Sources.s3(singletonList(bucketName), prefix, clientSupplier()))
          .groupingKey(s -> s)
          .aggregate(AggregateOperations.counting())
          .apply(Assertions.assertCollected(entries -> {
@@ -90,7 +99,7 @@ abstract class S3TestBase extends JetTestSupport {
         jet.newJob(p).join();
     }
 
-    abstract SupplierEx<AmazonS3> client();
+    abstract SupplierEx<AmazonS3> clientSupplier();
 
     static long assertPayloadAndCount(S3Object s3Object, String expectedPayload) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
