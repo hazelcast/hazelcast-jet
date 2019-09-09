@@ -175,7 +175,7 @@ public final class S3Sinks {
         }
 
         private void flush() {
-            if (partCounter == MAXIMUM_UPLOAD_PARTS) {
+            if (partCounter > MAXIMUM_UPLOAD_PARTS) {
                 completeActiveRequest();
                 fileCounter++;
                 partCounter = 0;
