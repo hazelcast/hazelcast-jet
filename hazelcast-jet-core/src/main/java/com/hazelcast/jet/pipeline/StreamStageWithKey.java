@@ -137,9 +137,9 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * <p>
      * This sample receives a stream of pairs {@code (serverId, requestLatency)}
      * that represent the latencies of individual requests served by a cluster
-     * of servers. It emits the record-breaking latencies for each server
-     * independently and resets the score after one minute of inactivity on a
-     * given server.
+     * of servers. It emits the record-breaking (worst so far) latencies for
+     * each server independently and resets the score after one minute of
+     * inactivity on a given server.
      * <pre>{@code
      * StreamStage<Entry<String, Long>> latencies;
      * StreamStage<Entry<String, Long>> topLatencies = latencies
@@ -193,9 +193,23 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * it discards the state object and creates a new one before processing the
      * event.
      * <p>
-     * Sample usage:
+     * This sample groups a stream of strings by length and inserts punctuation
+     * (a special string) after every 10th string in each group, or after one
+     * minute elapses without further input for a given key:
      * <pre>{@code
-     *
+     * StreamStage<String> punctuated = input
+     *         .groupingKey(String::length)
+     *         .flatMapStateful(
+     *                 MINUTES.toMillis(1),
+     *                 LongAccumulator::new,
+     *                 (counter, key, item) -> {
+     *                     counter.add(1);
+     *                     return counter.get() % 10 == 0
+     *                             ? Traversers.traverseItems("punctuation" + key, item)
+     *                             : Traversers.singleton(item);
+     *                 },
+     *                 (counter, key, wm) -> Traversers.singleton("punctuation" + key)
+     *         );
      * }</pre>
      *
      * @param createFn the function that returns the state object
