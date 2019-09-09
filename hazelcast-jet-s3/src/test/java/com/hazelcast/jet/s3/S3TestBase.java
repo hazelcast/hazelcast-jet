@@ -16,9 +16,6 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
 import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -28,8 +25,14 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.Assertions;
 import org.junit.Before;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -67,14 +70,14 @@ abstract class S3TestBase extends JetTestSupport {
 
         jet.newJob(p).join();
 
-        AmazonS3 client = clientSupplier().get();
-        ObjectListing listing = client.listObjects(bucketName);
-        long totalLineCount = listing.getObjectSummaries()
-                .stream()
-                .filter(summary -> summary.getKey().startsWith(prefix))
-                .map(summary -> client.getObject(bucketName, summary.getKey()))
-                .mapToLong(value -> assertPayloadAndCount(value, payload))
-                .sum();
+        S3Client client = clientSupplier().get();
+        ListObjectsResponse listing = client.listObjects(ListObjectsRequest.builder().bucket(bucketName).prefix(prefix).build());
+        long totalLineCount = listing.contents()
+                                     .stream()
+                                     .filter(object -> object.key().startsWith(prefix))
+                                     .map(object -> client.getObject(GetObjectRequest.builder().bucket(bucketName).key(object.key()).build(), ResponseTransformer.toBytes()))
+                                     .mapToLong(bytes -> assertPayloadAndCount(bytes.asByteArray(), payload))
+                                     .sum();
 
         assertEquals(itemCount, totalLineCount);
     }
@@ -94,10 +97,10 @@ abstract class S3TestBase extends JetTestSupport {
         jet.newJob(p).join();
     }
 
-    abstract SupplierEx<AmazonS3> clientSupplier();
+    abstract SupplierEx<S3Client> clientSupplier();
 
-    static long assertPayloadAndCount(S3Object s3Object, String expectedPayload) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
+    static long assertPayloadAndCount(byte[] bytes, String expectedPayload) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes)))) {
             return reader.lines().peek(s -> assertEquals(expectedPayload, s)).count();
         } catch (IOException e) {
             e.printStackTrace();

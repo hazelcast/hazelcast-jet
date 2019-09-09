@@ -16,12 +16,11 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import software.amazon.awssdk.services.s3.S3Client;
 
 @Category(NightlyTest.class)
 public class S3SourceTest extends S3TestBase {
@@ -33,8 +32,8 @@ public class S3SourceTest extends S3TestBase {
         testSource(jet, bucketName, null, 1100, 1000);
     }
 
-    SupplierEx<AmazonS3> clientSupplier() {
-        return () -> AmazonS3ClientBuilder.standard().build();
+    SupplierEx<S3Client> clientSupplier() {
+        return S3Client::create;
     }
 
 }

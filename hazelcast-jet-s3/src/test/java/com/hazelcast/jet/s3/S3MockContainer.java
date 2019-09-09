@@ -16,24 +16,12 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.testcontainers.containers.GenericContainer;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.services.s3.S3Client;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedTrustManager;
-import java.net.Socket;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
+import java.net.URI;
 import java.util.Collections;
 import java.util.Set;
 
@@ -43,7 +31,7 @@ import java.util.Set;
 public class S3MockContainer extends GenericContainer<S3MockContainer> {
 
     public static final String VERSION = "2.1.15";
-    public static final Integer S3_PORT = 9191;
+    public static final Integer S3_PORT = 9090;
 
     private static final String IMAGE_NAME = "adobe/s3mock";
 
@@ -66,76 +54,28 @@ public class S3MockContainer extends GenericContainer<S3MockContainer> {
     }
 
     String endpointURL() {
-        return "https://" + getContainerIpAddress() + ":" + getMappedPort(S3_PORT);
+        return "http://" + getContainerIpAddress() + ":" + getMappedPort(S3_PORT);
     }
 
-    AmazonS3 client() {
+    S3Client client() {
         return client(endpointURL());
     }
 
-    static AmazonS3 client(String endpointURL) {
-        return AmazonS3ClientBuilder
-                .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials("foo", "bar")))
-                .withClientConfiguration(ignoringInvalidSslCertificates(new ClientConfiguration()))
-                .withEndpointConfiguration(new EndpointConfiguration(endpointURL, "us-east-1"))
-                .enablePathStyleAccess()
+    static S3Client client(String endpointURL) {
+        return S3Client
+                .builder()
+                .credentialsProvider(StaticCredentialsProvider.create(new AwsCredentials() {
+                    @Override
+                    public String accessKeyId() {
+                        return "foo";
+                    }
+
+                    @Override
+                    public String secretAccessKey() {
+                        return "bar";
+                    }
+                }))
+                .endpointOverride(URI.create(endpointURL))
                 .build();
-    }
-
-    private static ClientConfiguration ignoringInvalidSslCertificates(ClientConfiguration clientConfiguration) {
-        clientConfiguration
-                .getApacheHttpClientConfig()
-                .withSslSocketFactory(new SSLConnectionSocketFactory(
-                        createBlindlyTrustingSslContext(),
-                        NoopHostnameVerifier.INSTANCE));
-
-        return clientConfiguration;
-    }
-
-    private static SSLContext createBlindlyTrustingSslContext() {
-        try {
-            SSLContext sc = SSLContext.getInstance("TLS");
-            sc.init(
-                    null,
-                    new TrustManager[]{
-                            new X509ExtendedTrustManager() {
-                                @Override
-                                public X509Certificate[] getAcceptedIssuers() {
-                                    return null;
-                                }
-
-                                @Override
-                                public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                                }
-
-                                @Override
-                                public void checkClientTrusted(X509Certificate[] arg0, String arg1, SSLEngine arg2) {
-                                }
-
-                                @Override
-                                public void checkClientTrusted(X509Certificate[] arg0, String arg1, Socket arg2) {
-                                }
-
-                                @Override
-                                public void checkServerTrusted(X509Certificate[] arg0, String arg1, SSLEngine arg2) {
-                                }
-
-                                @Override
-                                public void checkServerTrusted(X509Certificate[] arg0, String arg1, Socket arg2) {
-                                }
-
-                                @Override
-                                public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                                }
-
-                            }
-                    },
-                    new java.security.SecureRandom()
-            );
-            return sc;
-        } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            throw new RuntimeException("Unexpected exception", e);
-        }
     }
 }

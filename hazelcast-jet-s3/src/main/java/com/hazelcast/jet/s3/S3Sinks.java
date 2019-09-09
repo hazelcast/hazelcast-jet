@@ -16,31 +16,31 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.memory.MemoryUnit;
 import com.hazelcast.util.ExceptionUtil;
 import com.hazelcast.util.StringUtil;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.BucketLocationConstraint;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.amazonaws.services.s3.internal.Constants.MAXIMUM_UPLOAD_PARTS;
-import static com.amazonaws.services.s3.internal.Constants.MB;
 
 /**
  * Contains factory methods for creating AWS S3 sinks.
@@ -57,7 +57,7 @@ public final class S3Sinks {
     @Nonnull
     public static <T> Sink<? super T> s3(
             @Nonnull String bucketName,
-            @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
+            @Nonnull SupplierEx<? extends S3Client> clientSupplier
     ) {
         return s3(bucketName, null, StandardCharsets.UTF_8, clientSupplier, Object::toString);
     }
@@ -103,7 +103,7 @@ public final class S3Sinks {
             @Nonnull String bucketName,
             @Nullable String prefix,
             @Nonnull Charset charset,
-            @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
+            @Nonnull SupplierEx<? extends S3Client> clientSupplier,
             @Nonnull FunctionEx<? super T, String> toStringFn
 
     ) {
@@ -122,19 +122,19 @@ public final class S3Sinks {
 
         static final int MINIMUM_PART_NUMBER = 1;
         // visible for testing
-        static int maximumPartNumber = MAXIMUM_UPLOAD_PARTS;
+        static int maximumPartNumber = 10000;
 
-        private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = 5 * MB;
+        private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = (int) MemoryUnit.MEGABYTES.toBytes(5);
 
         private final String bucketName;
         private final String prefix;
         private final int processorIndex;
-        private final AmazonS3 s3Client;
+        private final S3Client s3Client;
         private final FunctionEx<? super T, String> toStringFn;
         private final Charset charset;
         private final byte[] lineSeparator;
         private final ByteBuffer buffer = ByteBuffer.allocateDirect(2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
-        private final List<PartETag> partETags = new ArrayList<>();
+        private final List<CompletedPart> completedParts = new ArrayList<>();
 
         private int partNumber = MINIMUM_PART_NUMBER; // must be between 1 and maximumPartNumber
         private int fileNumber;
@@ -145,7 +145,7 @@ public final class S3Sinks {
                 @Nullable String prefix,
                 String charsetName, int processorIndex,
                 FunctionEx<? super T, String> toStringFn,
-                SupplierEx<? extends AmazonS3> clientSupplier) {
+                SupplierEx<? extends S3Client> clientSupplier) {
             this.bucketName = bucketName;
             String trimmedPrefix = StringUtil.trim(prefix);
             this.prefix = StringUtil.isNullOrEmpty(trimmedPrefix) ? "" : trimmedPrefix;
@@ -159,12 +159,16 @@ public final class S3Sinks {
         }
 
         private void initiateUpload() {
-            InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, key());
-            uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
+            CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder()
+                                                                                                    .bucket(bucketName)
+                                                                                                    .key(key())
+                                                                                                    .build();
+            uploadId = s3Client.createMultipartUpload(createMultipartUploadRequest).uploadId();
         }
 
         private void checkIfBucketExists() {
-            if (!s3Client.doesBucketExistV2(bucketName)) {
+            GetBucketLocationRequest bucketLocationRequest = GetBucketLocationRequest.builder().bucket(bucketName).build();
+            if (!s3Client.getBucketLocation(bucketLocationRequest).locationConstraint().equals(BucketLocationConstraint.UNKNOWN_TO_SDK_VERSION)) {
                 throw new IllegalArgumentException("Bucket [" + bucketName + "] does not exist");
             }
         }
@@ -188,7 +192,7 @@ public final class S3Sinks {
             try {
                 flushBuffer(true);
             } finally {
-                s3Client.shutdown();
+                s3Client.close();
             }
         }
 
@@ -201,17 +205,14 @@ public final class S3Sinks {
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
             buffer.clear();
-            UploadPartRequest uploadRequest = new UploadPartRequest()
-                    .withBucketName(bucketName)
-                    .withKey(key())
-                    .withUploadId(uploadId)
-                    .withPartNumber(partNumber)
-
-                    .withInputStream(new ByteArrayInputStream(bytes))
-                    .withPartSize(bytes.length)
-                    .withLastPart(isLastPart);
-            UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
-            partETags.add(uploadResult.getPartETag());
+            UploadPartRequest uploadRequest = UploadPartRequest.builder()
+                                                               .bucket(bucketName)
+                                                               .key(key())
+                                                               .uploadId(uploadId)
+                                                               .partNumber(partNumber)
+                                                               .build();
+            String eTag = s3Client.uploadPart(uploadRequest, RequestBody.fromByteBuffer(buffer)).eTag();
+            completedParts.add(CompletedPart.builder().partNumber(partNumber).eTag(eTag).build());
             partNumber++;
             if (isLastPart) {
                 completeUpload();
@@ -220,13 +221,23 @@ public final class S3Sinks {
 
         private void completeUpload() {
             try {
-                if (partETags.isEmpty()) {
+                if (completedParts.isEmpty()) {
                     abortUpload();
                 } else {
-                    CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucketName, key(),
-                            uploadId, partETags);
-                    s3Client.completeMultipartUpload(compRequest);
-                    partETags.clear();
+                    CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload
+                            .builder()
+                            .parts(completedParts)
+                            .build();
+
+                    CompleteMultipartUploadRequest completeMultipartUploadRequest = CompleteMultipartUploadRequest
+                            .builder()
+                            .bucket(bucketName)
+                            .key(key())
+                            .uploadId(uploadId)
+                            .multipartUpload(completedMultipartUpload)
+                            .build();
+                    s3Client.completeMultipartUpload(completeMultipartUploadRequest);
+                    completedParts.clear();
                     partNumber = MINIMUM_PART_NUMBER;
                     uploadId = null;
                     fileNumber++;
@@ -238,7 +249,13 @@ public final class S3Sinks {
         }
 
         private void abortUpload() {
-            s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key(), uploadId));
+            AbortMultipartUploadRequest abortMultipartUploadRequest = AbortMultipartUploadRequest
+                    .builder()
+                    .uploadId(uploadId)
+                    .bucket(bucketName)
+                    .key(key())
+                    .build();
+            s3Client.abortMultipartUpload(abortMultipartUploadRequest);
         }
 
         private String key() {

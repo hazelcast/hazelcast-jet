@@ -16,17 +16,19 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 @Category(NightlyTest.class)
 public class S3SinkTest extends S3TestBase {
@@ -36,15 +38,22 @@ public class S3SinkTest extends S3TestBase {
     @Before
     @After
     public void deleteObjects() {
-        AmazonS3 client = clientSupplier().get();
-        String[] keys = client
-                .listObjects(bucketName)
-                .getObjectSummaries()
+        S3Client client = clientSupplier().get();
+        ObjectIdentifier[] identifiers = client
+                .listObjects(ListObjectsRequest.builder().bucket(bucketName).build())
+                .contents()
                 .stream()
-                .map(S3ObjectSummary::getKey)
-                .toArray(String[]::new);
-        if (keys.length > 0) {
-            client.deleteObjects(new DeleteObjectsRequest(bucketName).withKeys(keys));
+                .map(S3Object::key)
+                .map(key -> ObjectIdentifier.builder().key(key).build())
+                .toArray(ObjectIdentifier[]::new);
+        if (identifiers.length > 0) {
+            Delete delete = Delete.builder()
+                                  .objects(identifiers)
+                                  .build();
+            client.deleteObjects(DeleteObjectsRequest.builder()
+                                                     .bucket(bucketName)
+                                                     .delete(delete)
+                                                     .build());
         }
     }
 
@@ -53,10 +62,10 @@ public class S3SinkTest extends S3TestBase {
         testSink(jet, bucketName);
     }
 
-    SupplierEx<AmazonS3> clientSupplier() {
-        return () -> AmazonS3ClientBuilder
-                .standard()
-                .withRegion(Regions.US_EAST_1)
+    SupplierEx<S3Client> clientSupplier() {
+        return () -> S3Client
+                .builder()
+                .region(Region.US_EAST_1)
                 .build();
     }
 

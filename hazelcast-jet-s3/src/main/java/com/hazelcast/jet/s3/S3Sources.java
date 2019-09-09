@@ -16,10 +16,6 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
@@ -27,6 +23,12 @@ import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.SourceBuffer;
 import com.hazelcast.nio.IOUtil;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,8 +39,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 
+import static com.hazelcast.jet.Util.entry;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toMap;
 
@@ -61,7 +64,7 @@ public final class S3Sources {
     public static BatchSource<String> s3(
             @Nonnull List<String> bucketNames,
             @Nullable String prefix,
-            @Nonnull SupplierEx<? extends AmazonS3> clientSupplier
+            @Nonnull SupplierEx<? extends S3Client> clientSupplier
     ) {
         return s3(bucketNames, prefix, UTF_8, clientSupplier, (name, line) -> line);
     }
@@ -105,7 +108,7 @@ public final class S3Sources {
             @Nonnull List<String> bucketNames,
             @Nullable String prefix,
             @Nonnull Charset charset,
-            @Nonnull SupplierEx<? extends AmazonS3> clientSupplier,
+            @Nonnull SupplierEx<? extends S3Client> clientSupplier,
             @Nonnull BiFunctionEx<String, String, ? extends T> mapFn
     ) {
         String charsetName = charset.name();
@@ -120,17 +123,17 @@ public final class S3Sources {
 
     private static final class S3SourceContext<T> {
 
-        private static final ObjectListing EMPTY_LISTING = new ObjectListing();
         private static final int BATCH_COUNT = 1024;
 
-        private final AmazonS3 amazonS3;
-        private final Map<String, ObjectListing> listingMap;
+        private final List<String> bucketNames;
+        private final String prefix;
+        private final S3Client amazonS3;
         private final BiFunctionEx<String, String, ? extends T> mapFn;
         private final Charset charset;
         private final int processorIndex;
         private final int totalParallelism;
 
-        private Iterator<S3ObjectSummary> iterator;
+        private Iterator<Entry<String, S3Object>> iterator;
         private BufferedReader reader;
         private String objectName;
 
@@ -139,17 +142,17 @@ public final class S3Sources {
                 String prefix,
                 String charsetName,
                 Context context,
-                SupplierEx<? extends AmazonS3> clientSupplier,
+                SupplierEx<? extends S3Client> clientSupplier,
                 BiFunctionEx<String, String, ? extends T> mapFn
         ) {
+            this.bucketNames = bucketNames;
+            this.prefix = prefix;
             this.amazonS3 = clientSupplier.get();
             this.mapFn = mapFn;
             this.charset = Charset.forName(charsetName);
             this.processorIndex = context.globalProcessorIndex();
             this.totalParallelism = context.totalParallelism();
-            this.listingMap = bucketNames
-                    .stream()
-                    .collect(toMap(key -> key, key -> amazonS3.listObjects(key, prefix)));
+            this.iterator = createIterator();
         }
 
         private void fillBuffer(SourceBuffer<? super T> buffer) throws IOException {
@@ -158,26 +161,22 @@ public final class S3Sources {
                 return;
             }
 
-            if (iterator == null) {
-                // create an iterator for the object summaries which belongs to
-                // this processor.
-                iterator = createIterator();
-                // iterator is empty, we've exhausted all the objects
-                if (!iterator.hasNext()) {
-                    buffer.close();
-                    return;
-                }
-            }
-
             if (iterator.hasNext()) {
-                S3ObjectSummary summary = iterator.next();
-                S3Object s3Object = amazonS3.getObject(summary.getBucketName(), summary.getKey());
-                objectName = s3Object.getKey();
-                reader = new BufferedReader(new InputStreamReader(s3Object.getObjectContent(), charset));
+                Entry<String, S3Object> objectEntry = iterator.next();
+                String bucketName = objectEntry.getKey();
+                S3Object s3Object = objectEntry.getValue();
+                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                                                                    .bucket(bucketName)
+                                                                    .key(s3Object.key())
+                                                                    .build();
+                ResponseInputStream<GetObjectResponse> responseInputStream = amazonS3.getObject(getObjectRequest);
+                objectName = s3Object.key();
+                reader = new BufferedReader(new InputStreamReader(responseInputStream, charset));
                 addBatchToBuffer(buffer);
             } else {
+                // iterator is empty, we've exhausted all the objects
+                buffer.close();
                 iterator = null;
-                listingMap.replaceAll((k, v) -> v.isTruncated() ? amazonS3.listNextBatchOfObjects(v) : EMPTY_LISTING);
             }
         }
 
@@ -193,12 +192,19 @@ public final class S3Sources {
             }
         }
 
-        private Iterator<S3ObjectSummary> createIterator() {
-            return listingMap
-                    .values()
+        private Iterator<Entry<String, S3Object>> createIterator() {
+            return bucketNames
                     .stream()
-                    .flatMap(listing -> listing.getObjectSummaries().stream())
-                    .filter(summary -> belongsToThisProcessor(summary.getKey()))
+                    .collect(toMap(bucket -> bucket, bucket ->
+                            amazonS3.listObjectsV2Paginator(ListObjectsV2Request.builder()
+                                                                                .bucket(bucket)
+                                                                                .prefix(prefix)
+                                                                                .build()))
+                    )
+                    .entrySet()
+                    .stream()
+                    .flatMap(entry -> entry.getValue().contents().stream().map(o -> entry(entry.getKey(), o)))
+                    .filter(entry -> belongsToThisProcessor(entry.getValue().key()))
                     .iterator();
         }
 
@@ -209,7 +215,7 @@ public final class S3Sources {
 
         private void close() {
             IOUtil.closeResource(reader);
-            amazonS3.shutdown();
+            amazonS3.close();
         }
     }
 }

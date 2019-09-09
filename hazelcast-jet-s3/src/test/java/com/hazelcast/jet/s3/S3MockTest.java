@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
@@ -24,6 +23,10 @@ import com.hazelcast.logging.Logger;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import static java.lang.System.lineSeparator;
 import static java.util.stream.IntStream.range;
@@ -37,15 +40,15 @@ public class S3MockTest extends S3TestBase {
     private static final String SOURCE_BUCKET = "source-bucket";
     private static final String SINK_BUCKET = "sink-bucket";
 
-    private static AmazonS3 s3Client;
+    private static S3Client s3Client;
 
     @BeforeClass
     public static void setupS3() {
         S3SinkContext.maximumPartNumber = 1;
         s3MockContainer.followOutput(outputFrame -> logger.info(outputFrame.getUtf8String().trim()));
         s3Client = s3MockContainer.client();
-        s3Client.createBucket(SOURCE_BUCKET);
-        s3Client.createBucket(SINK_BUCKET);
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(SOURCE_BUCKET).build());
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(SINK_BUCKET).build());
     }
 
     @Test
@@ -62,7 +65,7 @@ public class S3MockTest extends S3TestBase {
         testSource(jet, SOURCE_BUCKET, "object-", objectCount, lineCount);
     }
 
-    SupplierEx<AmazonS3> clientSupplier() {
+    SupplierEx<S3Client> clientSupplier() {
         return () -> S3MockContainer.client(s3MockContainer.endpointURL());
     }
 
@@ -71,7 +74,11 @@ public class S3MockTest extends S3TestBase {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < objectCount; i++) {
             range(0, lineCount).forEach(j -> builder.append("line-").append(j).append(lineSeparator()));
-            s3Client.putObject(SOURCE_BUCKET, "object-" + i, builder.toString());
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                                                                .bucket(SOURCE_BUCKET)
+                                                                .key("object-" + i)
+                                                                .build();
+            s3Client.putObject(putObjectRequest, RequestBody.fromString(builder.toString()));
             builder.setLength(0);
         }
     }
