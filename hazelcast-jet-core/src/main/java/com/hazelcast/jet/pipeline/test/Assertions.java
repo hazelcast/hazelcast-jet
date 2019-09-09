@@ -226,14 +226,15 @@ public final class Assertions {
      * that it's of the expected type as follows:
      * <pre>{@code
      * try {
-     *     jet.newJob(pipeline).join();
-     *     fail("Job should have completed with an AssertionCompletedException, " +
-     *         "but instead completed normally"
-     *     );
+     *     jetInstance.newJob(p).join();
+     *     Assert.fail("Job should have completed with an AssertionCompletedException, " +
+     *             "but completed normally");
      * } catch (CompletionException e) {
-     *     Throwable jetException = e.getCause();
-     *     assertInstanceOf(AssertionCompletedException.class, jetException.getCause());
-     * }
+     *     String errorMsg = e.getCause().getMessage();
+     *     Assert.assertTrue(
+     *             "Job failed with another reason then AssertionCompletedException",
+     *             errorMsg.contains(AssertionCompletedException.class.getName())
+     *     );
      * }</pre>
      *
      * <b>Note:</b> This assertions requires that there are no other assertions in the
