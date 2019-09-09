@@ -59,7 +59,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     private final Function<K, TimestampedItem<S>> createIfAbsentFn;
     private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
     @Nullable
-    private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
+    private final TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn;
     private final Map<K, TimestampedItem<S>> keyToState =
             new LinkedHashMap<>(HASH_MAP_INITIAL_CAPACITY, HASH_MAP_LOAD_FACTOR, true);
     private final FlatMapper<T, R> flatMapper = flatMapper(this::flatMapEvent);
@@ -78,7 +78,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
             @Nonnull ToLongFunction<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         this.ttl = ttl > 0 ? ttl : Long.MAX_VALUE;
         this.keyFn = (Function<Object, ? extends K>) keyFn;
@@ -144,7 +144,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
                 if (onEvictFn == null) {
                     continue;
                 }
-                Traverser<R> outTrav = onEvictFn.apply(entry.getKey(), entry.getValue().item(), currentWm);
+                Traverser<R> outTrav = onEvictFn.apply(entry.getValue().item(), entry.getKey(), currentWm);
                 if (outTrav != null) {
                     return outTrav;
                 }

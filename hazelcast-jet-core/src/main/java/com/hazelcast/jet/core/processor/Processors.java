@@ -775,7 +775,7 @@ public final class Processors {
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
-            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends R> onEvictFn
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
         return () -> {
             final ResettableSingletonTraverser<R> mainTrav = new ResettableSingletonTraverser<>();
@@ -789,8 +789,8 @@ public final class Processors {
                         mainTrav.accept(statefulMapFn.apply(state, key, item));
                         return mainTrav;
                     },
-                    onEvictFn != null ? (k, s, wm) -> {
-                        evictTrav.accept(onEvictFn.apply(k, s, wm));
+                    onEvictFn != null ? (s, k, wm) -> {
+                        evictTrav.accept(onEvictFn.apply(s, k, wm));
                         return evictTrav;
                     } : null
             );
@@ -830,7 +830,7 @@ public final class Processors {
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn,
-            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         return () -> new TransformStatefulP<>(
                 ttl,

@@ -38,7 +38,7 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
     private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
     private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
-    private final TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn;
+    private final TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn;
 
     public FlatMapStatefulTransform(
             @Nonnull Transform upstream,
@@ -47,7 +47,7 @@ public class FlatMapStatefulTransform<T, K, S, R, OUT> extends AbstractTransform
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
-            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends Traverser<R>> onEvictFn
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         super("transform-stateful", upstream);
         this.ttl = ttl;

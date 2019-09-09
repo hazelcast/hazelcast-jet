@@ -315,7 +315,7 @@ public class TransformStatefulPTest {
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
-            @Nullable TriFunction<? super K, ? super S, ? super Long, ? extends R> onEvictFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn,
             @Nonnull Function<R, Traverser<R>> flatMapExpandFn
     ) {
         if (flatMap) {
@@ -325,8 +325,8 @@ public class TransformStatefulPTest {
                         return r != null ? flatMapExpandFn.apply(r) : Traversers.empty();
                     },
                     onEvictFn != null
-                            ? (k, s, wm) -> {
-                                R r = onEvictFn.apply(k, s, wm);
+                            ? (s, k, wm) -> {
+                                R r = onEvictFn.apply(s, k, wm);
                                 return r != null ? flatMapExpandFn.apply(r) : Traversers.empty();
                             }
                             : null);

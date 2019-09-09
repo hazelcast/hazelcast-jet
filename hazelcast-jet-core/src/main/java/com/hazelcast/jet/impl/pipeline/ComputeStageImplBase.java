@@ -176,7 +176,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         if (ttl > 0 && fnAdapter == DO_NOT_ADAPT) {
             throw new IllegalStateException("Cannot use time-to-live on a non-timestamped stream");
         }
-        MapStatefulTransform<T, K, S, R, Entry<K, R>> transform = new MapStatefulTransform(
+        MapStatefulTransform<T, K, S, R> transform = new MapStatefulTransform(
                 this.transform,
                 ttl,
                 fnAdapter.adaptKeyFn(keyFn),
