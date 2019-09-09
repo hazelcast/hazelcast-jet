@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -72,7 +73,8 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * discards all state objects with a timestamp less than {@code wm - ttl}.
      * Just before discarding the state object, Jet calls {@code onEvictFn} on
      * it. The function can return an output item that will be emitted, or
-     * {@code null} if it doesn't need to emit an item.
+     * {@code null} if it doesn't need to emit an item. If TTL is used, Jet
+     * also drops late events; otherwise, all events are processed.
      * <p>
      * This sample takes a stream of pairs {@code (serverId, latency)}
      * representing the latencies of serving individual requests and keeps
@@ -97,11 +99,12 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
-     * @param ttl        the time-to-live for each state object
+     * @param ttl        the time-to-live for each state object, disabled if &lt;0
      * @param createFn   the function that returns the state object
      * @param mapFn      the function that receives the state object and the input item and
      *                   outputs the result item. It may modify the state object.
      * @param onEvictFn  the function that Jet calls when evicting a state object
+     *
      * @param <S>        type of the state object
      * @param <R>        type of the result
      */
@@ -133,7 +136,8 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * same key seen so far. Upon seeing another event, Jet compares the state
      * timestamp with the current watermark. If it is less than {@code wm - ttl},
      * it discards the state object and creates a new one before processing the
-     * event.
+     * event. If TTL is used, Jet also drops late events; otherwise, all events
+     * are processed.
      * <p>
      * This sample receives a stream of pairs {@code (serverId, requestLatency)}
      * that represent the latencies of individual requests served by a cluster
@@ -156,7 +160,7 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
-     * @param ttl      the time-to-live for each state object
+     * @param ttl      the time-to-live for each state object, disabled if &lt;0
      * @param createFn the function that returns the state object
      * @param filterFn predicate that receives the state object and the input item and
      *                 outputs a boolean value. It may modify the state object.
@@ -186,12 +190,15 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * survives job restarts. For this reason it must be serializable.
      * <p>
      * If the given {@code ttl} is greater than zero, Jet will consider the
-     * state object stale if its time-to-live has expired. The state object
-     * has a timestamp attached to it: the top timestamp of any event with the
-     * same key seen so far. Upon seeing another event, Jet compares the state
-     * timestamp with the current watermark. If it is less than {@code wm - ttl},
-     * it discards the state object and creates a new one before processing the
-     * event.
+     * state object stale if its time-to-live has expired. The state object for
+     * a given key has a timestamp attached to it: the top timestamp of any
+     * event with that key seen so far. Whenever the watermark advances, Jet
+     * discards all state objects with a timestamp less than {@code wm - ttl}.
+     * Just before discarding the state object, Jet calls {@code onEvictFn} on
+     * it. The function returns a traverser over the items it wants to emit, or
+     * it can return an {@linkplain Traversers#empty() empty traverser}. If TTL
+     * is used, Jet also drops late events; otherwise, all events are
+     * processed.
      * <p>
      * This sample groups a stream of strings by length and inserts punctuation
      * (a special string) after every 10th string in each group, or after one
@@ -212,9 +219,12 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
+     * @param ttl        the time-to-live for each state object, disabled if &lt;0
      * @param createFn the function that returns the state object
      * @param flatMapFn the function that receives the state object and the input item and
      *                  outputs the result items. It may modify the state object.
+     * @param onEvictFn  the function that Jet calls when evicting a state object
+     *
      * @param <S>      type of the state object
      * @param <R>      type of the result
      */

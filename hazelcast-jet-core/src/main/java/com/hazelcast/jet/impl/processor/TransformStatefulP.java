@@ -54,7 +54,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     private final AtomicLong lateEventsDropped = new AtomicLong();
 
     private final long ttl;
-    private final Function<Object, ? extends K> keyFn;
+    private final Function<? super T, ? extends K> keyFn;
     private final ToLongFunction<? super T> timestampFn;
     private final Function<K, TimestampedItem<S>> createIfAbsentFn;
     private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
@@ -71,7 +71,6 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     private long currentWm = Long.MIN_VALUE;
     private Traverser<? extends Entry<?, ?>> snapshotTraverser;
 
-    @SuppressWarnings("unchecked")
     public TransformStatefulP(
             long ttl,
             @Nonnull Function<? super T, ? extends K> keyFn,
@@ -81,7 +80,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
             @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         this.ttl = ttl > 0 ? ttl : Long.MAX_VALUE;
-        this.keyFn = (Function<Object, ? extends K>) keyFn;
+        this.keyFn = keyFn;
         this.timestampFn = timestampFn;
         this.createIfAbsentFn = k -> new TimestampedItem<>(Long.MIN_VALUE, createFn.get());
         this.statefulFlatMapFn = statefulFlatMapFn;
@@ -97,7 +96,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     @Nonnull
     private Traverser<R> flatMapEvent(T event) {
         long timestamp = timestampFn.applyAsLong(event);
-        if (timestamp < currentWm) {
+        if (timestamp < currentWm && ttl < Long.MAX_VALUE) {
             logLateEvent(getLogger(), currentWm, event);
             lazyIncrement(lateEventsDropped);
             return Traversers.empty();
@@ -141,12 +140,8 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
                     break;
                 }
                 keyToStateIterator.remove();
-                if (onEvictFn == null) {
-                    continue;
-                }
-                Traverser<R> outTrav = onEvictFn.apply(entry.getValue().item(), entry.getKey(), currentWm);
-                if (outTrav != null) {
-                    return outTrav;
+                if (onEvictFn != null) {
+                    return onEvictFn.apply(entry.getValue().item(), entry.getKey(), currentWm);
                 }
             }
             keyToStateIterator = null;

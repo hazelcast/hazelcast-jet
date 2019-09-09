@@ -229,7 +229,7 @@ public class TransformStatefulPTest {
     public void mapStateful_lateEvent() {
         // TODO [viliam]
         SupplierEx<Processor> supplier = Processors.mapStatefulP(
-                0,
+                1000,
                 jetEvent -> 0L,
                 JetEvent::timestamp,
                 () -> new long[1],
