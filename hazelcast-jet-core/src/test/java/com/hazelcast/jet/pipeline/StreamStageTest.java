@@ -62,6 +62,7 @@ import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
+import static java.lang.Math.min;
 import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
@@ -616,6 +617,32 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                     long n = i / 2 + 1;
                     return entry(key, (key + i) * n / 2);
                 }), formatFn),
+                streamToString(sinkStreamOfEntry(), formatFn)
+        );
+    }
+
+    @Test
+    public void mapStateful_withEvictFn() {
+        // Given
+        List<Integer> input = sequence(itemCount);
+        int ttl = 1;
+        String evictedSignal = "evicted";
+
+        // When
+        StreamStage<Entry<Integer, String>> stage = streamStageFromList(input)
+                .groupingKey(i -> min(1, i))
+                .mapStateful(
+                        ttl,
+                        Object::new,
+                        (acc, k, i) -> null,
+                        (acc, k, wm) -> entry(k, evictedSignal));
+
+        // Then
+        stage.drainTo(sink);
+        execute();
+        Function<Entry<Integer, String>, String> formatFn = e -> String.format("%d %s", e.getKey(), e.getValue());
+        assertEquals(
+                streamToString(Stream.of(entry(0, evictedSignal)), formatFn),
                 streamToString(sinkStreamOfEntry(), formatFn)
         );
     }
