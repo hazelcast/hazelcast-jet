@@ -20,7 +20,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
@@ -111,8 +110,8 @@ public final class S3Sinks {
         String charsetName = charset.name();
         return SinkBuilder
                 .sinkBuilder("s3-sink", context ->
-                        new S3SinkContext<>(bucketName, prefix, context.globalProcessorIndex(),
-                                clientSupplier, toStringFn, charsetName))
+                        new S3SinkContext<>(bucketName, prefix, charsetName, context.globalProcessorIndex(),
+                                toStringFn, clientSupplier))
                 .<T>receiveFn(S3SinkContext::receive)
                 .flushFn(S3SinkContext::flush)
                 .destroyFn(S3SinkContext::close)
@@ -121,7 +120,12 @@ public final class S3Sinks {
 
     private static final class S3SinkContext<T> {
 
+        static final int MINIMUM_PART_NUMBER = 1;
+        // visible for testing
+        static int MAXIMUM_PART_NUMBER = MAXIMUM_UPLOAD_PARTS;
+
         private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = 5 * MB;
+
         private final String bucketName;
         private final String prefix;
         private final int processorIndex;
@@ -129,23 +133,22 @@ public final class S3Sinks {
         private final FunctionEx<? super T, String> toStringFn;
         private final Charset charset;
         private final byte[] lineSeparator;
+        private final ByteBuffer buffer = ByteBuffer.allocateDirect(2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
+        private final List<PartETag> partETags = new ArrayList<>();
 
-        private int partCounter;
-        private int fileCounter;
-
-        private ByteBuffer buffer = ByteBuffer.allocateDirect(2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
-        private List<PartETag> partETags;
+        private int partNumber = MINIMUM_PART_NUMBER; // must be between 1 and MAXIMUM_PART_NUMBER
+        private int fileNumber;
         private String uploadId;
 
         private S3SinkContext(
                 String bucketName,
-                String prefix,
-                int processorIndex,
-                SupplierEx<? extends AmazonS3> clientSupplier,
+                @Nullable String prefix,
+                String charsetName, int processorIndex,
                 FunctionEx<? super T, String> toStringFn,
-                String charsetName) {
+                SupplierEx<? extends AmazonS3> clientSupplier) {
             this.bucketName = bucketName;
-            this.prefix = StringUtil.isNullOrEmptyAfterTrim(prefix) ? "" : prefix;
+            String trimmedPrefix = StringUtil.trim(prefix);
+            this.prefix = StringUtil.isNullOrEmpty(trimmedPrefix) ? "" : trimmedPrefix;
             this.processorIndex = processorIndex;
             this.s3Client = clientSupplier.get();
             this.toStringFn = toStringFn;
@@ -153,14 +156,11 @@ public final class S3Sinks {
             this.lineSeparator = System.lineSeparator().getBytes(charset);
 
             checkIfBucketExists();
-            initUploadRequest();
         }
 
-        private void initUploadRequest() {
-            partETags = new ArrayList<>();
+        private void initiateUpload() {
             InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, key());
-            InitiateMultipartUploadResult initResponse = s3Client.initiateMultipartUpload(initRequest);
-            uploadId = initResponse.getUploadId();
+            uploadId = s3Client.initiateMultipartUpload(initRequest).getUploadId();
         }
 
         private void checkIfBucketExists() {
@@ -175,43 +175,61 @@ public final class S3Sinks {
         }
 
         private void flush() {
-            if (partCounter > MAXIMUM_UPLOAD_PARTS) {
-                completeActiveRequest();
-                fileCounter++;
-                partCounter = 0;
-                initUploadRequest();
+            if (uploadId == null) {
+                initiateUpload();
             }
-            if (buffer.position() <= DEFAULT_MINIMUM_UPLOAD_PART_SIZE) {
-                return;
+            if (buffer.position() > DEFAULT_MINIMUM_UPLOAD_PART_SIZE) {
+                boolean isLastPart = partNumber == MAXIMUM_PART_NUMBER;
+                flushBuffer(isLastPart);
             }
-            UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
-            UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
-            partETags.add(uploadResult.getPartETag());
         }
-
 
         private void close() {
             try {
-                completeActiveRequest();
+                flushBuffer(true);
             } finally {
                 s3Client.shutdown();
             }
         }
 
-        private void completeActiveRequest() {
+        private void flushBuffer(boolean isLastPart) {
+            if (buffer.position() == 0) {
+                return;
+            }
+
+            buffer.flip();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            buffer.clear();
+            UploadPartRequest uploadRequest = new UploadPartRequest()
+                    .withBucketName(bucketName)
+                    .withKey(key())
+                    .withUploadId(uploadId)
+                    .withPartNumber(partNumber)
+
+                    .withInputStream(new ByteArrayInputStream(bytes))
+                    .withPartSize(bytes.length)
+                    .withLastPart(isLastPart);
+            UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
+            partETags.add(uploadResult.getPartETag());
+            partNumber++;
+            if (isLastPart) {
+                completeUpload();
+            }
+        }
+
+        private void completeUpload() {
             try {
-                if (buffer.position() > 0) {
-                    UploadPartRequest uploadRequest = createUploadRequestFromBuffer();
-                    uploadRequest.withLastPart(true);
-                    UploadPartResult uploadResult = s3Client.uploadPart(uploadRequest);
-                    partETags.add(uploadResult.getPartETag());
-                }
                 if (partETags.isEmpty()) {
                     abortUpload();
                 } else {
                     CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(bucketName, key(),
                             uploadId, partETags);
                     s3Client.completeMultipartUpload(compRequest);
+                    partETags.clear();
+                    partNumber = MINIMUM_PART_NUMBER;
+                    uploadId = null;
+                    fileNumber++;
                 }
             } catch (Exception e) {
                 abortUpload();
@@ -223,23 +241,8 @@ public final class S3Sinks {
             s3Client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key(), uploadId));
         }
 
-        private UploadPartRequest createUploadRequestFromBuffer() {
-            buffer.flip();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            buffer.clear();
-            int partSize = bytes.length;
-            return new UploadPartRequest()
-                    .withBucketName(bucketName)
-                    .withKey(key())
-                    .withUploadId(uploadId)
-                    .withPartNumber(++partCounter)
-                    .withInputStream(new ByteArrayInputStream(bytes))
-                    .withPartSize(partSize);
-        }
-
         private String key() {
-            return prefix + processorIndex + (fileCounter == 0 ? "" : "-" + fileCounter);
+            return prefix + processorIndex + (fileNumber == 0 ? "" : "." + fileNumber);
         }
     }
 }
