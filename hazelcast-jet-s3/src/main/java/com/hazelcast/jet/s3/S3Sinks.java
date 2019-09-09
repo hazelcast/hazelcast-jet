@@ -17,7 +17,6 @@
 package com.hazelcast.jet.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
@@ -25,15 +24,10 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.hazelcast.jet.IMapJet;
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.util.ExceptionUtil;
 import com.hazelcast.util.StringUtil;
 
@@ -124,25 +118,6 @@ public final class S3Sinks {
                 .destroyFn(S3SinkContext::close)
                 .build();
     }
-
-    public static void main(String[] args) {
-        JetInstance jetInstance = Jet.newJetInstance();
-        IMapJet<Object, Object> m = jetInstance.getMap("myMap");
-        for (int i = 0; i < 100; i++) {
-            m.put(i, i);
-        }
-        Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map("map"))
-         .drainTo(S3Sinks.s3("cang", "jet/my-map-", StandardCharsets.UTF_8,
-                 () -> AmazonS3ClientBuilder.standard().build(),
-                 Object::toString
-         ));
-
-        jetInstance.newJob(p).join();
-
-
-    }
-
 
     private static final class S3SinkContext<T> {
 
