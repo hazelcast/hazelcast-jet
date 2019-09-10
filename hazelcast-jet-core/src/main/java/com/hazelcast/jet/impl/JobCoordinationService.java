@@ -281,7 +281,7 @@ public class JobCoordinationService {
                             if (t instanceof CancellationException || t instanceof JetException) {
                                 throw sneakyThrow(t);
                             }
-                            throw new JetException(t);
+                            throw new JetException(t.toString(), t);
                         }),
                 JobResult::asCompletableFuture,
                 jobRecord -> {

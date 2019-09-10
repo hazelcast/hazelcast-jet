@@ -387,7 +387,7 @@ public class JobRepository {
         if (error == null) {
             return null;
         }
-        if (error instanceof JetException) {
+        if (error.getClass().equals(JetException.class) && error.getMessage() != null) {
             return error.getMessage();
         }
         return error.toString();
