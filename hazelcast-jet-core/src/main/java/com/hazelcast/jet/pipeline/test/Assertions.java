@@ -232,7 +232,7 @@ public final class Assertions {
      * } catch (CompletionException e) {
      *     String errorMsg = e.getCause().getMessage();
      *     Assert.assertTrue(
-     *             "Job failed with another reason then AssertionCompletedException",
+     *             "Job was expected to complete with AssertionCompletedException, but completed with: " + e.getCause(),
      *             errorMsg.contains(AssertionCompletedException.class.getName())
      *     );
      * }</pre>
