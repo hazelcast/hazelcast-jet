@@ -19,6 +19,7 @@ package com.hazelcast.jet.s3;
 import org.testcontainers.containers.GenericContainer;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.net.URI;
@@ -75,6 +76,7 @@ public class S3MockContainer extends GenericContainer<S3MockContainer> {
                         return "bar";
                     }
                 }))
+                .region(Region.US_EAST_1)
                 .endpointOverride(URI.create(endpointURL))
                 .build();
     }
