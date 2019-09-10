@@ -202,9 +202,6 @@ public final class S3Sinks {
             }
 
             buffer.flip();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            buffer.clear();
             UploadPartRequest uploadRequest = UploadPartRequest.builder()
                                                                .bucket(bucketName)
                                                                .key(key())
@@ -214,6 +211,7 @@ public final class S3Sinks {
             String eTag = s3Client.uploadPart(uploadRequest, RequestBody.fromByteBuffer(buffer)).eTag();
             completedParts.add(CompletedPart.builder().partNumber(partNumber).eTag(eTag).build());
             partNumber++;
+            buffer.clear();
             if (isLastPart) {
                 completeUpload();
             }
