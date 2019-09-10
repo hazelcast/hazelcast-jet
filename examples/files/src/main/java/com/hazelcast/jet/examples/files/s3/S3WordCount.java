@@ -107,8 +107,7 @@ public class S3WordCount {
     }
 
     private static void uploadBooks(String prefix) throws IOException {
-        S3Client s3Client = createClient();
-        try {
+        try (S3Client s3Client = createClient()) {
             Path path = Paths.get(S3WordCount.class.getResource("/books").getPath());
             Files.list(path)
                  .limit(10)
@@ -117,8 +116,6 @@ public class S3WordCount {
                      s3Client.putObject(req -> req.bucket(INPUT_BUCKET).key(prefix + book.getFileName().toString()),
                              RequestBody.fromFile(book.toFile()));
                  });
-        } finally {
-            s3Client.close();
         }
     }
 

@@ -166,9 +166,9 @@ public final class S3Sources {
             }
 
             if (iterator.hasNext()) {
-                Entry<String, String> objectEntry = iterator.next();
-                String bucketName = objectEntry.getKey();
-                String key = objectEntry.getValue();
+                Entry<String, String> entry = iterator.next();
+                String bucketName = entry.getKey();
+                String key = entry.getValue();
                 GetObjectRequest getObjectRequest = GetObjectRequest
                         .builder()
                         .bucket(bucketName)

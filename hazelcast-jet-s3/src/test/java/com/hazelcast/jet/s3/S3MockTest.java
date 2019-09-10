@@ -20,6 +20,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -49,6 +50,12 @@ public class S3MockTest extends S3TestBase {
         s3Client = s3MockContainer.client();
         s3Client.createBucket(CreateBucketRequest.builder().bucket(SOURCE_BUCKET).build());
         s3Client.createBucket(CreateBucketRequest.builder().bucket(SINK_BUCKET).build());
+    }
+
+    @AfterClass
+    public static void teardown() {
+        s3Client.close();
+        S3SinkContext.maximumPartNumber = S3SinkContext.DEFAULT_MAXIMUM_PART_NUMBER;
     }
 
     @Test

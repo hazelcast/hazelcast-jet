@@ -43,7 +43,7 @@ import static software.amazon.awssdk.core.sync.ResponseTransformer.toBytes;
 
 abstract class S3TestBase extends JetTestSupport {
 
-    protected JetInstance jet;
+    JetInstance jet;
 
     @Before
     public void setupCluster() {
@@ -68,17 +68,18 @@ abstract class S3TestBase extends JetTestSupport {
 
         jet.newJob(p).join();
 
-        S3Client client = clientSupplier().get();
-        ListObjectsResponse listing = client.listObjects(req -> req.bucket(bucketName).prefix(prefix));
-        long totalLineCount = listing.contents()
-                                     .stream()
-                                     .filter(object -> object.key().startsWith(prefix))
-                                     .map(object -> client.getObject(req -> req.bucket(bucketName).key(object.key()),
-                                             toBytes()))
-                                     .mapToLong(bytes -> assertPayloadAndCount(bytes.asByteArray(), payload))
-                                     .sum();
+        try (S3Client client = clientSupplier().get()) {
+            ListObjectsResponse listing = client.listObjects(req -> req.bucket(bucketName).prefix(prefix));
+            long totalLineCount = listing.contents()
+                                         .stream()
+                                         .filter(object -> object.key().startsWith(prefix))
+                                         .map(object -> client.getObject(req -> req.bucket(bucketName).key(object.key()),
+                                                 toBytes()))
+                                         .mapToLong(bytes -> assertPayloadAndCount(bytes.asByteArray(), payload))
+                                         .sum();
 
-        assertEquals(itemCount, totalLineCount);
+            assertEquals(itemCount, totalLineCount);
+        }
     }
 
     void testSource(JetInstance jet, String bucketName, String prefix, int objectCount, int lineCount) {
