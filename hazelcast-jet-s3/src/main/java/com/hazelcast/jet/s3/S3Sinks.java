@@ -25,13 +25,11 @@ import com.hazelcast.util.ExceptionUtil;
 import com.hazelcast.util.StringUtil;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.BucketLocationConstraint;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import javax.annotation.Nonnull;
@@ -159,16 +157,18 @@ public final class S3Sinks {
         }
 
         private void initiateUpload() {
-            CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder()
-                                                                                                    .bucket(bucketName)
-                                                                                                    .key(key())
-                                                                                                    .build();
-            uploadId = s3Client.createMultipartUpload(createMultipartUploadRequest).uploadId();
+            CreateMultipartUploadRequest req = CreateMultipartUploadRequest
+                    .builder()
+                    .bucket(bucketName)
+                    .key(key())
+                    .build();
+
+            uploadId = s3Client.createMultipartUpload(req).uploadId();
         }
 
         private void checkIfBucketExists() {
-            GetBucketLocationRequest bucketLocationRequest = GetBucketLocationRequest.builder().bucket(bucketName).build();
-            if (!s3Client.getBucketLocation(bucketLocationRequest).locationConstraint().equals(BucketLocationConstraint.UNKNOWN_TO_SDK_VERSION)) {
+            GetBucketLocationResponse resp = s3Client.getBucketLocation(b -> b.bucket(bucketName));
+            if (!resp.locationConstraint().equals(BucketLocationConstraint.UNKNOWN_TO_SDK_VERSION)) {
                 throw new IllegalArgumentException("Bucket [" + bucketName + "] does not exist");
             }
         }
@@ -202,13 +202,15 @@ public final class S3Sinks {
             }
 
             buffer.flip();
-            UploadPartRequest uploadRequest = UploadPartRequest.builder()
-                                                               .bucket(bucketName)
-                                                               .key(key())
-                                                               .uploadId(uploadId)
-                                                               .partNumber(partNumber)
-                                                               .build();
-            String eTag = s3Client.uploadPart(uploadRequest, RequestBody.fromByteBuffer(buffer)).eTag();
+            UploadPartRequest req = UploadPartRequest
+                    .builder()
+                    .bucket(bucketName)
+                    .key(key())
+                    .uploadId(uploadId)
+                    .partNumber(partNumber)
+                    .build();
+
+            String eTag = s3Client.uploadPart(req, RequestBody.fromByteBuffer(buffer)).eTag();
             completedParts.add(CompletedPart.builder().partNumber(partNumber).eTag(eTag).build());
             partNumber++;
             buffer.clear();
@@ -222,19 +224,15 @@ public final class S3Sinks {
                 if (completedParts.isEmpty()) {
                     abortUpload();
                 } else {
-                    CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload
-                            .builder()
-                            .parts(completedParts)
-                            .build();
-
-                    CompleteMultipartUploadRequest completeMultipartUploadRequest = CompleteMultipartUploadRequest
+                    CompleteMultipartUploadRequest req = CompleteMultipartUploadRequest
                             .builder()
                             .bucket(bucketName)
                             .key(key())
                             .uploadId(uploadId)
-                            .multipartUpload(completedMultipartUpload)
+                            .multipartUpload(b -> b.parts(completedParts))
                             .build();
-                    s3Client.completeMultipartUpload(completeMultipartUploadRequest);
+
+                    s3Client.completeMultipartUpload(req);
                     completedParts.clear();
                     partNumber = MINIMUM_PART_NUMBER;
                     uploadId = null;
@@ -247,13 +245,7 @@ public final class S3Sinks {
         }
 
         private void abortUpload() {
-            AbortMultipartUploadRequest abortMultipartUploadRequest = AbortMultipartUploadRequest
-                    .builder()
-                    .uploadId(uploadId)
-                    .bucket(bucketName)
-                    .key(key())
-                    .build();
-            s3Client.abortMultipartUpload(abortMultipartUploadRequest);
+            s3Client.abortMultipartUpload(b -> b.uploadId(uploadId).bucket(bucketName).key(key()));
         }
 
         private String key() {
