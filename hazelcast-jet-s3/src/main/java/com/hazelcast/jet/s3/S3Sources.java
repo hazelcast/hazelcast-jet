@@ -87,7 +87,7 @@ public final class S3Sources {
      *      Arrays.asList("bucket1", "bucket2"),
      *      "prefix",
      *      StandardCharsets.UTF_8,
-     *      () -> AmazonS3ClientBuilder.standard().build(),
+     *      () -> S3Client.create(),
      *      (filename, line) -> line
      * ));
      * }</pre>
@@ -123,7 +123,6 @@ public final class S3Sources {
 
         private static final int BATCH_COUNT = 1024;
 
-        private final List<String> bucketNames;
         private final String prefix;
         private final S3Client amazonS3;
         private final BiFunctionEx<String, String, ? extends T> mapFn;
@@ -144,14 +143,13 @@ public final class S3Sources {
                 SupplierEx<? extends S3Client> clientSupplier,
                 BiFunctionEx<String, String, ? extends T> mapFn
         ) {
-            this.bucketNames = bucketNames;
             this.prefix = prefix;
             this.amazonS3 = clientSupplier.get();
             this.mapFn = mapFn;
             this.charset = Charset.forName(charsetName);
             this.processorIndex = context.globalProcessorIndex();
             this.totalParallelism = context.totalParallelism();
-            this.iterator = this.bucketNames
+            this.iterator = bucketNames
                     .stream()
                     .flatMap(bucket -> amazonS3.listObjectsV2Paginator(b ->
                             b.bucket(bucket).prefix(this.prefix)).contents().stream()

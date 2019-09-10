@@ -16,10 +16,6 @@
 
 package integration;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
@@ -32,6 +28,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import static java.util.Collections.singletonList;
 
@@ -43,10 +42,10 @@ public class S3 {
         String accessKeySecret = "";
         String prefix = "";
 
-        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
-        AmazonS3 s3 = AmazonS3ClientBuilder
-                .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKeyId, accessKeySecret);
+        S3Client s3 = S3Client
+                .builder()
+                .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .build();
 
         Pipeline p = Pipeline.create();
@@ -60,10 +59,10 @@ public class S3 {
         String accessKeyId = "";
         String accessKeySecret = "";
 
-        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKeyId, accessKeySecret);
-        AmazonS3 s3 = AmazonS3ClientBuilder
-                .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKeyId, accessKeySecret);
+        S3Client s3 = S3Client
+                .builder()
+                .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .build();
 
         Pipeline p = Pipeline.create();

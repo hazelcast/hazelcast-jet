@@ -25,11 +25,9 @@ import com.hazelcast.util.ExceptionUtil;
 import com.hazelcast.util.StringUtil;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.BucketLocationConstraint;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import javax.annotation.Nonnull;
@@ -83,7 +81,7 @@ public final class S3Sinks {
      * Pipeline p = Pipeline.create();
      * p.drawFrom(Sources.map("map"))
      *  .drainTo(S3Sinks.s3("bucket", "my-map-", StandardCharsets.UTF_8,
-     *      () -> AmazonS3ClientBuilder.standard().build(),
+     *      () -> S3Client.create(),
      *      Object::toString
      * ));
      * }</pre>
@@ -118,9 +116,10 @@ public final class S3Sinks {
 
     static final class S3SinkContext<T> {
 
+        static final int DEFAULT_MAXIMUM_PART_NUMBER = 10000;
         static final int MINIMUM_PART_NUMBER = 1;
         // visible for testing
-        static int maximumPartNumber = 10000;
+        static int maximumPartNumber = DEFAULT_MAXIMUM_PART_NUMBER;
 
         private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = (int) MemoryUnit.MEGABYTES.toBytes(5);
 
@@ -167,10 +166,7 @@ public final class S3Sinks {
         }
 
         private void checkIfBucketExists() {
-            GetBucketLocationResponse resp = s3Client.getBucketLocation(b -> b.bucket(bucketName));
-            if (!resp.locationConstraint().equals(BucketLocationConstraint.UNKNOWN_TO_SDK_VERSION)) {
-                throw new IllegalArgumentException("Bucket [" + bucketName + "] does not exist");
-            }
+            s3Client.getBucketLocation(b -> b.bucket(bucketName));
         }
 
         private void receive(T item) {

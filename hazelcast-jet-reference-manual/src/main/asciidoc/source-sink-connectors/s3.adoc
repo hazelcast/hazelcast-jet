@@ -4,9 +4,8 @@ Amazon AWS S3 Object Storage is a production-worthy choice for both a
 data source and a data sink in a batch computation job.
 
 The S3 Source and Sink uses Amazon S3 SDK to connect to the storage.
-The connectors expect the user to provide either an
-https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-s3/src/main/java/com/amazonaws/services/s3/AmazonS3.java[AmazonS3]
-client or credentials (Access key ID, Secret Access Key) to create the
+The connectors expect the user to provide either an S3Client
+client instance or credentials (Access key ID, Secret Access Key) to create the
 client. The source and sink assume the data is in the form of plain
 text and emit/receive data items which represent individual lines of
 text.

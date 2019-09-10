@@ -25,10 +25,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.Assertions;
 import org.junit.Before;
-import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 
 import java.io.BufferedReader;
@@ -42,6 +39,7 @@ import static com.hazelcast.jet.pipeline.GenericPredicates.alwaysTrue;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static software.amazon.awssdk.core.sync.ResponseTransformer.toBytes;
 
 abstract class S3TestBase extends JetTestSupport {
 
@@ -71,11 +69,12 @@ abstract class S3TestBase extends JetTestSupport {
         jet.newJob(p).join();
 
         S3Client client = clientSupplier().get();
-        ListObjectsResponse listing = client.listObjects(ListObjectsRequest.builder().bucket(bucketName).prefix(prefix).build());
+        ListObjectsResponse listing = client.listObjects(req -> req.bucket(bucketName).prefix(prefix));
         long totalLineCount = listing.contents()
                                      .stream()
                                      .filter(object -> object.key().startsWith(prefix))
-                                     .map(object -> client.getObject(GetObjectRequest.builder().bucket(bucketName).key(object.key()).build(), ResponseTransformer.toBytes()))
+                                     .map(object -> client.getObject(req -> req.bucket(bucketName).key(object.key()),
+                                             toBytes()))
                                      .mapToLong(bytes -> assertPayloadAndCount(bytes.asByteArray(), payload))
                                      .sum();
 

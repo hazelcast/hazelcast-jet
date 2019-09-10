@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.examples.files.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.function.BiFunctionEx;
@@ -26,6 +24,8 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.s3.S3Sinks;
 import com.hazelcast.jet.s3.S3Sources;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -85,8 +85,8 @@ public class S3WordCount {
         return p;
     }
 
-    private static AmazonS3 createClient() {
-        return AmazonS3ClientBuilder.standard().build();
+    private static S3Client createClient() {
+        return S3Client.create();
     }
 
     public static void main(String[] args) throws IOException {
@@ -107,17 +107,18 @@ public class S3WordCount {
     }
 
     private static void uploadBooks(String prefix) throws IOException {
-        AmazonS3 s3Client = createClient();
+        S3Client s3Client = createClient();
         try {
             Path path = Paths.get(S3WordCount.class.getResource("/books").getPath());
             Files.list(path)
                  .limit(10)
                  .forEach(book -> {
                      System.out.println("Uploading file " + book.getFileName().toString() + "...");
-                     s3Client.putObject(INPUT_BUCKET, prefix + book.getFileName().toString(), book.toFile());
+                     s3Client.putObject(req -> req.bucket(INPUT_BUCKET).key(prefix + book.getFileName().toString()),
+                             RequestBody.fromFile(book.toFile()));
                  });
         } finally {
-            s3Client.shutdown();
+            s3Client.close();
         }
     }
 
