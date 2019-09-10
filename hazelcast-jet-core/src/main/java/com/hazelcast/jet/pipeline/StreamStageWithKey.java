@@ -99,11 +99,11 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
-     * @param ttl        the time-to-live for each state object, disabled if &lt;0
-     * @param createFn   the function that returns the state object
-     * @param mapFn      the function that receives the state object and the input item and
+     * @param ttl        time-to-live for each state object, disabled if zero or less
+     * @param createFn   function that returns the state object
+     * @param mapFn      function that receives the state object and the input item and
      *                   outputs the result item. It may modify the state object.
-     * @param onEvictFn  the function that Jet calls when evicting a state object
+     * @param onEvictFn  function that Jet calls when evicting a state object
      *
      * @param <S>        type of the state object
      * @param <R>        type of the result
@@ -160,8 +160,8 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
-     * @param ttl      the time-to-live for each state object, disabled if &lt;0
-     * @param createFn the function that returns the state object
+     * @param ttl      time-to-live for each state object, disabled if zero or less
+     * @param createFn function that returns the state object
      * @param filterFn predicate that receives the state object and the input item and
      *                 outputs a boolean value. It may modify the state object.
      * @param <S>      type of the state object
@@ -219,14 +219,14 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
-     * @param ttl        the time-to-live for each state object, disabled if &lt;0
-     * @param createFn the function that returns the state object
-     * @param flatMapFn the function that receives the state object and the input item and
-     *                  outputs the result items. It may modify the state object.
-     * @param onEvictFn  the function that Jet calls when evicting a state object
+     * @param ttl        time-to-live for each state object, disabled if zero or less
+     * @param createFn   function that returns the state object
+     * @param flatMapFn  function that receives the state object and the input item and
+     *                   outputs the result items. It may modify the state object.
+     * @param onEvictFn  function that Jet calls when evicting a state object
      *
-     * @param <S>      type of the state object
-     * @param <R>      type of the result
+     * @param <S>        type of the state object
+     * @param <R>        type of the result
      */
     @Nonnull
     <S, R> StreamStage<R> flatMapStateful(

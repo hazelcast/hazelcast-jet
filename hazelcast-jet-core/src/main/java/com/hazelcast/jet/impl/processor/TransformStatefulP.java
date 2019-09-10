@@ -96,7 +96,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     @Nonnull
     private Traverser<R> flatMapEvent(T event) {
         long timestamp = timestampFn.applyAsLong(event);
-        if (timestamp < currentWm && ttl < Long.MAX_VALUE) {
+        if (timestamp < currentWm && ttl != Long.MAX_VALUE) {
             logLateEvent(getLogger(), currentWm, event);
             lazyIncrement(lateEventsDropped);
             return Traversers.empty();

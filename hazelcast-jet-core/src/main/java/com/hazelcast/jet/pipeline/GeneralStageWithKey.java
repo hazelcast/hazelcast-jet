@@ -84,8 +84,8 @@ public interface GeneralStageWithKey<T, K> {
      * This code has the same result as {@link #rollingAggregate
      * latencies.groupingKey(Entry::getKey).rollingAggregate(summing())}.
      *
-     * @param createFn the function that returns the state object
-     * @param mapFn    the function that receives the state object and the input item and
+     * @param createFn function that returns the state object
+     * @param mapFn    function that receives the state object and the input item and
      *                 outputs the result item. It may modify the state object.
      * @param <S>      type of the state object
      * @param <R>      type of the result
@@ -154,8 +154,8 @@ public interface GeneralStageWithKey<T, K> {
      *         );
      * }</pre>
      *
-     * @param createFn  the function that returns the state object
-     * @param flatMapFn the function that receives the state object and the input item and
+     * @param createFn  function that returns the state object
+     * @param flatMapFn function that receives the state object and the input item and
      *                  outputs the result items. It may modify the state
      *                  object. It must not return null traverser, but can
      *                  return an {@linkplain Traversers#empty() empty traverser}.
