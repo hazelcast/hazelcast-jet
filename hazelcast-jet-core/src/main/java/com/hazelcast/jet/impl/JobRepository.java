@@ -388,7 +388,7 @@ public class JobRepository {
             return null;
         }
         if (error instanceof JetException) {
-            return error.toString().substring((JetException.class.getName() + ": ").length());
+            return error.getMessage();
         }
         return error.toString();
     }
