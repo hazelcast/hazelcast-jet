@@ -27,7 +27,6 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nonnull;
@@ -43,7 +42,6 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toMap;
 
 /**
  * Contains factory methods for creating AWS S3 sources.
@@ -133,9 +131,10 @@ public final class S3Sources {
         private final int processorIndex;
         private final int totalParallelism;
 
-        private Iterator<Entry<String, S3Object>> iterator;
+        // (bucket, key)
+        private Iterator<Entry<String, String>> iterator;
         private BufferedReader reader;
-        private String objectName;
+        private String currentKey;
 
         private S3SourceContext(
                 List<String> bucketNames,
@@ -152,7 +151,14 @@ public final class S3Sources {
             this.charset = Charset.forName(charsetName);
             this.processorIndex = context.globalProcessorIndex();
             this.totalParallelism = context.totalParallelism();
-            this.iterator = createIterator();
+            this.iterator = this.bucketNames
+                    .stream()
+                    .flatMap(bucket -> amazonS3.listObjectsV2Paginator(b ->
+                            b.bucket(bucket).prefix(this.prefix)).contents().stream()
+                                               .map(S3Object::key)
+                                               .filter(this::belongsToThisProcessor)
+                                               .map(key -> entry(bucket, key))
+                    ).iterator();
         }
 
         private void fillBuffer(SourceBuffer<? super T> buffer) throws IOException {
@@ -162,15 +168,17 @@ public final class S3Sources {
             }
 
             if (iterator.hasNext()) {
-                Entry<String, S3Object> objectEntry = iterator.next();
+                Entry<String, String> objectEntry = iterator.next();
                 String bucketName = objectEntry.getKey();
-                S3Object s3Object = objectEntry.getValue();
-                GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                                                                    .bucket(bucketName)
-                                                                    .key(s3Object.key())
-                                                                    .build();
+                String key = objectEntry.getValue();
+                GetObjectRequest getObjectRequest = GetObjectRequest
+                        .builder()
+                        .bucket(bucketName)
+                        .key(key)
+                        .build();
+
                 ResponseInputStream<GetObjectResponse> responseInputStream = amazonS3.getObject(getObjectRequest);
-                objectName = s3Object.key();
+                currentKey = key;
                 reader = new BufferedReader(new InputStreamReader(responseInputStream, charset));
                 addBatchToBuffer(buffer);
             } else {
@@ -181,33 +189,18 @@ public final class S3Sources {
         }
 
         private void addBatchToBuffer(SourceBuffer<? super T> buffer) throws IOException {
+            assert currentKey != null : "currentKey must not be null";
             for (int i = 0; i < BATCH_COUNT; i++) {
                 String line = reader.readLine();
                 if (line == null) {
                     reader.close();
                     reader = null;
+                    currentKey = null;
                     return;
                 }
-                buffer.add(mapFn.apply(objectName, line));
+                buffer.add(mapFn.apply(currentKey, line));
             }
         }
-
-        private Iterator<Entry<String, S3Object>> createIterator() {
-            return bucketNames
-                    .stream()
-                    .collect(toMap(bucket -> bucket, bucket ->
-                            amazonS3.listObjectsV2Paginator(ListObjectsV2Request.builder()
-                                                                                .bucket(bucket)
-                                                                                .prefix(prefix)
-                                                                                .build()))
-                    )
-                    .entrySet()
-                    .stream()
-                    .flatMap(entry -> entry.getValue().contents().stream().map(o -> entry(entry.getKey(), o)))
-                    .filter(entry -> belongsToThisProcessor(entry.getValue().key()))
-                    .iterator();
-        }
-
 
         private boolean belongsToThisProcessor(String key) {
             return Math.floorMod(key.hashCode(), totalParallelism) == processorIndex;
