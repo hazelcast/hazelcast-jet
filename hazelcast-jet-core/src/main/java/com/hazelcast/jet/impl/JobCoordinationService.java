@@ -278,13 +278,10 @@ public class JobCoordinationService {
                             if (t == null) {
                                 return null;
                             }
-                            if (t instanceof CancellationException) {
+                            if (t instanceof CancellationException || t instanceof JetException) {
                                 throw sneakyThrow(t);
                             }
-                            if (t instanceof JetException) {
-                                throw (JetException) t;
-                            }
-                            throw new JetException(t.toString());
+                            throw new JetException(t);
                         }),
                 JobResult::asCompletableFuture,
                 jobRecord -> {
