@@ -50,10 +50,10 @@ import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.filterUsingPartitionedContextTransform;
@@ -139,8 +139,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 FN_ADAPTER.adaptTimestampFn(),
                 createFn,
-                FN_ADAPTER.adaptStatefulMapFn(mapFn),
-                FN_ADAPTER.adaptStatefulOutputFn((event, key, result) -> result)
+                FN_ADAPTER.<S, Object, T, R>adaptStatefulMapFn((s, k, t) -> mapFn.apply(s, t))
         );
         return (RET) attach(transform);
     }
@@ -157,8 +156,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 FN_ADAPTER.adaptTimestampFn(),
                 createFn,
-                FN_ADAPTER.adaptStatefulFlatMapFn(flatMapFn),
-                FN_ADAPTER.adaptStatefulOutputFn((event, key, result) -> result)
+                FN_ADAPTER.<S, Object, T, R>adaptStatefulFlatMapFn((s, k, t) -> flatMapFn.apply(s, t))
         );
         return (RET) attach(transform);
     }
@@ -169,19 +167,20 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
         checkSerializable(keyFn, "keyFn");
         checkSerializable(createFn, "createFn");
         checkSerializable(mapFn, "mapFn");
-        MapStatefulTransform<T, K, S, R, Entry<K, R>> transform = new MapStatefulTransform(
+        MapStatefulTransform<T, K, S, R> transform = new MapStatefulTransform(
                 this.transform,
                 ttl,
                 FN_ADAPTER.adaptKeyFn(keyFn),
                 FN_ADAPTER.adaptTimestampFn(),
                 createFn,
                 FN_ADAPTER.adaptStatefulMapFn(mapFn),
-                FN_ADAPTER.adaptStatefulOutputFn((e, k, r) -> entry(k, r)));
+                onEvictFn != null ? FN_ADAPTER.adaptOnEvictFn(onEvictFn) : null);
         return (RET) attach(transform);
     }
 
@@ -191,19 +190,20 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         checkSerializable(keyFn, "keyFn");
         checkSerializable(createFn, "createFn");
-        checkSerializable(mapFn, "mapFn");
+        checkSerializable(flatMapFn, "mapFn");
         FlatMapStatefulTransform<T, K, S, R, Entry<K, R>> transform = new FlatMapStatefulTransform(
                 this.transform,
                 ttl,
                 FN_ADAPTER.adaptKeyFn(keyFn),
                 FN_ADAPTER.adaptTimestampFn(),
                 createFn,
-                FN_ADAPTER.adaptStatefulFlatMapFn(mapFn),
-                FN_ADAPTER.adaptStatefulOutputFn((e, k, r) -> entry(k, r)));
+                FN_ADAPTER.adaptStatefulFlatMapFn(flatMapFn),
+                onEvictFn != null ? FN_ADAPTER.adaptOnEvictFlatMapFn(onEvictFn) : null);
         return (RET) attach(transform);
     }
 
