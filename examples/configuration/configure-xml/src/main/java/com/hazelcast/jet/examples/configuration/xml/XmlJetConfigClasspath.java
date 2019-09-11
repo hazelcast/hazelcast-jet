@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package com.hazelcast.jet.examples.configuration.xml;
+
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.InstanceConfig;

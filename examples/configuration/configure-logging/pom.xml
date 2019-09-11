@@ -3,20 +3,14 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>configuration</artifactId>
-        <groupId>com.hazelcast.jet.samples</groupId>
+        <artifactId>hazelcast-jet-examples-configuration</artifactId>
+        <groupId>com.hazelcast.jet.examples</groupId>
         <version>3.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
+    <artifactId>hazelcast-jet-examples-configuration-logging</artifactId>
 
-
-    <artifactId>configure-logging</artifactId>
-    <name>Configuration - Logging Configuration</name>
-
-    <description>
-        Configuration - Logging Configuration
-    </description>
     <properties>
         <!-- needed for checkstyle/findbugs -->
         <main.basedir>${project.parent.parent.basedir}</main.basedir>

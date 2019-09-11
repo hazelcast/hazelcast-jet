@@ -9,10 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>configuration</artifactId>
-
-    <name>Configuration</name>
-    <description>Code samples for Hazelcast Jet related to configuration and logging basics.</description>
+    <artifactId>hazelcast-jet-examples-configuration</artifactId>
 
     <packaging>pom</packaging>
     <modules>

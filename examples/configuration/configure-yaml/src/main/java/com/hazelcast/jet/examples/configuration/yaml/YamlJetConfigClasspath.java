@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.hazelcast.jet.examples.configuration.yaml;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
