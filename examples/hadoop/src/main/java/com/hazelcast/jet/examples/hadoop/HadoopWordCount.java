@@ -64,21 +64,35 @@ public class HadoopWordCount {
 
     private static final String OUTPUT_PATH = "hadoop-word-count";
 
-    private static Pipeline buildPipeline(Path inputPath, Path outputPath) {
-        JobConf jobConfig = new JobConf();
-        jobConfig.setInputFormat(TextInputFormat.class);
-        jobConfig.setOutputFormat(TextOutputFormat.class);
-        TextOutputFormat.setOutputPath(jobConfig, outputPath);
-        TextInputFormat.addInputPath(jobConfig, inputPath);
+    private static Pipeline buildPipeline(JobConf jobConf, Path inputPath, Path outputPath) {
+        jobConf.setInputFormat(TextInputFormat.class);
+        jobConf.setOutputFormat(TextOutputFormat.class);
+        TextOutputFormat.setOutputPath(jobConf, outputPath);
+        TextInputFormat.addInputPath(jobConf, inputPath);
 
         final Pattern regex = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.hdfs(jobConfig, (k, v) -> v.toString()))
+        p.drawFrom(HdfsSources.hdfs(jobConf, (k, v) -> v.toString()))
          .flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(HdfsSinks.hdfs(jobConfig));
+         .drainTo(HdfsSinks.hdfs(jobConf));
         return p;
+    }
+
+    public static void executeSample(JobConf jobConf, Path inputPath, Path outputPath) {
+        try {
+            JetInstance jet = Jet.newJetInstance();
+            Jet.newJetInstance();
+            System.out.print("\nCounting words from " + inputPath);
+            long start = nanoTime();
+            Pipeline p = buildPipeline(jobConf, inputPath, outputPath);
+            jet.newJob(p).join();
+            System.out.println("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
+            System.out.println("Output written to " + outputPath);
+        } finally {
+            Jet.shutdownAll();
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -86,18 +100,7 @@ public class HadoopWordCount {
         Path outputPath = new Path(OUTPUT_PATH);
         // delete the output directory, if already exists
         FileSystem.get(new Configuration()).delete(outputPath, true);
-        try {
-            JetInstance jet = Jet.newJetInstance();
-            Jet.newJetInstance();
-            System.out.print("\nCounting words from " + inputPath);
-            long start = nanoTime();
-            Pipeline p = buildPipeline(inputPath, outputPath);
-            jet.newJob(p).join();
-            System.out.println("Done in " + NANOSECONDS.toMillis(nanoTime() - start) + " milliseconds.");
-            System.out.println("Output written to " + outputPath);
-        } finally {
-            Jet.shutdownAll();
-        }
+        executeSample(new JobConf(), inputPath, outputPath);
     }
 
 }
