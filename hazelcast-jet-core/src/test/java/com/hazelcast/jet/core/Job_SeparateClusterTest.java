@@ -30,14 +30,22 @@ import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import org.hamcrest.Matchers;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -148,5 +156,59 @@ public class Job_SeparateClusterTest extends JetTestSupport {
         // Then
         expectedException.expectMessage(Matchers.containsString(ex.getMessage()));
         job.join();
+    }
+
+    @Test
+    public void stressTest_getJobStatus_client() throws Exception {
+        JetInstance client = createJetClient();
+        stressTest_getJobStatus(() -> client);
+    }
+
+    @Test
+    @Ignore("fails currently")
+    public void stressTest_getJobStatus_member() throws Exception {
+        stressTest_getJobStatus(() -> instance1);
+    }
+
+    private void stressTest_getJobStatus(Supplier<JetInstance> submitterSupplier) throws Exception {
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT * 2)));
+        AtomicReference<Job> job = new AtomicReference<>(submitterSupplier.get().newJob(dag));
+
+        AtomicBoolean done = new AtomicBoolean();
+        List<Runnable> actions = asList(
+                () -> job.get().getStatus(),
+                () -> job.get().getMetrics(),
+                () -> job.get().getConfig()
+        );
+        List<Future> checkerFutures = new ArrayList<>();
+        for (Runnable action : actions) {
+            checkerFutures.add(spawn(() -> {
+                while (!done.get()) {
+                    action.run();
+                }
+            }));
+        }
+
+        for (int i = 0; i < 5; i++) {
+            instance1.shutdown();
+            instance1 = createJetMember();
+            job.set(submitterSupplier.get().getJob(job.get().getId()));
+            assertJobStatusEventually(job.get(), RUNNING);
+
+            instance2.shutdown();
+            instance2 = createJetMember();
+            job.set(submitterSupplier.get().getJob(job.get().getId()));
+            assertJobStatusEventually(job.get(), RUNNING);
+
+            sleepSeconds(1);
+            if (checkerFutures.stream().anyMatch(Future::isDone)) {
+                break;
+            }
+        }
+
+        done.set(true);
+        for (Future future : checkerFutures) {
+            future.get();
+        }
     }
 }
