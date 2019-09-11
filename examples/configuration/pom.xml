@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.hazelcast.jet.examples</groupId>
+        <artifactId>hazelcast-jet-examples</artifactId>
+        <version>3.2-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>configuration</artifactId>
+
+    <name>Configuration</name>
+    <description>Code samples for Hazelcast Jet related to configuration and logging basics.</description>
+
+    <packaging>pom</packaging>
+    <modules>
+        <module>configure-logging</module>
+        <module>configure-yaml</module>
+        <module>configure-xml</module>
+    </modules>
+
+    <properties>
+        <!-- needed for checkstyle/findbugs -->
+        <main.basedir>${project.parent.basedir}</main.basedir>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+
+
+</project>
