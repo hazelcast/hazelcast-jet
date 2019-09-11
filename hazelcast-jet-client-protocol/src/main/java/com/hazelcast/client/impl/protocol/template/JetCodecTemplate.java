@@ -54,7 +54,7 @@ public interface JetCodecTemplate {
     @Request(id = 10, retryable = false, response = ResponseMessageConst.VOID)
     void resumeJob(long jobId);
 
-    @Request(id = 11, retryable = true, response = ResponseMessageConst.VOID)
+    @Request(id = 11, retryable = false, response = ResponseMessageConst.VOID)
     void exportSnapshot(long jobId, String name, boolean cancelJob);
 
     @Request(id = 12, retryable = true, response = ResponseMessageConst.DATA)
