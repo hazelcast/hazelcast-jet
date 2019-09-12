@@ -57,7 +57,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
-    private static final long RETRY_DELAY_NS = MILLISECONDS.toNanos(100);
+    private static final long RETRY_DELAY_NS = MILLISECONDS.toNanos(200);
+    private static final int RETRY_MAX_COUNT = 10;
 
     ClientJobProxy(JetClientInstanceImpl client, long jobId) {
         super(client, jobId);
@@ -183,11 +184,14 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
     }
 
     private <T> T callAndRetryIfTargetNotFound(Callable<T> action) {
-        for (;;) {
+        for (int retryCount = 0; ; retryCount++) {
             try {
                 return action.call();
             } catch (Exception e) {
-                if (e instanceof ExecutionException && e.getCause() instanceof TargetNotMemberException) {
+                if (retryCount < RETRY_MAX_COUNT
+                        && e instanceof ExecutionException
+                        && e.getCause() instanceof TargetNotMemberException
+                ) {
                     // ignore the TargetNotMemberException and retry with new master
                     LockSupport.parkNanos(RETRY_DELAY_NS);
                     continue;
