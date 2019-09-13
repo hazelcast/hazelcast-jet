@@ -26,20 +26,22 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.Assertions;
 import org.junit.Before;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.pipeline.GenericPredicates.alwaysTrue;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static software.amazon.awssdk.core.sync.ResponseTransformer.toBytes;
+import static software.amazon.awssdk.core.sync.ResponseTransformer.toInputStream;
 
 abstract class S3TestBase extends JetTestSupport {
 
@@ -64,21 +66,20 @@ abstract class S3TestBase extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map, alwaysTrue(), Map.Entry::getValue))
-         .drainTo(S3Sinks.s3(bucketName, prefix, StandardCharsets.UTF_8, clientSupplier(), Object::toString));
+         .drainTo(S3Sinks.s3(bucketName, prefix, UTF_8, clientSupplier(), Object::toString));
 
         jet.newJob(p).join();
 
         try (S3Client client = clientSupplier().get()) {
-            ListObjectsResponse listing = client.listObjects(req -> req.bucket(bucketName).prefix(prefix));
-            long totalLineCount = listing.contents()
-                                         .stream()
-                                         .filter(object -> object.key().startsWith(prefix))
-                                         .map(object -> client.getObject(req -> req.bucket(bucketName).key(object.key()),
-                                                 toBytes()))
-                                         .mapToLong(bytes -> assertPayloadAndCount(bytes.asByteArray(), payload))
-                                         .sum();
-
-            assertEquals(itemCount, totalLineCount);
+            long lineCount = client
+                    .listObjects(req -> req.bucket(bucketName).prefix(prefix))
+                    .contents()
+                    .stream()
+                    .map(o -> client.getObject(req -> req.bucket(bucketName).key(o.key()), toInputStream()))
+                    .flatMap(this::inputStreamToLines)
+                    .peek(line -> assertEquals(payload, line))
+                    .count();
+            assertEquals(itemCount, lineCount);
         }
     }
 
@@ -99,14 +100,20 @@ abstract class S3TestBase extends JetTestSupport {
 
     abstract SupplierEx<S3Client> clientSupplier();
 
-    static long assertPayloadAndCount(byte[] bytes, String expectedPayload) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes)))) {
-            return reader.lines().peek(s -> assertEquals(expectedPayload, s)).count();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return -1;
+    void deleteBucket(S3Client client, String bucket) {
+        try {
+            client.deleteBucket(b -> b.bucket(bucket));
+        } catch (NoSuchBucketException ignored) {
         }
     }
 
+    Stream<String> inputStreamToLines(InputStream is) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            // materialize the stream, since we can't read it afterwards
+            return reader.lines().collect(Collectors.toList()).stream();
+        } catch (IOException e) {
+            throw new AssertionError("Error reading file ", e);
+        }
+    }
 
 }

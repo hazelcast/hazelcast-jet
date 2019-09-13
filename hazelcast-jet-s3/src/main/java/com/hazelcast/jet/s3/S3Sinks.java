@@ -121,7 +121,8 @@ public final class S3Sinks {
         // visible for testing
         static int maximumPartNumber = DEFAULT_MAXIMUM_PART_NUMBER;
 
-        private static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = (int) MemoryUnit.MEGABYTES.toBytes(5);
+        static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = (int) MemoryUnit.MEGABYTES.toBytes(5);
+        static final int BUFFER_SIZE = 2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE;
 
         private final String bucketName;
         private final String prefix;
@@ -129,8 +130,8 @@ public final class S3Sinks {
         private final S3Client s3Client;
         private final FunctionEx<? super T, String> toStringFn;
         private final Charset charset;
-        private final byte[] lineSeparator;
-        private final ByteBuffer buffer = ByteBuffer.allocateDirect(2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
+        private final byte[] lineSeparatorBytes;
+        private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
         private final List<CompletedPart> completedParts = new ArrayList<>();
 
         private int partNumber = MINIMUM_PART_NUMBER; // must be between 1 and maximumPartNumber
@@ -150,7 +151,7 @@ public final class S3Sinks {
             this.s3Client = clientSupplier.get();
             this.toStringFn = toStringFn;
             this.charset = Charset.forName(charsetName);
-            this.lineSeparator = System.lineSeparator().getBytes(charset);
+            this.lineSeparatorBytes = System.lineSeparator().getBytes(charset);
 
             checkIfBucketExists();
         }
@@ -170,8 +171,21 @@ public final class S3Sinks {
         }
 
         private void receive(T item) {
-            buffer.put(toStringFn.apply(item).getBytes(charset));
-            buffer.put(lineSeparator);
+            write(toStringFn.apply(item).getBytes(charset));
+            write(lineSeparatorBytes);
+        }
+
+        private void write(byte[] bytes) {
+            int remaining = bytes.length;
+            while (remaining > 0) {
+                int length = Math.min(buffer.remaining(), remaining);
+                int offset = bytes.length - remaining;
+                buffer.put(bytes, offset, length);
+                remaining -= length;
+                if (buffer.remaining() == 0 || buffer.remaining() < remaining) {
+                    flush();
+                }
+            }
         }
 
         private void flush() {

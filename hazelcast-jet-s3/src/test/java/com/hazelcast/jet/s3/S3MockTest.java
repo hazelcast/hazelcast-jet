@@ -17,20 +17,28 @@
 package com.hazelcast.jet.s3;
 
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static java.lang.System.lineSeparator;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.IntStream.range;
+import static org.junit.Assert.assertEquals;
+import static software.amazon.awssdk.core.sync.ResponseTransformer.toInputStream;
 
 public class S3MockTest extends S3TestBase {
 
@@ -45,11 +53,8 @@ public class S3MockTest extends S3TestBase {
 
     @BeforeClass
     public static void setupS3() {
-        S3SinkContext.maximumPartNumber = 1;
         s3MockContainer.followOutput(outputFrame -> logger.info(outputFrame.getUtf8String().trim()));
         s3Client = s3MockContainer.client();
-        s3Client.createBucket(CreateBucketRequest.builder().bucket(SOURCE_BUCKET).build());
-        s3Client.createBucket(CreateBucketRequest.builder().bucket(SINK_BUCKET).build());
     }
 
     @AfterClass
@@ -58,17 +63,61 @@ public class S3MockTest extends S3TestBase {
         S3SinkContext.maximumPartNumber = S3SinkContext.DEFAULT_MAXIMUM_PART_NUMBER;
     }
 
+    @Before
+    public void setup() {
+        deleteBucket(s3Client, SOURCE_BUCKET);
+        deleteBucket(s3Client, SINK_BUCKET);
+    }
+
     @Test
-    public void testMockSink() {
+    public void when_manySmallItems() {
+        S3SinkContext.maximumPartNumber = 1;
+        s3Client.createBucket(b -> b.bucket(SINK_BUCKET));
+
         testSink(jet, SINK_BUCKET);
     }
 
     @Test
-    public void testMockSource() {
+    public void when_itemsLargerThanBuffer() {
+        s3Client.createBucket(b -> b.bucket(SINK_BUCKET));
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < S3SinkContext.BUFFER_SIZE / 10; i++) {
+            sb.append("012345678901234567890");
+        }
+        String expected = sb.toString();
+
+        Pipeline p = Pipeline.create();
+        p.drawFrom(TestSources.items(expected))
+         .drainTo(S3Sinks.s3(SINK_BUCKET, null, UTF_8, clientSupplier(), Object::toString));
+
+        jet.newJob(p).join();
+
+        try (S3Client client = clientSupplier().get()) {
+            List<String> lines = client
+                    .listObjects(req -> req.bucket(SINK_BUCKET))
+                    .contents()
+                    .stream()
+                    .peek(o -> System.out.println(o))
+                    .map(object -> client.getObject(req -> req.bucket(SINK_BUCKET).key(object.key()), toInputStream()))
+                    .flatMap(this::inputStreamToLines)
+                    .collect(Collectors.toList());
+
+            assertEquals(1, lines.size());
+            String actual = lines.get(0);
+            assertEquals(expected.length(), actual.length());
+            assertEquals(expected, actual);
+        }
+    }
+
+
+    @Test
+    public void when_simpleSource() {
         int objectCount = 20;
         int lineCount = 100;
         generateAndUploadObjects(objectCount, lineCount);
 
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET));
         testSource(jet, SOURCE_BUCKET, "object-", objectCount, lineCount);
     }
 
