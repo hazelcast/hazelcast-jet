@@ -25,12 +25,17 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.nio.Address;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -41,17 +46,16 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
-import static org.apache.hadoop.mapred.Reporter.NULL;
 
 /**
  * See {@link HdfsSources#hdfs}.
  */
-public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
+public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
 
     private final Traverser<R> trav;
     private final BiFunctionEx<K, V, R> projectionFn;
 
-    private ReadHdfsP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+    private ReadNewHdfsP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
         this.trav = traverseIterable(recordReaders).flatMap(this::traverseRecordReader);
         this.projectionFn = projectionFn;
     }
@@ -68,10 +72,10 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
 
     private Traverser<R> traverseRecordReader(RecordReader<K, V> r) {
         return () -> {
-            K key = r.createKey();
-            V value = r.createValue();
             try {
-                while (r.next(key, value)) {
+                K key = r.getCurrentKey();
+                V value = r.getCurrentValue();
+                while (r.nextKeyValue()) {
                     R projectedRecord = projectionFn.apply(key, value);
                     if (projectedRecord != null) {
                         return projectedRecord;
@@ -79,13 +83,13 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                 }
                 r.close();
                 return null;
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw sneakyThrow(e);
             }
         };
     }
 
-    public static class MetaSupplier<K, V, R> extends HdfsMetaSupplierBase  {
+    public static class MetaSupplier<K, V, R> extends HdfsMetaSupplierBase {
 
         static final long serialVersionUID = 1L;
 
@@ -109,11 +113,15 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
             int totalParallelism = context.totalParallelism();
-            InputFormat inputFormat = jobConf.getInputFormat();
-            InputSplit[] splits = inputFormat.getSplits(jobConf, totalParallelism);
-            IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.length];
-            Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits[i]));
-
+            Class<?> inputFormatClass = jobConf.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
+            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, jobConf);
+            Job job = Job.getInstance(jobConf);
+            if (inputFormat instanceof FileInputFormat) {
+                FileInputFormat.setMaxInputSplitSize(job, totalParallelism);
+            }
+            List<InputSplit> splits = inputFormat.getSplits(job);
+            IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.size()];
+            Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits.get(i)));
             Address[] addrs = context.jetInstance().getCluster().getMembers()
                                      .stream().map(Member::getAddress).toArray(Address[]::new);
             assigned = assignSplitsToMembers(indexedInputSplits, addrs);
@@ -128,6 +136,7 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                     assigned.get(address) != null ? assigned.get(address) : emptyList(),
                     mapper);
         }
+
     }
 
     private static class Supplier<K, V, R> extends HdfsProcessorSupplierBase<K, V, R> {
@@ -145,17 +154,26 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
         @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = getProcessorToSplits(count);
-            InputFormat inputFormat = jobConf.getInputFormat();
+            Class<?> inputFormatClass = jobConf.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
+            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, jobConf);
 
             return processorToSplits
-                    .values().stream()
+                    .values()
+                    .stream()
                     .map(splits -> splits.isEmpty()
                             ? Processors.noopP().get()
-                            : new ReadHdfsP<>(splits.stream()
-                                                    .map(IndexedInputSplit::getOldSplit)
-                                                    .map(split -> uncheckCall(() ->
-                                                            inputFormat.getRecordReader(split, jobConf, NULL)))
-                                                    .collect(toList()), mapper)
+                            : new ReadNewHdfsP<>(splits
+                            .stream()
+                            .map(IndexedInputSplit::getNewSplit)
+                            .map(split -> uncheckCall(() -> {
+                                        TaskAttemptContextImpl attemptContext = new TaskAttemptContextImpl(jobConf,
+                                                new TaskAttemptID());
+                                        RecordReader reader = inputFormat.createRecordReader(split, attemptContext);
+                                        reader.initialize(split, attemptContext);
+                                        return reader;
+                                    }
+                            ))
+                            .collect(toList()), mapper)
                     ).collect(toList());
         }
 
