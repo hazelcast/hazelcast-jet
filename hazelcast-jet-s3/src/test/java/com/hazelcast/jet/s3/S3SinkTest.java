@@ -59,7 +59,33 @@ public class S3SinkTest extends S3TestBase {
 
     @Test
     public void test() {
-        testSink(jet, bucketName);
+        testSink(bucketName);
+    }
+
+    @Test
+    public void when_writesToExistingFile_then_overwritesFile() {
+        testSink(bucketName, "my-objects-", 100);
+        testSink(bucketName, "my-objects-", 200);
+    }
+
+    @Test
+    public void when_drainToNotExistingBucket() {
+        testSinkWithNotExistingBucket("jet-s3-connector-test-bucket-sink-THIS-BUCKET-DOES-NOT-EXIST");
+    }
+
+    @Test
+    public void when_withSpaceInName() {
+        testSink(bucketName, "file with space", 10);
+    }
+
+    @Test
+    public void when_withNonAsciiSymbolInName() {
+        testSink(bucketName, "测试", 10);
+    }
+
+    @Test
+    public void when_withNonAsciiSymbolInFile() {
+        testSink(bucketName, "fileWithNonAsciiSymbol", 10, "测试");
     }
 
     SupplierEx<S3Client> clientSupplier() {

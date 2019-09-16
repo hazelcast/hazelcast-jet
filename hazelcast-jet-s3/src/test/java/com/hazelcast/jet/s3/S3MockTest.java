@@ -23,6 +23,7 @@ import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import java.util.ArrayList;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -51,7 +52,13 @@ public class S3MockTest extends S3TestBase {
 
     private static final ILogger logger = Logger.getLogger(S3MockTest.class);
     private static final String SOURCE_BUCKET = "source-bucket";
+    private static final String SOURCE_BUCKET_2 = "source-bucket-2";
+    private static final String SOURCE_BUCKET_EMPTY = "source-bucket-empty";
     private static final String SINK_BUCKET = "sink-bucket";
+    private static final String SINK_BUCKET_OVERWRITE = "sink-bucket-overwrite";
+    private static final String SINK_BUCKET_NONASCII = "sink-bucket-nonascii";
+
+    private static final int LINE_COUNT = 100;
 
     private static S3Client s3Client;
 
@@ -69,7 +76,11 @@ public class S3MockTest extends S3TestBase {
     @Before
     public void setup() {
         deleteBucket(s3Client, SOURCE_BUCKET);
+        deleteBucket(s3Client, SOURCE_BUCKET_2);
+        deleteBucket(s3Client, SOURCE_BUCKET_EMPTY);
         deleteBucket(s3Client, SINK_BUCKET);
+        deleteBucket(s3Client, SINK_BUCKET_OVERWRITE);
+        deleteBucket(s3Client, SINK_BUCKET_NONASCII);
     }
 
     @After
@@ -78,15 +89,15 @@ public class S3MockTest extends S3TestBase {
     }
 
     @Test
-    public void when_manySmallItems() {
+    public void when_manySmallItemsToSink() {
         S3SinkContext.maximumPartNumber = 1;
         s3Client.createBucket(b -> b.bucket(SINK_BUCKET));
 
-        testSink(jet, SINK_BUCKET);
+        testSink(SINK_BUCKET);
     }
 
     @Test
-    public void when_itemsLargerThanBuffer() {
+    public void when_itemsToSinkIsLargerThanBuffer() {
         s3Client.createBucket(b -> b.bucket(SINK_BUCKET));
 
         StringBuilder sb = new StringBuilder();
@@ -118,31 +129,124 @@ public class S3MockTest extends S3TestBase {
         }
     }
 
-
     @Test
     public void when_simpleSource() {
         s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET));
+        generateAndUploadObjects(SOURCE_BUCKET, "object-", 20, LINE_COUNT);
 
-        int objectCount = 20;
-        int lineCount = 100;
-        generateAndUploadObjects(objectCount, lineCount);
+        testSource(SOURCE_BUCKET, "object-", 20, LINE_COUNT);
+    }
 
-        testSource(jet, SOURCE_BUCKET, "object-", objectCount, lineCount);
+    @Test
+    public void when_sourceWithPrefix() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET));
+        generateAndUploadObjects(SOURCE_BUCKET, "object-", 20, LINE_COUNT);
+
+        testSource(SOURCE_BUCKET, "object-1", 11, LINE_COUNT);
+    }
+
+    @Test
+    public void when_sourceReadFromFolder() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET_2));
+        generateAndUploadObjects(SOURCE_BUCKET_2, "object-", 4, LINE_COUNT);
+        generateAndUploadObjects(SOURCE_BUCKET_2, "testFolder/object-", 5, LINE_COUNT);
+
+        testSource(SOURCE_BUCKET_2, "testFolder", 5, LINE_COUNT);
+    }
+
+    @Test
+    public void when_sourceWithNotExistingBucket() {
+        testSourceWithNotExistingBucket("jet-s3-connector-test-bucket-source-THIS-BUCKET-DOES-NOT-EXIST");
+    }
+
+    @Test
+    public void when_sourceWithNotExistingPrefix() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET_2));
+        generateAndUploadObjects(SOURCE_BUCKET_2, "object-", 4, LINE_COUNT);
+
+        testSourceWithEmptyResults(SOURCE_BUCKET_2, "THIS-PREFIX-DOES-NOT-EXIST");
+    }
+
+    @Test
+    public void when_sourceWithEmptyBucket() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET_EMPTY));
+
+        testSourceWithEmptyResults(SOURCE_BUCKET_EMPTY, null);
+    }
+
+    @Test
+    public void when_sourceWithTwoBuckets() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET));
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET_2));
+        generateAndUploadObjects(SOURCE_BUCKET, "object-", 20, LINE_COUNT);
+        generateAndUploadObjects(SOURCE_BUCKET_2, "object-", 4, LINE_COUNT);
+        generateAndUploadObjects(SOURCE_BUCKET_2, "testFolder/object-", 5, LINE_COUNT);
+
+        List<String> buckets = new ArrayList<>();
+        buckets.add(SOURCE_BUCKET);
+        buckets.add(SOURCE_BUCKET_2);
+        testSource(buckets, "object-3", 2, LINE_COUNT);
+    }
+
+    @Test
+    public void when_sinkWritesToExistingFile_then_overwritesFile() {
+        s3Client.createBucket(b -> b.bucket(SINK_BUCKET_OVERWRITE));
+        testSink(SINK_BUCKET_OVERWRITE, "my-objects-", 100);
+        testSink(SINK_BUCKET_OVERWRITE, "my-objects-", 200);
+    }
+
+    @Test
+    public void when_drainToNotExistingBucket() {
+        testSinkWithNotExistingBucket("jet-s3-connector-test-bucket-sink-THIS-BUCKET-DOES-NOT-EXIST");
+    }
+
+    @Test
+    public void when_sourceWithNonAsciiSymbolInName() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET_2));
+        generateAndUploadObjects(SOURCE_BUCKET_2, "测试", 1, LINE_COUNT);
+
+        testSource(SOURCE_BUCKET_2, "测试", 1, LINE_COUNT);
+    }
+
+    @Test
+    public void when_sourceWithNonAsciiSymbolInFile() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET_2));
+        generateAndUploadObjects(SOURCE_BUCKET_2, "fileWithNonASCIISymbol", 1, LINE_COUNT, "测试-");
+
+        testSource(SOURCE_BUCKET_2, "fileWithNonASCIISymbol", 1, LINE_COUNT, "^测试\\-\\d+$");
+    }
+
+    @Test
+    public void when_sinkWithNonAsciiSymbolInName() {
+        s3Client.createBucket(b -> b.bucket(SINK_BUCKET_NONASCII));
+
+        testSink(SINK_BUCKET_NONASCII, "测试", 10);
+    }
+
+    @Test
+    public void when_sinkWithNonAsciiSymbolInFile() {
+        s3Client.createBucket(b -> b.bucket(SINK_BUCKET_NONASCII));
+
+        testSink(SINK_BUCKET_NONASCII, "fileWithNonAsciiSymbol", 10, "测试");
     }
 
     SupplierEx<S3Client> clientSupplier() {
         return () -> S3MockContainer.client(s3MockContainer.endpointURL());
     }
 
+    private void generateAndUploadObjects(String bucketName, String prefix, int objectCount, int lineCount) {
+        generateAndUploadObjects(bucketName, prefix, objectCount, lineCount, "line-");
+    }
 
-    private void generateAndUploadObjects(int objectCount, int lineCount) {
+    private void generateAndUploadObjects(String bucketName, String prefix, int objectCount, int lineCount,
+            String textPrefix) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < objectCount; i++) {
-            range(0, lineCount).forEach(j -> builder.append("line-").append(j).append(lineSeparator()));
+            range(0, lineCount).forEach(j -> builder.append(textPrefix).append(j).append(lineSeparator()));
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                                                                .bucket(SOURCE_BUCKET)
-                                                                .key("object-" + i)
-                                                                .build();
+                    .bucket(bucketName)
+                    .key(prefix + i)
+                    .build();
             s3Client.putObject(putObjectRequest, RequestBody.fromString(builder.toString()));
             builder.setLength(0);
         }

@@ -22,8 +22,10 @@ import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.Assertions;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
@@ -32,6 +34,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,6 +44,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static software.amazon.awssdk.core.sync.ResponseTransformer.toInputStream;
 
 abstract class S3TestBase extends JetTestSupport {
@@ -53,12 +57,16 @@ abstract class S3TestBase extends JetTestSupport {
         createJetMember();
     }
 
-    void testSink(JetInstance jet, String bucketName) {
-        IMapJet<Integer, String> map = jet.getMap("map");
+    void testSink(String bucketName) {
+        testSink(bucketName, "my-objects-", 20000);
+    }
 
-        int itemCount = 20000;
-        String prefix = "my-objects-";
-        String payload = generateRandomString(1_000);
+    void testSink(String bucketName, String prefix, int itemCount) {
+        testSink(bucketName, prefix, itemCount, generateRandomString(1_000));
+    }
+
+    void testSink(String bucketName, String prefix, int itemCount, String payload) {
+        IMapJet<Integer, String> map = jet.getMap("map");
 
         for (int i = 0; i < itemCount; i++) {
             map.put(i, payload);
@@ -83,19 +91,67 @@ abstract class S3TestBase extends JetTestSupport {
         }
     }
 
-    void testSource(JetInstance jet, String bucketName, String prefix, int objectCount, int lineCount) {
+    void testSource(String bucketName, String prefix, int objectCount, int lineCount) {
+        testSource(bucketName, prefix, objectCount, lineCount, "^line\\-\\d+$");
+    }
+
+    void testSource(String bucketName, String prefix, int objectCount, int lineCount, String match) {
+        testSource(singletonList(bucketName), prefix, objectCount, lineCount, match);
+    }
+
+    void testSource(List<String> bucketNames, String prefix, int objectCount, int lineCount) {
+        testSource(bucketNames, prefix, objectCount, lineCount, "^line\\-\\d+$");
+    }
+
+    void testSource(List<String> bucketNames, String prefix, int objectCount, int lineCount, String match) {
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(singletonList(bucketName), prefix, clientSupplier()))
-         .groupingKey(s -> s)
-         .aggregate(AggregateOperations.counting())
-         .apply(Assertions.assertCollected(entries -> {
-             assertTrue(entries.stream().allMatch(
-                     e -> e.getValue() == objectCount && e.getKey().matches("^line\\-\\d+$")
-             ));
-             assertEquals(lineCount, entries.size());
-         }));
+        p.drawFrom(S3Sources.s3(bucketNames, prefix, clientSupplier()))
+                .groupingKey(s -> s)
+                .aggregate(AggregateOperations.counting())
+                .apply(Assertions.assertCollected(entries -> {
+                    assertTrue(entries.stream().allMatch(
+                            e -> e.getValue() == objectCount && e.getKey().matches(match)
+                    ));
+                    assertEquals(lineCount, entries.size());
+                }));
 
         jet.newJob(p).join();
+    }
+
+    public void testSourceWithEmptyResults(String bucketName, String prefix) {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(S3Sources.s3(singletonList(bucketName), prefix, clientSupplier()))
+                .apply(Assertions.assertCollected(entries -> {
+                    assertEquals(0, entries.size());
+                }));
+
+        jet.newJob(p).join();
+    }
+
+    public void testSourceWithNotExistingBucket(String bucketName) {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(S3Sources.s3(singletonList(bucketName), null, clientSupplier()))
+                .drainTo(Sinks.logger());
+
+        try {
+            jet.newJob(p).join();
+            fail();
+        } catch (Exception e) {
+            assertCausedByNoSuchBucketException(e);
+        }
+    }
+
+    public void testSinkWithNotExistingBucket(String bucketName) {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(TestSources.items("item"))
+                .drainTo(S3Sinks.s3(bucketName, "ignore", UTF_8, clientSupplier(), Object::toString));
+
+        try {
+            jet.newJob(p).join();
+            fail();
+        } catch (Exception e) {
+            assertCausedByNoSuchBucketException(e);
+        }
     }
 
     abstract SupplierEx<S3Client> clientSupplier();
@@ -114,6 +170,17 @@ abstract class S3TestBase extends JetTestSupport {
         } catch (IOException e) {
             throw new AssertionError("Error reading file ", e);
         }
+    }
+
+    private void assertCausedByNoSuchBucketException(Exception e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof NoSuchBucketException) {
+                return;
+            }
+            cause = cause.getCause();
+        }
+        fail("Failure was not caused by NoSuchBucketException.");
     }
 
 }
