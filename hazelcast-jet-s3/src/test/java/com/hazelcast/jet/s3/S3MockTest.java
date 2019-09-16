@@ -23,6 +23,7 @@ import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -63,13 +64,17 @@ public class S3MockTest extends S3TestBase {
     @AfterClass
     public static void teardown() {
         s3Client.close();
-        S3SinkContext.maximumPartNumber = S3SinkContext.DEFAULT_MAXIMUM_PART_NUMBER;
     }
 
     @Before
     public void setup() {
         deleteBucket(s3Client, SOURCE_BUCKET);
         deleteBucket(s3Client, SINK_BUCKET);
+    }
+
+    @After
+    public void resetPartNumber() {
+        S3SinkContext.maximumPartNumber = S3SinkContext.DEFAULT_MAXIMUM_PART_NUMBER;
     }
 
     @Test
