@@ -116,5 +116,11 @@
             <artifactId>hadoop-azure</artifactId>
             <version>${hadoop.version}</version>
         </dependency>
+        <!-- Azure Data Lake -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-azure-datalake</artifactId>
+            <version>${hadoop.version}</version>
+        </dependency>
     </dependencies>
 </project>
