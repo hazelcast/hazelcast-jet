@@ -22,11 +22,13 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -40,6 +42,7 @@ import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static software.amazon.awssdk.core.sync.ResponseTransformer.toInputStream;
 
+@RunWith(HazelcastSerialClassRunner.class)
 public class S3MockTest extends S3TestBase {
 
     @ClassRule
@@ -113,11 +116,12 @@ public class S3MockTest extends S3TestBase {
 
     @Test
     public void when_simpleSource() {
+        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET));
+
         int objectCount = 20;
         int lineCount = 100;
         generateAndUploadObjects(objectCount, lineCount);
 
-        s3Client.createBucket(b -> b.bucket(SOURCE_BUCKET));
         testSource(jet, SOURCE_BUCKET, "object-", objectCount, lineCount);
     }
 
