@@ -27,11 +27,6 @@
         <version>3.3-SNAPSHOT</version>
     </parent>
 
-    <properties>
-        <aws.sdk.version>1.11.627</aws.sdk.version>
-        <jackson.version>2.9.9</jackson.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.hazelcast.jet.examples</groupId>
