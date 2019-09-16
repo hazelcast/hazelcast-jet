@@ -31,11 +31,7 @@ import org.apache.hadoop.mapred.JobConf;
  * couple of dependencies and the credentials for S3. Necessary dependencies:
  * <ul>
  *     <li>hadoop-aws</li>
- *     <li>aws-java-sdk-s3</li>
- *     <li>aws-java-sdk-core</li>
- *     <li>jackson-core</li>
- *     <li>jackson-annotations</li>
- *     <li>jackson-databind</li>
+ *     <li>hadoop-client</li>
  * </ul>
  *
  * @see <a href="https://hadoop.apache.org/docs/r3.0.3/hadoop-aws/tools/hadoop-aws/index.html">
@@ -43,8 +39,8 @@ import org.apache.hadoop.mapred.JobConf;
  */
 public class AmazonS3Example {
 
-    private static final String ACCESS_KEY = "";
-    private static final String SECRET_KEY = "";
+    private static final String ACCESS_KEY = "AKIAZV4HIPQ4SCWV2M73";
+    private static final String SECRET_KEY = "aG8dY9jnYzvq7A9sFRDV5QZJvbLjPIzkFgal+qjS";
 
     private static final String BUCKET_NAME = "jet-s3-hdfs-example-bucket";
 
