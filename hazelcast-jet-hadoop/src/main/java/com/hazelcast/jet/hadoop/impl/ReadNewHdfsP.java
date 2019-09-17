@@ -30,7 +30,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -112,13 +111,9 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
         @Override
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
-            int totalParallelism = context.totalParallelism();
             Class<?> inputFormatClass = jobConf.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
             InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, jobConf);
             Job job = Job.getInstance(jobConf);
-            if (inputFormat instanceof FileInputFormat) {
-                FileInputFormat.setMaxInputSplitSize(job, totalParallelism);
-            }
             List<InputSplit> splits = inputFormat.getSplits(job);
             IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.size()];
             Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits.get(i)));

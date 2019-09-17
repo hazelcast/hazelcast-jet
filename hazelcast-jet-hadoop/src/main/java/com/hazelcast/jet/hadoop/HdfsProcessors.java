@@ -21,6 +21,8 @@ import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsP;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsP;
+import com.hazelcast.jet.hadoop.impl.WriteNewHdfsP;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;
@@ -60,5 +62,18 @@ public final class HdfsProcessors {
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
         return new WriteHdfsP.MetaSupplier<>(asSerializable(jobConf), extractKeyFn, extractValueFn);
+    }
+
+    /**
+     * Returns a supplier of processors for
+     * {@link HdfsSinks#hdfsNewApi(Configuration, FunctionEx, FunctionEx)}.
+     */
+    @Nonnull
+    public static <E, K, V> ProcessorMetaSupplier writeNewHdfsP(
+            @Nonnull JobConf jobConf,
+            @Nonnull FunctionEx<? super E, K> extractKeyFn,
+            @Nonnull FunctionEx<? super E, V> extractValueFn
+    ) {
+        return new WriteNewHdfsP.MetaSupplier<>(asSerializable(jobConf), extractKeyFn, extractValueFn);
     }
 }

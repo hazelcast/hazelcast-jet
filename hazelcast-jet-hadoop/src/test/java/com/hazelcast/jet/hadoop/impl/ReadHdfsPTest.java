@@ -35,10 +35,10 @@ import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.SequenceFile.Writer.Option;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -75,7 +75,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
             .toArray(String[]::new);
 
     @Parameterized.Parameter
-    public Class<? extends InputFormat> inputFormatClass;
+    public Class inputFormatClass;
 
     @Parameterized.Parameter(1)
     public EMapperType mapperType;
@@ -86,24 +86,41 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameters(name = "inputFormatClass={0}, mapper={1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
-                new Object[]{TextInputFormat.class, EMapperType.DEFAULT},
-                new Object[]{TextInputFormat.class, EMapperType.CUSTOM},
-                new Object[]{TextInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
-                new Object[]{SequenceFileInputFormat.class, EMapperType.DEFAULT},
-                new Object[]{SequenceFileInputFormat.class, EMapperType.CUSTOM},
-                new Object[]{SequenceFileInputFormat.class, EMapperType.CUSTOM_WITH_NULLS}
+                new Object[] {TextInputFormat.class, EMapperType.DEFAULT},
+                new Object[] {TextInputFormat.class, EMapperType.CUSTOM},
+                new Object[] {TextInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
+                new Object[] {org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class, EMapperType.DEFAULT},
+                new Object[] {org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class, EMapperType.CUSTOM},
+                new Object[] {org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
+                new Object[] {SequenceFileInputFormat.class, EMapperType.DEFAULT},
+                new Object[] {SequenceFileInputFormat.class, EMapperType.CUSTOM},
+                new Object[] {SequenceFileInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
+                new Object[] {org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class, EMapperType.DEFAULT},
+                new Object[] {org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class, EMapperType.CUSTOM},
+                new Object[] {org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class,
+                        EMapperType.CUSTOM_WITH_NULLS}
         );
     }
 
     @Before
     public void setup() throws IOException {
         instance = createJetMember();
-        jobConf = new JobConf();
-        jobConf.setInputFormat(inputFormatClass);
+        createConf();
 
         writeToFile();
         for (Path path : paths) {
             FileInputFormat.addInputPath(jobConf, path);
+        }
+    }
+
+    private void createConf() throws IOException {
+        if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
+            Job job = Job.getInstance();
+            job.setInputFormatClass(inputFormatClass);
+            jobConf = new JobConf(job.getConfiguration());
+        } else {
+            jobConf = new JobConf();
+            jobConf.setInputFormat(inputFormatClass);
         }
     }
 

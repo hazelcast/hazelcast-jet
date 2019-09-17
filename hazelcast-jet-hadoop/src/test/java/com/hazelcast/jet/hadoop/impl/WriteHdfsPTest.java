@@ -25,6 +25,23 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelTest;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputCommitter;
+import org.apache.hadoop.mapred.FileOutputFormat;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapred.lib.LazyOutputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -32,23 +49,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.FileOutputCommitter;
-import org.apache.hadoop.mapred.FileOutputFormat;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
-import org.apache.hadoop.mapred.TextInputFormat;
-import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.hadoop.mapred.lib.LazyOutputFormat;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
@@ -59,17 +59,23 @@ import static org.junit.Assert.assertEquals;
 public class WriteHdfsPTest extends HdfsTestSupport {
 
     @Parameterized.Parameter(0)
-    public Class<? extends OutputFormat> outputFormatClass;
+    public Class outputFormatClass;
 
     @Parameterized.Parameter(1)
-    public Class<? extends InputFormat> inputFormatClass;
+    public Class inputFormatClass;
 
     @Parameterized.Parameters(name = "Executing: {0} {1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
-                new Object[]{TextOutputFormat.class, TextInputFormat.class},
-                new Object[]{LazyOutputFormat.class, TextInputFormat.class},
-                new Object[]{SequenceFileOutputFormat.class, SequenceFileInputFormat.class}
+                new Object[] {TextOutputFormat.class, TextInputFormat.class},
+                new Object[] {LazyOutputFormat.class, TextInputFormat.class},
+                new Object[] {SequenceFileOutputFormat.class, SequenceFileInputFormat.class},
+                new Object[] {org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class,
+                        org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
+                new Object[] {org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.class,
+                        org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
+                new Object[] {org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat.class,
+                        org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class}
         );
     }
 
@@ -86,17 +92,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         Path path = getPath();
 
-        JobConf conf = new JobConf();
-        conf.setOutputFormat(outputFormatClass);
-        conf.setOutputCommitter(FileOutputCommitter.class);
-        conf.setOutputKeyClass(IntWritable.class);
-        conf.setOutputValueClass(IntWritable.class);
-
-        if (outputFormatClass.equals(LazyOutputFormat.class)) {
-            LazyOutputFormat.setOutputFormatClass(conf, TextOutputFormat.class);
-        }
-
-        FileOutputFormat.setOutputPath(conf, path);
+        JobConf conf = getSinkConf(path);
 
 
         Pipeline p = Pipeline.create();
@@ -109,9 +105,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         assertCompletesEventually(future);
 
 
-        JobConf readJobConf = new JobConf();
-        readJobConf.setInputFormat(inputFormatClass);
-        FileInputFormat.addInputPath(readJobConf, path);
+        JobConf readJobConf = getReadJobConf(path);
 
         p = Pipeline.create();
         p.drawFrom(HdfsSources.hdfs(readJobConf))
@@ -123,6 +117,46 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         IList<Object> results = instance.getList("results");
         assertEquals(messageCount, results.size());
+    }
+
+    private JobConf getReadJobConf(Path path) throws IOException {
+        JobConf conf = new JobConf();
+        if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
+            Job job = Job.getInstance();
+            job.setInputFormatClass(inputFormatClass);
+            org.apache.hadoop.mapreduce.lib.input.FileInputFormat.addInputPath(job, path);
+            conf = new JobConf(job.getConfiguration());
+        } else {
+            conf.setInputFormat(inputFormatClass);
+            FileInputFormat.addInputPath(conf, path);
+        }
+        return conf;
+    }
+
+    private JobConf getSinkConf(Path path) throws IOException {
+        JobConf conf = new JobConf();
+        if (outputFormatClass.getPackage().getName().contains("mapreduce")) {
+            Job job = Job.getInstance();
+            job.setOutputFormatClass(outputFormatClass);
+            job.setOutputKeyClass(IntWritable.class);
+            job.setOutputValueClass(IntWritable.class);
+            org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.setOutputPath(job, path);
+            if (outputFormatClass.equals(org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.class)) {
+                org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.setOutputFormatClass(job,
+                        org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
+            }
+            conf = new JobConf(job.getConfiguration());
+        } else {
+            conf.setOutputFormat(outputFormatClass);
+            conf.setOutputCommitter(FileOutputCommitter.class);
+            conf.setOutputKeyClass(IntWritable.class);
+            conf.setOutputValueClass(IntWritable.class);
+            FileOutputFormat.setOutputPath(conf, path);
+            if (outputFormatClass.equals(LazyOutputFormat.class)) {
+                LazyOutputFormat.setOutputFormatClass(conf, TextOutputFormat.class);
+            }
+        }
+        return conf;
     }
 
     private Path getPath() throws IOException {
