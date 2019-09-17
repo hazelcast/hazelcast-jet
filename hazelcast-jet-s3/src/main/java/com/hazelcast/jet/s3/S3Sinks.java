@@ -121,8 +121,9 @@ public final class S3Sinks {
         // visible for testing
         static int maximumPartNumber = DEFAULT_MAXIMUM_PART_NUMBER;
 
+        // the minimum size required for each part in AWS multipart
         static final int DEFAULT_MINIMUM_UPLOAD_PART_SIZE = (int) MemoryUnit.MEGABYTES.toBytes(5);
-        static final int BUFFER_SIZE = 2 * DEFAULT_MINIMUM_UPLOAD_PART_SIZE;
+        static final double BUFFER_SCALE = 1.2d;
 
         private final String bucketName;
         private final String prefix;
@@ -131,9 +132,9 @@ public final class S3Sinks {
         private final FunctionEx<? super T, String> toStringFn;
         private final Charset charset;
         private final byte[] lineSeparatorBytes;
-        private final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
         private final List<CompletedPart> completedParts = new ArrayList<>();
 
+        private ByteBuffer buffer;
         private int partNumber = MINIMUM_PART_NUMBER; // must be between 1 and maximumPartNumber
         private int fileNumber;
         private String uploadId;
@@ -152,8 +153,8 @@ public final class S3Sinks {
             this.toStringFn = toStringFn;
             this.charset = Charset.forName(charsetName);
             this.lineSeparatorBytes = System.lineSeparator().getBytes(charset);
-
             checkIfBucketExists();
+            resizeBuffer(DEFAULT_MINIMUM_UPLOAD_PART_SIZE);
         }
 
         private void initiateUpload() {
@@ -171,21 +172,35 @@ public final class S3Sinks {
         }
 
         private void receive(T item) {
-            write(toStringFn.apply(item).getBytes(charset));
-            write(lineSeparatorBytes);
-        }
+            byte[] bytes = toStringFn.apply(item).getBytes(charset);
+            int length = bytes.length + lineSeparatorBytes.length;
 
-        private void write(byte[] bytes) {
-            int remaining = bytes.length;
-            while (remaining > 0) {
-                int length = Math.min(buffer.remaining(), remaining);
-                int offset = bytes.length - remaining;
-                buffer.put(bytes, offset, length);
-                remaining -= length;
-                if (buffer.remaining() == 0 || buffer.remaining() < remaining) {
-                    flush();
+            // not enough space in buffer to write
+            if (buffer.remaining() < length) {
+                // we try to flush the current buffer first
+                flush();
+                // this might not be enough - either item is bigger than current
+                // buffer size or there was not enough data in the buffer to upload
+                // in this case we have to resize the buffer to hold more data
+                if (buffer.remaining() < length) {
+                    resizeBuffer(length + buffer.position());
                 }
             }
+
+            buffer.put(bytes);
+            buffer.put(lineSeparatorBytes);
+        }
+
+        private void resizeBuffer(int minimumLength) {
+            assert buffer == null || buffer.position() < minimumLength;
+
+            int newCapacity = (int) (minimumLength * BUFFER_SCALE);
+            ByteBuffer newBuffer = ByteBuffer.allocateDirect(newCapacity);
+            if (buffer != null) {
+                buffer.flip();
+                newBuffer.put(buffer);
+            }
+            buffer = newBuffer;
         }
 
         private void flush() {
@@ -207,23 +222,22 @@ public final class S3Sinks {
         }
 
         private void flushBuffer(boolean isLastPart) {
-            if (buffer.position() == 0) {
-                return;
+            if (buffer.position() > 0) {
+                buffer.flip();
+                UploadPartRequest req = UploadPartRequest
+                        .builder()
+                        .bucket(bucketName)
+                        .key(key())
+                        .uploadId(uploadId)
+                        .partNumber(partNumber)
+                        .build();
+
+                String eTag = s3Client.uploadPart(req, RequestBody.fromByteBuffer(buffer)).eTag();
+                completedParts.add(CompletedPart.builder().partNumber(partNumber).eTag(eTag).build());
+                partNumber++;
+                buffer.clear();
             }
 
-            buffer.flip();
-            UploadPartRequest req = UploadPartRequest
-                    .builder()
-                    .bucket(bucketName)
-                    .key(key())
-                    .uploadId(uploadId)
-                    .partNumber(partNumber)
-                    .build();
-
-            String eTag = s3Client.uploadPart(req, RequestBody.fromByteBuffer(buffer)).eTag();
-            completedParts.add(CompletedPart.builder().partNumber(partNumber).eTag(eTag).build());
-            partNumber++;
-            buffer.clear();
             if (isLastPart) {
                 completeUpload();
             }

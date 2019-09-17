@@ -23,7 +23,6 @@ import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import java.util.ArrayList;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -35,6 +34,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,6 +75,7 @@ public class S3MockTest extends S3TestBase {
 
     @Before
     public void setup() {
+        S3SinkContext.maximumPartNumber = 1;
         deleteBucket(s3Client, SOURCE_BUCKET);
         deleteBucket(s3Client, SOURCE_BUCKET_2);
         deleteBucket(s3Client, SOURCE_BUCKET_EMPTY);
@@ -90,7 +91,6 @@ public class S3MockTest extends S3TestBase {
 
     @Test
     public void when_manySmallItemsToSink() {
-        S3SinkContext.maximumPartNumber = 1;
         s3Client.createBucket(b -> b.bucket(SINK_BUCKET));
 
         testSink(SINK_BUCKET);
@@ -101,8 +101,8 @@ public class S3MockTest extends S3TestBase {
         s3Client.createBucket(b -> b.bucket(SINK_BUCKET));
 
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < S3SinkContext.BUFFER_SIZE / 10; i++) {
-            sb.append("012345678901234567890");
+        for (int i = 0; i < S3SinkContext.DEFAULT_MINIMUM_UPLOAD_PART_SIZE / 5; i++) {
+            sb.append("01234567890");
         }
         String expected = sb.toString();
 
@@ -117,7 +117,7 @@ public class S3MockTest extends S3TestBase {
                     .listObjects(req -> req.bucket(SINK_BUCKET))
                     .contents()
                     .stream()
-                    .peek(o -> System.out.println(o))
+                    .peek(o -> System.out.println("Found object: " + o))
                     .map(object -> client.getObject(req -> req.bucket(SINK_BUCKET).key(object.key()), toInputStream()))
                     .flatMap(this::inputStreamToLines)
                     .collect(Collectors.toList());
