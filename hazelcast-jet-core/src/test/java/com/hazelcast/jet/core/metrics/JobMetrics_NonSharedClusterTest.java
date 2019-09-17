@@ -19,6 +19,7 @@ package com.hazelcast.jet.core.metrics;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
@@ -29,7 +30,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static com.hazelcast.jet.core.metrics.JobMetrics_BatchTest.JOB_CONFIG_WITH_METRICS;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -38,6 +38,8 @@ import static org.junit.Assert.assertTrue;
  * has a specific configuration.
  */
 public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
+
+    private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
     @Before
     public void before() {

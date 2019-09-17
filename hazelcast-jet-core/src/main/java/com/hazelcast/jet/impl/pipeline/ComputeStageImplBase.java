@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
@@ -114,8 +115,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
-        PredicateEx<T> adaptedFn = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
-        return (RET) attach(new MapTransform<T, T>("filter", transform, t -> adaptedFn.test(t) ? t : null), fnAdapter);
+        PredicateEx<T> adaptedPred = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
+        FunctionEx<T, T> adaptedFn = t -> adaptedPred.test(t) ? t : null;
+        if (filterFn instanceof UserMetricsSource) {
+            adaptedFn = UserMetricsSource.wrap(adaptedFn, ((UserMetricsSource) filterFn).getMetricsSources());
+        }
+        return (RET) attach(new MapTransform<T, T>("filter", transform, adaptedFn), fnAdapter);
     }
 
     @Nonnull

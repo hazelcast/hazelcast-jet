@@ -38,7 +38,7 @@ import static org.junit.Assert.assertNotEquals;
 
 public class JobMetrics_BatchTest extends TestInClusterSupport {
 
-    static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
+    private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
     private static final String SOURCE_VERTEX = "items";
     private static final String FLAT_MAP_AND_FILTER_VERTEX = "fused(flat-map, filter)";

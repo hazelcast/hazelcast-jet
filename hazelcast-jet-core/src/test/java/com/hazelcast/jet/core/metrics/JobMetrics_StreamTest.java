@@ -35,10 +35,11 @@ import java.util.Map;
 import static com.hazelcast.jet.core.JobStatus.FAILED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.JobStatus.SUSPENDED;
-import static com.hazelcast.jet.core.metrics.JobMetrics_BatchTest.JOB_CONFIG_WITH_METRICS;
 import static org.junit.Assert.assertEquals;
 
 public class JobMetrics_StreamTest extends TestInClusterSupport {
+
+    private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
     private static final String NOT_FILTER_OUT_PREFIX = "ok";
     private static final String FILTER_OUT_PREFIX = "nok";

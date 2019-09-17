@@ -18,9 +18,12 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.function.FunctionEx;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -29,19 +32,28 @@ import javax.annotation.Nonnull;
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public class TransformP<T, R> extends AbstractProcessor {
+public class TransformP<T, R> extends AbstractProcessor implements UserMetricsSource {
     private final FlatMapper<T, R> flatMapper;
+    private final List<Object> metricsSources;
 
     /**
      * Constructs a processor with the given mapping function.
      */
     public TransformP(@Nonnull FunctionEx<T, ? extends Traverser<? extends R>> mapper) {
         this.flatMapper = flatMapper(mapper);
+        this.metricsSources = mapper instanceof UserMetricsSource ?
+                ((UserMetricsSource) mapper).getMetricsSources() : Collections.emptyList();
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         return flatMapper.tryProcess((T) item);
+    }
+
+    @Nonnull
+    @Override
+    public List getMetricsSources() {
+        return metricsSources;
     }
 }

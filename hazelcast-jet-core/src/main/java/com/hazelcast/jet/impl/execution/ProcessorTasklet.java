@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricTags;
+import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -120,6 +121,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLong queuesSize = new AtomicLong();
     private final AtomicLong queuesCapacity = new AtomicLong();
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
+    private final ProbeBuilder probeBuilder;
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public ProcessorTasklet(@Nonnull Context context,
@@ -157,6 +159,8 @@ public class ProcessorTasklet implements Tasklet {
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
+
+        this.probeBuilder = probeBuilder;
         if (probeBuilder != null) {
             registerMetrics(instreams, probeBuilder);
         }
@@ -231,6 +235,13 @@ public class ProcessorTasklet implements Tasklet {
             processor.init(outbox, context);
         } catch (Exception e) {
             throw sneakyThrow(e);
+        }
+
+        if (probeBuilder != null && processor instanceof UserMetricsSource) {
+            List sources = ((UserMetricsSource) processor).getMetricsSources();
+            for (Object source : sources) {
+                probeBuilder.scanAndRegister(source);
+            }
         }
     }
 

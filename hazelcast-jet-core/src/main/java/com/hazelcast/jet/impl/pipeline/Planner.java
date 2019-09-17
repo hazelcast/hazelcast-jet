@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
@@ -203,13 +204,18 @@ public class Planner {
             return null;
         }
         List<FunctionEx> functions = chain.stream().map(t -> ((MapTransform) t).mapFn()).collect(toList());
-        return t -> {
+        List userMetricsSources = functions.stream()
+                .filter(o -> o instanceof UserMetricsSource)
+                .flatMap(o -> ((UserMetricsSource) o).getMetricsSources().stream())
+                .collect(toList());
+        FunctionEx mergedFunction = t -> {
             Object result = t;
             for (int i = 0; i < functions.size() && result != null; i++) {
                 result = functions.get(i).apply(result);
             }
             return result;
         };
+        return userMetricsSources.isEmpty() ? mergedFunction : UserMetricsSource.wrap(mergedFunction, userMetricsSources);
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

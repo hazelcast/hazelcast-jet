@@ -31,6 +31,7 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -696,10 +697,12 @@ public final class Processors {
     public static <T, R> SupplierEx<Processor> mapP(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         return () -> {
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
-            return new TransformP<T, R>(item -> {
+            FunctionEx<T, Traverser<? extends R>> traverserFn = item -> {
                 trav.accept(mapFn.apply(item));
                 return trav;
-            });
+            };
+            return new TransformP<>(mapFn instanceof UserMetricsSource ?
+                    UserMetricsSource.wrap(traverserFn, ((UserMetricsSource) mapFn).getMetricsSources()) : traverserFn);
         };
     }
 

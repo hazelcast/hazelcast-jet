@@ -16,7 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
@@ -43,7 +46,12 @@ public class MapTransform<T, R> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), mapP(mapFn()));
+        FunctionEx<? super T, ? extends R> mapFn = mapFn();
+        SupplierEx<Processor> procSupplier = mapP(mapFn);
+        if (mapFn instanceof UserMetricsSource) {
+            procSupplier = UserMetricsSource.wrap(mapP(mapFn), ((UserMetricsSource) mapFn).getMetricsSources());
+        }
+        PlannerVertex pv = p.addVertex(this, name(), localParallelism(), procSupplier);
         p.addEdges(this, pv.v);
     }
 }
