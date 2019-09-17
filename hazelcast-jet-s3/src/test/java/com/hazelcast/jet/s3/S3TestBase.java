@@ -34,6 +34,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -48,6 +49,8 @@ import static org.junit.Assert.fail;
 import static software.amazon.awssdk.core.sync.ResponseTransformer.toInputStream;
 
 abstract class S3TestBase extends JetTestSupport {
+
+    private static final Charset CHARSET = UTF_8;
 
     JetInstance jet;
 
@@ -74,7 +77,7 @@ abstract class S3TestBase extends JetTestSupport {
 
         Pipeline p = Pipeline.create();
         p.drawFrom(Sources.map(map, alwaysTrue(), Map.Entry::getValue))
-         .drainTo(S3Sinks.s3(bucketName, prefix, UTF_8, clientSupplier(), Object::toString));
+         .drainTo(S3Sinks.s3(bucketName, prefix, CHARSET, clientSupplier(), Object::toString));
 
         jet.newJob(p).join();
 
@@ -164,7 +167,7 @@ abstract class S3TestBase extends JetTestSupport {
     }
 
     Stream<String> inputStreamToLines(InputStream is) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, CHARSET))) {
             // materialize the stream, since we can't read it afterwards
             return reader.lines().collect(Collectors.toList()).stream();
         } catch (IOException e) {
