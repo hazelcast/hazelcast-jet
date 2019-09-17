@@ -176,8 +176,8 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
                 try {
                     JobConf copiedConfig = new JobConf(jobConf);
                     TaskAttemptID taskAttemptID = getTaskAttemptID(i, jobContext, getUuid(context));
-                    copiedConfig.set("mapred.task.id", taskAttemptID.toString());
-                    copiedConfig.setInt("mapred.task.partition", i);
+                    copiedConfig.set("mapreduce.task.attempt.id", taskAttemptID.toString());
+                    copiedConfig.setInt("mapreduce.task.partition", i);
 
                     TaskAttemptContextImpl taskAttemptContext = new TaskAttemptContextImpl(copiedConfig, taskAttemptID);
                     @SuppressWarnings("unchecked")

@@ -37,7 +37,7 @@ public final class HdfsSinks {
     }
 
     /**
-     * Returns a sink that writes to Apache Hadoop HDFS . It transforms each
+     * Returns a sink that writes to Apache Hadoop HDFS. It transforms each
      * received item to a key-value pair using the two supplied mapping
      * functions. The type of key and value must conform to the expectations
      * of the output format specified in {@code JobConf}.

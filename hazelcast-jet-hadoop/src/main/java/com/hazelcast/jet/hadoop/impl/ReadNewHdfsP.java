@@ -72,9 +72,9 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
     private Traverser<R> traverseRecordReader(RecordReader<K, V> r) {
         return () -> {
             try {
-                K key = r.getCurrentKey();
-                V value = r.getCurrentValue();
                 while (r.nextKeyValue()) {
+                    K key = r.getCurrentKey();
+                    V value = r.getCurrentValue();
                     R projectedRecord = projectionFn.apply(key, value);
                     if (projectedRecord != null) {
                         return projectedRecord;
