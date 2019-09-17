@@ -18,6 +18,7 @@ package com.hazelcast.jet.examples.hadoop.avro;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.examples.hadoop.dto.User;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.Util;

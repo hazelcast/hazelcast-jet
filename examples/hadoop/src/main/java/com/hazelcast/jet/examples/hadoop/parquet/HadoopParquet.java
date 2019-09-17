@@ -14,59 +14,62 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.hadoop.avro;
+package com.hazelcast.jet.examples.hadoop.parquet;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.examples.hadoop.dto.User;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.mapred.AvroInputFormat;
-import org.apache.avro.mapred.AvroJob;
-import org.apache.avro.mapred.AvroOutputFormat;
-import org.apache.avro.mapred.AvroWrapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.parquet.avro.AvroParquetInputFormat;
+import org.apache.parquet.avro.AvroParquetOutputFormat;
+import org.apache.parquet.avro.AvroParquetWriter;
+import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.Util.entry;
+
 /**
- * A sample which reads records from HDFS using Apache Avro input format,
- * filters and writes back to HDFS using Apache Avro output format
+ * A sample which reads records from Apache Parquet file from HDFS
+ * using Apache Avro schema, filters and writes back to HDFS
+ * using Apache Parquet output format with the same schema.
  */
-public class HadoopAvro {
+public class HadoopParquet {
 
     private static final String MODULE_DIRECTORY = moduleDirectory();
-    private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-input";
-    private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-output";
+    private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-parquet-input";
+    private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hdfs-parquet-output";
 
-    private static Pipeline buildPipeline(JobConf jobConfig) {
+    private static Pipeline buildPipeline(Configuration configuration) {
         Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.<AvroWrapper<User>, NullWritable>hdfs(jobConfig))
-         .filter(entry -> entry.getKey().datum().get(3).equals(Boolean.TRUE))
-         .peek(entry -> entry.getKey().datum().toString())
-         .drainTo(HdfsSinks.hdfs(jobConfig));
+        p.drawFrom(HdfsSources.<String, User, User>hdfsNewApi(configuration, (s, user) -> user))
+         .filter(user -> user.get(3).equals(Boolean.TRUE))
+         .peek()
+         .map(user -> entry(user.get(0), user))
+         .drainTo(HdfsSinks.hdfsNewApi(configuration));
         return p;
     }
 
     public static void main(String[] args) throws Exception {
-        new HadoopAvro().go();
+        new HadoopParquet().go();
     }
 
     private void go() throws Exception {
         try {
-            createAvroFile();
+            createParquetFile();
             JetInstance jet = Jet.newJetInstance();
 
-            JobConf jobConfig = createJobConfig();
+            Configuration jobConfig = createJobConfig();
             jet.newJob(buildPipeline(jobConfig)).join();
 
         } finally {
@@ -74,39 +77,48 @@ public class HadoopAvro {
         }
     }
 
-    private JobConf createJobConfig() throws IOException {
+    private Configuration createJobConfig() throws IOException {
         Path inputPath = new Path(INPUT_PATH);
         Path outputPath = new Path(OUTPUT_PATH);
 
         FileSystem.get(new Configuration()).delete(outputPath, true);
 
-        JobConf jobConfig = new JobConf();
-        jobConfig.setInputFormat(AvroInputFormat.class);
-        jobConfig.setOutputFormat(AvroOutputFormat.class);
-        AvroOutputFormat.setOutputPath(jobConfig, outputPath);
-        AvroInputFormat.addInputPath(jobConfig, inputPath);
-        jobConfig.set(AvroJob.OUTPUT_SCHEMA, User.SCHEMA.toString());
-        jobConfig.set(AvroJob.INPUT_SCHEMA, User.SCHEMA.toString());
-        return jobConfig;
+        Job job = Job.getInstance();
+        job.setInputFormatClass(AvroParquetInputFormat.class);
+        job.setOutputFormatClass(AvroParquetOutputFormat.class);
+        AvroParquetOutputFormat.setOutputPath(job, outputPath);
+        AvroParquetOutputFormat.setSchema(job, User.SCHEMA);
+        AvroParquetInputFormat.addInputPath(job, inputPath);
+        AvroParquetInputFormat.setAvroReadSchema(job, User.SCHEMA);
+        return job.getConfiguration();
     }
 
-    private void createAvroFile() throws IOException {
+    private void createParquetFile() throws IOException {
         Path inputPath = new Path(INPUT_PATH);
         FileSystem fs = FileSystem.get(new Configuration());
         fs.delete(inputPath, true);
+        Path filePath = new Path(inputPath, "file.parquet");
 
-        DataFileWriter<User> fileWriter = new DataFileWriter<>(new GenericDatumWriter<User>(User.SCHEMA));
+        ParquetWriter<User> writer = AvroParquetWriter.
+                <User>builder(filePath)
+                .withRowGroupSize(ParquetWriter.DEFAULT_BLOCK_SIZE)
+                .withPageSize(ParquetWriter.DEFAULT_PAGE_SIZE)
+                .withSchema(User.SCHEMA)
+                .withConf(new Configuration())
+                .withCompressionCodec(CompressionCodecName.SNAPPY)
+                .withValidation(false)
+                .withDictionaryEncoding(false)
+                .build();
 
-        fileWriter.create(User.SCHEMA, fs.create(new Path(inputPath, "file.avro")));
         IntStream.range(0, 100)
                  .mapToObj(i -> new User("name" + i, "pass" + i, i, i % 2 == 0))
-                 .forEach(user -> Util.uncheckRun(() -> fileWriter.append(user)));
-        fileWriter.close();
+                 .forEach(user -> Util.uncheckRun(() -> writer.write(user)));
+        writer.close();
         fs.close();
     }
 
     private static String moduleDirectory() {
-        String resourcePath = HadoopAvro.class.getClassLoader().getResource("").getPath();
+        String resourcePath = HadoopParquet.class.getClassLoader().getResource("").getPath();
         return Paths.get(resourcePath).getParent().getParent().toString();
     }
 

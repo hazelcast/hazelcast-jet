@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.hadoop.avro;
+package com.hazelcast.jet.examples.hadoop.dto;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
