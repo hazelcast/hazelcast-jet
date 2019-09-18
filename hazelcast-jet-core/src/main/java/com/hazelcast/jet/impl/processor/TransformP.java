@@ -18,12 +18,12 @@ package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.metrics.UserMetricsSource;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.MetricsOperator;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
 
 import javax.annotation.Nonnull;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -32,17 +32,16 @@ import java.util.List;
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public class TransformP<T, R> extends AbstractProcessor implements UserMetricsSource {
+public class TransformP<T, R> extends AbstractProcessor implements MetricsOperator {
     private final FlatMapper<T, R> flatMapper;
-    private final List<Object> metricsSources;
+    private final MetricsOperator metricsOperator;
 
     /**
      * Constructs a processor with the given mapping function.
      */
     public TransformP(@Nonnull FunctionEx<T, ? extends Traverser<? extends R>> mapper) {
         this.flatMapper = flatMapper(mapper);
-        this.metricsSources = mapper instanceof UserMetricsSource ?
-                ((UserMetricsSource) mapper).getMetricsSources() : Collections.emptyList();
+        this.metricsOperator = MetricsOperatorUtil.cast(mapper);
     }
 
     @Override
@@ -51,9 +50,9 @@ public class TransformP<T, R> extends AbstractProcessor implements UserMetricsSo
         return flatMapper.tryProcess((T) item);
     }
 
-    @Nonnull
     @Override
-    public List getMetricsSources() {
-        return metricsSources;
+    public void init(MetricsContext context) {
+        metricsOperator.init(context);
     }
+
 }

@@ -31,7 +31,6 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
-import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -41,6 +40,7 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
@@ -701,8 +701,7 @@ public final class Processors {
                 trav.accept(mapFn.apply(item));
                 return trav;
             };
-            return new TransformP<>(mapFn instanceof UserMetricsSource ?
-                    UserMetricsSource.wrap(traverserFn, ((UserMetricsSource) mapFn).getMetricsSources()) : traverserFn);
+            return new TransformP<>(MetricsOperatorUtil.wrap(traverserFn, mapFn));
         };
     }
 

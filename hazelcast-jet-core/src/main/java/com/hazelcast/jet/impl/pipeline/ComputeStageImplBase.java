@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.metrics.UserMetricsSource;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
@@ -26,6 +25,7 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapStatefulTransform;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
@@ -116,10 +116,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
         PredicateEx<T> adaptedPred = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
-        FunctionEx<T, T> adaptedFn = t -> adaptedPred.test(t) ? t : null;
-        if (filterFn instanceof UserMetricsSource) {
-            adaptedFn = UserMetricsSource.wrap(adaptedFn, ((UserMetricsSource) filterFn).getMetricsSources());
-        }
+        FunctionEx<T, T> adaptedFn = MetricsOperatorUtil.wrap(t -> adaptedPred.test(t) ? t : null, filterFn);
         return (RET) attach(new MapTransform<T, T>("filter", transform, adaptedFn), fnAdapter);
     }
 

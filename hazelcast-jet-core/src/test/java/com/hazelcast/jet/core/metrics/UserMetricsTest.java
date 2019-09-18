@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.core.metrics;
 
-import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -27,8 +26,6 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Test;
 
-import javax.annotation.Nonnull;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -41,7 +38,7 @@ public class UserMetricsTest extends JetTestSupport {
 
     @Test
     public void filter() {
-        FilterWithUserMetrics filterFn = new FilterWithUserMetrics();
+        FilterWithMetrics filterFn = new FilterWithMetrics();
 
         Pipeline pipeline = Pipeline.create();
         pipeline.drawFrom(TestSources.items(1, 2, 3, 4, 5))
@@ -52,43 +49,38 @@ public class UserMetricsTest extends JetTestSupport {
         Job job = instance.newJob(pipeline, JOB_CONFIG_WITH_METRICS);
 
         job.join();
+
         JobMetrics metrics = job.getMetrics();
-
-        List<Measurement> dropped = metrics.get("dropped");
-        assertFalse(dropped.isEmpty());
-        assertEquals(2L, dropped.get(0).getValue());
-
-        List<Measurement> total = metrics.get("total");
-        assertFalse(total.isEmpty());
-        assertEquals(5L, total.get(0).getValue());
+        assertCounterValue(metrics.get("dropped"), 2L);
+        assertCounterValue(metrics.get("total"), 5L);
     }
 
-    private static class FilterWithUserMetrics implements PredicateEx<Integer>, UserMetricsSource {
+    private void assertCounterValue(List<Measurement> measurements, long expectedValue) {
+        assertFalse(measurements.isEmpty());
+        assertEquals(expectedValue, measurements.stream().mapToLong(Measurement::getValue).sum());
+    }
 
-        @Probe
-        private final AtomicLong dropped = new AtomicLong(); //user metric with field annotation
+    private static class FilterWithMetrics implements PredicateEx<Integer>, MetricsOperator {
 
-        private final AtomicLong total = new AtomicLong(); //user metric with method annotation
+        private AtomicLong droppedCounter;
+        private AtomicLong totalCounter;
 
         @Override
-        public boolean testEx(Integer anInt) throws Exception {
+        public void init(MetricsContext context) {
+            droppedCounter = context.getCounter("dropped");
+            totalCounter = context.getCounter("total");
+        }
+
+        @Override
+        public boolean testEx(Integer anInt) {
             boolean even = anInt % 2 == 0;
             if (even) {
-                dropped.incrementAndGet();
+                droppedCounter.incrementAndGet();
             }
-            total.incrementAndGet();
+
+            totalCounter.incrementAndGet();
+
             return even;
-        }
-
-        @Probe
-        public long getTotal() {
-            return total.get();
-        }
-
-        @Nonnull
-        @Override
-        public List<Object> getMetricsSources() {
-            return Collections.singletonList(this);
         }
     }
 }

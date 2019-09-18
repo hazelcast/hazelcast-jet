@@ -26,7 +26,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.core.metrics.UserMetricsSource;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.MetricsOperator;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -44,7 +45,10 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
@@ -237,11 +241,8 @@ public class ProcessorTasklet implements Tasklet {
             throw sneakyThrow(e);
         }
 
-        if (probeBuilder != null && processor instanceof UserMetricsSource) {
-            List sources = ((UserMetricsSource) processor).getMetricsSources();
-            for (Object source : sources) {
-                probeBuilder.scanAndRegister(source);
-            }
+        if (probeBuilder != null && processor instanceof MetricsOperator) {
+            ((MetricsOperator) processor).init(new MetricsContextImpl(probeBuilder));
         }
     }
 
@@ -536,6 +537,31 @@ public class ProcessorTasklet implements Tasklet {
         if (!processorClosed) {
             closeProcessor();
             processorClosed = true;
+        }
+    }
+
+    private class MetricsContextImpl implements MetricsContext {
+
+        private final ProbeBuilder probeBuilder;
+        private final Map<String, AtomicLong> counters = new HashMap<>();
+
+        MetricsContextImpl(@Nonnull ProbeBuilder probeBuilder) {
+            this.probeBuilder = probeBuilder;
+        }
+
+        @Nonnull
+        @Override
+        public AtomicLong getCounter(@Nonnull String name) {
+            Objects.requireNonNull(name, "name");
+
+            return counters.computeIfAbsent(name,
+                    n -> {
+                        AtomicLong counter = new AtomicLong();
+                        LongProbeFunction<ProcessorTasklet> probeFn = t -> counter.get();
+                        probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT, probeFn);
+                        return counter;
+                    }
+            );
         }
     }
 }
