@@ -12,3 +12,6 @@ hazelcast:
         enabled: true
         member-list:
           - 127.0.0.1
+  map:
+    transactionStatus:
+      max-idle-seconds: 1
