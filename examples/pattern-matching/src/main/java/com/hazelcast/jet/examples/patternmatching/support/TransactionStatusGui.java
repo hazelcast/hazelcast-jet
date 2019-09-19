@@ -99,8 +99,7 @@ public final class TransactionStatusGui {
         rootPanel.setBorder(new EmptyBorder(BORDER_SIZE, BORDER_SIZE, BORDER_SIZE, BORDER_SIZE));
         BoxLayout layout = new BoxLayout(rootPanel, Y_AXIS);
         rootPanel.setLayout(layout);
-        JLabel header = new JLabel("Transaction ID: status");
-        rootPanel.add(header);
+        rootPanel.add(new JLabel("Transaction ID: status"));
         rootPanel.add(new JLabel("---------------------"));
         Arrays.setAll(labels, i -> new JLabel());
         for (JLabel l : labels) {

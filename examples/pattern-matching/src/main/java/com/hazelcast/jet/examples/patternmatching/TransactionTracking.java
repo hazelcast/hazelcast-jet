@@ -86,7 +86,6 @@ public final class TransactionTracking {
 
     public static void main(String[] args) {
         JetInstance jet = Jet.newJetInstance();
-//        Jet.newJetInstance();
         try {
             new TransactionStatusGui(jet.getList(STATUS_MAP_NAME));
             jet.newJob(buildPipeline()).join();
