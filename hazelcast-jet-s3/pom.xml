@@ -86,13 +86,6 @@
             <classifier>tests</classifier>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client</artifactId>
-            <scope>test</scope>
-            <version>${hazelcast.version}</version>
-            <classifier>tests</classifier>
-        </dependency>
-        <dependency>
             <groupId>com.adobe.testing</groupId>
             <artifactId>s3mock</artifactId>
             <version>2.1.15</version>
