@@ -16,16 +16,15 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.map.IMap;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.util.function.FunctionEx;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -36,21 +35,19 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.Util.entry;
 import static java.util.Collections.emptyList;
 
-@RunWith(HazelcastParallelClassRunner.class)
-public class ReadMapOrCachePTest extends JetTestSupport {
+@RunWith(HazelcastSerialClassRunner.class)
+public class ReadMapOrCachePTest extends SimpleTestInClusterSupport {
 
-    private JetInstance jet;
-
-    @Before
-    public void setUp() {
-        jet = createJetMember();
+    @BeforeClass
+    public static void setUp() {
+        initialize(1, null);
     }
 
     @Test
     public void test_whenEmpty() {
         TestSupport
-                .verifyProcessor(SourceProcessors.readMapP("map"))
-                .jetInstance(jet)
+                .verifyProcessor(SourceProcessors.readMapP(randomMapName()))
+                .jetInstance(instance())
                 .disableSnapshots()
                 .disableProgressAssertion()
                 .expectOutput(emptyList());
@@ -58,7 +55,7 @@ public class ReadMapOrCachePTest extends JetTestSupport {
 
     @Test
     public void test_whenNoPredicateAndNoProjection() {
-        IMap<Integer, String> map = jet.getMap("map");
+        IMap<Integer, String> map = instance().getMap(randomMapName());
         List<Entry<Integer, String>> expected = new ArrayList<>();
         for (int i = 0; i < 1000; i++) {
             map.put(i, "value-" + i);
@@ -66,17 +63,17 @@ public class ReadMapOrCachePTest extends JetTestSupport {
         }
 
         TestSupport
-            .verifyProcessor(SourceProcessors.readMapP("map"))
-            .jetInstance(jet)
-            .disableSnapshots()
-            .disableProgressAssertion()
-            .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
-            .expectOutput(expected);
+                .verifyProcessor(SourceProcessors.readMapP(map.getName()))
+                .jetInstance(instance())
+                .disableSnapshots()
+                .disableProgressAssertion()
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .expectOutput(expected);
     }
 
     @Test
     public void test_whenPredicateAndProjectionSet() {
-        IMap<Integer, String> map = jet.getMap("map");
+        IMap<Integer, String> map = instance().getMap(randomMapName());
         List<String> expected = new ArrayList<>();
         for (int i = 0; i < 1000; i++) {
             map.put(i, "value-" + i);
@@ -88,17 +85,18 @@ public class ReadMapOrCachePTest extends JetTestSupport {
         Predicate<Integer, String> predicate = entry -> entry.getKey() % 2 == 0;
         Projection<Entry<Integer, String>, String> projection = toProjection(Entry::getValue);
         TestSupport
-            .verifyProcessor(SourceProcessors.readMapP("map", predicate, projection))
-            .jetInstance(jet)
-            .disableSnapshots()
-            .disableProgressAssertion()
-            .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
-            .expectOutput(expected);
+                .verifyProcessor(SourceProcessors.readMapP(map.getName(), predicate, projection))
+                .jetInstance(instance())
+                .disableSnapshots()
+                .disableProgressAssertion()
+                .outputChecker(TestSupport.SAME_ITEMS_ANY_ORDER)
+                .expectOutput(expected);
     }
 
     private static <I, O> Projection<I, O> toProjection(FunctionEx<I, O> projectionFn) {
         return new Projection<I, O>() {
-            @Override public O transform(I input) {
+            @Override
+            public O transform(I input) {
                 return projectionFn.apply(input);
             }
         };

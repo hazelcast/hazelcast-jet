@@ -59,7 +59,7 @@ methods:
     doc: |
       TODO doc
     request:
-      retryable: false
+      retryable: true
       acquiresResource: false
       partitionIdentifier: jobId
       params:
@@ -101,7 +101,7 @@ methods:
     doc: |
       TODO doc
     request:
-      retryable: false
+      retryable: true
       acquiresResource: false
       partitionIdentifier: jobId
       params:
@@ -166,7 +166,7 @@ methods:
     doc: |
       TODO doc
     request:
-      retryable: false
+      retryable: true
       acquiresResource: false
       partitionIdentifier: jobId
       params:

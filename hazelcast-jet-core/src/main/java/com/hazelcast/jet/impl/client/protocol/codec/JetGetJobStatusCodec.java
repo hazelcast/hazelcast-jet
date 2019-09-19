@@ -51,7 +51,7 @@ public final class JetGetJobStatusCodec {
 
     public static ClientMessage encodeRequest(long jobId) {
         ClientMessage clientMessage = ClientMessage.createForEncode();
-        clientMessage.setRetryable(false);
+        clientMessage.setRetryable(true);
         clientMessage.setAcquiresResource(false);
         clientMessage.setOperationName("Jet.GetJobStatus");
         ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[REQUEST_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);

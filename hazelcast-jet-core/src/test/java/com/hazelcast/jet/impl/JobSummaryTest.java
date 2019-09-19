@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -174,7 +175,7 @@ public class JobSummaryTest extends JetTestSupport {
         assertEquals(1, list.size());
         JobSummary jobSummary = list.get(0);
 
-        assertEquals(msg, jobSummary.getFailureText());
+        assertEquals(msg, new JetException(jobSummary.getFailureText()).toString());
         assertNotEquals(0, jobSummary.getCompletionTime());
     }
 

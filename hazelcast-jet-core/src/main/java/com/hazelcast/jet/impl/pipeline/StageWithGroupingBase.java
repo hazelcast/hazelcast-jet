@@ -22,11 +22,11 @@ import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.GeneralStageWithKey;
-import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.FunctionEx;
 import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
@@ -54,18 +54,20 @@ class StageWithGroupingBase<T, K> {
     <S, R, RET> RET attachMapStateful(
             long ttl,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
-        return computeStage.attachMapStateful(ttl, keyFn(), createFn, mapFn);
+        return computeStage.attachMapStateful(ttl, keyFn(), createFn, mapFn, onEvictFn);
     }
 
     @Nonnull
     <S, R, RET> RET attachFlatMapStateful(
             long ttl,
             @Nonnull SupplierEx<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> mapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn,
+            @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
-        return computeStage.attachFlatMapStateful(ttl, keyFn(), createFn, mapFn);
+        return computeStage.attachFlatMapStateful(ttl, keyFn(), createFn, flatMapFn, onEvictFn);
     }
 
     @Nonnull

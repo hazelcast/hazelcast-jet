@@ -20,7 +20,6 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
-import com.hazelcast.util.function.BiFunctionEx;
 import com.hazelcast.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
@@ -32,27 +31,25 @@ public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
 
     private final ToLongFunctionEx<? super T> timestampFn;
     private final Supplier<? extends S> createFn;
-    private final BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn;
-    private final TriFunction<? super T, Integer, ? super R, ? extends R> mapToOutputFn;
+    private final TriFunction<? super S, Object, ? super T, ? extends R> statefulMapFn;
 
     public GlobalMapStatefulTransform(
             @Nonnull Transform upstream,
-            ToLongFunctionEx<? super T> timestampFn, @Nonnull Supplier<? extends S> createFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> statefulMapFn,
-            @Nonnull TriFunction<? super T, Integer, ? super R, ? extends R> mapToOutputFn
+            @Nonnull ToLongFunctionEx<? super T> timestampFn,
+            @Nonnull Supplier<? extends S> createFn,
+            @Nonnull TriFunction<? super S, Object, ? super T, ? extends R> statefulMapFn
     ) {
         super("transform-stateful", upstream);
         this.timestampFn = timestampFn;
         this.createFn = createFn;
         this.statefulMapFn = statefulMapFn;
-        this.mapToOutputFn = mapToOutputFn;
     }
 
     @Override
     public void addToDag(Planner p) {
         ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
         PlannerVertex pv = p.addVertex(this, name(), 1,
-                mapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulMapFn, mapToOutputFn));
+                mapStatefulP(Long.MAX_VALUE, keyFn, timestampFn, createFn, statefulMapFn, null));
         p.addEdges(this, pv.v, edge -> edge.partitioned(keyFn).distributed());
     }
 }
