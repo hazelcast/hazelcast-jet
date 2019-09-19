@@ -24,9 +24,13 @@ import java.io.Serializable;
  */
 public class TransactionEvent implements Serializable {
 
-    private final long timestamp;
-    private final long transactionId;
     private final Type type;
+    private final long transactionId;
+    private final long timestamp;
+
+    public enum Type {
+        START, END
+    }
 
     public TransactionEvent(long timestamp, long transactionId, Type type) {
         this.timestamp = timestamp;
@@ -34,8 +38,8 @@ public class TransactionEvent implements Serializable {
         this.type = type;
     }
 
-    public enum Type {
-        START, END
+    public Type type() {
+        return type;
     }
 
     public long transactionId() {
@@ -44,9 +48,5 @@ public class TransactionEvent implements Serializable {
 
     public long timestamp() {
         return timestamp;
-    }
-
-    public Type type() {
-        return type;
     }
 }
