@@ -18,6 +18,7 @@ package com.hazelcast.jet.examples.patternmatching;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.examples.patternmatching.support.TransactionEvent;
 import com.hazelcast.jet.examples.patternmatching.support.TransactionStatusGui;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -49,15 +50,15 @@ public final class TransactionTracking {
 
     private static final int EVENTS_PER_SECOND = 20;
     private static final String STATUS_MAP_NAME = "transactionStatus";
+    private static final int TRANSACTION_TIMEOUT_SECONDS = 2;
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-
         StreamSource<TransactionEvent> source = transactionEventSource(EVENTS_PER_SECOND);
         p.drawFrom(source).withTimestamps(TransactionEvent::timestamp, 0)
          .groupingKey(TransactionEvent::transactionId)
          .mapStateful(
-                 SECONDS.toMillis(2),
+                 SECONDS.toMillis(TRANSACTION_TIMEOUT_SECONDS),
                  () -> new TransactionEvent[2],
                  (startEnd, transactionId, transactionEvent) -> {
                      switch (transactionEvent.type()) {
@@ -80,14 +81,16 @@ public final class TransactionTracking {
                  (startEnd, transactionId, wm) -> (startEnd[0] != null && startEnd[1] == null)
                          ? entry(transactionId, TIMED_OUT_CODE)
                          : null
-         ).drainTo(Sinks.list(STATUS_MAP_NAME));
+         ).drainTo(Sinks.map(STATUS_MAP_NAME));
         return p;
     }
 
     public static void main(String[] args) {
-        JetInstance jet = Jet.newJetInstance();
+        JetConfig cfg = new JetConfig();
+        cfg.getHazelcastConfig().getMapConfig(STATUS_MAP_NAME).setMaxIdleSeconds(1);
+        JetInstance jet = Jet.newJetInstance(cfg);
         try {
-            new TransactionStatusGui(jet.getList(STATUS_MAP_NAME));
+            new TransactionStatusGui(jet.getMap(STATUS_MAP_NAME));
             jet.newJob(buildPipeline()).join();
         } finally {
             Jet.shutdownAll();

@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet.examples.patternmatching.support;
 
-import com.hazelcast.core.IList;
-import com.hazelcast.core.ItemEvent;
-import com.hazelcast.core.ItemListener;
+import com.hazelcast.core.EntryEvent;
+import com.hazelcast.core.EntryListener;
+import com.hazelcast.core.IMap;
+import com.hazelcast.core.MapEvent;
+import com.hazelcast.map.listener.EntryAddedListener;
+import com.hazelcast.map.listener.EntryUpdatedListener;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -26,7 +29,6 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import static javax.swing.BoxLayout.Y_AXIS;
@@ -49,28 +51,9 @@ public final class TransactionStatusGui {
     private final List<TxInfo> guiModel = new ArrayList<>();
     private final JFrame frame = new JFrame();
 
-    public TransactionStatusGui(IList<Entry<Long, Long>> jetResults) {
-        ItemAddedListener<Entry<Long, Long>> listener = event -> {
-            long transactionId = event.getKey();
-            long value = event.getValue();
-            EventQueue.invokeLater(() -> {
-                TxInfo ti = guiModel.stream()
-                                    .filter(it -> it.transactionId == transactionId)
-                                    .findAny()
-                                    .orElseGet(() -> {
-                                        TxInfo newTi = new TxInfo(transactionId);
-                                        guiModel.add(newTi);
-                                        return newTi;
-                                    });
-                ti.statusCode = value < 0 ? value : COMPLETED_CODE;
-                ti.latency = value < 0 ? 0 : value;
-                if (value != PENDING_CODE) {
-                    ti.removeAt = System.currentTimeMillis() + RETENTION_TIME_MS;
-                }
-                frame.repaint();
-            });
-        };
-        jetResults.addItemListener(listener, true);
+    public TransactionStatusGui(IMap<Long, Long> jetResults) {
+        jetResults.addEntryListener((EntryAddedListener<Long, Long>) this::onMapEvent, true);
+        jetResults.addEntryListener((EntryUpdatedListener<Long, Long>) this::onMapEvent, true);
         EventQueue.invokeLater(this::startGui);
     }
 
@@ -109,6 +92,27 @@ public final class TransactionStatusGui {
         frame.setVisible(true);
     }
 
+    private void onMapEvent(EntryEvent<Long, Long> event) {
+        long transactionId = event.getKey();
+        long value = event.getValue();
+        EventQueue.invokeLater(() -> {
+            TxInfo ti = guiModel.stream()
+                                .filter(it -> it.transactionId == transactionId)
+                                .findAny()
+                                .orElseGet(() -> {
+                                    TxInfo newTi = new TxInfo(transactionId);
+                                    guiModel.add(newTi);
+                                    return newTi;
+                                });
+            ti.statusCode = value < 0 ? value : COMPLETED_CODE;
+            ti.latency = value < 0 ? 0 : value;
+            if (value != PENDING_CODE) {
+                ti.removeAt = System.currentTimeMillis() + RETENTION_TIME_MS;
+            }
+            frame.repaint();
+        });
+    }
+
     private static class TxInfo {
         long transactionId;
         long statusCode = PENDING_CODE;
@@ -135,13 +139,33 @@ public final class TransactionStatusGui {
         }
     }
 
-    interface ItemAddedListener<T> extends ItemListener<T> {
-        void item(T item);
+    interface EventListener<K, V> extends EntryListener<K, V> {
+        void onEvent(EntryEvent<K, V> event);
 
-        @Override default void itemRemoved(ItemEvent<T> event) {
+        @Override
+        default void entryAdded(EntryEvent<K, V> event) {
+            onEvent(event);
         }
-        @Override default void itemAdded(ItemEvent<T> event) {
-            item(event.getItem());
+
+        @Override
+        default void entryUpdated(EntryEvent<K, V> event) {
+            onEvent(event);
+        }
+
+        @Override
+        default void entryEvicted(EntryEvent<K, V> event) {
+        }
+
+        @Override
+        default void entryRemoved(EntryEvent<K, V> event) {
+        }
+
+        @Override
+        default void mapCleared(MapEvent event) {
+        }
+
+        @Override
+        default void mapEvicted(MapEvent event) {
         }
     }
 }
