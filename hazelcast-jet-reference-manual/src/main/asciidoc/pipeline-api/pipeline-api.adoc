@@ -141,10 +141,12 @@ being evicted, the key associated with it, and the current watermark
 (i.e., current event time). If it detects that a slot in the array was
 left unoccupied, it outputs "transaction timed out".
 
-You can also implement simple aggregation logic with stateful mapping,
-like keeping a rolling sum of a value, or its extreme values. You can
-also achieve these with <<rolling-aggregation, rolling aggregation>> and
-reuse Jet's ready-made aggregate operations.
+Another thing you can do with stateful mapping is _rolling aggregation_,
+like accumulating the sum of a quantity across events, or its extreme
+values. You can also achieve these with the dedicated <<rolling-aggregation,
+rolling aggregation>> transform to reuse Jet's ready-made aggregate
+operations. However, if you can't find an existing aggregate operation
+to reuse, it's usually simpler to implement it with stateful mapping.
 
 There is one major caveat when considering to solve your problem with
 stateful mapping: it's sensitive to the order of the events in the stream.

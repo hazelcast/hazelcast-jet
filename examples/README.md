@@ -35,9 +35,7 @@ samples using the Core API.
   - use _stateful mapping_ on an event stream to track the state of many
     concurrent transactions, detect when a transaction is done, and compute
     its duration
-  - apply two sliding window aggregations to compute the mean duration of
-    transactions and the number of timed-out transactions per second
-  - open a live GUI chart that shows the transaction metrics
+  - open a GUI window that shows the transaction status
 
 ### [Rolling Aggregation](rolling-aggregation/src/main/java/com/hazelcast/jet/examples/rollingaggregation/TradingVolume.java)
   - use `SourceBuilder` to create a mock source of trade events from a stock
