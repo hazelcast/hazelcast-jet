@@ -111,8 +111,7 @@ public class ExecutionContext {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
-        boolean registerMetrics = jobConfig.isMetricsEnabled() &&
-                ((JetService) nodeEngine.getService(JetService.SERVICE_NAME)).getMetricsService().isEnabled();
+        boolean registerMetrics = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
         plan.initialize(nodeEngine, jobId, executionId, snapshotContext, registerMetrics);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());

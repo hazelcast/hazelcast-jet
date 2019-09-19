@@ -18,6 +18,7 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.core.HazelcastException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;

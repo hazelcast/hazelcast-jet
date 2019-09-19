@@ -17,6 +17,7 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -29,9 +30,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import static com.hazelcast.config.MetricsConfig.DEFAULT_METRICS_COLLECTION_SECONDS;
+import static com.hazelcast.config.MetricsConfig.DEFAULT_METRICS_RETENTION_SECONDS;
 import static com.hazelcast.jet.config.InstanceConfig.DEFAULT_FLOW_CONTROL_PERIOD_MS;
-import static com.hazelcast.jet.config.MetricsConfig.DEFAULT_METRICS_COLLECTION_SECONDS;
-import static com.hazelcast.jet.config.MetricsConfig.DEFAULT_METRICS_RETENTION_SECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;

@@ -17,12 +17,12 @@
 package com.hazelcast.jet.impl.operation;
 
 import com.hazelcast.cluster.Member;
+import com.hazelcast.internal.metrics.managementcenter.MetricsCompressor;
 import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.metrics.MetricsCompressor;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.Address;

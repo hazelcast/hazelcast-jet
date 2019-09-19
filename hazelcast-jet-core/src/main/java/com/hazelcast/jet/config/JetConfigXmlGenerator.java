@@ -17,6 +17,7 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.ConfigXmlGenerator.XmlGenerator;
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.util.Preconditions;

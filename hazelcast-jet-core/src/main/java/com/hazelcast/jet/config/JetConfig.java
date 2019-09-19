@@ -18,6 +18,7 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InvalidConfigurationException;
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
@@ -70,7 +71,6 @@ public class JetConfig {
     private Config hazelcastConfig = defaultHazelcastConfig();
     private InstanceConfig instanceConfig = new InstanceConfig();
     private EdgeConfig defaultEdgeConfig = new EdgeConfig();
-    private MetricsConfig metricsConfig = new MetricsConfig();
     private Properties properties = new Properties();
 
     /**
@@ -501,7 +501,7 @@ public class JetConfig {
      */
     @Nonnull
     public MetricsConfig getMetricsConfig() {
-        return metricsConfig;
+        return getHazelcastConfig().getMetricsConfig();
     }
 
     /**
@@ -510,7 +510,7 @@ public class JetConfig {
     @Nonnull
     public JetConfig setMetricsConfig(@Nonnull MetricsConfig metricsConfig) {
         Preconditions.checkNotNull(metricsConfig, "metricsConfig");
-        this.metricsConfig = metricsConfig;
+        this.hazelcastConfig.setMetricsConfig(metricsConfig) ;
         return this;
     }
 

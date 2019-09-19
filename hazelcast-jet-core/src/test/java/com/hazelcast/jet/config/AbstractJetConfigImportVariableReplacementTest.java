@@ -17,6 +17,7 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.InvalidConfigurationException;
+import com.hazelcast.config.MetricsConfig;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

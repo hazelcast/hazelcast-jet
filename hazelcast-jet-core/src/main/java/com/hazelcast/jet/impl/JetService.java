@@ -21,6 +21,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.metrics.impl.MetricsService;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.internal.services.MemberAttributeServiceEvent;
@@ -31,7 +32,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
-import com.hazelcast.jet.impl.metrics.JetMetricsService;
+import com.hazelcast.jet.impl.metrics.JobMetricsPublisher;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -81,7 +82,6 @@ public class JetService
     private JobRepository jobRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
-    private JetMetricsService jetMetricsService;
 
     private final AtomicInteger numConcurrentAsyncOps = new AtomicInteger();
 
@@ -101,15 +101,15 @@ public class JetService
         this.sharedMigrationWatcher = new MigrationWatcher(engine.getHazelcastInstance());
         jetInstance = new JetInstanceImpl((HazelcastInstanceImpl) engine.getHazelcastInstance(), config);
         taskletExecutionService = new TaskletExecutionService(
-            nodeEngine, config.getInstanceConfig().getCooperativeThreadCount(), nodeEngine.getProperties()
+                nodeEngine, config.getInstanceConfig().getCooperativeThreadCount(), nodeEngine.getProperties()
         );
         jobRepository = new JobRepository(jetInstance);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
 
-        jetMetricsService = new JetMetricsService(nodeEngine);
-        jetMetricsService.init(nodeEngine, jobExecutionService, config.getMetricsConfig());
-
+        MetricsService metricsService = nodeEngine.getService(MetricsService.SERVICE_NAME);
+        metricsService.registerPublisher(nodeEngine -> new JobMetricsPublisher(jobExecutionService,
+                nodeEngine.getLocalMember()));
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
 
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);
@@ -121,7 +121,7 @@ public class JetService
         }
 
         logger.info("Setting number of cooperative threads and default parallelism to "
-            + config.getInstanceConfig().getCooperativeThreadCount());
+                + config.getInstanceConfig().getCooperativeThreadCount());
     }
 
     static JetConfig findJetServiceConfig(Config hzConfig) {
@@ -169,7 +169,6 @@ public class JetService
             Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
         }
 
-        jetMetricsService.shutdown();
         jobExecutionService.shutdown();
         taskletExecutionService.shutdown();
         taskletExecutionService.awaitWorkerTermination();
@@ -178,7 +177,6 @@ public class JetService
 
     @Override
     public void reset() {
-        jetMetricsService.reset();
         jobExecutionService.reset();
         jobCoordinationService.reset();
     }
@@ -217,10 +215,6 @@ public class JetService
 
     public JobExecutionService getJobExecutionService() {
         return jobExecutionService;
-    }
-
-    public JetMetricsService getMetricsService() {
-        return jetMetricsService;
     }
 
     /**

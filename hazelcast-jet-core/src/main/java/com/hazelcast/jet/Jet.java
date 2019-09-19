@@ -31,9 +31,9 @@ import com.hazelcast.instance.BuildInfoProvider;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.instance.impl.HazelcastInstanceProxy;
+import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetNodeContext;
 import com.hazelcast.jet.impl.JetService;
@@ -57,7 +57,6 @@ import static com.hazelcast.jet.impl.JobRepository.JOB_METRICS_MAP_NAME;
 import static com.hazelcast.jet.impl.JobRepository.JOB_RESULTS_MAP_NAME;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetClientConfig;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
-import static com.hazelcast.jet.impl.metrics.JetMetricsService.applyMetricsConfig;
 import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_ENABLED;
 
 /**
@@ -251,7 +250,6 @@ public final class Jet {
             hzConfig.getHotRestartPersistenceConfig().setEnabled(true);
         }
 
-        MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
-        applyMetricsConfig(hzConfig, metricsConfig);
+        jetConfig.getMetricsConfig().setMinimumLevel(ProbeLevel.INFO);
     }
 }

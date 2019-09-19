@@ -185,36 +185,6 @@ methods:
           doc: |
             TODO doc
   - id: 9
-    name: readMetrics
-    since: 2.0
-    doc: |
-      TODO doc
-    request:
-      retryable: true
-      acquiresResource: false
-      partitionIdentifier: uuid
-      params:
-        - name: uuid
-          type: String
-          nullable: false
-          since: 2.0
-          doc: |
-            TODO doc
-        - name: fromSequence
-          type: long
-          nullable: false
-          since: 2.0
-          doc: |
-            TODO doc
-    response:
-      params:
-        - name: response
-          type: Data
-          nullable: false
-          since: 2.0
-          doc: |
-            TODO doc
-  - id: 10
     name: resumeJob
     since: 2.0
     doc: |
@@ -231,7 +201,7 @@ methods:
           doc: |
             TODO doc
     response: {}
-  - id: 11
+  - id: 10
     name: exportSnapshot
     since: 2.0
     doc: |
@@ -260,7 +230,7 @@ methods:
           doc: |
             TODO doc
     response: {}
-  - id: 12
+  - id: 11
     name: getJobSummaryList
     since: 2.0
     doc: |
@@ -278,7 +248,7 @@ methods:
           since: 2.0
           doc: |
             TODO doc
-  - id: 13
+  - id: 12
     name: existsDistributedObject
     since: 2.0
     doc: |
@@ -308,7 +278,7 @@ methods:
           since: 2.0
           doc: |
             TODO doc
-  - id: 14
+  - id: 13
     name: getClusterMetadata
     since: 2.0
     doc: |
@@ -344,7 +314,7 @@ methods:
           since: 2.0
           doc: |
             TODO doc
-  - id: 15
+  - id: 14
     name: getMemberXmlConfiguration
     since: 2.0
     doc: |
@@ -362,7 +332,7 @@ methods:
           since: 2.0
           doc: |
             TODO doc
-  - id: 16
+  - id: 15
     name: getJobMetrics
     since: 2.0
     doc: |

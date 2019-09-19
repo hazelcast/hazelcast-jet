@@ -18,11 +18,12 @@ package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.impl.MemberImpl;
+import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.internal.metrics.managementcenter.MetricsResultSet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
-import com.hazelcast.jet.impl.metrics.management.MetricsResultSet;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.util.UuidUtil;
@@ -49,6 +50,7 @@ public class ReadMetricsTest extends JetTestSupport {
     public void when_readMetricsAsync() throws Exception {
         JetConfig conf = new JetConfig();
         conf.getMetricsConfig().setCollectionIntervalSeconds(1);
+        conf.getMetricsConfig().setMinimumLevel(ProbeLevel.INFO);
         JetInstance instance = createJetMember(conf);
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
         Member member = instance.getHazelcastInstance().getCluster().getLocalMember();

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.InvalidConfigurationException;
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.impl.config.YamlJetConfigBuilder;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.util.RootCauseMatcher;

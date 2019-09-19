@@ -19,6 +19,7 @@ package com.hazelcast.jet.config;
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.IdentityReplacer;
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.TestReplacer;
 import com.hazelcast.config.InvalidConfigurationException;
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.IOUtil;

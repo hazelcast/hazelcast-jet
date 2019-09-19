@@ -20,7 +20,7 @@ import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.internal.yaml.YamlNode;
 import com.hazelcast.internal.yaml.YamlScalar;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.MetricsConfig;
+import com.hazelcast.config.MetricsConfig;
 import org.w3c.dom.Node;
 
 import java.util.Properties;

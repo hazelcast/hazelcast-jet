@@ -18,12 +18,12 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.cluster.Member;
 import com.hazelcast.internal.metrics.MetricsUtil;
+import com.hazelcast.internal.metrics.managementcenter.Metric;
+import com.hazelcast.internal.metrics.managementcenter.MetricsCompressor;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.core.metrics.Measurement;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.impl.metrics.Metric;
-import com.hazelcast.jet.impl.metrics.MetricsCompressor;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 
 import javax.annotation.Nonnull;

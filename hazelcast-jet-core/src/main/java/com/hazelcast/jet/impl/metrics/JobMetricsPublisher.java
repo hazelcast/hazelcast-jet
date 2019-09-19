@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.cluster.Member;
+import com.hazelcast.internal.metrics.MetricsPublisher;
+import com.hazelcast.internal.metrics.managementcenter.MetricsCompressor;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 
@@ -39,7 +41,7 @@ public class JobMetricsPublisher implements MetricsPublisher {
     private final String namePrefix;
     private final Map<Long, MetricsCompressor> executionIdToCompressor = new HashMap<>();
 
-    JobMetricsPublisher(
+    public JobMetricsPublisher(
             @Nonnull JobExecutionService jobExecutionService,
             @Nonnull Member member
     ) {
