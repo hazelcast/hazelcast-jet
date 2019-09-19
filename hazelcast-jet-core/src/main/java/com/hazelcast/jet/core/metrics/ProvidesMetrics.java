@@ -20,7 +20,7 @@ package com.hazelcast.jet.core.metrics;
  * Marker interface to be implemented by all classes that want to be able
  * to retrieve and work with custom metrics.
  */
-public interface MetricsOperator {
+public interface ProvidesMetrics {
 
     /**
      * Will be called once for each instance and has the role to provide

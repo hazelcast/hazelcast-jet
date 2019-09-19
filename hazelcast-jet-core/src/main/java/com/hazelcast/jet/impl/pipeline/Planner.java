@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.FlatMapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
@@ -211,7 +211,7 @@ public class Planner {
             }
             return result;
         };
-        return MetricsOperatorUtil.wrapAll(mergedFunction, functions);
+        return UserMetricsUtil.wrapAll(mergedFunction, functions);
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

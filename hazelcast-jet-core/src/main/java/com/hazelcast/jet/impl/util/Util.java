@@ -30,11 +30,13 @@ import com.hazelcast.spi.NodeEngine;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InvalidClassException;
 import java.io.NotSerializableException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -200,6 +202,21 @@ public final class Util {
         } catch (IOException e) {
             // never really thrown, as the underlying stream never throws it
             throw new JetException(e);
+        }
+    }
+
+    /** Returns a deep clone of an object by serializing and deserializing it (ser-de). */
+    public static <T> T serde(T object) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(object);
+            oos.close();
+            byte[] byteData = baos.toByteArray();
+            ByteArrayInputStream bais = new ByteArrayInputStream(byteData);
+            return (T) new ObjectInputStream(bais).readObject();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

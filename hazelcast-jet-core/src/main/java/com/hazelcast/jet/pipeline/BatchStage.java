@@ -39,7 +39,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.Functions.wholeItem;
 
@@ -283,13 +282,11 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * @param <R1> type of the aggregated result for the other stage
      */
     @Nonnull
-    default <T1, R0, R1> BatchStage<Tuple2<R0, R1>> aggregate2(
+    <T1, R0, R1> BatchStage<Tuple2<R0, R1>> aggregate2(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1
-    ) {
-        return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1));
-    }
+    );
 
     /**
      * Attaches a stage that performs the given aggregate operation over all

@@ -20,7 +20,10 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -40,9 +43,10 @@ import static java.util.Collections.singletonList;
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
  */
-public class GroupP<K, A, R, OUT> extends AbstractProcessor {
+public class GroupP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
+    @Nonnull private final ProvidesMetrics metricsProvider;
 
     private final Map<K, A> keyToAcc = new HashMap<>();
     private Traverser<OUT> resultTraverser;
@@ -58,6 +62,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
+        this.metricsProvider = UserMetricsUtil.cast(aggrOp);
     }
 
     public <T> GroupP(
@@ -86,6 +91,11 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor {
                     .map(e -> mapToOutputFn.apply(e.getKey(), aggrOp.finishFn().apply(e.getValue())));
         }
         return emitFromTraverser(resultTraverser);
+    }
+
+    @Override
+    public void init(MetricsContext context) {
+        metricsProvider.init(context);
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {

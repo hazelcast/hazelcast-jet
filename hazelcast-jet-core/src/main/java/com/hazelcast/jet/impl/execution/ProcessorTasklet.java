@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.MetricsOperator;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -241,8 +241,8 @@ public class ProcessorTasklet implements Tasklet {
             throw sneakyThrow(e);
         }
 
-        if (probeBuilder != null && processor instanceof MetricsOperator) {
-            ((MetricsOperator) processor).init(new MetricsContextImpl(probeBuilder));
+        if (probeBuilder != null && processor instanceof ProvidesMetrics) {
+            ((ProvidesMetrics) processor).init(new MetricsContextImpl(probeBuilder));
         }
     }
 

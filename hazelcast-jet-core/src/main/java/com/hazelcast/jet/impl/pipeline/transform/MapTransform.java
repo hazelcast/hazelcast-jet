@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
@@ -47,7 +47,7 @@ public class MapTransform<T, R> extends AbstractTransform {
     @Override
     public void addToDag(Planner p) {
         FunctionEx<? super T, ? extends R> mapFn = mapFn();
-        SupplierEx<Processor> procSupplier = MetricsOperatorUtil.wrap(mapP(mapFn), mapFn);
+        SupplierEx<Processor> procSupplier = UserMetricsUtil.wrap(mapP(mapFn), mapFn);
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(), procSupplier);
         p.addEdges(this, pv.v);
     }

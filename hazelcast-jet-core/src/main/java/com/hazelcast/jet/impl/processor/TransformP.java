@@ -19,9 +19,9 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.MetricsOperator;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
 
@@ -32,16 +32,16 @@ import javax.annotation.Nonnull;
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public class TransformP<T, R> extends AbstractProcessor implements MetricsOperator {
+public class TransformP<T, R> extends AbstractProcessor implements ProvidesMetrics {
     private final FlatMapper<T, R> flatMapper;
-    private final MetricsOperator metricsOperator;
+    private final ProvidesMetrics metricsProvider;
 
     /**
      * Constructs a processor with the given mapping function.
      */
     public TransformP(@Nonnull FunctionEx<T, ? extends Traverser<? extends R>> mapper) {
         this.flatMapper = flatMapper(mapper);
-        this.metricsOperator = MetricsOperatorUtil.cast(mapper);
+        this.metricsProvider = UserMetricsUtil.cast(mapper);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class TransformP<T, R> extends AbstractProcessor implements MetricsOperat
 
     @Override
     public void init(MetricsContext context) {
-        metricsOperator.init(context);
+        metricsProvider.init(context);
     }
 
 }

@@ -22,12 +22,14 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.AggregateTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -37,9 +39,11 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.Traversers.singleton;
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -181,9 +185,13 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    @SuppressWarnings("unchecked")
     public <R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapter);
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp, aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn()
+        );
+        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp =
+                                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
+        return attach(new AggregateTransform<>(singletonList(transform), wrappedAggrOp), fnAdapter);
     }
 
     @Nonnull @Override
@@ -191,7 +199,27 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
     ) {
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), aggrOp), DO_NOT_ADAPT);
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp, aggrOp.accumulateFn0(), aggrOp.accumulateFn1(),
+                aggrOp.createFn(), aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn()
+        );
+        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedAggrOp =
+                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), wrappedAggrOp), DO_NOT_ADAPT);
+    }
+
+    @Nonnull
+    @Override
+    public <T1, R0, R1> BatchStage<Tuple2<R0, R1>> aggregate2(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
+            @Nonnull BatchStage<T1> stage1,
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1) {
+        List<Serializable> metricsProviderCandidates = asList(
+                op0, op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(),
+                op1, op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn()
+        );
+        AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> aggrOp = aggregateOperation2(op0, op1);
+        return aggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 
     @Nonnull @Override

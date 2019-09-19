@@ -40,7 +40,7 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.metrics.MetricsOperatorUtil;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingContextUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
@@ -54,6 +54,7 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -61,6 +62,7 @@ import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.TimestampKind.EVENT;
 import static com.hazelcast.jet.function.FunctionEx.identity;
+import static com.hazelcast.jet.impl.util.Util.serde;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
@@ -237,7 +239,10 @@ public final class Processors {
     ) {
         // We should use the same constant key as the input edges do, but since
         // the processor doesn't save the state, there's no need to.
-        return () -> new GroupP<>(nCopies(aggrOp.arity(), t -> "ALL"), aggrOp, (k, r) -> r);
+        return () -> {
+            AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
+            return new GroupP<>(nCopies(clonedAggrOp.arity(), t -> "ALL"), clonedAggrOp, (k, r) -> r);
+        };
     }
 
     /**
@@ -259,12 +264,17 @@ public final class Processors {
      */
     @Nonnull
     public static <A, R> SupplierEx<Processor> accumulateP(@Nonnull AggregateOperation<A, R> aggrOp) {
-        return () -> new GroupP<>(
-                // We should use the same constant key as the input edges do, but since
-                // the processor doesn't save the state, there's no need to.
-                nCopies(aggrOp.arity(), t -> "ALL"),
-                aggrOp.withIdentityFinish(),
-                (k, r) -> r);
+        return () -> {
+            AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
+            AggregateOperation<A, A> wrappedAggrOp = UserMetricsUtil.wrap(
+                                                        clonedAggrOp.withIdentityFinish(), clonedAggrOp);
+            return new GroupP<>(
+                    // We should use the same constant key as the input edges do, but since
+                    // the processor doesn't save the state, there's no need to.
+                    nCopies(wrappedAggrOp.arity(), t -> "ALL"),
+                    wrappedAggrOp,
+                    (k, r) -> r);
+        };
     }
 
     /**
@@ -288,12 +298,18 @@ public final class Processors {
     public static <A, R> SupplierEx<Processor> combineP(
             @Nonnull AggregateOperation<A, R> aggrOp
     ) {
-        return () -> new GroupP<>(
-                // We should use the same constant key as the input edges do, but since
-                // the processor doesn't save the state, there's no need to.
-                t -> "ALL",
-                aggrOp.withCombiningAccumulateFn(identity()),
-                (k, r) -> r);
+        return () -> {
+            AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
+            AggregateOperation<A, R> wrappedAggrOp = UserMetricsUtil.wrap(
+                                                        clonedAggrOp.withCombiningAccumulateFn(identity()), clonedAggrOp);
+            return new GroupP<>(
+                    // We should use the same constant key as the input edges do, but since
+                    // the processor doesn't save the state, there's no need to.
+                    Collections.singletonList(t -> "ALL"),
+                    wrappedAggrOp,
+                    (k, r) -> r
+            );
+        };
     }
 
     /**
@@ -326,7 +342,10 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new GroupP<>(keyFns, aggrOp, mapToOutputFn);
+        return () -> {
+            AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
+            return new GroupP<>(keyFns, clonedAggrOp, mapToOutputFn);
+        };
     }
 
     /**
@@ -355,7 +374,12 @@ public final class Processors {
             @Nonnull List<FunctionEx<?, ? extends K>> getKeyFns,
             @Nonnull AggregateOperation<A, ?> aggrOp
     ) {
-        return () -> new GroupP<>(getKeyFns, aggrOp.withIdentityFinish(), Util::entry);
+        return () -> {
+            AggregateOperation<A, ?> clonedAggrOp = serde(aggrOp);
+            AggregateOperation<A, A> wrappedAggrOp = UserMetricsUtil.wrap(
+                                                            clonedAggrOp.withIdentityFinish(), clonedAggrOp);
+            return new GroupP<>(getKeyFns, wrappedAggrOp, Util::entry);
+        };
     }
 
     /**
@@ -386,10 +410,15 @@ public final class Processors {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull BiFunctionEx<? super K, ? super R, OUT> mapToOutputFn
     ) {
-        return () -> new GroupP<>(
-                Entry::getKey,
-                aggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
-                mapToOutputFn);
+        return () -> {
+            AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
+            AggregateOperation<A, R> wrappedAggrOp = UserMetricsUtil.wrap(
+                                            clonedAggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue), clonedAggrOp);
+            return new GroupP<>(
+                    singletonList((FunctionEx<Entry<K, ?>, K>) Entry::getKey),
+                    wrappedAggrOp,
+                    mapToOutputFn);
+        };
     }
 
     /**
@@ -696,12 +725,13 @@ public final class Processors {
     @Nonnull
     public static <T, R> SupplierEx<Processor> mapP(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         return () -> {
+            FunctionEx<? super T, ? extends R> clonedMapFn = serde(mapFn);
             final ResettableSingletonTraverser<R> trav = new ResettableSingletonTraverser<>();
             FunctionEx<T, Traverser<? extends R>> traverserFn = item -> {
-                trav.accept(mapFn.apply(item));
+                trav.accept(clonedMapFn.apply(item));
                 return trav;
             };
-            return new TransformP<>(MetricsOperatorUtil.wrap(traverserFn, mapFn));
+            return new TransformP<>(UserMetricsUtil.wrap(traverserFn, clonedMapFn));
         };
     }
 
@@ -738,7 +768,7 @@ public final class Processors {
     public static <T, R> SupplierEx<Processor> flatMapP(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return () -> new TransformP<>(flatMapFn);
+        return () -> new TransformP<>(serde(flatMapFn));
     }
 
     /**
