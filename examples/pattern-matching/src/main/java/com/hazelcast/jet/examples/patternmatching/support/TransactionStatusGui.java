@@ -17,9 +17,7 @@
 package com.hazelcast.jet.examples.patternmatching.support;
 
 import com.hazelcast.core.EntryEvent;
-import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.IMap;
-import com.hazelcast.core.MapEvent;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryUpdatedListener;
 
@@ -57,6 +55,27 @@ public final class TransactionStatusGui {
         EventQueue.invokeLater(this::startGui);
     }
 
+    private void onMapEvent(EntryEvent<Long, Long> event) {
+        long transactionId = event.getKey();
+        long value = event.getValue();
+        EventQueue.invokeLater(() -> {
+            TxInfo ti = guiModel.stream()
+                                .filter(it -> it.transactionId == transactionId)
+                                .findAny()
+                                .orElseGet(() -> {
+                                    TxInfo newTi = new TxInfo(transactionId);
+                                    guiModel.add(newTi);
+                                    return newTi;
+                                });
+            ti.statusCode = value < 0 ? value : COMPLETED_CODE;
+            ti.latency = value < 0 ? 0 : value;
+            if (value != PENDING_CODE) {
+                ti.removeAt = System.currentTimeMillis() + RETENTION_TIME_MS;
+            }
+            frame.repaint();
+        });
+    }
+
     private void startGui() {
         frame.setBackground(Color.WHITE);
         frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -92,27 +111,6 @@ public final class TransactionStatusGui {
         frame.setVisible(true);
     }
 
-    private void onMapEvent(EntryEvent<Long, Long> event) {
-        long transactionId = event.getKey();
-        long value = event.getValue();
-        EventQueue.invokeLater(() -> {
-            TxInfo ti = guiModel.stream()
-                                .filter(it -> it.transactionId == transactionId)
-                                .findAny()
-                                .orElseGet(() -> {
-                                    TxInfo newTi = new TxInfo(transactionId);
-                                    guiModel.add(newTi);
-                                    return newTi;
-                                });
-            ti.statusCode = value < 0 ? value : COMPLETED_CODE;
-            ti.latency = value < 0 ? 0 : value;
-            if (value != PENDING_CODE) {
-                ti.removeAt = System.currentTimeMillis() + RETENTION_TIME_MS;
-            }
-            frame.repaint();
-        });
-    }
-
     private static class TxInfo {
         long transactionId;
         long statusCode = PENDING_CODE;
@@ -136,36 +134,6 @@ public final class TransactionStatusGui {
                     : statusCode == TIMED_OUT_CODE ? Color.RED
                     : statusCode == PENDING_CODE ? Color.BLUE
                     : Color.RED;
-        }
-    }
-
-    interface EventListener<K, V> extends EntryListener<K, V> {
-        void onEvent(EntryEvent<K, V> event);
-
-        @Override
-        default void entryAdded(EntryEvent<K, V> event) {
-            onEvent(event);
-        }
-
-        @Override
-        default void entryUpdated(EntryEvent<K, V> event) {
-            onEvent(event);
-        }
-
-        @Override
-        default void entryEvicted(EntryEvent<K, V> event) {
-        }
-
-        @Override
-        default void entryRemoved(EntryEvent<K, V> event) {
-        }
-
-        @Override
-        default void mapCleared(MapEvent event) {
-        }
-
-        @Override
-        default void mapEvicted(MapEvent event) {
         }
     }
 }
