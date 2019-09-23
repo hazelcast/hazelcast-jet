@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.jet.function.SupplierEx;
+
 import javax.annotation.Nonnull;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Context object which is able to provide localized counter instances to
@@ -28,9 +29,40 @@ import java.util.concurrent.atomic.AtomicLong;
 public interface MetricsContext {
 
     /**
-     * Return a counter that can be used to set values for a custom, per
-     * Processor metric.
+     * Return a {@link UserMetric} object that can be used to set values
+     * for one specific user-defined, per Processor metric, identified
+     * by the provided name.
+     *
+     * Calling this method for metrics which have already had an implicit
+     * supplier set is not allowed and will result in an {@code IllegalStateException}
+     * being thrown.
      */
     @Nonnull
-    AtomicLong getCounter(String name);
+    UserMetric getUserMetric(String name) throws IllegalStateException;
+
+    /**
+     * Specifies an implicit value supplier for a user-defined, per Processor
+     * metric, identified by the provided name.
+     *
+     * Calling this method for metrics for which a {@link UserMetric} handler
+     * has already been retrieved is not allowed and will result in an
+     * {@code IllegalStateException} being thrown.
+     *
+     * Setting a supplier after it has already been set will also result in
+     * an {@code IllegalStateException} being thrown.
+     *
+     * Care needs to be taken that the supplier passed in as a parameter is
+     * thread-safe. For example:
+     *
+     * <pre>{@code
+     *     AtomicLong counter = new AtomicLong();
+     *     ...
+     *     context.getUserMetric("my_metric").setValueSupplier(counter::get);
+     *     ...
+     *     counter.incrementAndGet();
+     *     counter.incrementAndGet();
+     * }</pre>
+     */
+    void setUserMetricSupplier(@Nonnull String name, @Nonnull SupplierEx<Long> supplier)
+                                                                    throws IllegalStateException;
 }

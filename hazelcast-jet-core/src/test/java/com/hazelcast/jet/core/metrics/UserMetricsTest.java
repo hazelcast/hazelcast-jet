@@ -209,7 +209,7 @@ public class UserMetricsTest extends JetTestSupport {
     private static class AccumulateProvidingMetrics implements BiConsumerEx<LongAccumulator, Long>, ProvidesMetrics {
 
         private final String metricName;
-        private AtomicLong addedCounter;
+        private UserMetric addedCounter;
 
         AccumulateProvidingMetrics(String metricName) {
             this.metricName = metricName;
@@ -218,7 +218,7 @@ public class UserMetricsTest extends JetTestSupport {
         @Override
         public void acceptEx(LongAccumulator longAccumulator, Long l) {
             longAccumulator.add(l);
-            addedCounter.incrementAndGet();
+            addedCounter.incValue();
         }
 
         @Override
@@ -226,7 +226,7 @@ public class UserMetricsTest extends JetTestSupport {
             if (addedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
-            addedCounter = context.getCounter(metricName);
+            addedCounter = context.getUserMetric(metricName);
         }
 
     }
@@ -238,8 +238,8 @@ public class UserMetricsTest extends JetTestSupport {
 
         private final PredicateEx<Long> predicate;
 
-        private AtomicLong droppedCounter;
-        private AtomicLong totalCounter;
+        private AtomicLong droppedCounter = new AtomicLong();
+        private AtomicLong totalCounter = new AtomicLong();
 
         PredicateProvidingMetrics(PredicateEx<Long> predicate) {
             this.predicate = predicate;
@@ -247,11 +247,8 @@ public class UserMetricsTest extends JetTestSupport {
 
         @Override
         public void init(MetricsContext context) {
-            if (droppedCounter != null || totalCounter != null) {
-                throw new IllegalStateException("Should get initialised only once!");
-            }
-            droppedCounter = context.getCounter(DROPPED);
-            totalCounter = context.getCounter(TOTAL);
+            context.setUserMetricSupplier(DROPPED, droppedCounter::get);
+            context.setUserMetricSupplier(TOTAL, totalCounter::get);
         }
 
         @Override
@@ -271,19 +268,19 @@ public class UserMetricsTest extends JetTestSupport {
 
         private static final String MAPPED = "mapped";
 
-        private AtomicLong mappedCounter;
+        private UserMetric mappedCounter;
 
         @Override
         public void init(MetricsContext context) {
             if (mappedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
-            mappedCounter = context.getCounter(MAPPED);
+            mappedCounter = context.getUserMetric(MAPPED);
         }
 
         @Override
         public Long applyEx(Long aLong) {
-            mappedCounter.incrementAndGet();
+            mappedCounter.incValue();
             return aLong;
         }
     }
@@ -294,7 +291,7 @@ public class UserMetricsTest extends JetTestSupport {
 
         private final FunctionEx<Long, Long[]> expandFn;
 
-        private AtomicLong expandedCounter;
+        private UserMetric expandedCounter;
 
         FlatMapProvidingMetrics(FunctionEx<Long, Long[]> expandFn) {
             this.expandFn = expandFn;
@@ -305,13 +302,13 @@ public class UserMetricsTest extends JetTestSupport {
             if (expandedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
-            expandedCounter = context.getCounter(EXPANDED);
+            expandedCounter = context.getUserMetric(EXPANDED);
         }
 
         @Override
         public Traverser<Long> applyEx(Long aLong) {
             Long[] expansions = expandFn.apply(aLong);
-            expandedCounter.addAndGet(expansions.length);
+            expandedCounter.incValue(expansions.length);
             return Traversers.traverseItems(expansions);
         }
     }

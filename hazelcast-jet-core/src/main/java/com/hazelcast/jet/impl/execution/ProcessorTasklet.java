@@ -28,6 +28,8 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.UserMetric;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -246,7 +248,8 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    @Override @Nonnull
+    @Override
+    @Nonnull
     public ProgressState call() {
         assert !processorClosed : "processor closed";
         progTracker.reset();
@@ -540,10 +543,61 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
+    private static class UserMetricImpl implements UserMetric {
+
+        @Nonnull
+        private final String name;
+        private final AtomicLong counter = new AtomicLong();
+
+        UserMetricImpl(@Nonnull String name) {
+            this.name = Objects.requireNonNull(name, "name");
+        }
+
+        @Override
+        @Nonnull
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public void updateValue(long newValue) {
+            counter.set(newValue);
+        }
+
+        @Override
+        public void incValue() {
+            counter.incrementAndGet();
+        }
+
+        @Override
+        public void incValue(long increment) {
+            counter.addAndGet(increment);
+        }
+
+        @Override
+        public void decValue() {
+            counter.decrementAndGet();
+        }
+
+        @Override
+        public void decValue(long decrement) {
+            boolean successfull;
+            do {
+                long value = counter.get();
+                successfull = counter.compareAndSet(value, value - decrement);
+            } while (!successfull);
+        }
+
+        LongProbeFunction<ProcessorTasklet> getProbeFunction() {
+            return t -> counter.get();
+        }
+    }
+
     private class MetricsContextImpl implements MetricsContext {
 
         private final ProbeBuilder probeBuilder;
-        private final Map<String, AtomicLong> counters = new HashMap<>();
+        private final Map<String, UserMetricImpl> setters = new HashMap<>();
+        private final Map<String, SupplierEx<Long>> suppliers = new HashMap<>();
 
         MetricsContextImpl(@Nonnull ProbeBuilder probeBuilder) {
             this.probeBuilder = probeBuilder;
@@ -551,17 +605,46 @@ public class ProcessorTasklet implements Tasklet {
 
         @Nonnull
         @Override
-        public AtomicLong getCounter(@Nonnull String name) {
+        public UserMetric getUserMetric(String name) {
             Objects.requireNonNull(name, "name");
 
-            return counters.computeIfAbsent(name,
+            if (suppliers.containsKey(name)) {
+                throw new IllegalStateException(
+                        String.format("User-metric '%s' already has an implicit supplier set", name)
+                );
+            }
+
+            return setters.computeIfAbsent(name,
                     n -> {
-                        AtomicLong counter = new AtomicLong();
-                        LongProbeFunction<ProcessorTasklet> probeFn = t -> counter.get();
-                        probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT, probeFn);
-                        return counter;
+                        UserMetricImpl userMetric = new UserMetricImpl(name);
+                        probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT,
+                                                                                            userMetric.getProbeFunction());
+                        return userMetric;
                     }
             );
+        }
+
+        @Override
+        public void setUserMetricSupplier(@Nonnull String name, @Nonnull SupplierEx<Long> supplier)
+                                                                                throws IllegalStateException {
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(supplier, "supplier");
+
+            if (setters.containsKey(name)) {
+                throw new IllegalStateException(
+                        String.format("User-metric '%s' already has an explicit setter defined", name)
+                );
+            }
+
+            if (suppliers.containsKey(name)) {
+                throw new IllegalStateException(
+                        String.format("User-metric '%s' already has a implicit supplier set", name)
+                );
+            }
+
+            probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT,
+                                                            (LongProbeFunction<ProcessorTasklet>) t -> supplier.get());
+            suppliers.put(name, supplier);
         }
     }
 }
