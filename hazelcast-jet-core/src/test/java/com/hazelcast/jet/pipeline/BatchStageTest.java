@@ -460,7 +460,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, Long>> stage = batchStageFromList(input)
                 .groupingKey(i -> i % 2)
                 .mapStateful(LongAccumulator::new, (acc, k, i) -> {
-                    acc.addAllowingOverflow(1);
+                    acc.add(1);
                     if (acc.get() == input.size() / 2) {
                         return entry(k, acc.get());
                     }
@@ -482,7 +482,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, Long>> stage = batchStageFromList(input)
                 .groupingKey(i -> i % 2)
                 .mapStateful(LongAccumulator::new, (acc, k, i) -> {
-                    acc.addAllowingOverflow(1);
+                    acc.add(1);
                     return (acc.get() == input.size() / 2) ? entry(k, acc.get()) : null;
                 });
 

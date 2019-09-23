@@ -24,16 +24,17 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.util.function.LongConsumer;
 
 import static com.hazelcast.jet.Util.entry;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -71,18 +72,18 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
     @Test
     public void mapStateful_whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized() {
-        whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized(streamStageWithKey
-                -> streamStageWithKey.mapStateful(TTL,
-                        AtomicLong::new,
-                        (atomicLong, key, input) -> {
+        whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized(streamStageWithKey ->
+                streamStageWithKey.mapStateful(TTL,
+                        () -> new long[1],
+                        (counter, key, input) -> {
                             if (key == 1) {
                                 keys.add(input);
                             }
-                            return entry(input, atomicLong.getAndIncrement() * 2);
+                            return entry(input, 2 * counter[0]++);
                         },
-                        (atomicLong, key, wm) -> {
+                        (counter, key, wm) -> {
                             if (key == 1) {
-                                evictCounterValues.add(atomicLong.get());
+                                evictCounterValues.add(counter[0]);
                                 if (evictCount.getAndIncrement() < 1) {
                                     emitSpecialItem.set(true);
                                 }
@@ -93,18 +94,18 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
     @Test
     public void flatMapStateful_whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized() {
-        whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized(streamStageWithKey
-                -> streamStageWithKey.flatMapStateful(TTL,
-                        AtomicLong::new,
-                        (atomicLong, key, input) -> {
+        whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized(streamStageWithKey ->
+                streamStageWithKey.flatMapStateful(TTL,
+                        () -> new long[1],
+                        (counter, key, input) -> {
                             if (key == 1) {
                                 keys.add(input);
                             }
-                            return Traversers.singleton(entry(input, atomicLong.getAndIncrement() * 2));
+                            return Traversers.singleton(entry(input, 2 * counter[0]++));
                         },
-                        (atomicLong, key, wm) -> {
+                        (counter, key, wm) -> {
                             if (key == 1) {
-                                evictCounterValues.add(atomicLong.get());
+                                evictCounterValues.add(counter[0]);
                                 if (evictCount.getAndIncrement() < 1) {
                                     emitSpecialItem.set(true);
                                 }
@@ -116,16 +117,16 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
     @Test
     public void mapStateful_whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem() {
-        whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey
-                -> streamStageWithKey.mapStateful(
+        whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey ->
+                streamStageWithKey.mapStateful(
                         TTL_INTERVAL_LOWER,
-                        AtomicLong::new,
-                        (atomicLong, key, input) -> {
-                            mapFnCounterValues.add(atomicLong.getAndIncrement());
+                        () -> new long[1],
+                        (counter, key, input) -> {
+                            mapFnCounterValues.add(counter[0]++);
                             return entry(input.sequence(), input.sequence());
                         },
-                        (atomicLong, key, wm) -> {
-                            evictCounterValues.add(atomicLong.getAndIncrement());
+                        (counter, key, wm) -> {
+                            evictCounterValues.add(counter[0]++);
                             evictCount.incrementAndGet();
                             return null;
                         }));
@@ -133,16 +134,16 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
     @Test
     public void flatMapStateful_whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem() {
-        whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey
-                -> streamStageWithKey.flatMapStateful(
+        whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey ->
+                streamStageWithKey.flatMapStateful(
                         TTL_INTERVAL_LOWER,
-                        AtomicLong::new,
-                        (atomicLong, key, input) -> {
-                            mapFnCounterValues.add(atomicLong.getAndIncrement());
+                        () -> new long[1],
+                        (counter, key, input) -> {
+                            mapFnCounterValues.add(++counter[0]);
                             return Traversers.singleton(entry(input.sequence(), input.sequence()));
                         },
-                        (atomicLong, key, wm) -> {
-                            evictCounterValues.add(atomicLong.getAndIncrement());
+                        (counter, key, wm) -> {
+                            evictCounterValues.add(++counter[0]);
                             evictCount.incrementAndGet();
                             return Traversers.empty();
                         }));
@@ -150,14 +151,12 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
     @Test
     public void mapStateful_whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen() {
-        whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen(streamStageWithKey
-                -> streamStageWithKey.mapStateful(
+        whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen(streamStageWithKey ->
+                streamStageWithKey.mapStateful(
                         TTL_INTERVAL_EQUAL,
-                        AtomicLong::new,
-                        (atomicLong, key, input) -> {
-                            return entry(input.sequence(), input.sequence());
-                        },
-                        (atomicLong, key, wm) -> {
+                        () -> new long[1],
+                        (counter, key, input) -> entry(input.sequence(), input.sequence()),
+                        (counter, key, wm) -> {
                             evictCount.incrementAndGet();
                             return null;
                         }));
@@ -165,46 +164,48 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
     @Test
     public void flatMapStateful_whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen() {
-        whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen(streamStageWithKey
-                -> streamStageWithKey.flatMapStateful(
+        whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen(streamStageWithKey ->
+                streamStageWithKey.flatMapStateful(
                         TTL_INTERVAL_EQUAL,
-                        AtomicLong::new,
-                        (atomicLong, key, input) -> {
-                            return Traversers.singleton(entry(input.sequence(), input.sequence()));
-                        },
-                        (atomicLong, key, wm) -> {
+                        () -> new long[1],
+                        (counter, key, input) ->
+                                Traversers.singleton(entry(input.sequence(), input.sequence())),
+                        (counter, key, wm) -> {
                             evictCount.incrementAndGet();
                             return Traversers.empty();
                         }));
     }
 
-    public void whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(
-            Function<StreamStageWithKey<SimpleEvent, Object>, StreamStage<Map.Entry<Long, Long>>> statefulFn) {
+    private void whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(
+            Function<StreamStageWithKey<SimpleEvent, Object>, StreamStage<Map.Entry<Long, Long>>> statefulFn
+    ) {
         runIntervalTest(statefulFn,
-                (Long minimalSize) -> {
-                    assertTrue(evictCount.get() >= minimalSize);
-                    for (Long mapFnCounterValue : mapFnCounterValues) {
-                        assertEquals(new Long(0), mapFnCounterValue);
+                minimumSize -> {
+                    assertTrue(evictCount.get() >= minimumSize);
+                    for (long mapFnCounterValue : mapFnCounterValues) {
+                        assertEquals(0, mapFnCounterValue);
                     }
-                    for (Long evictCounterValue : evictCounterValues) {
-                        assertEquals(new Long(1), evictCounterValue);
+                    for (long evictCounterValue : evictCounterValues) {
+                        assertEquals(1, evictCounterValue);
                     }
                 });
     }
 
-    public void whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen(
-            Function<StreamStageWithKey<SimpleEvent, Object>, StreamStage<Map.Entry<Long, Long>>> statefulFn) {
-        runIntervalTest(statefulFn,
-                (Long ignore) -> assertEquals(0, evictCount.get()));
+    private void whenItemIntervalIsEqualTtl_thenEvictionDoesNotHappen(
+            Function<StreamStageWithKey<SimpleEvent, Object>, StreamStage<Map.Entry<Long, Long>>> statefulFn
+    ) {
+        runIntervalTest(statefulFn, ignored -> assertEquals(0, evictCount.get()));
     }
 
-    public void runIntervalTest(
+    private void runIntervalTest(
             Function<StreamStageWithKey<SimpleEvent, Object>, StreamStage<Map.Entry<Long, Long>>> statefulFn,
-            Consumer<Long> assertion) {
+            LongConsumer assertion
+    ) {
         Pipeline p = Pipeline.create();
-        StreamStageWithKey<SimpleEvent, Object> streamStageWithKey = p.drawFrom(TestSources.itemStream(1000))
+        StreamStageWithKey<SimpleEvent, Object> streamStageWithKey = p
+                .drawFrom(TestSources.itemStream(1000))
                 .withTimestamps(t -> t.sequence() * TS_FREQUENCY, 0)
-                .groupingKey(t -> t.sequence() % 1);
+                .groupingKey(t -> 0L);
         StreamStage<Map.Entry<Long, Long>> statefulStage = statefulFn.apply(streamStageWithKey);
         statefulStage.drainTo(Sinks.map(SINK_MAP_NAME));
 
@@ -216,13 +217,15 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
         ditchJob(job);
 
-        assertTrueEventually(() -> assertion.accept(new Long(map.size() - 1)));
+        assertTrueEventually(() -> assertion.accept(map.size() - 1));
     }
 
     private void whenEvictedAndAnotherItem_thenJustRelatedStateIsReinitialized(
-            Function<StreamStageWithKey<Long, Long>, StreamStage<Map.Entry<Long, Long>>> statefulFn) {
+            Function<StreamStageWithKey<Long, Long>, StreamStage<Map.Entry<Long, Long>>> statefulFn
+    ) {
         Pipeline p = Pipeline.create();
-        StreamStageWithKey<Long, Long> streamStageWithKey = p.drawFrom(TestSources.itemStream(1000))
+        StreamStageWithKey<Long, Long> streamStageWithKey = p
+                .drawFrom(TestSources.itemStream(1000))
                 .withIngestionTimestamps()
                 .setLocalParallelism(1)
                 .map(t -> emitSpecialItem.getAndSet(false) ? t.sequence() * 2 + 1 : t.sequence() * 2)
@@ -242,13 +245,9 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
 
         ditchJob(job);
 
-        //then
-        assertResults(map);
-    }
-
-    private void assertResults(Map<Long, Long> map) {
-        for (Long evictCounterValue : evictCounterValues) {
-            assertEquals((Long) 1L, evictCounterValue);
+        // then
+        for (long evictCounterValue : evictCounterValues) {
+            assertEquals(1, evictCounterValue);
         }
 
         assertEquals(2, keys.size());
