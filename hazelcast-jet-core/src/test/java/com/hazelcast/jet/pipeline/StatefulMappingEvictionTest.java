@@ -45,8 +45,10 @@ import static org.junit.Assert.assertTrue;
 public class StatefulMappingEvictionTest extends JetTestSupport {
 
     private static final long TTL = SECONDS.toMillis(2);
-    private static final long TTL_INTERVAL_LOWER = 1;
-    private static final long TTL_INTERVAL_EQUAL = 2;
+    private static final long TS_FREQUENCY = 100;
+    // it must be value like TTL_INTERVAL_LOWER * 1.1 < TS_FREQUENCY
+    private static final long TTL_INTERVAL_LOWER = 90;
+    private static final long TTL_INTERVAL_EQUAL = TS_FREQUENCY;
 
     private static final String SINK_MAP_NAME = StatefulMappingEvictionTest.class.getSimpleName() + "_map";
     private static AtomicBoolean emitSpecialItem;
@@ -113,8 +115,8 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
     }
 
     @Test
-    public void mapStateful_whenItemIntervalIsLowerThanTtl_thenEvictedBeforeEveryItem() {
-        whenItemIntervalIsLowerThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey
+    public void mapStateful_whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem() {
+        whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey
                 -> streamStageWithKey.mapStateful(
                         TTL_INTERVAL_LOWER,
                         AtomicLong::new,
@@ -130,8 +132,8 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
     }
 
     @Test
-    public void flatMapStateful_whenItemIntervalIsLowerThanTtl_thenEvictedBeforeEveryItem() {
-        whenItemIntervalIsLowerThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey
+    public void flatMapStateful_whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem() {
+        whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(streamStageWithKey
                 -> streamStageWithKey.flatMapStateful(
                         TTL_INTERVAL_LOWER,
                         AtomicLong::new,
@@ -176,7 +178,7 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
                         }));
     }
 
-    public void whenItemIntervalIsLowerThanTtl_thenEvictedBeforeEveryItem(
+    public void whenItemIntervalIsHigherThanTtl_thenEvictedBeforeEveryItem(
             Function<StreamStageWithKey<SimpleEvent, Object>, StreamStage<Map.Entry<Long, Long>>> statefulFn) {
         runIntervalTest(statefulFn,
                 (Long minimalSize) -> {
@@ -201,7 +203,7 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
             Consumer<Long> assertion) {
         Pipeline p = Pipeline.create();
         StreamStageWithKey<SimpleEvent, Object> streamStageWithKey = p.drawFrom(TestSources.itemStream(1000))
-                .withTimestamps(t -> t.sequence() * 2, 0)
+                .withTimestamps(t -> t.sequence() * TS_FREQUENCY, 0)
                 .groupingKey(t -> t.sequence() % 1);
         StreamStage<Map.Entry<Long, Long>> statefulStage = statefulFn.apply(streamStageWithKey);
         statefulStage.drainTo(Sinks.map(SINK_MAP_NAME));
@@ -222,6 +224,7 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
         Pipeline p = Pipeline.create();
         StreamStageWithKey<Long, Long> streamStageWithKey = p.drawFrom(TestSources.itemStream(1000))
                 .withIngestionTimestamps()
+                .setLocalParallelism(1)
                 .map(t -> emitSpecialItem.getAndSet(false) ? t.sequence() * 2 + 1 : t.sequence() * 2)
                 .groupingKey(t -> t % 2);
         StreamStage<Map.Entry<Long, Long>> statefulStage = statefulFn.apply(streamStageWithKey);
