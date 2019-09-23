@@ -46,11 +46,6 @@ public class GlobalMapStatefulTransform<T, S, R> extends AbstractTransform {
     }
 
     @Override
-    public long preferredWatermarkStride() {
-        return 1;
-    }
-
-    @Override
     public void addToDag(Planner p) {
         ConstantFunctionEx<T, Integer> keyFn = new ConstantFunctionEx<>(name().hashCode());
         PlannerVertex pv = p.addVertex(this, name(), 1,
