@@ -139,11 +139,11 @@ public class StatefulMappingEvictionTest extends JetTestSupport {
                         TTL_INTERVAL_LOWER,
                         () -> new long[1],
                         (counter, key, input) -> {
-                            mapFnCounterValues.add(++counter[0]);
+                            mapFnCounterValues.add(counter[0]++);
                             return Traversers.singleton(entry(input.sequence(), input.sequence()));
                         },
                         (counter, key, wm) -> {
-                            evictCounterValues.add(++counter[0]);
+                            evictCounterValues.add(counter[0]++);
                             evictCount.incrementAndGet();
                             return Traversers.empty();
                         }));
