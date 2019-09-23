@@ -27,7 +27,6 @@ import javax.annotation.Nullable;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.processor.Processors.mapStatefulP;
-import static java.lang.Math.max;
 
 public class MapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase<T, K, S> {
 

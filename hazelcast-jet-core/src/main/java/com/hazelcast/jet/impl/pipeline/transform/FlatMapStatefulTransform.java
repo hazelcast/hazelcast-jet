@@ -28,7 +28,6 @@ import javax.annotation.Nullable;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.processor.Processors.flatMapStatefulP;
-import static java.lang.Math.max;
 
 public class FlatMapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase<T, K, S> {
 
