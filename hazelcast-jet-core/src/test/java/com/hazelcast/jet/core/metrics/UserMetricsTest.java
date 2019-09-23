@@ -25,12 +25,15 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +43,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
+import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -57,7 +62,7 @@ public class UserMetricsTest extends JetTestSupport {
 
     @Test
     public void filter_batch() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4))
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
                 .drainTo(Sinks.logger());
 
@@ -67,18 +72,21 @@ public class UserMetricsTest extends JetTestSupport {
 
     @Test
     public void filter_stream() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4))
-                .addTimestamps(o -> 0L, 0L)
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
                 .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
-                .drainTo(Sinks.logger());
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
 
         assertCountersProduced(PredicateProvidingMetrics.DROPPED, 2,
-                PredicateProvidingMetrics.TOTAL, 5);
+                PredicateProvidingMetrics.TOTAL, 4);
     }
 
     @Test
     public void map_batch() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4))
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .map(new MapProvidingMetrics())
                 .drainTo(Sinks.logger());
 
@@ -87,17 +95,20 @@ public class UserMetricsTest extends JetTestSupport {
 
     @Test
     public void map_stream() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4))
-                .addTimestamps(o -> 0L, 0L)
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
                 .map(new MapProvidingMetrics())
-                .drainTo(Sinks.logger());
+                .drainTo(assertAnyOrder(Arrays.asList(3L, 12L, 21L, 30L)));
 
-        assertCountersProduced(MapProvidingMetrics.MAPPED, 5);
+        assertCountersProduced(MapProvidingMetrics.MAPPED, 4);
     }
 
     @Test
     public void fusedMapAndFilter_batch() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4))
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
                 .map(new MapProvidingMetrics())
                 .drainTo(Sinks.logger());
@@ -109,21 +120,24 @@ public class UserMetricsTest extends JetTestSupport {
 
     @Test
     public void fusedMapAndFilter_stream() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4))
-                .addTimestamps(o -> 0L, 0L)
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
                 .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
                 .map(new MapProvidingMetrics())
-                .drainTo(Sinks.logger());
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
 
         assertCountersProduced(PredicateProvidingMetrics.DROPPED, 2,
-                MapProvidingMetrics.MAPPED, 3,
-                PredicateProvidingMetrics.TOTAL, 5);
+                PredicateProvidingMetrics.TOTAL, 4,
+                MapProvidingMetrics.MAPPED, 2);
     }
 
     @Test
     public void flatMap_batch() {
-        pipeline.drawFrom(TestSources.items(0, 2, 4, 6, 8))
-                .flatMap(new FlatMapProvidingMetrics(i -> new Integer[]{i, i + 1}))
+        pipeline.drawFrom(TestSources.items(0L, 2L, 4L, 6L, 8L))
+                .flatMap(new FlatMapProvidingMetrics(l -> new Long[]{l, l + 1}))
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(FlatMapProvidingMetrics.EXPANDED, 10);
@@ -131,12 +145,15 @@ public class UserMetricsTest extends JetTestSupport {
 
     @Test
     public void flatMap_stream() {
-        pipeline.drawFrom(TestSources.items(0, 2, 4, 6, 8))
-                .addTimestamps(o -> 0L, 0L)
-                .flatMap(new FlatMapProvidingMetrics(i -> new Integer[]{i, i + 1}))
-                .drainTo(Sinks.logger());
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .flatMap(new FlatMapProvidingMetrics(l -> new Long[]{l, l + 1}))
+                .drainTo(assertAnyOrder(Arrays.asList(3L, 4L, 12L, 13L)));
 
-        assertCountersProduced(FlatMapProvidingMetrics.EXPANDED, 10);
+        assertCountersProduced(FlatMapProvidingMetrics.EXPANDED, 4);
     }
 
     @Test
@@ -174,13 +191,19 @@ public class UserMetricsTest extends JetTestSupport {
 
         JobMetrics metrics = job.getMetrics();
         for (int i = 0; i < expected.length; i += 2) {
-            assertCounterValue(metrics.get((String) expected[i]), (long) (Integer) expected[i + 1]);
+            String name = (String) expected[i];
+            assertCounterValue(name, metrics.get(name), (long) (Integer) expected[i + 1]);
         }
     }
 
-    private void assertCounterValue(List<Measurement> measurements, long expectedValue) {
+    private void assertCounterValue(String name, List<Measurement> measurements, long expectedValue) {
         assertFalse(measurements.isEmpty());
-        assertEquals(expectedValue, measurements.stream().mapToLong(Measurement::getValue).sum());
+        long actualValue = measurements.stream().mapToLong(Measurement::getValue).sum();
+        assertEquals(
+                String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name, actualValue),
+                expectedValue,
+                actualValue
+        );
     }
 
     private static class AccumulateProvidingMetrics implements BiConsumerEx<LongAccumulator, Long>, ProvidesMetrics {
@@ -193,7 +216,7 @@ public class UserMetricsTest extends JetTestSupport {
         }
 
         @Override
-        public void acceptEx(LongAccumulator longAccumulator, Long l) throws Exception {
+        public void acceptEx(LongAccumulator longAccumulator, Long l) {
             longAccumulator.add(l);
             addedCounter.incrementAndGet();
         }
@@ -208,17 +231,17 @@ public class UserMetricsTest extends JetTestSupport {
 
     }
 
-    private static class PredicateProvidingMetrics implements PredicateEx<Integer>, ProvidesMetrics {
+    private static class PredicateProvidingMetrics implements PredicateEx<Long>, ProvidesMetrics {
 
         private static final String DROPPED = "dropped";
         private static final String TOTAL = "total";
 
-        private final PredicateEx<Integer> predicate;
+        private final PredicateEx<Long> predicate;
 
         private AtomicLong droppedCounter;
         private AtomicLong totalCounter;
 
-        PredicateProvidingMetrics(PredicateEx<Integer> predicate) {
+        PredicateProvidingMetrics(PredicateEx<Long> predicate) {
             this.predicate = predicate;
         }
 
@@ -232,8 +255,8 @@ public class UserMetricsTest extends JetTestSupport {
         }
 
         @Override
-        public boolean testEx(Integer anInt) {
-            boolean pass = predicate.test(anInt);
+        public boolean testEx(Long aLong) {
+            boolean pass = predicate.test(aLong);
             if (!pass) {
                 droppedCounter.incrementAndGet();
             }
@@ -244,7 +267,7 @@ public class UserMetricsTest extends JetTestSupport {
         }
     }
 
-    private static class MapProvidingMetrics implements FunctionEx<Integer, Integer>, ProvidesMetrics {
+    private static class MapProvidingMetrics implements FunctionEx<Long, Long>, ProvidesMetrics {
 
         private static final String MAPPED = "mapped";
 
@@ -259,21 +282,21 @@ public class UserMetricsTest extends JetTestSupport {
         }
 
         @Override
-        public Integer applyEx(Integer i) {
+        public Long applyEx(Long aLong) {
             mappedCounter.incrementAndGet();
-            return i;
+            return aLong;
         }
     }
 
-    private static class FlatMapProvidingMetrics implements FunctionEx<Integer, Traverser<Integer>>, ProvidesMetrics {
+    private static class FlatMapProvidingMetrics implements FunctionEx<Long, Traverser<Long>>, ProvidesMetrics {
 
         private static final String EXPANDED = "expanded";
 
-        private final FunctionEx<Integer, Integer[]> expandFn;
+        private final FunctionEx<Long, Long[]> expandFn;
 
         private AtomicLong expandedCounter;
 
-        FlatMapProvidingMetrics(FunctionEx<Integer, Integer[]> expandFn) {
+        FlatMapProvidingMetrics(FunctionEx<Long, Long[]> expandFn) {
             this.expandFn = expandFn;
         }
 
@@ -286,8 +309,8 @@ public class UserMetricsTest extends JetTestSupport {
         }
 
         @Override
-        public Traverser<Integer> applyEx(Integer i) {
-            Integer[] expansions = expandFn.apply(i);
+        public Traverser<Long> applyEx(Long aLong) {
+            Long[] expansions = expandFn.apply(aLong);
             expandedCounter.addAndGet(expansions.length);
             return Traversers.traverseItems(expansions);
         }

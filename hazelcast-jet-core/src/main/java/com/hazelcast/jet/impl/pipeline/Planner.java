@@ -41,6 +41,7 @@ import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -171,18 +172,7 @@ public class Planner {
             if (chain.get(i) instanceof FlatMapTransform) {
                 FunctionEx<Object, Traverser> function = ((FlatMapTransform) chain.get(i)).flatMapFn();
                 FunctionEx<Object, Object> inputMapFn = mergeMapFunctions(chain.subList(lastFlatMap, i));
-                if (inputMapFn != null) {
-                    flatMapFn = flatMapFn == null
-                            ? (Object t) -> {
-                                Object mappedValue = inputMapFn.apply(t);
-                                return mappedValue != null ? function.apply(mappedValue) : Traversers.empty();
-                            }
-                            : flatMapFn.andThen(r -> r.map(inputMapFn).flatMap(function));
-                } else {
-                    flatMapFn = flatMapFn == null
-                            ? function::apply
-                            : flatMapFn.andThen(r -> r.flatMap(function));
-                }
+                flatMapFn = recomputeFlatMapFn(flatMapFn, function, inputMapFn);
                 lastFlatMap = i + 1;
             }
         }
@@ -193,7 +183,7 @@ public class Planner {
             return new MapTransform(name, chain.get(0).upstream().get(0), trailingMapFn);
         } else {
             if (trailingMapFn != null) {
-                flatMapFn = flatMapFn.andThen(t -> t.map(trailingMapFn));
+                flatMapFn = merge(flatMapFn, trailingMapFn);
             }
             return new FlatMapTransform(name, chain.get(0).upstream().get(0), flatMapFn);
         }
@@ -212,6 +202,34 @@ public class Planner {
             return result;
         };
         return UserMetricsUtil.wrapAll(mergedFunction, functions);
+    }
+
+    private static FunctionEx<Object, Traverser> merge(FunctionEx<Object, Traverser> flatMapFn, FunctionEx trailingMapFn) {
+        return UserMetricsUtil.wrapAll(
+                flatMapFn.andThen(t -> t.map(trailingMapFn)),
+                Arrays.asList(flatMapFn, trailingMapFn)
+        );
+    }
+
+    private static FunctionEx<Object, Traverser> recomputeFlatMapFn(
+            FunctionEx<Object, Traverser> flatMapFn,
+            FunctionEx<Object, Traverser> function,
+            FunctionEx<Object, Object> inputMapFn
+    ) {
+        FunctionEx<Object, Traverser> newFlatMapFn;
+        if (inputMapFn != null) {
+            newFlatMapFn = flatMapFn == null
+                    ? (Object t) -> {
+                        Object mappedValue = inputMapFn.apply(t);
+                        return mappedValue != null ? function.apply(mappedValue) : Traversers.empty();
+                    }
+                    : flatMapFn.andThen(r -> r.map(inputMapFn).flatMap(function));
+        } else {
+            newFlatMapFn = flatMapFn == null
+                    ? function::apply
+                    : flatMapFn.andThen(r -> r.flatMap(function));
+        }
+        return UserMetricsUtil.wrapAll(newFlatMapFn, Arrays.asList(flatMapFn, function, inputMapFn));
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

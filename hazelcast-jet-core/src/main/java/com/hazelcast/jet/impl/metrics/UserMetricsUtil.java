@@ -198,8 +198,6 @@ public final class UserMetricsUtil {
         }
     }
 
-
-
     @SuppressWarnings("unchecked")
     private static class WrappedAggregateOperation2 implements AggregateOperation2, ProvidesMetrics, Serializable {
 
