@@ -266,7 +266,10 @@ public interface Processor {
      * should do the following:
      * <ul>
      *     <li>if {@code commitTransactions == true}, it should commit the
-     *     pending transactions
+     *     pending transactions. It must not continue to use the just-committed
+     *     transaction ID - we stored it in the latest snapshot and after
+     *     restart we commit the transactions with IDs found in the snapshot -
+     *     we would commit the items written after the snapshot.
      *
      *     <li>if {@code commitTransactions == false}, it should do nothing to
      *     pending transactions. If it didn't create new active transaction in
