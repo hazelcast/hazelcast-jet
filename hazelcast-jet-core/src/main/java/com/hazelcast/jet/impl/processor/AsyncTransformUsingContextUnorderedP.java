@@ -139,8 +139,8 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     }
 
     @Override
-    public void init(MetricsContext context) {
-        metricsProvider.init(context);
+    public void registerMetrics(MetricsContext context) {
+        metricsProvider.registerMetrics(context);
     }
 
     @Override

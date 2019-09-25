@@ -85,8 +85,8 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
     }
 
     @Override
-    public void init(MetricsContext context) {
-        metricsProvider.init(context);
+    public void registerMetrics(MetricsContext context) {
+        metricsProvider.registerMetrics(context);
     }
 
     @Override

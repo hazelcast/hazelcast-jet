@@ -105,8 +105,8 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
     }
 
     @Override
-    public void init(MetricsContext context) {
-        metricsProvider.init(context);
+    public void registerMetrics(MetricsContext context) {
+        metricsProvider.registerMetrics(context);
     }
 
     @Override

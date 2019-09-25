@@ -244,7 +244,7 @@ public class ProcessorTasklet implements Tasklet {
         }
 
         if (probeBuilder != null && processor instanceof ProvidesMetrics) {
-            ((ProvidesMetrics) processor).init(new MetricsContextImpl(probeBuilder));
+            ((ProvidesMetrics) processor).registerMetrics(new MetricsContextImpl(probeBuilder));
         }
     }
 
@@ -545,7 +545,6 @@ public class ProcessorTasklet implements Tasklet {
 
     private static class CounterImpl implements Counter {
 
-        @Nonnull
         private final String name;
         private final AtomicLong counter = new AtomicLong();
 

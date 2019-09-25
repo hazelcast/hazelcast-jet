@@ -392,7 +392,7 @@ public class UserMetricsTest extends JetTestSupport {
         private AtomicLong totalCounter = new AtomicLong();
 
         @Override
-        public void init(MetricsContext context) {
+        public void registerMetrics(MetricsContext context) {
             context.registerGauge(DROPPED, droppedCounter::get);
             context.registerGauge(TOTAL, totalCounter::get);
         }
@@ -499,7 +499,7 @@ public class UserMetricsTest extends JetTestSupport {
         private Counter mappedCounter;
 
         @Override
-        public void init(MetricsContext context) {
+        public void registerMetrics(MetricsContext context) {
             if (mappedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
@@ -572,7 +572,7 @@ public class UserMetricsTest extends JetTestSupport {
         }
 
         @Override
-        public void init(MetricsContext context) {
+        public void registerMetrics(MetricsContext context) {
             if (expandedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
@@ -603,7 +603,7 @@ public class UserMetricsTest extends JetTestSupport {
         }
 
         @Override
-        public void init(MetricsContext context) {
+        public void registerMetrics(MetricsContext context) {
             if (addedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }

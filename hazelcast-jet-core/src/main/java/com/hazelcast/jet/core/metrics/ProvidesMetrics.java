@@ -27,6 +27,6 @@ public interface ProvidesMetrics {
      * access to the {@link MetricsContext} which can provide the concrete
      * metric counters to use.
      */
-    void init(MetricsContext context);
+    void registerMetrics(MetricsContext context);
 
 }

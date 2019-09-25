@@ -391,9 +391,9 @@ public final class UserMetricsUtil {
         }
 
         @Override
-        public void init(MetricsContext context) {
+        public void registerMetrics(MetricsContext context) {
             for (ProvidesMetrics provider : providers) {
-                provider.init(context);
+                provider.registerMetrics(context);
             }
         }
     }

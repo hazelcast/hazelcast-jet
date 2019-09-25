@@ -51,8 +51,8 @@ public class TransformP<T, R> extends AbstractProcessor implements ProvidesMetri
     }
 
     @Override
-    public void init(MetricsContext context) {
-        metricsProvider.init(context);
+    public void registerMetrics(MetricsContext context) {
+        metricsProvider.registerMetrics(context);
     }
 
 }

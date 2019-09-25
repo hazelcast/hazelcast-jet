@@ -94,8 +94,8 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor implements ProvidesM
     }
 
     @Override
-    public void init(MetricsContext context) {
-        metricsProvider.init(context);
+    public void registerMetrics(MetricsContext context) {
+        metricsProvider.registerMetrics(context);
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {
