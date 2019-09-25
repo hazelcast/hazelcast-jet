@@ -36,7 +36,8 @@ final class ResumeTransactionUtil {
      * Instead of obtaining producerId and epoch from the transaction coordinator, re-use previously obtained ones,
      * so that we can resume transaction after a restart. Implementation of this method is based on
      * {@link KafkaProducer#initTransactions}.
-     * https://github.com/apache/kafka/commit/5d2422258cb975a137a42a4e08f03573c49a387e#diff-f4ef1afd8792cd2a2e9069cd7ddea630
+     * https://github.com/apache/kafka/commit/5d2422258cb975a137a42a4e08f03573c49a387e
+     * #diff-f4ef1afd8792cd2a2e9069cd7ddea630
      */
     static void resumeTransaction(ILogger logger, KafkaProducer producer, long producerId, short epoch, String txnId) {
         Preconditions.checkState(producerId >= 0 && epoch >= 0,

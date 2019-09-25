@@ -84,10 +84,11 @@ public class StreamKafkaPTest extends SimpleTestInClusterSupport {
     private static final int INITIAL_PARTITION_COUNT = 4;
     private static final long LAG = 3;
 
+    private static KafkaTestSupport kafkaTestSupport;
+
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    private static KafkaTestSupport kafkaTestSupport;
     private String topic1Name;
     private String topic2Name;
 

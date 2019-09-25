@@ -241,7 +241,9 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
                 job.restart(graceful);
                 try {
                     int actualCount = 0;
-                    for (ConsumerRecords<String, String> records; !(records = consumer.poll(Duration.ofMillis(2000))).isEmpty(); ) {
+                    for (ConsumerRecords<String, String> records;
+                         !(records = consumer.poll(Duration.ofSeconds(2))).isEmpty();
+                    ) {
                         for (ConsumerRecord<String, String> record : records) {
                             actualSinkContents.append(record.value()).append('\n');
                             actualCount++;
