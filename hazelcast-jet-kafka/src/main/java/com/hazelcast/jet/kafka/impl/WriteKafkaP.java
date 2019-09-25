@@ -16,33 +16,49 @@
 
 package com.hazelcast.jet.kafka.impl;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility;
+import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
+import com.hazelcast.jet.impl.processor.TwoTransactionProcessorUtility;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.kafka.KafkaProcessors;
+import com.hazelcast.logging.ILogger;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.TimeoutException;
 
 import javax.annotation.Nonnull;
-import java.util.List;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static java.util.stream.Collectors.toList;
 
 /**
  * See {@link KafkaProcessors#writeKafkaP}.
  */
 public final class WriteKafkaP<T, K, V> implements Processor {
 
-    private final KafkaProducer<K, V> producer;
+    private final Map<String, Object> properties;
     private final Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn;
+    private final boolean exactlyOnce;
+
+    private Context context;
+    private TwoTransactionProcessorUtility<KafkaTransactionId, KafkaTransaction<K, V>> snapshotUtility;
     private final AtomicReference<Throwable> lastError = new AtomicReference<>();
 
     private final Callback callback = (metadata, exception) -> {
@@ -51,15 +67,48 @@ public final class WriteKafkaP<T, K, V> implements Processor {
             lastError.compareAndSet(null, exception);
         }
     };
+    private int transactionIndex;
 
-    private WriteKafkaP(KafkaProducer<K, V> producer, Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn) {
-        this.producer = producer;
+    private WriteKafkaP(
+            @Nonnull Map<String, Object> properties,
+            @Nonnull Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn,
+            boolean exactlyOnce
+    ) {
+        this.properties = properties;
         this.toRecordFn = toRecordFn;
+        this.exactlyOnce = exactlyOnce;
     }
 
     @Override
-    public boolean isCooperative() {
-        return false;
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+        this.context = context;
+        snapshotUtility = new TwoTransactionProcessorUtility<>(
+                outbox,
+                context,
+                context.processingGuarantee() == EXACTLY_ONCE && !exactlyOnce
+                        ? AT_LEAST_ONCE
+                        : context.processingGuarantee(),
+                transactional -> {
+                    KafkaTransactionId txnId = new KafkaTransactionId(
+                            context.jobId(), context.vertexName(), context.globalProcessorIndex(), transactionIndex++);
+                    if (transactional) {
+                        properties.put("transactional.id", txnId.getKafkaId());
+                    }
+                    return new KafkaTransaction<>(txnId, properties, context.logger());
+                },
+                txnId -> {
+                    try {
+                        recoverTransaction(txnId, true);
+                    } catch (ProducerFencedException e) {
+                        context.logger().warning("Failed to finish the commit of a transaction ID saved in the " +
+                                "snapshot, data loss can occur. Transaction id: " + txnId.getKafkaId(), e);
+                    }
+                },
+                index -> {
+                    recoverTransaction(new KafkaTransactionId(context.jobId(), context.vertexName(), index, 0), false);
+                    recoverTransaction(new KafkaTransactionId(context.jobId(), context.vertexName(), index, 1), false);
+                }
+        );
     }
 
     @Override
@@ -68,12 +117,19 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         return true;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
+        KafkaTransaction<K, V> txn = snapshotUtility.activeTransaction();
+        if (txn == null) {
+            context.logger().finest("no transaction");
+            return;
+        }
         checkError();
         for (Object item; (item = inbox.peek()) != null; ) {
             try {
-                producer.send(toRecordFn.apply((T) item), callback);
+                txn.producer.send(toRecordFn.apply((T) item), callback);
+                context.logger().finest("sent " + item); // TODO [viliam] remove
             } catch (TimeoutException ignored) {
                 // apply backpressure, the item will be retried
                 return;
@@ -89,21 +145,65 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
     @Override
     public boolean complete() {
-        ensureAllWritten();
+        KafkaTransaction<K, V> transaction = snapshotUtility.activeTransaction();
+        if (transaction == null) {
+            return false;
+        }
+        transaction.producer.flush();
+        LoggingUtil.logFinest(context.logger(), "flush in complete() done, %s", transaction.transactionId);
+        checkError();
         return true;
     }
 
     @Override
     public boolean saveToSnapshot() {
-        ensureAllWritten();
+        if (!snapshotUtility.saveToSnapshot()) {
+            return false;
+        }
+        checkError();
         return true;
     }
 
-    private void ensureAllWritten() {
-        checkError();
-        // flush() should ensure that all lingering records are sent and that all futures from
-        // producer.send() are done.
-        producer.flush();
+    @Override
+    public boolean onSnapshotCompleted(boolean commitTransactions) {
+        return snapshotUtility.onSnapshotCompleted(commitTransactions);
+    }
+
+    @Override
+    public void restoreFromSnapshot(@Nonnull Inbox inbox) {
+        snapshotUtility.restoreFromSnapshot(inbox);
+    }
+
+    @Override
+    public boolean finishSnapshotRestore() {
+        return snapshotUtility.finishSnapshotRestore();
+    }
+
+    @Override
+    public boolean isCooperative() {
+        return false;
+    }
+
+    private void recoverTransaction(KafkaTransactionId txnId, boolean commit) {
+        context.logger().fine("recoverTransaction " + txnId + ", commit=" + commit);
+        HashMap<Object, Object> properties2 = new HashMap<>(properties);
+        properties2.put("transactional.id", txnId.getKafkaId());
+        try (KafkaProducer p  = new KafkaProducer(properties2)) {
+            if (commit) {
+                ResumeTransactionUtil.resumeTransaction(context.logger(), p, txnId.producerId(), txnId.epoch(),
+                        txnId.getKafkaId());
+                p.commitTransaction();
+            } else {
+                p.initTransactions();
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        if (snapshotUtility != null) {
+            snapshotUtility.close();
+        }
     }
 
     private void checkError() {
@@ -113,37 +213,137 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
     }
 
-    public static class Supplier<T, K, V> implements ProcessorSupplier {
+    /**
+     * Use {@link KafkaProcessors#writeKafkaP(Properties, FunctionEx, boolean)}
+     */
+    @SuppressWarnings("unchecked")
+    public static <T, K, V> SupplierEx<Processor> supplier(
+            @Nonnull Properties properties,
+            @Nonnull Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn,
+            boolean exactlyOnce
+    ) {
+        if (properties.containsKey("transactional.id")) {
+            throw new IllegalArgumentException("Property `transactional.id` must not be set, Jet sets it as needed");
+        }
+        return () -> new WriteKafkaP<>(new HashMap<>((Map) properties), toRecordFn, exactlyOnce);
+    }
 
-        private static final long serialVersionUID = 1L;
+    /**
+     * A simple class wrapping a KafkaProducer that ensures that
+     * `producer.initTransactions` is called exactly once before first
+     * `beginTransaction` call.
+     */
+    private static final class KafkaTransaction<K, V> implements TransactionalResource<KafkaTransactionId> {
+        private final KafkaProducer<K, V> producer;
+        private final ILogger logger;
+        private final KafkaTransactionId transactionId;
+        private final AtomicBoolean txnInitialized = new AtomicBoolean();
 
-        private final Properties properties;
-        private final Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn;
-
-        private transient KafkaProducer<K, V> producer;
-
-        public Supplier(Properties properties, Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn) {
-            this.properties = properties;
-            this.toRecordFn = toRecordFn;
+        private KafkaTransaction(KafkaTransactionId transactionId, Map<String, Object> properties, ILogger logger) {
+            this.transactionId = transactionId;
+            this.producer = new KafkaProducer<>(properties);
+            this.logger = logger;
         }
 
         @Override
-        public void init(@Nonnull Context context) {
-            producer = new KafkaProducer<>(properties);
-        }
-
-        @Override @Nonnull
-        public List<Processor> get(int count) {
-            return Stream.generate(() -> new WriteKafkaP<>(producer, toRecordFn))
-                         .limit(count)
-                         .collect(toList());
+        public KafkaTransactionId id() {
+            return transactionId;
         }
 
         @Override
-        public void close(Throwable error) {
-            if (producer != null) {
-                producer.close();
+        public void beginTransaction() {
+            if (txnInitialized.compareAndSet(false, true)) {
+                LoggingUtil.logFinest(logger, "initTransactions %s", transactionId);
+                producer.initTransactions();
+                transactionId.updateProducerAndEpoch(producer);
             }
+            LoggingUtil.logFinest(logger, "beginTransaction %s", transactionId);
+            producer.beginTransaction();
+        }
+
+        @Override
+        public void flush(boolean finalFlush) {
+            LoggingUtil.logFinest(logger, "flush %s", transactionId);
+            producer.flush();
+        }
+
+        @Override
+        public void commit() {
+            LoggingUtil.logFinest(logger, "commitTransaction %s", transactionId);
+            producer.commitTransaction();
+        }
+
+        @Override
+        public void release() {
+            LoggingUtil.logFinest(logger, "release (close producer) %s", transactionId);
+            producer.close();
+        }
+    }
+
+    // TODO [viliam] better serialization
+    public static class KafkaTransactionId implements TwoPhaseSnapshotCommitUtility.TransactionId, Serializable {
+        private final long jobId;
+        private final String vertexId;
+        private final int processorIndex;
+        private final int transactionIndex;
+        private long producerId = -1;
+        private short epoch = -1;
+
+        KafkaTransactionId(long jobId, @Nonnull String vertexId, int processorIndex, int transactionIndex) {
+            this.jobId = jobId;
+            this.vertexId = vertexId;
+            this.processorIndex = processorIndex;
+            this.transactionIndex = transactionIndex;
+        }
+
+        @Override
+        public int index() {
+            return processorIndex;
+        }
+
+        long producerId() {
+            return producerId;
+        }
+
+        short epoch() {
+            return epoch;
+        }
+
+        void updateProducerAndEpoch(KafkaProducer producer) {
+            producerId = ResumeTransactionUtil.getProducerId(producer);
+            epoch = ResumeTransactionUtil.getEpoch(producer);
+        }
+
+        /**
+         * Get a String representation of this ID.
+         */
+        @Override
+        public String toString() {
+            return getKafkaId() + ",producerId=" + producerId + ",epoch=" + epoch;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            KafkaTransactionId that = (KafkaTransactionId) o;
+            return jobId == that.jobId &&
+                    processorIndex == that.processorIndex &&
+                    vertexId.equals(that.vertexId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(jobId, vertexId, processorIndex);
+        }
+
+        @Nonnull
+        String getKafkaId() {
+            return "jet.job-" + idToString(jobId) + '.' + vertexId + '.' + processorIndex + "-" + transactionIndex;
         }
     }
 }

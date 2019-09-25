@@ -17,6 +17,9 @@
 package com.hazelcast.jet.kafka;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -56,6 +59,10 @@ public final class KafkaSinks {
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
      *
+     * TODO [viliam] document exactly-once behavior. Document also:
+     *  - the txn timeout and possible loss of data
+     *  - the overhead of transactions, greater latency
+     *
      * @param properties     producer properties which should contain broker
      *                       address and key/value serializers
      * @param toRecordFn   function that extracts the key from the stream item
@@ -69,7 +76,8 @@ public final class KafkaSinks {
             @Nonnull Properties properties,
             @Nonnull FunctionEx<? super E, ProducerRecord<K, V>> toRecordFn
     ) {
-        return Sinks.fromProcessor("writeKafka", writeKafkaP(properties, toRecordFn));
+        // TODO [viliam] default for exactlyOnce?
+        return Sinks.fromProcessor("writeKafka", writeKafkaP(properties, toRecordFn, true));
     }
 
     /**
@@ -81,11 +89,10 @@ public final class KafkaSinks {
      * @param <K> type of the key published to Kafka
      * @param <V> type of the value published to Kafka
      * @param properties     producer properties which should contain broker
-*                       address and key/value serializers
+     *                       address and key/value serializers
      * @param topic          name of the Kafka topic to publish to
      * @param extractKeyFn   function that extracts the key from the stream item
      * @param extractValueFn function that extracts the value from the stream item
-*
      */
     @Nonnull
     public static <E, K, V> Sink<E> kafka(
@@ -95,7 +102,7 @@ public final class KafkaSinks {
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
         return Sinks.fromProcessor("writeKafka(" + topic + ")",
-                writeKafkaP(properties, topic, extractKeyFn, extractValueFn));
+                writeKafkaP(properties, topic, extractKeyFn, extractValueFn, true));
     }
 
     /**
@@ -112,5 +119,144 @@ public final class KafkaSinks {
     @Nonnull
     public static <K, V> Sink<Entry<K, V>> kafka(@Nonnull Properties properties, @Nonnull String topic) {
         return kafka(properties, topic, Entry::getKey, Entry::getValue);
+    }
+
+    /**
+     * TODO [viliam]
+     * @param properties
+     * @param <E>
+     * @return
+     */
+    @Nonnull
+    public static <E> Builder<E> kafka(@Nonnull Properties properties) {
+        return new Builder<>(properties);
+    }
+
+    /**
+     * TODO [viliam]
+     * @param <E>
+     */
+    public static final class Builder<E> {
+
+        private final Properties properties;
+        private FunctionEx<? super E, ? extends ProducerRecord<Object, Object>> toRecordFn;
+        private String topic;
+        private FunctionEx<? super E, ?> extractKeyFn;
+        private FunctionEx<? super E, ?> extractValueFn;
+        private boolean exactlyOnce = true;
+
+        private Builder(Properties properties) {
+            this.properties = properties;
+        }
+
+        /**
+         * TODO [viliam]
+         * @param toRecordFn a function to convert sunk items into Kafka's
+         *      {@code ProducerRecord}
+         * @return this instance for fluent API
+         */
+        @SuppressWarnings("unchecked")
+        public Builder<E> toRecordFn(FunctionEx<? super E, ? extends ProducerRecord<?, ?>> toRecordFn) {
+            if (topic != null || extractKeyFn != null || extractValueFn != null) {
+                throw new IllegalArgumentException("topic, extractKeyFn or extractValueFn are already set, you can't use" +
+                        " toRecordFn along with them");
+            }
+            this.toRecordFn = (FunctionEx<? super E, ? extends ProducerRecord<Object, Object>>) toRecordFn;
+            return this;
+        }
+
+        /**
+         * TODO [viliam]
+         * @param topic the topic name
+         * @return this instance for fluent API
+         */
+        public Builder<E> topic(String topic) {
+            if (toRecordFn != null) {
+                throw new IllegalArgumentException("toRecordFn already set, you can't use topic if it's set");
+            }
+            this.topic = topic;
+            return this;
+        }
+
+        /**
+         * TODO [viliam]
+         * The default is to use {@code null} key.
+         *
+         * @param extractKeyFn a function to extract the key from the sunk item
+         * @return this instance for fluent API
+         */
+        public Builder<E> extractKeyFn(@Nonnull FunctionEx<? super E, ?> extractKeyFn) {
+            if (toRecordFn != null) {
+                throw new IllegalArgumentException("toRecordFn already set, you can't use extractKeyFn if it's set");
+            }
+            this.extractKeyFn = extractKeyFn;
+            return this;
+        }
+
+        /**
+         * TODO [viliam]
+         * The default is to use the input item directly.
+         *
+         * @param extractValueFn a function to extract the value from the sunk item
+         * @return this instance for fluent API
+         */
+        public Builder<E> extractValueFn(@Nonnull FunctionEx<? super E, ?> extractValueFn) {
+            if (toRecordFn != null) {
+                throw new IllegalArgumentException("toRecordFn already set, you can't use extractValueFn if it's set");
+            }
+            this.extractValueFn = extractValueFn;
+            return this;
+        }
+
+        /**
+         * Enables or disables the exactly-once behavior of the sink using
+         * two-phase commit of state snapshots. If enabled, the {@linkplain
+         * JobConfig#setProcessingGuarantee(ProcessingGuarantee) processing
+         * guarantee} of the job must be set to {@linkplain
+         * ProcessingGuarantee#EXACTLY_ONCE exactly-once}, otherwise the sink's
+         * guarantee will match that of the job. In other words, sink's
+         * guarantee cannot be higher than job's, but can be lower to avoid the
+         * additional overhead.
+         *
+         * Exactly-once behavior is achieved using Kafka transactions. Records
+         * will be only committed after a successful snapshot was done. If a
+         * read-committed consumer is used, it will see the records with much
+         * higher latency depending on the snapshot interval. The throughput is
+         * also limited because while waiting for all the members doing the
+         * snapshot, no more items can be produced to Kafka.
+         *
+         * The default value is true.
+         *
+         * @return this instance for fluent API
+         * @param enable If true, sink's guarantee will match the job
+         *      guarantee. If false, sink's guarantee will be at-least-once
+         *      even if job's is exactly-once
+         */
+        public Builder<E> exactlyOnce(boolean enable) {
+            exactlyOnce = enable;
+            return this;
+        }
+
+        /**
+         * TODO [viliam]
+         * @return this instance for fluent API
+         */
+        public Sink<E> build() {
+            if ((extractValueFn != null || extractKeyFn != null) && topic == null) {
+                throw new IllegalArgumentException("if extractKeyFn or extractValueFn are set, topic must be set too");
+            }
+            if (topic == null && toRecordFn == null) {
+                throw new IllegalArgumentException("either from topic or toRecordFn must be set");
+            }
+            if (topic != null) {
+                FunctionEx<? super E, ?> extractKeyFn1 = this.extractKeyFn != null ? this.extractKeyFn : t -> null;
+                FunctionEx<? super E, ?> extractValueFn1 = this.extractValueFn != null ? this.extractValueFn : t -> t;
+                return Sinks.fromProcessor("writeKafka(" + topic + ")",
+                        writeKafkaP(properties, topic, extractKeyFn1, extractValueFn1, exactlyOnce));
+            } else {
+                ProcessorMetaSupplier metaSupplier = writeKafkaP(properties, toRecordFn, exactlyOnce);
+                return Sinks.fromProcessor("writeKafka", metaSupplier);
+            }
+        }
     }
 }
