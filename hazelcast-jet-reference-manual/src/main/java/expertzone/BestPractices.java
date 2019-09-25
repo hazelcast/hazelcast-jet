@@ -58,7 +58,7 @@ class BestPractices {
         //tag::s3[]
         Vertex diagnose = dag
                 .newVertex("diagnose", writeFileP(
-                        "tokenize-output", Object::toString, UTF_8, false))
+                        "tokenize-output", Object::toString, UTF_8, false, null, null))
                 .localParallelism(1);
         dag.edge(from(tokenize, 1).to(diagnose));
         //end::s3[]

@@ -27,14 +27,15 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.connector.HazelcastWriters;
-import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.connector.WriteFileP;
+import com.hazelcast.jet.impl.connector.WriteBufferedP;
 import com.hazelcast.jet.impl.connector.WriteJdbcP;
 import com.hazelcast.jet.impl.connector.WriteJmsP;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jms.Connection;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
@@ -239,13 +240,15 @@ public final class SinkProcessors {
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull Charset charset,
-            boolean append
+            boolean append,
+            @Nullable String datePattern,
+            @Nullable Long maxFileSize
     ) {
         checkSerializable(toStringFn, "toStringFn");
 
-        return WriteFileP.metaSupplier(directoryName, toStringFn, charset.name(), append);
+        return WriteFileP.metaSupplier(directoryName, toStringFn, charset.name(), append,
+                datePattern, maxFileSize);
     }
-
 
     /**
      * Shortcut for {@link #writeBufferedP(FunctionEx,

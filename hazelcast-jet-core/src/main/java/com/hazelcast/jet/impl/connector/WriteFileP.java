@@ -17,68 +17,413 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.RestartableException;
+import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
+import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
+import com.hazelcast.jet.impl.processor.UnboundedTransactionsProcessorUtility;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
-import java.io.BufferedWriter;
+import javax.annotation.Nullable;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Serializable;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Set;
+import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * See {@link SinkProcessors#writeFileP(String, FunctionEx, Charset, boolean)}.
- * <p>
- * Since the work of this sink is file IO-intensive, {@link
- * com.hazelcast.jet.core.Vertex#localParallelism(int) local parallelism} of
- * the vertex should be set according to the performance characteristics of
- * the underlying storage system. Most typically, local parallelism of 1 will
- * already reach the maximum available performance.
+ * A file-writing sink supporting rolling files. Rolling can occur on:
+ * - at a snapshot boundary
+ * - when a file size is reached
+ * - when a date changes
  */
-public final class WriteFileP {
+public final class WriteFileP<T> implements Processor {
 
-    private WriteFileP() { }
+    static final String TEMP_FILE_SUFFIX = ".tmp";
+    private static final LongSupplier SYSTEM_CLOCK = (LongSupplier & Serializable) System::currentTimeMillis;
+
+    private final Path directory;
+    private final FunctionEx<? super T, ? extends String> toStringFn;
+    private final Charset charset;
+    private final boolean append;
+    private final DateTimeFormatter dateFormatter;
+    private final Long maxFileSize;
+    private final LongSupplier clock;
+
+    private UnboundedTransactionsProcessorUtility<FileId, FileResource> utility;
+    private Context context;
+    private int fileSequence;
+    private SizeTrackingStream sizeTrackingStream;
+    private String lastFileDate;
 
     /**
-     * Use {@link SinkProcessors#writeFileP(String, FunctionEx, Charset, boolean)}
+     * Rolling by date is based on system clock, not on event time.
+     *
+     * @param directoryName
+     * @param toStringFn
+     * @param charset
+     * @param append
+     * @param dateFormatter
+     * @param maxFileSize
+     */
+    private WriteFileP(
+            @Nonnull String directoryName,
+            @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
+            @Nonnull String charset,
+            boolean append,
+            @Nullable String dateFormatter,
+            @Nullable Long maxFileSize,
+            @Nonnull LongSupplier clock
+    ) {
+        this.directory = Paths.get(directoryName);
+        this.toStringFn = toStringFn;
+        this.charset = Charset.forName(charset);
+        this.append = append;
+        this.dateFormatter = dateFormatter != null ? DateTimeFormatter.ofPattern(dateFormatter) : null;
+        this.maxFileSize = maxFileSize;
+        this.clock = clock;
+    }
+
+    @Override
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws IOException {
+        this.context = context;
+        Files.createDirectories(directory);
+
+        utility = new UnboundedTransactionsProcessorUtility<>(
+                outbox,
+                context,
+                context.processingGuarantee(),
+                this::newFile,
+                this::recoverAndCommit,
+                this::abortUnfinishedTransactions
+        );
+    }
+
+    @Override
+    public void process(int ordinal, @Nonnull Inbox inbox) {
+        // roll file on date change
+        if (dateFormatter != null && !dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong())).equals(lastFileDate)) {
+            fileSequence = 0;
+            utility.newActiveTransaction();
+        }
+        FileResource transaction = utility.activeTransaction();
+        Writer writer = transaction.writer();
+        try {
+            for (Object item; (item = inbox.poll()) != null; ) {
+                writer.write(toStringFn.apply((T) item));
+                writer.write(System.lineSeparator());
+                if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
+                    writer = utility.newActiveTransaction().writer();
+                }
+            }
+            writer.flush();
+            if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
+                utility.newActiveTransaction();
+            }
+        } catch (IOException e) {
+            throw new RestartableException(e);
+        }
+    }
+
+    @Override
+    public boolean complete() {
+        utility.afterCompleted();
+        return true;
+    }
+
+    @Override
+    public void close() throws Exception {
+        if (utility != null) {
+            utility.close();
+        }
+    }
+
+    @Override
+    public boolean saveToSnapshot() {
+        return utility.saveToSnapshot();
+    }
+
+    @Override
+    public boolean onSnapshotCompleted(boolean commitTransactions) {
+        return utility.onSnapshotCompleted(commitTransactions);
+    }
+
+    @Override
+    public void restoreFromSnapshot(@Nonnull Inbox inbox) {
+        utility.restoreFromSnapshot(inbox);
+    }
+
+    @Override
+    public boolean finishSnapshotRestore() {
+        return utility.finishSnapshotRestore();
+    }
+
+    /**
+     * Creates a new file name and returns FileResource for it.
+     *
+     * @param checkExistingFiles true if we should check existing files to
+     *                           find a next free sequence number
+     */
+    private FileResource newFile(boolean checkExistingFiles) {
+        StringBuilder sb = new StringBuilder();
+        if (dateFormatter != null) {
+            lastFileDate = dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong()));
+            sb.append(lastFileDate);
+            sb.append('-');
+        }
+        sb.append(context.globalProcessorIndex());
+        String file = sb.toString();
+        boolean usesSequence = utility.externalGuarantee() == EXACTLY_ONCE || maxFileSize != null;
+        if (usesSequence) {
+            // TODO [viliam] always check existing files, if sequence is used. We might only
+            //  build the set only if the first sequence fails and only if fileSequence == 0, otherwise
+            //  we can just check the generated file
+            Set<String> existingFiles;
+            if (checkExistingFiles) {
+                try (Stream<Path> fileListStream = Files.list(directory)) {
+                    existingFiles = fileListStream
+                            .map(f -> f.getFileName().toString())
+                            .collect(Collectors.toSet());
+                } catch (IOException e) {
+                    throw sneakyThrow(e);
+                }
+            } else {
+                existingFiles = Collections.emptySet();
+            }
+            int prefixLength = sb.length();
+            do {
+                sb.append('-').append(fileSequence++);
+                file = sb.toString();
+                sb.setLength(prefixLength);
+            } while (existingFiles.contains(file) || existingFiles.contains(file + TEMP_FILE_SUFFIX));
+        }
+
+        logFine(context.logger(), "Creating %s", file); // TODO [viliam] logFinest
+        return utility.externalGuarantee() == EXACTLY_ONCE
+                ? new FileWithTransaction(file)
+                : new FileWithoutTransaction(file);
+    }
+
+    private void recoverAndCommit(FileId fileId) throws IOException {
+        this.context.logger().info("aaa recoverAndCommit " + fileId);
+        Path tempFile = directory.resolve(fileId.fileName + TEMP_FILE_SUFFIX);
+        if (Files.exists(tempFile)) {
+            Files.move(tempFile, directory.resolve(fileId.fileName), StandardCopyOption.ATOMIC_MOVE);
+        } else {
+            context.logger().warning("Uncommitted temporary file from previous execution didn't exist, data loss " +
+                    "might occur: " + tempFile);
+        }
+    }
+
+    private void abortUnfinishedTransactions() {
+        try (Stream<Path> fileStream = Files.list(directory)) {
+            fileStream
+                    .filter(file -> file.getFileName().toString().endsWith(TEMP_FILE_SUFFIX))
+                    .forEach(file -> uncheckRun(() -> {
+                        context.logger().fine("Deleting " + file);
+                        Files.delete(file);
+                    }));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Writer createWriter(Path file) {
+        try {
+            context.logger().info("aaa creating " + file);
+            FileOutputStream fos = new FileOutputStream(file.toFile(), append);
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+            sizeTrackingStream = new SizeTrackingStream(bos);
+            return new OutputStreamWriter(sizeTrackingStream, charset);
+        } catch (IOException e) {
+            throw sneakyThrow(e);
+        }
+    }
+
+    /**
+     * Use method in {@link SinkProcessors} instead. TODO [viliam]
      */
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
-            boolean append) {
-
-        return ProcessorMetaSupplier.preferLocalParallelismOne(writeBufferedP(
-                ctx -> createBufferedWriter(Paths.get(directoryName), ctx.globalProcessorIndex(),
-                        charset, append),
-                (fileWriter, item) -> {
-                    fileWriter.write(toStringFn.apply((T) item));
-                    fileWriter.newLine();
-                },
-                BufferedWriter::flush,
-                BufferedWriter::close
-        ));
+            boolean append,
+            @Nullable String datePattern,
+            @Nullable Long maxFileSize
+    ) {
+        return metaSupplier(directoryName, toStringFn, charset, append, datePattern, maxFileSize, SYSTEM_CLOCK);
     }
 
-    @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
-            justification = "mkdirs() returns false if the directory already existed, which is good. "
-                    + "We don't care even if it didn't exist and we failed to create it, "
-                    + "because we'll fail later when trying to create the file.")
-    private static BufferedWriter createBufferedWriter(
-            Path directory, int globalIndex, String charset, boolean append) throws IOException {
-        directory.toFile().mkdirs();
-
-        Path file = directory.resolve(String.valueOf(globalIndex));
-
-        return Files.newBufferedWriter(file,
-                Charset.forName(charset), StandardOpenOption.CREATE,
-                append ? StandardOpenOption.APPEND : StandardOpenOption.TRUNCATE_EXISTING);
+    // for tests
+    static <T> ProcessorMetaSupplier metaSupplier(
+            @Nonnull String directoryName,
+            @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
+            @Nonnull String charset,
+            boolean append,
+            @Nullable String datePattern,
+            @Nullable Long maxFileSize,
+            @Nonnull LongSupplier clock
+    ) {
+        return ProcessorMetaSupplier.preferLocalParallelismOne(() -> new WriteFileP<>(directoryName, toStringFn,
+                charset, append, datePattern, maxFileSize, clock));
     }
 
+    private abstract class FileResource implements TransactionalResource<FileId> {
+
+        final FileId fileId;
+        final Path targetFile;
+        Writer writer;
+
+        @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
+                justification = "targetFile always has fileName")
+        FileResource(Path targetFile) {
+            this.targetFile = targetFile;
+            this.fileId = new FileId(targetFile.getFileName().toString(), context.globalProcessorIndex());
+        }
+
+        @Override
+        public FileId id() {
+            return fileId;
+        }
+
+        @Override
+        public void beginTransaction() {
+        }
+
+        @Override
+        public void flush(boolean finalFlush) throws IOException {
+            assert finalFlush : "all flushes should be final in our case";
+            context.logger().info("aaa flush " + id());
+            release();
+        }
+
+        @Override
+        public void release() throws IOException {
+            if (writer != null) {
+                context.logger().info("aaa release (maybe flush?) " + id());
+                writer.close();
+                writer = null;
+            }
+        }
+
+        public Writer writer() {
+            return writer;
+        }
+    }
+
+    private final class FileWithoutTransaction extends FileResource {
+
+        FileWithoutTransaction(@Nonnull String fileName) {
+            super(directory.resolve(fileName));
+        }
+
+        @Override
+        public Writer writer() {
+            if (writer == null) {
+                writer = createWriter(targetFile);
+            }
+            return super.writer();
+        }
+    }
+
+    private final class FileWithTransaction extends FileResource {
+
+        private final Path tempFile;
+
+        FileWithTransaction(@Nonnull String fileName) {
+            super(directory.resolve(fileName));
+            tempFile = directory.resolve(fileName + TEMP_FILE_SUFFIX);
+        }
+
+        @Override
+        public void beginTransaction() {
+            writer = createWriter(tempFile);
+        }
+
+        @Override
+        public void commit() throws IOException {
+            context.logger().info("aaa committing " + tempFile);
+            if (writer != null) {
+                writer.close();
+                writer = null;
+            }
+            Files.move(tempFile, targetFile, StandardCopyOption.ATOMIC_MOVE);
+        }
+    }
+
+    private final class SizeTrackingStream extends OutputStream {
+        private final OutputStream target;
+        private long size;
+
+        private SizeTrackingStream(OutputStream target) {
+            this.target = target;
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            size++;
+            target.write(b);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            size += len;
+            target.write(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            target.close();
+        }
+
+        @Override
+        public void flush() throws IOException {
+            target.flush();
+        }
+    }
+
+    // TODO [viliam] better serialization
+    private static final class FileId implements TransactionId, Serializable {
+        private final String fileName;
+        private final int index;
+
+        private FileId(String fileName, int index) {
+            this.fileName = fileName;
+            this.index = index;
+        }
+
+        @Override
+        public int index() {
+            return index;
+        }
+
+        @Override
+        public String toString() {
+            return "FileId{" + fileName + '}';
+        }
+    }
 }
