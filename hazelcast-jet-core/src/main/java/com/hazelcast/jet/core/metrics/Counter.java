@@ -22,39 +22,44 @@ import javax.annotation.Nonnull;
  * Can be used to explicitly set the value of one particular
  * user-defined metric.
  *
- * Implementation are thread-safe, calling all methods is safe to be done
+ * Implementation is thread-safe, calling all methods is safe to be done
  * from any thread.
  */
-public interface UserMetric {
+public interface Counter {
 
     /**
      * Returns the name of the metric being manipulated.
      */
     @Nonnull
-    String getName();
+    String name();
 
     /**
-     * Sets the metric to the specified value.
+     * Sets the counter to the specified value.
      */
-    void updateValue(long newValue);
+    void set(long newValue);
 
     /**
      * Increments the current value with 1.
      */
-    void incValue();
+    void increment();
 
     /**
      * Increments the current value with the specified amount.
      */
-    void incValue(long increment);
+    void increment(long increment);
 
     /**
      * Decrements the current value with 1.
      */
-    void decValue();
+    void decrement();
 
     /**
      * Decrements the current value with the specified amount.
      */
-    void decValue(long decrement);
+    void decrement(long decrement);
+
+    /**
+     * Returns the current value of the counter
+     */
+    long value();
 }

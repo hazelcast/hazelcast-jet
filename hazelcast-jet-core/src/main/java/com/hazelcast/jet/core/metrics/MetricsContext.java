@@ -29,40 +29,39 @@ import javax.annotation.Nonnull;
 public interface MetricsContext {
 
     /**
-     * Return a {@link UserMetric} object that can be used to set values
+     * Return a {@link Counter} object that can be used to set values
      * for one specific user-defined, per Processor metric, identified
      * by the provided name.
-     *
+     * <p>
      * Calling this method for metrics which have already had an implicit
      * supplier set is not allowed and will result in an {@code IllegalStateException}
      * being thrown.
      */
     @Nonnull
-    UserMetric getUserMetric(String name) throws IllegalStateException;
+    Counter registerCounter(String name);
 
     /**
      * Specifies an implicit value supplier for a user-defined, per Processor
      * metric, identified by the provided name.
-     *
-     * Calling this method for metrics for which a {@link UserMetric} handler
+     * <p>
+     * Calling this method for metrics for which a {@link Counter} handler
      * has already been retrieved is not allowed and will result in an
      * {@code IllegalStateException} being thrown.
-     *
-     * Setting a supplier after it has already been set will also result in
+     * <p>
+     * Setting a gauge after it has already been set will also result in
      * an {@code IllegalStateException} being thrown.
-     *
+     * <p>
      * Care needs to be taken that the supplier passed in as a parameter is
      * thread-safe. For example:
      *
      * <pre>{@code
      *     AtomicLong counter = new AtomicLong();
      *     ...
-     *     context.getUserMetric("my_metric").setValueSupplier(counter::get);
+     *     context.registerGauge(counter::get);
      *     ...
      *     counter.incrementAndGet();
      *     counter.incrementAndGet();
      * }</pre>
      */
-    void setUserMetricSupplier(@Nonnull String name, @Nonnull SupplierEx<Long> supplier)
-                                                                    throws IllegalStateException;
+    void registerGauge(@Nonnull String name, @Nonnull SupplierEx<Long> supplier);
 }

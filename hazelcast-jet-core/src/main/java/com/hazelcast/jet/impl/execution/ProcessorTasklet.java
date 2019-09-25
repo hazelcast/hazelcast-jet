@@ -25,10 +25,10 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.metrics.Counter;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
-import com.hazelcast.jet.core.metrics.UserMetric;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
@@ -47,12 +47,12 @@ import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -543,61 +543,57 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    private static class UserMetricImpl implements UserMetric {
+    private static class CounterImpl implements Counter {
 
         @Nonnull
         private final String name;
         private final AtomicLong counter = new AtomicLong();
 
-        UserMetricImpl(@Nonnull String name) {
+        CounterImpl(@Nonnull String name) {
             this.name = Objects.requireNonNull(name, "name");
         }
 
         @Override
         @Nonnull
-        public String getName() {
+        public String name() {
             return name;
         }
 
         @Override
-        public void updateValue(long newValue) {
+        public void set(long newValue) {
             counter.set(newValue);
         }
 
         @Override
-        public void incValue() {
+        public void increment() {
             counter.incrementAndGet();
         }
 
         @Override
-        public void incValue(long increment) {
+        public void increment(long increment) {
             counter.addAndGet(increment);
         }
 
         @Override
-        public void decValue() {
+        public void decrement() {
             counter.decrementAndGet();
         }
 
         @Override
-        public void decValue(long decrement) {
-            boolean successfull;
-            do {
-                long value = counter.get();
-                successfull = counter.compareAndSet(value, value - decrement);
-            } while (!successfull);
+        public void decrement(long decrement) {
+            counter.addAndGet(-decrement);
         }
 
-        LongProbeFunction<ProcessorTasklet> getProbeFunction() {
-            return t -> counter.get();
+        @Override
+        public long value() {
+            return counter.get();
         }
     }
 
     private class MetricsContextImpl implements MetricsContext {
 
         private final ProbeBuilder probeBuilder;
-        private final Map<String, UserMetricImpl> setters = new HashMap<>();
-        private final Map<String, SupplierEx<Long>> suppliers = new HashMap<>();
+        private final Set<String> metrics = new HashSet<>();
 
         MetricsContextImpl(@Nonnull ProbeBuilder probeBuilder) {
             this.probeBuilder = probeBuilder;
@@ -605,46 +601,27 @@ public class ProcessorTasklet implements Tasklet {
 
         @Nonnull
         @Override
-        public UserMetric getUserMetric(String name) {
+        public Counter registerCounter(@Nonnull String name) {
             Objects.requireNonNull(name, "name");
-
-            if (suppliers.containsKey(name)) {
-                throw new IllegalStateException(
-                        String.format("User-metric '%s' already has an implicit supplier set", name)
-                );
-            }
-
-            return setters.computeIfAbsent(name,
-                    n -> {
-                        UserMetricImpl userMetric = new UserMetricImpl(name);
-                        probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT,
-                                userMetric.getProbeFunction());
-                        return userMetric;
-                    }
-            );
+            CounterImpl counter = new CounterImpl(name);
+            registerGauge(name, counter::value);
+            return counter;
         }
 
         @Override
-        public void setUserMetricSupplier(@Nonnull String name, @Nonnull SupplierEx<Long> supplier)
-                throws IllegalStateException {
+        public void registerGauge(@Nonnull String name, @Nonnull SupplierEx<Long> gaugeFn) {
             Objects.requireNonNull(name, "name");
-            Objects.requireNonNull(supplier, "supplier");
+            Objects.requireNonNull(gaugeFn, "gaugeFn");
 
-            if (setters.containsKey(name)) {
+            if (metrics.contains(name)) {
                 throw new IllegalStateException(
-                        String.format("User-metric '%s' already has an explicit setter defined", name)
-                );
-            }
-
-            if (suppliers.containsKey(name)) {
-                throw new IllegalStateException(
-                        String.format("User-metric '%s' already has a implicit supplier set", name)
+                        String.format("Metric '%s' is already registered", name)
                 );
             }
 
             probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT,
-                    (LongProbeFunction<ProcessorTasklet>) t -> supplier.get());
-            suppliers.put(name, supplier);
+                    (LongProbeFunction<ProcessorTasklet>) t -> gaugeFn.get());
+            metrics.add(name);
         }
     }
 }

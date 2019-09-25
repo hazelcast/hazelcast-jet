@@ -393,8 +393,8 @@ public class UserMetricsTest extends JetTestSupport {
 
         @Override
         public void init(MetricsContext context) {
-            context.setUserMetricSupplier(DROPPED, droppedCounter::get);
-            context.setUserMetricSupplier(TOTAL, totalCounter::get);
+            context.registerGauge(DROPPED, droppedCounter::get);
+            context.registerGauge(TOTAL, totalCounter::get);
         }
 
         void incCounters(boolean passed) {
@@ -496,18 +496,18 @@ public class UserMetricsTest extends JetTestSupport {
 
     private abstract static class AbstractMapping implements ProvidesMetrics, Serializable {
 
-        private UserMetric mappedCounter;
+        private Counter mappedCounter;
 
         @Override
         public void init(MetricsContext context) {
             if (mappedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
-            mappedCounter = context.getUserMetric(MAPPED);
+            mappedCounter = context.registerCounter(MAPPED);
         }
 
         void incCounter() {
-            mappedCounter.incValue();
+            mappedCounter.increment();
         }
     }
 
@@ -565,7 +565,7 @@ public class UserMetricsTest extends JetTestSupport {
 
         private final FunctionEx<Long, Long[]> expandFn;
 
-        private UserMetric expandedCounter;
+        private Counter expandedCounter;
 
         FlatMapProvidingMetrics(FunctionEx<Long, Long[]> expandFn) {
             this.expandFn = expandFn;
@@ -576,13 +576,13 @@ public class UserMetricsTest extends JetTestSupport {
             if (expandedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
-            expandedCounter = context.getUserMetric(EXPANDED);
+            expandedCounter = context.registerCounter(EXPANDED);
         }
 
         @Override
         public Traverser<Long> applyEx(Long aLong) {
             Long[] expansions = expandFn.apply(aLong);
-            expandedCounter.incValue(expansions.length);
+            expandedCounter.increment(expansions.length);
             return Traversers.traverseItems(expansions);
         }
     }
@@ -590,7 +590,7 @@ public class UserMetricsTest extends JetTestSupport {
     private static class AccumulateProvidingMetrics implements BiConsumerEx<LongAccumulator, Long>, ProvidesMetrics {
 
         private final String metricName;
-        private UserMetric addedCounter;
+        private Counter addedCounter;
 
         AccumulateProvidingMetrics(String metricName) {
             this.metricName = metricName;
@@ -599,7 +599,7 @@ public class UserMetricsTest extends JetTestSupport {
         @Override
         public void acceptEx(LongAccumulator longAccumulator, Long l) {
             longAccumulator.add(l);
-            addedCounter.incValue();
+            addedCounter.increment();
         }
 
         @Override
@@ -607,7 +607,7 @@ public class UserMetricsTest extends JetTestSupport {
             if (addedCounter != null) {
                 throw new IllegalStateException("Should get initialised only once!");
             }
-            addedCounter = context.getUserMetric(metricName);
+            addedCounter = context.registerCounter(metricName);
         }
 
     }
