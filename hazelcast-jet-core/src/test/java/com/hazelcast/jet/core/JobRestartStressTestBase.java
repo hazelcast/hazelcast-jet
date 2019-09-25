@@ -67,7 +67,7 @@ public class JobRestartStressTestBase extends JetTestSupport {
         spawn(() -> {
             for (int i = 0; i < 10; i++) {
                 job[0] = action.apply(tuple3(instance1, dag, job[0]));
-                waitForNextSnapshot(jobRepository, job[0].getId(), 5);
+                waitForNextSnapshot(jobRepository, job[0].getId(), 5, false);
             }
             return null;
         }).get();

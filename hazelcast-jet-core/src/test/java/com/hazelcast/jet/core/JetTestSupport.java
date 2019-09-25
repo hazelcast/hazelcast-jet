@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IList;
 import com.hazelcast.core.IMap;
@@ -242,7 +243,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         logger.info("First snapshot found (id=" + snapshotId[0] + ")");
     }
 
-    public void waitForNextSnapshot(JobRepository jr, long jobId, int timeoutSeconds) {
+    public void waitForNextSnapshot(JobRepository jr, long jobId, int timeoutSeconds, boolean allowEmptySnapshot) {
         long originalSnapshotId = jr.getJobExecutionRecord(jobId).snapshotId();
         // wait until there is at least one more snapshot
         long[] snapshotId = {-1};
@@ -252,9 +253,25 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
             snapshotId[0] = record.snapshotId();
             assertTrue("No more snapshots produced after restart in " + timeoutSeconds + " seconds",
                     snapshotId[0] > originalSnapshotId);
-            assertTrue("stats are 0", record.snapshotStats().numBytes() > 0);
+            assertTrue("stats are 0", allowEmptySnapshot || record.snapshotStats().numBytes() > 0);
         }, timeoutSeconds);
         logger.info("Next snapshot found (id=" + snapshotId[0] + ", previous id=" + originalSnapshotId + ")");
+    }
+
+    /**
+     * Clean up the cluster and make it ready to run a next test. If we fail
+     * to, shut it down so that next tests don't run on a messed-up cluster.
+     *
+     * @param instancesToShutDown cluster instances, must contain at least
+     *                            one instance
+     */
+    public void cleanUpCluster(JetInstance ... instancesToShutDown) {
+        for (Job job : instancesToShutDown[0].getJobs()) {
+            ditchJob(job, instancesToShutDown);
+        }
+        for (DistributedObject o : instancesToShutDown[0].getHazelcastInstance().getDistributedObjects()) {
+            o.destroy();
+        }
     }
 
     /**
