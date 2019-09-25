@@ -33,7 +33,8 @@ import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId, TXN extends TransactionalResource<TXN_ID>> {
+public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId,
+        TXN extends TransactionalResource<TXN_ID>> {
 
     private final Outbox outbox;
     private final Context procContext;
