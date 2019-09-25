@@ -49,7 +49,6 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -278,8 +277,8 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
         KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
         producer.initTransactions();
         producer.beginTransaction();
-        producer.send(new ProducerRecord<>(topic, "0")).get();
-        producer.send(new ProducerRecord<>(topic, "1")).get();
+        producer.send(new ProducerRecord<>(topic, 0, null, "0")).get();
+        producer.send(new ProducerRecord<>(topic, 0, null, "1")).get();
         long producerId = ResumeTransactionUtil.getProducerId(producer);
         short epoch = ResumeTransactionUtil.getEpoch(producer);
 
@@ -299,10 +298,11 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
 
         // verify items are visible
         polledRecords = consumer.poll(Duration.ofSeconds(2));
-        assertEquals(2, polledRecords.count());
-        Iterator<ConsumerRecord<String, String>> recordIterator = polledRecords.iterator();
-        assertEquals("0", recordIterator.next().value());
-        assertEquals("1", recordIterator.next().value());
+        StringBuilder actualContents = new StringBuilder();
+        for (ConsumerRecord<String, String> record : polledRecords) {
+            actualContents.append(record.value()).append('\n');
+        }
+        assertEquals("0\n1\n", actualContents.toString());
 
         producer.close();
         consumer.close();
