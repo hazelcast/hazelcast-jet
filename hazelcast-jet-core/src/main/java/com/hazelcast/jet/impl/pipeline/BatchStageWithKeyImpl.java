@@ -28,6 +28,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.DistinctTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -111,8 +112,10 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull TriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>>
                     filterAsyncFn
     ) {
+        TriFunction<C, K, T, CompletableFuture<Traverser<T>>> triFunction = (c, k, t) ->
+                filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null);
         return attachTransformUsingContextAsync("filter", contextFactory,
-                (c, k, t) -> filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
+                UserMetricsUtil.wrap(triFunction, filterAsyncFn));
     }
 
     @Nonnull @Override

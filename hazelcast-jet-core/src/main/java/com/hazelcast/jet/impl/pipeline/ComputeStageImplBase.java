@@ -527,7 +527,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <C, T, R> BiFunctionEx<? super C, ?, ?> adaptMapUsingContextFn(
                 @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
         ) {
-            return delegate.adaptMapUsingContextFn(mapFn);
+            BiFunctionEx<? super C, ?, ?> adaptedMapFn = delegate.adaptMapUsingContextFn(mapFn);
+            return UserMetricsUtil.wrap(adaptedMapFn, mapFn);
         }
 
         @Nonnull
@@ -535,7 +536,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <C, T> BiPredicateEx<? super C, ?> adaptFilterUsingContextFn(
                 @Nonnull BiPredicateEx<? super C, ? super T> filterFn
         ) {
-            return delegate.adaptFilterUsingContextFn(filterFn);
+
+            BiPredicateEx<? super C, ?> adaptedFilterFn = delegate.adaptFilterUsingContextFn(filterFn);
+            return UserMetricsUtil.wrap(adaptedFilterFn, filterFn);
         }
 
         @Nonnull
@@ -551,7 +554,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
                 @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
         ) {
-            return delegate.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);
+            BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptedFlatMapAsyncFn =
+                    delegate.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);
+            return UserMetricsUtil.wrap(adaptedFlatMapAsyncFn, flatMapAsyncFn);
         }
 
         @Nonnull

@@ -17,10 +17,13 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.GeneralStageWithKey;
@@ -76,10 +79,12 @@ class StageWithGroupingBase<T, K> {
             @Nonnull TriFunction<? super C, ? super K, ? super T, ? extends R> mapFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
-        return computeStage.attachMapUsingPartitionedContext(contextFactory, keyFn, (c, t) -> {
+        BiFunctionEx<C, T, ? extends R> biFunction = (c, t) -> {
             K k = keyFn.apply(t);
             return mapFn.apply(c, k, t);
-        });
+        };
+        return computeStage.attachMapUsingPartitionedContext(contextFactory, keyFn,
+                UserMetricsUtil.wrap(biFunction, mapFn));
     }
 
     @Nonnull
@@ -88,10 +93,12 @@ class StageWithGroupingBase<T, K> {
             @Nonnull TriPredicate<? super C, ? super K, ? super T> filterFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
-        return computeStage.attachFilterUsingPartitionedContext(contextFactory, keyFn, (c, t) -> {
+        BiPredicateEx<C, T> filterPredicate = (c, t) -> {
             K k = keyFn.apply(t);
             return filterFn.test(c, k, t);
-        });
+        };
+        return computeStage.attachFilterUsingPartitionedContext(contextFactory, keyFn,
+                UserMetricsUtil.wrap(filterPredicate, filterFn));
     }
 
     @Nonnull
@@ -114,11 +121,12 @@ class StageWithGroupingBase<T, K> {
                     flatMapAsyncFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
+        BiFunctionEx<C, T, CompletableFuture<Traverser<R>>> biFunction = (c, t) -> {
+            K k = keyFn.apply(t);
+            return flatMapAsyncFn.apply(c, k, t);
+        };
         return computeStage.attachTransformUsingPartitionedContextAsync(operationName, contextFactory, keyFn,
-                (c, t) -> {
-                    K k = keyFn.apply(t);
-                    return flatMapAsyncFn.apply(c, k, t);
-                });
+                UserMetricsUtil.wrap(biFunction, flatMapAsyncFn));
     }
 
     static Transform transformOf(GeneralStageWithKey stage) {

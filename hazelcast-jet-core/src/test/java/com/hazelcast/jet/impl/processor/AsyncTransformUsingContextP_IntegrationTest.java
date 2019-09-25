@@ -208,10 +208,11 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_filterNotPartitioned() {
         Pipeline p = Pipeline.create();
+        FunctionEx<Integer, Boolean> integerBooleanFunctionEx = i -> i % 2 == 0;
         p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
          .withoutTimestamps()
          .filterUsingContextAsync(contextFactory,
-                 transformNotPartitionedFn(i -> i % 2 == 0))
+                 transformNotPartitionedFn(integerBooleanFunctionEx))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
 

@@ -903,10 +903,12 @@ public final class Processors {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
-        return TransformUsingContextP.<C, T, R>supplier(contextFactory, (singletonTraverser, context, item) -> {
-            singletonTraverser.accept(mapFn.apply(context, item));
-            return singletonTraverser;
-        });
+        TriFunction<ResettableSingletonTraverser<R>, C, T, Traverser<? extends R>> triFunction =
+                (singletonTraverser, context, item) -> {
+                    singletonTraverser.accept(mapFn.apply(context, item));
+                    return singletonTraverser;
+                };
+        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrap(triFunction, mapFn));
     }
 
     /**
@@ -958,10 +960,12 @@ public final class Processors {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     ) {
-        return TransformUsingContextP.<C, T, T>supplier(contextFactory, (singletonTraverser, context, item) -> {
-            singletonTraverser.accept(filterFn.test(context, item) ? item : null);
-            return singletonTraverser;
-        });
+        TriFunction<ResettableSingletonTraverser<T>, C, T, Traverser<? extends T>> flatMapFn =
+                (singletonTraverser, context, item) -> {
+                    singletonTraverser.accept(filterFn.test(context, item) ? item : null);
+                    return singletonTraverser;
+                };
+        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrap(flatMapFn, filterFn));
     }
 
     /**

@@ -27,10 +27,15 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.BiConsumerEx;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.WindowDefinition;
@@ -38,9 +43,11 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
@@ -53,6 +60,11 @@ public class UserMetricsTest extends JetTestSupport {
 
     private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
+    private static final String DROPPED = "dropped";
+    private static final String TOTAL = "total";
+
+    private static final String MAPPED = "mapped";
+
     private Pipeline pipeline;
 
     @Before
@@ -63,11 +75,10 @@ public class UserMetricsTest extends JetTestSupport {
     @Test
     public void filter_batch() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
-                .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
+                .filter(new FilteringPredicateProvidingMetrics(i -> i % 2 == 0))
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced(PredicateProvidingMetrics.DROPPED, 2,
-                PredicateProvidingMetrics.TOTAL, 5);
+        assertCountersProduced(DROPPED, 2, TOTAL, 5);
     }
 
     @Test
@@ -77,20 +88,135 @@ public class UserMetricsTest extends JetTestSupport {
                 .window(WindowDefinition.tumbling(3))
                 .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
                 .map(WindowResult::result)
-                .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
+                .filter(new FilteringPredicateProvidingMetrics(i -> i % 2 == 0))
                 .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
 
-        assertCountersProduced(PredicateProvidingMetrics.DROPPED, 2,
-                PredicateProvidingMetrics.TOTAL, 4);
+        assertCountersProduced(DROPPED, 2, TOTAL, 4);
+    }
+
+    @Test
+    public void filterUsingContext_batch() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .filterUsingContext(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new FilteringBiPredicateProvidingMetrics((ctx, l) -> l % 2 == ctx)
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 5);
+    }
+
+    @Test
+    public void filterUsingContext_batchWithKey() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .groupingKey(l -> l % 3L)
+                .filterUsingContext(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new FilteringTriPredicateProvidingMetrics((ctx, key, l) -> l % 2 == ctx)
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 5);
+    }
+
+    @Test
+    public void filterUsingContext_stream() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .filterUsingContext(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new FilteringBiPredicateProvidingMetrics((ctx, l) -> l % 2 == ctx)
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 4);
+    }
+
+    @Test
+    public void filterUsingContext_streamWithKey() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .groupingKey(l -> l % 3L)
+                .filterUsingContext(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new FilteringTriPredicateProvidingMetrics((ctx, key, l) -> l % 2 == ctx)
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 4);
+    }
+
+    @Test
+    public void filterUsingContextAsync_batch() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .filterUsingContextAsync(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new AsyncFilterBiFunctionProvidingMetrics((ctx, l) -> l % 2L == ctx)
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 5);
+    }
+
+    @Test
+    public void filterUsingContextAsync_batchWithKey() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .groupingKey(l -> l % 3L)
+                .filterUsingContextAsync(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new AsyncFilterTriFunctionProvidingMetrics((ctx, key, l) -> l % 2L == ctx)
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 5);
+    }
+
+    @Test
+    public void filterUsingContextAsync_stream() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .filterUsingContextAsync(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new AsyncFilterBiFunctionProvidingMetrics((ctx, l) -> l % 2L == ctx)
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 4);
+    }
+
+    @Test
+    public void filterUsingContextAsync_streamWithKey() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .groupingKey(l -> l % 3L)
+                .filterUsingContextAsync(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        new AsyncFilterTriFunctionProvidingMetrics((ctx, key, l) -> l % 2L == ctx)
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+
+        assertCountersProduced(DROPPED, 2, TOTAL, 4);
     }
 
     @Test
     public void map_batch() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
-                .map(new MapProvidingMetrics())
+                .map(new MappingFunctionProvidingMetrics(l -> l * 10))
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced(MapProvidingMetrics.MAPPED, 5);
+        assertCountersProduced(MAPPED, 5);
     }
 
     @Test
@@ -100,22 +226,78 @@ public class UserMetricsTest extends JetTestSupport {
                 .window(WindowDefinition.tumbling(3))
                 .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
                 .map(WindowResult::result)
-                .map(new MapProvidingMetrics())
-                .drainTo(assertAnyOrder(Arrays.asList(3L, 12L, 21L, 30L)));
+                .map(new MappingFunctionProvidingMetrics(l -> l * 10))
+                .drainTo(assertAnyOrder(Arrays.asList(30L, 120L, 210L, 300L)));
 
-        assertCountersProduced(MapProvidingMetrics.MAPPED, 4);
+        assertCountersProduced(MAPPED, 4);
+    }
+
+    @Test
+    public void mapUsingContext_batch() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .mapUsingContext(
+                        ContextFactory.withCreateFn(i -> 10L),
+                        new MappingBiFunctionProvidingMetrics((ctx, l) -> l * ctx)
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(MAPPED, 5);
+    }
+
+    @Test
+    public void mapUsingContext_batchWithKey() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .groupingKey(l -> l % 3L)
+                .mapUsingContext(
+                        ContextFactory.withCreateFn(i -> 10L),
+                        new MappingTriFunctionProvidingMetrics((ctx, key, l) -> l * ctx)
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(MAPPED, 5);
+    }
+
+    @Test
+    public void mapUsingContext_stream() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .mapUsingContext(
+                        ContextFactory.withCreateFn(i -> 10L),
+                        new MappingBiFunctionProvidingMetrics((ctx, l) -> l * ctx)
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(30L, 120L, 210L, 300L)));
+
+        assertCountersProduced(MAPPED, 4);
+    }
+
+    @Test
+    public void mapUsingContext_streamWithKey() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .groupingKey(l -> l % 3L)
+                .mapUsingContext(
+                        ContextFactory.withCreateFn(i -> 10L),
+                        new MappingTriFunctionProvidingMetrics((ctx, key, l) -> l * ctx)
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(30L, 120L, 210L, 300L)));
+
+        assertCountersProduced(MAPPED, 4);
     }
 
     @Test
     public void fusedMapAndFilter_batch() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
-                .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
-                .map(new MapProvidingMetrics())
+                .filter(new FilteringPredicateProvidingMetrics(i -> i % 2 == 0))
+                .map(new MappingFunctionProvidingMetrics(l -> l * 10))
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced(PredicateProvidingMetrics.DROPPED, 2,
-                MapProvidingMetrics.MAPPED, 3,
-                PredicateProvidingMetrics.TOTAL, 5);
+        assertCountersProduced(DROPPED, 2, MAPPED, 3, TOTAL, 5);
     }
 
     @Test
@@ -125,13 +307,11 @@ public class UserMetricsTest extends JetTestSupport {
                 .window(WindowDefinition.tumbling(3))
                 .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
                 .map(WindowResult::result)
-                .filter(new PredicateProvidingMetrics(i -> i % 2 == 0))
-                .map(new MapProvidingMetrics())
-                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+                .filter(new FilteringPredicateProvidingMetrics(i -> i % 2 == 0))
+                .map(new MappingFunctionProvidingMetrics(l -> l * 10))
+                .drainTo(assertAnyOrder(Arrays.asList(120L, 300L)));
 
-        assertCountersProduced(PredicateProvidingMetrics.DROPPED, 2,
-                PredicateProvidingMetrics.TOTAL, 4,
-                MapProvidingMetrics.MAPPED, 2);
+        assertCountersProduced(DROPPED, 2, TOTAL, 4, MAPPED, 2);
     }
 
     @Test
@@ -192,7 +372,8 @@ public class UserMetricsTest extends JetTestSupport {
         JobMetrics metrics = job.getMetrics();
         for (int i = 0; i < expected.length; i += 2) {
             String name = (String) expected[i];
-            assertCounterValue(name, metrics.get(name), (long) (Integer) expected[i + 1]);
+            List<Measurement> measurements = metrics.get(name);
+            assertCounterValue(name, measurements, (long) (Integer) expected[i + 1]);
         }
     }
 
@@ -206,44 +387,9 @@ public class UserMetricsTest extends JetTestSupport {
         );
     }
 
-    private static class AccumulateProvidingMetrics implements BiConsumerEx<LongAccumulator, Long>, ProvidesMetrics {
-
-        private final String metricName;
-        private UserMetric addedCounter;
-
-        AccumulateProvidingMetrics(String metricName) {
-            this.metricName = metricName;
-        }
-
-        @Override
-        public void acceptEx(LongAccumulator longAccumulator, Long l) {
-            longAccumulator.add(l);
-            addedCounter.incValue();
-        }
-
-        @Override
-        public void init(MetricsContext context) {
-            if (addedCounter != null) {
-                throw new IllegalStateException("Should get initialised only once!");
-            }
-            addedCounter = context.getUserMetric(metricName);
-        }
-
-    }
-
-    private static class PredicateProvidingMetrics implements PredicateEx<Long>, ProvidesMetrics {
-
-        private static final String DROPPED = "dropped";
-        private static final String TOTAL = "total";
-
-        private final PredicateEx<Long> predicate;
-
+    private abstract static class AbstractFiltering implements ProvidesMetrics, Serializable {
         private AtomicLong droppedCounter = new AtomicLong();
         private AtomicLong totalCounter = new AtomicLong();
-
-        PredicateProvidingMetrics(PredicateEx<Long> predicate) {
-            this.predicate = predicate;
-        }
 
         @Override
         public void init(MetricsContext context) {
@@ -251,22 +397,104 @@ public class UserMetricsTest extends JetTestSupport {
             context.setUserMetricSupplier(TOTAL, totalCounter::get);
         }
 
+        void incCounters(boolean passed) {
+            if (!passed) {
+                droppedCounter.incrementAndGet();
+            }
+            totalCounter.incrementAndGet();
+        }
+    }
+
+    private static class FilteringPredicateProvidingMetrics extends AbstractFiltering
+            implements PredicateEx<Long>, ProvidesMetrics {
+
+        private final PredicateEx<Long> predicate;
+
+        FilteringPredicateProvidingMetrics(PredicateEx<Long> predicate) {
+            this.predicate = predicate;
+        }
+
         @Override
         public boolean testEx(Long aLong) {
             boolean pass = predicate.test(aLong);
-            if (!pass) {
-                droppedCounter.incrementAndGet();
-            }
-
-            totalCounter.incrementAndGet();
-
+            incCounters(pass);
             return pass;
         }
     }
 
-    private static class MapProvidingMetrics implements FunctionEx<Long, Long>, ProvidesMetrics {
+    private static class FilteringBiPredicateProvidingMetrics extends AbstractFiltering
+            implements BiPredicateEx<Long, Long>, ProvidesMetrics {
 
-        private static final String MAPPED = "mapped";
+        private final BiPredicateEx<Long, Long> biPredicate;
+
+        FilteringBiPredicateProvidingMetrics(BiPredicateEx<Long, Long> biPredicate) {
+            this.biPredicate = biPredicate;
+        }
+
+        @Override
+        public boolean testEx(Long t, Long u) throws Exception {
+            boolean pass = biPredicate.testEx(t, u);
+            incCounters(pass);
+            return pass;
+        }
+    }
+
+    private static class FilteringTriPredicateProvidingMetrics extends AbstractFiltering
+            implements TriPredicate<Long, Long, Long>, ProvidesMetrics {
+
+        private final TriPredicate<Long, Long, Long> triPredicate;
+
+        FilteringTriPredicateProvidingMetrics(TriPredicate<Long, Long, Long> triPredicate) {
+            this.triPredicate = triPredicate;
+        }
+
+        @Override
+        public boolean testEx(Long t, Long u, Long v) throws Exception {
+            boolean pass = triPredicate.testEx(t, u, v);
+            incCounters(pass);
+            return pass;
+        }
+    }
+
+    private static class AsyncFilterBiFunctionProvidingMetrics extends AbstractFiltering
+            implements BiFunctionEx<Long, Long, CompletableFuture<Boolean>>, ProvidesMetrics {
+
+        private final BiFunctionEx<Long, Long, Boolean> biFunctionEx;
+
+        AsyncFilterBiFunctionProvidingMetrics(BiFunctionEx<Long, Long, Boolean> biFunctionEx) {
+            this.biFunctionEx = biFunctionEx;
+        }
+
+        @Override
+        public CompletableFuture<Boolean> applyEx(Long ctx, Long l) {
+            return CompletableFuture.supplyAsync(() -> {
+                boolean pass = biFunctionEx.apply(ctx, l);
+                incCounters(pass);
+                return pass;
+            });
+        }
+    }
+
+    private static class AsyncFilterTriFunctionProvidingMetrics extends AbstractFiltering
+            implements TriFunction<Long, Long, Long, CompletableFuture<Boolean>>, ProvidesMetrics {
+
+        private final TriFunction<Long, Long, Long, Boolean> triFunction;
+
+        AsyncFilterTriFunctionProvidingMetrics(TriFunction<Long, Long, Long, Boolean> triFunction) {
+            this.triFunction = triFunction;
+        }
+
+        @Override
+        public CompletableFuture<Boolean> applyEx(Long t0, Long t1, Long t2) {
+            return CompletableFuture.supplyAsync(() -> {
+                boolean pass = triFunction.apply(t0, t1, t2);
+                incCounters(pass);
+                return pass;
+            });
+        }
+    }
+
+    private abstract static class AbstractMapping implements ProvidesMetrics, Serializable {
 
         private UserMetric mappedCounter;
 
@@ -278,10 +506,56 @@ public class UserMetricsTest extends JetTestSupport {
             mappedCounter = context.getUserMetric(MAPPED);
         }
 
+        void incCounter() {
+            mappedCounter.incValue();
+        }
+    }
+
+    private static class MappingFunctionProvidingMetrics extends AbstractMapping
+            implements FunctionEx<Long, Long>, ProvidesMetrics {
+
+        private final FunctionEx<Long, Long> mappingFunction;
+
+        MappingFunctionProvidingMetrics(FunctionEx<Long, Long> mappingFunction) {
+            this.mappingFunction = mappingFunction;
+        }
+
         @Override
         public Long applyEx(Long aLong) {
-            mappedCounter.incValue();
-            return aLong;
+            incCounter();
+            return mappingFunction.apply(aLong);
+        }
+    }
+
+    private static class MappingBiFunctionProvidingMetrics extends AbstractMapping
+            implements BiFunctionEx<Long, Long, Long>, ProvidesMetrics {
+
+        private final BiFunctionEx<Long, Long, Long> mappingFunction;
+
+        MappingBiFunctionProvidingMetrics(BiFunctionEx<Long, Long, Long> mappingFunction) {
+            this.mappingFunction = mappingFunction;
+        }
+
+        @Override
+        public Long applyEx(Long t, Long u) {
+            incCounter();
+            return mappingFunction.apply(t, u);
+        }
+    }
+
+    private static class MappingTriFunctionProvidingMetrics extends AbstractMapping
+            implements TriFunction<Long, Long, Long, Long>, ProvidesMetrics {
+
+        private final TriFunction<Long, Long, Long, Long> mappingFunction;
+
+        MappingTriFunctionProvidingMetrics(TriFunction<Long, Long, Long, Long> mappingFunction) {
+            this.mappingFunction = mappingFunction;
+        }
+
+        @Override
+        public Long applyEx(Long t0, Long t1, Long t2) {
+            incCounter();
+            return mappingFunction.apply(t0, t1, t2);
         }
     }
 
@@ -311,5 +585,30 @@ public class UserMetricsTest extends JetTestSupport {
             expandedCounter.incValue(expansions.length);
             return Traversers.traverseItems(expansions);
         }
+    }
+
+    private static class AccumulateProvidingMetrics implements BiConsumerEx<LongAccumulator, Long>, ProvidesMetrics {
+
+        private final String metricName;
+        private UserMetric addedCounter;
+
+        AccumulateProvidingMetrics(String metricName) {
+            this.metricName = metricName;
+        }
+
+        @Override
+        public void acceptEx(LongAccumulator longAccumulator, Long l) {
+            longAccumulator.add(l);
+            addedCounter.incValue();
+        }
+
+        @Override
+        public void init(MetricsContext context) {
+            if (addedCounter != null) {
+                throw new IllegalStateException("Should get initialised only once!");
+            }
+            addedCounter = context.getUserMetric(metricName);
+        }
+
     }
 }

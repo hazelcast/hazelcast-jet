@@ -25,6 +25,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -133,8 +134,10 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     ) {
+        BiFunctionEx<C, T, CompletableFuture<Traverser<T>>> biFunction = (c, t) -> filterAsyncFn.apply(c, t)
+                .thenApply(passed -> passed ? singleton(t) : null);
         return attachFlatMapUsingContextAsync("filter", contextFactory,
-                (c, t) -> filterAsyncFn.apply(c, t).thenApply(passed -> passed ? singleton(t) : null));
+                                                UserMetricsUtil.wrap(biFunction, filterAsyncFn));
     }
 
     @Nonnull @Override

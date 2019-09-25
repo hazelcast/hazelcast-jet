@@ -24,6 +24,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
@@ -121,8 +122,10 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull TriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
     ) {
+        TriFunction<C, K, T, CompletableFuture<Traverser<T>>> triFunction = (c, k, t) -> filterAsyncFn.apply(c, k, t)
+                .thenApply(passed -> passed ? Traversers.singleton(t) : null);
         return attachTransformUsingContextAsync("filter", contextFactory,
-                (c, k, t) -> filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
+                UserMetricsUtil.wrap(triFunction, filterAsyncFn));
     }
 
     @Nonnull @Override

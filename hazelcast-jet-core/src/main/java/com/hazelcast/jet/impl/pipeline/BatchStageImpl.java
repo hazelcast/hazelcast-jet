@@ -139,8 +139,9 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     ) {
-        return attachFlatMapUsingContextAsync("filter", contextFactory,
-                (c, t) -> filterAsyncFn.apply(c, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
+        BiFunctionEx<C, T, CompletableFuture<Traverser<T>>> biFunction = (c, t) -> filterAsyncFn.apply(c, t)
+                .thenApply(passed -> passed ? Traversers.singleton(t) : null);
+        return attachFlatMapUsingContextAsync("filter", contextFactory, UserMetricsUtil.wrap(biFunction, filterAsyncFn));
     }
 
     @Nonnull @Override

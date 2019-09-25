@@ -20,13 +20,17 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supplierWithContext;
+import static com.hazelcast.jet.impl.util.Util.serde;
 
 /**
  * Backing processor for {@link
@@ -36,7 +40,7 @@ import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supp
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
+public final class TransformUsingContextP<C, T, R> extends AbstractProcessor implements ProvidesMetrics {
 
     // package-visible for test
     C contextObject;
@@ -47,6 +51,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
 
     private Traverser<? extends R> outputTraverser;
     private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
+    private final ProvidesMetrics metricsProvider;
 
     /**
      * Constructs a processor with the given mapping function.
@@ -60,6 +65,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
         this.contextFactory = contextFactory;
         this.flatMapFn = flatMapFn;
         this.contextObject = contextObject;
+        this.metricsProvider = UserMetricsUtil.cast(flatMapFn);
 
         assert contextObject == null ^ contextFactory.hasLocalSharing()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -76,6 +82,11 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
             assert contextObject == null : "contextObject is not null: " + contextObject;
             contextObject = contextFactory.createFn().apply(context.jetInstance());
         }
+    }
+
+    @Override
+    public void init(MetricsContext context) {
+        metricsProvider.init(context);
     }
 
     @Override
@@ -111,7 +122,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor {
                                             ? extends Traverser<? extends R>> flatMapFn
     ) {
         return supplierWithContext(contextFactory,
-                (ctxF, ctxO) -> new TransformUsingContextP<C, T, R>(ctxF, ctxO, flatMapFn)
+                (ctxF, ctxO) -> new TransformUsingContextP<C, T, R>(ctxF, ctxO, serde(flatMapFn))
         );
     }
 }

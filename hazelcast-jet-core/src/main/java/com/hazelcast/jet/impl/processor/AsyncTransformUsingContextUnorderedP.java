@@ -26,10 +26,13 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
@@ -55,6 +58,7 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supplierWithContext;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.Util.serde;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -72,11 +76,12 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
  * @param <K> extracted key type
  * @param <R> emitted item type
  */
-public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends AbstractProcessor {
+public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends AbstractProcessor implements ProvidesMetrics {
 
     private final ContextFactory<C> contextFactory;
     private final BiFunctionEx<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
     private final Function<? super T, ? extends K> extractKeyFn;
+    private final ProvidesMetrics metricsProvider;
 
     private C contextObject;
     private ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Object>> resultQueue;
@@ -115,6 +120,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
         this.extractKeyFn = extractKeyFn;
+        this.metricsProvider = UserMetricsUtil.cast(callAsyncFn);
     }
 
     @Override
@@ -130,6 +136,11 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         }
         maxAsyncOps = contextFactory.maxPendingCallsPerProcessor();
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
+    }
+
+    @Override
+    public void init(MetricsContext context) {
+        metricsProvider.init(context);
     }
 
     @Override
@@ -334,7 +345,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn
     ) {
         return supplierWithContext(contextFactory,
-                (ctxF, ctxO) -> new AsyncTransformUsingContextUnorderedP<>(ctxF, ctxO, callAsyncFn, extractKeyFn)
+                (ctxF, ctxO) -> new AsyncTransformUsingContextUnorderedP<>(ctxF, ctxO, serde(callAsyncFn), extractKeyFn)
         );
     }
 

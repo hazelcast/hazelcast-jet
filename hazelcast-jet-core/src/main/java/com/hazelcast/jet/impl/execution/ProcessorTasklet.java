@@ -618,7 +618,7 @@ public class ProcessorTasklet implements Tasklet {
                     n -> {
                         UserMetricImpl userMetric = new UserMetricImpl(name);
                         probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT,
-                                                                                            userMetric.getProbeFunction());
+                                userMetric.getProbeFunction());
                         return userMetric;
                     }
             );
@@ -626,7 +626,7 @@ public class ProcessorTasklet implements Tasklet {
 
         @Override
         public void setUserMetricSupplier(@Nonnull String name, @Nonnull SupplierEx<Long> supplier)
-                                                                                throws IllegalStateException {
+                throws IllegalStateException {
             Objects.requireNonNull(name, "name");
             Objects.requireNonNull(supplier, "supplier");
 
@@ -643,7 +643,7 @@ public class ProcessorTasklet implements Tasklet {
             }
 
             probeBuilder.register(ProcessorTasklet.this, name, ProbeLevel.INFO, ProbeUnit.COUNT,
-                                                            (LongProbeFunction<ProcessorTasklet>) t -> supplier.get());
+                    (LongProbeFunction<ProcessorTasklet>) t -> supplier.get());
             suppliers.put(name, supplier);
         }
     }

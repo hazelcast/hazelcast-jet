@@ -22,8 +22,11 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.BiConsumerEx;
+import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.function.TriFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,12 +51,31 @@ public final class UserMetricsUtil {
         }
     }
 
+    public static <T, U> BiPredicateEx<T, U> wrap(BiPredicateEx<T, U> biPredicateEx, Object metricsProviderCandidate) {
+        if (metricsProviderCandidate instanceof ProvidesMetrics) {
+            return new WrappedBiPredicateEx<>(biPredicateEx,
+                    Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));
+        } else {
+            return biPredicateEx;
+        }
+    }
+
     public static <T, R> FunctionEx<T, R> wrap(FunctionEx<T, R> functionEx, Object metricsProviderCandidate) {
         if (metricsProviderCandidate instanceof ProvidesMetrics) {
             return new WrappedFunctionEx<>(functionEx,
                     Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));
         } else {
             return functionEx;
+        }
+    }
+
+    public static <T, U, R> BiFunctionEx<T, U, R> wrap(BiFunctionEx<T, U, R> biFunctionEx,
+                                                                    Object metricsProviderCandidate) {
+        if (metricsProviderCandidate instanceof ProvidesMetrics) {
+            return new WrappedBiFunctionEx<>(biFunctionEx,
+                    Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));
+        } else {
+            return biFunctionEx;
         }
     }
 
@@ -75,6 +97,16 @@ public final class UserMetricsUtil {
                     Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));
         } else {
             return supplierEx;
+        }
+    }
+
+    public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrap(TriFunction<T0, T1, T2, R> triFunction,
+                                                                                Object metricsProviderCandidate) {
+        if (metricsProviderCandidate instanceof ProvidesMetrics) {
+            return new WrappedTriFunction<>(triFunction,
+                    Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));
+        } else {
+            return triFunction;
         }
     }
 
@@ -108,15 +140,12 @@ public final class UserMetricsUtil {
     }
 
     @SuppressWarnings("unchecked")
-    private static class WrappedAggregateOperation1 implements AggregateOperation1, ProvidesMetrics, Serializable {
-
+    private static class WrappedAggregateOperation1 extends AbstractWrapper implements AggregateOperation1 {
         private final AggregateOperation1 aggrOp1;
-        private final List<ProvidesMetrics> providers;
-
 
         WrappedAggregateOperation1(AggregateOperation1 aggrOp1, List<ProvidesMetrics> providers) {
+            super(providers);
             this.aggrOp1 = aggrOp1;
-            this.providers = providers;
         }
 
         @Nonnull
@@ -189,25 +218,15 @@ public final class UserMetricsUtil {
         public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
             return aggrOp1.withAccumulateFns(accumulateFns);
         }
-
-        @Override
-        public void init(MetricsContext context) {
-            for (ProvidesMetrics provider : providers) {
-                provider.init(context);
-            }
-        }
     }
 
     @SuppressWarnings("unchecked")
-    private static class WrappedAggregateOperation2 implements AggregateOperation2, ProvidesMetrics, Serializable {
-
+    private static class WrappedAggregateOperation2 extends AbstractWrapper implements AggregateOperation2 {
         private final AggregateOperation2 aggrOp2;
-        private final List<ProvidesMetrics> providers;
-
 
         WrappedAggregateOperation2(AggregateOperation2 aggrOp2, List<ProvidesMetrics> providers) {
+            super(providers);
             this.aggrOp2 = aggrOp2;
-            this.providers = providers;
         }
 
         @Nonnull
@@ -292,51 +311,83 @@ public final class UserMetricsUtil {
         public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
             return aggrOp2.withAccumulateFns(accumulateFns);
         }
+    }
+
+    private static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
+        private final BiPredicateEx<T, U> predicateEx;
+
+        WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, List<ProvidesMetrics> providers) {
+            super(providers);
+            this.predicateEx = predicateEx;
+        }
 
         @Override
-        public void init(MetricsContext context) {
-            for (ProvidesMetrics provider : providers) {
-                provider.init(context);
-            }
+        public boolean testEx(T t, U u) throws Exception {
+            return predicateEx.testEx(t, u);
         }
     }
 
-    private static class WrappedFunctionEx<T, R> implements FunctionEx<T, R>, ProvidesMetrics, Serializable {
-
+    private static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
         private final FunctionEx<T, R> functionEx;
-        private final List<ProvidesMetrics> providers;
 
         WrappedFunctionEx(FunctionEx<T, R> functionEx, List<ProvidesMetrics> providers) {
+            super(providers);
             this.functionEx = functionEx;
-            this.providers = providers;
         }
 
         @Override
         public R applyEx(T t) throws Exception {
             return functionEx.applyEx(t);
         }
+    }
+
+    private static class WrappedBiFunctionEx<T, U, R> extends AbstractWrapper implements BiFunctionEx<T, U, R> {
+        private final BiFunctionEx<T, U, R> biFunctionEx;
+
+        WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, List<ProvidesMetrics> providers) {
+            super(providers);
+            this.biFunctionEx = biFunctionEx;
+        }
 
         @Override
-        public void init(MetricsContext context) {
-            for (ProvidesMetrics provider : providers) {
-                provider.init(context);
-            }
+        public R applyEx(T t, U u) throws Exception {
+            return biFunctionEx.applyEx(t, u);
         }
     }
 
-    private static class WrappedSupplierEx<P> implements SupplierEx<P>, ProvidesMetrics, Serializable {
-
+    private static class WrappedSupplierEx<P> extends AbstractWrapper implements SupplierEx<P> {
         private final SupplierEx<P> supplierEx;
-        private final List<ProvidesMetrics> providers;
 
         WrappedSupplierEx(SupplierEx<P> supplierEx, List<ProvidesMetrics> providers) {
+            super(providers);
             this.supplierEx = supplierEx;
-            this.providers = providers;
         }
 
         @Override
         public P getEx() throws Exception {
             return supplierEx.getEx();
+        }
+    }
+
+    private static class WrappedTriFunction<T0, T1, T2, R> extends AbstractWrapper implements TriFunction<T0, T1, T2, R> {
+        private final TriFunction<T0, T1, T2, R> triFunction;
+
+        WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, List<ProvidesMetrics> providers) {
+            super(providers);
+            this.triFunction = triFunction;
+        }
+
+        @Override
+        public R applyEx(T0 t0, T1 t1, T2 t2) throws Exception {
+            return triFunction.applyEx(t0, t1, t2);
+        }
+    }
+
+    private abstract static class AbstractWrapper implements ProvidesMetrics, Serializable {
+        private final List<ProvidesMetrics> providers;
+
+        AbstractWrapper(List<ProvidesMetrics> providers) {
+            this.providers = providers;
         }
 
         @Override

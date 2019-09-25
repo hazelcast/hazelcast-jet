@@ -24,8 +24,11 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
@@ -36,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supplierWithContext;
+import static com.hazelcast.jet.impl.util.Util.serde;
 
 /**
  * Processor which, for each received item, emits all the items from the
@@ -49,7 +53,7 @@ import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithContext.supp
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractProcessor {
+public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractProcessor implements ProvidesMetrics {
 
     private final ContextFactory<C> contextFactory;
     private final BiFunctionEx<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
@@ -66,6 +70,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     @Probe(name = "numInFlightOps")
     private final AtomicInteger asyncOpsCounterMetric = new AtomicInteger();
+    private final ProvidesMetrics metricsProvider;
 
     /**
      * Constructs a processor with the given mapping function.
@@ -78,6 +83,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         this.contextFactory = contextFactory;
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
+        this.metricsProvider = UserMetricsUtil.cast(callAsyncFn);
 
         assert contextObject == null ^ contextFactory.hasLocalSharing()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -96,6 +102,11 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         }
         maxAsyncOps = contextFactory.maxPendingCallsPerProcessor();
         queue = new ArrayDeque<>(maxAsyncOps);
+    }
+
+    @Override
+    public void init(MetricsContext context) {
+        metricsProvider.init(context);
     }
 
     @Override
@@ -211,7 +222,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
             @Nonnull BiFunctionEx<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return supplierWithContext(contextFactory,
-                (ctxF, ctxO) -> new AsyncTransformUsingContextOrderedP<>(ctxF, ctxO, callAsyncFn)
+                (ctxF, ctxO) -> new AsyncTransformUsingContextOrderedP<>(ctxF, ctxO, serde(callAsyncFn))
         );
     }
 }
