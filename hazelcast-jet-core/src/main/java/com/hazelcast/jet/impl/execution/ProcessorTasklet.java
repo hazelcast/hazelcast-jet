@@ -248,8 +248,7 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    @Override
-    @Nonnull
+    @Override @Nonnull
     public ProgressState call() {
         assert !processorClosed : "processor closed";
         progTracker.reset();

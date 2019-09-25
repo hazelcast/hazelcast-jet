@@ -191,7 +191,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
                 aggrOp, aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn()
         );
         AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp =
-                                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
+                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
         return attach(new AggregateTransform<>(singletonList(transform), wrappedAggrOp), fnAdapter);
     }
 
@@ -209,8 +209,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), wrappedAggrOp), DO_NOT_ADAPT);
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public <T1, R0, R1> BatchStage<Tuple2<R0, R1>> aggregate2(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
             @Nonnull BatchStage<T1> stage1,

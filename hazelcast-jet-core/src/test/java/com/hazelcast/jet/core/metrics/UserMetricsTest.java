@@ -339,7 +339,7 @@ public class UserMetricsTest extends JetTestSupport {
     @Test
     public void aggregate1() {
         AggregateOperation1<Long, LongAccumulator, Long> aggrOp = AggregateOperations.summingLong((Long x) -> x)
-                                                    .withAccumulateFn(new AccumulateProvidingMetrics("added"));
+                .withAccumulateFn(new AccumulateProvidingMetrics("added"));
         pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L))
                 .aggregate(aggrOp)
                 .drainTo(assertOrdered(Collections.singletonList(15L)));

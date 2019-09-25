@@ -70,7 +70,7 @@ public final class UserMetricsUtil {
     }
 
     public static <T, U, R> BiFunctionEx<T, U, R> wrap(BiFunctionEx<T, U, R> biFunctionEx,
-                                                                    Object metricsProviderCandidate) {
+                                                       Object metricsProviderCandidate) {
         if (metricsProviderCandidate instanceof ProvidesMetrics) {
             return new WrappedBiFunctionEx<>(biFunctionEx,
                     Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));
@@ -101,7 +101,7 @@ public final class UserMetricsUtil {
     }
 
     public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrap(TriFunction<T0, T1, T2, R> triFunction,
-                                                                                Object metricsProviderCandidate) {
+                                                                  Object metricsProviderCandidate) {
         if (metricsProviderCandidate instanceof ProvidesMetrics) {
             return new WrappedTriFunction<>(triFunction,
                     Collections.singletonList((ProvidesMetrics) metricsProviderCandidate));

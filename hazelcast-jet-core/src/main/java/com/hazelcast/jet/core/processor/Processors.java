@@ -82,7 +82,7 @@ import static java.util.stream.Collectors.toList;
  * be stateless.
  *
  * <h1>Single-stage aggregation</h1>
- *
+ * <p>
  * This is the basic setup where all the aggregation steps happen in one
  * vertex. The input must be properly partitioned and distributed. For
  * non-aligned window aggregation (e.g., session-based, trigger-based,
@@ -108,7 +108,7 @@ import static java.util.stream.Collectors.toList;
  * </pre>
  *
  * <h1>Two-stage aggregation</h1>
- *
+ * <p>
  * In two-stage aggregation, the first stage applies just the
  * {@link AggregateOperation1#accumulateFn() accumulate} aggregation
  * primitive and the second stage does {@link
@@ -267,7 +267,7 @@ public final class Processors {
         return () -> {
             AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
             AggregateOperation<A, A> wrappedAggrOp = UserMetricsUtil.wrap(
-                                                        clonedAggrOp.withIdentityFinish(), clonedAggrOp);
+                    clonedAggrOp.withIdentityFinish(), clonedAggrOp);
             return new GroupP<>(
                     // We should use the same constant key as the input edges do, but since
                     // the processor doesn't save the state, there's no need to.
@@ -301,7 +301,7 @@ public final class Processors {
         return () -> {
             AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
             AggregateOperation<A, R> wrappedAggrOp = UserMetricsUtil.wrap(
-                                                        clonedAggrOp.withCombiningAccumulateFn(identity()), clonedAggrOp);
+                    clonedAggrOp.withCombiningAccumulateFn(identity()), clonedAggrOp);
             return new GroupP<>(
                     // We should use the same constant key as the input edges do, but since
                     // the processor doesn't save the state, there's no need to.
@@ -377,7 +377,7 @@ public final class Processors {
         return () -> {
             AggregateOperation<A, ?> clonedAggrOp = serde(aggrOp);
             AggregateOperation<A, A> wrappedAggrOp = UserMetricsUtil.wrap(
-                                                            clonedAggrOp.withIdentityFinish(), clonedAggrOp);
+                    clonedAggrOp.withIdentityFinish(), clonedAggrOp);
             return new GroupP<>(getKeyFns, wrappedAggrOp, Util::entry);
         };
     }
@@ -413,7 +413,7 @@ public final class Processors {
         return () -> {
             AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
             AggregateOperation<A, R> wrappedAggrOp = UserMetricsUtil.wrap(
-                                            clonedAggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue), clonedAggrOp);
+                    clonedAggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue), clonedAggrOp);
             return new GroupP<>(
                     singletonList((FunctionEx<Entry<K, ?>, K>) Entry::getKey),
                     wrappedAggrOp,
