@@ -759,7 +759,7 @@ public class JobTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobIsJoinedAfterRestart_then_futureShouldNotBeCompletedEarly() throws InterruptedException {
+    public void when_joinFromClientTimesOut_then_futureShouldNotBeCompletedEarly() throws InterruptedException {
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
 
         int timeoutSecs = 2;
@@ -767,9 +767,11 @@ public class JobTest extends JetTestSupport {
                 .setProperty(ClientProperty.INVOCATION_TIMEOUT_SECONDS.getName(), Integer.toString(timeoutSecs));
         JetInstance client = createJetClient(config);
 
+        // join request is sent along with job submission
         Job job = client.newJob(dag);
         NoOutputSourceP.executionStarted.await();
-        // wait for invocation to timeout
+
+        // wait for join invocation to timeout
         Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSecs));
 
         // When
