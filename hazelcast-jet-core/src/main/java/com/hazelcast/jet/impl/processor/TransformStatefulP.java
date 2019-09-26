@@ -23,8 +23,11 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
@@ -46,7 +49,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.function.Function.identity;
 
-public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
+public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements ProvidesMetrics {
     private static final int HASH_MAP_INITIAL_CAPACITY = 16;
     private static final float HASH_MAP_LOAD_FACTOR = 0.75f;
 
@@ -68,6 +71,8 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     private final EvictingTraverser evictingTraverser = new EvictingTraverser();
     private final Traverser<?> evictingTraverserFlattened = evictingTraverser.flatMap(identity());
 
+    private final ProvidesMetrics metricsProvider;
+
     private long currentWm = Long.MIN_VALUE;
     private Traverser<? extends Entry<?, ?>> snapshotTraverser;
 
@@ -85,12 +90,18 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
         this.createIfAbsentFn = k -> new TimestampedItem<>(Long.MIN_VALUE, createFn.get());
         this.statefulFlatMapFn = statefulFlatMapFn;
         this.onEvictFn = onEvictFn;
+        this.metricsProvider = UserMetricsUtil.cast(statefulFlatMapFn);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected boolean tryProcess(int ordinal, @Nonnull Object item) {
         return flatMapper.tryProcess((T) item);
+    }
+
+    @Override
+    public void registerMetrics(MetricsContext context) {
+        metricsProvider.registerMetrics(context);
     }
 
     @Nonnull

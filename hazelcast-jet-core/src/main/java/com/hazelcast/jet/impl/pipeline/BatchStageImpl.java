@@ -98,7 +98,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
-        return attachGlobalMapStateful(createFn, (s, t) -> filterFn.test(s, t) ? t : null);
+        BiFunctionEx<? super S, ? super T, ? extends T> mapFn = (s, t) -> filterFn.test(s, t) ? t : null;
+        return attachGlobalMapStateful(createFn, UserMetricsUtil.wrap(mapFn, filterFn));
     }
 
     @Nonnull @Override
@@ -122,8 +123,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
+        BiFunctionEx<C, T, CompletableFuture<Traverser<R>>> flatMapAsyncFn =
+                (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton);
         return attachFlatMapUsingContextAsync("map", contextFactory,
-                (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton));
+                UserMetricsUtil.wrap(flatMapAsyncFn, mapAsyncFn));
     }
 
     @Nonnull @Override
@@ -139,9 +142,10 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     ) {
-        BiFunctionEx<C, T, CompletableFuture<Traverser<T>>> biFunction = (c, t) -> filterAsyncFn.apply(c, t)
+        BiFunctionEx<C, T, CompletableFuture<Traverser<T>>> flatMapAsyncFn = (c, t) -> filterAsyncFn.apply(c, t)
                 .thenApply(passed -> passed ? Traversers.singleton(t) : null);
-        return attachFlatMapUsingContextAsync("filter", contextFactory, UserMetricsUtil.wrap(biFunction, filterAsyncFn));
+        return attachFlatMapUsingContextAsync("filter", contextFactory,
+                UserMetricsUtil.wrap(flatMapAsyncFn, filterAsyncFn));
     }
 
     @Nonnull @Override

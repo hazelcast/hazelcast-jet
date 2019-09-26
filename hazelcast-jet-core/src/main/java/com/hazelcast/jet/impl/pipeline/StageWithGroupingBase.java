@@ -79,12 +79,12 @@ class StageWithGroupingBase<T, K> {
             @Nonnull TriFunction<? super C, ? super K, ? super T, ? extends R> mapFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
-        BiFunctionEx<C, T, ? extends R> biFunction = (c, t) -> {
+        BiFunctionEx<C, T, ? extends R> keyedMapFn = (c, t) -> {
             K k = keyFn.apply(t);
             return mapFn.apply(c, k, t);
         };
         return computeStage.attachMapUsingPartitionedContext(contextFactory, keyFn,
-                UserMetricsUtil.wrap(biFunction, mapFn));
+                UserMetricsUtil.wrap(keyedMapFn, mapFn));
     }
 
     @Nonnull
@@ -107,10 +107,12 @@ class StageWithGroupingBase<T, K> {
             @Nonnull TriFunction<? super C, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
-        return computeStage.attachFlatMapUsingPartitionedContext(contextFactory, keyFn, (c, t) -> {
+        BiFunctionEx<C, T, Traverser<? extends R>> keyedFlatMapFn = (c, t) -> {
             K k = keyFn.apply(t);
             return flatMapFn.apply(c, k, t);
-        });
+        };
+        return computeStage.attachFlatMapUsingPartitionedContext(contextFactory, keyFn,
+                UserMetricsUtil.wrap(keyedFlatMapFn, flatMapFn));
     }
 
     @Nonnull
@@ -121,12 +123,12 @@ class StageWithGroupingBase<T, K> {
                     flatMapAsyncFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
-        BiFunctionEx<C, T, CompletableFuture<Traverser<R>>> biFunction = (c, t) -> {
+        BiFunctionEx<C, T, CompletableFuture<Traverser<R>>> keyedFlatMapAsyncFn = (c, t) -> {
             K k = keyFn.apply(t);
             return flatMapAsyncFn.apply(c, k, t);
         };
         return computeStage.attachTransformUsingPartitionedContextAsync(operationName, contextFactory, keyFn,
-                UserMetricsUtil.wrap(biFunction, flatMapAsyncFn));
+                UserMetricsUtil.wrap(keyedFlatMapAsyncFn, flatMapAsyncFn));
     }
 
     static Transform transformOf(GeneralStageWithKey stage) {

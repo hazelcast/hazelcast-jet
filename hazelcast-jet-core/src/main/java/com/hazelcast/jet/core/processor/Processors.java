@@ -813,15 +813,17 @@ public final class Processors {
             // SpotBugs bug: https://github.com/spotbugs/spotbugs/issues/844
             @SuppressWarnings("UnnecessaryLocalVariable")
             TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFnCopy = onEvictFn;
+            TriFunction<? super S, ? super K, ? super T, ? extends R> clonedStatefulMapFn = serde(statefulMapFn);
+            TriFunction<S, K, T, Traverser<R>> statefulFlatMapFn = (state, key, item) -> {
+                mainTrav.accept(clonedStatefulMapFn.apply(state, key, item));
+                return mainTrav;
+            };
             return new TransformStatefulP<T, K, S, R>(
                     ttl,
                     keyFn,
                     timestampFn,
                     createFn,
-                    (state, key, item) -> {
-                        mainTrav.accept(statefulMapFn.apply(state, key, item));
-                        return mainTrav;
-                    },
+                    UserMetricsUtil.wrap(statefulFlatMapFn, clonedStatefulMapFn),
                     onEvictFnCopy != null ? (s, k, wm) -> {
                         evictTrav.accept(onEvictFnCopy.apply(s, k, wm));
                         return evictTrav;
@@ -903,12 +905,12 @@ public final class Processors {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
-        TriFunction<ResettableSingletonTraverser<R>, C, T, Traverser<? extends R>> triFunction =
+        TriFunction<ResettableSingletonTraverser<R>, C, T, Traverser<? extends R>> flatMapFn =
                 (singletonTraverser, context, item) -> {
                     singletonTraverser.accept(mapFn.apply(context, item));
                     return singletonTraverser;
                 };
-        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrap(triFunction, mapFn));
+        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrap(flatMapFn, mapFn));
     }
 
     /**
@@ -1021,8 +1023,9 @@ public final class Processors {
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return TransformUsingContextP.<C, T, R>supplier(contextFactory,
-                (singletonTraverser, context, item) -> flatMapFn.apply(context, item));
+        TriFunction<ResettableSingletonTraverser<R>, C, T, Traverser<? extends R>> flatMapTriFn =
+                (singletonTraverser, context, item) -> flatMapFn.apply(context, item);
+        return TransformUsingContextP.<C, T, R>supplier(contextFactory, UserMetricsUtil.wrap(flatMapTriFn, flatMapFn));
     }
 
     /**

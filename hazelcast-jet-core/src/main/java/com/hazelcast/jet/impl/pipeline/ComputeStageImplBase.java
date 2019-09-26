@@ -118,7 +118,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
-        FunctionEx<T, T> adaptedFn = fnAdapter.filterPredicateToFn(filterFn);
+        FunctionEx<T, T> adaptedFn = fnAdapter.adaptFilterPredicate(filterFn);
         return (RET) attach(new MapTransform<>("filter", transform, adaptedFn), fnAdapter);
     }
 
@@ -143,7 +143,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.<S, Object, T, R>adaptStatefulMapFn((s, k, t) -> mapFn.apply(s, t))
+                fnAdapter.adaptStatefulMapFn(mapFn)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -450,10 +450,17 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             this.delegate = delegate;
         }
 
-        <T> FunctionEx<T, T> filterPredicateToFn(PredicateEx<T> predicate) {
+        <T> FunctionEx<T, T> adaptFilterPredicate(PredicateEx<T> predicate) {
             PredicateEx<T> adaptedPredicate = (PredicateEx<T>) delegate.adaptFilterFn(predicate);
             FunctionEx<T, T> fn = t -> adaptedPredicate.test(t) ? t : null;
             return UserMetricsUtil.wrap(fn, predicate);
+        }
+
+        <S, T, R> TriFunction<? super S, ? super Object, ?, ?> adaptStatefulMapFn(
+                BiFunctionEx<? super S, ? super T, ? extends R> mapFn) {
+            TriFunction<S, Object, T, R> keylessMapFn = (s, k, t) -> mapFn.apply(s, t);
+            TriFunction<? super S, ? super Object, ?, ?> adaptedStatefulMapFn = delegate.adaptStatefulMapFn(keylessMapFn);
+            return UserMetricsUtil.wrap(adaptedStatefulMapFn, mapFn);
         }
 
         @Nonnull @Override
@@ -490,7 +497,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <S, K, T, R> TriFunction<? super S, ? super K, ?, ?> adaptStatefulMapFn(
                 @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
         ) {
-            return delegate.adaptStatefulMapFn(mapFn);
+            TriFunction<? super S, ? super K, ?, ?> adaptedMapFn = delegate.adaptStatefulMapFn(mapFn);
+            return UserMetricsUtil.wrap(adaptedMapFn, mapFn);
         }
 
         @Nonnull @Override
@@ -535,7 +543,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <C, T, R> BiFunctionEx<? super C, ?, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
                 @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
         ) {
-            return delegate.adaptFlatMapUsingContextFn(flatMapFn);
+            BiFunctionEx<? super C, ?, ? extends Traverser<?>> adaptedFlatMapFn =
+                    delegate.adaptFlatMapUsingContextFn(flatMapFn);
+            return UserMetricsUtil.wrap(adaptedFlatMapFn, flatMapFn);
         }
 
         @Nonnull @Override
