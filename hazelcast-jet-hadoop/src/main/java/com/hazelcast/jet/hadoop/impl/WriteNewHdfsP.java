@@ -137,7 +137,6 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
         }
     }
 
-
     private static class Supplier<T, K, V> implements ProcessorSupplier {
 
         static final long serialVersionUID = 1L;
@@ -169,8 +168,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
                     getUuid(context)));
         }
 
-        @Override
-        @Nonnull
+        @Override @Nonnull
         public List<Processor> get(int count) {
             return range(0, count).mapToObj(i -> {
                 try {

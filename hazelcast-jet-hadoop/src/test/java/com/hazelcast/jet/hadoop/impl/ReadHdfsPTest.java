@@ -17,14 +17,12 @@
 package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.core.IList;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -40,8 +38,8 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -67,7 +65,6 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-@Category(ParallelTest.class)
 public class ReadHdfsPTest extends HdfsTestSupport {
 
     private static final String[] ENTRIES = range(0, 4)
@@ -80,7 +77,6 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameter(1)
     public EMapperType mapperType;
     private JobConf jobConf;
-    private JetInstance instance;
     private Set<Path> paths = new HashSet<>();
 
     @Parameterized.Parameters(name = "inputFormatClass={0}, mapper={1}")
@@ -102,9 +98,13 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         );
     }
 
+    @BeforeClass
+    public static void beforeClass() {
+        initialize(2, null);
+    }
+
     @Before
     public void setup() throws IOException {
-        instance = createJetMember();
         createConf();
 
         writeToFile();
@@ -126,20 +126,21 @@ public class ReadHdfsPTest extends HdfsTestSupport {
 
     @Test
     public void testReadHdfs() {
+        // TODO [viliam] test the new api
         DAG dag = new DAG();
 
+        IList sinkList = instance().getList(randomName());
         Vertex source = dag.newVertex("source", readHdfsP(jobConf, mapperType.mapper))
                            .localParallelism(4);
-        Vertex sink = dag.newVertex("sink", writeListP("sink"))
+        Vertex sink = dag.newVertex("sink", writeListP(sinkList.getName()))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
-        Future<Void> future = instance.newJob(dag).getFuture();
+        Future<Void> future = instance().newJob(dag).getFuture();
         assertCompletesEventually(future);
 
-        IList list = instance.getList("sink");
-        assertEquals(expectedSinkSize(), list.size());
-        assertTrue(list.get(0).toString().contains("value"));
+        assertEquals(expectedSinkSize(), sinkList.size());
+        assertTrue(sinkList.get(0).toString().contains("value"));
     }
 
     private int expectedSinkSize() {

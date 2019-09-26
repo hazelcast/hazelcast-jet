@@ -17,14 +17,13 @@
 package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.core.IList;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -37,8 +36,8 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.LazyOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -46,16 +45,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.Future;
+import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static java.util.stream.Collectors.toMap;
+import static com.hazelcast.jet.Util.entry;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
-@Category(ParallelTest.class)
 public class WriteHdfsPTest extends HdfsTestSupport {
 
     @Parameterized.Parameter
@@ -79,42 +77,43 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         );
     }
 
+    @BeforeClass
+    public static void beforeClass() {
+        initialize(2, null);
+    }
+
     @Test
-    public void testWriteFile() throws Exception {
+    public void testWrite_oldApi() throws Exception {
+        testWrite(HdfsSinks::hdfs);
+    }
+
+    @Test
+    public void testWrite_newApi() throws Exception {
+        testWrite(HdfsSinks::hdfsNewApi);
+    }
+
+    private void testWrite(Function<JobConf, Sink<Entry<IntWritable, IntWritable>>> sinkFactory) throws Exception {
+        Path directory = new Path(Files.createTempDirectory(getClass().getSimpleName()).toString());
+        JobConf conf = getSinkConf(directory);
+
         int messageCount = 320;
-        String mapName = randomMapName();
-        JetInstance instance = createJetMember();
-        createJetMember();
-
-        Map<IntWritable, IntWritable> map = IntStream.range(0, messageCount).boxed()
-                                                     .collect(toMap(IntWritable::new, IntWritable::new));
-        instance.getMap(mapName).putAll(map);
-
-        Path path = getPath();
-
-        JobConf conf = getSinkConf(path);
-
-
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map(mapName))
-         .drainTo(HdfsSinks.hdfs(conf))
+        p.drawFrom(TestSources.items(IntStream.range(0, messageCount).boxed().toArray(Integer[]::new)))
+         .map(num -> entry(new IntWritable(num), new IntWritable(num)))
+         .drainTo(sinkFactory.apply(conf))
          // we use higher value to increase the race chance for LazyOutputFormat
          .setLocalParallelism(8);
 
-        Future<Void> future = instance.newJob(p).getFuture();
-        assertCompletesEventually(future);
-
-        JobConf readJobConf = getReadJobConf(path);
+        instance().newJob(p).join();
+        JobConf readJobConf = getReadJobConf(directory);
 
         p = Pipeline.create();
-        p.drawFrom(HdfsSources.hdfs(readJobConf))
-         .drainTo(Sinks.list("results"));
+        IList<Entry<IntWritable, IntWritable>> resultList = instance().getList(randomName());
+        p.drawFrom(HdfsSources.<IntWritable, IntWritable>hdfs(readJobConf))
+         .drainTo(Sinks.list(resultList));
 
-        future = instance.newJob(p).getFuture();
-        assertCompletesEventually(future);
-
-        IList<Object> results = instance.getList("results");
-        assertEquals(messageCount, results.size());
+        instance().newJob(p).join();
+        assertEquals(messageCount, resultList.size());
     }
 
     private JobConf getReadJobConf(Path path) throws IOException {
@@ -132,7 +131,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     }
 
     private JobConf getSinkConf(Path path) throws IOException {
-        JobConf conf = new JobConf();
+        JobConf conf;
         if (outputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setOutputFormatClass(outputFormatClass);
@@ -145,6 +144,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
             }
             conf = new JobConf(job.getConfiguration());
         } else {
+            conf = new JobConf();
             conf.setOutputFormat(outputFormatClass);
             conf.setOutputCommitter(FileOutputCommitter.class);
             conf.setOutputKeyClass(IntWritable.class);
@@ -155,10 +155,5 @@ public class WriteHdfsPTest extends HdfsTestSupport {
             }
         }
         return conf;
-    }
-
-    private Path getPath() throws IOException {
-        String dirName = Files.createTempDirectory(getClass().getName()).toString();
-        return new Path(dirName);
     }
 }
