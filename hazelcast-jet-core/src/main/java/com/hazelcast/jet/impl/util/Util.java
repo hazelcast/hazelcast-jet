@@ -206,7 +206,7 @@ public final class Util {
     }
 
     /** Returns a deep clone of an object by serializing and deserializing it (ser-de). */
-    public static <T> T serde(T object) {
+    public static <T extends Serializable> T serde(T object) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);

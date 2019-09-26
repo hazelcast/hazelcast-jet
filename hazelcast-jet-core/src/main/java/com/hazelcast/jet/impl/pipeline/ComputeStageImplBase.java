@@ -76,12 +76,12 @@ import static java.util.Collections.singletonList;
 
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
-    public static final FunctionAdapter ADAPT_TO_JET_EVENT = new InternalFunctionAdapter(
+    public static final FunctionAdapter ADAPT_TO_JET_EVENT = new UserMetricFunctionAdapter(
             new JetEventFunctionAdapter());
-    static final FunctionAdapter DO_NOT_ADAPT = new InternalFunctionAdapter(new FunctionAdapter());
+    static final FunctionAdapter DO_NOT_ADAPT = new UserMetricFunctionAdapter(new FunctionAdapter());
 
     @Nonnull
-    public InternalFunctionAdapter fnAdapter;
+    public UserMetricFunctionAdapter fnAdapter;
 
     ComputeStageImplBase(
             @Nonnull Transform transform,
@@ -434,19 +434,19 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         }
     }
 
-    private static InternalFunctionAdapter extendFunctionAdapter(FunctionAdapter fnAdapter) {
-        if (fnAdapter instanceof InternalFunctionAdapter) {
-            return (InternalFunctionAdapter) fnAdapter;
+    private static UserMetricFunctionAdapter extendFunctionAdapter(FunctionAdapter fnAdapter) {
+        if (fnAdapter instanceof UserMetricFunctionAdapter) {
+            return (UserMetricFunctionAdapter) fnAdapter;
         } else {
-            return new InternalFunctionAdapter(fnAdapter);
+            return new UserMetricFunctionAdapter(fnAdapter);
         }
     }
 
-    private static final class InternalFunctionAdapter extends FunctionAdapter {
+    private static final class UserMetricFunctionAdapter extends FunctionAdapter {
 
         private final FunctionAdapter delegate;
 
-        InternalFunctionAdapter(FunctionAdapter delegate) {
+        UserMetricFunctionAdapter(FunctionAdapter delegate) {
             this.delegate = delegate;
         }
 
