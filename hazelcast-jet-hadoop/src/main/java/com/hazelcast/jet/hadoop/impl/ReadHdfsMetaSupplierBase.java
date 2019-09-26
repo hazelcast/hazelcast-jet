@@ -50,21 +50,13 @@ import static java.util.stream.Stream.concat;
  * Base class contains shared logic between HDFS processor meta suppliers which are using
  * old and new MapReduce API.
  */
-public abstract class HdfsMetaSupplierBase implements ProcessorMetaSupplier {
+public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier {
 
     protected transient ILogger logger;
 
-
     @Override
     public void init(@Nonnull Context context) throws Exception {
-        logger = context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(HdfsMetaSupplierBase.class);
-    }
-
-    private static boolean isSplitLocalForMember(List<String> splitLocations, String hostName) {
-        if (hostName == null) {
-            return false;
-        }
-        return splitLocations.stream().anyMatch(hostName::equalsIgnoreCase);
+        logger = context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(ReadHdfsMetaSupplierBase.class);
     }
 
     private static int indexOfMin(int[] ints) {
@@ -136,7 +128,6 @@ public abstract class HdfsMetaSupplierBase implements ProcessorMetaSupplier {
                                     return isSplitLocalForMember(is.getLocations(), memberAddrs[i]);
                                 } catch (Exception e) {
                                     throw ExceptionUtil.rethrow(e);
-
                                 }
                             })
                             .peek(i -> memberToSplitCount[i]++)
@@ -187,6 +178,13 @@ public abstract class HdfsMetaSupplierBase implements ProcessorMetaSupplier {
                         Stream.of(e.getKey() + ":"),
                         Optional.of(e.getValue()).orElse(emptyList()).stream().map(Object::toString))
                 ).collect(joining("\n")));
+    }
+
+    private static boolean isSplitLocalForMember(List<String> splitLocations, String hostName) {
+        if (hostName == null) {
+            return false;
+        }
+        return splitLocations.stream().anyMatch(hostName::equalsIgnoreCase);
     }
 
     private boolean isSplitLocalForMember(List<String> splitLocations, Address memberAddr) {

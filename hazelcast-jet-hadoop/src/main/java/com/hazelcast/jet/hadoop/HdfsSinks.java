@@ -59,6 +59,7 @@ public final class HdfsSinks {
      * @param jobConf       {@code JobConf} used for output format configuration
      * @param extractKeyF   mapper to map a key to another key
      * @param extractValueF mapper to map a value to another value
+     *
      * @param <E>           stream item type
      * @param <K>           type of key to write to HDFS
      * @param <V>           type of value to write to HDFS
@@ -116,8 +117,8 @@ public final class HdfsSinks {
             @Nonnull FunctionEx<? super E, K> extractKeyF,
             @Nonnull FunctionEx<? super E, V> extractValueF
     ) {
-        return Sinks.fromProcessor("writeNewHdfs", HdfsProcessors.writeNewHdfsP(new JobConf(configuration),
-                extractKeyF, extractValueF));
+        return Sinks.fromProcessor("writeHdfsNew", HdfsProcessors.writeNewHdfsP(configuration, extractKeyF,
+                extractValueF));
     }
 
     /**
@@ -130,5 +131,4 @@ public final class HdfsSinks {
     public static <K, V> Sink<Entry<K, V>> hdfsNewApi(@Nonnull Configuration configuration) {
         return hdfsNewApi(configuration, Entry::getKey, Entry::getValue);
     }
-
 }

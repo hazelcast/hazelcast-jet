@@ -58,7 +58,7 @@ import static org.junit.Assert.assertEquals;
 @Category(ParallelTest.class)
 public class WriteHdfsPTest extends HdfsTestSupport {
 
-    @Parameterized.Parameter(0)
+    @Parameterized.Parameter
     public Class outputFormatClass;
 
     @Parameterized.Parameter(1)
@@ -104,7 +104,6 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         Future<Void> future = instance.newJob(p).getFuture();
         assertCompletesEventually(future);
 
-
         JobConf readJobConf = getReadJobConf(path);
 
         p = Pipeline.create();
@@ -113,7 +112,6 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         future = instance.newJob(p).getFuture();
         assertCompletesEventually(future);
-
 
         IList<Object> results = instance.getList("results");
         assertEquals(messageCount, results.size());
@@ -163,5 +161,4 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         String dirName = Files.createTempDirectory(getClass().getName()).toString();
         return new Path(dirName);
     }
-
 }

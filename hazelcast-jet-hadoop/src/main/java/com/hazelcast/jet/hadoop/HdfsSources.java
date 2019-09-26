@@ -21,6 +21,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsP.MetaSupplier;
 import com.hazelcast.jet.hadoop.impl.ReadNewHdfsP;
+import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
+import com.hazelcast.jet.hadoop.impl.SerializableJobConf;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import org.apache.hadoop.conf.Configuration;
@@ -28,8 +30,6 @@ import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
-
-import static com.hazelcast.jet.hadoop.impl.SerializableJobConf.asSerializable;
 
 /**
  * Contains factory methods for Apache Hadoop HDFS sources.
@@ -72,7 +72,7 @@ public final class HdfsSources {
             @Nonnull JobConf jobConf,
             @Nonnull BiFunctionEx<K, V, E> projectionFn
     ) {
-        return Sources.batchFromProcessor("readHdfs", new MetaSupplier<>(asSerializable(jobConf), projectionFn));
+        return Sources.batchFromProcessor("readHdfs", new MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), projectionFn));
     }
 
     /**
@@ -116,7 +116,7 @@ public final class HdfsSources {
             @Nonnull BiFunctionEx<K, V, E> projectionFn
     ) {
         return Sources.batchFromProcessor("readHdfsNew",
-                new ReadNewHdfsP.MetaSupplier<>(asSerializable(new JobConf(configuration)), projectionFn));
+                new ReadNewHdfsP.MetaSupplier<>(SerializableConfiguration.asSerializable(configuration), projectionFn));
     }
 
     /**
@@ -124,7 +124,7 @@ public final class HdfsSources {
      * with {@link java.util.Map.Entry} as its output type.
      */
     @Nonnull
-    public static <K, V> BatchSource<Entry<K, V>> hdfsNewApi(@Nonnull Configuration jobConf) {
-        return hdfsNewApi(jobConf, (BiFunctionEx<K, V, Entry<K, V>>) Util::entry);
+    public static <K, V> BatchSource<Entry<K, V>> hdfsNewApi(@Nonnull Configuration configuration) {
+        return hdfsNewApi(configuration, (BiFunctionEx<K, V, Entry<K, V>>) Util::entry);
     }
 }

@@ -17,8 +17,8 @@
 package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.jet.core.ProcessorSupplier;
-
 import com.hazelcast.jet.function.BiFunctionEx;
+import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -40,12 +40,11 @@ import static java.util.stream.IntStream.range;
  */
 abstract class HdfsProcessorSupplierBase<K, V, R> implements ProcessorSupplier {
 
-    SerializableJobConf jobConf;
+    Configuration jobConf;
     BiFunctionEx<K, V, R> mapper;
     List<IndexedInputSplit> assignedSplits;
 
-
-    HdfsProcessorSupplierBase(SerializableJobConf jobConf, List<IndexedInputSplit> assignedSplits,
+    HdfsProcessorSupplierBase(Configuration jobConf, List<IndexedInputSplit> assignedSplits,
                               BiFunctionEx<K, V, R> mapper) {
         this.jobConf = jobConf;
         this.assignedSplits = assignedSplits;
@@ -75,6 +74,4 @@ abstract class HdfsProcessorSupplierBase<K, V, R> implements ProcessorSupplier {
         assignedSplits = (List<IndexedInputSplit>) in.readObject();
         mapper = (BiFunctionEx<K, V, R>) in.readObject();
     }
-
-
 }

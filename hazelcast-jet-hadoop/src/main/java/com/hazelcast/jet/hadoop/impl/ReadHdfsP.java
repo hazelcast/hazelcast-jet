@@ -27,6 +27,7 @@ import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.nio.Address;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 
 import javax.annotation.Nonnull;
@@ -85,7 +86,7 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
         };
     }
 
-    public static class MetaSupplier<K, V, R> extends HdfsMetaSupplierBase  {
+    public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase {
 
         static final long serialVersionUID = 1L;
 
@@ -141,11 +142,11 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
             super(jobConf, assignedSplits, mapper);
         }
 
-        @Override
-        @Nonnull
+        @Override @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = getProcessorToSplits(count);
-            InputFormat inputFormat = jobConf.getInputFormat();
+            JobConf jobConfCasted = (JobConf) jobConf;
+            InputFormat inputFormat = jobConfCasted.getInputFormat();
 
             return processorToSplits
                     .values().stream()
@@ -154,11 +155,9 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                             : new ReadHdfsP<>(splits.stream()
                                                     .map(IndexedInputSplit::getOldSplit)
                                                     .map(split -> uncheckCall(() ->
-                                                            inputFormat.getRecordReader(split, jobConf, NULL)))
+                                                            inputFormat.getRecordReader(split, jobConfCasted, NULL)))
                                                     .collect(toList()), mapper)
                     ).collect(toList());
         }
-
     }
-
 }

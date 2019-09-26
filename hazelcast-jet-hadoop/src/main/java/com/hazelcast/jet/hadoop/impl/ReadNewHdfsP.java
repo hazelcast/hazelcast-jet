@@ -88,17 +88,16 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
         };
     }
 
-    public static class MetaSupplier<K, V, R> extends HdfsMetaSupplierBase {
+    public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableJobConf jobConf;
+        private final SerializableConfiguration jobConf;
         private final BiFunctionEx<K, V, R> mapper;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-
-        public MetaSupplier(@Nonnull SerializableJobConf jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
+        public MetaSupplier(@Nonnull SerializableConfiguration jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
             this.jobConf = jobConf;
             this.mapper = mapper;
         }
@@ -123,30 +122,27 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
             printAssignments(assigned);
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new Supplier<>(
                     jobConf,
                     assigned.get(address) != null ? assigned.get(address) : emptyList(),
                     mapper);
         }
-
     }
 
     private static class Supplier<K, V, R> extends HdfsProcessorSupplierBase<K, V, R> {
 
         static final long serialVersionUID = 1L;
 
-        Supplier(SerializableJobConf jobConf,
+        Supplier(SerializableConfiguration jobConf,
                  List<IndexedInputSplit> assignedSplits,
                  @Nonnull BiFunctionEx<K, V, R> mapper
         ) {
             super(jobConf, assignedSplits, mapper);
         }
 
-        @Override
-        @Nonnull
+        @Override @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = getProcessorToSplits(count);
             Class<?> inputFormatClass = jobConf.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
@@ -171,7 +167,5 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
                             .collect(toList()), mapper)
                     ).collect(toList());
         }
-
     }
-
 }

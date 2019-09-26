@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
-
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
@@ -25,6 +24,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.hadoop.HdfsProcessors;
 import com.hazelcast.nio.Address;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -45,7 +45,7 @@ import static java.util.stream.IntStream.range;
 import static org.apache.hadoop.mapreduce.TaskType.JOB_SETUP;
 
 /**
- * See {@link HdfsProcessors#writeNewHdfsP(JobConf, FunctionEx, FunctionEx)}.
+ * See {@link HdfsProcessors#writeNewHdfsP(Configuration, FunctionEx, FunctionEx)}.
  */
 public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
@@ -93,18 +93,18 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableJobConf jobConf;
+        private final SerializableConfiguration configuration;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
 
-        public MetaSupplier(SerializableJobConf jobConf,
+        public MetaSupplier(SerializableConfiguration configuration,
                             FunctionEx<? super T, K> extractKeyFn,
                             FunctionEx<? super T, V> extractValueFn
         ) {
-            this.jobConf = jobConf;
+            this.configuration = configuration;
             this.extractKeyFn = extractKeyFn;
             this.extractValueFn = extractValueFn;
         }
@@ -116,9 +116,9 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
-            jobContext = new JobContextImpl(jobConf, new JobID());
-            OutputFormat outputFormat = getOutputFormat(jobConf);
-            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(0, jobConf, jobContext,
+            jobContext = new JobContextImpl(configuration, new JobID());
+            OutputFormat outputFormat = getOutputFormat(configuration);
+            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
                     getUuid(context)));
             outputCommitter.setupJob(jobContext);
         }
@@ -133,7 +133,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
         @Override
         @Nonnull
         public FunctionEx<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new Supplier<>(jobConf, extractKeyFn, extractValueFn);
+            return address -> new Supplier<>(configuration, extractKeyFn, extractValueFn);
         }
     }
 
@@ -142,7 +142,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableJobConf jobConf;
+        private final SerializableConfiguration jobConf;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
@@ -150,7 +150,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
 
-        Supplier(SerializableJobConf jobConf,
+        Supplier(SerializableConfiguration jobConf,
                  FunctionEx<? super T, K> extractKeyFn,
                  FunctionEx<? super T, V> extractValueFn
         ) {
@@ -165,7 +165,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
             jobContext = new JobContextImpl(jobConf, new JobID());
             OutputFormat outputFormat = getOutputFormat(jobConf);
-            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(0, jobConf, jobContext,
+            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(jobConf, jobContext,
                     getUuid(context)));
         }
 
@@ -191,26 +191,23 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
             }).collect(toList());
         }
-
-
     }
 
     private static String getUuid(@Nonnull ProcessorMetaSupplier.Context context) {
         return context.jetInstance().getCluster().getLocalMember().getUuid();
     }
 
-    private static OutputFormat getOutputFormat(JobConf config) {
+    private static OutputFormat getOutputFormat(Configuration config) {
         Class<?> outputFormatClass = config.getClass("mapreduce.job.outputformat.class", TextOutputFormat.class);
         return (OutputFormat) ReflectionUtils.newInstance(outputFormatClass, config);
     }
 
-    private static TaskAttemptContextImpl getTaskAttemptContext(int id, SerializableJobConf jobConf,
+    private static TaskAttemptContextImpl getTaskAttemptContext(SerializableConfiguration jobConf,
                                                                 JobContextImpl jobContext, String uuid) {
-        return new TaskAttemptContextImpl(jobConf, getTaskAttemptID(id, jobContext, uuid));
+        return new TaskAttemptContextImpl(jobConf, getTaskAttemptID(0, jobContext, uuid));
     }
 
     private static TaskAttemptID getTaskAttemptID(int id, JobContextImpl jobContext, String uuid) {
         return new TaskAttemptID("jet-node-" + uuid, jobContext.getJobID().getId(), JOB_SETUP, id, 0);
     }
-
 }

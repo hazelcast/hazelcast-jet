@@ -20,14 +20,14 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsP;
+import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
+import com.hazelcast.jet.hadoop.impl.SerializableJobConf;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsP;
 import com.hazelcast.jet.hadoop.impl.WriteNewHdfsP;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;
-
-import static com.hazelcast.jet.hadoop.impl.SerializableJobConf.asSerializable;
 
 /**
  * Static utility class with factories of Apache Hadoop HDFS source and sink
@@ -48,7 +48,7 @@ public final class HdfsProcessors {
     public static <K, V, R> ReadHdfsP.MetaSupplier<K, V, R> readHdfsP(
             @Nonnull JobConf jobConf, @Nonnull BiFunctionEx<K, V, R> mapper
     ) {
-        return new ReadHdfsP.MetaSupplier<>(asSerializable(jobConf), mapper);
+        return new ReadHdfsP.MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), mapper);
     }
 
     /**
@@ -61,7 +61,7 @@ public final class HdfsProcessors {
             @Nonnull FunctionEx<? super E, K> extractKeyFn,
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
-        return new WriteHdfsP.MetaSupplier<>(asSerializable(jobConf), extractKeyFn, extractValueFn);
+        return new WriteHdfsP.MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), extractKeyFn, extractValueFn);
     }
 
     /**
@@ -70,10 +70,11 @@ public final class HdfsProcessors {
      */
     @Nonnull
     public static <E, K, V> ProcessorMetaSupplier writeNewHdfsP(
-            @Nonnull JobConf jobConf,
+            @Nonnull Configuration jobConf,
             @Nonnull FunctionEx<? super E, K> extractKeyFn,
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
-        return new WriteNewHdfsP.MetaSupplier<>(asSerializable(jobConf), extractKeyFn, extractValueFn);
+        return new WriteNewHdfsP.MetaSupplier<>(SerializableConfiguration.asSerializable(jobConf), extractKeyFn,
+                extractValueFn);
     }
 }
