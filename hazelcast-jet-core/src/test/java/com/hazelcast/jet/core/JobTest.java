@@ -789,7 +789,7 @@ public class JobTest extends JetTestSupport {
     public void when_joinFromClientSentToNonMaster_then_futureShouldNotBeCompletedEarly() throws InterruptedException {
         DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
 
-        int timeoutSecs = 2;
+        int timeoutSecs = 1;
         Address address = getAddress(instance2);
         ClientConfig config = new JetClientConfig()
                 .setProperty(ClientProperty.INVOCATION_TIMEOUT_SECONDS.getName(), Integer.toString(timeoutSecs))
