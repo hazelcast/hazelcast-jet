@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.metrics;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
+import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.BiConsumerEx;
@@ -31,10 +32,12 @@ import com.hazelcast.jet.function.TriFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 public final class UserMetricsUtil {
 
@@ -59,11 +62,37 @@ public final class UserMetricsUtil {
         }
     }
 
+    public static <T, U> BiConsumerEx<T, U> wrap(BiConsumerEx<T, U> biConsumerEx, Object metricsProviderCandidate) {
+        if (metricsProviderCandidate instanceof ProvidesMetrics) {
+            return new WrappedBiConsumerEx<>(biConsumerEx, (ProvidesMetrics) metricsProviderCandidate);
+        } else {
+            return biConsumerEx;
+        }
+    }
+
+    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, List<?> metricsProviderCandidates) {
+        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+        if (providers.isEmpty()) {
+            return biConsumerEx;
+        } else {
+            return new WrappedBiConsumerEx<>(biConsumerEx, providers);
+        }
+    }
+
     public static <T, R> FunctionEx<T, R> wrap(FunctionEx<T, R> functionEx, Object metricsProviderCandidate) {
         if (metricsProviderCandidate instanceof ProvidesMetrics) {
             return new WrappedFunctionEx<>(functionEx, (ProvidesMetrics) metricsProviderCandidate);
         } else {
             return functionEx;
+        }
+    }
+
+    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> metricsProviderCandidates) {
+        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+        if (providers.isEmpty()) {
+            return functionEx;
+        } else {
+            return new WrappedFunctionEx<>(functionEx, providers);
         }
     }
 
@@ -76,15 +105,12 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> metricsProviderCandidates) {
-        List<ProvidesMetrics> providers = metricsProviderCandidates.stream()
-                .filter(ProvidesMetrics.class::isInstance)
-                .map(ProvidesMetrics.class::cast)
-                .collect(toList());
-        if (providers.isEmpty()) {
-            return functionEx;
+    public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrap(TriFunction<T0, T1, T2, R> triFunction,
+                                                                  Object metricsProviderCandidate) {
+        if (metricsProviderCandidate instanceof ProvidesMetrics) {
+            return new WrappedTriFunction<>(triFunction, (ProvidesMetrics) metricsProviderCandidate);
         } else {
-            return new WrappedFunctionEx<>(functionEx, providers);
+            return triFunction;
         }
     }
 
@@ -96,12 +122,12 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrap(TriFunction<T0, T1, T2, R> triFunction,
-                                                                  Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedTriFunction<>(triFunction, (ProvidesMetrics) metricsProviderCandidate);
+    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, List<?> metricsProviderCandidates) {
+        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+        if (providers.isEmpty()) {
+            return supplierEx;
         } else {
-            return triFunction;
+            return new WrappedSupplierEx<>(supplierEx, providers);
         }
     }
 
@@ -111,8 +137,11 @@ public final class UserMetricsUtil {
             if (aggrOp.arity() == 1) {
                 return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp,
                         (ProvidesMetrics) metricsProviderCandidate);
-            } else {
+            } else if (aggrOp.arity() == 2) {
                 return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp,
+                        (ProvidesMetrics) metricsProviderCandidate);
+            } else if (aggrOp.arity() == 3) {
+                return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp,
                         (ProvidesMetrics) metricsProviderCandidate);
             }
         }
@@ -121,18 +150,24 @@ public final class UserMetricsUtil {
 
     @SuppressWarnings("unchecked")
     public static <T extends AggregateOperation> T wrapAll(T aggrOp, List<?> metricsProviderCandidates) {
-        List<ProvidesMetrics> providers = metricsProviderCandidates.stream()
-                .filter(ProvidesMetrics.class::isInstance)
-                .map(ProvidesMetrics.class::cast)
-                .collect(toList());
+        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
         if (!providers.isEmpty()) {
             if (aggrOp.arity() == 1) {
                 return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp, providers);
             } else if (aggrOp.arity() == 2) {
                 return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp, providers);
+            } else if (aggrOp.arity() == 3) {
+                return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp, providers);
             }
         }
         return aggrOp;
+    }
+
+    private static Set<ProvidesMetrics> getProvidesMetrics(List<?> metricsProviderCandidates) {
+        return metricsProviderCandidates.stream()
+                .filter(ProvidesMetrics.class::isInstance)
+                .map(ProvidesMetrics.class::cast)
+                .collect(toSet());
     }
 
     @SuppressWarnings("unchecked")
@@ -144,7 +179,7 @@ public final class UserMetricsUtil {
             this.aggrOp1 = aggrOp1;
         }
 
-        WrappedAggregateOperation1(AggregateOperation1 aggrOp1, List<ProvidesMetrics> providers) {
+        WrappedAggregateOperation1(AggregateOperation1 aggrOp1, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.aggrOp1 = aggrOp1;
         }
@@ -230,7 +265,7 @@ public final class UserMetricsUtil {
             this.aggrOp2 = aggrOp2;
         }
 
-        WrappedAggregateOperation2(AggregateOperation2 aggrOp2, List<ProvidesMetrics> providers) {
+        WrappedAggregateOperation2(AggregateOperation2 aggrOp2, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.aggrOp2 = aggrOp2;
         }
@@ -319,6 +354,116 @@ public final class UserMetricsUtil {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static class WrappedAggregateOperation3 extends AbstractWrapper implements AggregateOperation3 {
+        private final AggregateOperation3 aggrOp3;
+
+        WrappedAggregateOperation3(AggregateOperation3 aggrOp3, ProvidesMetrics provider) {
+            super(provider);
+            this.aggrOp3 = aggrOp3;
+        }
+
+        WrappedAggregateOperation3(AggregateOperation3 aggrOp3, Collection<ProvidesMetrics> providers) {
+            super(providers);
+            this.aggrOp3 = aggrOp3;
+        }
+
+        @Nonnull
+        @Override
+        public BiConsumerEx accumulateFn0() {
+            return aggrOp3.accumulateFn0();
+        }
+
+        @Nonnull
+        @Override
+        public BiConsumerEx accumulateFn1() {
+            return aggrOp3.accumulateFn1();
+        }
+
+        @Nonnull
+        @Override
+        public BiConsumerEx accumulateFn2() {
+            return aggrOp3.accumulateFn2();
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation3 withAccumulateFn0(@Nonnull BiConsumerEx accumulateFn) {
+            return aggrOp3.withAccumulateFn0(accumulateFn);
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation3 withAccumulateFn1(@Nonnull BiConsumerEx accumulateFn) {
+            return aggrOp3.withAccumulateFn1(accumulateFn);
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation3 withAccumulateFn2(@Nonnull BiConsumerEx accumulateFn) {
+            return aggrOp3.withAccumulateFn2(accumulateFn);
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation3 withIdentityFinish() {
+            return aggrOp3.withIdentityFinish();
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation3 andThen(FunctionEx thenFn) {
+            return aggrOp3.andThen(thenFn);
+        }
+
+        @Override
+        public int arity() {
+            return aggrOp3.arity();
+        }
+
+        @Nonnull
+        @Override
+        public SupplierEx createFn() {
+            return aggrOp3.createFn();
+        }
+
+        @Nonnull
+        @Override
+        public BiConsumerEx accumulateFn(int index) {
+            return aggrOp3.accumulateFn(index);
+        }
+
+        @Nullable
+        @Override
+        public BiConsumerEx combineFn() {
+            return aggrOp3.combineFn();
+        }
+
+        @Nullable
+        @Override
+        public BiConsumerEx deductFn() {
+            return aggrOp3.deductFn();
+        }
+
+        @Nonnull
+        @Override
+        public FunctionEx exportFn() {
+            return aggrOp3.exportFn();
+        }
+
+        @Nonnull
+        @Override
+        public FunctionEx finishFn() {
+            return aggrOp3.finishFn();
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
+            return aggrOp3.withAccumulateFns(accumulateFns);
+        }
+    }
+
     private static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
         private final BiPredicateEx<T, U> predicateEx;
 
@@ -333,6 +478,25 @@ public final class UserMetricsUtil {
         }
     }
 
+    private static class WrappedBiConsumerEx<T, U> extends AbstractWrapper implements BiConsumerEx<T, U> {
+        private final BiConsumerEx<T, U> consumerEx;
+
+        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, ProvidesMetrics provider) {
+            super(provider);
+            this.consumerEx = consumerEx;
+        }
+
+        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, Collection<ProvidesMetrics> providers) {
+            super(providers);
+            this.consumerEx = consumerEx;
+        }
+
+        @Override
+        public void acceptEx(T t, U u) throws Exception {
+            consumerEx.acceptEx(t, u);
+        }
+    }
+
     private static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
         private final FunctionEx<T, R> functionEx;
 
@@ -341,7 +505,7 @@ public final class UserMetricsUtil {
             this.functionEx = functionEx;
         }
 
-        WrappedFunctionEx(FunctionEx<T, R> functionEx, List<ProvidesMetrics> providers) {
+        WrappedFunctionEx(FunctionEx<T, R> functionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.functionEx = functionEx;
         }
@@ -374,6 +538,11 @@ public final class UserMetricsUtil {
             this.supplierEx = supplierEx;
         }
 
+        WrappedSupplierEx(SupplierEx<P> supplierEx, Collection<ProvidesMetrics> providers) {
+            super(providers);
+            this.supplierEx = supplierEx;
+        }
+
         @Override
         public P getEx() throws Exception {
             return supplierEx.getEx();
@@ -395,13 +564,13 @@ public final class UserMetricsUtil {
     }
 
     private abstract static class AbstractWrapper implements ProvidesMetrics, Serializable {
-        private final List<ProvidesMetrics> providers;
+        private final Collection<ProvidesMetrics> providers;
 
         AbstractWrapper(ProvidesMetrics provider) {
             this(Collections.singletonList(provider));
         }
 
-        AbstractWrapper(List<ProvidesMetrics> providers) {
+        AbstractWrapper(Collection<ProvidesMetrics> providers) {
             this.providers = providers;
         }
 

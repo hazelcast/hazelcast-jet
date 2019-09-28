@@ -39,6 +39,7 @@ import com.hazelcast.jet.function.ToDoubleFunctionEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.aggregate.AggregateOpAggregator;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.GeneralStage;
@@ -62,6 +63,7 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static java.util.Arrays.asList;
 
 /**
  * Utility class with factory methods for several useful aggregate
@@ -1503,28 +1505,43 @@ public final class AggregateOperations {
             @Nonnull BiFunctionEx<? super R0, ? super R1, ? extends R> exportFinishFn
     ) {
         checkSerializable(exportFinishFn, "exportFinishFn");
+
+        SupplierEx<Tuple2<A0, A1>> createFn = () -> tuple2(op0.createFn().get(), op1.createFn().get());
+
+        BiConsumerEx<Tuple2<A0, A1>, T0> accumFn0 = (acc, item) -> op0.accumulateFn().accept(acc.f0(), item);
+        BiConsumerEx<Tuple2<A0, A1>, T1> accumFn1 = (acc, item) -> op1.accumulateFn().accept(acc.f1(), item);
+
         BiConsumerEx<? super A0, ? super A0> combine0 = op0.combineFn();
         BiConsumerEx<? super A1, ? super A1> combine1 = op1.combineFn();
-        BiConsumerEx<? super A0, ? super A0> deduct0 = op0.deductFn();
-        BiConsumerEx<? super A1, ? super A1> deduct1 = op1.deductFn();
-        return AggregateOperation
-                .withCreate(() -> tuple2(op0.createFn().get(), op1.createFn().get()))
-                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
-                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
-                .andCombine(combine0 == null || combine1 == null ? null :
+        BiConsumerEx<? super Tuple2<A0, A1>, ? super Tuple2<A0, A1>> combineFn =
+                combine0 == null || combine1 == null ? null :
                         (acc1, acc2) -> {
                             combine0.accept(acc1.f0(), acc2.f0());
                             combine1.accept(acc1.f1(), acc2.f1());
-                        })
-                .andDeduct(deduct0 == null || deduct1 == null ? null :
-                        (acc1, acc2) -> {
-                            deduct0.accept(acc1.f0(), acc2.f0());
-                            deduct1.accept(acc1.f1(), acc2.f1());
-                        })
-                .<R>andExport(acc ->
-                        exportFinishFn.apply(op0.exportFn().apply(acc.f0()), op1.exportFn().apply(acc.f1())))
-                .andFinish(acc ->
-                        exportFinishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1())));
+                        };
+
+        BiConsumerEx<? super A0, ? super A0> deduct0 = op0.deductFn();
+        BiConsumerEx<? super A1, ? super A1> deduct1 = op1.deductFn();
+        BiConsumerEx<? super Tuple2<A0, A1>, ? super Tuple2<A0, A1>> deductFn =
+                deduct0 == null || deduct1 == null ? null : (acc1, acc2) -> {
+                    deduct0.accept(acc1.f0(), acc2.f0());
+                    deduct1.accept(acc1.f1(), acc2.f1());
+                };
+
+        FunctionEx<Tuple2<A0, A1>, R> exportFn = acc ->
+                exportFinishFn.apply(op0.exportFn().apply(acc.f0()), op1.exportFn().apply(acc.f1()));
+
+        FunctionEx<Tuple2<A0, A1>, R> finishFn = acc ->
+                exportFinishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1()));
+
+        return AggregateOperation
+                .withCreate(UserMetricsUtil.wrapAll(createFn, asList(op0.createFn(), op1.createFn())))
+                .andAccumulate0(UserMetricsUtil.wrap(accumFn0, op0.accumulateFn()))
+                .andAccumulate1(UserMetricsUtil.wrap(accumFn1, op1.accumulateFn()))
+                .andCombine(UserMetricsUtil.wrapAll(combineFn, asList(op0.combineFn(), op1.combineFn())))
+                .andDeduct(UserMetricsUtil.wrapAll(deductFn, asList(op0.deductFn(), op1.deductFn())))
+                .andExport(UserMetricsUtil.wrapAll(exportFn, asList(op0.exportFn(), op1.exportFn())))
+                .andFinish(UserMetricsUtil.wrapAll(finishFn, asList(op0.finishFn(), op1.finishFn())));
     }
 
     /**
@@ -1619,37 +1636,56 @@ public final class AggregateOperations {
             @Nonnull TriFunction<? super R0, ? super R1, ? super R2, ? extends R> exportFinishFn
     ) {
         checkSerializable(exportFinishFn, "exportFinishFn");
+
+        SupplierEx<Tuple3<A0, A1, A2>> createFn = () ->
+                tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get());
+
+        BiConsumerEx<Tuple3<A0, A1, A2>, T0> accumFn0 = (acc, item) -> op0.accumulateFn().accept(acc.f0(), item);
+        BiConsumerEx<Tuple3<A0, A1, A2>, T1> accumFn1 = (acc, item) -> op1.accumulateFn().accept(acc.f1(), item);
+        BiConsumerEx<Tuple3<A0, A1, A2>, T2> accumFn2 = (acc, item) -> op2.accumulateFn().accept(acc.f2(), item);
+
         BiConsumerEx<? super A0, ? super A0> combine0 = op0.combineFn();
         BiConsumerEx<? super A1, ? super A1> combine1 = op1.combineFn();
         BiConsumerEx<? super A2, ? super A2> combine2 = op2.combineFn();
-        BiConsumerEx<? super A0, ? super A0> deduct0 = op0.deductFn();
-        BiConsumerEx<? super A1, ? super A1> deduct1 = op1.deductFn();
-        BiConsumerEx<? super A2, ? super A2> deduct2 = op2.deductFn();
-        return AggregateOperation
-                .withCreate(() -> tuple3(op0.createFn().get(), op1.createFn().get(), op2.createFn().get()))
-                .<T0>andAccumulate0((acc, item) -> op0.accumulateFn().accept(acc.f0(), item))
-                .<T1>andAccumulate1((acc, item) -> op1.accumulateFn().accept(acc.f1(), item))
-                .<T2>andAccumulate2((acc, item) -> op2.accumulateFn().accept(acc.f2(), item))
-                .andCombine(combine0 == null || combine1 == null || combine2 == null ? null :
+        BiConsumerEx<? super Tuple3<A0, A1, A2>, ? super Tuple3<A0, A1, A2>> combineFn =
+                combine0 == null || combine1 == null || combine2 == null ? null :
                         (acc1, acc2) -> {
                             combine0.accept(acc1.f0(), acc2.f0());
                             combine1.accept(acc1.f1(), acc2.f1());
                             combine2.accept(acc1.f2(), acc2.f2());
-                        })
-                .andDeduct(deduct0 == null || deduct1 == null || deduct2 == null ? null :
+                        };
+
+        BiConsumerEx<? super A0, ? super A0> deduct0 = op0.deductFn();
+        BiConsumerEx<? super A1, ? super A1> deduct1 = op1.deductFn();
+        BiConsumerEx<? super A2, ? super A2> deduct2 = op2.deductFn();
+        BiConsumerEx<? super Tuple3<A0, A1, A2>, ? super Tuple3<A0, A1, A2>> deductFn =
+                deduct0 == null || deduct1 == null || deduct2 == null ? null :
                         (acc1, acc2) -> {
                             deduct0.accept(acc1.f0(), acc2.f0());
                             deduct1.accept(acc1.f1(), acc2.f1());
                             deduct2.accept(acc1.f2(), acc2.f2());
-                        })
-                .<R>andExport(acc -> exportFinishFn.apply(
-                        op0.exportFn().apply(acc.f0()),
-                        op1.exportFn().apply(acc.f1()),
-                        op2.exportFn().apply(acc.f2())))
-                .andFinish(acc -> exportFinishFn.apply(
-                        op0.finishFn().apply(acc.f0()),
-                        op1.finishFn().apply(acc.f1()),
-                        op2.finishFn().apply(acc.f2())));
+                        };
+
+        FunctionEx<Tuple3<A0, A1, A2>, R> exportFn = acc -> exportFinishFn.apply(
+                op0.exportFn().apply(acc.f0()),
+                op1.exportFn().apply(acc.f1()),
+                op2.exportFn().apply(acc.f2()));
+
+        FunctionEx<Tuple3<A0, A1, A2>, R> finishFn = acc -> exportFinishFn.apply(
+                op0.finishFn().apply(acc.f0()),
+                op1.finishFn().apply(acc.f1()),
+                op2.finishFn().apply(acc.f2())
+        );
+
+        return AggregateOperation
+                .withCreate(UserMetricsUtil.wrapAll(createFn, asList(op0.createFn(), op1.createFn(), op2.createFn())))
+                .andAccumulate0(UserMetricsUtil.wrap(accumFn0, op0.accumulateFn()))
+                .andAccumulate1(UserMetricsUtil.wrap(accumFn1, op1.accumulateFn()))
+                .andAccumulate2(UserMetricsUtil.wrap(accumFn2, op2.accumulateFn()))
+                .andCombine(UserMetricsUtil.wrapAll(combineFn, asList(op0.combineFn(), op1.combineFn(), op2.combineFn())))
+                .andDeduct(UserMetricsUtil.wrapAll(deductFn, asList(op0.deductFn(), op1.deductFn(), op2.deductFn())))
+                .andExport(UserMetricsUtil.wrapAll(exportFn, asList(op0.exportFn(), op1.exportFn(), op2.exportFn())))
+                .andFinish(UserMetricsUtil.wrapAll(finishFn, asList(op0.finishFn(), op1.finishFn(), op2.finishFn())));
     }
 
     /**

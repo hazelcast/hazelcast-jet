@@ -23,6 +23,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -62,30 +64,35 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         this(transform, pipeline);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
         checkSerializable(keyFn, "keyFn");
         return new BatchStageWithKeyImpl<>(this, keyFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <R> BatchStage<R> map(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         return attachMap(mapFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public BatchStage<T> filter(@Nonnull PredicateEx<T> filterFn) {
         return attachFilter(filterFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <R> BatchStage<R> flatMap(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
         return attachFlatMap(flatMapFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <S, R> BatchStage<R> mapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
@@ -93,7 +100,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachGlobalMapStateful(createFn, mapFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <S> BatchStage<T> filterStateful(
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
@@ -102,7 +110,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachGlobalMapStateful(createFn, UserMetricsUtil.wrap(mapFn, filterFn));
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <S, R> BatchStage<R> flatMapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
@@ -110,7 +119,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachGlobalFlatMapStateful(createFn, flatMapFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <C, R> BatchStage<R> mapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
@@ -118,7 +128,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachMapUsingContext(contextFactory, mapFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <C, R> BatchStage<R> mapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
@@ -129,7 +140,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
                 UserMetricsUtil.wrap(flatMapAsyncFn, mapAsyncFn));
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <C> BatchStage<T> filterUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
@@ -137,7 +149,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachFilterUsingContext(contextFactory, filterFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <C> BatchStage<T> filterUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
@@ -148,7 +161,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
                 UserMetricsUtil.wrap(flatMapAsyncFn, filterAsyncFn));
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <C, R> BatchStage<R> flatMapUsingContext(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<R>> flatMapFn
@@ -156,7 +170,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachFlatMapUsingContext(contextFactory, flatMapFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <C, R> BatchStage<R> flatMapUsingContextAsync(
             @Nonnull ContextFactory<C> contextFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
@@ -164,12 +179,14 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachFlatMapUsingContextAsync("flatMap", contextFactory, flatMapAsyncFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public BatchStage<T> merge(@Nonnull BatchStage<? extends T> other) {
         return attachMerge(other);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <K, T1_IN, T1, R> BatchStage<R> hashJoin(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -178,7 +195,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachHashJoin(stage1, joinClause1, mapToOutputFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <K1, K2, T1_IN, T2_IN, T1, T2, R> BatchStage<R> hashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -189,55 +207,79 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachHashJoin2(stage1, joinClause1, stage2, joinClause2, mapToOutputFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp, aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn()
-        );
+        List<Serializable> metricsProviderCandidates = asList(aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
         AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp =
                 UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
         return attach(new AggregateTransform<>(singletonList(transform), wrappedAggrOp), fnAdapter);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <T1, R> BatchStage<R> aggregate2(
             @Nonnull BatchStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
+            @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> op
     ) {
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp, aggrOp.accumulateFn0(), aggrOp.accumulateFn1(),
-                aggrOp.createFn(), aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn()
-        );
-        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedAggrOp =
-                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), wrappedAggrOp), DO_NOT_ADAPT);
+        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.createFn(), op.combineFn(),
+                op.deductFn(), op.exportFn(), op.finishFn());
+        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp =
+                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), wrappedOp), DO_NOT_ADAPT);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <T1, R0, R1> BatchStage<Tuple2<R0, R1>> aggregate2(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1) {
         List<Serializable> metricsProviderCandidates = asList(
-                op0, op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(),
-                op1, op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn()
+                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
+                op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn()
         );
         AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> aggrOp = aggregateOperation2(op0, op1);
         return aggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <T1, T2, R> BatchStage<R> aggregate3(
             @Nonnull BatchStage<T1> stage1,
             @Nonnull BatchStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> op
     ) {
-        return attach(new AggregateTransform<>(
-                asList(transform, transformOf(stage1), transformOf(stage2)), aggrOp),
+        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.accumulateFn2(),
+                op.createFn(), op.combineFn(), op.deductFn(), op.exportFn(), op.finishFn());
+        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp =
+                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), wrappedOp),
                 DO_NOT_ADAPT);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
+    public <T1, T2, R0, R1, R2> BatchStage<Tuple3<R0, R1, R2>> aggregate3(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
+            @Nonnull BatchStage<T1> stage1,
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1,
+            @Nonnull BatchStage<T2> stage2,
+            @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> op2
+    ) {
+        List<Serializable> metricsProviderCandidates = asList(
+                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
+                op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn(),
+                op2.accumulateFn(), op2.createFn(), op2.combineFn(), op2.deductFn(), op2.exportFn(), op2.finishFn()
+        );
+        AggregateOperation3<T, T1, T2, ? extends Tuple3<?, ?, ?>, Tuple3<R0, R1, R2>> aggrOp =
+                aggregateOperation3(op0, op1, op2);
+        return aggregate3(stage1, stage2, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+    }
+
+    @Nonnull
+    @Override
     public BatchStage<T> peek(
             @Nonnull PredicateEx<? super T> shouldLogFn,
             @Nonnull FunctionEx<? super T, ? extends CharSequence> toStringFn
@@ -245,7 +287,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachPeek(shouldLogFn, toStringFn);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public <R> BatchStage<R> customTransform(
             @Nonnull String stageName,
             @Nonnull ProcessorMetaSupplier procSupplier
@@ -253,20 +296,23 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         return attachCustomTransform(stageName, procSupplier);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     @SuppressWarnings("unchecked")
     <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter) {
         pipelineImpl.connect(transform.upstream(), transform);
         return (RET) new BatchStageImpl<>(transform, pipelineImpl);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public BatchStage<T> setLocalParallelism(int localParallelism) {
         super.setLocalParallelism(localParallelism);
         return this;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public BatchStage<T> setName(@Nonnull String name) {
         super.setName(name);
         return this;

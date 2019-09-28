@@ -23,6 +23,8 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
@@ -36,9 +38,13 @@ import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
+import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DO_NOT_ADAPT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -147,10 +153,14 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     public <R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
+        List<Serializable> metricsProviderCandidates = asList(aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp =
+                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
         return computeStage.attach(new GroupTransform<>(
                         singletonList(computeStage.transform),
                         singletonList(keyFn()),
-                        aggrOp,
+                        wrappedAggrOp,
                         Util::entry),
                 DO_NOT_ADAPT);
     }
@@ -158,29 +168,71 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     @Nonnull @Override
     public <T1, R> BatchStage<Entry<K, R>> aggregate2(
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> aggrOp
+            @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> op
     ) {
+        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.createFn(), op.combineFn(),
+                op.deductFn(), op.exportFn(), op.finishFn());
+        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp =
+                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
-                        aggrOp,
+                        wrappedOp,
                         Util::entry
                 ), DO_NOT_ADAPT);
+    }
+
+    @Nonnull
+    @Override
+    public <T1, R0, R1> BatchStage<Entry<K, Tuple2<R0, R1>>> aggregate2(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
+            @Nonnull BatchStageWithKey<? extends T1, ? extends K> stage1,
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1
+    ) {
+        List<Serializable> metricsProviderCandidates = asList(
+                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
+                op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn()
+        );
+        AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> aggrOp = aggregateOperation2(op0, op1);
+        return aggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 
     @Nonnull @Override
     public <T1, T2, R> BatchStage<Entry<K, R>> aggregate3(
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> op
     ) {
+        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.accumulateFn2(),
+                op.createFn(), op.combineFn(), op.deductFn(), op.exportFn(), op.finishFn());
+        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp =
+                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        aggrOp,
+                        wrappedOp,
                         Util::entry),
                 DO_NOT_ADAPT);
+    }
+
+    @Nonnull
+    @Override
+    public <T1, T2, R0, R1, R2> BatchStage<Entry<K, Tuple3<R0, R1, R2>>> aggregate3(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
+            @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1,
+            @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
+            @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> op2
+    ) {
+        List<Serializable> metricsProviderCandidates = asList(
+                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
+                op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn(),
+                op2.accumulateFn(), op2.createFn(), op2.combineFn(), op2.deductFn(), op2.exportFn(), op2.finishFn()
+        );
+        AggregateOperation3<T, T1, T2, ? extends Tuple3<?, ?, ?>, Tuple3<R0, R1, R2>> aggrOp =
+                aggregateOperation3(op0, op1, op2);
+        return aggregate3(stage1, stage2, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 }

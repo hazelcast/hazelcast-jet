@@ -36,9 +36,6 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
-import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-
 /**
  * An intermediate step while constructing a group-and-aggregate batch
  * pipeline stage. It captures the grouping key and offers the methods to
@@ -231,15 +228,11 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <R1> type of the aggregation result for stream-1
      */
     @Nonnull
-    default <T1, R0, R1> BatchStage<Entry<K, Tuple2<R0, R1>>> aggregate2(
+    <T1, R0, R1> BatchStage<Entry<K, Tuple2<R0, R1>>> aggregate2(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
             @Nonnull BatchStageWithKey<? extends T1, ? extends K> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1
-    ) {
-        AggregateOperation2<? super T, ? super T1, ?, Tuple2<R0, R1>> aggrOp =
-                aggregateOperation2(aggrOp0, aggrOp1, Tuple2::tuple2);
-        return aggregate2(stage1, aggrOp);
-    }
+    );
 
     /**
      * Attaches a stage that performs the given cogroup-and-aggregate operation
@@ -322,17 +315,13 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
      * @param <R2> type of the aggregation result for stream-2
      */
     @Nonnull
-    default <T1, T2, R0, R1, R2> BatchStage<Entry<K, Tuple3<R0, R1, R2>>> aggregate3(
+    <T1, T2, R0, R1, R2> BatchStage<Entry<K, Tuple3<R0, R1, R2>>> aggregate3(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1,
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> aggrOp2
-    ) {
-        AggregateOperation3<T, T1, T2, ?, Tuple3<R0, R1, R2>> aggrOp =
-                aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, Tuple3::tuple3);
-        return aggregate3(stage1, stage2, aggrOp);
-    }
+    );
 
     /**
      * Offers a step-by-step API to build a pipeline stage that co-aggregates

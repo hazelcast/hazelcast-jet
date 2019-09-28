@@ -59,9 +59,9 @@ import static java.util.Collections.singletonList;
 @SuppressWarnings("checkstyle:declarationorder")
 public class TransformStatefulPTest {
 
-    private final Function<Entry<Object, Long>, Traverser<Entry<Object, Long>>> expandEntryFn =
+    private final FunctionEx<Entry<Object, Long>, Traverser<Entry<Object, Long>>> expandEntryFn =
             en -> traverseItems(en, entry(en.getKey(), -en.getValue()));
-    private final Function<JetEvent<Entry<Object, Long>>, Traverser<JetEvent<Entry<Object, Long>>>> expandJetEventFn =
+    private final FunctionEx<JetEvent<Entry<Object, Long>>, Traverser<JetEvent<Entry<Object, Long>>>> expandJetEventFn =
             je -> traverseItems(je, jetEvent(je.timestamp(), entry(je.payload().getKey(), -je.payload().getValue())));
 
     @Parameter
@@ -316,7 +316,7 @@ public class TransformStatefulPTest {
             @Nonnull Supplier<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
             @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn,
-            @Nonnull Function<R, Traverser<R>> flatMapExpandFn
+            @Nonnull FunctionEx<R, Traverser<R>> flatMapExpandFn
     ) {
         if (flatMap) {
             return Processors.<T, K, S, R>flatMapStatefulP(ttl, keyFn, timestampFn, createFn,

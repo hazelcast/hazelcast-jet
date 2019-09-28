@@ -872,7 +872,7 @@ public final class Processors {
                 keyFn,
                 timestampFn,
                 createFn,
-                statefulFlatMapFn,
+                serde(statefulFlatMapFn),
                 onEvictFn
         );
     }

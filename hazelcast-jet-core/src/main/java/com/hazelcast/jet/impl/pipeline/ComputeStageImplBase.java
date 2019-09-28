@@ -160,7 +160,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.<S, Object, T, R>adaptStatefulFlatMapFn((s, k, t) -> flatMapFn.apply(s, t))
+                fnAdapter.adaptStatefulFlatMapFn(flatMapFn)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -458,9 +458,17 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
         <S, T, R> TriFunction<? super S, ? super Object, ?, ?> adaptStatefulMapFn(
                 BiFunctionEx<? super S, ? super T, ? extends R> mapFn) {
-            TriFunction<S, Object, T, R> keylessMapFn = (s, k, t) -> mapFn.apply(s, t);
-            TriFunction<? super S, ? super Object, ?, ?> adaptedStatefulMapFn = delegate.adaptStatefulMapFn(keylessMapFn);
+            TriFunction<S, Object, T, R> keyedMapFn = (s, k, t) -> mapFn.apply(s, t);
+            TriFunction<? super S, ? super Object, ?, ?> adaptedStatefulMapFn = delegate.adaptStatefulMapFn(keyedMapFn);
             return UserMetricsUtil.wrap(adaptedStatefulMapFn, mapFn);
+        }
+
+        <S, T, R> TriFunction<? super S, ? super Object, ?, ? extends Traverser<?>> adaptStatefulFlatMapFn(
+                BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn) {
+            TriFunction<S, Object, T, Traverser<R>> keyedMapFn = (s, k, t) -> flatMapFn.apply(s, t);
+            TriFunction<? super S, ? super Object, ?, ? extends Traverser<?>> adaptedStatefulFlatMapFn =
+                    delegate.adaptStatefulFlatMapFn(keyedMapFn);
+            return UserMetricsUtil.wrap(adaptedStatefulFlatMapFn, flatMapFn);
         }
 
         @Nonnull @Override
@@ -512,7 +520,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <S, K, T, R> TriFunction<? super S, ? super K, ?, ? extends Traverser<?>> adaptStatefulFlatMapFn(
                 @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
         ) {
-            return delegate.adaptStatefulFlatMapFn(flatMapFn);
+            TriFunction<? super S, ? super K, ?, ? extends Traverser<?>> adaptedFlatMapFn =
+                    delegate.adaptStatefulFlatMapFn(flatMapFn);
+            return UserMetricsUtil.wrap(adaptedFlatMapFn, flatMapFn);
         }
 
         @Nonnull @Override

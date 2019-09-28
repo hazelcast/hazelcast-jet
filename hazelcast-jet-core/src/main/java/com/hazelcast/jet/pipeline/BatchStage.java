@@ -39,7 +39,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.Functions.wholeItem;
 
 /**
@@ -257,7 +256,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     @Nonnull
     <T1, R> BatchStage<R> aggregate2(
             @Nonnull BatchStage<T1> stage1,
-            @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp);
+            @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
+    );
 
     /**
      * Attaches a stage that co-aggregates the data from this and the supplied
@@ -326,7 +326,8 @@ public interface BatchStage<T> extends GeneralStage<T> {
     <T1, T2, R> BatchStage<R> aggregate3(
             @Nonnull BatchStage<T1> stage1,
             @Nonnull BatchStage<T2> stage2,
-            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp);
+            @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
+    );
 
 
     /**
@@ -357,15 +358,13 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * @param <R2> type of the aggregated result for {@code stage2}
      */
     @Nonnull
-    default <T1, T2, R0, R1, R2> BatchStage<Tuple3<R0, R1, R2>> aggregate3(
+    <T1, T2, R0, R1, R2> BatchStage<Tuple3<R0, R1, R2>> aggregate3(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1,
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> aggrOp2
-    ) {
-        return aggregate3(stage1, stage2, aggregateOperation3(aggrOp0, aggrOp1, aggrOp2, Tuple3::tuple3));
-    }
+    );
 
     /**
      * Offers a step-by-step API to build a pipeline stage that co-aggregates
