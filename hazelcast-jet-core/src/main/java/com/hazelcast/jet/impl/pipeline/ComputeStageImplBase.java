@@ -51,7 +51,6 @@ import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
@@ -156,7 +155,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(createFn, "createFn");
         checkSerializable(flatMapFn, "flatMapFn");
-        GlobalFlatMapStatefulTransform<T, S, R, RET> transform = new GlobalFlatMapStatefulTransform(
+        GlobalFlatMapStatefulTransform<T, S, R> transform = new GlobalFlatMapStatefulTransform(
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
@@ -206,7 +205,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         if (ttl > 0 && fnAdapter == DO_NOT_ADAPT) {
             throw new IllegalStateException("Cannot use time-to-live on a non-timestamped stream");
         }
-        FlatMapStatefulTransform<T, K, S, R, Entry<K, R>> transform = new FlatMapStatefulTransform(
+        FlatMapStatefulTransform<T, K, S, R> transform = new FlatMapStatefulTransform(
                 this.transform,
                 ttl,
                 fnAdapter.adaptKeyFn(keyFn),

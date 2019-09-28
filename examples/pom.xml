@@ -30,7 +30,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-root</artifactId>
-        <version>3.2-SNAPSHOT</version>
+        <version>3.3-SNAPSHOT</version>
     </parent>
 
     <modules>
@@ -48,14 +48,15 @@
         <module>jms</module>
         <module>job-management</module>
         <module>kafka</module>
+        <module>pattern-matching</module>
         <module>rolling-aggregation</module>
         <module>session-windows</module>
         <module>sockets</module>
         <module>source-sink-builder</module>
         <module>sliding-windows</module>
         <module>spring</module>
-        <module>wordcount</module>
         <module>tf-idf</module>
+        <module>wordcount</module>
     </modules>
 
     <properties>
