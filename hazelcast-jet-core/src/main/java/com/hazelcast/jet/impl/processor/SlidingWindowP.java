@@ -28,8 +28,11 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -77,7 +80,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * @param <A> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
+public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
 
     // package-visible for testing
     final Long2ObjectHashMap<Map<K, A>> tsToKeyToAcc = new Long2ObjectHashMap<>();
@@ -95,8 +98,6 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     private final List<Function<Object, ? extends K>> keyFns;
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
-    @Nonnull
-    private final A emptyAcc;
     @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
     @Nullable
@@ -117,10 +118,14 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     @Probe(name = "totalKeysInFrames")
     private final AtomicLong totalKeysInFrames = new AtomicLong();
 
+    private final ProvidesMetrics metricsProvider;
+
     // Fields for early results emission
     private final long earlyResultsPeriod;
     private long lastTimeEarlyResultsEmitted;
     private Traverser<? extends OUT> earlyWinTraverser;
+
+    private A emptyAcc;
 
     private Traverser<Object> flushTraverser;
     private Traverser<Entry> snapshotTraverser;
@@ -155,6 +160,7 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
         this.keyFns = (List<Function<Object, ? extends K>>) keyFns;
         this.earlyResultsPeriod = earlyResultsPeriod;
         this.aggrOp = aggrOp;
+        this.metricsProvider = UserMetricsUtil.cast(aggrOp);
         this.combineFn = aggrOp.combineFn();
         this.mapToOutputFn = mapToOutputFn;
         this.isLastStage = isLastStage;
@@ -163,7 +169,6 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
                         .append(wm)
                         .onFirstNull(() -> nextWinToEmit = winPolicy.higherFrameTs(wm.timestamp()))
         );
-        this.emptyAcc = aggrOp.createFn().get();
         this.createMapPerTsFunction = x -> {
             lazyIncrement(totalFrames);
             return new HashMap<>();
@@ -178,6 +183,12 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor {
     protected void init(@Nonnull Context context) {
         processingGuarantee = context.processingGuarantee();
         lastTimeEarlyResultsEmitted = NANOSECONDS.toMillis(System.nanoTime());
+    }
+
+    @Override
+    public void registerMetrics(MetricsContext context) {
+        this.metricsProvider.registerMetrics(context);
+        this.emptyAcc = aggrOp.createFn().get();
     }
 
     @Override

@@ -21,6 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
@@ -28,6 +29,8 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
+import java.util.List;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
@@ -76,10 +79,17 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+        AggregateOperation1<?, A, ? extends R> adaptedAggrOp = fnAdapter.adaptAggregateOperation1(aggrOp);
+
+        List<Serializable> metricsProviderCandidates = asList(aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        AggregateOperation1<?, A, ? extends R> wrappedAggrOp =
+                UserMetricsUtil.wrapAll(adaptedAggrOp, metricsProviderCandidates);
+
         return streamStage.attach(new WindowAggregateTransform<A, R>(
                         singletonList(streamStage.transform),
                         wDef,
-                        fnAdapter.adaptAggregateOperation1(aggrOp)
+                        wrappedAggrOp
                 ),
                 fnAdapter);
     }

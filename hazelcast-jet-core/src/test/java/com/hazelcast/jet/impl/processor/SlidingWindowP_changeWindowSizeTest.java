@@ -17,12 +17,15 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.jet.core.SlidingWindowPolicy;
+import com.hazelcast.jet.core.metrics.Counter;
+import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,6 +42,8 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @RunWith(HazelcastSerialClassRunner.class)
 public class SlidingWindowP_changeWindowSizeTest {
@@ -103,6 +108,7 @@ public class SlidingWindowP_changeWindowSizeTest {
         SlidingWindowP p = createProcessor(policy1);
         TestOutbox outbox = new TestOutbox(new int[]{1024}, 1024);
         p.init(outbox, new TestProcessorContext());
+        p.registerMetrics(mockMetricsContext());
         TestInbox inbox = new TestInbox();
         inbox.addAll(asList(0, 1, 2, 3));
         p.process(0, inbox);
@@ -116,6 +122,7 @@ public class SlidingWindowP_changeWindowSizeTest {
 
         p = createProcessor(policy2);
         p.init(outbox, new TestProcessorContext());
+        p.registerMetrics(mockMetricsContext());
         for (Object o : snapshotInbox.queue()) {
             Entry e = (Entry) o;
             p.restoreFromSnapshot(e.getKey(), e.getValue());
@@ -127,6 +134,12 @@ public class SlidingWindowP_changeWindowSizeTest {
         }
         assertTrue("tsToKeyToAcc not empty", p.tsToKeyToAcc.isEmpty());
         assertTrue("slidingWindow not empty", p.slidingWindow == null || p.slidingWindow.isEmpty());
+    }
+
+    private static MetricsContext mockMetricsContext() {
+        MetricsContext context = Mockito.mock(MetricsContext.class);
+        when(context.registerCounter(any(String.class))).thenReturn(Mockito.mock(Counter.class));
+        return context;
     }
 
     private static SlidingWindowP createProcessor(SlidingWindowPolicy winPolicy) {

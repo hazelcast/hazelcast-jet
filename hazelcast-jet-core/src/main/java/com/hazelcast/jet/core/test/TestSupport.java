@@ -25,6 +25,9 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.metrics.Counter;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingServiceImpl;
@@ -780,9 +783,58 @@ public final class TestSupport {
         }
         try {
             processor.init(outbox, context);
+            if (processor instanceof ProvidesMetrics) {
+                ProvidesMetrics providesMetrics = (ProvidesMetrics) processor;
+                providesMetrics.registerMetrics(mockMetricsContext());
+            }
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
+    }
+
+    private static MetricsContext mockMetricsContext() {
+        //TODO: would need access to Mockito for more compact mock code...
+        return new MetricsContext() {
+            @Nonnull @Override
+            public Counter registerCounter(String name) {
+                return new Counter() {
+                    @Nonnull
+                    @Override
+                    public String name() {
+                        return name;
+                    }
+
+                    @Override
+                    public void set(long newValue) {
+                    }
+
+                    @Override
+                    public void increment() {
+                    }
+
+                    @Override
+                    public void increment(long increment) {
+                    }
+
+                    @Override
+                    public void decrement() {
+                    }
+
+                    @Override
+                    public void decrement(long decrement) {
+                    }
+
+                    @Override
+                    public long value() {
+                        return 0;
+                    }
+                };
+            }
+
+            @Override
+            public void registerGauge(@Nonnull String name, @Nonnull SupplierEx<Long> supplier) {
+            }
+        };
     }
 
     private static double toMillis(long nanos) {

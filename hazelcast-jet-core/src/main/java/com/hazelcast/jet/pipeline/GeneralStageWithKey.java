@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -29,6 +30,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -478,8 +480,9 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull String mapName,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName),
-                (map, key, item) -> toCompletableFuture(map.getAsync(key)).thenApply(value -> mapFn.apply(item, value)));
+        TriFunction<IMapJet<K, V>, K, T, CompletableFuture<R>> mapAsyncFn = (map, key, item) ->
+                toCompletableFuture(map.getAsync(key)).thenApply(value -> mapFn.apply(item, value));
+        return mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName), UserMetricsUtil.wrap(mapAsyncFn, mapFn));
     }
 
     /**

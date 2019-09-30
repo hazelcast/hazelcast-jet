@@ -22,6 +22,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -32,10 +33,12 @@ import com.hazelcast.jet.function.TriFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -70,8 +73,16 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, List<?> metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx,
+                                                    List<?> metricsProviderCandidates) {
+        return wrapAll(biConsumerEx, getProvidesMetrics(metricsProviderCandidates.stream()));
+    }
+
+    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Object[] metricsProviderCandidates) {
+        return wrapAll(biConsumerEx, getProvidesMetrics(Arrays.stream(metricsProviderCandidates)));
+    }
+
+    private static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Set<ProvidesMetrics> providers) {
         if (providers.isEmpty()) {
             return biConsumerEx;
         } else {
@@ -88,7 +99,14 @@ public final class UserMetricsUtil {
     }
 
     public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+        return wrapAll(functionEx, getProvidesMetrics(metricsProviderCandidates.stream()));
+    }
+
+    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Object[] metricsProviderCandidates) {
+        return wrapAll(functionEx, getProvidesMetrics(Arrays.stream(metricsProviderCandidates)));
+    }
+
+    private static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Set<ProvidesMetrics> providers) {
         if (providers.isEmpty()) {
             return functionEx;
         } else {
@@ -123,7 +141,16 @@ public final class UserMetricsUtil {
     }
 
     public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, List<?> metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates.stream());
+        return wrapAll(supplierEx, providers);
+    }
+
+    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Object[] metricsProviderCandidates) {
+        Set<ProvidesMetrics> providers = getProvidesMetrics(Arrays.stream(metricsProviderCandidates));
+        return wrapAll(supplierEx, providers);
+    }
+
+    private static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Set<ProvidesMetrics> providers) {
         if (providers.isEmpty()) {
             return supplierEx;
         } else {
@@ -143,6 +170,8 @@ public final class UserMetricsUtil {
             } else if (aggrOp.arity() == 3) {
                 return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp,
                         (ProvidesMetrics) metricsProviderCandidate);
+            } else {
+                return (T) new WrappedAggregateOperation(aggrOp, (ProvidesMetrics) metricsProviderCandidate);
             }
         }
         return aggrOp;
@@ -150,7 +179,7 @@ public final class UserMetricsUtil {
 
     @SuppressWarnings("unchecked")
     public static <T extends AggregateOperation> T wrapAll(T aggrOp, List<?> metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates);
+        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates.stream());
         if (!providers.isEmpty()) {
             if (aggrOp.arity() == 1) {
                 return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp, providers);
@@ -158,13 +187,15 @@ public final class UserMetricsUtil {
                 return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp, providers);
             } else if (aggrOp.arity() == 3) {
                 return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp, providers);
+            } else {
+                return (T) new WrappedAggregateOperation(aggrOp, providers);
             }
         }
         return aggrOp;
     }
 
-    private static Set<ProvidesMetrics> getProvidesMetrics(List<?> metricsProviderCandidates) {
-        return metricsProviderCandidates.stream()
+    private static Set<ProvidesMetrics> getProvidesMetrics(Stream<?> candidates) {
+        return candidates
                 .filter(ProvidesMetrics.class::isInstance)
                 .map(ProvidesMetrics.class::cast)
                 .collect(toSet());
@@ -461,6 +492,92 @@ public final class UserMetricsUtil {
         @Override
         public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
             return aggrOp3.withAccumulateFns(accumulateFns);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static class WrappedAggregateOperation extends AbstractWrapper implements AggregateOperation {
+        private final AggregateOperation aggrOp;
+
+        WrappedAggregateOperation(AggregateOperation aggrOp, ProvidesMetrics provider) {
+            super(provider);
+            this.aggrOp = aggrOp;
+        }
+
+        WrappedAggregateOperation(AggregateOperation aggrOp, Collection<ProvidesMetrics> providers) {
+            super(providers);
+            this.aggrOp = aggrOp;
+        }
+
+        @Nonnull
+        @Override
+        public BiConsumerEx accumulateFn(@Nonnull Tag tag) {
+            return aggrOp.accumulateFn(tag);
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation1 withCombiningAccumulateFn(@Nonnull FunctionEx getAccFn) {
+            return aggrOp.withCombiningAccumulateFn(getAccFn);
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation withIdentityFinish() {
+            return aggrOp.withIdentityFinish();
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation andThen(FunctionEx thenFn) {
+            return aggrOp.andThen(thenFn);
+        }
+
+        @Override
+        public int arity() {
+            return aggrOp.arity();
+        }
+
+        @Nonnull
+        @Override
+        public SupplierEx createFn() {
+            return aggrOp.createFn();
+        }
+
+        @Nonnull
+        @Override
+        public BiConsumerEx accumulateFn(int index) {
+            return aggrOp.accumulateFn(index);
+        }
+
+        @Nullable
+        @Override
+        public BiConsumerEx combineFn() {
+            return aggrOp.combineFn();
+        }
+
+        @Nullable
+        @Override
+        public BiConsumerEx deductFn() {
+            return aggrOp.deductFn();
+        }
+
+        @Nonnull
+        @Override
+        public FunctionEx exportFn() {
+            return aggrOp.exportFn();
+        }
+
+        @Nonnull
+        @Override
+        public FunctionEx finishFn() {
+            return aggrOp.finishFn();
+        }
+
+        @Nonnull
+        @Override
+        public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
+            return aggrOp.withAccumulateFns(accumulateFns);
         }
     }
 

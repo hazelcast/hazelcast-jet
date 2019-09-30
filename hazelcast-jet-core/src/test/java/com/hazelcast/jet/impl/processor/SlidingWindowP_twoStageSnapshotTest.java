@@ -24,6 +24,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.metrics.Counter;
+import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
@@ -40,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
 
 import java.util.Collection;
 import java.util.Map.Entry;
@@ -54,6 +57,8 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * This test checks the flushing of internal buffer downstream instead of saving
@@ -124,8 +129,11 @@ public class SlidingWindowP_twoStageSnapshotTest {
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
 
         stage1p1.init(stage1p1Outbox, context);
+        stage1p1.registerMetrics(mockMetricsContext());
         stage1p2.init(stage1p2Outbox, context);
+        stage1p2.registerMetrics(mockMetricsContext());
         stage2p.init(stage2Outbox, context);
+        stage2p.registerMetrics(mockMetricsContext());
 
         // process some events in the 1st stage
         assertTrue(stage1p1.tryProcess(0, entry(1L, 1L))); // entry key is time
@@ -148,7 +156,9 @@ public class SlidingWindowP_twoStageSnapshotTest {
             stage1p1Outbox = newOutbox();
             stage1p2Outbox = newOutbox();
             stage1p1.init(stage1p1Outbox, context);
+            stage1p1.registerMetrics(mockMetricsContext());
             stage1p2.init(stage1p2Outbox, context);
+            stage1p2.registerMetrics(mockMetricsContext());
         }
 
         // process some more events in 1st stage
@@ -174,6 +184,12 @@ public class SlidingWindowP_twoStageSnapshotTest {
                         wm(10)
                 )),
                 collectionToString(stage2Outbox.queue(0)));
+    }
+
+    private static MetricsContext mockMetricsContext() {
+        MetricsContext context = Mockito.mock(MetricsContext.class);
+        when(context.registerCounter(any(String.class))).thenReturn(Mockito.mock(Counter.class));
+        return context;
     }
 
     private static void processStage2(

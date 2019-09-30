@@ -514,7 +514,7 @@ public final class Processors {
                 timestampKind,
                 winPolicy.toTumblingByFrame(),
                 0L,
-                aggrOp.withIdentityFinish(),
+                UserMetricsUtil.wrap(aggrOp.withIdentityFinish(), aggrOp),
                 KeyedWindowResult::new,
                 false
         );
@@ -568,7 +568,7 @@ public final class Processors {
                 TimestampKind.FRAME,
                 winPolicy,
                 0L,
-                aggrOp.withCombiningAccumulateFn(KeyedWindowResult<Object, A>::result),
+                UserMetricsUtil.wrap(aggrOp.withCombiningAccumulateFn(KeyedWindowResult<Object, A>::result), aggrOp),
                 mapToOutputFn,
                 true
         );
@@ -612,7 +612,7 @@ public final class Processors {
                             .collect(toList()),
                 winPolicy,
                 earlyResultsPeriod,
-                aggrOp,
+                serde(aggrOp),
                 mapToOutputFn,
                 isLastStage);
     }
@@ -678,7 +678,7 @@ public final class Processors {
             @Nonnull KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn
     ) {
         return () -> new SessionWindowP<>(
-                sessionTimeout, earlyResultsPeriod, timestampFns, keyFns, aggrOp, mapToOutputFn);
+                sessionTimeout, earlyResultsPeriod, timestampFns, keyFns, serde(aggrOp), mapToOutputFn);
     }
 
     /**

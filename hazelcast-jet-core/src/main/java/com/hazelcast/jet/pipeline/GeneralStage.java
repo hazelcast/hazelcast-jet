@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -31,6 +32,7 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -539,8 +541,10 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
+        BiFunctionEx<ReplicatedMap<K, V>, T, R> mapUsingContextFn = (map, t) ->
+                mapFn.apply(t, map.get(lookupKeyFn.apply(t)));
         GeneralStage<R> res = mapUsingContext(ContextFactories.<K, V>replicatedMapContext(mapName),
-                (map, t) -> mapFn.apply(t, map.get(lookupKeyFn.apply(t))));
+                UserMetricsUtil.wrap(mapUsingContextFn, mapFn));
         return res.setName("mapUsingReplicatedMap");
     }
 
@@ -631,8 +635,10 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        GeneralStage<R> res = mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName), (map, t) ->
-                toCompletableFuture(map.getAsync(lookupKeyFn.apply(t))).thenApply(e -> mapFn.apply(t, e)));
+        BiFunctionEx<IMapJet<K, V>, T, CompletableFuture<R>> mapAsyncFunction = (map, t) ->
+                toCompletableFuture(map.getAsync(lookupKeyFn.apply(t))).thenApply(e -> mapFn.apply(t, e));
+        GeneralStage<R> res = mapUsingContextAsync(ContextFactories.iMapContext(mapName),
+                UserMetricsUtil.wrap(mapAsyncFunction, mapFn));
         return res.setName("mapUsingIMap");
     }
 

@@ -26,7 +26,10 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -77,7 +80,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * @param <A> type of the accumulator object
  * @param <R> type of the finished result
  */
-public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
+public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
     private static final Watermark COMPLETING_WM = new Watermark(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks
@@ -93,12 +96,11 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
     @Nonnull
-    private final BiConsumer<? super A, ? super A> combineFn;
-    @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
     @Nonnull
     private final FlatMapper<Watermark, Object> closedWindowFlatmapper;
     private ProcessingGuarantee processingGuarantee;
+    private BiConsumer<? super A, ? super A> combineFn;
 
     @Probe(name = "lateEventsDropped")
     private final AtomicLong lateEventsDropped = new AtomicLong();
@@ -106,6 +108,8 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     private final AtomicLong totalKeys = new AtomicLong();
     @Probe(name = "totalWindows")
     private final AtomicLong totalWindows = new AtomicLong();
+
+    private final ProvidesMetrics metricsProvider;
 
     // Fields for early results emission
     private final long earlyResultsPeriod;
@@ -137,7 +141,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
         this.keyFns = (List<Function<Object, K>>) keyFns;
         this.earlyResultsPeriod = earlyResultsPeriod;
         this.aggrOp = aggrOp;
-        this.combineFn = requireNonNull(aggrOp.combineFn());
+        this.metricsProvider = UserMetricsUtil.cast(aggrOp);
         this.mapToOutputFn = mapToOutputFn;
         this.sessionTimeout = sessionTimeout;
         this.closedWindowFlatmapper = flatMapper(this::traverseClosedWindows);
@@ -147,6 +151,12 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor {
     protected void init(@Nonnull Context context) {
         processingGuarantee = context.processingGuarantee();
         lastTimeEarlyResultsEmitted = NANOSECONDS.toMillis(System.nanoTime());
+    }
+
+    @Override
+    public void registerMetrics(MetricsContext context) {
+        this.metricsProvider.registerMetrics(context);
+        this.combineFn = requireNonNull(aggrOp.combineFn());
     }
 
     @Override

@@ -20,6 +20,8 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.util.Preconditions;
 
@@ -109,47 +111,61 @@ public class CoAggregateOperationBuilder {
         Stream<Entry<Tag, AggregateOperation1>> sorted = opsByTag.entrySet().stream()
                                                                  .sorted(comparing(Entry::getKey));
         List<AggregateOperation1> ops = sorted.map(Entry::getValue).collect(toList());
-        BiConsumerEx[] combineFns =
-                ops.stream().map(AggregateOperation::combineFn).toArray(BiConsumerEx[]::new);
-        BiConsumerEx[] deductFns =
-                ops.stream().map(AggregateOperation::deductFn).toArray(BiConsumerEx[]::new);
-        FunctionEx[] exportFns =
-                ops.stream().map(AggregateOperation::exportFn).toArray(FunctionEx[]::new);
-        FunctionEx[] finishFns =
-                ops.stream().map(AggregateOperation::finishFn).toArray(FunctionEx[]::new);
 
+        SupplierEx[] createFns = ops.stream().map(AggregateOperation::createFn).toArray(SupplierEx[]::new);
+        SupplierEx<Object[]> createFn = () -> stream(createFns).map(SupplierEx::get).toArray();
         AggregateOperationBuilder.VarArity<Object[], Void> b = AggregateOperation
-                .withCreate(() -> ops.stream().map(op -> op.createFn().get()).toArray())
+                .withCreate(UserMetricsUtil.wrapAll(createFn, createFns))
                 .varArity();
+
         opsByTag.forEach((tag, op) -> {
             int index = tag.index();
-            b.andAccumulate(tag, (acc, item) -> op.accumulateFn().accept(acc[index], item));
+            BiConsumerEx<Object[], Object> accumulateFn = (acc, item) -> op.accumulateFn().accept(acc[index], item);
+            b.andAccumulate(tag, UserMetricsUtil.wrap(accumulateFn, op.accumulateFn()));
         });
-        return b.andCombine(stream(combineFns).anyMatch(Objects::isNull) ? null :
-                        (acc1, acc2) -> {
-                            for (int i = 0; i < combineFns.length; i++) {
-                                combineFns[i].accept(acc1[i], acc2[i]);
-                            }
-                        })
-                .andDeduct(stream(deductFns).anyMatch(Objects::isNull) ? null :
-                        (acc1, acc2) -> {
-                            for (int i = 0; i < deductFns.length; i++) {
-                                deductFns[i].accept(acc1[i], acc2[i]);
-                            }
-                        })
-                .<R>andExport(acc -> {
-                    ItemsByTag result = new ItemsByTag();
-                    for (int i = 0; i < exportFns.length; i++) {
-                        result.put(tags[i], exportFns[i].apply(acc[i]));
+
+        BiConsumerEx[] combineFns =
+                ops.stream().map(AggregateOperation::combineFn).toArray(BiConsumerEx[]::new);
+        BiConsumerEx<Object[], Object[]> combineFn = stream(combineFns).anyMatch(Objects::isNull) ?
+                null :
+                (acc1, acc2) -> {
+                    for (int i = 0; i < combineFns.length; i++) {
+                        combineFns[i].accept(acc1[i], acc2[i]);
                     }
-                    return exportFinishFn.apply(result);
-                })
-                .andFinish(acc -> {
-                    ItemsByTag result = new ItemsByTag();
-                    for (int i = 0; i < finishFns.length; i++) {
-                        result.put(tags[i], finishFns[i].apply(acc[i]));
+                };
+
+        BiConsumerEx[] deductFns =
+                ops.stream().map(AggregateOperation::deductFn).toArray(BiConsumerEx[]::new);
+        BiConsumerEx<? super Object[], ? super Object[]> deductFn = stream(deductFns).anyMatch(Objects::isNull) ? null :
+                (acc1, acc2) -> {
+                    for (int i = 0; i < deductFns.length; i++) {
+                        deductFns[i].accept(acc1[i], acc2[i]);
                     }
-                    return exportFinishFn.apply(result);
-                });
+                };
+
+        FunctionEx[] exportFns =
+                ops.stream().map(AggregateOperation::exportFn).toArray(FunctionEx[]::new);
+        FunctionEx<Object[], R> exportFn = acc -> {
+            ItemsByTag result = new ItemsByTag();
+            for (int i = 0; i < exportFns.length; i++) {
+                result.put(tags[i], exportFns[i].apply(acc[i]));
+            }
+            return exportFinishFn.apply(result);
+        };
+
+        FunctionEx[] finishFns =
+                ops.stream().map(AggregateOperation::finishFn).toArray(FunctionEx[]::new);
+        FunctionEx<Object[], R> finishFn = acc -> {
+            ItemsByTag result = new ItemsByTag();
+            for (int i = 0; i < finishFns.length; i++) {
+                result.put(tags[i], finishFns[i].apply(acc[i]));
+            }
+            return exportFinishFn.apply(result);
+        };
+
+        return b.andCombine(UserMetricsUtil.wrapAll(combineFn, combineFns))
+                .andDeduct(UserMetricsUtil.wrapAll(deductFn, deductFns))
+                .andExport(UserMetricsUtil.wrapAll(exportFn, exportFns))
+                .andFinish(UserMetricsUtil.wrapAll(finishFn, finishFns));
     }
 }
