@@ -19,6 +19,7 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -50,6 +51,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
+import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
@@ -84,15 +86,18 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
     @Test
     public void testWrite_oldApi() throws Exception {
-        testWrite(HdfsSinks::hdfs);
+        testWrite(HdfsSources::hdfs, HdfsSinks::hdfs);
     }
 
     @Test
     public void testWrite_newApi() throws Exception {
-        testWrite(HdfsSinks::hdfsNewApi);
+        testWrite(HdfsSources::hdfsNewApi, HdfsSinks::hdfsNewApi);
     }
 
-    private void testWrite(Function<JobConf, Sink<Entry<IntWritable, IntWritable>>> sinkFactory) throws Exception {
+    private void testWrite(
+            Function<JobConf, BatchSource<Entry<IntWritable, IntWritable>>> sourceFactory,
+            Function<JobConf, Sink<Entry<IntWritable, IntWritable>>> sinkFactory
+    ) throws Exception {
         Path directory = new Path(Files.createTempDirectory(getClass().getSimpleName()).toString());
         JobConf conf = getSinkConf(directory);
 
@@ -108,8 +113,8 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         JobConf readJobConf = getReadJobConf(directory);
 
         p = Pipeline.create();
-        IList<Entry<IntWritable, IntWritable>> resultList = instance().getList(randomName());
-        p.drawFrom(HdfsSources.<IntWritable, IntWritable>hdfs(readJobConf))
+        IList<Entry> resultList = instance().getList(randomName());
+        p.drawFrom(sourceFactory.apply(readJobConf))
          .drainTo(Sinks.list(resultList));
 
         instance().newJob(p).join();

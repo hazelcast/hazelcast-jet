@@ -141,7 +141,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableConfiguration jobConf;
+        private final SerializableConfiguration configuration;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
@@ -149,11 +149,11 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
 
-        Supplier(SerializableConfiguration jobConf,
+        Supplier(SerializableConfiguration configuration,
                  FunctionEx<? super T, K> extractKeyFn,
                  FunctionEx<? super T, V> extractValueFn
         ) {
-            this.jobConf = jobConf;
+            this.configuration = configuration;
             this.extractKeyFn = extractKeyFn;
             this.extractValueFn = extractValueFn;
         }
@@ -162,9 +162,9 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
         public void init(@Nonnull Context context) throws IOException, InterruptedException {
             this.context = context;
 
-            jobContext = new JobContextImpl(jobConf, new JobID());
-            OutputFormat outputFormat = getOutputFormat(jobConf);
-            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(jobConf, jobContext,
+            jobContext = new JobContextImpl(configuration, new JobID());
+            OutputFormat outputFormat = getOutputFormat(configuration);
+            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
                     getUuid(context)));
         }
 
@@ -172,7 +172,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
         public List<Processor> get(int count) {
             return range(0, count).mapToObj(i -> {
                 try {
-                    JobConf copiedConfig = new JobConf(jobConf);
+                    JobConf copiedConfig = new JobConf(configuration);
                     TaskAttemptID taskAttemptID = getTaskAttemptID(i, jobContext, getUuid(context));
                     copiedConfig.set("mapreduce.task.attempt.id", taskAttemptID.toString());
                     copiedConfig.setInt("mapreduce.task.partition", i);
