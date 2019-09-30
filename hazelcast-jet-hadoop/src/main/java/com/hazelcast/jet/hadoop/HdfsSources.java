@@ -72,7 +72,8 @@ public final class HdfsSources {
             @Nonnull JobConf jobConf,
             @Nonnull BiFunctionEx<K, V, E> projectionFn
     ) {
-        return Sources.batchFromProcessor("readHdfs", new MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), projectionFn));
+        return Sources.batchFromProcessor("readHdfs",
+                new MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), projectionFn));
     }
 
     /**

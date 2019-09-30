@@ -56,7 +56,8 @@ public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier 
 
     @Override
     public void init(@Nonnull Context context) throws Exception {
-        logger = context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(ReadHdfsMetaSupplierBase.class);
+        logger = context.jetInstance().getHazelcastInstance().getLoggingService()
+                        .getLogger(ReadHdfsMetaSupplierBase.class);
     }
 
     private static int indexOfMin(int[] ints) {
