@@ -33,6 +33,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.nio.Address;
 import com.hazelcast.test.ExpectedRuntimeException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -778,10 +779,11 @@ public class JobTest extends JetTestSupport {
 
         // When
         instance1.getHazelcastInstance().getLifecycleService().terminate();
-        job.cancel();
+        RuntimeException ex = new RuntimeException("Faulty job");
+        NoOutputSourceP.failure.set(ex);
 
         // Then
-        expectedException.expect(CancellationException.class);
+        expectedException.expectMessage(Matchers.containsString(ex.getMessage()));
         job.join();
     }
 
@@ -808,10 +810,11 @@ public class JobTest extends JetTestSupport {
 
         // When
         instance1.getHazelcastInstance().getLifecycleService().terminate();
-        job.cancel();
+        RuntimeException ex = new RuntimeException("Faulty job");
+        NoOutputSourceP.failure.set(ex);
 
         // Then
-        expectedException.expect(CancellationException.class);
+        expectedException.expectMessage(Matchers.containsString(ex.getMessage()));
         job.join();
     }
 
