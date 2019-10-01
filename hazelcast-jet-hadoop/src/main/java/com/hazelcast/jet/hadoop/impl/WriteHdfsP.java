@@ -100,7 +100,6 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
-        private Context context;
 
         public MetaSupplier(SerializableConfiguration configuration,
                             FunctionEx<? super T, K> extractKeyFn,
@@ -118,7 +117,6 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
-            this.context = context;
             jobContext = new JobContextImpl(configuration, new JobID());
             OutputFormat outputFormat = getOutputFormat(configuration);
             outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
