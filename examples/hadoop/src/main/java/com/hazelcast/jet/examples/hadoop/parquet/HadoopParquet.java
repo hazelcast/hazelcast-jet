@@ -56,7 +56,7 @@ public class HadoopParquet {
          .filter(user -> user.get(3).equals(Boolean.TRUE))
          .peek()
          .map(user -> entry(user.get(0), user))
-         .drainTo(HdfsSinks.hdfsNewApi(configuration));
+         .drainTo(HdfsSinks.hdfs(configuration));
         return p;
     }
 

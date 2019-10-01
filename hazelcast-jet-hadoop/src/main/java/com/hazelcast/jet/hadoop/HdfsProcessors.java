@@ -23,7 +23,6 @@ import com.hazelcast.jet.hadoop.impl.ReadHdfsP;
 import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
 import com.hazelcast.jet.hadoop.impl.SerializableJobConf;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsP;
-import com.hazelcast.jet.hadoop.impl.WriteNewHdfsP;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -53,28 +52,15 @@ public final class HdfsProcessors {
 
     /**
      * Returns a supplier of processors for
-     * {@link HdfsSinks#hdfs(JobConf, FunctionEx, FunctionEx)}.
+     * {@link HdfsSinks#hdfs(Configuration, FunctionEx, FunctionEx)}.
      */
     @Nonnull
     public static <E, K, V> ProcessorMetaSupplier writeHdfsP(
-            @Nonnull JobConf jobConf,
-            @Nonnull FunctionEx<? super E, K> extractKeyFn,
-            @Nonnull FunctionEx<? super E, V> extractValueFn
-    ) {
-        return new WriteHdfsP.MetaSupplier<>(SerializableJobConf.asSerializable(jobConf), extractKeyFn, extractValueFn);
-    }
-
-    /**
-     * Returns a supplier of processors for
-     * {@link HdfsSinks#hdfsNewApi(Configuration, FunctionEx, FunctionEx)}.
-     */
-    @Nonnull
-    public static <E, K, V> ProcessorMetaSupplier writeNewHdfsP(
             @Nonnull Configuration jobConf,
             @Nonnull FunctionEx<? super E, K> extractKeyFn,
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
-        return new WriteNewHdfsP.MetaSupplier<>(SerializableConfiguration.asSerializable(jobConf), extractKeyFn,
+        return new WriteHdfsP.MetaSupplier<>(SerializableConfiguration.asSerializable(jobConf), extractKeyFn,
                 extractValueFn);
     }
 }

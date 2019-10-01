@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
-
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
@@ -25,28 +24,28 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.hadoop.HdfsProcessors;
 import com.hazelcast.nio.Address;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobContextImpl;
-import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.OutputCommitter;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.TaskAttemptContextImpl;
-import org.apache.hadoop.mapred.TaskAttemptID;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.OutputFormat;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 
-import static java.lang.String.valueOf;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.apache.hadoop.mapreduce.TaskType.JOB_SETUP;
 
 /**
- * See {@link HdfsProcessors#writeHdfsP(
- * org.apache.hadoop.mapred.JobConf, FunctionEx, FunctionEx)}.
+ * See {@link HdfsProcessors#writeHdfsP(Configuration, FunctionEx, FunctionEx)}.
  */
 public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
@@ -84,8 +83,9 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        recordWriter.close(Reporter.NULL);
-        if (outputCommitter.needsTaskCommit(taskAttemptContext)) {
+        recordWriter.close(taskAttemptContext);
+        boolean needsCommit = outputCommitter.needsTaskCommit(taskAttemptContext);
+        if (needsCommit) {
             outputCommitter.commitTask(taskAttemptContext);
         }
     }
@@ -94,18 +94,19 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableJobConf jobConf;
+        private final SerializableConfiguration configuration;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
+        private Context context;
 
-        public MetaSupplier(SerializableJobConf jobConf,
+        public MetaSupplier(SerializableConfiguration configuration,
                             FunctionEx<? super T, K> extractKeyFn,
                             FunctionEx<? super T, V> extractValueFn
         ) {
-            this.jobConf = jobConf;
+            this.configuration = configuration;
             this.extractKeyFn = extractKeyFn;
             this.extractValueFn = extractValueFn;
         }
@@ -117,8 +118,11 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
-            outputCommitter = jobConf.getOutputCommitter();
-            jobContext = new JobContextImpl(jobConf, new JobID());
+            this.context = context;
+            jobContext = new JobContextImpl(configuration, new JobID());
+            OutputFormat outputFormat = getOutputFormat(configuration);
+            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
+                    context.jetInstance().getCluster().getLocalMember().getUuid()));
             outputCommitter.setupJob(jobContext);
         }
 
@@ -129,9 +133,10 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
             }
         }
 
-        @Override @Nonnull
+        @Override
+        @Nonnull
         public FunctionEx<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new Supplier<>(jobConf, extractKeyFn, extractValueFn);
+            return address -> new Supplier<>(configuration, extractKeyFn, extractValueFn);
         }
     }
 
@@ -139,7 +144,7 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableJobConf jobConf;
+        private final SerializableConfiguration configuration;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
@@ -147,47 +152,64 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
 
-        Supplier(SerializableJobConf jobConf,
+        Supplier(SerializableConfiguration configuration,
                  FunctionEx<? super T, K> extractKeyFn,
                  FunctionEx<? super T, V> extractValueFn
         ) {
-            this.jobConf = jobConf;
+            this.configuration = configuration;
             this.extractKeyFn = extractKeyFn;
             this.extractValueFn = extractValueFn;
         }
 
         @Override
-        public void init(@Nonnull Context context) {
+        public void init(@Nonnull Context context) throws IOException, InterruptedException {
             this.context = context;
-            outputCommitter = jobConf.getOutputCommitter();
-            jobContext = new JobContextImpl(jobConf, new JobID());
+
+            jobContext = new JobContextImpl(configuration, new JobID());
+            OutputFormat outputFormat = getOutputFormat(configuration);
+            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
+                    getUuid(context)));
         }
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            return range(0, count).mapToObj(i -> {
+            return range(0, count).mapToObj(localIndex -> {
                 try {
-                    String uuid = context.jetInstance().getCluster().getLocalMember().getUuid();
-                    TaskAttemptID taskAttemptID = new TaskAttemptID("jet-node-" + uuid, jobContext.getJobID().getId(),
-                            JOB_SETUP, i, 0);
-
-                    JobConf copiedConfig = new JobConf(jobConf);
-
-                    copiedConfig.set("mapred.task.id", taskAttemptID.toString());
-                    copiedConfig.setInt("mapred.task.partition", i);
+                    JobConf copiedConfig = new JobConf(configuration);
+                    int globalIndex = context.memberIndex() * context.localParallelism() + localIndex;
+                    TaskAttemptID taskAttemptID = getTaskAttemptID(globalIndex, jobContext, getUuid(context));
+                    copiedConfig.set("mapreduce.task.attempt.id", taskAttemptID.toString());
+                    copiedConfig.setInt("mapreduce.task.partition", globalIndex);
 
                     TaskAttemptContextImpl taskAttemptContext = new TaskAttemptContextImpl(copiedConfig, taskAttemptID);
                     @SuppressWarnings("unchecked")
-                    OutputFormat<K, V> outFormat = copiedConfig.getOutputFormat();
-                    RecordWriter<K, V> recordWriter = outFormat.getRecordWriter(
-                            null, copiedConfig, uuid + '-' + valueOf(i), Reporter.NULL);
-                    return new WriteHdfsP<>(
-                            recordWriter, taskAttemptContext, outputCommitter, extractKeyFn, extractValueFn);
-                } catch (IOException e) {
+                    OutputFormat<K, V> outFormat = getOutputFormat(copiedConfig);
+                    RecordWriter<K, V> recordWriter = outFormat.getRecordWriter(taskAttemptContext);
+                    return new WriteHdfsP<>(recordWriter, taskAttemptContext, outputCommitter, extractKeyFn,
+                            extractValueFn);
+                } catch (Exception e) {
                     throw new JetException(e);
                 }
 
             }).collect(toList());
         }
+    }
+
+    private static String getUuid(@Nonnull ProcessorMetaSupplier.Context context) {
+        return context.jetInstance().getCluster().getLocalMember().getUuid();
+    }
+
+    private static OutputFormat getOutputFormat(Configuration config) {
+        Class<?> outputFormatClass = config.getClass("mapreduce.job.outputformat.class", TextOutputFormat.class);
+        return (OutputFormat) ReflectionUtils.newInstance(outputFormatClass, config);
+    }
+
+    private static TaskAttemptContextImpl getTaskAttemptContext(SerializableConfiguration jobConf,
+                                                                JobContextImpl jobContext, String uuid) {
+        return new TaskAttemptContextImpl(jobConf, getTaskAttemptID(0, jobContext, uuid));
+    }
+
+    private static TaskAttemptID getTaskAttemptID(int id, JobContextImpl jobContext, String uuid) {
+        return new TaskAttemptID("jet-node-" + uuid, jobContext.getJobID().getId(), JOB_SETUP, id, 0);
     }
 }

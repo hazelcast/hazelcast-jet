@@ -19,9 +19,7 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
-import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.nio.IOUtil;
@@ -50,7 +48,6 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -105,27 +102,14 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     }
 
     @Test
-    public void testWrite_oldApi() throws Exception {
-        testWrite("old", HdfsSources::hdfs, HdfsSinks::hdfs);
-    }
-
-    @Test
     public void testWrite_newApi() throws Exception {
-        testWrite("new", HdfsSources::hdfsNewApi, HdfsSinks::hdfsNewApi);
-    }
-
-    private void testWrite(
-            String runnerType,
-            Function<JobConf, BatchSource<Entry<IntWritable, IntWritable>>> sourceFactory,
-            Function<JobConf, Sink<Entry<IntWritable, IntWritable>>> sinkFactory
-    ) throws Exception {
         JobConf conf = getSinkConf(hadoopDir);
 
         int messageCount = 320;
         Pipeline p = Pipeline.create();
         p.drawFrom(TestSources.items(IntStream.range(0, messageCount).boxed().toArray(Integer[]::new)))
          .map(num -> entry(new IntWritable(num), new IntWritable(num)))
-         .drainTo(sinkFactory.apply(conf))
+         .drainTo(HdfsSinks.hdfs(conf))
          // we use higher value to increase the race chance for LazyOutputFormat
          .setLocalParallelism(8);
 
@@ -134,7 +118,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         p = Pipeline.create();
         IList<Entry> resultList = instance().getList(randomName());
-        p.drawFrom(sourceFactory.apply(readJobConf))
+        p.drawFrom(HdfsSources.hdfsNewApi(readJobConf))
          .drainTo(Sinks.list(resultList));
 
         instance().newJob(p).join();
