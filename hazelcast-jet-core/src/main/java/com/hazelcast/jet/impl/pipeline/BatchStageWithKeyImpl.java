@@ -190,12 +190,8 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BatchStageWithKey<? extends T1, ? extends K> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1
     ) {
-        List<Serializable> metricsProviderCandidates = asList(
-                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
-                op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn()
-        );
         AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> aggrOp = aggregateOperation2(op0, op1);
-        return aggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return aggregate2(stage1, aggrOp);
     }
 
     @Nonnull @Override
@@ -226,13 +222,8 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation1<? super T2, ?, ? extends R2> op2
     ) {
-        List<Serializable> metricsProviderCandidates = asList(
-                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
-                op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn(),
-                op2.accumulateFn(), op2.createFn(), op2.combineFn(), op2.deductFn(), op2.exportFn(), op2.finishFn()
-        );
         AggregateOperation3<T, T1, T2, ? extends Tuple3<?, ?, ?>, Tuple3<R0, R1, R2>> aggrOp =
                 aggregateOperation3(op0, op1, op2);
-        return aggregate3(stage1, stage2, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return aggregate3(stage1, stage2, aggrOp);
     }
 }

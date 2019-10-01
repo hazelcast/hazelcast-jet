@@ -53,8 +53,6 @@ import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Serializable;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
@@ -602,40 +600,32 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         <A, R> AggregateOperation<A, ? extends R> adaptAggregateOperation(
                 @Nonnull AggregateOperation<A, ? extends R> aggrOp
         ) {
-            return delegate.adaptAggregateOperation(aggrOp);
+            AggregateOperation<A, ? extends R> adaptedAggrOp = delegate.adaptAggregateOperation(aggrOp);
+            return UserMetricsUtil.wrap(adaptedAggrOp, aggrOp);
         }
 
         @Nonnull @Override
         <T, A, R> AggregateOperation1<?, A, ? extends R> adaptAggregateOperation1(
                 @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
         ) {
-            List<Serializable> metricsProviderCandidates = asList(
-                    aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
-                    aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
             AggregateOperation1<?, A, ? extends R> adaptedAggrOp = delegate.adaptAggregateOperation1(aggrOp);
-            return UserMetricsUtil.wrapAll(adaptedAggrOp, metricsProviderCandidates);
+            return UserMetricsUtil.wrap(adaptedAggrOp, aggrOp);
         }
 
         @Nonnull
         @Override
         <T0, T1, A, R> AggregateOperation2<?, ?, A, ? extends R> adaptAggregateOperation2(
                 @Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
-            List<Serializable> metricsProviderCandidates = asList(
-                    aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.createFn(), aggrOp.combineFn(),
-                    aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
             AggregateOperation2<?, ?, A, ? extends R> adaptedAggrOp = delegate.adaptAggregateOperation2(aggrOp);
-            return UserMetricsUtil.wrapAll(adaptedAggrOp, metricsProviderCandidates);
+            return UserMetricsUtil.wrap(adaptedAggrOp, aggrOp);
         }
 
         @Nonnull
         @Override
         <T0, T1, T2, A, R> AggregateOperation3<?, ?, ?, A, ? extends R> adaptAggregateOperation3(
                 @Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
-            List<Serializable> metricsProviderCandidates = asList(
-                    aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.accumulateFn2(), aggrOp.createFn(),
-                    aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
             AggregateOperation3<?, ?, ?, A, ? extends R> adaptedAggrOp = delegate.adaptAggregateOperation3(aggrOp);
-            return UserMetricsUtil.wrapAll(adaptedAggrOp, metricsProviderCandidates);
+            return UserMetricsUtil.wrap(adaptedAggrOp, aggrOp);
         }
     }
 }

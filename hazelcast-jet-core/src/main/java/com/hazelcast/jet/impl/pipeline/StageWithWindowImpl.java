@@ -21,6 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
@@ -28,6 +29,8 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
+import java.util.List;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
@@ -66,7 +69,10 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
-        return attachAggregate(aggrOp);
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 
     // This method was extracted in order to capture the wildcard parameter A.
@@ -89,7 +95,10 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents((ComputeStageImplBase) stage1, "stage1");
-        return attachAggregate2(stage1, aggrOp);
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        return attachAggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 
     // This method was extracted in order to capture the wildcard parameter A.
@@ -98,10 +107,11 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull AggregateOperation2<? super T, ? super T1, A, ? extends R> aggrOp
     ) {
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
+        AggregateOperation2<?, ?, A, ? extends R> adaptedAggrOp = fnAdapter.adaptAggregateOperation2(aggrOp);
         return streamStage.attach(new WindowAggregateTransform<A, R>(
                         asList(streamStage.transform, ((StreamStageImpl) stage1).transform),
                         wDef,
-                        fnAdapter.adaptAggregateOperation2(aggrOp)
+                        adaptedAggrOp
                 ),
                 fnAdapter);
     }
@@ -117,7 +127,10 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
-        return attachAggregate3(stage1, stage2, aggrOp);
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.accumulateFn2(), aggrOp.createFn(),
+                aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        return attachAggregate3(stage1, stage2, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
     }
 
     // This method was extracted in order to capture the wildcard parameter A.

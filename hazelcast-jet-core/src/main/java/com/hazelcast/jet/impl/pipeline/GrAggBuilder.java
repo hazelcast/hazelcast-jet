@@ -21,7 +21,6 @@ import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
@@ -97,26 +96,10 @@ public class GrAggBuilder<K> {
     ) {
         checkSerializable(mapToOutputFn, "mapToOutputFn");
 
-        List<Object> candidates = getMetricsProviderCandidates(aggrOp);
-        AggregateOperation<A, ? extends R> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp, candidates);
-
         List<Transform> upstreamTransforms = upstreamStages.stream().map(s -> s.transform).collect(toList());
-        Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, wrappedAggrOp, mapToOutputFn);
+        Transform transform = new GroupTransform<>(upstreamTransforms, keyFns, aggrOp, mapToOutputFn);
         pipelineImpl.connect(upstreamTransforms, transform);
         return new BatchStageImpl<>(transform, pipelineImpl);
-    }
-
-    private List<Object> getMetricsProviderCandidates(AggregateOperation<?, ?> aggrOp) {
-        List<Object> metricsProviderCandidates = new ArrayList<>();
-        for (int i = 0; i < aggrOp.arity(); i++) {
-            metricsProviderCandidates.add(aggrOp.accumulateFn(i));
-        }
-        metricsProviderCandidates.add(aggrOp.createFn());
-        metricsProviderCandidates.add(aggrOp.combineFn());
-        metricsProviderCandidates.add(aggrOp.deductFn());
-        metricsProviderCandidates.add(aggrOp.exportFn());
-        metricsProviderCandidates.add(aggrOp.finishFn());
-        return metricsProviderCandidates;
     }
 
     @SuppressWarnings("unchecked")

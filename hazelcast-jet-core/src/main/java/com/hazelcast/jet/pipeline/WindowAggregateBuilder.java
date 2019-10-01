@@ -22,11 +22,14 @@ import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.WindowResult;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.coAggregateOperationBuilder;
 
@@ -97,6 +100,20 @@ public class WindowAggregateBuilder<R0> {
         AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         CreateOutStageFn<WindowResult<ItemsByTag>, StreamStage<WindowResult<ItemsByTag>>> createOutStageFn =
                 StreamStageImpl::new;
-        return aggBuilder.build(aggrOp, createOutStageFn);
+        List<Object> metricsProviderCandidates = getMetricsProviderCandidates(aggrOp);
+        return aggBuilder.build(UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates), createOutStageFn);
+    }
+
+    private List<Object> getMetricsProviderCandidates(AggregateOperation<?, ?> aggrOp) {
+        List<Object> metricsProviderCandidates = new ArrayList<>();
+        for (int i = 0; i < aggrOp.arity(); i++) {
+            metricsProviderCandidates.add(aggrOp.accumulateFn(i));
+        }
+        metricsProviderCandidates.add(aggrOp.createFn());
+        metricsProviderCandidates.add(aggrOp.combineFn());
+        metricsProviderCandidates.add(aggrOp.deductFn());
+        metricsProviderCandidates.add(aggrOp.exportFn());
+        metricsProviderCandidates.add(aggrOp.finishFn());
+        return metricsProviderCandidates;
     }
 }

@@ -49,28 +49,26 @@ public final class UserMetricsUtil {
     private UserMetricsUtil() {
     }
 
-    public static ProvidesMetrics cast(Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return (ProvidesMetrics) metricsProviderCandidate;
+    public static ProvidesMetrics cast(Object candidate) {
+        if (candidate instanceof ProvidesMetrics) {
+            return (ProvidesMetrics) candidate;
         } else {
             return DUMMY_METRICS_PROVIDER;
         }
     }
 
-    public static <T, U> BiPredicateEx<T, U> wrap(BiPredicateEx<T, U> biPredicateEx, Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedBiPredicateEx<>(biPredicateEx, (ProvidesMetrics) metricsProviderCandidate);
-        } else {
-            return biPredicateEx;
+    public static <T, U> BiPredicateEx<T, U> wrap(BiPredicateEx<T, U> biPredicateEx, Object candidate) {
+        if (notAlreadyWrapped(biPredicateEx) && candidate instanceof ProvidesMetrics) {
+            return new WrappedBiPredicateEx<>(biPredicateEx, (ProvidesMetrics) candidate);
         }
+        return biPredicateEx;
     }
 
-    public static <T, U> BiConsumerEx<T, U> wrap(BiConsumerEx<T, U> biConsumerEx, Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedBiConsumerEx<>(biConsumerEx, (ProvidesMetrics) metricsProviderCandidate);
-        } else {
-            return biConsumerEx;
+    public static <T, U> BiConsumerEx<T, U> wrap(BiConsumerEx<T, U> biConsumerEx, Object candidate) {
+        if (notAlreadyWrapped(biConsumerEx) && candidate instanceof ProvidesMetrics) {
+            return new WrappedBiConsumerEx<>(biConsumerEx, (ProvidesMetrics) candidate);
         }
+        return biConsumerEx;
     }
 
     public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx,
@@ -78,117 +76,112 @@ public final class UserMetricsUtil {
         return wrapAll(biConsumerEx, getProvidesMetrics(metricsProviderCandidates.stream()));
     }
 
-    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Object[] metricsProviderCandidates) {
-        return wrapAll(biConsumerEx, getProvidesMetrics(Arrays.stream(metricsProviderCandidates)));
+    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Object[] candidates) {
+        return wrapAll(biConsumerEx, getProvidesMetrics(Arrays.stream(candidates)));
     }
 
     private static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Set<ProvidesMetrics> providers) {
-        if (providers.isEmpty()) {
-            return biConsumerEx;
-        } else {
+        if (notAlreadyWrapped(biConsumerEx) && !providers.isEmpty()) {
             return new WrappedBiConsumerEx<>(biConsumerEx, providers);
         }
+        return biConsumerEx;
     }
 
-    public static <T, R> FunctionEx<T, R> wrap(FunctionEx<T, R> functionEx, Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedFunctionEx<>(functionEx, (ProvidesMetrics) metricsProviderCandidate);
-        } else {
-            return functionEx;
+    public static <T, R> FunctionEx<T, R> wrap(FunctionEx<T, R> functionEx, Object candidate) {
+        if (notAlreadyWrapped(functionEx) && candidate instanceof ProvidesMetrics) {
+            return new WrappedFunctionEx<>(functionEx, (ProvidesMetrics) candidate);
         }
+        return functionEx;
     }
 
-    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> metricsProviderCandidates) {
-        return wrapAll(functionEx, getProvidesMetrics(metricsProviderCandidates.stream()));
+    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> candidates) {
+        return wrapAll(functionEx, getProvidesMetrics(candidates.stream()));
     }
 
-    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Object[] metricsProviderCandidates) {
-        return wrapAll(functionEx, getProvidesMetrics(Arrays.stream(metricsProviderCandidates)));
+    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Object[] candidates) {
+        return wrapAll(functionEx, getProvidesMetrics(Arrays.stream(candidates)));
     }
 
     private static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Set<ProvidesMetrics> providers) {
-        if (providers.isEmpty()) {
-            return functionEx;
-        } else {
+        if (notAlreadyWrapped(functionEx) && !providers.isEmpty()) {
             return new WrappedFunctionEx<>(functionEx, providers);
         }
+        return functionEx;
     }
 
     public static <T, U, R> BiFunctionEx<T, U, R> wrap(BiFunctionEx<T, U, R> biFunctionEx,
-                                                       Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedBiFunctionEx<>(biFunctionEx, (ProvidesMetrics) metricsProviderCandidate);
-        } else {
-            return biFunctionEx;
+                                                       Object candidate) {
+        if (notAlreadyWrapped(biFunctionEx) && candidate instanceof ProvidesMetrics) {
+            return new WrappedBiFunctionEx<>(biFunctionEx, (ProvidesMetrics) candidate);
         }
+        return biFunctionEx;
     }
 
     public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrap(TriFunction<T0, T1, T2, R> triFunction,
-                                                                  Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedTriFunction<>(triFunction, (ProvidesMetrics) metricsProviderCandidate);
-        } else {
-            return triFunction;
+                                                                  Object candidate) {
+        if (notAlreadyWrapped(triFunction) && candidate instanceof ProvidesMetrics) {
+            return new WrappedTriFunction<>(triFunction, (ProvidesMetrics) candidate);
         }
+        return triFunction;
     }
 
-    public static <P> SupplierEx<P> wrap(SupplierEx<P> supplierEx, Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
-            return new WrappedSupplierEx<>(supplierEx, (ProvidesMetrics) metricsProviderCandidate);
-        } else {
-            return supplierEx;
+    public static <P> SupplierEx<P> wrap(SupplierEx<P> supplierEx, Object candidate) {
+        if (notAlreadyWrapped(supplierEx) && candidate instanceof ProvidesMetrics) {
+            return new WrappedSupplierEx<>(supplierEx, (ProvidesMetrics) candidate);
         }
+        return supplierEx;
     }
 
-    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, List<?> metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates.stream());
+    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, List<?> candidates) {
+        Set<ProvidesMetrics> providers = getProvidesMetrics(candidates.stream());
         return wrapAll(supplierEx, providers);
     }
 
-    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Object[] metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(Arrays.stream(metricsProviderCandidates));
+    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Object[] candidates) {
+        Set<ProvidesMetrics> providers = getProvidesMetrics(Arrays.stream(candidates));
         return wrapAll(supplierEx, providers);
     }
 
     private static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Set<ProvidesMetrics> providers) {
-        if (providers.isEmpty()) {
-            return supplierEx;
-        } else {
+        if (notAlreadyWrapped(supplierEx) && !providers.isEmpty()) {
             return new WrappedSupplierEx<>(supplierEx, providers);
         }
+        return supplierEx;
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends AggregateOperation> T wrap(T aggrOp, Object metricsProviderCandidate) {
-        if (metricsProviderCandidate instanceof ProvidesMetrics) {
+    public static <T extends AggregateOperation> T wrap(T aggrOp, Object candidate) {
+        if (notAlreadyWrapped(aggrOp) && candidate instanceof ProvidesMetrics) {
             if (aggrOp.arity() == 1) {
                 return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp,
-                        (ProvidesMetrics) metricsProviderCandidate);
+                        (ProvidesMetrics) candidate);
             } else if (aggrOp.arity() == 2) {
                 return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp,
-                        (ProvidesMetrics) metricsProviderCandidate);
+                        (ProvidesMetrics) candidate);
             } else if (aggrOp.arity() == 3) {
                 return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp,
-                        (ProvidesMetrics) metricsProviderCandidate);
+                        (ProvidesMetrics) candidate);
             } else {
-                return (T) new WrappedAggregateOperation(aggrOp, (ProvidesMetrics) metricsProviderCandidate);
+                return (T) new WrappedAggregateOperation(aggrOp, (ProvidesMetrics) candidate);
             }
         }
         return aggrOp;
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends AggregateOperation> T wrapAll(T aggrOp, List<?> metricsProviderCandidates) {
-        Set<ProvidesMetrics> providers = getProvidesMetrics(metricsProviderCandidates.stream());
-        if (!providers.isEmpty()) {
-            if (aggrOp.arity() == 1) {
-                return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp, providers);
-            } else if (aggrOp.arity() == 2) {
-                return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp, providers);
-            } else if (aggrOp.arity() == 3) {
-                return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp, providers);
-            } else {
-                return (T) new WrappedAggregateOperation(aggrOp, providers);
+    public static <T extends AggregateOperation> T wrapAll(T aggrOp, List<?> candidates) {
+        if (notAlreadyWrapped(aggrOp)) {
+            Set<ProvidesMetrics> providers = getProvidesMetrics(candidates.stream());
+            if (!providers.isEmpty()) {
+                if (aggrOp.arity() == 1) {
+                    return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp, providers);
+                } else if (aggrOp.arity() == 2) {
+                    return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp, providers);
+                } else if (aggrOp.arity() == 3) {
+                    return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp, providers);
+                } else {
+                    return (T) new WrappedAggregateOperation(aggrOp, providers);
+                }
             }
         }
         return aggrOp;
@@ -199,6 +192,10 @@ public final class UserMetricsUtil {
                 .filter(ProvidesMetrics.class::isInstance)
                 .map(ProvidesMetrics.class::cast)
                 .collect(toSet());
+    }
+
+    private static boolean notAlreadyWrapped(Object obj) {
+        return !(obj instanceof AbstractWrapper);
     }
 
     @SuppressWarnings("unchecked")

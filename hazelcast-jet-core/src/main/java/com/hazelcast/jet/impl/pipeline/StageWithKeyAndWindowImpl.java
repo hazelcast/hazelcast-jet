@@ -21,6 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
@@ -29,6 +30,8 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
+import java.util.List;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
@@ -61,6 +64,14 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+    }
+
+    private <R> StreamStage<KeyedWindowResult<K, R>> attachAggregate(
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return computeStage.attach(new WindowGroupTransform<K, R>(
                         singletonList(computeStage.transform),
@@ -79,12 +90,20 @@ public class StageWithKeyAndWindowImpl<T, K>
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(((StageWithGroupingBase) stage1).computeStage, "stage1");
         Transform upstream1 = ((StageWithGroupingBase) stage1).computeStage.transform;
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.createFn(), aggrOp.combineFn(),
+                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        return attachAggregate2(stage1, upstream1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+    }
+
+    private <T1, R> StreamStage<KeyedWindowResult<K, R>> attachAggregate2(
+            @Nonnull StreamStageWithKey<T1, ? extends K> stage1, Transform upstream1, @
+            Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp) {
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return computeStage.attach(new WindowGroupTransform<K, R>(
                         asList(computeStage.transform, upstream1),
                         wDef,
-                        asList(fnAdapter.adaptKeyFn(keyFn()),
-                                fnAdapter.adaptKeyFn(stage1.keyFn())),
+                        asList(fnAdapter.adaptKeyFn(keyFn()), fnAdapter.adaptKeyFn(stage1.keyFn())),
                         fnAdapter.adaptAggregateOperation2(aggrOp)
                 ),
                 fnAdapter);
@@ -103,6 +122,20 @@ public class StageWithKeyAndWindowImpl<T, K>
         ensureJetEvents(stageImpl2, "stage2");
         Transform transform1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         Transform transform2 = ((StageWithGroupingBase) stage2).computeStage.transform;
+
+        List<Serializable> metricsProviderCandidates = asList(
+                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.accumulateFn2(), aggrOp.createFn(),
+                aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
+        return attachAggregate3(stage1, stage2, transform1, transform2,
+                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+    }
+
+    private <T1, T2, R> StreamStage<KeyedWindowResult<K, R>> attachAggregate3(
+            @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
+            @Nonnull StreamStageWithKey<T2, ? extends K> stage2,
+            Transform transform1, Transform transform2,
+            AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> aggrOp
+    ) {
         FunctionAdapter fnAdapter = ADAPT_TO_JET_EVENT;
         return computeStage.attach(new WindowGroupTransform<K, R>(
                         asList(computeStage.transform, transform1, transform2),
