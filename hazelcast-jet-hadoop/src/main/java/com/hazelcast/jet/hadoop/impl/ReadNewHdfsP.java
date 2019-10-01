@@ -21,10 +21,11 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.nio.Address;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -35,6 +36,11 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import javax.annotation.Nonnull;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +48,6 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
@@ -51,11 +56,23 @@ import static java.util.stream.Collectors.toList;
  */
 public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
 
+    private final Configuration jobConf;
+    private final InputFormat inputFormat;
     private final Traverser<R> trav;
     private final BiFunctionEx<K, V, R> projectionFn;
+    private final BetterByteArrayOutputStream cloneBuffer = new BetterByteArrayOutputStream();
+    private final DataOutputStream cloneBufferDataOutput = new DataOutputStream(cloneBuffer);
 
-    private ReadNewHdfsP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
-        this.trav = traverseIterable(recordReaders).flatMap(this::traverseRecordReader);
+    private ReadNewHdfsP(
+            @Nonnull Configuration jobConf,
+            @Nonnull InputFormat inputFormat,
+            @Nonnull List<InputSplit> splits,
+            @Nonnull BiFunctionEx<K, V, R> projectionFn
+    ) {
+        this.jobConf = jobConf;
+        this.inputFormat = inputFormat;
+        this.trav = traverseIterable(splits)
+                .flatMap(this::traverseSplit);
         this.projectionFn = projectionFn;
     }
 
@@ -69,23 +86,43 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
         return emitFromTraverser(trav);
     }
 
-    private Traverser<R> traverseRecordReader(RecordReader<K, V> r) {
+    private Traverser<R> traverseSplit(InputSplit split) {
+        RecordReader<K, V> reader;
+        try {
+            TaskAttemptContextImpl attemptContext = new TaskAttemptContextImpl(jobConf, new TaskAttemptID());
+            reader = inputFormat.createRecordReader(split, attemptContext);
+            reader.initialize(split, attemptContext);
+        } catch (IOException | InterruptedException e) {
+            throw sneakyThrow(e);
+        }
+
         return () -> {
             try {
-                while (r.nextKeyValue()) {
-                    K key = r.getCurrentKey();
-                    V value = r.getCurrentValue();
+                while (reader.nextKeyValue()) {
+                    K key = tryClone(reader.getCurrentKey());
+                    V value = tryClone(reader.getCurrentValue());
                     R projectedRecord = projectionFn.apply(key, value);
                     if (projectedRecord != null) {
                         return projectedRecord;
                     }
                 }
-                r.close();
+                reader.close();
                 return null;
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
         };
+    }
+
+    private <T> T tryClone(T o) throws IOException, IllegalAccessException, InstantiationException {
+        if (o instanceof Writable) {
+            ((Writable) o).write(cloneBufferDataOutput);
+            Writable newO = (Writable) o.getClass().newInstance();
+            newO.readFields(cloneBuffer.getDataInputStream());
+            o = (T) newO;
+            cloneBuffer.reset();
+        }
+        return o;
     }
 
     public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase {
@@ -151,21 +188,56 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
             return processorToSplits
                     .values()
                     .stream()
-                    .map(splits -> splits.isEmpty()
-                            ? Processors.noopP().get()
-                            : new ReadNewHdfsP<>(splits
-                            .stream()
-                            .map(IndexedInputSplit::getNewSplit)
-                            .map(split -> uncheckCall(() -> {
-                                        TaskAttemptContextImpl attemptContext = new TaskAttemptContextImpl(jobConf,
-                                                new TaskAttemptID());
-                                        RecordReader reader = inputFormat.createRecordReader(split, attemptContext);
-                                        reader.initialize(split, attemptContext);
-                                        return reader;
-                                    }
-                            ))
-                            .collect(toList()), mapper)
+                    .map(splits -> {
+                                List<InputSplit> mappedSplits = splits
+                                        .stream()
+                                        .map(IndexedInputSplit::getNewSplit)
+                                        .collect(toList());
+                                return new ReadNewHdfsP<>(jobConf, inputFormat, mappedSplits, mapper);
+                            }
                     ).collect(toList());
+        }
+    }
+
+    private static final class BetterByteArrayOutputStream extends ByteArrayOutputStream {
+        private static final int BYTE_MASK = 0xff;
+
+        private int inputStreamPos;
+
+        private InputStream inputStream = new InputStream() {
+            @Override
+            public int read() {
+                return (inputStreamPos < count) ? (buf[inputStreamPos++] & BYTE_MASK) : -1;
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) {
+                if (inputStreamPos == count) {
+                    return -1;
+                }
+                int copiedLength = Math.min(len, count - inputStreamPos);
+                System.arraycopy(buf, inputStreamPos, b, off, copiedLength);
+                inputStreamPos += copiedLength;
+                return copiedLength;
+            }
+        };
+
+        private DataInputStream inputStreamDataInput = new DataInputStream(inputStream);
+
+        /**
+         * Returns a DataInputStream from which you can read current contents
+         * of this output stream. Calling this method again invalidates the
+         * previously returned stream.
+         */
+        DataInputStream getDataInputStream() {
+            inputStreamPos = 0;
+            return inputStreamDataInput;
+        }
+
+        @Override
+        public void reset() {
+            inputStreamPos = 0;
+            super.reset();
         }
     }
 }

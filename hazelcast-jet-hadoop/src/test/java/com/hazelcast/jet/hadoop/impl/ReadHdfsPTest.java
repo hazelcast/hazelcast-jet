@@ -18,10 +18,11 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.core.IList;
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.function.BiFunctionEx;
+import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,13 +52,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.Future;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.Edge.between;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
-import static com.hazelcast.jet.hadoop.HdfsProcessors.readHdfsP;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Integer.parseInt;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
@@ -76,10 +71,11 @@ public class ReadHdfsPTest extends HdfsTestSupport {
 
     @Parameterized.Parameter(1)
     public EMapperType mapperType;
-    private JobConf jobConf;
+
+    private Configuration jobConf;
     private Set<Path> paths = new HashSet<>();
 
-    @Parameterized.Parameters(name = "inputFormatClass={0}, mapper={1}")
+    @Parameterized.Parameters(name = "inputFormat={0}, mapper={1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
                 new Object[] {TextInputFormat.class, EMapperType.DEFAULT},
@@ -108,8 +104,10 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         createConf();
 
         writeToFile();
-        for (Path path : paths) {
-            FileInputFormat.addInputPath(jobConf, path);
+        if (jobConf instanceof JobConf) {
+            for (Path path : paths) {
+                FileInputFormat.addInputPath((JobConf) jobConf, path);
+            }
         }
     }
 
@@ -117,28 +115,27 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setInputFormatClass(inputFormatClass);
-            jobConf = new JobConf(job.getConfiguration());
+            jobConf = job.getConfiguration();
         } else {
-            jobConf = new JobConf();
+            JobConf jobConf = new JobConf();
+            this.jobConf = jobConf;
             jobConf.setInputFormat(inputFormatClass);
         }
     }
 
     @Test
     public void testReadHdfs() {
-        // TODO [viliam] test the new api
-        DAG dag = new DAG();
+        IList<Object> sinkList = instance().getList(randomName());
+        Pipeline p = Pipeline.create();
+        p.drawFrom(HdfsSources.hdfsNewApi(jobConf, mapperType.mapper))
+         .setLocalParallelism(4)
+         .drainTo(Sinks.list(sinkList))
+         .setLocalParallelism(1);
 
-        IList sinkList = instance().getList(randomName());
-        Vertex source = dag.newVertex("source", readHdfsP(jobConf, mapperType.mapper))
-                           .localParallelism(4);
-        Vertex sink = dag.newVertex("sink", writeListP(sinkList.getName()))
-                         .localParallelism(1);
-        dag.edge(between(source, sink));
+        instance().newJob(p).join();
 
-        Future<Void> future = instance().newJob(dag).getFuture();
-        assertCompletesEventually(future);
-
+        System.out.println("Result list contents:");
+        sinkList.forEach(System.out::println);
         assertEquals(expectedSinkSize(), sinkList.size());
         assertTrue(sinkList.get(0).toString().contains("value"));
     }
@@ -151,14 +148,15 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         Configuration conf = new Configuration();
         LocalFileSystem local = FileSystem.getLocal(conf);
 
-        IntStream.range(0, 4).mapToObj(i -> createPath()).forEach(path -> uncheckRun(() -> {
+        for (int i = 0; i < 4; i++) {
+            Path path = createPath();
             paths.add(path);
-            if (SequenceFileInputFormat.class.equals(inputFormatClass)) {
+            if (inputFormatClass.equals(org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class)) {
                 writeToSequenceFile(conf, path);
             } else {
                 writeToTextFile(local, path);
             }
-        }));
+        }
     }
 
     private static void writeToTextFile(LocalFileSystem local, Path path) throws IOException {

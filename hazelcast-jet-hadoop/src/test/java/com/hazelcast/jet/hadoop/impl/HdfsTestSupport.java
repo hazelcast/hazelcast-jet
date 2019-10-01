@@ -19,7 +19,7 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import org.junit.Before;
 
-public class HdfsTestSupport extends SimpleTestInClusterSupport {
+public abstract class HdfsTestSupport extends SimpleTestInClusterSupport {
 
     @Before
     public void hdfsSupportBefore() {
