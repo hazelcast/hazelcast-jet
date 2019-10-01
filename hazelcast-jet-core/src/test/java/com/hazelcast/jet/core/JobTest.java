@@ -16,9 +16,13 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.client.config.ClientNetworkConfig;
+import com.hazelcast.client.spi.properties.ClientProperty;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobAlreadyExistsException;
+import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.Identity;
@@ -26,8 +30,10 @@ import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.nio.Address;
 import com.hazelcast.test.ExpectedRuntimeException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -755,6 +761,63 @@ public class JobTest extends JetTestSupport {
         assertNotEquals(0, trackedJob.getSubmissionTime());
     }
 
+    @Test
+    public void when_joinFromClientTimesOut_then_futureShouldNotBeCompletedEarly() throws InterruptedException {
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
+
+        int timeoutSecs = 1;
+        ClientConfig config = new JetClientConfig()
+                .setProperty(ClientProperty.INVOCATION_TIMEOUT_SECONDS.getName(), Integer.toString(timeoutSecs));
+        JetInstance client = createJetClient(config);
+
+        // join request is sent along with job submission
+        Job job = client.newJob(dag);
+        NoOutputSourceP.executionStarted.await();
+
+        // wait for join invocation to timeout
+        Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSecs));
+
+        // When
+        instance1.getHazelcastInstance().getLifecycleService().terminate();
+        RuntimeException ex = new RuntimeException("Faulty job");
+        NoOutputSourceP.failure.set(ex);
+
+        // Then
+        expectedException.expectMessage(Matchers.containsString(ex.getMessage()));
+        job.join();
+    }
+
+    @Test
+    public void when_joinFromClientSentToNonMaster_then_futureShouldNotBeCompletedEarly() throws InterruptedException {
+        DAG dag = new DAG().vertex(new Vertex("test", new MockPS(NoOutputSourceP::new, NODE_COUNT)));
+
+        int timeoutSecs = 1;
+        Address address = getAddress(instance2);
+        ClientConfig config = new JetClientConfig()
+                .setProperty(ClientProperty.INVOCATION_TIMEOUT_SECONDS.getName(), Integer.toString(timeoutSecs))
+                .setNetworkConfig(new ClientNetworkConfig()
+                        .setSmartRouting(false)
+                        .addAddress(address.getHost() + ":" + address.getPort())
+                );
+        JetInstance client = createJetClient(config);
+
+        // join request is sent along with job submission
+        Job job = client.newJob(dag);
+        NoOutputSourceP.executionStarted.await();
+
+        // wait for join invocation to timeout
+        Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSecs));
+
+        // When
+        instance1.getHazelcastInstance().getLifecycleService().terminate();
+        RuntimeException ex = new RuntimeException("Faulty job");
+        NoOutputSourceP.failure.set(ex);
+
+        // Then
+        expectedException.expectMessage(Matchers.containsString(ex.getMessage()));
+        job.join();
+    }
+
     private void joinAndExpectCancellation(Job job) {
         try {
             job.join();
@@ -777,7 +840,8 @@ public class JobTest extends JetTestSupport {
             initLatch.await();
         }
 
-        @Nonnull @Override
+        @Nonnull
+        @Override
         public Collection<? extends Processor> get(int count) {
             return Stream.generate(supplier).limit(count).collect(toList());
 
