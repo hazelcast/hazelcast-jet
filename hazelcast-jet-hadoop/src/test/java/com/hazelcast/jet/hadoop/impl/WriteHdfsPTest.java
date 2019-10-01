@@ -24,6 +24,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -37,6 +38,8 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.LazyOutputFormat;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,17 +67,23 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameter(1)
     public Class inputFormatClass;
 
+    private java.nio.file.Path javaDir;
+    private Path hadoopDir;
+
     @Parameterized.Parameters(name = "Executing: {0} {1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
                 new Object[] {TextOutputFormat.class, TextInputFormat.class},
                 new Object[] {LazyOutputFormat.class, TextInputFormat.class},
                 new Object[] {SequenceFileOutputFormat.class, SequenceFileInputFormat.class},
-                new Object[] {org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class,
+                new Object[] {
+                        org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
-                new Object[] {org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.class,
+                new Object[] {
+                        org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
-                new Object[] {org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat.class,
+                new Object[] {
+                        org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class}
         );
     }
@@ -84,22 +93,33 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         initialize(2, null);
     }
 
+    @Before
+    public void before() throws IOException {
+        javaDir = Files.createTempDirectory(getClass().getSimpleName());
+        hadoopDir = new Path(javaDir.toString());
+    }
+
+    @After
+    public void after() {
+        IOUtil.delete(javaDir.toFile());
+    }
+
     @Test
     public void testWrite_oldApi() throws Exception {
-        testWrite(HdfsSources::hdfs, HdfsSinks::hdfs);
+        testWrite("old", HdfsSources::hdfs, HdfsSinks::hdfs);
     }
 
     @Test
     public void testWrite_newApi() throws Exception {
-        testWrite(HdfsSources::hdfsNewApi, HdfsSinks::hdfsNewApi);
+        testWrite("new", HdfsSources::hdfsNewApi, HdfsSinks::hdfsNewApi);
     }
 
     private void testWrite(
+            String runnerType,
             Function<JobConf, BatchSource<Entry<IntWritable, IntWritable>>> sourceFactory,
             Function<JobConf, Sink<Entry<IntWritable, IntWritable>>> sinkFactory
     ) throws Exception {
-        Path directory = new Path(Files.createTempDirectory(getClass().getSimpleName()).toString());
-        JobConf conf = getSinkConf(directory);
+        JobConf conf = getSinkConf(hadoopDir);
 
         int messageCount = 320;
         Pipeline p = Pipeline.create();
@@ -110,7 +130,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
          .setLocalParallelism(8);
 
         instance().newJob(p).join();
-        JobConf readJobConf = getReadJobConf(directory);
+        JobConf readJobConf = getReadJobConf(hadoopDir);
 
         p = Pipeline.create();
         IList<Entry> resultList = instance().getList(randomName());
@@ -118,6 +138,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
          .drainTo(Sinks.list(resultList));
 
         instance().newJob(p).join();
+        logger.info("Result list contents:\n" + resultList.stream().map(e -> e.toString() + ", key type: " + e.getKey().getClass().getName() + ", value type: " + e.getValue().getClass().getName()).collect(joining("\n")));
         assertEquals(messageCount, resultList.size());
     }
 

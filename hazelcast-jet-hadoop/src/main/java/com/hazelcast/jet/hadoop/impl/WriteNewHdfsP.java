@@ -84,7 +84,8 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
     @Override
     public void close() throws Exception {
         recordWriter.close(taskAttemptContext);
-        if (outputCommitter.needsTaskCommit(taskAttemptContext)) {
+        boolean needsCommit = outputCommitter.needsTaskCommit(taskAttemptContext);
+        if (needsCommit) {
             outputCommitter.commitTask(taskAttemptContext);
         }
     }
@@ -99,6 +100,7 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
+        private Context context;
 
         public MetaSupplier(SerializableConfiguration configuration,
                             FunctionEx<? super T, K> extractKeyFn,
@@ -116,10 +118,11 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
+            this.context = context;
             jobContext = new JobContextImpl(configuration, new JobID());
             OutputFormat outputFormat = getOutputFormat(configuration);
             outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
-                    getUuid(context)));
+                    context.jetInstance().getCluster().getLocalMember().getUuid()));
             outputCommitter.setupJob(jobContext);
         }
 
@@ -170,12 +173,13 @@ public final class WriteNewHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            return range(0, count).mapToObj(i -> {
+            return range(0, count).mapToObj(localIndex -> {
                 try {
                     JobConf copiedConfig = new JobConf(configuration);
-                    TaskAttemptID taskAttemptID = getTaskAttemptID(i, jobContext, getUuid(context));
+                    int globalIndex = context.memberIndex() * context.localParallelism() + localIndex;
+                    TaskAttemptID taskAttemptID = getTaskAttemptID(globalIndex, jobContext, getUuid(context));
                     copiedConfig.set("mapreduce.task.attempt.id", taskAttemptID.toString());
-                    copiedConfig.setInt("mapreduce.task.partition", i);
+                    copiedConfig.setInt("mapreduce.task.partition", globalIndex);
 
                     TaskAttemptContextImpl taskAttemptContext = new TaskAttemptContextImpl(copiedConfig, taskAttemptID);
                     @SuppressWarnings("unchecked")
