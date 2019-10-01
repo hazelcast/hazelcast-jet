@@ -175,7 +175,7 @@ public interface StageWithKeyAndWindow<T, K> {
             @Nonnull StreamStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1
     ) {
-        return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1, Tuple2::tuple2));
+        return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1));
     }
 
     /**

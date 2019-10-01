@@ -36,6 +36,10 @@ import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
+import com.hazelcast.jet.pipeline.StageWithWindow;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
@@ -79,6 +83,19 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
     }
 
     @Test
+    public void aggregate_1way_batchWithKey() {
+        AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
+                aggrOp("create", "add", "combine", "deduct", "export", "finish");
+
+        pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L))
+                .groupingKey(l -> l % 3L)
+                .aggregate(aggrOp)
+                .drainTo(assertAnyOrder(Arrays.asList(entry(0L, 18L), entry(1L, 22L), entry(2L, 15L))));
+
+        assertCountersProduced("create", 6, "add", 10, "combine", 3, "deduct", 0, "export", 0, "finish", 3);
+    }
+
+    @Test
     public void aggregate_1way_streamWithSlidingWindow() {
         AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
                 aggrOp("create", "add", "combine", "deduct", "export", "finish");
@@ -87,10 +104,11 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .addTimestamps(i -> i, 0L)
                 .window(WindowDefinition.tumbling(3))
                 .aggregate(aggrOp)
+                .setLocalParallelism(4)
                 .map(WindowResult::result)
                 .drainTo(assertAnyOrder(Arrays.asList(3L, 12L, 21L, 30L)));
 
-        assertCountersProduced("create", 29, "add", 12, "combine", 12, "deduct", 0, "export", 0, "finish", 4);
+        assertCountersProduced("create", 21, "add", 12, "combine", 12, "deduct", 0, "export", 0, "finish", 4);
     }
 
     @Test
@@ -109,16 +127,36 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
     }
 
     @Test
-    public void aggregate_1way_batchWithKey() {
+    public void aggregate_1way_streamWithSlidingWindowAndKey() {
         AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
                 aggrOp("create", "add", "combine", "deduct", "export", "finish");
 
-        pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L))
-                .groupingKey(l -> l % 3L)
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .groupingKey(l -> 0L)
                 .aggregate(aggrOp)
-                .drainTo(assertAnyOrder(Arrays.asList(entry(0L, 18L), entry(1L, 22L), entry(2L, 15L))));
+                .setLocalParallelism(4)
+                .map(WindowResult::result)
+                .drainTo(assertAnyOrder(Arrays.asList(3L, 12L, 21L, 30L)));
 
-        assertCountersProduced("create", 6, "add", 10, "combine", 3, "deduct", 0, "export", 0, "finish", 3);
+        assertCountersProduced("create", 16, "add", 12, "combine", 4, "deduct", 0, "export", 0, "finish", 4);
+    }
+
+    @Test
+    public void aggregate_1way_streamWithSessionWindowAndKey() {
+        AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
+                aggrOp("create", "add", "combine", "deduct", "export", "finish");
+
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L, 5L, 16L, 17L, 18L, 19L, 20L, 21L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.session(5))
+                .groupingKey(l -> 0L)
+                .aggregate(aggrOp)
+                .map(WindowResult::result)
+                .drainTo(assertAnyOrder(Arrays.asList(15L, 111L)));
+
+        assertCountersProduced("create", 2, "add", 12, "combine", 0, "deduct", 0, "export", 0, "finish", 2);
     }
 
     @Test
@@ -191,6 +229,194 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
 
         assertCountersProduced("create1", 6, "add1", 5, "combine1", 3, "deduct1", 0, "export1", 0, "finish1", 3,
                 "create2", 6, "add2", 5, "combine2", 3, "deduct2", 0, "export2", 0, "finish2", 3);
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSlidingWindow_simple() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithWindow<Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3));
+        StreamStage<Long> stage2 = pipeline.drawFrom(TestSources.items(8L, 9L, 10L, 11L))
+                .addTimestamps(i -> i, 0L);
+
+        stage1.aggregate2(op1, stage2, op2)
+                .setLocalParallelism(4)
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 21, "add1", 8, "combine1", 12, "deduct1", 0, "export1", 0, "finish1", 4,
+                "create2", 21, "add2", 4, "combine2", 12, "deduct2", 0, "export2", 0, "finish2", 4
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSlidingWindow_merged() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithWindow<Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3));
+        StreamStage<Long> stage2 = pipeline.drawFrom(TestSources.items(8L, 9L, 10L, 11L))
+                .addTimestamps(i -> i, 0L);
+
+        stage1.aggregate2(stage2, AggregateOperations.aggregateOperation2(op1, op2))
+                .setLocalParallelism(4)
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 21, "add1", 8, "combine1", 12, "deduct1", 0, "export1", 0, "finish1", 4,
+                "create2", 21, "add2", 4, "combine2", 12, "deduct2", 0, "export2", 0, "finish2", 4
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSessionWindow_simple() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithWindow<Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 10L, 11L, 12L, 13L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.session(5));
+        StreamStage<Long> stage2 = pipeline.drawFrom(TestSources.items(4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L);
+
+        stage1.aggregate2(op1, stage2, op2)
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
+                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSessionWindow_merged() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithWindow<Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 10L, 11L, 12L, 13L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.session(5));
+        StreamStage<Long> stage2 = pipeline.drawFrom(TestSources.items(4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L);
+
+        stage1.aggregate2(stage2, AggregateOperations.aggregateOperation2(op1, op2))
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
+                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSlidingWindowAndKey_simple() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithKeyAndWindow<Long, Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .groupingKey(l -> 0L);
+        StreamStageWithKey<Long, Long> stage2 = pipeline.drawFrom(TestSources.items(8L, 9L, 10L, 11L))
+                .addTimestamps(i -> i, 0L)
+                .groupingKey(l -> 0L);
+
+        stage1.aggregate2(op1, stage2, op2)
+                .setLocalParallelism(4)
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 16, "add1", 8, "combine1", 4, "deduct1", 0, "export1", 0, "finish1", 4,
+                "create2", 16, "add2", 4, "combine2", 4, "deduct2", 0, "export2", 0, "finish2", 4
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSlidingWindowAndKey_merged() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithKeyAndWindow<Long, Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .groupingKey(l -> 0L);
+        StreamStageWithKey<Long, Long> stage2 = pipeline.drawFrom(TestSources.items(8L, 9L, 10L, 11L))
+                .addTimestamps(i -> i, 0L)
+                .groupingKey(l -> 0L);
+
+        stage1.aggregate2(stage2, AggregateOperations.aggregateOperation2(op1, op2))
+                .setLocalParallelism(4)
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 16, "add1", 8, "combine1", 4, "deduct1", 0, "export1", 0, "finish1", 4,
+                "create2", 16, "add2", 4, "combine2", 4, "deduct2", 0, "export2", 0, "finish2", 4
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSessionWindowAndKey_simple() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithKeyAndWindow<Long, Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 10L, 11L, 12L, 13L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.session(5))
+                .groupingKey(l -> 0L);
+        StreamStageWithKey<Long, Long> stage2 = pipeline.drawFrom(TestSources.items(4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L)
+                .groupingKey(l -> 0L);
+
+        stage1.aggregate2(op1, stage2, op2)
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
+                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+        );
+    }
+
+    @Test
+    public void aggregate_2way_streamWithSessionWindowAndKey_merged() {
+        AggregateOperation1<Long, LongAccumulator, Long> op1 =
+                aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
+        AggregateOperation1<Long, LongAccumulator, Long> op2 =
+                aggrOp("create2", "add2", "combine2", "deduct2", "export2", "finish2");
+
+        StageWithKeyAndWindow<Long, Long> stage1 = pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 10L, 11L, 12L, 13L))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.session(5))
+                .groupingKey(l -> 0L);
+        StreamStageWithKey<Long, Long> stage2 = pipeline.drawFrom(TestSources.items(4L, 5L, 6L, 7L))
+                .addTimestamps(i -> i, 0L)
+                .groupingKey(l -> 0L);
+
+        stage1.aggregate2(stage2, AggregateOperations.aggregateOperation2(op1, op2))
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(
+                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
+                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+        );
     }
 
     @Test
@@ -284,6 +510,46 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
     }
 
     @Test
+    public void aggregate_3way_streamWithSlidingWindow_simple() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSlidingWindow_merged() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSessionWindow_simple() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSessionWindow_merged() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSlidingWindowAndKey_simple() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSlidingWindowAndKey_merged() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSessionWindowAndKey_simple() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_3way_streamWithSessionWindowAndKey_merged() {
+        //todo
+    }
+
+    @Test
     public void aggregate_builder_batch() {
         AggregateOperation1<Long, LongAccumulator, Long> op1 =
                 aggrOp("create1", "add1", "combine1", "deduct1", "export1", "finish1");
@@ -345,6 +611,26 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 "create2", 6, "add2", 3, "combine2", 3, "deduct2", 0, "export2", 0, "finish2", 3,
                 "create3", 6, "add3", 2, "combine3", 3, "deduct3", 0, "export3", 0, "finish3", 3,
                 "create4", 6, "add4", 1, "combine4", 3, "deduct4", 0, "export4", 0, "finish4", 3);
+    }
+
+    @Test
+    public void aggregate_builder_streamWithSlidingWindow() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_builder_streamWithSessionWindow() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_builder_streamWithSlidingWindowAndKey() {
+        //todo
+    }
+
+    @Test
+    public void aggregate_builder_streamWithSessionWindowAndKey() {
+        //todo
     }
 
     private AggregateOperation1<Long, LongAccumulator, Long> aggrOp(String create, String add, String combine,

@@ -173,6 +173,19 @@ public class FunctionAdapter {
     }
 
     @Nonnull
+    <T0, T1, A, R> AggregateOperation2<?, ?, A, ? extends R>
+    adaptAggregateOperation2(@Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
+        return aggrOp;
+    }
+
+    @Nonnull
+    <T0, T1, T2, A, R>
+    AggregateOperation3<?, ?, ?, A, ? extends R>
+    adaptAggregateOperation3(@Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
+        return aggrOp;
+    }
+
+    @Nonnull
     public static ProcessorMetaSupplier adaptingMetaSupplier(ProcessorMetaSupplier metaSup, int[] ordinalsToAdapt) {
         return new WrappingProcessorMetaSupplier(metaSup, p -> new AdaptingProcessor(p, ordinalsToAdapt));
     }
@@ -387,16 +400,16 @@ class JetEventFunctionAdapter extends FunctionAdapter {
         return aggrOp.withAccumulateFn(adaptAccumulateFn(aggrOp.accumulateFn()));
     }
 
-    @Nonnull
-    static <T0, T1, A, R> AggregateOperation2<? super JetEvent<T0>, ? super JetEvent<T1>, A, ? extends R>
+    @Nonnull @Override
+    <T0, T1, A, R> AggregateOperation2<? super JetEvent<T0>, ? super JetEvent<T1>, A, ? extends R>
     adaptAggregateOperation2(@Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
         return aggrOp
                 .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
                 .withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()));
     }
 
-    @Nonnull
-    static <T0, T1, T2, A, R>
+    @Nonnull @Override
+    <T0, T1, T2, A, R>
     AggregateOperation3<? super JetEvent<T0>, ? super JetEvent<T1>, ? super JetEvent<T2>, A, ? extends R>
     adaptAggregateOperation3(@Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
         return aggrOp

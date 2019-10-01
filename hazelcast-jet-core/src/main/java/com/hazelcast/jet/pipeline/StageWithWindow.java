@@ -23,12 +23,16 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
+import java.util.List;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
 import static com.hazelcast.jet.function.Functions.wholeItem;
+import static java.util.Arrays.asList;
 
 /**
  * Represents an intermediate step in the construction of a pipeline stage
@@ -154,8 +158,8 @@ public interface StageWithWindow<T> {
     /**
      * Attaches a stage that performs the given co-aggregate operations over
      * the items from this stage and {@code stage1} you supply. It performs
-     * the aggregation separately for each input stage: {@code aggrOp0} on this
-     * stage and {@code aggrOp1} on {@code stage1}. Once it has received all
+     * the aggregation separately for each input stage: {@code op0} on this
+     * stage and {@code op1} on {@code stage1}. Once it has received all
      * the items belonging to a window, it emits a {@code
      * WindowResult(Tuple2(result0, result1))}.
      * <p>
@@ -173,20 +177,25 @@ public interface StageWithWindow<T> {
      * }</pre>
      *
      * @see com.hazelcast.jet.aggregate.AggregateOperations AggregateOperations
-     * @param aggrOp0 aggregate operation to perform on this stage
+     * @param op0 aggregate operation to perform on this stage
      * @param stage1 the other stage
-     * @param aggrOp1 aggregate operation to perform on the other stage
+     * @param op1 aggregate operation to perform on the other stage
      * @param <T1> type of the items in the other stage
      * @param <R0> type of the aggregated result for this stage
      * @param <R1> type of the aggregated result for the other stage
      */
     @Nonnull
     default <T1, R0, R1> StreamStage<WindowResult<Tuple2<R0, R1>>> aggregate2(
-            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> aggrOp0,
+            @Nonnull AggregateOperation1<? super T, ?, ? extends R0> op0,
             @Nonnull StreamStage<T1> stage1,
-            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> aggrOp1
+            @Nonnull AggregateOperation1<? super T1, ?, ? extends R1> op1
     ) {
-        return aggregate2(stage1, aggregateOperation2(aggrOp0, aggrOp1, Tuple2::tuple2));
+        List<Serializable> metricsProviderCandidates = asList(
+                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
+                op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn()
+        );
+        AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> op = aggregateOperation2(op0, op1);
+        return aggregate2(stage1, UserMetricsUtil.wrapAll(op, metricsProviderCandidates));
     }
 
     /**

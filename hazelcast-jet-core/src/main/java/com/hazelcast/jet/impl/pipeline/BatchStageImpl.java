@@ -240,8 +240,8 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
                 op0.accumulateFn(), op0.createFn(), op0.combineFn(), op0.deductFn(), op0.exportFn(), op0.finishFn(),
                 op1.accumulateFn(), op1.createFn(), op1.combineFn(), op1.deductFn(), op1.exportFn(), op1.finishFn()
         );
-        AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> aggrOp = aggregateOperation2(op0, op1);
-        return aggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        AggregateOperation2<T, T1, ? extends Tuple2<?, ?>, Tuple2<R0, R1>> op = aggregateOperation2(op0, op1);
+        return aggregate2(stage1, UserMetricsUtil.wrapAll(op, metricsProviderCandidates));
     }
 
     @Nonnull
