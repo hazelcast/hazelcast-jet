@@ -51,7 +51,6 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
-import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
@@ -122,7 +121,6 @@ public class WriteHdfsPTest extends HdfsTestSupport {
          .drainTo(Sinks.list(resultList));
 
         instance().newJob(p).join();
-        logger.info("Result list contents:\n" + resultList.stream().map(e -> e.toString() + ", key type: " + e.getKey().getClass().getName() + ", value type: " + e.getValue().getClass().getName()).collect(joining("\n")));
         assertEquals(messageCount, resultList.size());
     }
 
