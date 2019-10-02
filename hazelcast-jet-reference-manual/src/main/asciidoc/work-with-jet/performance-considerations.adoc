@@ -66,7 +66,7 @@ emitting is rolling aggregation. Consider this example where we use
 include::{javasource}/Serialization.java[tag=modify-emitted]
 ----
 
-<1>  You keep emitting the same list, changing it in-place
+<1>  Here you both modify and emit the same list
 
 The downstream stage receives the same object each time, but it's
 supposed to see it in the state as it was sent. In reality, the
