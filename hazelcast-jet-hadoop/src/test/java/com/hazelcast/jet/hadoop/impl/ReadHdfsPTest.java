@@ -35,8 +35,6 @@ import org.apache.hadoop.io.SequenceFile.Writer.Option;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -51,9 +49,12 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.lang.Integer.parseInt;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -72,26 +73,36 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameter(1)
     public EMapperType mapperType;
 
-    private Configuration jobConf;
+    private JobConf jobConf;
     private Set<Path> paths = new HashSet<>();
 
     @Parameterized.Parameters(name = "inputFormat={0}, mapper={1}")
     public static Collection<Object[]> parameters() {
-        return Arrays.asList(
-                new Object[] {TextInputFormat.class, EMapperType.DEFAULT},
-                new Object[] {TextInputFormat.class, EMapperType.CUSTOM},
-                new Object[] {TextInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
-                new Object[] {org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class, EMapperType.DEFAULT},
-                new Object[] {org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class, EMapperType.CUSTOM},
-                new Object[] {org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
-                new Object[] {SequenceFileInputFormat.class, EMapperType.DEFAULT},
-                new Object[] {SequenceFileInputFormat.class, EMapperType.CUSTOM},
-                new Object[] {SequenceFileInputFormat.class, EMapperType.CUSTOM_WITH_NULLS},
-                new Object[] {org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class, EMapperType.DEFAULT},
-                new Object[] {org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class, EMapperType.CUSTOM},
-                new Object[] {org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class,
-                        EMapperType.CUSTOM_WITH_NULLS}
-        );
+        return combinations(
+                Arrays.asList(
+                        org.apache.hadoop.mapred.TextInputFormat.class,
+                        org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class,
+                        org.apache.hadoop.mapred.SequenceFileInputFormat.class,
+                        org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class),
+                Arrays.asList(EMapperType.values()));
+    }
+
+    /**
+     * Returns all possible tuples that contain one item from each of the given
+     * {@code lists}.
+     */
+    private static Collection<Object[]> combinations(List<?>... lists) {
+        Stream<Object[]> stream = Stream.<Object[]>of(new Object[0]);
+        for (int i = 0; i < lists.length; i++) {
+            int finalI = i;
+            stream = stream.flatMap(tuple -> lists[finalI].stream()
+                    .map(item -> {
+                        Object[] res = Arrays.copyOf(tuple, tuple.length + 1);
+                        res[tuple.length] = item;
+                        return res;
+                    }));
+        }
+        return stream.collect(toList());
     }
 
     @BeforeClass
@@ -115,7 +126,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setInputFormatClass(inputFormatClass);
-            jobConf = job.getConfiguration();
+            jobConf = new JobConf(job.getConfiguration());
         } else {
             JobConf jobConf = new JobConf();
             this.jobConf = jobConf;
@@ -127,7 +138,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     public void testReadHdfs() {
         IList<Object> sinkList = instance().getList(randomName());
         Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.hdfsNewApi(jobConf, mapperType.mapper))
+        p.drawFrom(HdfsSources.hdfs(jobConf, mapperType.mapper))
          .setLocalParallelism(4)
          .drainTo(Sinks.list(sinkList))
          .setLocalParallelism(1);
@@ -151,7 +162,8 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         for (int i = 0; i < 4; i++) {
             Path path = createPath();
             paths.add(path);
-            if (inputFormatClass.equals(org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class)) {
+            // TODO [viliam] is this ok? We're creating a text file for the old sequence file
+            if (inputFormatClass.equals(org.apache.hadoop.mapred.SequenceFileInputFormat.class)) {
                 writeToSequenceFile(conf, path);
             } else {
                 writeToTextFile(local, path);

@@ -47,12 +47,12 @@ import static org.apache.hadoop.mapred.Reporter.NULL;
 /**
  * See {@link HdfsSources#hdfs}.
  */
-public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
+public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
 
     private final Traverser<R> trav;
     private final BiFunctionEx<K, V, R> projectionFn;
 
-    private ReadHdfsP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+    private ReadHdfsOldApiP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
         this.trav = traverseIterable(recordReaders).flatMap(this::traverseRecordReader);
         this.projectionFn = projectionFn;
     }
@@ -90,13 +90,13 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableJobConf jobConf;
+        private final JobConf jobConf;
         private final BiFunctionEx<K, V, R> mapper;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
 
-        public MetaSupplier(@Nonnull SerializableJobConf jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
+        public MetaSupplier(@Nonnull JobConf jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
             this.jobConf = jobConf;
             this.mapper = mapper;
         }
@@ -135,7 +135,7 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        Supplier(SerializableJobConf jobConf,
+        Supplier(JobConf jobConf,
                  List<IndexedInputSplit> assignedSplits,
                  @Nonnull BiFunctionEx<K, V, R> mapper
         ) {
@@ -152,11 +152,11 @@ public final class ReadHdfsP<K, V, R> extends AbstractProcessor {
                     .values().stream()
                     .map(splits -> splits.isEmpty()
                             ? Processors.noopP().get()
-                            : new ReadHdfsP<>(splits.stream()
-                                                    .map(IndexedInputSplit::getOldSplit)
-                                                    .map(split -> uncheckCall(() ->
+                            : new ReadHdfsOldApiP<>(splits.stream()
+                                                          .map(IndexedInputSplit::getOldSplit)
+                                                          .map(split -> uncheckCall(() ->
                                                             inputFormat.getRecordReader(split, jobConfCasted, NULL)))
-                                                    .collect(toList()), mapper)
+                                                          .collect(toList()), mapper)
                     ).collect(toList());
         }
     }

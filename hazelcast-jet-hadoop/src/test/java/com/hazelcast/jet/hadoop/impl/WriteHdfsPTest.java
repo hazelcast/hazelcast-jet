@@ -69,9 +69,11 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameters(name = "Executing: {0} {1}")
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
+                // old api classes
                 new Object[] {TextOutputFormat.class, TextInputFormat.class},
                 new Object[] {LazyOutputFormat.class, TextInputFormat.class},
                 new Object[] {SequenceFileOutputFormat.class, SequenceFileInputFormat.class},
+                // new api classes
                 new Object[] {
                         org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
@@ -117,7 +119,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         p = Pipeline.create();
         IList<Entry> resultList = instance().getList(randomName());
-        p.drawFrom(HdfsSources.hdfsNewApi(readJobConf))
+        p.drawFrom(HdfsSources.hdfs(readJobConf))
          .drainTo(Sinks.list(resultList));
 
         instance().newJob(p).join();

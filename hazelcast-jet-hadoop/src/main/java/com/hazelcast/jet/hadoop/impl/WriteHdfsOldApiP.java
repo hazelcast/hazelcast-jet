@@ -26,15 +26,14 @@ import com.hazelcast.jet.hadoop.HdfsProcessors;
 import com.hazelcast.nio.Address;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.OutputCommitter;
-import org.apache.hadoop.mapreduce.OutputFormat;
-import org.apache.hadoop.mapreduce.RecordWriter;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.mapreduce.task.JobContextImpl;
-import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapred.JobContextImpl;
+import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapred.OutputCommitter;
+import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.mapred.RecordWriter;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TaskAttemptContextImpl;
+import org.apache.hadoop.mapred.TaskAttemptID;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -45,9 +44,10 @@ import static java.util.stream.IntStream.range;
 import static org.apache.hadoop.mapreduce.TaskType.JOB_SETUP;
 
 /**
- * See {@link HdfsProcessors#writeHdfsP(Configuration, FunctionEx, FunctionEx)}.
+ * See {@link HdfsProcessors#writeHdfsP(Configuration, FunctionEx,
+ * FunctionEx)}.
  */
-public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
+public final class WriteHdfsOldApiP<T, K, V> extends AbstractProcessor {
 
     private final RecordWriter<K, V> recordWriter;
     private final TaskAttemptContextImpl taskAttemptContext;
@@ -55,11 +55,11 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
     private final FunctionEx<? super T, K> extractKeyFn;
     private final FunctionEx<? super T, V> extractValueFn;
 
-    private WriteHdfsP(RecordWriter<K, V> recordWriter,
-                       TaskAttemptContextImpl taskAttemptContext,
-                       OutputCommitter outputCommitter,
-                       FunctionEx<? super T, K> extractKeyFn,
-                       FunctionEx<? super T, V> extractValueFn
+    private WriteHdfsOldApiP(RecordWriter<K, V> recordWriter,
+                             TaskAttemptContextImpl taskAttemptContext,
+                             OutputCommitter outputCommitter,
+                             FunctionEx<? super T, K> extractKeyFn,
+                             FunctionEx<? super T, V> extractValueFn
     ) {
         this.recordWriter = recordWriter;
         this.taskAttemptContext = taskAttemptContext;
@@ -83,9 +83,8 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        recordWriter.close(taskAttemptContext);
-        boolean needsCommit = outputCommitter.needsTaskCommit(taskAttemptContext);
-        if (needsCommit) {
+        recordWriter.close(Reporter.NULL);
+        if (outputCommitter.needsTaskCommit(taskAttemptContext)) {
             outputCommitter.commitTask(taskAttemptContext);
         }
     }
@@ -94,18 +93,18 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableConfiguration configuration;
+        private final JobConf jobConf;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
 
-        public MetaSupplier(SerializableConfiguration configuration,
+        public MetaSupplier(JobConf jobConf,
                             FunctionEx<? super T, K> extractKeyFn,
                             FunctionEx<? super T, V> extractValueFn
         ) {
-            this.configuration = configuration;
+            this.jobConf = jobConf;
             this.extractKeyFn = extractKeyFn;
             this.extractValueFn = extractValueFn;
         }
@@ -117,11 +116,8 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
-            jobContext = new JobContextImpl(configuration, new JobID());
-            OutputFormat outputFormat = getOutputFormat(configuration);
-            // TODO [viliam] remove the use of UUID
-            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
-                    context.jetInstance().getCluster().getLocalMember().getUuid()));
+            outputCommitter = jobConf.getOutputCommitter();
+            jobContext = new JobContextImpl(jobConf, new JobID());
             outputCommitter.setupJob(jobContext);
         }
 
@@ -132,10 +128,9 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
             }
         }
 
-        @Override
-        @Nonnull
+        @Override @Nonnull
         public FunctionEx<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new Supplier<>(configuration, extractKeyFn, extractValueFn);
+            return address -> new Supplier<>(jobConf, extractKeyFn, extractValueFn);
         }
     }
 
@@ -143,7 +138,7 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableConfiguration configuration;
+        private final JobConf jobConf;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
 
@@ -151,64 +146,47 @@ public final class WriteHdfsP<T, K, V> extends AbstractProcessor {
         private transient OutputCommitter outputCommitter;
         private transient JobContextImpl jobContext;
 
-        Supplier(SerializableConfiguration configuration,
+        Supplier(JobConf jobConf,
                  FunctionEx<? super T, K> extractKeyFn,
                  FunctionEx<? super T, V> extractValueFn
         ) {
-            this.configuration = configuration;
+            this.jobConf = jobConf;
             this.extractKeyFn = extractKeyFn;
             this.extractValueFn = extractValueFn;
         }
 
         @Override
-        public void init(@Nonnull Context context) throws IOException, InterruptedException {
+        public void init(@Nonnull Context context) {
             this.context = context;
-
-            jobContext = new JobContextImpl(configuration, new JobID());
-            OutputFormat outputFormat = getOutputFormat(configuration);
-            outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
-                    getUuid(context)));
+            outputCommitter = jobConf.getOutputCommitter();
+            jobContext = new JobContextImpl(jobConf, new JobID());
         }
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            return range(0, count).mapToObj(localIndex -> {
+            return range(0, count).mapToObj(i -> {
                 try {
-                    JobConf copiedConfig = new JobConf(configuration);
-                    int globalIndex = context.memberIndex() * context.localParallelism() + localIndex;
-                    TaskAttemptID taskAttemptID = getTaskAttemptID(globalIndex, jobContext, getUuid(context));
-                    copiedConfig.set("mapreduce.task.attempt.id", taskAttemptID.toString());
-                    copiedConfig.setInt("mapreduce.task.partition", globalIndex);
+                    String uuid = context.jetInstance().getCluster().getLocalMember().getUuid();
+                    TaskAttemptID taskAttemptID = new TaskAttemptID("jet-node-" + uuid, jobContext.getJobID().getId(),
+                            JOB_SETUP, i, 0);
+
+                    JobConf copiedConfig = new JobConf(jobConf);
+
+                    copiedConfig.set("mapred.task.id", taskAttemptID.toString());
+                    copiedConfig.setInt("mapred.task.partition", i);
 
                     TaskAttemptContextImpl taskAttemptContext = new TaskAttemptContextImpl(copiedConfig, taskAttemptID);
                     @SuppressWarnings("unchecked")
-                    OutputFormat<K, V> outFormat = getOutputFormat(copiedConfig);
-                    RecordWriter<K, V> recordWriter = outFormat.getRecordWriter(taskAttemptContext);
-                    return new WriteHdfsP<>(recordWriter, taskAttemptContext, outputCommitter, extractKeyFn,
-                            extractValueFn);
-                } catch (Exception e) {
+                    OutputFormat<K, V> outFormat = copiedConfig.getOutputFormat();
+                    RecordWriter<K, V> recordWriter = outFormat.getRecordWriter(
+                            null, copiedConfig, uuid + '-' + i, Reporter.NULL);
+                    return new WriteHdfsOldApiP<>(
+                            recordWriter, taskAttemptContext, outputCommitter, extractKeyFn, extractValueFn);
+                } catch (IOException e) {
                     throw new JetException(e);
                 }
 
             }).collect(toList());
         }
-    }
-
-    private static String getUuid(@Nonnull ProcessorMetaSupplier.Context context) {
-        return context.jetInstance().getCluster().getLocalMember().getUuid();
-    }
-
-    private static OutputFormat getOutputFormat(Configuration config) {
-        Class<?> outputFormatClass = config.getClass("mapreduce.job.outputformat.class", TextOutputFormat.class);
-        return (OutputFormat) ReflectionUtils.newInstance(outputFormatClass, config);
-    }
-
-    private static TaskAttemptContextImpl getTaskAttemptContext(SerializableConfiguration jobConf,
-                                                                JobContextImpl jobContext, String uuid) {
-        return new TaskAttemptContextImpl(jobConf, getTaskAttemptID(0, jobContext, uuid));
-    }
-
-    private static TaskAttemptID getTaskAttemptID(int id, JobContextImpl jobContext, String uuid) {
-        return new TaskAttemptID("jet-node-" + uuid, jobContext.getJobID().getId(), JOB_SETUP, id, 0);
     }
 }

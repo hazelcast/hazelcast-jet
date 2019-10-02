@@ -45,7 +45,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * For more details about the word count pipeline itself, please see the JavaDoc
  * for the {@code WordCount} class in {@code wordcount} sample.
  * <p>
- * {@link HdfsSources#hdfs(JobConf, BiFunctionEx)} is a source
+ * {@link HdfsSources#hdfs(Configuration, BiFunctionEx)} is a source
  * that can be used for reading from HDFS given a {@code JobConf}
  * with input paths and input formats. The files in the input folder
  * will be split among Jet processors, using {@code InputSplit}s.

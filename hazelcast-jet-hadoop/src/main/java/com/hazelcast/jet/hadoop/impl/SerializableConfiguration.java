@@ -17,6 +17,7 @@
 package com.hazelcast.jet.hadoop.impl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -30,8 +31,8 @@ import java.io.Serializable;
  */
 public final class SerializableConfiguration extends Configuration implements Serializable {
 
+    @SuppressWarnings("unused") // for deserialization
     SerializableConfiguration() {
-        //For deserialization
     }
 
     private SerializableConfiguration(Configuration jobConf) {
@@ -46,7 +47,15 @@ public final class SerializableConfiguration extends Configuration implements Se
         super.readFields(new DataInputStream(in));
     }
 
-    public static SerializableConfiguration asSerializable(Configuration conf) {
-        return new SerializableConfiguration(conf);
+    public static Configuration asSerializable(Configuration conf) {
+        // prevent double wrapping
+        if (conf instanceof Serializable) {
+            return conf;
+        }
+        if (conf instanceof JobConf) {
+            return new SerializableJobConf((JobConf) conf);
+        } else {
+            return new SerializableConfiguration(conf);
+        }
     }
 }

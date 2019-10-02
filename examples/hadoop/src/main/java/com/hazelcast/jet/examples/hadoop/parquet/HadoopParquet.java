@@ -52,7 +52,7 @@ public class HadoopParquet {
 
     private static Pipeline buildPipeline(Configuration configuration) {
         Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.<String, User, User>hdfsNewApi(configuration, (s, user) -> user))
+        p.drawFrom(HdfsSources.<String, User, User>hdfs(configuration, (s, user) -> user))
          .filter(user -> user.get(3).equals(Boolean.TRUE))
          .peek()
          .map(user -> entry(user.get(0), user))

@@ -54,7 +54,7 @@ import static java.util.stream.Collectors.toList;
 /**
  * See {@link HdfsSources#hdfs}.
  */
-public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
+public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
     private final Configuration jobConf;
     private final InputFormat inputFormat;
@@ -63,7 +63,7 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
     private final BetterByteArrayOutputStream cloneBuffer = new BetterByteArrayOutputStream();
     private final DataOutputStream cloneBufferDataOutput = new DataOutputStream(cloneBuffer);
 
-    private ReadNewHdfsP(
+    private ReadHdfsNewApiP(
             @Nonnull Configuration jobConf,
             @Nonnull InputFormat inputFormat,
             @Nonnull List<InputSplit> splits,
@@ -129,12 +129,12 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final SerializableConfiguration jobConf;
+        private final Configuration jobConf;
         private final BiFunctionEx<K, V, R> mapper;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-        public MetaSupplier(@Nonnull SerializableConfiguration jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
+        public MetaSupplier(@Nonnull Configuration jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
             this.jobConf = jobConf;
             this.mapper = mapper;
         }
@@ -172,7 +172,7 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        Supplier(SerializableConfiguration jobConf,
+        Supplier(Configuration jobConf,
                  List<IndexedInputSplit> assignedSplits,
                  @Nonnull BiFunctionEx<K, V, R> mapper
         ) {
@@ -193,7 +193,7 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
                                         .stream()
                                         .map(IndexedInputSplit::getNewSplit)
                                         .collect(toList());
-                                return new ReadNewHdfsP<>(jobConf, inputFormat, mappedSplits, mapper);
+                                return new ReadHdfsNewApiP<>(jobConf, inputFormat, mappedSplits, mapper);
                             }
                     ).collect(toList());
         }
@@ -211,7 +211,7 @@ public final class ReadNewHdfsP<K, V, R> extends AbstractProcessor {
             }
 
             @Override
-            public int read(byte[] b, int off, int len) {
+            public int read(@Nonnull byte[] b, int off, int len) {
                 if (inputStreamPos == count) {
                     return -1;
                 }

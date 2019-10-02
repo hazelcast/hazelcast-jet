@@ -55,6 +55,8 @@ public final class HdfsSinks {
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
      *
+     * TODO [viliam] document when new or old api is used
+     *
      * @param configuration {@code Configuration} used for output format configuration
      * @param extractKeyF   mapper to map a key to another key
      * @param extractValueF mapper to map a value to another value
