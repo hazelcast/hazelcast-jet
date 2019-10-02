@@ -967,7 +967,55 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .rollingAggregate(aggrOp)
                 .drainTo(assertOrdered(Arrays.asList(1L, 3L, 6L, 10L, 15L)));
 
-        assertCountersProduced("create", 1, "add", 5, "deduct", null, "export", 5, "finish", null);
+        assertCountersProduced("create", 1, "add", 5, "combine", null, "deduct", null, "export", 5, "finish", null);
+    }
+
+    @Test
+    public void rollingAggregate_batchWithKey() {
+        AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
+                aggrOp("create", "add", "combine", "deduct", "export", "finish");
+
+        pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L))
+                .groupingKey(l -> l % 3L)
+                .rollingAggregate(aggrOp)
+                .drainTo(assertAnyOrder(Arrays.asList(
+                        entry(0L, 3L),
+                        entry(1L, 1L), entry(1L, 5L),
+                        entry(2L, 2L), entry(2L, 7L)
+                )));
+
+        assertCountersProduced("create", 3, "add", 5, "combine", null, "deduct", null, "export", 5, "finish", null);
+    }
+
+    @Test
+    public void rollingAggregate_stream() {
+        AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
+                aggrOp("create", "add", "combine", "deduct", "export", "finish");
+
+        pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L))
+                .addTimestamps(i -> i, 0L)
+                .rollingAggregate(aggrOp)
+                .drainTo(assertOrdered(Arrays.asList(1L, 3L, 6L, 10L, 15L)));
+
+        assertCountersProduced("create", 1, "add", 5, "combine", null, "deduct", null, "export", 5, "finish", null);
+    }
+
+    @Test
+    public void rollingAggregate_streamWithKey() {
+        AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
+                aggrOp("create", "add", "combine", "deduct", "export", "finish");
+
+        pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L))
+                .addTimestamps(i -> i, 0L)
+                .groupingKey(l -> l % 3L)
+                .rollingAggregate(aggrOp)
+                .drainTo(assertAnyOrder(Arrays.asList(
+                        entry(0L, 3L),
+                        entry(1L, 1L), entry(1L, 5L),
+                        entry(2L, 2L), entry(2L, 7L)
+                )));
+
+        assertCountersProduced("create", 3, "add", 5, "combine", null, "deduct", null, "export", 5, "finish", null);
     }
 
     private AggregateOperation1<Long, LongAccumulator, Long> aggrOp(String create, String add, String combine,

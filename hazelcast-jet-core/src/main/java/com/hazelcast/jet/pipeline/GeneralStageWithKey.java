@@ -33,6 +33,7 @@ import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
+import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -198,10 +199,11 @@ public interface GeneralStageWithKey<T, K> {
     ) {
         BiConsumer<? super A, ? super T> accumulateFn = aggrOp.accumulateFn();
         Function<? super A, ? extends R> exportFn = aggrOp.exportFn();
-        return mapStateful(aggrOp.createFn(), (acc, key, item) -> {
+        TriFunction<A, K, T, Entry<K, R>> mapFn = (acc, key, item) -> {
             accumulateFn.accept(acc, item);
             return entry(key, exportFn.apply(acc));
-        });
+        };
+        return mapStateful(aggrOp.createFn(), UserMetricsUtil.wrapAll(mapFn, Arrays.asList(accumulateFn, exportFn)));
     }
 
     /**
