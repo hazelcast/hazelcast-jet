@@ -47,8 +47,8 @@ import static java.util.stream.IntStream.range;
 import static java.util.stream.Stream.concat;
 
 /**
- * Base class contains shared logic between HDFS processor meta suppliers which are using
- * old and new MapReduce API.
+ * Base class that contains shared logic between HDFS processor meta suppliers
+ * which are using the old and the new MapReduce API.
  */
 public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier {
 
@@ -56,8 +56,12 @@ public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier 
 
     @Override
     public void init(@Nonnull Context context) throws Exception {
-        logger = context.jetInstance().getHazelcastInstance().getLoggingService()
-                        .getLogger(ReadHdfsMetaSupplierBase.class);
+        logger = context.logger();
+    }
+
+    @Override
+    public int preferredLocalParallelism() {
+        return 2;
     }
 
     private static int indexOfMin(int[] ints) {
@@ -67,7 +71,7 @@ public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier 
                 .orElseThrow(() -> new AssertionError("empty array"));
     }
 
-    private static <T> T singleItem(Collection<T> coll) {
+    private static <T> T getTheOnlyItem(Collection<T> coll) {
         if (coll.size() != 1) {
             throw new AssertionError("Collection does not have exactly one item: " + coll);
         }
@@ -169,7 +173,7 @@ public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier 
         } while (foundNonUnique[0]);
         logger.info("Final split counts per member: " + Arrays.toString(memberToSplitCount));
         return splitToCandidates.entrySet().stream()
-                                .map(e -> entry(e.getKey(), memberAddrs[singleItem(e.getValue())]))
+                                .map(e -> entry(e.getKey(), memberAddrs[getTheOnlyItem(e.getValue())]))
                                 .collect(groupingBy(Entry::getValue, mapping(Entry::getKey, toList())));
     }
 
@@ -179,13 +183,6 @@ public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier 
                         Stream.of(e.getKey() + ":"),
                         Optional.of(e.getValue()).orElse(emptyList()).stream().map(Object::toString))
                 ).collect(joining("\n")));
-    }
-
-    private static boolean isSplitLocalForMember(List<String> splitLocations, String hostName) {
-        if (hostName == null) {
-            return false;
-        }
-        return splitLocations.stream().anyMatch(hostName::equalsIgnoreCase);
     }
 
     private boolean isSplitLocalForMember(List<String> splitLocations, Address memberAddr) {
@@ -200,5 +197,12 @@ public abstract class ReadHdfsMetaSupplierBase implements ProcessorMetaSupplier 
                     "will use host name equality to determine data locality", e);
             return isSplitLocalForMember(splitLocations, memberAddr.getScopedHost());
         }
+    }
+
+    private static boolean isSplitLocalForMember(List<String> splitLocations, String hostName) {
+        if (hostName == null) {
+            return false;
+        }
+        return splitLocations.stream().anyMatch(hostName::equalsIgnoreCase);
     }
 }

@@ -24,7 +24,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputCommitter;
@@ -45,6 +45,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
@@ -63,8 +64,8 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameter(1)
     public Class inputFormatClass;
 
-    private java.nio.file.Path javaDir;
-    private Path hadoopDir;
+    private Path javaDir;
+    private org.apache.hadoop.fs.Path hadoopDir;
 
     @Parameterized.Parameters(name = "Executing: {0} {1}")
     public static Collection<Object[]> parameters() {
@@ -94,7 +95,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     @Before
     public void before() throws IOException {
         javaDir = Files.createTempDirectory(getClass().getSimpleName());
-        hadoopDir = new Path(javaDir.toString());
+        hadoopDir = new org.apache.hadoop.fs.Path(javaDir.toString());
     }
 
     @After
@@ -104,7 +105,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
     @Test
     public void testWrite_newApi() throws Exception {
-        JobConf conf = getSinkConf(hadoopDir);
+        Configuration conf = getSinkConf(hadoopDir);
 
         int messageCount = 320;
         Pipeline p = Pipeline.create();
@@ -114,8 +115,8 @@ public class WriteHdfsPTest extends HdfsTestSupport {
          // we use higher value to increase the race chance for LazyOutputFormat
          .setLocalParallelism(8);
 
-        instance().newJob(p).join();
-        JobConf readJobConf = getReadJobConf(hadoopDir);
+        instances()[1].newJob(p).join();
+        Configuration readJobConf = getReadJobConf(hadoopDir);
 
         p = Pipeline.create();
         IList<Entry> resultList = instance().getList(randomName());
@@ -126,22 +127,21 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         assertEquals(messageCount, resultList.size());
     }
 
-    private JobConf getReadJobConf(Path path) throws IOException {
-        JobConf conf = new JobConf();
+    private Configuration getReadJobConf(org.apache.hadoop.fs.Path path) throws IOException {
         if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setInputFormatClass(inputFormatClass);
             org.apache.hadoop.mapreduce.lib.input.FileInputFormat.addInputPath(job, path);
-            conf = new JobConf(job.getConfiguration());
+            return job.getConfiguration();
         } else {
+            JobConf conf = new JobConf();
             conf.setInputFormat(inputFormatClass);
             FileInputFormat.addInputPath(conf, path);
+            return conf;
         }
-        return conf;
     }
 
-    private JobConf getSinkConf(Path path) throws IOException {
-        JobConf conf;
+    private Configuration getSinkConf(org.apache.hadoop.fs.Path path) throws IOException {
         if (outputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setOutputFormatClass(outputFormatClass);
@@ -152,9 +152,9 @@ public class WriteHdfsPTest extends HdfsTestSupport {
                 org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.setOutputFormatClass(job,
                         org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class);
             }
-            conf = new JobConf(job.getConfiguration());
+            return job.getConfiguration();
         } else {
-            conf = new JobConf();
+            JobConf conf = new JobConf();
             conf.setOutputFormat(outputFormatClass);
             conf.setOutputCommitter(FileOutputCommitter.class);
             conf.setOutputKeyClass(IntWritable.class);
@@ -163,7 +163,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
             if (outputFormatClass.equals(LazyOutputFormat.class)) {
                 LazyOutputFormat.setOutputFormatClass(conf, TextOutputFormat.class);
             }
+            return conf;
         }
-        return conf;
     }
 }

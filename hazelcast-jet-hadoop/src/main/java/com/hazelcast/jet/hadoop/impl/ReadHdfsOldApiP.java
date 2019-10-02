@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.Address;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
@@ -91,14 +92,13 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
         static final long serialVersionUID = 1L;
 
         private final JobConf jobConf;
-        private final BiFunctionEx<K, V, R> mapper;
+        private final BiFunctionEx<K, V, R> projectionFn;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-
-        public MetaSupplier(@Nonnull JobConf jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
+        public MetaSupplier(@Nonnull JobConf jobConf, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
             this.jobConf = jobConf;
-            this.mapper = mapper;
+            this.projectionFn = projectionFn;
         }
 
         @Override
@@ -124,29 +124,28 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
         @Nonnull
         @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new Supplier<>(
-                    jobConf,
-                    assigned.get(address) != null ? assigned.get(address) : emptyList(),
-                    mapper);
+            return address ->
+                    new Supplier<>(jobConf, assigned.getOrDefault(address, emptyList()), projectionFn);
         }
     }
 
-    private static class Supplier<K, V, R> extends HdfsProcessorSupplierBase<K, V, R> {
-
+    private static class Supplier<K, V, R> implements ProcessorSupplier {
         static final long serialVersionUID = 1L;
 
-        Supplier(JobConf jobConf,
-                 List<IndexedInputSplit> assignedSplits,
-                 @Nonnull BiFunctionEx<K, V, R> mapper
-        ) {
-            super(jobConf, assignedSplits, mapper);
+        private JobConf jobConf;
+        private BiFunctionEx<K, V, R> projectionFn;
+        private List<IndexedInputSplit> assignedSplits;
+
+        Supplier(JobConf jobConf, List<IndexedInputSplit> assignedSplits, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+            this.jobConf = jobConf;
+            this.projectionFn = projectionFn;
+            this.assignedSplits = assignedSplits;
         }
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            Map<Integer, List<IndexedInputSplit>> processorToSplits = getProcessorToSplits(count);
-            JobConf jobConfCasted = (JobConf) jobConf;
-            InputFormat inputFormat = jobConfCasted.getInputFormat();
+            Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, assignedSplits);
+            InputFormat inputFormat = jobConf.getInputFormat();
 
             return processorToSplits
                     .values().stream()
@@ -155,8 +154,8 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
                             : new ReadHdfsOldApiP<>(splits.stream()
                                                           .map(IndexedInputSplit::getOldSplit)
                                                           .map(split -> uncheckCall(() ->
-                                                            inputFormat.getRecordReader(split, jobConfCasted, NULL)))
-                                                          .collect(toList()), mapper)
+                                                                  inputFormat.getRecordReader(split, jobConf, NULL)))
+                                                          .collect(toList()), projectionFn)
                     ).collect(toList());
         }
     }

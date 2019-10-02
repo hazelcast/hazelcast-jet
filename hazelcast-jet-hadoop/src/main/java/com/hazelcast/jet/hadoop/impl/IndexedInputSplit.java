@@ -41,7 +41,6 @@ class IndexedInputSplit implements Comparable<IndexedInputSplit>, Serializable {
     private org.apache.hadoop.mapreduce.InputSplit newSplit;
     private boolean isOld;
 
-
     IndexedInputSplit(int index, org.apache.hadoop.mapred.InputSplit split) {
         this.index = index;
         this.oldSplit = split;
@@ -112,22 +111,22 @@ class IndexedInputSplit implements Comparable<IndexedInputSplit>, Serializable {
         } else {
             if (!(newSplit instanceof Writable)) {
                 throw new IllegalStateException(newSplit.getClass().getName()
-                        + " does not implement org.apache.hadoop.io.Writable interface");
-            } else {
-                out.writeUTF(newSplit.getClass().getName());
-                ((Writable) newSplit).write(out);
+                        + " does not implement the org.apache.hadoop.io.Writable interface");
             }
+            out.writeUTF(newSplit.getClass().getName());
+            ((Writable) newSplit).write(out);
         }
     }
 
     private void readObject(ObjectInputStream in) throws Exception {
         index = in.readInt();
         isOld = in.readBoolean();
+        Object splitClass = ClassLoaderUtil.newInstance(Thread.currentThread().getContextClassLoader(), in.readUTF());
         if (isOld) {
-            oldSplit = ClassLoaderUtil.newInstance(Thread.currentThread().getContextClassLoader(), in.readUTF());
+            oldSplit = (org.apache.hadoop.mapred.InputSplit) splitClass;
             oldSplit.readFields(in);
         } else {
-            newSplit = ClassLoaderUtil.newInstance(Thread.currentThread().getContextClassLoader(), in.readUTF());
+            newSplit = (org.apache.hadoop.mapreduce.InputSplit) splitClass;
             ((Writable) newSplit).readFields(in);
         }
     }

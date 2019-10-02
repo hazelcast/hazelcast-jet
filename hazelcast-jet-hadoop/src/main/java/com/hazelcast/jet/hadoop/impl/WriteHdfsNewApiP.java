@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.hadoop.HdfsProcessors;
+import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.nio.Address;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
@@ -45,7 +45,7 @@ import static java.util.stream.IntStream.range;
 import static org.apache.hadoop.mapreduce.TaskType.JOB_SETUP;
 
 /**
- * See {@link HdfsProcessors#writeHdfsP(Configuration, FunctionEx, FunctionEx)}.
+ * See {@link HdfsSinks#hdfs}.
  */
 public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
 
@@ -84,8 +84,7 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
     @Override
     public void close() throws Exception {
         recordWriter.close(taskAttemptContext);
-        boolean needsCommit = outputCommitter.needsTaskCommit(taskAttemptContext);
-        if (needsCommit) {
+        if (outputCommitter.needsTaskCommit(taskAttemptContext)) {
             outputCommitter.commitTask(taskAttemptContext);
         }
     }
@@ -132,8 +131,7 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
             }
         }
 
-        @Override
-        @Nonnull
+        @Override @Nonnull
         public FunctionEx<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new Supplier<>(configuration, extractKeyFn, extractValueFn);
         }

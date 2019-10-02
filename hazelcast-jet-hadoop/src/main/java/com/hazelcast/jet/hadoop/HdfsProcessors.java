@@ -46,13 +46,13 @@ public final class HdfsProcessors {
      */
     @Nonnull
     public static <K, V, R> ProcessorMetaSupplier readHdfsP(
-            @Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> mapper
+            @Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> projectionFn
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
         if (configuration.get("mapreduce.job.inputformat.class") != null) {
-            return new ReadHdfsNewApiP.MetaSupplier<>(configuration, mapper);
+            return new ReadHdfsNewApiP.MetaSupplier<>(configuration, projectionFn);
         } else {
-            return new ReadHdfsOldApiP.MetaSupplier<>((JobConf) configuration, mapper);
+            return new ReadHdfsOldApiP.MetaSupplier<>((JobConf) configuration, projectionFn);
         }
     }
 

@@ -23,7 +23,7 @@ import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Job;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -41,16 +41,21 @@ public final class HdfsSources {
     }
 
     /**
-     * Returns a source that reads records from Apache Hadoop HDFS using the
-     * old MapReduce API {@code org.apache.hadoop.mapred} and emits
+     * Returns a source that reads records from Apache Hadoop HDFS and emits
      * the results of transforming each record (a key-value pair) with the
-     * supplied mapping function.
+     * supplied projection function.
      * <p>
      * This source splits and balances the input data among Jet {@linkplain
-     * Processor processors}, doing its best to achieve
-     * data locality. To this end the Jet cluster topology should be aligned
-     * with Hadoop's &mdash; on each Hadoop member there should be a Jet
-     * member.
+     * Processor processors}, doing its best to achieve data locality. To this
+     * end the Jet cluster topology should be aligned with Hadoop's &mdash; on
+     * each Hadoop member there should be a Jet member.
+     * <p>
+     * The processor will use either the new or the old MapReduce API based on
+     * the key which stores the {@code InputFormat} configuration. If it's
+     * stored under {@code mapreduce.job.inputformat.class}, the new API will
+     * be used. Otherwise, the old API will be used. If you get the
+     * configuration from {@link Job#getConfiguration()}, the new API will be
+     * used.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
@@ -58,25 +63,20 @@ public final class HdfsSources {
      * This source does not save any state to snapshot. If the job is restarted,
      * all entries will be emitted again.
      *
-     * TODO [viliam] document when new or old api is used
-     *
-     * @param <K>          key type of the records
-     * @param <V>          value type of the records
-     * @param <E>          the type of the emitted value
+     * @param <K>           key type of the records
+     * @param <V>           value type of the records
+     * @param <E>           the type of the emitted value
      * @param configuration JobConf for reading files with the appropriate
      *                     input format and path
-     * @param projectionFn function to create output objects from key and value.
-     *                     If the projection returns a {@code null} for an item, that item
-     *                     will be filtered out
+     * @param projectionFn  function to create output objects from key and value.
+     *                      If the projection returns a {@code null} for an item, that item
+     *                      will be filtered out
      */
     @Nonnull
     public static <K, V, E> BatchSource<E> hdfs(
             @Nonnull Configuration configuration,
             @Nonnull BiFunctionEx<K, V, E> projectionFn
     ) {
-        for (Entry<String, String> en : configuration) {
-            System.out.println(en);
-        }
         return Sources.batchFromProcessor("readHdfs",
                 readHdfsP(SerializableConfiguration.asSerializable(configuration), projectionFn));
     }
@@ -86,7 +86,7 @@ public final class HdfsSources {
      * with {@link java.util.Map.Entry} as its output type.
      */
     @Nonnull
-    public static <K, V> BatchSource<Entry<K, V>> hdfs(@Nonnull JobConf jobConf) {
+    public static <K, V> BatchSource<Entry<K, V>> hdfs(@Nonnull Configuration jobConf) {
         return hdfs(jobConf, (BiFunctionEx<K, V, Entry<K, V>>) Util::entry);
     }
 }

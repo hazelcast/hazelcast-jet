@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.Address;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -56,7 +57,7 @@ import static java.util.stream.Collectors.toList;
  */
 public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
-    private final Configuration jobConf;
+    private final Configuration configuration;
     private final InputFormat inputFormat;
     private final Traverser<R> trav;
     private final BiFunctionEx<K, V, R> projectionFn;
@@ -64,12 +65,12 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     private final DataOutputStream cloneBufferDataOutput = new DataOutputStream(cloneBuffer);
 
     private ReadHdfsNewApiP(
-            @Nonnull Configuration jobConf,
+            @Nonnull Configuration configuration,
             @Nonnull InputFormat inputFormat,
             @Nonnull List<InputSplit> splits,
             @Nonnull BiFunctionEx<K, V, R> projectionFn
     ) {
-        this.jobConf = jobConf;
+        this.configuration = configuration;
         this.inputFormat = inputFormat;
         this.trav = traverseIterable(splits)
                 .flatMap(this::traverseSplit);
@@ -86,10 +87,11 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return emitFromTraverser(trav);
     }
 
+    @SuppressWarnings("unchecked")
     private Traverser<R> traverseSplit(InputSplit split) {
         RecordReader<K, V> reader;
         try {
-            TaskAttemptContextImpl attemptContext = new TaskAttemptContextImpl(jobConf, new TaskAttemptID());
+            TaskAttemptContextImpl attemptContext = new TaskAttemptContextImpl(configuration, new TaskAttemptID());
             reader = inputFormat.createRecordReader(split, attemptContext);
             reader.initialize(split, attemptContext);
         } catch (IOException | InterruptedException e) {
@@ -99,8 +101,11 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return () -> {
             try {
                 while (reader.nextKeyValue()) {
-                    K key = tryClone(reader.getCurrentKey());
-                    V value = tryClone(reader.getCurrentValue());
+                    // we have to clone the the value returned by `reader.getCurrentKey()` because
+                    // the next call to `reader.nextKeyValue()` will mutate the returned value instead
+                    // of creating a new value. Same for value.
+                    K key = serdeWritable(reader.getCurrentKey());
+                    V value = serdeWritable(reader.getCurrentValue());
                     R projectedRecord = projectionFn.apply(key, value);
                     if (projectedRecord != null) {
                         return projectedRecord;
@@ -114,14 +119,13 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         };
     }
 
-    private <T> T tryClone(T o) throws IOException, IllegalAccessException, InstantiationException {
-        if (o instanceof Writable) {
-            ((Writable) o).write(cloneBufferDataOutput);
-            Writable newO = (Writable) o.getClass().newInstance();
-            newO.readFields(cloneBuffer.getDataInputStream());
-            o = (T) newO;
-            cloneBuffer.reset();
-        }
+    @SuppressWarnings("unchecked")
+    private <T> T serdeWritable(T o) throws IOException, IllegalAccessException, InstantiationException {
+        ((Writable) o).write(cloneBufferDataOutput);
+        Writable newO = (Writable) o.getClass().newInstance();
+        newO.readFields(cloneBuffer.getDataInputStream());
+        o = (T) newO;
+        cloneBuffer.reset();
         return o;
     }
 
@@ -129,27 +133,23 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
-        private final Configuration jobConf;
-        private final BiFunctionEx<K, V, R> mapper;
+        private final Configuration configuration;
+        private final BiFunctionEx<K, V, R> projectionFn;
 
         private transient Map<Address, List<IndexedInputSplit>> assigned;
 
-        public MetaSupplier(@Nonnull Configuration jobConf, @Nonnull BiFunctionEx<K, V, R> mapper) {
-            this.jobConf = jobConf;
-            this.mapper = mapper;
-        }
-
-        @Override
-        public int preferredLocalParallelism() {
-            return 2;
+        public MetaSupplier(@Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+            this.configuration = configuration;
+            this.projectionFn = projectionFn;
         }
 
         @Override
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
-            Class<?> inputFormatClass = jobConf.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
-            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, jobConf);
-            Job job = Job.getInstance(jobConf);
+            Class<?> inputFormatClass = configuration.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
+            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
+            Job job = Job.getInstance(configuration);
+            @SuppressWarnings("unchecked")
             List<InputSplit> splits = inputFormat.getSplits(job);
             IndexedInputSplit[] indexedInputSplits = new IndexedInputSplit[splits.size()];
             Arrays.setAll(indexedInputSplits, i -> new IndexedInputSplit(i, splits.get(i)));
@@ -161,49 +161,55 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
         @Nonnull @Override
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-            return address -> new Supplier<>(
-                    jobConf,
-                    assigned.get(address) != null ? assigned.get(address) : emptyList(),
-                    mapper);
+            return address ->
+                    new Supplier<>(configuration, assigned.getOrDefault(address, emptyList()), projectionFn);
         }
     }
 
-    private static class Supplier<K, V, R> extends HdfsProcessorSupplierBase<K, V, R> {
-
+    private static class Supplier<K, V, R> implements ProcessorSupplier {
         static final long serialVersionUID = 1L;
 
-        Supplier(Configuration jobConf,
-                 List<IndexedInputSplit> assignedSplits,
-                 @Nonnull BiFunctionEx<K, V, R> mapper
+        private Configuration configuration;
+        private BiFunctionEx<K, V, R> projectionFn;
+        private List<IndexedInputSplit> assignedSplits;
+
+        Supplier(
+                Configuration configuration,
+                List<IndexedInputSplit> assignedSplits,
+                @Nonnull BiFunctionEx<K, V, R> projectionFn
         ) {
-            super(jobConf, assignedSplits, mapper);
+            this.configuration = configuration;
+            this.projectionFn = projectionFn;
+            this.assignedSplits = assignedSplits;
         }
 
         @Override @Nonnull
         public List<Processor> get(int count) {
-            Map<Integer, List<IndexedInputSplit>> processorToSplits = getProcessorToSplits(count);
-            Class<?> inputFormatClass = jobConf.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
-            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, jobConf);
+            Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, assignedSplits);
+            Class<?> inputFormatClass = configuration.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
+            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
 
             return processorToSplits
-                    .values()
-                    .stream()
+                    .values().stream()
                     .map(splits -> {
                                 List<InputSplit> mappedSplits = splits
                                         .stream()
                                         .map(IndexedInputSplit::getNewSplit)
                                         .collect(toList());
-                                return new ReadHdfsNewApiP<>(jobConf, inputFormat, mappedSplits, mapper);
+                                return new ReadHdfsNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
                             }
                     ).collect(toList());
         }
     }
 
+    /**
+     * A {@link ByteArrayOutputStream} that provides an InputStream to read out
+     * its current contents.
+     */
     private static final class BetterByteArrayOutputStream extends ByteArrayOutputStream {
         private static final int BYTE_MASK = 0xff;
 
         private int inputStreamPos;
-
         private InputStream inputStream = new InputStream() {
             @Override
             public int read() {
@@ -221,7 +227,6 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
                 return copiedLength;
             }
         };
-
         private DataInputStream inputStreamDataInput = new DataInputStream(inputStream);
 
         /**

@@ -21,6 +21,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -38,24 +39,30 @@ public final class HdfsSinks {
     /**
      * Returns a sink that writes to Apache Hadoop HDFS. It transforms each
      * received item to a key-value pair using the two supplied mapping
-     * functions. The type of key and value must conform to the expectations
-     * of the output format specified in {@code JobConf}.
+     * functions. The type of the key and the value must conform to the
+     * expectations of the output format specified in the {@code
+     * configuration}.
      * <p>
      * The sink creates a number of files in the output path, identified by the
-     * cluster member ID and the {@link Processor} ID. Unlike MapReduce, the
-     * data in the files is not sorted by key.
+     * cluster member UUID and the {@link Processor} index. Unlike MapReduce,
+     * the data in the files is not sorted by key.
      * <p>
      * The supplied {@code Configuration} must specify an {@code OutputFormat}
      * class with a path.
      * <p>
+     * The processor will use either the new or the old MapReduce API based on
+     * the key which stores the {@code OutputFormat} configuration. If it's
+     * stored under {@code mapreduce.job.outputformat.class}, the new API will
+     * be used. Otherwise, the old API will be used. If you get the
+     * configuration from {@link Job#getConfiguration()}, the new API will be
+     * used.
+     * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at-least-once</i>
-     * guarantee.
+     * guarantee. TODO [viliam] wrong, don't we overwrite files?
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
-     *
-     * TODO [viliam] document when new or old api is used
      *
      * @param configuration {@code Configuration} used for output format configuration
      * @param extractKeyF   mapper to map a key to another key
