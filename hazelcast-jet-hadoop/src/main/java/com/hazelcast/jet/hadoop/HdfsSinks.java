@@ -22,6 +22,7 @@ import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -52,8 +53,8 @@ public final class HdfsSinks {
      * <p>
      * The processor will use either the new or the old MapReduce API based on
      * the key which stores the {@code OutputFormat} configuration. If it's
-     * stored under {@code mapreduce.job.outputformat.class}, the new API will
-     * be used. Otherwise, the old API will be used. If you get the
+     * stored under {@value MRJobConfig#OUTPUT_FORMAT_CLASS_ATTR}}, the new API
+     * will be used. Otherwise, the old API will be used. If you get the
      * configuration from {@link Job#getConfiguration()}, the new API will be
      * used.
      * <p>

@@ -26,6 +26,7 @@ import com.hazelcast.jet.hadoop.impl.WriteHdfsNewApiP;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsOldApiP;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import javax.annotation.Nonnull;
 
@@ -49,7 +50,7 @@ public final class HdfsProcessors {
             @Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> projectionFn
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
-        if (configuration.get("mapreduce.job.inputformat.class") != null) {
+        if (configuration.get(MRJobConfig.INPUT_FORMAT_CLASS_ATTR) != null) {
             return new ReadHdfsNewApiP.MetaSupplier<>(configuration, projectionFn);
         } else {
             return new ReadHdfsOldApiP.MetaSupplier<>((JobConf) configuration, projectionFn);
@@ -67,7 +68,7 @@ public final class HdfsProcessors {
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
-        if (configuration.get("mapreduce.job.outputformat.class") != null) {
+        if (configuration.get(MRJobConfig.OUTPUT_FORMAT_CLASS_ATTR) != null) {
             return new WriteHdfsNewApiP.MetaSupplier<>(configuration, extractKeyFn, extractValueFn);
         } else {
             return new WriteHdfsOldApiP.MetaSupplier<>((JobConf) configuration, extractKeyFn, extractValueFn);

@@ -27,6 +27,7 @@ import com.hazelcast.nio.Address;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -197,7 +198,7 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
     }
 
     private static OutputFormat getOutputFormat(Configuration config) {
-        Class<?> outputFormatClass = config.getClass("mapreduce.job.outputformat.class", TextOutputFormat.class);
+        Class<?> outputFormatClass = config.getClass(MRJobConfig.OUTPUT_FORMAT_CLASS_ATTR, TextOutputFormat.class);
         return (OutputFormat) ReflectionUtils.newInstance(outputFormatClass, config);
     }
 

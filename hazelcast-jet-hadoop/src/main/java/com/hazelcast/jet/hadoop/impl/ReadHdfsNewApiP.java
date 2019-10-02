@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -129,6 +130,11 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return o;
     }
 
+    private static InputFormat getInputFormat(Configuration configuration) {
+        Class<?> inputFormatClass = configuration.getClass(MRJobConfig.INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
+        return (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
+    }
+
     public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase {
 
         static final long serialVersionUID = 1L;
@@ -146,8 +152,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         @Override
         public void init(@Nonnull Context context) throws Exception {
             super.init(context);
-            Class<?> inputFormatClass = configuration.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
-            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
+            InputFormat inputFormat = getInputFormat(configuration);
             Job job = Job.getInstance(configuration);
             @SuppressWarnings("unchecked")
             List<InputSplit> splits = inputFormat.getSplits(job);
@@ -186,8 +191,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         @Override @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, assignedSplits);
-            Class<?> inputFormatClass = configuration.getClass("mapreduce.job.inputformat.class", TextInputFormat.class);
-            InputFormat inputFormat = (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
+            InputFormat inputFormat = getInputFormat(configuration);
 
             return processorToSplits
                     .values().stream()
