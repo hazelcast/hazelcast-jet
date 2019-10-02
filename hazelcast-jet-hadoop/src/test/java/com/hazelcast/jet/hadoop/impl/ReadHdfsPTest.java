@@ -23,11 +23,11 @@ import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Writer;
@@ -35,6 +35,7 @@ import org.apache.hadoop.io.SequenceFile.Writer.Option;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -45,6 +46,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -74,7 +76,8 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     public EMapperType projectionType;
 
     private Configuration jobConf;
-    private Set<Path> paths = new HashSet<>();
+    private Path directory;
+    private Set<org.apache.hadoop.fs.Path> paths = new HashSet<>();
 
     @Parameterized.Parameters(name = "inputFormat={0}, mapper={1}")
     public static Collection<Object[]> parameters() {
@@ -112,15 +115,21 @@ public class ReadHdfsPTest extends HdfsTestSupport {
 
     @Before
     public void setup() throws IOException {
+        directory = Files.createTempDirectory(getClass().getSimpleName());
         createInputFiles();
         createConfiguration();
+    }
+
+    @After
+    public void after() {
+        IOUtil.delete(directory.toFile());
     }
 
     private void createConfiguration() throws IOException {
         if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setInputFormatClass(inputFormatClass);
-            for (Path path : paths) {
+            for (org.apache.hadoop.fs.Path path : paths) {
                 org.apache.hadoop.mapreduce.lib.input.FileInputFormat.addInputPath(job, path);
             }
             jobConf = job.getConfiguration();
@@ -128,7 +137,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
             JobConf jobConf = new JobConf();
             this.jobConf = jobConf;
             jobConf.setInputFormat(inputFormatClass);
-            for (Path path : paths) {
+            for (org.apache.hadoop.fs.Path path : paths) {
                 org.apache.hadoop.mapred.FileInputFormat.addInputPath(jobConf, path);
             }
         }
@@ -155,7 +164,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         LocalFileSystem local = FileSystem.getLocal(conf);
 
         for (int i = 0; i < 4; i++) {
-            Path path = createPath();
+            org.apache.hadoop.fs.Path path = createPath();
             paths.add(path);
             if (inputFormatClass.getSimpleName().equals("SequenceFileInputFormat")) {
                 createInputSequenceFiles(conf, path);
@@ -165,7 +174,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         }
     }
 
-    private static void createInputTextFiles(LocalFileSystem local, Path path) throws IOException {
+    private static void createInputTextFiles(LocalFileSystem local, org.apache.hadoop.fs.Path path) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(local.create(path)))) {
             for (String value : ENTRIES) {
                 writer.write(value);
@@ -174,7 +183,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         }
     }
 
-    private static void createInputSequenceFiles(Configuration conf, Path path) throws IOException {
+    private static void createInputSequenceFiles(Configuration conf, org.apache.hadoop.fs.Path path) throws IOException {
         IntWritable key = new IntWritable();
         Text value = new Text();
         Option fileOption = Writer.file(path);
@@ -189,10 +198,10 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         }
     }
 
-    private Path createPath() {
+    private org.apache.hadoop.fs.Path createPath() {
         try {
-            String fileName = Files.createTempFile(getClass().getName(), null).toString();
-            return new Path(fileName);
+            String fileName = Files.createTempFile(directory, getClass().getName(), null).toString();
+            return new org.apache.hadoop.fs.Path(fileName);
         } catch (IOException e) {
             throw ExceptionUtil.sneakyThrow(e);
         }
