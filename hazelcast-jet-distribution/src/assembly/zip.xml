@@ -40,68 +40,68 @@
     <files>
         <!-- Default XML config files -->
         <file>
-            <source>${config.directory}/hazelcast-jet-default.xml</source>
+            <source>${configs.from.jar}/hazelcast-jet-default.xml</source>
             <destName>hazelcast-jet.xml</destName>
             <outputDirectory>config</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-jet-member-default.xml</source>
+            <source>${configs.from.jar}/hazelcast-jet-member-default.xml</source>
             <destName>hazelcast.xml</destName>
             <outputDirectory>config</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-jet-client-default.xml</source>
+            <source>${configs.from.jar}/hazelcast-jet-client-default.xml</source>
             <destName>hazelcast-client.xml</destName>
             <outputDirectory>config</outputDirectory>
         </file>
 
         <!-- Full Example XML config files -->
         <file>
-            <source>${config.directory}/hazelcast-jet-full-example.xml</source>
+            <source>${configs.from.jar}/hazelcast-jet-full-example.xml</source>
             <destName>hazelcast-jet-full-example.xml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-full-example.xml</source>
+            <source>${configs.from.jar}/hazelcast-full-example.xml</source>
             <destName>hazelcast-full-example.xml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-client-full-example.xml</source>
+            <source>${configs.from.jar}/hazelcast-client-full-example.xml</source>
             <destName>hazelcast-client-full-example.xml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
 
         <!-- Full Example YAML config files -->
         <file>
-            <source>${config.directory}/hazelcast-jet-full-example.yaml</source>
+            <source>${configs.from.jar}/hazelcast-jet-full-example.yaml</source>
             <destName>hazelcast-jet-full-example.yaml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-full-example.yaml</source>
+            <source>${configs.from.jar}/hazelcast-full-example.yaml</source>
             <destName>hazelcast-full-example.yaml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-client-full-example.yaml</source>
+            <source>${configs.from.jar}/hazelcast-client-full-example.yaml</source>
             <destName>hazelcast-client-full-example.yaml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
 
         <!-- Simple Example YAML config files -->
         <file>
-            <source>${config.directory}/hazelcast-jet-default.yaml</source>
+            <source>${configs.from.jar}/hazelcast-jet-default.yaml</source>
             <destName>hazelcast-jet.yaml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-jet-member-default.yaml</source>
+            <source>${configs.from.jar}/hazelcast-jet-member-default.yaml</source>
             <destName>hazelcast.yaml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${config.directory}/hazelcast-jet-client-default.yaml</source>
+            <source>${configs.from.jar}/hazelcast-jet-client-default.yaml</source>
             <destName>hazelcast-client.yaml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>

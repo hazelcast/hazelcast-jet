@@ -30,7 +30,7 @@
     </parent>
 
     <properties>
-        <config.directory>${project.build.directory}/config</config.directory>
+        <configs.from.jar>${project.build.directory}/config</configs.from.jar>
         <hazelcast.jet.artifact>hazelcast-jet</hazelcast.jet.artifact>
     </properties>
 
@@ -51,7 +51,7 @@
                                 <artifactItem>
                                     <groupId>com.hazelcast.jet</groupId>
                                     <artifactId>hazelcast-jet</artifactId>
-                                    <outputDirectory>${config.directory}</outputDirectory>
+                                    <outputDirectory>${configs.from.jar}</outputDirectory>
                                     <includes>**/*.xml,**/*.yaml</includes>
                                 </artifactItem>
                             </artifactItems>
@@ -153,58 +153,52 @@
             <artifactId>hazelcast-aws</artifactId>
             <version>${hazelcast.aws.version}</version>
             <optional>true</optional>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>
             <version>${jsr107.api.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>javax.jms</groupId>
             <artifactId>javax.jms-api</artifactId>
             <version>${jms.api.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
             <version>${osgi.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>${jsr250.api.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+
         <!-- logging -->
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>${log4j2.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.api.version}</version>
-            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+
         <!-- required for hazelcast-jet-hadoop -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -218,6 +212,7 @@
             <version>${hadoop.version}</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- required for hazelcast-jet-spring -->
         <dependency>
             <groupId>org.springframework</groupId>
