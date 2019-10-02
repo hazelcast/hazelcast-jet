@@ -40,8 +40,6 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
@@ -210,10 +208,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull
     @Override
     public <R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        List<Serializable> metricsProviderCandidates = asList(aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
-                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp =
-                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
+        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp);
         return attach(new AggregateTransform<>(singletonList(transform), wrappedAggrOp), fnAdapter);
     }
 
@@ -223,10 +218,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> op
     ) {
-        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.createFn(), op.combineFn(),
-                op.deductFn(), op.exportFn(), op.finishFn());
-        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp =
-                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
+        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
         return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), wrappedOp), DO_NOT_ADAPT);
     }
 
@@ -247,10 +239,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> op
     ) {
-        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.accumulateFn2(),
-                op.createFn(), op.combineFn(), op.deductFn(), op.exportFn(), op.finishFn());
-        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp =
-                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
+        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
         return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), wrappedOp),
                 DO_NOT_ADAPT);
     }

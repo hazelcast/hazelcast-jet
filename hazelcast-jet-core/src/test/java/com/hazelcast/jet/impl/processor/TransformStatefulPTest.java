@@ -43,7 +43,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Util.entry;
@@ -373,7 +372,7 @@ public class TransformStatefulPTest {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull Supplier<? extends S> createFn,
+            @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
             @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn,
             @Nonnull FunctionEx<R, Traverser<R>> flatMapExpandFn

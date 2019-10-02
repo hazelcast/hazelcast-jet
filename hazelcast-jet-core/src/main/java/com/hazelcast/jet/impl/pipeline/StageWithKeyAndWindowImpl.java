@@ -30,8 +30,6 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.List;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
@@ -64,10 +62,7 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
-                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp));
     }
 
     private <R> StreamStage<KeyedWindowResult<K, R>> attachAggregate(
@@ -90,10 +85,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(((StageWithGroupingBase) stage1).computeStage, "stage1");
         Transform upstream1 = ((StageWithGroupingBase) stage1).computeStage.transform;
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.createFn(), aggrOp.combineFn(),
-                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        return attachAggregate2(stage1, upstream1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return attachAggregate2(stage1, upstream1, UserMetricsUtil.wrapAll(aggrOp));
     }
 
     private <T1, R> StreamStage<KeyedWindowResult<K, R>> attachAggregate2(
@@ -123,11 +115,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         Transform transform1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         Transform transform2 = ((StageWithGroupingBase) stage2).computeStage.transform;
 
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.accumulateFn2(), aggrOp.createFn(),
-                aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        return attachAggregate3(stage1, stage2, transform1, transform2,
-                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return attachAggregate3(stage1, stage2, transform1, transform2, UserMetricsUtil.wrapAll(aggrOp));
     }
 
     private <T1, T2, R> StreamStage<KeyedWindowResult<K, R>> attachAggregate3(

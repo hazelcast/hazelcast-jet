@@ -29,8 +29,6 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.List;
 
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
@@ -69,10 +67,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
-                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp));
     }
 
     // This method was extracted in order to capture the wildcard parameter A.
@@ -95,10 +90,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
     ) {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents((ComputeStageImplBase) stage1, "stage1");
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.createFn(), aggrOp.combineFn(),
-                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        return attachAggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return attachAggregate2(stage1, UserMetricsUtil.wrapAll(aggrOp));
     }
 
     // This method was extracted in order to capture the wildcard parameter A.
@@ -127,10 +119,7 @@ public class StageWithWindowImpl<T> implements StageWithWindow<T> {
         ensureJetEvents(streamStage, "This pipeline stage");
         ensureJetEvents(stageImpl1, "stage1");
         ensureJetEvents(stageImpl2, "stage2");
-        List<Serializable> metricsProviderCandidates = asList(
-                aggrOp.accumulateFn0(), aggrOp.accumulateFn1(), aggrOp.accumulateFn2(), aggrOp.createFn(),
-                aggrOp.combineFn(), aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        return attachAggregate3(stage1, stage2, UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates));
+        return attachAggregate3(stage1, stage2, UserMetricsUtil.wrapAll(aggrOp));
     }
 
     // This method was extracted in order to capture the wildcard parameter A.

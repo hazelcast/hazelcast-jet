@@ -54,6 +54,7 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
@@ -803,7 +804,7 @@ public final class Processors {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull Supplier<? extends S> createFn,
+            @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
             @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
@@ -818,12 +819,13 @@ public final class Processors {
                 mainTrav.accept(clonedStatefulMapFn.apply(state, key, item));
                 return mainTrav;
             };
+            Supplier<? extends S> clonedCreateFn = serde(createFn);
             return new TransformStatefulP<T, K, S, R>(
                     ttl,
                     keyFn,
                     timestampFn,
-                    createFn,
-                    UserMetricsUtil.wrap(statefulFlatMapFn, clonedStatefulMapFn),
+                    clonedCreateFn,
+                    UserMetricsUtil.wrapAll(statefulFlatMapFn, Arrays.asList(clonedStatefulMapFn, clonedCreateFn)),
                     onEvictFnCopy != null ? (s, k, wm) -> {
                         evictTrav.accept(onEvictFnCopy.apply(s, k, wm));
                         return evictTrav;

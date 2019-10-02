@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
@@ -24,7 +25,6 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.function.Supplier;
 
 import static com.hazelcast.jet.core.processor.Processors.mapStatefulP;
 
@@ -38,7 +38,7 @@ public class MapStatefulTransform<T, K, S, R> extends StatefulKeyedTransformBase
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull Supplier<? extends S> createFn,
+            @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> statefulMapFn,
             @Nullable TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {

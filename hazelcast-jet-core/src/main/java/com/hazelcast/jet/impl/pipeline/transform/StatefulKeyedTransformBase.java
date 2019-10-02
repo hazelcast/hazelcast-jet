@@ -17,10 +17,10 @@
 package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
-import java.util.function.Supplier;
 
 import static java.lang.Math.max;
 
@@ -31,7 +31,7 @@ abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform {
     final long ttl;
     final FunctionEx<? super T, ? extends K> keyFn;
     final ToLongFunctionEx<? super T> timestampFn;
-    final Supplier<? extends S> createFn;
+    final SupplierEx<? extends S> createFn;
 
     StatefulKeyedTransformBase(
             @Nonnull String name,
@@ -39,7 +39,7 @@ abstract class StatefulKeyedTransformBase<T, K, S> extends AbstractTransform {
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
             @Nonnull ToLongFunctionEx<? super T> timestampFn,
-            @Nonnull Supplier<? extends S> createFn
+            @Nonnull SupplierEx<? extends S> createFn
     ) {
         super(name, upstream);
         this.ttl = ttl;

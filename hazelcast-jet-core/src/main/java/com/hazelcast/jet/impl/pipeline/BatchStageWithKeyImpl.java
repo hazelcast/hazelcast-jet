@@ -38,8 +38,6 @@ import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
@@ -153,10 +151,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     public <R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
-        List<Serializable> metricsProviderCandidates = asList(aggrOp.accumulateFn(), aggrOp.createFn(), aggrOp.combineFn(),
-                aggrOp.deductFn(), aggrOp.exportFn(), aggrOp.finishFn());
-        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp =
-                UserMetricsUtil.wrapAll(aggrOp, metricsProviderCandidates);
+        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp);
         return computeStage.attach(new GroupTransform<>(
                         singletonList(computeStage.transform),
                         singletonList(keyFn()),
@@ -170,10 +165,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> op
     ) {
-        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.createFn(), op.combineFn(),
-                op.deductFn(), op.exportFn(), op.finishFn());
-        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp =
-                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
+        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
@@ -200,10 +192,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> op
     ) {
-        List<?> metricsProviderCandidates = asList(op.accumulateFn0(), op.accumulateFn1(), op.accumulateFn2(),
-                op.createFn(), op.combineFn(), op.deductFn(), op.exportFn(), op.finishFn());
-        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp =
-                UserMetricsUtil.wrapAll(op, metricsProviderCandidates);
+        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),

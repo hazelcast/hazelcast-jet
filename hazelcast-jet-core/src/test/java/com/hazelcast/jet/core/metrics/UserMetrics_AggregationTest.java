@@ -58,6 +58,7 @@ import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class UserMetrics_AggregationTest extends JetTestSupport {
 
@@ -833,13 +834,13 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         builder.add(stage2, op2);
         builder.add(stage3, op3);
         builder.add(stage4, op4);
-        builder.build().drainTo(Sinks.logger());
+        builder.build().setLocalParallelism(4).drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 36, "add1", 8, "combine1", 16, "deduct1", 0, "export1", 0, "finish1", 7,
-                "create2", 36, "add2", 4, "combine2", 16, "deduct2", 0, "export2", 0, "finish2", 7,
-                "create3", 36, "add3", 3, "combine3", 16, "deduct3", 0, "export3", 0, "finish3", 7,
-                "create4", 36, "add4", 1, "combine4", 16, "deduct4", 0, "export4", 0, "finish4", 7
+                "create1", 28, "add1", 8, "combine1", 16, "deduct1", 0, "export1", 0, "finish1", 7,
+                "create2", 28, "add2", 4, "combine2", 16, "deduct2", 0, "export2", 0, "finish2", 7,
+                "create3", 28, "add3", 3, "combine3", 16, "deduct3", 0, "export3", 0, "finish3", 7,
+                "create4", 28, "add4", 1, "combine4", 16, "deduct4", 0, "export4", 0, "finish4", 7
         );
     }
 
@@ -908,13 +909,13 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         builder.add(stage2, op2);
         builder.add(stage3, op3);
         builder.add(stage4, op4);
-        builder.build().drainTo(Sinks.logger());
+        builder.build().setLocalParallelism(4).drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 38, "add1", 8, "combine1", 7, "deduct1", 0, "export1", 0, "finish1", 7,
-                "create2", 38, "add2", 4, "combine2", 7, "deduct2", 0, "export2", 0, "finish2", 7,
-                "create3", 38, "add3", 3, "combine3", 7, "deduct3", 0, "export3", 0, "finish3", 7,
-                "create4", 38, "add4", 1, "combine4", 7, "deduct4", 0, "export4", 0, "finish4", 7
+                "create1", 22, "add1", 8, "combine1", 7, "deduct1", 0, "export1", 0, "finish1", 7,
+                "create2", 22, "add2", 4, "combine2", 7, "deduct2", 0, "export2", 0, "finish2", 7,
+                "create3", 22, "add3", 3, "combine3", 7, "deduct3", 0, "export3", 0, "finish3", 7,
+                "create4", 22, "add4", 1, "combine4", 7, "deduct4", 0, "export4", 0, "finish4", 7
         );
     }
 
@@ -957,6 +958,18 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         );
     }
 
+    @Test
+    public void rollingAggregate_batch() {
+        AggregateOperation1<Long, LongAccumulator, Long> aggrOp =
+                aggrOp("create", "add", "combine", "deduct", "export", "finish");
+
+        pipeline.drawFrom(TestSources.items(1L, 2L, 3L, 4L, 5L))
+                .rollingAggregate(aggrOp)
+                .drainTo(assertOrdered(Arrays.asList(1L, 3L, 6L, 10L, 15L)));
+
+        assertCountersProduced("create", 1, "add", 5, "deduct", null, "export", 5, "finish", null);
+    }
+
     private AggregateOperation1<Long, LongAccumulator, Long> aggrOp(String create, String add, String combine,
                                                                     String deduct, String export, String finish) {
         return AggregateOperation
@@ -977,21 +990,28 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         for (int i = 0; i < expected.length; i += 2) {
             String name = (String) expected[i];
             List<Measurement> measurements = metrics.get(name);
-            assertCounterValue(name, measurements, (long) (Integer) expected[i + 1]);
+            assertCounterValue(name, measurements, (Integer) expected[i + 1]);
         }
     }
 
-    private void assertCounterValue(String name, List<Measurement> measurements, long expectedValue) {
-        assertFalse(
-                String.format("Expected measurements for metric '%s', but there were none!", name),
-                measurements.isEmpty()
-        );
-        long actualValue = measurements.stream().mapToLong(Measurement::getValue).sum();
-        assertEquals(
-                String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name, actualValue),
-                expectedValue,
-                actualValue
-        );
+    private void assertCounterValue(String name, List<Measurement> measurements, Integer expectedValue) {
+        if (expectedValue == null) {
+            assertTrue(
+                    String.format("Did not expected measurements for metric '%s', but there were some!", name),
+                    measurements.isEmpty()
+            );
+        } else {
+            assertFalse(
+                    String.format("Expected measurements for metric '%s', but there were none!", name),
+                    measurements.isEmpty()
+            );
+            long actualValue = measurements.stream().mapToLong(Measurement::getValue).sum();
+            assertEquals(
+                    String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name, actualValue),
+                    (long) expectedValue,
+                    actualValue
+            );
+        }
     }
 
     private abstract static class AbstractAggregateFunction implements ProvidesMetrics, Serializable {
