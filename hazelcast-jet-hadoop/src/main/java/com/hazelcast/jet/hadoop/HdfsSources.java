@@ -74,6 +74,9 @@ public final class HdfsSources {
             @Nonnull Configuration configuration,
             @Nonnull BiFunctionEx<K, V, E> projectionFn
     ) {
+        for (Entry<String, String> en : configuration) {
+            System.out.println(en);
+        }
         return Sources.batchFromProcessor("readHdfs",
                 readHdfsP(SerializableConfiguration.asSerializable(configuration), projectionFn));
     }

@@ -29,8 +29,6 @@ import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;
 
-import static com.hazelcast.jet.hadoop.impl.SerializableConfiguration.asSerializable;
-
 /**
  * Static utility class with factories of Apache Hadoop HDFS source and sink
  * processors.
@@ -51,10 +49,10 @@ public final class HdfsProcessors {
             @Nonnull Configuration configuration, @Nonnull BiFunctionEx<K, V, R> mapper
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
-        if (configuration instanceof JobConf) {
-            return new ReadHdfsOldApiP.MetaSupplier<>((JobConf) configuration, mapper);
-        } else {
+        if (configuration.get("mapreduce.job.inputformat.class") != null) {
             return new ReadHdfsNewApiP.MetaSupplier<>(configuration, mapper);
+        } else {
+            return new ReadHdfsOldApiP.MetaSupplier<>((JobConf) configuration, mapper);
         }
     }
 
@@ -69,12 +67,10 @@ public final class HdfsProcessors {
             @Nonnull FunctionEx<? super E, V> extractValueFn
     ) {
         configuration = SerializableConfiguration.asSerializable(configuration);
-        if (configuration instanceof JobConf) {
-            return new WriteHdfsOldApiP.MetaSupplier<>((JobConf) configuration,
-                    extractKeyFn, extractValueFn);
+        if (configuration.get("mapreduce.job.outputformat.class") != null) {
+            return new WriteHdfsNewApiP.MetaSupplier<>(configuration, extractKeyFn, extractValueFn);
         } else {
-            return new WriteHdfsNewApiP.MetaSupplier<>(asSerializable(configuration),
-                    extractKeyFn, extractValueFn);
+            return new WriteHdfsOldApiP.MetaSupplier<>((JobConf) configuration, extractKeyFn, extractValueFn);
         }
     }
 }

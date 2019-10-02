@@ -73,7 +73,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     @Parameterized.Parameter(1)
     public EMapperType mapperType;
 
-    private JobConf jobConf;
+    private Configuration jobConf;
     private Set<Path> paths = new HashSet<>();
 
     @Parameterized.Parameters(name = "inputFormat={0}, mapper={1}")
@@ -126,7 +126,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         if (inputFormatClass.getPackage().getName().contains("mapreduce")) {
             Job job = Job.getInstance();
             job.setInputFormatClass(inputFormatClass);
-            jobConf = new JobConf(job.getConfiguration());
+            jobConf = job.getConfiguration();
         } else {
             JobConf jobConf = new JobConf();
             this.jobConf = jobConf;
@@ -162,8 +162,7 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         for (int i = 0; i < 4; i++) {
             Path path = createPath();
             paths.add(path);
-            // TODO [viliam] is this ok? We're creating a text file for the old sequence file
-            if (inputFormatClass.equals(org.apache.hadoop.mapred.SequenceFileInputFormat.class)) {
+            if (inputFormatClass.getSimpleName().equals("SequenceFileInputFormat")) {
                 writeToSequenceFile(conf, path);
             } else {
                 writeToTextFile(local, path);
