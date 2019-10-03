@@ -113,23 +113,8 @@
             <outputDirectory>docs/javadoc</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>src/bin</directory>
-            <includes>
-                <include>cluster.sh</include>
-                <include>jet.sh</include>
-                <include>jet-start.sh</include>
-                <include>jet-stop.sh</include>
-            </includes>
+            <directory>src/bin-filemode-755</directory>
             <fileMode>0755</fileMode>
-            <outputDirectory>bin</outputDirectory>
-            <filtered>true</filtered>
-        </fileSet>
-        <fileSet>
-            <directory>src/bin</directory>
-            <includes>
-                <include>common.sh</include>
-                <include>*.bat</include>
-            </includes>
             <outputDirectory>bin</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
