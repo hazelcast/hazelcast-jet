@@ -27,6 +27,7 @@
         <dependencySet>
             <includes>
                 <include>com.hazelcast.jet:hazelcast-jet</include>
+                <include>log4j:log4j</include>
                 <include>com.hazelcast.jet:hazelcast-jet-avro</include>
                 <include>com.hazelcast.jet:hazelcast-jet-hadoop</include>
                 <include>com.hazelcast.jet:hazelcast-jet-kafka</include>
@@ -138,6 +139,10 @@
         <fileSet>
             <directory>src/dist</directory>
             <outputDirectory/>
+        </fileSet>
+        <fileSet>
+            <directory>src/config</directory>
+            <outputDirectory>config</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>

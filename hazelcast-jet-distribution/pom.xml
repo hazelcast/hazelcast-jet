@@ -31,7 +31,6 @@
 
     <properties>
         <configs.from.jar>${project.build.directory}/config</configs.from.jar>
-        <hazelcast.jet.artifact>hazelcast-jet</hazelcast.jet.artifact>
     </properties>
 
     <build>
@@ -115,11 +114,10 @@
             <artifactId>hazelcast-jet</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <!-- workaround, otherwise javadoc from core module is not included-->
         <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-core</artifactId>
-            <version>${project.parent.version}</version>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
@@ -144,6 +142,12 @@
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-s3</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <!-- workaround, otherwise javadoc from core module is not included -->
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
 
@@ -181,12 +185,6 @@
 
         <!-- logging -->
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>${log4j2.version}</version>
@@ -218,13 +216,13 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>${spring.version}</version>
-            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
             <version>${spring.version}</version>
-            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>
