@@ -126,7 +126,8 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .map(WindowResult::result)
                 .drainTo(assertAnyOrder(Arrays.asList(15L, 111L)));
 
-        assertCountersProduced("create", 2, "add", 12, "combine", 0, "deduct", 0, "export", 0, "finish", 2);
+        assertCountersProduced("create", new long[] {2, 3}, "add", 12, "combine", new long[] {0, 1}, "deduct", 0,
+                "export", 0, "finish", 2);
     }
 
     @Test
@@ -159,7 +160,8 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .map(WindowResult::result)
                 .drainTo(assertAnyOrder(Arrays.asList(15L, 111L)));
 
-        assertCountersProduced("create", 2, "add", 12, "combine", 0, "deduct", 0, "export", 0, "finish", 2);
+        assertCountersProduced("create", new long[] {2, 3}, "add", 12, "combine", new long[] {0, 1}, "deduct", 0,
+                "export", 0, "finish", 2);
     }
 
     @Test
@@ -297,8 +299,10 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
-                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+                "create1", new long[] {1, 2}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 1,
+                "create2", new long[] {1, 2}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 1
         );
     }
 
@@ -319,8 +323,10 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
-                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+                "create1", new long[] {1, 2}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 1,
+                "create2", new long[] {1, 2}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 1
         );
     }
 
@@ -393,8 +399,10 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
-                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+                "create1", new long[] {1, 2}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 1,
+                "create2", new long[] {1, 2}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 1
         );
     }
 
@@ -417,8 +425,10 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 1, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 1,
-                "create2", 1, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 1
+                "create1", new long[] {1, 2}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 1,
+                "create2", new long[] {1, 2}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 1
         );
     }
 
@@ -589,9 +599,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 2, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 2,
-                "create2", 2, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 2,
-                "create3", 2, "add3", 3, "combine3", 0, "deduct3", 0, "export3", 0, "finish3", 2
+                "create1", new long[] {2, 3}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 2,
+                "create2", new long[] {2, 3}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 2,
+                "create3", new long[] {2, 3}, "add3", 3, "combine3", new long[] {0, 1}, "deduct3", 0, "export3", 0,
+                "finish3", 2
         );
     }
 
@@ -616,9 +629,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 2, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 2,
-                "create2", 2, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 2,
-                "create3", 2, "add3", 3, "combine3", 0, "deduct3", 0, "export3", 0, "finish3", 2
+                "create1", new long[] {2, 3}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 2,
+                "create2", new long[] {2, 3}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 2,
+                "create3", new long[] {2, 3}, "add3", 3, "combine3", new long[] {0, 1}, "deduct3", 0, "export3", 0,
+                "finish3", 2
         );
     }
 
@@ -708,9 +724,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 2, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 2,
-                "create2", 2, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 2,
-                "create3", 2, "add3", 3, "combine3", 0, "deduct3", 0, "export3", 0, "finish3", 2
+                "create1", new long[] {2, 3}, "add1", 8, "combine1", new long[] {0, 1},  "deduct1", 0, "export1", 0,
+                "finish1", 2,
+                "create2", new long[] {2, 3}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 2,
+                "create3", new long[] {2, 3}, "add3", 3, "combine3", new long[] {0, 1}, "deduct3", 0, "export3", 0,
+                "finish3", 2
         );
     }
 
@@ -738,9 +757,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 2, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 2,
-                "create2", 2, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 2,
-                "create3", 2, "add3", 3, "combine3", 0, "deduct3", 0, "export3", 0, "finish3", 2
+                "create1", new long[] {2, 3}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 2,
+                "create2", new long[] {2, 3}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 2,
+                "create3", new long[] {2, 3}, "add3", 3, "combine3", new long[] {0, 1}, "deduct3", 0, "export3", 0,
+                "finish3", 2
         );
     }
 
@@ -873,9 +895,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         builder.build().drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 3, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 3,
-                "create2", 3, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 3,
-                "create3", 3, "add3", 3, "combine3", 0, "deduct3", 0, "export3", 0, "finish3", 3
+                "create1", new long[] {3, 4}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 3,
+                "create2", new long[] {3, 4}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 3,
+                "create3", new long[] {3, 4}, "add3", 3, "combine3", new long[] {0, 1}, "deduct3", 0, "export3", 0,
+                "finish3", 3
         );
     }
 
@@ -952,9 +977,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         builder.build().drainTo(Sinks.logger());
 
         assertCountersProduced(
-                "create1", 3, "add1", 8, "combine1", 0, "deduct1", 0, "export1", 0, "finish1", 3,
-                "create2", 3, "add2", 4, "combine2", 0, "deduct2", 0, "export2", 0, "finish2", 3,
-                "create3", 3, "add3", 3, "combine3", 0, "deduct3", 0, "export3", 0, "finish3", 3
+                "create1", new long[] {3, 4}, "add1", 8, "combine1", new long[] {0, 1}, "deduct1", 0, "export1", 0,
+                "finish1", 3,
+                "create2", new long[] {3, 4}, "add2", 4, "combine2", new long[] {0, 1}, "deduct2", 0, "export2", 0,
+                "finish2", 3,
+                "create3", new long[] {3, 4}, "add3", 3, "combine3", new long[] {0, 1}, "deduct3", 0, "export3", 0,
+                "finish3", 3
         );
     }
 
@@ -1038,12 +1066,12 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         for (int i = 0; i < expected.length; i += 2) {
             String name = (String) expected[i];
             List<Measurement> measurements = metrics.get(name);
-            assertCounterValue(name, measurements, (Integer) expected[i + 1]);
+            assertCounterValue(name, measurements, expected[i + 1]);
         }
     }
 
-    private void assertCounterValue(String name, List<Measurement> measurements, Integer expectedValue) {
-        if (expectedValue == null) {
+    private void assertCounterValue(String name, List<Measurement> measurements, Object expected) {
+        if (expected == null) {
             assertTrue(
                     String.format("Did not expected measurements for metric '%s', but there were some!", name),
                     measurements.isEmpty()
@@ -1054,11 +1082,23 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                     measurements.isEmpty()
             );
             long actualValue = measurements.stream().mapToLong(Measurement::getValue).sum();
-            assertEquals(
-                    String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name, actualValue),
-                    (long) expectedValue,
-                    actualValue
-            );
+            if (expected instanceof Number) {
+                long expectedValue = ((Number) expected).longValue();
+                assertEquals(
+                        String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name,
+                                actualValue),
+                        expectedValue,
+                        actualValue
+                );
+            } else {
+                long expectedMinValue = ((long[]) expected)[0];
+                long expectedMaxValue = ((long[]) expected)[1];
+                assertTrue(
+                        String.format("Expected a value in the range of [%d, %d] for metric '%s', but got %d instead!",
+                                expectedMinValue, expectedMaxValue, name, actualValue),
+                        expectedMinValue <= actualValue && actualValue <= expectedMaxValue
+                );
+            }
         }
     }
 
