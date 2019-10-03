@@ -39,38 +39,21 @@
         </dependencySet>
     </dependencySets>
     <files>
-        <!-- Default XML config files -->
+        <!-- Default YAML config files -->
         <file>
-            <source>${configs.from.jar}/hazelcast-jet-default.xml</source>
-            <destName>hazelcast-jet.xml</destName>
+            <source>${configs.from.jar}/hazelcast-jet-default.yaml</source>
+            <destName>hazelcast-jet.yaml</destName>
             <outputDirectory>config</outputDirectory>
         </file>
         <file>
-            <source>${configs.from.jar}/hazelcast-jet-member-default.xml</source>
-            <destName>hazelcast.xml</destName>
+            <source>${configs.from.jar}/hazelcast-jet-member-default.yaml</source>
+            <destName>hazelcast.yaml</destName>
             <outputDirectory>config</outputDirectory>
         </file>
         <file>
-            <source>${configs.from.jar}/hazelcast-jet-client-default.xml</source>
-            <destName>hazelcast-client.xml</destName>
+            <source>${configs.from.jar}/hazelcast-jet-client-default.yaml</source>
+            <destName>hazelcast-client.yaml</destName>
             <outputDirectory>config</outputDirectory>
-        </file>
-
-        <!-- Full Example XML config files -->
-        <file>
-            <source>${configs.from.jar}/hazelcast-jet-full-example.xml</source>
-            <destName>hazelcast-jet-full-example.xml</destName>
-            <outputDirectory>config/examples</outputDirectory>
-        </file>
-        <file>
-            <source>${configs.from.jar}/hazelcast-full-example.xml</source>
-            <destName>hazelcast-full-example.xml</destName>
-            <outputDirectory>config/examples</outputDirectory>
-        </file>
-        <file>
-            <source>${configs.from.jar}/hazelcast-client-full-example.xml</source>
-            <destName>hazelcast-client-full-example.xml</destName>
-            <outputDirectory>config/examples</outputDirectory>
         </file>
 
         <!-- Full Example YAML config files -->
@@ -90,20 +73,37 @@
             <outputDirectory>config/examples</outputDirectory>
         </file>
 
-        <!-- Simple Example YAML config files -->
+        <!-- Simple XML config files -->
         <file>
-            <source>${configs.from.jar}/hazelcast-jet-default.yaml</source>
-            <destName>hazelcast-jet.yaml</destName>
+            <source>${configs.from.jar}/hazelcast-jet-default.xml</source>
+            <destName>hazelcast-jet.xml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${configs.from.jar}/hazelcast-jet-member-default.yaml</source>
-            <destName>hazelcast.yaml</destName>
+            <source>${configs.from.jar}/hazelcast-jet-member-default.xml</source>
+            <destName>hazelcast.xml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
         <file>
-            <source>${configs.from.jar}/hazelcast-jet-client-default.yaml</source>
-            <destName>hazelcast-client.yaml</destName>
+            <source>${configs.from.jar}/hazelcast-jet-client-default.xml</source>
+            <destName>hazelcast-client.xml</destName>
+            <outputDirectory>config/examples</outputDirectory>
+        </file>
+
+        <!-- Full Example XML config files -->
+        <file>
+            <source>${configs.from.jar}/hazelcast-jet-full-example.xml</source>
+            <destName>hazelcast-jet-full-example.xml</destName>
+            <outputDirectory>config/examples</outputDirectory>
+        </file>
+        <file>
+            <source>${configs.from.jar}/hazelcast-full-example.xml</source>
+            <destName>hazelcast-full-example.xml</destName>
+            <outputDirectory>config/examples</outputDirectory>
+        </file>
+        <file>
+            <source>${configs.from.jar}/hazelcast-client-full-example.xml</source>
+            <destName>hazelcast-client-full-example.xml</destName>
             <outputDirectory>config/examples</outputDirectory>
         </file>
     </files>
