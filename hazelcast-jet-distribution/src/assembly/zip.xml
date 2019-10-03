@@ -115,7 +115,10 @@
         <fileSet>
             <directory>src/bin</directory>
             <includes>
-                <include>*.sh</include>
+                <include>cluster.sh</include>
+                <include>jet.sh</include>
+                <include>jet-start.sh</include>
+                <include>jet-stop.sh</include>
             </includes>
             <fileMode>0755</fileMode>
             <outputDirectory>bin</outputDirectory>
@@ -124,6 +127,7 @@
         <fileSet>
             <directory>src/bin</directory>
             <includes>
+                <include>common.sh</include>
                 <include>*.bat</include>
             </includes>
             <outputDirectory>bin</outputDirectory>
