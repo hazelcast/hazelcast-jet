@@ -113,7 +113,7 @@
             <outputDirectory>docs/javadoc</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>${project.build.outputDirectory}/bin</directory>
+            <directory>src/bin</directory>
             <includes>
                 <include>*.sh</include>
             </includes>
@@ -122,7 +122,7 @@
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
-            <directory>${project.build.outputDirectory}/bin</directory>
+            <directory>src/bin</directory>
             <includes>
                 <include>*.bat</include>
             </includes>
@@ -130,19 +130,8 @@
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
-            <directory>${project.build.outputDirectory}</directory>
-            <includes>
-                <include>*.txt</include>
-            </includes>
-            <outputDirectory/>
-        </fileSet>
-        <fileSet>
             <directory>src/dist</directory>
             <outputDirectory/>
-        </fileSet>
-        <fileSet>
-            <directory>src/config</directory>
-            <outputDirectory>config</outputDirectory>
         </fileSet>
     </fileSets>
 </assembly>
