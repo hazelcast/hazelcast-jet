@@ -149,6 +149,25 @@
             <version>3.9.0</version>
         </dependency>
 
+        <!-- These dependencies are otherwise optional, but we include them in the
+        uberjar for convenience -->
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-aws</artifactId>
+            <version>${hazelcast.aws.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-kubernetes</artifactId>
+            <version>${hazelcast.kubernetes.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-gcp</artifactId>
+            <version>${hazelcast.gcp.version}</version>
+        </dependency>
+
+        <!-- Test dependencies -->
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-core</artifactId>
@@ -164,14 +183,6 @@
             <classifier>tests</classifier>
         </dependency>
 
-        <!-- optional dependencies -->
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-aws</artifactId>
-            <version>${hazelcast.aws.version}</version>
-            <optional>true</optional>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- Optional dependencies: required for building, optional at run time -->
         <dependency>
