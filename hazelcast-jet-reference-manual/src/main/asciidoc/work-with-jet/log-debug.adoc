@@ -260,6 +260,92 @@ these metrics for each processor instance _N_, the _N_ denotes the global
 processor index.
 |===
 
+=== User-defined metrics ===
+
+User-defined metrics are actually a subset of job metrics. What distinguishes them
+from regular job-specific metrics is exactly what their name implies: they are not
+built-in, but defined when processing pipelines are written.
+
+Since user metrics are also job metrics, they will have the same tag structure. Only
+their names will differ.
+
+Let's see how one would go about defining user metrics. For example if you would
+like to monitor your filtering step you could write code like this:
+
+[source]
+----
+include::{javasource}/LogDebug.java[tag=s5]
+----
+
+As you can see there are two user-metrics defined inside our filtering code. They work
+in different ways to showcase the options provided.
+
+One uses the provided `{jet-javadoc}/core/metrics/MetricsContext.html[MetricsContext]`
+object to obtain a `{jet-javadoc}/core/metrics/Counter.html[Counter]` instance
+which can be used to explicitly set values for that specific metric.
+
+The other registers a callback which can be used by the metrics framework to fetch the
+metric's latest value whenever an update is scheduled.
+
+Take note that out `Filter` class also has to implement the
+`{jet-javadoc}/core/metrics/ProvidesMetrics.html[ProvidesMetrics]` marker interface so
+that it can be identified later and that it will get a
+`{jet-javadoc}/core/metrics/MetricsContext.html[MetricsContext]` provided to it.
+
+User-metrics can be defined in various places when using the Pipeline API, but not
+everywhere. The list of supported Pipeline operations is as follows (showing only the parameters which
+ are allowed to be metrics providers, ie. implement
+ `{jet-javadoc}/core/metrics/ProvidesMetrics.html[ProvidesMetrics]`):
+
+-----
+filter                   (PredicateEx filterFn)
+filterUsingContext       (..., BiPredicateEx filterFn)
+filterUsingContextAsync  (..., BiFunctionEx filterAsyncFn)
+filterStateful           (..., BiPredicateEx filterFn)
+map                      (FunctionEx mapFn)
+mapUsingContext          (..., BiFunctionEx mapFn)
+mapUsingContextAsync     (..., BiFunctionEx mapAsyncFn)
+mapStateful              (..., BiFunctionEx mapFn)
+mapUsingIMap             (..., BiFunctionEx mapFn)
+mapUsingReplicatedMap    (..., BiFunctionEx mapFn)
+flatMap                  (FunctionEx flatMapFn)
+flatMapUsingContext      (..., BiFunctionEx flatMapFn)
+flatMapUsingContextAsync (..., BiFunctionEx flatMapAsyncFn)
+flatMapStateful          (..., BiFunctionEx flatMapFn)
+aggregate                (AggregateOperation1 aggrOp)
+aggregate2               (AggregateOperation1 aggrOp0, ..., AggregateOperation1 aggrOp1)
+aggregate2               (..., AggregateOperation2 aggrOp)
+aggregate3               (AggregateOperation1 aggrOp0, ..., AggregateOperation1 aggrOp1, ..., AggregateOperation1 aggrOp2)
+aggregate3               (..., AggregateOperation3 aggrOp)
+aggregateBuilder         ()
+aggregateBuilder         (AggregateOperation1 aggrOp0)
+rollingAggregate         (AggregateOperation1 aggrOp)
+-----
+
+**Note on aggregate operations**: it's not the
+`{jet-javadoc}/aggregate/AggregateOperation.html[AggregateOperations]`
+themselves who need to implement
+`{jet-javadoc}/core/metrics/ProvidesMetrics.html[ProvidesMetrics]` but their constituent
+functions. Same applies to aggregated operations used by
+`{jet-javadoc}/pipeline/AggregateBuilder.html[AggregateBuilder]`.
+The constituent functions are:
+`{jet-javadoc}/aggregate/AggregateOperation.html#accumulateFn-int-[accumulateFn]`
+(don't forget to consider the `{jet-javadoc}/aggregate/AggregateOperation.html#arity--[arity]`
+of the aggregated operation, that determines how many accumulated functions an operation has),
+`{jet-javadoc}/aggregate/AggregateOperation.html#createFn--[createFn]`,
+`{jet-javadoc}/aggregate/AggregateOperation.html#combineFn--[combineFn]`,
+`{jet-javadoc}/aggregate/AggregateOperation.html#deductFn--[deductFn]`,
+`{jet-javadoc}/aggregate/AggregateOperation.html#exportFn--[exportFn]`,
+`{jet-javadoc}/aggregate/AggregateOperation.html#finishFn--[finishFn]`.
+
+**Note on rolling aggregate**: the same applies as stated above for regular aggregation,
+with the extra mention that not all for rolling aggregatation not all constituent functions
+are considered and executed. The ones that are:
+`{jet-javadoc}/aggregate/AggregateOperation.html#accumulateFn-int-[accumulateFn]`,
+`{jet-javadoc}/aggregate/AggregateOperation.html#createFn--[createFn]`,
+`{jet-javadoc}/aggregate/AggregateOperation.html#exportFn--[exportFn]`.
+
+
 === Exposing metrics ===
 The main method Jet has for exposing the metrics to the outside world is the
 JVM's standard JMX interface. Since Jet 3.2 there is also an alternative to JMX
