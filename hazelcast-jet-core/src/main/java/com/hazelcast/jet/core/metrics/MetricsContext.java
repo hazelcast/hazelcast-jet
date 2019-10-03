@@ -21,7 +21,7 @@ import com.hazelcast.jet.function.SupplierEx;
 import javax.annotation.Nonnull;
 
 /**
- * Context object which is able to provide localized counter instances to
+ * Context object which is able to provide localised counter instances to
  * be used as sources of custom metrics. Each {@link com.hazelcast.jet.core.Processor}
  * will have its own instance. Hence user metrics have the same granularity
  * as Processors.
