@@ -20,7 +20,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.metrics.Counter;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -81,7 +81,7 @@ public class LogDebug {
         Pipeline pipeline = Pipeline.create();
 
         //tag::s5[]
-        class Filter implements PredicateEx<Long>, ProvidesMetrics {
+        class Filter implements PredicateEx<Long>, MetricsProvider {
 
             private Counter dropped;
             private AtomicLong total;

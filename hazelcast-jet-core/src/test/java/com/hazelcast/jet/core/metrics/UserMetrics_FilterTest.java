@@ -295,7 +295,7 @@ public class UserMetrics_FilterTest extends JetTestSupport {
         );
     }
 
-    private abstract static class AbstractFiltering implements ProvidesMetrics, Serializable {
+    private abstract static class AbstractFiltering implements MetricsProvider, Serializable {
         private Counter droppedCounter;
         private AtomicLong totalCounter = new AtomicLong();
 

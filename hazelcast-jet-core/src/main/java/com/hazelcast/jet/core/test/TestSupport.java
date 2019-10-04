@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.Counter;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.LoggingServiceImpl;
@@ -783,9 +783,9 @@ public final class TestSupport {
         }
         try {
             processor.init(outbox, context);
-            if (processor instanceof ProvidesMetrics) {
-                ProvidesMetrics providesMetrics = (ProvidesMetrics) processor;
-                providesMetrics.registerMetrics(mockMetricsContext());
+            if (processor instanceof MetricsProvider) {
+                MetricsProvider metricsProvider = (MetricsProvider) processor;
+                metricsProvider.registerMetrics(mockMetricsContext());
             }
         } catch (Exception e) {
             throw sneakyThrow(e);

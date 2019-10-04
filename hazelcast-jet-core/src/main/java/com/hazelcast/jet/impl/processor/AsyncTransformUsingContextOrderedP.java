@@ -25,7 +25,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
@@ -53,7 +53,7 @@ import static com.hazelcast.jet.impl.util.Util.serde;
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractProcessor implements ProvidesMetrics {
+public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractProcessor implements MetricsProvider {
 
     private final ContextFactory<C> contextFactory;
     private final BiFunctionEx<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;

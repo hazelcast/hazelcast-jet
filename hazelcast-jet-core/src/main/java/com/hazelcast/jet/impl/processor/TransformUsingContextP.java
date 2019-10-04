@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.pipeline.ContextFactory;
@@ -40,7 +40,7 @@ import static com.hazelcast.jet.impl.util.Util.serde;
  * @param <T> received item type
  * @param <R> emitted item type
  */
-public final class TransformUsingContextP<C, T, R> extends AbstractProcessor implements ProvidesMetrics {
+public final class TransformUsingContextP<C, T, R> extends AbstractProcessor implements MetricsProvider {
 
     // package-visible for test
     C contextObject;

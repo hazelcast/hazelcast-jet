@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.aggregate;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
-public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R>, ProvidesMetrics {
+public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R>, MetricsProvider {
     final BiConsumerEx<? super A, ?>[] accumulateFns;
     private final SupplierEx<A> createFn;
     private final BiConsumerEx<? super A, ? super A> combineFn;

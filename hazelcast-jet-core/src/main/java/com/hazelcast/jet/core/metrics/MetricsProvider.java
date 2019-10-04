@@ -17,10 +17,10 @@
 package com.hazelcast.jet.core.metrics;
 
 /**
- * Marker interface to be implemented by all classes that want to be able
- * to retrieve and work with custom metrics.
+ * An interface to be implemented by classes that want to be able to retrieve
+ * and work with custom metrics.
  */
-public interface ProvidesMetrics {
+public interface MetricsProvider {
 
     /**
      * Will be called once for each instance and has the role to provide
@@ -28,5 +28,4 @@ public interface ProvidesMetrics {
      * metric counters to use.
      */
     void registerMetrics(MetricsContext context);
-
 }

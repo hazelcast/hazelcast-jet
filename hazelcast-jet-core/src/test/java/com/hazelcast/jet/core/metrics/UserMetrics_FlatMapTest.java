@@ -291,7 +291,7 @@ public class UserMetrics_FlatMapTest extends JetTestSupport {
         );
     }
 
-    private abstract static class AbstractFlatMapping implements ProvidesMetrics, Serializable {
+    private abstract static class AbstractFlatMapping implements MetricsProvider, Serializable {
         private Counter expandedCounter;
 
         @Override

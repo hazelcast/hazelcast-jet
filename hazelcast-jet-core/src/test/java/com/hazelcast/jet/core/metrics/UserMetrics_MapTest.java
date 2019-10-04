@@ -408,7 +408,7 @@ public class UserMetrics_MapTest extends JetTestSupport {
         );
     }
 
-    private abstract static class AbstractMapping implements ProvidesMetrics, Serializable {
+    private abstract static class AbstractMapping implements MetricsProvider, Serializable {
 
         private Counter mappedCounter;
 

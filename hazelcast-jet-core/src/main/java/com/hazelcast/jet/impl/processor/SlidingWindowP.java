@@ -29,7 +29,7 @@ import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
@@ -80,7 +80,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * @param <A> type of the frame accumulator object
  * @param <R> type of the finished result
  */
-public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
+public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor implements MetricsProvider {
 
     // package-visible for testing
     final Long2ObjectHashMap<Map<K, A>> tsToKeyToAcc = new Long2ObjectHashMap<>();

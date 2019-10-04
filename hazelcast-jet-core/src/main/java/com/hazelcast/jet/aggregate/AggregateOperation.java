@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.aggregate;
 
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.BiConsumerEx;
@@ -110,7 +110,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *
  * @since 3.0
  */
-public interface AggregateOperation<A, R> extends Serializable, ProvidesMetrics {
+public interface AggregateOperation<A, R> extends Serializable, MetricsProvider {
 
     /**
      * Returns the number of contributing streams this operation is set up to

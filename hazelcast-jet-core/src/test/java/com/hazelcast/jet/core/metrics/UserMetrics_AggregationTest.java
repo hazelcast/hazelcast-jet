@@ -1102,7 +1102,7 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
         }
     }
 
-    private abstract static class AbstractAggregateFunction implements ProvidesMetrics, Serializable {
+    private abstract static class AbstractAggregateFunction implements MetricsProvider, Serializable {
         private final String metricName;
 
         private Counter counter;
@@ -1127,7 +1127,7 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
     }
 
     private static class AggrAccumulateFnProvidingMetrics extends AbstractAggregateFunction
-            implements BiConsumerEx<LongAccumulator, Long>, ProvidesMetrics {
+            implements BiConsumerEx<LongAccumulator, Long>, MetricsProvider {
         AggrAccumulateFnProvidingMetrics(String metricName) {
             super(metricName);
         }

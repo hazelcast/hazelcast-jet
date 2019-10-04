@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -79,7 +79,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * @param <A> type of the accumulator object
  * @param <R> type of the finished result
  */
-public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
+public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements MetricsProvider {
     private static final Watermark COMPLETING_WM = new Watermark(Long.MAX_VALUE);
 
     // exposed for testing, to check for memory leaks

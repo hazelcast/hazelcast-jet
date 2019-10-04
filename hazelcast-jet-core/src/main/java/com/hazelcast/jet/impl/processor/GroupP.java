@@ -21,7 +21,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
@@ -43,7 +43,7 @@ import static java.util.Collections.singletonList;
  * more inbound edges. The supplied aggregate operation must have as many
  * accumulation functions as there are inbound edges.
  */
-public class GroupP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
+public class GroupP<K, A, R, OUT> extends AbstractProcessor implements MetricsProvider {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
 

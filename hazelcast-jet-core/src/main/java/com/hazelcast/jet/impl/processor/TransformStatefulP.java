@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricsContext;
-import com.hazelcast.jet.core.metrics.ProvidesMetrics;
+import com.hazelcast.jet.core.metrics.MetricsProvider;
 import com.hazelcast.jet.datamodel.TimestampedItem;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
@@ -49,7 +49,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.function.Function.identity;
 
-public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements ProvidesMetrics {
+public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements MetricsProvider {
     private static final int HASH_MAP_INITIAL_CAPACITY = 16;
     private static final float HASH_MAP_LOAD_FACTOR = 0.75f;
 
