@@ -61,9 +61,9 @@ public class Serialization {
         Pipeline p = Pipeline.create();
         p.drawFrom(source)
          .mapStateful(ArrayList::new, (list, item) -> {
-             list.add(item);
+             list.add(item); // <1>
              // Don't do this!
-             return list; // <1>
+             return list; // <2>
          });
         //end::modify-emitted[]
     }
