@@ -22,7 +22,6 @@ import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import javax.annotation.Nonnull;
@@ -92,6 +91,6 @@ public class WindowGroupAggregateBuilder<K, R0> {
     @Nonnull
     public StreamStage<KeyedWindowResult<K, ItemsByTag>> build() {
         AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
-        return grAggBuilder.buildStream(UserMetricsUtil.wrapAll(aggrOp));
+        return grAggBuilder.buildStream(aggrOp);
     }
 }

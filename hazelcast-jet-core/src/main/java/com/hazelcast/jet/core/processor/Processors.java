@@ -267,13 +267,11 @@ public final class Processors {
     public static <A, R> SupplierEx<Processor> accumulateP(@Nonnull AggregateOperation<A, R> aggrOp) {
         return () -> {
             AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
-            AggregateOperation<A, A> wrappedAggrOp = UserMetricsUtil.wrap(
-                    clonedAggrOp.withIdentityFinish(), clonedAggrOp);
             return new GroupP<>(
                     // We should use the same constant key as the input edges do, but since
                     // the processor doesn't save the state, there's no need to.
-                    nCopies(wrappedAggrOp.arity(), t -> "ALL"),
-                    wrappedAggrOp,
+                    nCopies(clonedAggrOp.arity(), t -> "ALL"),
+                    clonedAggrOp.withIdentityFinish(),
                     (k, r) -> r);
         };
     }
@@ -301,13 +299,11 @@ public final class Processors {
     ) {
         return () -> {
             AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
-            AggregateOperation<A, R> wrappedAggrOp = UserMetricsUtil.wrap(
-                    clonedAggrOp.withCombiningAccumulateFn(identity()), clonedAggrOp);
             return new GroupP<>(
                     // We should use the same constant key as the input edges do, but since
                     // the processor doesn't save the state, there's no need to.
                     Collections.singletonList(t -> "ALL"),
-                    wrappedAggrOp,
+                    clonedAggrOp.withCombiningAccumulateFn(identity()),
                     (k, r) -> r
             );
         };
@@ -377,9 +373,7 @@ public final class Processors {
     ) {
         return () -> {
             AggregateOperation<A, ?> clonedAggrOp = serde(aggrOp);
-            AggregateOperation<A, A> wrappedAggrOp = UserMetricsUtil.wrap(
-                    clonedAggrOp.withIdentityFinish(), clonedAggrOp);
-            return new GroupP<>(getKeyFns, wrappedAggrOp, Util::entry);
+            return new GroupP<>(getKeyFns, clonedAggrOp.withIdentityFinish(), Util::entry);
         };
     }
 
@@ -413,11 +407,9 @@ public final class Processors {
     ) {
         return () -> {
             AggregateOperation<A, R> clonedAggrOp = serde(aggrOp);
-            AggregateOperation<A, R> wrappedAggrOp = UserMetricsUtil.wrap(
-                    clonedAggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue), clonedAggrOp);
             return new GroupP<>(
                     singletonList((FunctionEx<Entry<K, ?>, K>) Entry::getKey),
-                    wrappedAggrOp,
+                    clonedAggrOp.withCombiningAccumulateFn(Entry<K, A>::getValue),
                     mapToOutputFn);
         };
     }
@@ -515,7 +507,7 @@ public final class Processors {
                 timestampKind,
                 winPolicy.toTumblingByFrame(),
                 0L,
-                UserMetricsUtil.wrap(aggrOp.withIdentityFinish(), aggrOp),
+                aggrOp.withIdentityFinish(),
                 KeyedWindowResult::new,
                 false
         );
@@ -569,7 +561,7 @@ public final class Processors {
                 TimestampKind.FRAME,
                 winPolicy,
                 0L,
-                UserMetricsUtil.wrap(aggrOp.withCombiningAccumulateFn(KeyedWindowResult<Object, A>::result), aggrOp),
+                aggrOp.withCombiningAccumulateFn(KeyedWindowResult<Object, A>::result),
                 mapToOutputFn,
                 true
         );

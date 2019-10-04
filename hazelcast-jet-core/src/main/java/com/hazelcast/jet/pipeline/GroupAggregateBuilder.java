@@ -22,7 +22,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.GrAggBuilder;
 
 import javax.annotation.Nonnull;
@@ -96,8 +95,6 @@ public class GroupAggregateBuilder<K, R0> {
      */
     @Nonnull
     public BatchStage<Entry<K, ItemsByTag>> build() {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
-        AggregateOperation<Object[], ItemsByTag> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp);
-        return grAggBuilder.buildBatch(wrappedAggrOp, Util::entry);
+        return grAggBuilder.buildBatch(aggrOpBuilder.build(), Util::entry);
     }
 }

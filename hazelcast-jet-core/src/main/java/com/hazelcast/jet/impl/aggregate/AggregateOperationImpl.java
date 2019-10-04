@@ -17,9 +17,12 @@
 package com.hazelcast.jet.impl.aggregate;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.core.metrics.MetricsContext;
+import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.function.BiConsumerEx;
+import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -27,7 +30,7 @@ import javax.annotation.Nullable;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.util.Preconditions.checkNotNull;
 
-public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
+public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R>, ProvidesMetrics {
     final BiConsumerEx<? super A, ?>[] accumulateFns;
     private final SupplierEx<A> createFn;
     private final BiConsumerEx<? super A, ? super A> combineFn;
@@ -122,6 +125,18 @@ public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     @SuppressWarnings("unchecked")
     static <A> BiConsumerEx<? super A, ?>[] accumulateFns(BiConsumerEx... accFns) {
         return (BiConsumerEx<? super A, ?>[]) accFns;
+    }
+
+    @Override
+    public void registerMetrics(MetricsContext context) {
+        for (BiConsumerEx<? super A, ?> accumulateFn : accumulateFns) {
+            UserMetricsUtil.cast(accumulateFn).registerMetrics(context);
+        }
+        UserMetricsUtil.cast(createFn).registerMetrics(context);
+        UserMetricsUtil.cast(combineFn).registerMetrics(context);
+        UserMetricsUtil.cast(deductFn).registerMetrics(context);
+        UserMetricsUtil.cast(exportFn).registerMetrics(context);
+        UserMetricsUtil.cast(finishFn).registerMetrics(context);
     }
 
     FunctionEx<? super A, ? extends A> unsupportedExportFn() {

@@ -22,7 +22,6 @@ import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
@@ -115,10 +114,6 @@ public class AggregateBuilder<R0> {
     @Nonnull
     public BatchStage<ItemsByTag> build() {
         CreateOutStageFn<ItemsByTag, BatchStage<ItemsByTag>> createOutStageFn = BatchStageImpl::new;
-
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
-        AggregateOperation<Object[], ItemsByTag> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp);
-
-        return aggBuilder.build(wrappedAggrOp, createOutStageFn);
+        return aggBuilder.build(aggrOpBuilder.build(), createOutStageFn);
     }
 }

@@ -151,11 +151,10 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     public <R> BatchStage<Entry<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
-        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp);
         return computeStage.attach(new GroupTransform<>(
                         singletonList(computeStage.transform),
                         singletonList(keyFn()),
-                        wrappedAggrOp,
+                        aggrOp,
                         Util::entry),
                 DO_NOT_ADAPT);
     }
@@ -165,12 +164,11 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BatchStageWithKey<T1, ? extends K> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, R> op
     ) {
-        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
                         asList(keyFn(), stage1.keyFn()),
-                        wrappedOp,
+                        op,
                         Util::entry
                 ), DO_NOT_ADAPT);
     }
@@ -192,12 +190,11 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BatchStageWithKey<T2, ? extends K> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> op
     ) {
-        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
                         asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
-                        wrappedOp,
+                        op,
                         Util::entry),
                 DO_NOT_ADAPT);
     }

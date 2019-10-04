@@ -22,7 +22,6 @@ import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.StreamStageImpl;
@@ -95,9 +94,8 @@ public class WindowAggregateBuilder<R0> {
      */
     @Nonnull
     public StreamStage<WindowResult<ItemsByTag>> build() {
-        AggregateOperation<Object[], ItemsByTag> aggrOp = aggrOpBuilder.build();
         CreateOutStageFn<WindowResult<ItemsByTag>, StreamStage<WindowResult<ItemsByTag>>> createOutStageFn =
                 StreamStageImpl::new;
-        return aggBuilder.build(UserMetricsUtil.wrapAll(aggrOp), createOutStageFn);
+        return aggBuilder.build(aggrOpBuilder.build(), createOutStageFn);
     }
 }

@@ -208,8 +208,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull
     @Override
     public <R> BatchStage<R> aggregate(@Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp) {
-        AggregateOperation1<? super T, ?, ? extends R> wrappedAggrOp = UserMetricsUtil.wrapAll(aggrOp);
-        return attach(new AggregateTransform<>(singletonList(transform), wrappedAggrOp), fnAdapter);
+        return attach(new AggregateTransform<>(singletonList(transform), aggrOp), fnAdapter);
     }
 
     @Nonnull
@@ -218,8 +217,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T1> stage1,
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> op
     ) {
-        AggregateOperation2<? super T, ? super T1, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), wrappedOp), DO_NOT_ADAPT);
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1)), op), DO_NOT_ADAPT);
     }
 
     @Nonnull
@@ -239,8 +237,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BatchStage<T2> stage2,
             @Nonnull AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> op
     ) {
-        AggregateOperation3<? super T, ? super T1, ? super T2, ?, ? extends R> wrappedOp = UserMetricsUtil.wrapAll(op);
-        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), wrappedOp),
+        return attach(new AggregateTransform<>(asList(transform, transformOf(stage1), transformOf(stage2)), op),
                 DO_NOT_ADAPT);
     }
 

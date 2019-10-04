@@ -16,13 +16,8 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.AggregateOperation2;
-import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
-import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -30,10 +25,7 @@ import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,7 +37,7 @@ import static java.util.stream.Collectors.toSet;
 
 public final class UserMetricsUtil {
 
-    private static final ProvidesMetrics NOOP_METRICS_PROVIDER = context -> { };
+    private static final ProvidesMetrics NOOP_METRICS_PROVIDER = (ProvidesMetrics & Serializable) context -> { };
 
     private UserMetricsUtil() {
     }
@@ -174,57 +166,6 @@ public final class UserMetricsUtil {
         return supplierEx;
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T extends AggregateOperation> T wrap(T aggrOp, Object candidate) {
-        if (notAlreadyWrapped(aggrOp) && candidate instanceof ProvidesMetrics) {
-            if (aggrOp.arity() == 1) {
-                return (T) new WrappedAggregateOperation1((AggregateOperation1) aggrOp,
-                        (ProvidesMetrics) candidate);
-            } else if (aggrOp.arity() == 2) {
-                return (T) new WrappedAggregateOperation2((AggregateOperation2) aggrOp,
-                        (ProvidesMetrics) candidate);
-            } else if (aggrOp.arity() == 3) {
-                return (T) new WrappedAggregateOperation3((AggregateOperation3) aggrOp,
-                        (ProvidesMetrics) candidate);
-            } else {
-                return (T) new WrappedAggregateOperation(aggrOp, (ProvidesMetrics) candidate);
-            }
-        }
-        return aggrOp;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T extends AggregateOperation> T wrapAll(T op) {
-        if (notAlreadyWrapped(op)) {
-            Set<ProvidesMetrics> providers = getProviders(getCandidates(op).stream());
-            if (!providers.isEmpty()) {
-                if (op.arity() == 1) {
-                    return (T) new WrappedAggregateOperation1((AggregateOperation1) op, providers);
-                } else if (op.arity() == 2) {
-                    return (T) new WrappedAggregateOperation2((AggregateOperation2) op, providers);
-                } else if (op.arity() == 3) {
-                    return (T) new WrappedAggregateOperation3((AggregateOperation3) op, providers);
-                } else {
-                    return (T) new WrappedAggregateOperation(op, providers);
-                }
-            }
-        }
-        return op;
-    }
-
-    private static List<?> getCandidates(AggregateOperation op) {
-        List<Object> candidates = new ArrayList<>();
-        for (int i = 0; i < op.arity(); i++) {
-            candidates.add(op.accumulateFn(i));
-        }
-        candidates.add(op.createFn());
-        candidates.add(op.combineFn());
-        candidates.add(op.deductFn());
-        candidates.add(op.exportFn());
-        candidates.add(op.finishFn());
-        return candidates;
-    }
-
     private static Set<ProvidesMetrics> getProviders(Stream<?> candidates) {
         return candidates
                 .filter(ProvidesMetrics.class::isInstance)
@@ -236,387 +177,7 @@ public final class UserMetricsUtil {
         return !(obj instanceof AbstractWrapper);
     }
 
-    @SuppressWarnings("unchecked")
-    private static class WrappedAggregateOperation1 extends AbstractWrapper implements AggregateOperation1 {
-        private final AggregateOperation1 aggrOp1;
-
-        WrappedAggregateOperation1(AggregateOperation1 aggrOp1, ProvidesMetrics provider) {
-            super(provider);
-            this.aggrOp1 = aggrOp1;
-        }
-
-        WrappedAggregateOperation1(AggregateOperation1 aggrOp1, Collection<ProvidesMetrics> providers) {
-            super(providers);
-            this.aggrOp1 = aggrOp1;
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn() {
-            return aggrOp1.accumulateFn();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation1 withAccumulateFn(BiConsumerEx accumulateFn) {
-            return aggrOp1.withAccumulateFn(accumulateFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation1 withIdentityFinish() {
-            return aggrOp1.withIdentityFinish();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation1 andThen(FunctionEx thenFn) {
-            return aggrOp1.andThen(thenFn);
-        }
-
-        @Override
-        public int arity() {
-            return aggrOp1.arity();
-        }
-
-        @Nonnull
-        @Override
-        public SupplierEx createFn() {
-            return aggrOp1.createFn();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn(int index) {
-            return aggrOp1.accumulateFn(index);
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx combineFn() {
-            return aggrOp1.combineFn();
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx deductFn() {
-            return aggrOp1.deductFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx exportFn() {
-            return aggrOp1.exportFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx finishFn() {
-            return aggrOp1.finishFn();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
-            return aggrOp1.withAccumulateFns(accumulateFns);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static class WrappedAggregateOperation2 extends AbstractWrapper implements AggregateOperation2 {
-        private final AggregateOperation2 aggrOp2;
-
-        WrappedAggregateOperation2(AggregateOperation2 aggrOp2, ProvidesMetrics provider) {
-            super(provider);
-            this.aggrOp2 = aggrOp2;
-        }
-
-        WrappedAggregateOperation2(AggregateOperation2 aggrOp2, Collection<ProvidesMetrics> providers) {
-            super(providers);
-            this.aggrOp2 = aggrOp2;
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn0() {
-            return aggrOp2.accumulateFn0();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn1() {
-            return aggrOp2.accumulateFn1();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation2 withAccumulateFn0(@Nonnull BiConsumerEx accumulateFn) {
-            return aggrOp2.withAccumulateFn0(accumulateFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation2 withAccumulateFn1(@Nonnull BiConsumerEx accumulateFn) {
-            return aggrOp2.withAccumulateFn1(accumulateFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation2 withIdentityFinish() {
-            return aggrOp2.withIdentityFinish();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation2 andThen(FunctionEx thenFn) {
-            return aggrOp2.andThen(thenFn);
-        }
-
-        @Override
-        public int arity() {
-            return aggrOp2.arity();
-        }
-
-        @Nonnull
-        @Override
-        public SupplierEx createFn() {
-            return aggrOp2.createFn();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn(int index) {
-            return aggrOp2.accumulateFn(index);
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx combineFn() {
-            return aggrOp2.combineFn();
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx deductFn() {
-            return aggrOp2.deductFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx exportFn() {
-            return aggrOp2.exportFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx finishFn() {
-            return aggrOp2.finishFn();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
-            return aggrOp2.withAccumulateFns(accumulateFns);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static class WrappedAggregateOperation3 extends AbstractWrapper implements AggregateOperation3 {
-        private final AggregateOperation3 aggrOp3;
-
-        WrappedAggregateOperation3(AggregateOperation3 aggrOp3, ProvidesMetrics provider) {
-            super(provider);
-            this.aggrOp3 = aggrOp3;
-        }
-
-        WrappedAggregateOperation3(AggregateOperation3 aggrOp3, Collection<ProvidesMetrics> providers) {
-            super(providers);
-            this.aggrOp3 = aggrOp3;
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn0() {
-            return aggrOp3.accumulateFn0();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn1() {
-            return aggrOp3.accumulateFn1();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn2() {
-            return aggrOp3.accumulateFn2();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation3 withAccumulateFn0(@Nonnull BiConsumerEx accumulateFn) {
-            return aggrOp3.withAccumulateFn0(accumulateFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation3 withAccumulateFn1(@Nonnull BiConsumerEx accumulateFn) {
-            return aggrOp3.withAccumulateFn1(accumulateFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation3 withAccumulateFn2(@Nonnull BiConsumerEx accumulateFn) {
-            return aggrOp3.withAccumulateFn2(accumulateFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation3 withIdentityFinish() {
-            return aggrOp3.withIdentityFinish();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation3 andThen(FunctionEx thenFn) {
-            return aggrOp3.andThen(thenFn);
-        }
-
-        @Override
-        public int arity() {
-            return aggrOp3.arity();
-        }
-
-        @Nonnull
-        @Override
-        public SupplierEx createFn() {
-            return aggrOp3.createFn();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn(int index) {
-            return aggrOp3.accumulateFn(index);
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx combineFn() {
-            return aggrOp3.combineFn();
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx deductFn() {
-            return aggrOp3.deductFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx exportFn() {
-            return aggrOp3.exportFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx finishFn() {
-            return aggrOp3.finishFn();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
-            return aggrOp3.withAccumulateFns(accumulateFns);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static class WrappedAggregateOperation extends AbstractWrapper implements AggregateOperation {
-        private final AggregateOperation aggrOp;
-
-        WrappedAggregateOperation(AggregateOperation aggrOp, ProvidesMetrics provider) {
-            super(provider);
-            this.aggrOp = aggrOp;
-        }
-
-        WrappedAggregateOperation(AggregateOperation aggrOp, Collection<ProvidesMetrics> providers) {
-            super(providers);
-            this.aggrOp = aggrOp;
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn(@Nonnull Tag tag) {
-            return aggrOp.accumulateFn(tag);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation1 withCombiningAccumulateFn(@Nonnull FunctionEx getAccFn) {
-            return aggrOp.withCombiningAccumulateFn(getAccFn);
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation withIdentityFinish() {
-            return aggrOp.withIdentityFinish();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation andThen(FunctionEx thenFn) {
-            return aggrOp.andThen(thenFn);
-        }
-
-        @Override
-        public int arity() {
-            return aggrOp.arity();
-        }
-
-        @Nonnull
-        @Override
-        public SupplierEx createFn() {
-            return aggrOp.createFn();
-        }
-
-        @Nonnull
-        @Override
-        public BiConsumerEx accumulateFn(int index) {
-            return aggrOp.accumulateFn(index);
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx combineFn() {
-            return aggrOp.combineFn();
-        }
-
-        @Nullable
-        @Override
-        public BiConsumerEx deductFn() {
-            return aggrOp.deductFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx exportFn() {
-            return aggrOp.exportFn();
-        }
-
-        @Nonnull
-        @Override
-        public FunctionEx finishFn() {
-            return aggrOp.finishFn();
-        }
-
-        @Nonnull
-        @Override
-        public AggregateOperation withAccumulateFns(BiConsumerEx... accumulateFns) {
-            return aggrOp.withAccumulateFns(accumulateFns);
-        }
-    }
-
-    private static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
+    public static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
         private final BiPredicateEx<T, U> predicateEx;
 
         WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, ProvidesMetrics provider) {
@@ -630,15 +191,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    private static class WrappedBiConsumerEx<T, U> extends AbstractWrapper implements BiConsumerEx<T, U> {
+    public static class WrappedBiConsumerEx<T, U> extends AbstractWrapper implements BiConsumerEx<T, U> {
         private final BiConsumerEx<T, U> consumerEx;
 
-        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, ProvidesMetrics provider) {
+        public WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, ProvidesMetrics provider) {
             super(provider);
             this.consumerEx = consumerEx;
         }
 
-        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, Collection<ProvidesMetrics> providers) {
+        public WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.consumerEx = consumerEx;
         }
@@ -649,15 +210,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    private static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
+    public static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
         private final FunctionEx<T, R> functionEx;
 
-        WrappedFunctionEx(FunctionEx<T, R> functionEx, ProvidesMetrics provider) {
+        public WrappedFunctionEx(FunctionEx<T, R> functionEx, ProvidesMetrics provider) {
             super(provider);
             this.functionEx = functionEx;
         }
 
-        WrappedFunctionEx(FunctionEx<T, R> functionEx, Collection<ProvidesMetrics> providers) {
+        public WrappedFunctionEx(FunctionEx<T, R> functionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.functionEx = functionEx;
         }
@@ -668,15 +229,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    private static class WrappedBiFunctionEx<T, U, R> extends AbstractWrapper implements BiFunctionEx<T, U, R> {
+    public static class WrappedBiFunctionEx<T, U, R> extends AbstractWrapper implements BiFunctionEx<T, U, R> {
         private final BiFunctionEx<T, U, R> biFunctionEx;
 
-        WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, ProvidesMetrics provider) {
+        public WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, ProvidesMetrics provider) {
             super(provider);
             this.biFunctionEx = biFunctionEx;
         }
 
-        WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, Collection<ProvidesMetrics> providers) {
+        public WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.biFunctionEx = biFunctionEx;
         }
@@ -687,15 +248,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    private static class WrappedSupplierEx<P> extends AbstractWrapper implements SupplierEx<P> {
+    public static class WrappedSupplierEx<P> extends AbstractWrapper implements SupplierEx<P> {
         private final SupplierEx<P> supplierEx;
 
-        WrappedSupplierEx(SupplierEx<P> supplierEx, ProvidesMetrics provider) {
+        public WrappedSupplierEx(SupplierEx<P> supplierEx, ProvidesMetrics provider) {
             super(provider);
             this.supplierEx = supplierEx;
         }
 
-        WrappedSupplierEx(SupplierEx<P> supplierEx, Collection<ProvidesMetrics> providers) {
+        public WrappedSupplierEx(SupplierEx<P> supplierEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.supplierEx = supplierEx;
         }
@@ -706,15 +267,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    private static class WrappedTriFunction<T0, T1, T2, R> extends AbstractWrapper implements TriFunction<T0, T1, T2, R> {
+    public static class WrappedTriFunction<T0, T1, T2, R> extends AbstractWrapper implements TriFunction<T0, T1, T2, R> {
         private final TriFunction<T0, T1, T2, R> triFunction;
 
-        WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, ProvidesMetrics provider) {
+        public WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, ProvidesMetrics provider) {
             super(provider);
             this.triFunction = triFunction;
         }
 
-        WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, Collection<ProvidesMetrics> providers) {
+        public WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.triFunction = triFunction;
         }
@@ -743,5 +304,4 @@ public final class UserMetricsUtil {
             }
         }
     }
-
 }

@@ -29,7 +29,6 @@ import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.core.metrics.MetricsContext;
 import com.hazelcast.jet.core.metrics.ProvidesMetrics;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -96,11 +95,12 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements P
     @Nonnull
     private final AggregateOperation<A, ? extends R> aggrOp;
     @Nonnull
+    private final BiConsumer<? super A, ? super A> combineFn;
+    @Nonnull
     private final KeyedWindowResultFunction<? super K, ? super R, ? extends OUT> mapToOutputFn;
     @Nonnull
     private final FlatMapper<Watermark, Object> closedWindowFlatmapper;
     private ProcessingGuarantee processingGuarantee;
-    private BiConsumer<? super A, ? super A> combineFn;
 
     @Probe(name = "lateEventsDropped")
     private final AtomicLong lateEventsDropped = new AtomicLong();
@@ -108,8 +108,6 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements P
     private final AtomicLong totalKeys = new AtomicLong();
     @Probe(name = "totalWindows")
     private final AtomicLong totalWindows = new AtomicLong();
-
-    private final ProvidesMetrics metricsProvider;
 
     // Fields for early results emission
     private final long earlyResultsPeriod;
@@ -141,7 +139,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements P
         this.keyFns = (List<Function<Object, K>>) keyFns;
         this.earlyResultsPeriod = earlyResultsPeriod;
         this.aggrOp = aggrOp;
-        this.metricsProvider = UserMetricsUtil.cast(aggrOp);
+        this.combineFn = requireNonNull(aggrOp.combineFn());
         this.mapToOutputFn = mapToOutputFn;
         this.sessionTimeout = sessionTimeout;
         this.closedWindowFlatmapper = flatMapper(this::traverseClosedWindows);
@@ -155,8 +153,7 @@ public class SessionWindowP<K, A, R, OUT> extends AbstractProcessor implements P
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        this.metricsProvider.registerMetrics(context);
-        this.combineFn = requireNonNull(aggrOp.combineFn());
+        aggrOp.registerMetrics(context);
     }
 
     @Override

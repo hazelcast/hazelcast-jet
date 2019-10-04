@@ -1073,19 +1073,19 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
     private void assertCounterValue(String name, List<Measurement> measurements, Object expected) {
         if (expected == null) {
             assertTrue(
-                    String.format("Did not expected measurements for metric '%s', but there were some!", name),
+                    String.format("Did not expect measurements for metric '%s', but there were some", name),
                     measurements.isEmpty()
             );
         } else {
             assertFalse(
-                    String.format("Expected measurements for metric '%s', but there were none!", name),
+                    String.format("Expected measurements for metric '%s', but there were none", name),
                     measurements.isEmpty()
             );
             long actualValue = measurements.stream().mapToLong(Measurement::getValue).sum();
             if (expected instanceof Number) {
                 long expectedValue = ((Number) expected).longValue();
                 assertEquals(
-                        String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name,
+                        String.format("Expected %d for metric '%s', but got %d instead", expectedValue, name,
                                 actualValue),
                         expectedValue,
                         actualValue
@@ -1094,7 +1094,7 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
                 long expectedMinValue = ((long[]) expected)[0];
                 long expectedMaxValue = ((long[]) expected)[1];
                 assertTrue(
-                        String.format("Expected a value in the range of [%d, %d] for metric '%s', but got %d instead!",
+                        String.format("Expected a value in the range [%d, %d] for metric '%s', but got %d",
                                 expectedMinValue, expectedMaxValue, name, actualValue),
                         expectedMinValue <= actualValue && actualValue <= expectedMaxValue
                 );
@@ -1116,7 +1116,7 @@ public class UserMetrics_AggregationTest extends JetTestSupport {
             if (counter != null) {
                 /* We do this check explicitly because we want to detect situations when this method gets called
                 multiple times on the same object, but with different context parameters. */
-                throw new IllegalStateException("Should get initialised only once!");
+                throw new IllegalStateException("Should get initialised only once");
             }
             counter = context.registerCounter(metricName);
         }

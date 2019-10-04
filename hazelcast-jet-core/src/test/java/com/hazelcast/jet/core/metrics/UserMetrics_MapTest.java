@@ -397,12 +397,12 @@ public class UserMetrics_MapTest extends JetTestSupport {
 
     private void assertCounterValue(String name, List<Measurement> measurements, long expectedValue) {
         assertFalse(
-                String.format("Expected measurements for metric '%s', but there were none!", name),
+                String.format("Expected measurements for metric '%s', but there were none", name),
                 measurements.isEmpty()
         );
         long actualValue = measurements.stream().mapToLong(Measurement::getValue).sum();
         assertEquals(
-                String.format("Expected %d for metric '%s', but got %d instead!", expectedValue, name, actualValue),
+                String.format("Expected %d for metric '%s', but got %d instead", expectedValue, name, actualValue),
                 expectedValue,
                 actualValue
         );
@@ -417,7 +417,7 @@ public class UserMetrics_MapTest extends JetTestSupport {
             if (mappedCounter != null) {
                 /* We do this check explicitly because we want to detect situations when this method gets called
                 multiple times on the same object, but with different context parameters. */
-                throw new IllegalStateException("Should get initialised only once!");
+                throw new IllegalStateException("Should get initialised only once");
             }
             mappedCounter = context.registerCounter(MAPPED);
         }

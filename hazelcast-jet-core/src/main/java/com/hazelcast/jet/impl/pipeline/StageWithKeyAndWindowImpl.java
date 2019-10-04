@@ -21,7 +21,6 @@ import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.impl.pipeline.transform.WindowGroupTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
@@ -62,7 +61,7 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         ensureJetEvents(computeStage, "This pipeline stage");
-        return attachAggregate(UserMetricsUtil.wrapAll(aggrOp));
+        return attachAggregate(aggrOp);
     }
 
     private <R> StreamStage<KeyedWindowResult<K, R>> attachAggregate(
@@ -85,7 +84,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         ensureJetEvents(computeStage, "This pipeline stage");
         ensureJetEvents(((StageWithGroupingBase) stage1).computeStage, "stage1");
         Transform upstream1 = ((StageWithGroupingBase) stage1).computeStage.transform;
-        return attachAggregate2(stage1, upstream1, UserMetricsUtil.wrapAll(aggrOp));
+        return attachAggregate2(stage1, upstream1, aggrOp);
     }
 
     private <T1, R> StreamStage<KeyedWindowResult<K, R>> attachAggregate2(
@@ -115,7 +114,7 @@ public class StageWithKeyAndWindowImpl<T, K>
         Transform transform1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         Transform transform2 = ((StageWithGroupingBase) stage2).computeStage.transform;
 
-        return attachAggregate3(stage1, stage2, transform1, transform2, UserMetricsUtil.wrapAll(aggrOp));
+        return attachAggregate3(stage1, stage2, transform1, transform2, aggrOp);
     }
 
     private <T1, T2, R> StreamStage<KeyedWindowResult<K, R>> attachAggregate3(
