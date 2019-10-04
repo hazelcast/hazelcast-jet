@@ -1,19 +1,3 @@
-<!--
-  ~ Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~ http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
-
 <!doctype html>
 <!--
   ~ Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
@@ -142,17 +126,14 @@
 			<li><a href="#resources">Training, Tutorials and Events</a></li>
 			<li><a href="#community">Hazelcast Community</a></li>
 			<li><a href="#support">Support</a></li>
-
 		</ul>
 
 		<h2 id="about">About Hazelcast Jet</h2>
-
 		<p>
-		Hazelcast Jet is a distributed data processing engine built for high-performance and low-latency stream
+			Hazelcast Jet is a distributed data processing engine built for high-performance and low-latency stream
 			processing and fast batch processing. It embeds Hazelcast In-Memory Data Grid (IMDG) to provide a
 			lightweight package of a processor and a scalable in-memory storage layer.
 		</p>
-
 		<p>
 			Visit <a href="http://jet.hazelcast.org">jet.hazelcast.org</a> to learn more about its architecture,
 			features and use-cases.
@@ -161,87 +142,71 @@
 		<h2 id="included">What's Included</h2>
 
 		<ul class="included">
-
-		<h3 id="folders">Folders</h3>
-
+			<li><strong>changelog.txt</strong> &mdash; log of changes among Hazelcast Jet releases.</li>
+			<li><strong>release_notes.txt</strong> &mdash; new features, enhancements and fixes for this
+				Hazelcast Jet release.</li>
 			<li>
-				<strong>/config</strong>
+				<strong>config/...</strong>
 				<ul>
-					<li><strong>hazelcast.xml</strong> &mdash; the configuration file for embedded Hazelcast IMDG
-						cluster.</li>
-					<li><strong>hazelcast-jet.xml</strong> &mdash; the configuration file for Hazelcast Jet cluster.
+					<li><strong>hazelcast-jet.yaml</strong> &mdash; configuration for Hazelcast Jet
 					</li>
-					<li><strong>log4j.properties</strong> &mdash; the configuration file for Log4j logging.
+					<li><strong>hazelcast.yaml</strong> &mdash; configuration for the underlying Hazelcast IMDG cluster
+					</li>
+					<li><strong>hazelcast-client.yaml</strong> &mdash; configuration that the <strong>jet</strong>
+						command-line tool uses to connect to a Hazelcast Jet cluster
+					</li>
+					<li><strong>log4j.properties</strong> &mdash; configuration for Log4j logging
 					</li>
 				</ul>
-				<strong>/bin</strong>
+				<strong>bin/...</strong>
 				<ul>
-				<li><strong>jet-start.sh / jet-start.bat</strong> &mdash; Starts a new Hazelcast Jet member</li>
-                <li><strong>jet-stop.sh / jet-stop.bat</strong> &mdash; Stops all running Hazelcast Jet members on local
-					machine</li>
-                <li><strong>jet.sh / jet.bat</strong> &mdash; Utility for submitting and managing jobs in the Jet cluster</li>
-                <li><strong>cluster.sh</strong> &mdash; Provides basic functionality for cluster management such as getting
-					and changing the cluster state, shutting down the cluster or forcing the cluster to clean its
-					persisted data and make a fresh start.</li>
+					<li><strong>jet-start.sh / jet-start.bat</strong> &mdash; starts a new Hazelcast Jet member</li>
+					<li><strong>jet-stop.sh / jet-stop.bat</strong> &mdash; stops all running Hazelcast Jet members on local
+						machine</li>
+					<li><strong>jet.sh / jet.bat</strong> &mdash;submits and manages jobs in the Jet cluster</li>
+					<li><strong>cluster.sh</strong> &mdash; manages the Jet cluster, such as: get and change the
+						cluster state, shut down, force-start if Hot Restart data is compromised.</li>
 				</ul>
 			</li>
-
-			<li><strong>/code-samples</strong> &mdash; Hazelcast Jet code samples to learn from and include in your
-				projects.</li>
-			
-			<li><strong>/lib</strong>
+			<li><strong>lib/...</strong>
 				<ul>
-					<li><strong>hazelcast-jet.jar</strong> &mdash; The core Hazelcast Jet JAR.</li>
-					<li><strong>hazelcast-jet-hadoop.jar</strong> &mdash; The Hadoop connector allowing reading from and
-						writing to HDFS.</li>
-					<li><strong>hazelcast-jet-kafka.jar</strong> &mdash; The Kafka connector for reading from and writing to
-						Apache Kafka topics.</li>
+					<li><strong>hazelcast-jet.jar</strong> &mdash; core Hazelcast Jet JAR.</li>
+					<li><strong>hazelcast-jet-hadoop.jar</strong> &mdash; allows Jet to access the Hadoop
+						Distributed File System.</li>
+					<li><strong>hazelcast-jet-kafka.jar</strong> &mdash; allows Jet to access Apache Kafka topics.
+					</li>
                 </ul>
 			</li>
 
-			<li><strong>/license</strong>
+			<li><strong>license/...</strong>
 				<ul>
-					<li><strong>apache-v2-license.txt</strong> &mdash; Hazelcast license.</li>
-					<li><strong>notice.txt</strong> &mdash; NOTICE file corresponding to the section 4 (d) of the Apache
+					<li><strong>apache-v2-license.txt</strong> &mdash; Hazelcast's Apache 2.0 license.</li>
+					<li><strong>notice.txt</strong> &mdash; NOTICE file in accordance with the section 4 (d) of the Apache
 						License.</li>
 					<li><strong>README.txt</strong> &mdash; License README.</li>
 				</ul>
 			</li>
-
 		</ul>
-
-		<h3 id="files">TXT Files</h3>
-                                <ul>
-				<li><strong>changelog.txt</strong> &mdash; The log of changes among Hazelcast Jet releases.</li>
-				<li><strong>release_notes.txt</strong> &mdash; Lists the new features, enhancements and fixes for this
-					Hazelcast Jet release.</li>
-				</ul>
-
 
 		<h2 id="getting-started">Getting Started</h2>
 
 		<p>Go through the <a href="http://jet.hazelcast.org/getting-started/">online Getting Started guide</a> to
-			get Hazelcast Jet up and running. It includes the tutorials to guide you through building your first Hazelcast Jet application and running your cluster.</p>
-
-
+			get Hazelcast Jet up and running. It includes the tutorials to guide you through building your first
+			Hazelcast Jet application and running your cluster.</p>
 
 		<h2 id="demos">Demos</h2>
-
 		<p>
 			Demos are designed to showcase some of the use cases which are possible using Hazelcast Jet. Each is a
 			full application and demonstrates how you can use Jet to solve real-world problems. Please see the
 			<a href="https://jet.hazelcast.org/demos/">Demos page</a>.
 		</p>
-
 		<p>
 			For smaller, feature specific samples see Hazelcast Jet
 			<a href="https://github.com/hazelcast/hazelcast-jet-code-samples">Code Samples</a>.
 		</p>
-
 		<p>
 			Some of the demos include:
 		</p>
-
 		<ul>
 			<li>Worldwide Commercial Aircraft Traffic Analysis - An application which streams airplane locations and
 				based on this data aggregates noise and pollution amounts over selected airports.</li>
@@ -251,15 +216,13 @@
 				Uses the trend from week ago to predict the traffic now.</li>
 		</ul>
 
-
-
 		<h2 id="connectors">Connectors</h2>
 
-		Hazelcast Jet contains a library of connectors enabling Jet jobs to read from and write to various sources and
-		sinks. Please see <a href="https://jet.hazelcast.org/connectors/">Connectors page</a> to learn about Jet
-		plugins.
-
-
+		<p>
+			Hazelcast Jet contains a library of connectors enabling Jet jobs to read from and write to various sources
+			and sinks. Please see <a href="https://jet.hazelcast.org/connectors/">Connectors page</a> to learn about Jet
+			plugins.
+		</p>
 		<h2 id="plugins">Hazelcast Plugins</h2>
 		<p>You can extend the functionality of Hazelcast Jet by adding its plugins. Please see
 			<a href="http://hazelcast.org/plugins/">Plugins page</a> to learn about Hazelcast plugins you can use.</p>
@@ -276,17 +239,12 @@
 		<p>Get your questions answered and share your knowledge on
 			<a href="http://stackoverflow.com/questions/tagged/hazelcast-jet">Stack Overflow</a> and our
 			<a href="https://groups.google.com/forum/#!forum/hazelcast-jet">Google Group</a>.
-
-
 		</p>
 
 		<h2 id="support">Support</h2>
 		<p>For information on professional support subscriptions, please visit
 			<a href="https://hazelcast.com/products/jet/professional-support/">Jet Professional Support</a> page.
 		</p>
-
-
-
 	</div>
 </body>
 </html>
