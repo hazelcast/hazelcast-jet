@@ -30,7 +30,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
-import java.util.stream.Stream;
+import java.util.function.BiFunction;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -50,68 +50,44 @@ public final class UserMetricsUtil {
     }
 
     public static <P> SupplierEx<P> wrapSupplier(SupplierEx<P> supplierEx, Object... candidates) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(supplierEx) || providers.isEmpty()) {
-            return supplierEx;
-        }
-        return new WrappedSupplierEx<>(supplierEx, providers);
+        return wrapInternal(supplierEx, WrappedSupplierEx::new, candidates);
     }
 
     public static <T> PredicateEx<T> wrapPredicate(PredicateEx<T> predicateEx, Object... candidates) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(predicateEx) || providers.isEmpty()) {
-            return predicateEx;
-        }
-        return new WrappedPredicateEx<>(predicateEx, providers);
+        return wrapInternal(predicateEx, WrappedPredicateEx::new, candidates);
     }
 
     public static <T, U> BiPredicateEx<T, U> wrapBiPredicate(BiPredicateEx<T, U> biPredicateEx, Object... candidates) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(biPredicateEx) || providers.isEmpty()) {
-            return biPredicateEx;
-        }
-        return new WrappedBiPredicateEx<>(biPredicateEx, providers);
+        return wrapInternal(biPredicateEx, WrappedBiPredicateEx::new, candidates);
     }
 
     public static <T, U> BiConsumerEx<T, U> wrapBiConsumer(BiConsumerEx<T, U> biConsumerEx, Object... candidates) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(biConsumerEx) || providers.isEmpty()) {
-            return biConsumerEx;
-        }
-        return new WrappedBiConsumerEx<>(biConsumerEx, providers);
+        return wrapInternal(biConsumerEx, WrappedBiConsumerEx::new, candidates);
     }
 
     public static <T, R> FunctionEx<T, R> wrapFunction(FunctionEx<T, R> functionEx, Object... candidates) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(functionEx) || providers.isEmpty()) {
-            return functionEx;
-        }
-        return new WrappedFunctionEx<>(functionEx, providers);
+        return wrapInternal(functionEx, WrappedFunctionEx::new, candidates);
     }
 
     public static <T, U, R> BiFunctionEx<T, U, R> wrapBiFunction(BiFunctionEx<T, U, R> biFunction, Object... candidates) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(biFunction) || providers.isEmpty()) {
-            return biFunction;
-        }
-        return new WrappedBiFunctionEx<>(biFunction, providers);
+        return wrapInternal(biFunction, WrappedBiFunctionEx::new, candidates);
     }
 
     public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrapTriFunction(
             TriFunction<T0, T1, T2, R> triFunctionEx, Object... candidates
     ) {
-        Set<MetricsProvider> providers = getProviders(Arrays.stream(candidates));
-        if (alreadyWrapped(triFunctionEx) || providers.isEmpty()) {
-            return triFunctionEx;
-        }
-        return new WrappedTriFunction<>(triFunctionEx, providers);
+        return wrapInternal(triFunctionEx, WrappedTriFunction::new, candidates);
     }
 
-    private static Set<MetricsProvider> getProviders(Stream<?> candidates) {
-        return candidates
-                .filter(MetricsProvider.class::isInstance)
-                .map(MetricsProvider.class::cast)
-                .collect(toSet());
+    private static <X> X wrapInternal(X object, BiFunction<X, Set<MetricsProvider>, X> factory, Object... candidates) {
+        Set<MetricsProvider> providers = Arrays.stream(candidates)
+                                               .filter(MetricsProvider.class::isInstance)
+                                               .map(MetricsProvider.class::cast)
+                                               .collect(toSet());
+        if (alreadyWrapped(object) || providers.isEmpty()) {
+            return object;
+        }
+        return factory.apply(object, providers);
     }
 
     private static boolean alreadyWrapped(Object obj) {
