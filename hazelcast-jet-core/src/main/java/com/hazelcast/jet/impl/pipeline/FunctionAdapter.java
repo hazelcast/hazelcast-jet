@@ -271,26 +271,27 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <T, R> FunctionEx<? super JetEvent<T>, ?> adaptMapFn(
             @Nonnull FunctionEx<? super T, ? extends R> mapFn
     ) {
-        return e -> jetEvent(e.timestamp(), mapFn.apply(e.payload()));
+        return UserMetricsUtil.wrap(e -> jetEvent(e.timestamp(), mapFn.apply(e.payload())), mapFn);
     }
 
     @Nonnull @Override
     <T> PredicateEx<? super JetEvent<T>> adaptFilterFn(@Nonnull PredicateEx<? super T> filterFn) {
-        return e -> filterFn.test(e.payload());
+        return UserMetricsUtil.wrapPredicate(e -> filterFn.test(e.payload()), filterFn);
     }
 
     @Nonnull @Override
     <T, R> FunctionEx<? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptFlatMapFn(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(e.timestamp(), r));
+        return UserMetricsUtil.wrap(e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(e.timestamp(), r)), flatMapFn);
     }
 
     @Nonnull @Override
     <S, K, T, R> TriFunction<? super S, ? super K, ? super JetEvent<T>, ? extends JetEvent<R>> adaptStatefulMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
     ) {
-        return (state, key, e) -> jetEvent(e.timestamp(), mapFn.apply(state, key, e.payload()));
+        return UserMetricsUtil.wrap((state, key, e) -> jetEvent(e.timestamp(), mapFn.apply(state, key, e.payload())),
+                mapFn);
     }
 
     @Nonnull
@@ -305,7 +306,9 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     adaptStatefulFlatMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
-        return (state, key, e) -> flatMapFn.apply(state, key, e.payload()).map(r -> jetEvent(e.timestamp(), r));
+        return UserMetricsUtil.wrap(
+                (state, key, e) -> flatMapFn.apply(state, key, e.payload()).map(r -> jetEvent(e.timestamp(), r)),
+                flatMapFn);
     }
 
     @Nonnull
@@ -319,32 +322,33 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T>, ? extends JetEvent<R>> adaptMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
-        return (context, e) -> jetEvent(e.timestamp(), mapFn.apply(context, e.payload()));
+        return UserMetricsUtil.wrap((context, e) -> jetEvent(e.timestamp(), mapFn.apply(context, e.payload())), mapFn);
     }
 
     @Nonnull @Override
     <C, T> BiPredicateEx<? super C, ? super JetEvent<T>> adaptFilterUsingContextFn(
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     ) {
-        return (context, e) -> filterFn.test(context, e.payload());
+        return UserMetricsUtil.wrapPredicate((context, e) -> filterFn.test(context, e.payload()), filterFn);
     }
 
     @Nonnull @Override
-    <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>>
-    adaptFlatMapUsingContextFn(
+    <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptFlatMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (context, e) -> flatMapFn.apply(context, e.payload()).map(r -> jetEvent(e.timestamp(), r));
+        return UserMetricsUtil.wrap(
+                (context, e) -> flatMapFn.apply(context, e.payload()).map(r -> jetEvent(e.timestamp(), r)), flatMapFn);
     }
 
     @Nonnull @Override
-    <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>>
-    adaptFlatMapUsingContextAsyncFn(
+    <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return (C context, JetEvent<T> e) ->
-                flatMapAsyncFn.apply(context, e.payload())
-                        .thenApply(trav -> trav == null ? null : trav.map(re -> jetEvent(e.timestamp(), re)));
+        return UserMetricsUtil.wrap(
+                (C context, JetEvent<T> e) ->
+                        flatMapAsyncFn.apply(context, e.payload())
+                                .thenApply(trav -> trav == null ? null : trav.map(re -> jetEvent(e.timestamp(), re))),
+                flatMapAsyncFn);
     }
 
     @Nonnull @Override

@@ -17,10 +17,6 @@
 package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.jet.aggregate.AggregateOperation1;
-import com.hazelcast.jet.aggregate.AggregateOperation2;
-import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
@@ -77,12 +73,11 @@ import static java.util.Collections.singletonList;
 
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
-    public static final FunctionAdapter ADAPT_TO_JET_EVENT = new UserMetricFunctionAdapter(
-            new JetEventFunctionAdapter());
-    static final FunctionAdapter DO_NOT_ADAPT = new UserMetricFunctionAdapter(new FunctionAdapter());
+    public static final FunctionAdapter ADAPT_TO_JET_EVENT = new JetEventFunctionAdapter();
+    static final FunctionAdapter DO_NOT_ADAPT = new FunctionAdapter();
 
     @Nonnull
-    public UserMetricFunctionAdapter fnAdapter;
+    public FunctionAdapter fnAdapter;
 
     ComputeStageImplBase(
             @Nonnull Transform transform,
@@ -91,7 +86,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             boolean acceptsDownstream
     ) {
         super(transform, acceptsDownstream, pipelineImpl);
-        this.fnAdapter = extendFunctionAdapter(fnAdapter);
+        this.fnAdapter = fnAdapter;
     }
 
     @Nonnull
@@ -119,8 +114,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @SuppressWarnings("unchecked")
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
-        FunctionEx<T, T> adaptedFn = fnAdapter.adaptFilterPredicate(filterFn);
-        return (RET) attach(new MapTransform<>("filter", transform, adaptedFn), fnAdapter);
+        PredicateEx<T> adaptedPredicate = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
+        FunctionEx<T, T> fn = UserMetricsUtil.wrap(
+                (FunctionEx<T, T>) t -> adaptedPredicate.test(t) ? t : null, adaptedPredicate);
+        return (RET) attach(new MapTransform<>("filter", transform, fn), fnAdapter);
     }
 
     @Nonnull
@@ -140,11 +137,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(createFn, "createFn");
         checkSerializable(mapFn, "mapFn");
+        TriFunction<S, Object, T, R> keyedMapFn = UserMetricsUtil.wrap((s, k, t) -> mapFn.apply(s, t), mapFn);
         GlobalMapStatefulTransform<T, S, R> transform = new GlobalMapStatefulTransform(
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.adaptStatefulMapFn(mapFn)
+                fnAdapter.adaptStatefulMapFn(keyedMapFn)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -157,11 +155,13 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(createFn, "createFn");
         checkSerializable(flatMapFn, "flatMapFn");
+        TriFunction<S, Object, T, Traverser<R>> keyedMapFn =
+                UserMetricsUtil.wrap((s, k, t) -> flatMapFn.apply(s, t), flatMapFn);
         GlobalFlatMapStatefulTransform<T, S, R> transform = new GlobalFlatMapStatefulTransform(
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
                 createFn,
-                fnAdapter.adaptStatefulFlatMapFn(flatMapFn)
+                fnAdapter.adaptStatefulFlatMapFn(keyedMapFn)
         );
         return (RET) attach(transform, fnAdapter);
     }
@@ -432,193 +432,6 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                             " one of the .addTimestamps() methods on it before performing" +
                             " the aggregation."
             );
-        }
-    }
-
-    private static UserMetricFunctionAdapter extendFunctionAdapter(FunctionAdapter fnAdapter) {
-        if (fnAdapter instanceof UserMetricFunctionAdapter) {
-            return (UserMetricFunctionAdapter) fnAdapter;
-        } else {
-            return new UserMetricFunctionAdapter(fnAdapter);
-        }
-    }
-
-    private static final class UserMetricFunctionAdapter extends FunctionAdapter {
-
-        private final FunctionAdapter delegate;
-
-        UserMetricFunctionAdapter(FunctionAdapter delegate) {
-            this.delegate = delegate;
-        }
-
-        <T> FunctionEx<T, T> adaptFilterPredicate(PredicateEx<T> predicate) {
-            PredicateEx<T> adaptedPredicate = (PredicateEx<T>) delegate.adaptFilterFn(predicate);
-            FunctionEx<T, T> fn = t -> adaptedPredicate.test(t) ? t : null;
-            return UserMetricsUtil.wrap(fn, predicate);
-        }
-
-        <S, T, R> TriFunction<? super S, ? super Object, ?, ?> adaptStatefulMapFn(
-                BiFunctionEx<? super S, ? super T, ? extends R> mapFn) {
-            TriFunction<S, Object, T, R> keyedMapFn = (s, k, t) -> mapFn.apply(s, t);
-            TriFunction<? super S, ? super Object, ?, ?> adaptedStatefulMapFn = delegate.adaptStatefulMapFn(keyedMapFn);
-            return UserMetricsUtil.wrap(adaptedStatefulMapFn, mapFn);
-        }
-
-        <S, T, R> TriFunction<? super S, ? super Object, ?, ? extends Traverser<?>> adaptStatefulFlatMapFn(
-                BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn) {
-            TriFunction<S, Object, T, Traverser<R>> keyedMapFn = (s, k, t) -> flatMapFn.apply(s, t);
-            TriFunction<? super S, ? super Object, ?, ? extends Traverser<?>> adaptedStatefulFlatMapFn =
-                    delegate.adaptStatefulFlatMapFn(keyedMapFn);
-            return UserMetricsUtil.wrap(adaptedStatefulFlatMapFn, flatMapFn);
-        }
-
-        @Nonnull @Override
-        public <T, K> FunctionEx<?, ? extends K> adaptKeyFn(@Nonnull FunctionEx<? super T, ? extends K> keyFn) {
-            return delegate.adaptKeyFn(keyFn);
-        }
-
-        @Nonnull @Override
-        <T> ToLongFunctionEx<?> adaptTimestampFn() {
-            return delegate.adaptTimestampFn();
-        }
-
-        @Nonnull @Override
-        <T, R> FunctionEx<?, ?> adaptMapFn(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
-            FunctionEx<?, ?> adaptedMapFn = delegate.adaptMapFn(mapFn);
-            return UserMetricsUtil.wrap(adaptedMapFn, mapFn);
-        }
-
-        @Nonnull
-        @Override
-        <T> PredicateEx<?> adaptFilterFn(@Nonnull PredicateEx<? super T> filterFn) {
-            return delegate.adaptFilterFn(filterFn);
-        }
-
-        @Nonnull @Override
-        <T, R> FunctionEx<?, ? extends Traverser<?>> adaptFlatMapFn(
-                @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
-        ) {
-            FunctionEx<?, ? extends Traverser<?>> adaptedFlatMapFn = delegate.adaptFlatMapFn(flatMapFn);
-            return UserMetricsUtil.wrap(adaptedFlatMapFn, flatMapFn);
-        }
-
-        @Nonnull @Override
-        <S, K, T, R> TriFunction<? super S, ? super K, ?, ?> adaptStatefulMapFn(
-                @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
-        ) {
-            TriFunction<? super S, ? super K, ?, ?> adaptedMapFn = delegate.adaptStatefulMapFn(mapFn);
-            return UserMetricsUtil.wrap(adaptedMapFn, mapFn);
-        }
-
-        @Nonnull @Override
-        <S, K, R> TriFunction<? super S, ? super K, ? super Long, ?> adaptOnEvictFn(
-                @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
-        ) {
-            return delegate.adaptOnEvictFn(onEvictFn);
-        }
-
-        @Nonnull @Override
-        <S, K, T, R> TriFunction<? super S, ? super K, ?, ? extends Traverser<?>> adaptStatefulFlatMapFn(
-                @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
-        ) {
-            TriFunction<? super S, ? super K, ?, ? extends Traverser<?>> adaptedFlatMapFn =
-                    delegate.adaptStatefulFlatMapFn(flatMapFn);
-            return UserMetricsUtil.wrap(adaptedFlatMapFn, flatMapFn);
-        }
-
-        @Nonnull @Override
-        <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<?>> adaptOnEvictFlatMapFn(
-                @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
-        ) {
-            return delegate.adaptOnEvictFlatMapFn(onEvictFn);
-        }
-
-        @Nonnull @Override
-        <C, T, R> BiFunctionEx<? super C, ?, ?> adaptMapUsingContextFn(
-                @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
-        ) {
-            BiFunctionEx<? super C, ?, ?> adaptedMapFn = delegate.adaptMapUsingContextFn(mapFn);
-            return UserMetricsUtil.wrap(adaptedMapFn, mapFn);
-        }
-
-        @Nonnull @Override
-        <C, T> BiPredicateEx<? super C, ?> adaptFilterUsingContextFn(
-                @Nonnull BiPredicateEx<? super C, ? super T> filterFn
-        ) {
-            BiPredicateEx<? super C, ?> adaptedFilterFn = delegate.adaptFilterUsingContextFn(filterFn);
-            return UserMetricsUtil.wrap(adaptedFilterFn, filterFn);
-        }
-
-        @Nonnull @Override
-        <C, T, R> BiFunctionEx<? super C, ?, ? extends Traverser<?>> adaptFlatMapUsingContextFn(
-                @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
-        ) {
-            BiFunctionEx<? super C, ?, ? extends Traverser<?>> adaptedFlatMapFn =
-                    delegate.adaptFlatMapUsingContextFn(flatMapFn);
-            return UserMetricsUtil.wrap(adaptedFlatMapFn, flatMapFn);
-        }
-
-        @Nonnull @Override
-        <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
-                @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-        ) {
-            BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptedFlatMapAsyncFn =
-                    delegate.adaptFlatMapUsingContextAsyncFn(flatMapAsyncFn);
-            return UserMetricsUtil.wrap(adaptedFlatMapAsyncFn, flatMapAsyncFn);
-        }
-
-        @Nonnull @Override
-        <T, R extends CharSequence> FunctionEx<?, ? extends R> adaptToStringFn(
-                @Nonnull FunctionEx<? super T, ? extends R> toStringFn
-        ) {
-            return delegate.adaptToStringFn(toStringFn);
-        }
-
-        @Nonnull @Override
-        public <K, T0, T1, T1_OUT> JoinClause<? extends K, ?, ? super T1, ? extends T1_OUT> adaptJoinClause(
-                @Nonnull JoinClause<? extends K, ? super T0, ? super T1, ? extends T1_OUT> joinClause
-        ) {
-            return delegate.adaptJoinClause(joinClause);
-        }
-
-        @Nonnull @Override
-        public <T, T1, R> BiFunctionEx<?, ? super T1, ?> adaptHashJoinOutputFn(
-                @Nonnull BiFunctionEx<? super T, ? super T1, ? extends R> mapToOutputFn
-        ) {
-            return delegate.adaptHashJoinOutputFn(mapToOutputFn);
-        }
-
-        @Nonnull @Override
-        <T, T1, T2, R> TriFunction<?, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
-                @Nonnull TriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
-        ) {
-            return delegate.adaptHashJoinOutputFn(mapToOutputFn);
-        }
-
-        @Nonnull @Override
-        <A, R> AggregateOperation<A, ? extends R> adaptAggregateOperation(
-                @Nonnull AggregateOperation<A, ? extends R> aggrOp
-        ) {
-            return delegate.adaptAggregateOperation(aggrOp);
-        }
-
-        @Nonnull @Override
-        <T, A, R> AggregateOperation1<?, A, ? extends R> adaptAggregateOperation1(
-                @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
-        ) {
-            return delegate.adaptAggregateOperation1(aggrOp);
-        }
-
-        @Nonnull @Override
-        <T0, T1, A, R> AggregateOperation2<?, ?, A, ? extends R> adaptAggregateOperation2(
-                @Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
-            return delegate.adaptAggregateOperation2(aggrOp);
-        }
-
-        @Nonnull @Override
-        <T0, T1, T2, A, R> AggregateOperation3<?, ?, ?, A, ? extends R> adaptAggregateOperation3(
-                @Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
-            return delegate.adaptAggregateOperation3(aggrOp);
         }
     }
 }

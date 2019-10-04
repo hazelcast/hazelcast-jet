@@ -121,7 +121,7 @@ public class CoAggregateOperationBuilder {
         opsByTag.forEach((tag, op) -> {
             int index = tag.index();
             BiConsumerEx<Object[], Object> accumulateFn = (acc, item) -> op.accumulateFn().accept(acc[index], item);
-            b.andAccumulate(tag, UserMetricsUtil.wrap(accumulateFn, op.accumulateFn()));
+            b.andAccumulate(tag, UserMetricsUtil.wrapConsumer(accumulateFn, op.accumulateFn()));
         });
 
         BiConsumerEx[] combineFns =

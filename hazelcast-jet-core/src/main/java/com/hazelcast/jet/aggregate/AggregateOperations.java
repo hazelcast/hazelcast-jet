@@ -1536,8 +1536,8 @@ public final class AggregateOperations {
 
         return AggregateOperation
                 .withCreate(UserMetricsUtil.wrapAll(createFn, asList(op0.createFn(), op1.createFn())))
-                .andAccumulate0(UserMetricsUtil.wrap(accumFn0, op0.accumulateFn()))
-                .andAccumulate1(UserMetricsUtil.wrap(accumFn1, op1.accumulateFn()))
+                .andAccumulate0(UserMetricsUtil.wrapConsumer(accumFn0, op0.accumulateFn()))
+                .andAccumulate1(UserMetricsUtil.wrapConsumer(accumFn1, op1.accumulateFn()))
                 .andCombine(UserMetricsUtil.wrapAll(combineFn, asList(op0.combineFn(), op1.combineFn())))
                 .andDeduct(UserMetricsUtil.wrapAll(deductFn, asList(op0.deductFn(), op1.deductFn())))
                 .andExport(UserMetricsUtil.wrapAll(exportFn, asList(op0.exportFn(), op1.exportFn())))
@@ -1679,9 +1679,9 @@ public final class AggregateOperations {
 
         return AggregateOperation
                 .withCreate(UserMetricsUtil.wrapAll(createFn, asList(op0.createFn(), op1.createFn(), op2.createFn())))
-                .andAccumulate0(UserMetricsUtil.wrap(accumFn0, op0.accumulateFn()))
-                .andAccumulate1(UserMetricsUtil.wrap(accumFn1, op1.accumulateFn()))
-                .andAccumulate2(UserMetricsUtil.wrap(accumFn2, op2.accumulateFn()))
+                .andAccumulate0(UserMetricsUtil.wrapConsumer(accumFn0, op0.accumulateFn()))
+                .andAccumulate1(UserMetricsUtil.wrapConsumer(accumFn1, op1.accumulateFn()))
+                .andAccumulate2(UserMetricsUtil.wrapConsumer(accumFn2, op2.accumulateFn()))
                 .andCombine(UserMetricsUtil.wrapAll(combineFn, asList(op0.combineFn(), op1.combineFn(), op2.combineFn())))
                 .andDeduct(UserMetricsUtil.wrapAll(deductFn, asList(op0.deductFn(), op1.deductFn(), op2.deductFn())))
                 .andExport(UserMetricsUtil.wrapAll(exportFn, asList(op0.exportFn(), op1.exportFn(), op2.exportFn())))

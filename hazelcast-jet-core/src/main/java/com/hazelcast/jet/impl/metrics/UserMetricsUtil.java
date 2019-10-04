@@ -22,6 +22,7 @@ import com.hazelcast.jet.function.BiConsumerEx;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.function.BiPredicateEx;
 import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 
@@ -50,14 +51,14 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static <T, U> BiPredicateEx<T, U> wrap(BiPredicateEx<T, U> biPredicateEx, Object candidate) {
+    public static <T, U> BiPredicateEx<T, U> wrapPredicate(BiPredicateEx<T, U> biPredicateEx, Object candidate) {
         if (notAlreadyWrapped(biPredicateEx) && candidate instanceof ProvidesMetrics) {
             return new WrappedBiPredicateEx<>(biPredicateEx, (ProvidesMetrics) candidate);
         }
         return biPredicateEx;
     }
 
-    public static <T, U> BiConsumerEx<T, U> wrap(BiConsumerEx<T, U> biConsumerEx, Object candidate) {
+    public static <T, U> BiConsumerEx<T, U> wrapConsumer(BiConsumerEx<T, U> biConsumerEx, Object candidate) {
         if (notAlreadyWrapped(biConsumerEx) && candidate instanceof ProvidesMetrics) {
             return new WrappedBiConsumerEx<>(biConsumerEx, (ProvidesMetrics) candidate);
         }
@@ -85,6 +86,13 @@ public final class UserMetricsUtil {
             return new WrappedFunctionEx<>(functionEx, (ProvidesMetrics) candidate);
         }
         return functionEx;
+    }
+
+    public static <T> PredicateEx<T> wrapPredicate(PredicateEx<T> predicateEx, Object candidate) {
+        if (notAlreadyWrapped(predicateEx) && candidate instanceof ProvidesMetrics) {
+            return new WrappedPredicateEx<>(predicateEx, (ProvidesMetrics) candidate);
+        }
+        return predicateEx;
     }
 
     public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> candidates) {
@@ -177,10 +185,24 @@ public final class UserMetricsUtil {
         return !(obj instanceof AbstractWrapper);
     }
 
+    public static class WrappedPredicateEx<T> extends AbstractWrapper implements PredicateEx<T> {
+        private final PredicateEx<T> predicateEx;
+
+        public WrappedPredicateEx(PredicateEx<T> predicateEx, ProvidesMetrics provider) {
+            super(provider);
+            this.predicateEx = predicateEx;
+        }
+
+        @Override
+        public boolean testEx(T t) throws Exception {
+            return predicateEx.testEx(t);
+        }
+    }
+
     public static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
         private final BiPredicateEx<T, U> predicateEx;
 
-        WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, ProvidesMetrics provider) {
+        public WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, ProvidesMetrics provider) {
             super(provider);
             this.predicateEx = predicateEx;
         }

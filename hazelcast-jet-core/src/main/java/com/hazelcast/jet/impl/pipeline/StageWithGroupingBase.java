@@ -98,7 +98,7 @@ class StageWithGroupingBase<T, K> {
             return filterFn.test(c, k, t);
         };
         return computeStage.attachFilterUsingPartitionedContext(contextFactory, keyFn,
-                UserMetricsUtil.wrap(filterPredicate, filterFn));
+                UserMetricsUtil.wrapPredicate(filterPredicate, filterFn));
     }
 
     @Nonnull

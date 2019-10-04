@@ -33,15 +33,16 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
+import com.hazelcast.jet.impl.metrics.UserMetricsUtil.WrappedBiFunctionEx;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
+import static java.util.Arrays.asList;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -250,13 +251,14 @@ public interface GeneralStage<T> extends Stage {
     ) {
         BiConsumer<? super A, ? super T> accumulateFn = aggrOp.accumulateFn();
         Function<? super A, ? extends R> exportFn = aggrOp.exportFn();
-        BiFunctionEx<A, T, R> mapFn = (acc, item) -> {
-            accumulateFn.accept(acc, item);
-            return exportFn.apply(acc);
-        };
-        BiFunctionEx<A, T, R> wrappedMapFn = UserMetricsUtil.wrapAll(mapFn, Arrays.asList(accumulateFn, exportFn));
+        BiFunctionEx<A, T, R> mapFn = new WrappedBiFunctionEx<>(
+                (acc, item) -> {
+                    accumulateFn.accept(acc, item);
+                    return exportFn.apply(acc);
+                },
+                asList(UserMetricsUtil.cast(accumulateFn), UserMetricsUtil.cast(exportFn)));
         SupplierEx<A> createFn = aggrOp.createFn();
-        return mapStateful(createFn, wrappedMapFn);
+        return mapStateful(createFn, mapFn);
     }
 
     /**
