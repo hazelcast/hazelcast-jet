@@ -113,14 +113,22 @@
             <outputDirectory>docs/javadoc</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>src/zip-root</directory>
+            <outputDirectory/>
+        </fileSet>
+
+        <!-- These two directories contain files with property placeholders that the
+             Maven Assembly Plugin must resolve (that's what "filtered" means). -->
+        <fileSet>
             <directory>src/bin-filemode-755</directory>
             <fileMode>0755</fileMode>
             <outputDirectory>bin</outputDirectory>
             <filtered>true</filtered>
         </fileSet>
         <fileSet>
-            <directory>src/dist</directory>
-            <outputDirectory/>
+            <directory>src/bin-regular</directory>
+            <outputDirectory>bin</outputDirectory>
+            <filtered>true</filtered>
         </fileSet>
     </fileSets>
 </assembly>

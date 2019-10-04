@@ -72,7 +72,7 @@
                             <finalName>hazelcast-jet-${project.version}</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
                             <descriptors>
-                                <descriptor>src/assembly/zip.xml</descriptor>
+                                <descriptor>src/assembly-descriptor.xml</descriptor>
                             </descriptors>
                             <tarLongFileMode>posix</tarLongFileMode>
                         </configuration>
