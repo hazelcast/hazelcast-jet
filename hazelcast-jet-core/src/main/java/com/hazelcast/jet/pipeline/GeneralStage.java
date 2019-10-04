@@ -33,7 +33,6 @@ import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil.WrappedBiFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -251,12 +250,12 @@ public interface GeneralStage<T> extends Stage {
     ) {
         BiConsumer<? super A, ? super T> accumulateFn = aggrOp.accumulateFn();
         Function<? super A, ? extends R> exportFn = aggrOp.exportFn();
-        BiFunctionEx<A, T, R> mapFn = new WrappedBiFunctionEx<>(
+        BiFunctionEx<A, T, R> mapFn = UserMetricsUtil.wrapAll(
                 (acc, item) -> {
                     accumulateFn.accept(acc, item);
                     return exportFn.apply(acc);
                 },
-                asList(UserMetricsUtil.cast(accumulateFn), UserMetricsUtil.cast(exportFn)));
+                asList(accumulateFn, exportFn));
         SupplierEx<A> createFn = aggrOp.createFn();
         return mapStateful(createFn, mapFn);
     }

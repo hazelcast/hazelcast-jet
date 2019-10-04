@@ -33,7 +33,6 @@ import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
-import com.hazelcast.jet.impl.metrics.UserMetricsUtil.WrappedBiConsumerEx;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.JoinClause;
@@ -428,8 +427,6 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     private static <A, T> BiConsumerEx<? super A, ? super JetEvent<T>> adaptAccumulateFn(
             @Nonnull BiConsumerEx<? super A, ? super T> accumulateFn
     ) {
-        return new WrappedBiConsumerEx<>(
-                (acc, t) -> accumulateFn.accept(acc, t.payload()),
-                UserMetricsUtil.cast(accumulateFn));
+        return UserMetricsUtil.wrapConsumer((acc, t) -> accumulateFn.accept(acc, t.payload()), accumulateFn);
     }
 }

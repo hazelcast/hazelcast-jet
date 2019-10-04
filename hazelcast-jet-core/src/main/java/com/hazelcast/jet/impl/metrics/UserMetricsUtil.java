@@ -185,10 +185,10 @@ public final class UserMetricsUtil {
         return !(obj instanceof AbstractWrapper);
     }
 
-    public static class WrappedPredicateEx<T> extends AbstractWrapper implements PredicateEx<T> {
+    private static class WrappedPredicateEx<T> extends AbstractWrapper implements PredicateEx<T> {
         private final PredicateEx<T> predicateEx;
 
-        public WrappedPredicateEx(PredicateEx<T> predicateEx, ProvidesMetrics provider) {
+        WrappedPredicateEx(PredicateEx<T> predicateEx, ProvidesMetrics provider) {
             super(provider);
             this.predicateEx = predicateEx;
         }
@@ -199,10 +199,10 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
+    private static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
         private final BiPredicateEx<T, U> predicateEx;
 
-        public WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, ProvidesMetrics provider) {
+        WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, ProvidesMetrics provider) {
             super(provider);
             this.predicateEx = predicateEx;
         }
@@ -213,15 +213,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static class WrappedBiConsumerEx<T, U> extends AbstractWrapper implements BiConsumerEx<T, U> {
+    private static class WrappedBiConsumerEx<T, U> extends AbstractWrapper implements BiConsumerEx<T, U> {
         private final BiConsumerEx<T, U> consumerEx;
 
-        public WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, ProvidesMetrics provider) {
+        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, ProvidesMetrics provider) {
             super(provider);
             this.consumerEx = consumerEx;
         }
 
-        public WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, Collection<ProvidesMetrics> providers) {
+        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.consumerEx = consumerEx;
         }
@@ -232,15 +232,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
+    private static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
         private final FunctionEx<T, R> functionEx;
 
-        public WrappedFunctionEx(FunctionEx<T, R> functionEx, ProvidesMetrics provider) {
+        WrappedFunctionEx(FunctionEx<T, R> functionEx, ProvidesMetrics provider) {
             super(provider);
             this.functionEx = functionEx;
         }
 
-        public WrappedFunctionEx(FunctionEx<T, R> functionEx, Collection<ProvidesMetrics> providers) {
+        WrappedFunctionEx(FunctionEx<T, R> functionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.functionEx = functionEx;
         }
@@ -251,15 +251,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static class WrappedBiFunctionEx<T, U, R> extends AbstractWrapper implements BiFunctionEx<T, U, R> {
+    private static class WrappedBiFunctionEx<T, U, R> extends AbstractWrapper implements BiFunctionEx<T, U, R> {
         private final BiFunctionEx<T, U, R> biFunctionEx;
 
-        public WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, ProvidesMetrics provider) {
+        WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, ProvidesMetrics provider) {
             super(provider);
             this.biFunctionEx = biFunctionEx;
         }
 
-        public WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, Collection<ProvidesMetrics> providers) {
+        WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.biFunctionEx = biFunctionEx;
         }
@@ -270,15 +270,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static class WrappedSupplierEx<P> extends AbstractWrapper implements SupplierEx<P> {
+    private static class WrappedSupplierEx<P> extends AbstractWrapper implements SupplierEx<P> {
         private final SupplierEx<P> supplierEx;
 
-        public WrappedSupplierEx(SupplierEx<P> supplierEx, ProvidesMetrics provider) {
+        WrappedSupplierEx(SupplierEx<P> supplierEx, ProvidesMetrics provider) {
             super(provider);
             this.supplierEx = supplierEx;
         }
 
-        public WrappedSupplierEx(SupplierEx<P> supplierEx, Collection<ProvidesMetrics> providers) {
+        WrappedSupplierEx(SupplierEx<P> supplierEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.supplierEx = supplierEx;
         }
@@ -289,15 +289,15 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static class WrappedTriFunction<T0, T1, T2, R> extends AbstractWrapper implements TriFunction<T0, T1, T2, R> {
+    private static class WrappedTriFunction<T0, T1, T2, R> extends AbstractWrapper implements TriFunction<T0, T1, T2, R> {
         private final TriFunction<T0, T1, T2, R> triFunction;
 
-        public WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, ProvidesMetrics provider) {
+        WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, ProvidesMetrics provider) {
             super(provider);
             this.triFunction = triFunction;
         }
 
-        public WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, Collection<ProvidesMetrics> providers) {
+        WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.triFunction = triFunction;
         }
