@@ -29,8 +29,6 @@ import com.hazelcast.jet.function.TriFunction;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -51,127 +49,62 @@ public final class UserMetricsUtil {
         }
     }
 
-    public static <T, U> BiPredicateEx<T, U> wrapPredicate(BiPredicateEx<T, U> biPredicateEx, Object candidate) {
-        if (notAlreadyWrapped(biPredicateEx) && candidate instanceof ProvidesMetrics) {
-            return new WrappedBiPredicateEx<>(biPredicateEx, (ProvidesMetrics) candidate);
-        }
-        return biPredicateEx;
-    }
-
-    public static <T, U> BiConsumerEx<T, U> wrapConsumer(BiConsumerEx<T, U> biConsumerEx, Object candidate) {
-        if (notAlreadyWrapped(biConsumerEx) && candidate instanceof ProvidesMetrics) {
-            return new WrappedBiConsumerEx<>(biConsumerEx, (ProvidesMetrics) candidate);
-        }
-        return biConsumerEx;
-    }
-
-    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx,
-                                                    List<?> metricsProviderCandidates) {
-        return wrapAll(biConsumerEx, getProviders(metricsProviderCandidates.stream()));
-    }
-
-    public static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Object[] candidates) {
-        return wrapAll(biConsumerEx, getProviders(Arrays.stream(candidates)));
-    }
-
-    private static <T, U> BiConsumerEx<T, U> wrapAll(BiConsumerEx<T, U> biConsumerEx, Set<ProvidesMetrics> providers) {
-        if (notAlreadyWrapped(biConsumerEx) && !providers.isEmpty()) {
-            return new WrappedBiConsumerEx<>(biConsumerEx, providers);
-        }
-        return biConsumerEx;
-    }
-
-    public static <T, R> FunctionEx<T, R> wrap(FunctionEx<T, R> functionEx, Object candidate) {
-        if (notAlreadyWrapped(functionEx) && candidate instanceof ProvidesMetrics) {
-            return new WrappedFunctionEx<>(functionEx, (ProvidesMetrics) candidate);
-        }
-        return functionEx;
-    }
-
-    public static <T> PredicateEx<T> wrapPredicate(PredicateEx<T> predicateEx, Object candidate) {
-        if (notAlreadyWrapped(predicateEx) && candidate instanceof ProvidesMetrics) {
-            return new WrappedPredicateEx<>(predicateEx, (ProvidesMetrics) candidate);
-        }
-        return predicateEx;
-    }
-
-    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, List<?> candidates) {
-        return wrapAll(functionEx, getProviders(candidates.stream()));
-    }
-
-    public static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Object[] candidates) {
-        return wrapAll(functionEx, getProviders(Arrays.stream(candidates)));
-    }
-
-    private static <T, R> FunctionEx<T, R> wrapAll(FunctionEx<T, R> functionEx, Set<ProvidesMetrics> providers) {
-        if (notAlreadyWrapped(functionEx) && !providers.isEmpty()) {
-            return new WrappedFunctionEx<>(functionEx, providers);
-        }
-        return functionEx;
-    }
-
-    public static <T, U, R> BiFunctionEx<T, U, R> wrap(BiFunctionEx<T, U, R> biFunctionEx, Object candidate) {
-        if (notAlreadyWrapped(biFunctionEx) && candidate instanceof ProvidesMetrics) {
-            return new WrappedBiFunctionEx<>(biFunctionEx, (ProvidesMetrics) candidate);
-        }
-        return biFunctionEx;
-    }
-
-    public static <T, U, R> BiFunctionEx<T, U, R> wrapAll(BiFunctionEx<T, U, R> biFunctionEx, List<?> candidates) {
-        return wrapAll(biFunctionEx, getProviders(candidates.stream()));
-    }
-
-    private static <T, U, R> BiFunctionEx<T, U, R> wrapAll(BiFunctionEx<T, U, R> biFunctionEx,
-                                                           Set<ProvidesMetrics> providers) {
-        if (notAlreadyWrapped(biFunctionEx) && !providers.isEmpty()) {
-            return new WrappedBiFunctionEx<>(biFunctionEx, providers);
-        }
-        return biFunctionEx;
-    }
-
-    public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrap(TriFunction<T0, T1, T2, R> triFunction,
-                                                                  Object candidate) {
-        if (notAlreadyWrapped(triFunction) && candidate instanceof ProvidesMetrics) {
-            return new WrappedTriFunction<>(triFunction, (ProvidesMetrics) candidate);
-        }
-        return triFunction;
-    }
-
-    public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrapAll(
-            TriFunction<T0, T1, T2, R> triFunctionEx, List<?> candidates) {
-        return wrapAll(triFunctionEx, getProviders(candidates.stream()));
-    }
-
-    private static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrapAll(TriFunction<T0, T1, T2, R> triFunctionEx,
-                                                           Set<ProvidesMetrics> providers) {
-        if (notAlreadyWrapped(triFunctionEx) && !providers.isEmpty()) {
-            return new WrappedTriFunction<>(triFunctionEx, providers);
-        }
-        return triFunctionEx;
-    }
-
-    public static <P> SupplierEx<P> wrap(SupplierEx<P> supplierEx, Object candidate) {
-        if (notAlreadyWrapped(supplierEx) && candidate instanceof ProvidesMetrics) {
-            return new WrappedSupplierEx<>(supplierEx, (ProvidesMetrics) candidate);
-        }
-        return supplierEx;
-    }
-
-    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, List<?> candidates) {
-        Set<ProvidesMetrics> providers = getProviders(candidates.stream());
-        return wrapAll(supplierEx, providers);
-    }
-
-    public static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Object[] candidates) {
+    public static <P> SupplierEx<P> wrapSupplier(SupplierEx<P> supplierEx, Object... candidates) {
         Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
-        return wrapAll(supplierEx, providers);
+        if (alreadyWrapped(supplierEx) || providers.isEmpty()) {
+            return supplierEx;
+        }
+        return new WrappedSupplierEx<>(supplierEx, providers);
     }
 
-    private static <P> SupplierEx<P> wrapAll(SupplierEx<P> supplierEx, Set<ProvidesMetrics> providers) {
-        if (notAlreadyWrapped(supplierEx) && !providers.isEmpty()) {
-            return new WrappedSupplierEx<>(supplierEx, providers);
+    public static <T> PredicateEx<T> wrapPredicate(PredicateEx<T> predicateEx, Object... candidates) {
+        Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
+        if (alreadyWrapped(predicateEx) || providers.isEmpty()) {
+            return predicateEx;
         }
-        return supplierEx;
+        return new WrappedPredicateEx<>(predicateEx, providers);
+    }
+
+    public static <T, U> BiPredicateEx<T, U> wrapBiPredicate(BiPredicateEx<T, U> biPredicateEx, Object... candidates) {
+        Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
+        if (alreadyWrapped(biPredicateEx) || providers.isEmpty()) {
+            return biPredicateEx;
+        }
+        return new WrappedBiPredicateEx<>(biPredicateEx, providers);
+    }
+
+    public static <T, U> BiConsumerEx<T, U> wrapBiConsumer(BiConsumerEx<T, U> biConsumerEx, Object... candidates) {
+        Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
+        if (alreadyWrapped(biConsumerEx) || providers.isEmpty()) {
+            return biConsumerEx;
+        }
+        return new WrappedBiConsumerEx<>(biConsumerEx, providers);
+    }
+
+    public static <T, R> FunctionEx<T, R> wrapFunction(FunctionEx<T, R> functionEx, Object... candidates) {
+        Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
+        if (alreadyWrapped(functionEx) || providers.isEmpty()) {
+            return functionEx;
+        }
+        return new WrappedFunctionEx<>(functionEx, providers);
+    }
+
+    public static <T, U, R> BiFunctionEx<T, U, R> wrapBiFunction(BiFunctionEx<T, U, R> biFunction, Object... candidates) {
+        Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
+        if (alreadyWrapped(biFunction) || providers.isEmpty()) {
+            return biFunction;
+        }
+        return new WrappedBiFunctionEx<>(biFunction, providers);
+    }
+
+    public static <T0, T1, T2, R> TriFunction<T0, T1, T2, R> wrapTriFunction(
+            TriFunction<T0, T1, T2, R> triFunctionEx, Object... candidates
+    ) {
+        Set<ProvidesMetrics> providers = getProviders(Arrays.stream(candidates));
+        if (alreadyWrapped(triFunctionEx) || providers.isEmpty()) {
+            return triFunctionEx;
+        }
+        return new WrappedTriFunction<>(triFunctionEx, providers);
     }
 
     private static Set<ProvidesMetrics> getProviders(Stream<?> candidates) {
@@ -181,14 +114,14 @@ public final class UserMetricsUtil {
                 .collect(toSet());
     }
 
-    private static boolean notAlreadyWrapped(Object obj) {
-        return !(obj instanceof AbstractWrapper);
+    private static boolean alreadyWrapped(Object obj) {
+        return obj instanceof AbstractWrapper;
     }
 
     private static class WrappedPredicateEx<T> extends AbstractWrapper implements PredicateEx<T> {
         private final PredicateEx<T> predicateEx;
 
-        WrappedPredicateEx(PredicateEx<T> predicateEx, ProvidesMetrics provider) {
+        WrappedPredicateEx(PredicateEx<T> predicateEx, Collection<ProvidesMetrics> provider) {
             super(provider);
             this.predicateEx = predicateEx;
         }
@@ -202,7 +135,7 @@ public final class UserMetricsUtil {
     private static class WrappedBiPredicateEx<T, U> extends AbstractWrapper implements BiPredicateEx<T, U> {
         private final BiPredicateEx<T, U> predicateEx;
 
-        WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, ProvidesMetrics provider) {
+        WrappedBiPredicateEx(BiPredicateEx<T, U> predicateEx, Collection<ProvidesMetrics> provider) {
             super(provider);
             this.predicateEx = predicateEx;
         }
@@ -215,11 +148,6 @@ public final class UserMetricsUtil {
 
     private static class WrappedBiConsumerEx<T, U> extends AbstractWrapper implements BiConsumerEx<T, U> {
         private final BiConsumerEx<T, U> consumerEx;
-
-        WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, ProvidesMetrics provider) {
-            super(provider);
-            this.consumerEx = consumerEx;
-        }
 
         WrappedBiConsumerEx(BiConsumerEx<T, U> consumerEx, Collection<ProvidesMetrics> providers) {
             super(providers);
@@ -235,11 +163,6 @@ public final class UserMetricsUtil {
     private static class WrappedFunctionEx<T, R> extends AbstractWrapper implements FunctionEx<T, R> {
         private final FunctionEx<T, R> functionEx;
 
-        WrappedFunctionEx(FunctionEx<T, R> functionEx, ProvidesMetrics provider) {
-            super(provider);
-            this.functionEx = functionEx;
-        }
-
         WrappedFunctionEx(FunctionEx<T, R> functionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.functionEx = functionEx;
@@ -253,11 +176,6 @@ public final class UserMetricsUtil {
 
     private static class WrappedBiFunctionEx<T, U, R> extends AbstractWrapper implements BiFunctionEx<T, U, R> {
         private final BiFunctionEx<T, U, R> biFunctionEx;
-
-        WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, ProvidesMetrics provider) {
-            super(provider);
-            this.biFunctionEx = biFunctionEx;
-        }
 
         WrappedBiFunctionEx(BiFunctionEx<T, U, R> biFunctionEx, Collection<ProvidesMetrics> providers) {
             super(providers);
@@ -273,11 +191,6 @@ public final class UserMetricsUtil {
     private static class WrappedSupplierEx<P> extends AbstractWrapper implements SupplierEx<P> {
         private final SupplierEx<P> supplierEx;
 
-        WrappedSupplierEx(SupplierEx<P> supplierEx, ProvidesMetrics provider) {
-            super(provider);
-            this.supplierEx = supplierEx;
-        }
-
         WrappedSupplierEx(SupplierEx<P> supplierEx, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.supplierEx = supplierEx;
@@ -292,11 +205,6 @@ public final class UserMetricsUtil {
     private static class WrappedTriFunction<T0, T1, T2, R> extends AbstractWrapper implements TriFunction<T0, T1, T2, R> {
         private final TriFunction<T0, T1, T2, R> triFunction;
 
-        WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, ProvidesMetrics provider) {
-            super(provider);
-            this.triFunction = triFunction;
-        }
-
         WrappedTriFunction(TriFunction<T0, T1, T2, R> triFunction, Collection<ProvidesMetrics> providers) {
             super(providers);
             this.triFunction = triFunction;
@@ -310,10 +218,6 @@ public final class UserMetricsUtil {
 
     private abstract static class AbstractWrapper implements ProvidesMetrics, Serializable {
         private final Collection<ProvidesMetrics> providers;
-
-        AbstractWrapper(ProvidesMetrics provider) {
-            this(Collections.singletonList(provider));
-        }
 
         AbstractWrapper(Collection<ProvidesMetrics> providers) {
             this.providers = providers;

@@ -33,7 +33,6 @@ import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.impl.metrics.UserMetricsUtil;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -203,7 +202,7 @@ public interface GeneralStageWithKey<T, K> {
             accumulateFn.accept(acc, item);
             return entry(key, exportFn.apply(acc));
         };
-        return mapStateful(aggrOp.createFn(), UserMetricsUtil.wrapAll(mapFn, Arrays.asList(accumulateFn, exportFn)));
+        return mapStateful(aggrOp.createFn(), UserMetricsUtil.wrapTriFunction(mapFn, accumulateFn, exportFn));
     }
 
     /**
@@ -484,7 +483,8 @@ public interface GeneralStageWithKey<T, K> {
     ) {
         TriFunction<IMapJet<K, V>, K, T, CompletableFuture<R>> mapAsyncFn = (map, key, item) ->
                 toCompletableFuture(map.getAsync(key)).thenApply(value -> mapFn.apply(item, value));
-        return mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName), UserMetricsUtil.wrap(mapAsyncFn, mapFn));
+        return mapUsingContextAsync(ContextFactories.iMapContext(mapName),
+                UserMetricsUtil.wrapTriFunction(mapAsyncFn, mapFn));
     }
 
     /**

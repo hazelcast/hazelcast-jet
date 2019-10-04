@@ -115,7 +115,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
         PredicateEx<T> adaptedPredicate = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
-        FunctionEx<T, T> fn = UserMetricsUtil.wrap(
+        FunctionEx<T, T> fn = UserMetricsUtil.wrapFunction(
                 (FunctionEx<T, T>) t -> adaptedPredicate.test(t) ? t : null, adaptedPredicate);
         return (RET) attach(new MapTransform<>("filter", transform, fn), fnAdapter);
     }
@@ -137,7 +137,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(createFn, "createFn");
         checkSerializable(mapFn, "mapFn");
-        TriFunction<S, Object, T, R> keyedMapFn = UserMetricsUtil.wrap((s, k, t) -> mapFn.apply(s, t), mapFn);
+        TriFunction<S, Object, T, R> keyedMapFn = UserMetricsUtil.wrapTriFunction((s, k, t) -> mapFn.apply(s, t), mapFn);
         GlobalMapStatefulTransform<T, S, R> transform = new GlobalMapStatefulTransform(
                 this.transform,
                 fnAdapter.adaptTimestampFn(),
@@ -156,7 +156,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         checkSerializable(createFn, "createFn");
         checkSerializable(flatMapFn, "flatMapFn");
         TriFunction<S, Object, T, Traverser<R>> keyedMapFn =
-                UserMetricsUtil.wrap((s, k, t) -> flatMapFn.apply(s, t), flatMapFn);
+                UserMetricsUtil.wrapTriFunction((s, k, t) -> flatMapFn.apply(s, t), flatMapFn);
         GlobalFlatMapStatefulTransform<T, S, R> transform = new GlobalFlatMapStatefulTransform(
                 this.transform,
                 fnAdapter.adaptTimestampFn(),

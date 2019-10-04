@@ -270,7 +270,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <T, R> FunctionEx<? super JetEvent<T>, ?> adaptMapFn(
             @Nonnull FunctionEx<? super T, ? extends R> mapFn
     ) {
-        return UserMetricsUtil.wrap(e -> jetEvent(e.timestamp(), mapFn.apply(e.payload())), mapFn);
+        return UserMetricsUtil.wrapFunction(e -> jetEvent(e.timestamp(), mapFn.apply(e.payload())), mapFn);
     }
 
     @Nonnull @Override
@@ -282,14 +282,17 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <T, R> FunctionEx<? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptFlatMapFn(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return UserMetricsUtil.wrap(e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(e.timestamp(), r)), flatMapFn);
+        return UserMetricsUtil.wrapFunction(
+                e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(e.timestamp(), r)),
+                flatMapFn);
     }
 
     @Nonnull @Override
     <S, K, T, R> TriFunction<? super S, ? super K, ? super JetEvent<T>, ? extends JetEvent<R>> adaptStatefulMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
     ) {
-        return UserMetricsUtil.wrap((state, key, e) -> jetEvent(e.timestamp(), mapFn.apply(state, key, e.payload())),
+        return UserMetricsUtil.wrapTriFunction(
+                (state, key, e) -> jetEvent(e.timestamp(), mapFn.apply(state, key, e.payload())),
                 mapFn);
     }
 
@@ -305,7 +308,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     adaptStatefulFlatMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
-        return UserMetricsUtil.wrap(
+        return UserMetricsUtil.wrapTriFunction(
                 (state, key, e) -> flatMapFn.apply(state, key, e.payload()).map(r -> jetEvent(e.timestamp(), r)),
                 flatMapFn);
     }
@@ -321,21 +324,22 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T>, ? extends JetEvent<R>> adaptMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     ) {
-        return UserMetricsUtil.wrap((context, e) -> jetEvent(e.timestamp(), mapFn.apply(context, e.payload())), mapFn);
+        return UserMetricsUtil.wrapBiFunction((context, e) -> jetEvent(e.timestamp(), mapFn.apply(context, e.payload())),
+                mapFn);
     }
 
     @Nonnull @Override
     <C, T> BiPredicateEx<? super C, ? super JetEvent<T>> adaptFilterUsingContextFn(
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     ) {
-        return UserMetricsUtil.wrapPredicate((context, e) -> filterFn.test(context, e.payload()), filterFn);
+        return UserMetricsUtil.wrapBiPredicate((context, e) -> filterFn.test(context, e.payload()), filterFn);
     }
 
     @Nonnull @Override
     <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptFlatMapUsingContextFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return UserMetricsUtil.wrap(
+        return UserMetricsUtil.wrapBiFunction(
                 (context, e) -> flatMapFn.apply(context, e.payload()).map(r -> jetEvent(e.timestamp(), r)), flatMapFn);
     }
 
@@ -343,7 +347,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>> adaptFlatMapUsingContextAsyncFn(
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return UserMetricsUtil.wrap(
+        return UserMetricsUtil.wrapBiFunction(
                 (C context, JetEvent<T> e) ->
                         flatMapAsyncFn.apply(context, e.payload())
                                 .thenApply(trav -> trav == null ? null : trav.map(re -> jetEvent(e.timestamp(), re))),
@@ -427,6 +431,6 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     private static <A, T> BiConsumerEx<? super A, ? super JetEvent<T>> adaptAccumulateFn(
             @Nonnull BiConsumerEx<? super A, ? super T> accumulateFn
     ) {
-        return UserMetricsUtil.wrapConsumer((acc, t) -> accumulateFn.accept(acc, t.payload()), accumulateFn);
+        return UserMetricsUtil.wrapBiConsumer((acc, t) -> accumulateFn.accept(acc, t.payload()), accumulateFn);
     }
 }

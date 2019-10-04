@@ -41,7 +41,6 @@ import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -193,21 +192,21 @@ public class Planner {
         if (chain.isEmpty()) {
             return null;
         }
-        List<FunctionEx> functions = chain.stream().map(t -> ((MapTransform) t).mapFn()).collect(toList());
+        FunctionEx[] functions = chain.stream().map(t -> ((MapTransform) t).mapFn()).toArray(FunctionEx[]::new);
         FunctionEx mergedFunction = t -> {
             Object result = t;
-            for (int i = 0; i < functions.size() && result != null; i++) {
-                result = functions.get(i).apply(result);
+            for (int i = 0; i < functions.length && result != null; i++) {
+                result = functions[i].apply(result);
             }
             return result;
         };
-        return UserMetricsUtil.wrapAll(mergedFunction, functions);
+        return UserMetricsUtil.wrapFunction(mergedFunction, functions);
     }
 
     private static FunctionEx<Object, Traverser> merge(FunctionEx<Object, Traverser> flatMapFn, FunctionEx trailingMapFn) {
-        return UserMetricsUtil.wrapAll(
+        return UserMetricsUtil.wrapFunction(
                 flatMapFn.andThen(t -> t.map(trailingMapFn)),
-                Arrays.asList(flatMapFn, trailingMapFn)
+                flatMapFn, trailingMapFn
         );
     }
 
@@ -229,7 +228,7 @@ public class Planner {
                     ? function::apply
                     : flatMapFn.andThen(r -> r.flatMap(function));
         }
-        return UserMetricsUtil.wrapAll(newFlatMapFn, Arrays.asList(flatMapFn, function, inputMapFn));
+        return UserMetricsUtil.wrapFunction(newFlatMapFn, flatMapFn, function, inputMapFn);
     }
 
     private static void validateNoLeakage(Map<Transform, List<Transform>> adjacencyMap) {

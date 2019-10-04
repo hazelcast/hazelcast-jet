@@ -105,7 +105,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
         BiFunctionEx<? super S, ? super T, ? extends T> mapFn = (s, t) -> filterFn.test(s, t) ? t : null;
-        return attachGlobalMapStateful(createFn, UserMetricsUtil.wrap(mapFn, filterFn));
+        return attachGlobalMapStateful(createFn, UserMetricsUtil.wrapBiFunction(mapFn, filterFn));
     }
 
     @Nonnull
@@ -135,7 +135,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         BiFunctionEx<C, T, CompletableFuture<Traverser<R>>> flatMapAsyncFn =
                 (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton);
         return attachFlatMapUsingContextAsync("map", contextFactory,
-                UserMetricsUtil.wrap(flatMapAsyncFn, mapAsyncFn));
+                UserMetricsUtil.wrapBiFunction(flatMapAsyncFn, mapAsyncFn));
     }
 
     @Nonnull
@@ -156,7 +156,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
         BiFunctionEx<C, T, CompletableFuture<Traverser<T>>> flatMapAsyncFn = (c, t) -> filterAsyncFn.apply(c, t)
                 .thenApply(passed -> passed ? Traversers.singleton(t) : null);
         return attachFlatMapUsingContextAsync("filter", contextFactory,
-                UserMetricsUtil.wrap(flatMapAsyncFn, filterAsyncFn));
+                UserMetricsUtil.wrapBiFunction(flatMapAsyncFn, filterAsyncFn));
     }
 
     @Nonnull

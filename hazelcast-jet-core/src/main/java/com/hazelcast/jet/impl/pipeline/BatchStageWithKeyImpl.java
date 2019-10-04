@@ -70,7 +70,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
         TriFunction<S, K, T, T> mapFn = (s, k, t) -> filterFn.test(s, t) ? t : null;
-        return attachMapStateful(0, createFn, UserMetricsUtil.wrap(mapFn, filterFn), null);
+        return attachMapStateful(0, createFn, UserMetricsUtil.wrapTriFunction(mapFn, filterFn), null);
     }
 
     @Nonnull @Override
@@ -102,7 +102,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
         TriFunction<C, K, T, CompletableFuture<Traverser<R>>> flatMapAsyncFn =
                 (c, k, t) -> mapAsyncFn.apply(c, k, t).thenApply(Traversers::singleton);
         return attachTransformUsingContextAsync("map", contextFactory,
-                UserMetricsUtil.wrap(flatMapAsyncFn, mapAsyncFn));
+                UserMetricsUtil.wrapTriFunction(flatMapAsyncFn, mapAsyncFn));
     }
 
     @Nonnull @Override
@@ -122,7 +122,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
         TriFunction<C, K, T, CompletableFuture<Traverser<T>>> flatMapAsyncFn = (c, k, t) ->
                 filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null);
         return attachTransformUsingContextAsync("filter", contextFactory,
-                UserMetricsUtil.wrap(flatMapAsyncFn, filterAsyncFn));
+                UserMetricsUtil.wrapTriFunction(flatMapAsyncFn, filterAsyncFn));
     }
 
     @Nonnull @Override

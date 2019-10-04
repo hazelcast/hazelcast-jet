@@ -84,7 +84,7 @@ class StageWithGroupingBase<T, K> {
             return mapFn.apply(c, k, t);
         };
         return computeStage.attachMapUsingPartitionedContext(contextFactory, keyFn,
-                UserMetricsUtil.wrap(keyedMapFn, mapFn));
+                UserMetricsUtil.wrapBiFunction(keyedMapFn, mapFn));
     }
 
     @Nonnull
@@ -98,7 +98,7 @@ class StageWithGroupingBase<T, K> {
             return filterFn.test(c, k, t);
         };
         return computeStage.attachFilterUsingPartitionedContext(contextFactory, keyFn,
-                UserMetricsUtil.wrapPredicate(filterPredicate, filterFn));
+                UserMetricsUtil.wrapBiPredicate(filterPredicate, filterFn));
     }
 
     @Nonnull
@@ -112,7 +112,7 @@ class StageWithGroupingBase<T, K> {
             return flatMapFn.apply(c, k, t);
         };
         return computeStage.attachFlatMapUsingPartitionedContext(contextFactory, keyFn,
-                UserMetricsUtil.wrap(keyedFlatMapFn, flatMapFn));
+                UserMetricsUtil.wrapBiFunction(keyedFlatMapFn, flatMapFn));
     }
 
     @Nonnull
@@ -128,7 +128,7 @@ class StageWithGroupingBase<T, K> {
             return flatMapAsyncFn.apply(c, k, t);
         };
         return computeStage.attachTransformUsingPartitionedContextAsync(operationName, contextFactory, keyFn,
-                UserMetricsUtil.wrap(keyedFlatMapAsyncFn, flatMapAsyncFn));
+                UserMetricsUtil.wrapBiFunction(keyedFlatMapAsyncFn, flatMapAsyncFn));
     }
 
     static Transform transformOf(GeneralStageWithKey stage) {

@@ -54,7 +54,6 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
@@ -724,7 +723,7 @@ public final class Processors {
                 trav.accept(clonedMapFn.apply(item));
                 return trav;
             };
-            return new TransformP<>(UserMetricsUtil.wrap(traverserFn, clonedMapFn));
+            return new TransformP<>(UserMetricsUtil.wrapFunction(traverserFn, clonedMapFn));
         };
     }
 
@@ -817,7 +816,7 @@ public final class Processors {
                     keyFn,
                     timestampFn,
                     clonedCreateFn,
-                    UserMetricsUtil.wrapAll(statefulFlatMapFn, Arrays.asList(clonedStatefulMapFn, clonedCreateFn)),
+                    UserMetricsUtil.wrapTriFunction(statefulFlatMapFn, clonedStatefulMapFn, clonedCreateFn),
                     onEvictFnCopy != null ? (s, k, wm) -> {
                         evictTrav.accept(onEvictFnCopy.apply(s, k, wm));
                         return evictTrav;
@@ -904,7 +903,7 @@ public final class Processors {
                     singletonTraverser.accept(mapFn.apply(context, item));
                     return singletonTraverser;
                 };
-        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrap(flatMapFn, mapFn));
+        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrapTriFunction(flatMapFn, mapFn));
     }
 
     /**
@@ -961,7 +960,7 @@ public final class Processors {
                     singletonTraverser.accept(filterFn.test(context, item) ? item : null);
                     return singletonTraverser;
                 };
-        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrap(flatMapFn, filterFn));
+        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrapTriFunction(flatMapFn, filterFn));
     }
 
     /**
@@ -1019,7 +1018,7 @@ public final class Processors {
     ) {
         TriFunction<ResettableSingletonTraverser<R>, C, T, Traverser<? extends R>> flatMapTriFn =
                 (singletonTraverser, context, item) -> flatMapFn.apply(context, item);
-        return TransformUsingContextP.<C, T, R>supplier(contextFactory, UserMetricsUtil.wrap(flatMapTriFn, flatMapFn));
+        return TransformUsingContextP.supplier(contextFactory, UserMetricsUtil.wrapTriFunction(flatMapTriFn, flatMapFn));
     }
 
     /**

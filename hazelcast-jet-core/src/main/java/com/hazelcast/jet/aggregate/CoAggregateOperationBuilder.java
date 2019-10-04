@@ -115,13 +115,13 @@ public class CoAggregateOperationBuilder {
         SupplierEx[] createFns = ops.stream().map(AggregateOperation::createFn).toArray(SupplierEx[]::new);
         SupplierEx<Object[]> createFn = () -> stream(createFns).map(SupplierEx::get).toArray();
         AggregateOperationBuilder.VarArity<Object[], Void> b = AggregateOperation
-                .withCreate(UserMetricsUtil.wrapAll(createFn, createFns))
+                .withCreate(UserMetricsUtil.wrapSupplier(createFn, createFns))
                 .varArity();
 
         opsByTag.forEach((tag, op) -> {
             int index = tag.index();
             BiConsumerEx<Object[], Object> accumulateFn = (acc, item) -> op.accumulateFn().accept(acc[index], item);
-            b.andAccumulate(tag, UserMetricsUtil.wrapConsumer(accumulateFn, op.accumulateFn()));
+            b.andAccumulate(tag, UserMetricsUtil.wrapBiConsumer(accumulateFn, op.accumulateFn()));
         });
 
         BiConsumerEx[] combineFns =
@@ -163,9 +163,9 @@ public class CoAggregateOperationBuilder {
             return exportFinishFn.apply(result);
         };
 
-        return b.andCombine(UserMetricsUtil.wrapAll(combineFn, combineFns))
-                .andDeduct(UserMetricsUtil.wrapAll(deductFn, deductFns))
-                .andExport(UserMetricsUtil.wrapAll(exportFn, exportFns))
-                .andFinish(UserMetricsUtil.wrapAll(finishFn, finishFns));
+        return b.andCombine(UserMetricsUtil.wrapBiConsumer(combineFn, combineFns))
+                .andDeduct(UserMetricsUtil.wrapBiConsumer(deductFn, deductFns))
+                .andExport(UserMetricsUtil.wrapFunction(exportFn, exportFns))
+                .andFinish(UserMetricsUtil.wrapFunction(finishFn, finishFns));
     }
 }

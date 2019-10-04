@@ -94,7 +94,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
         BiFunctionEx<S, T, T> mapFn = (s, t) -> filterFn.test(s, t) ? t : null;
-        return attachGlobalMapStateful(createFn, UserMetricsUtil.wrap(mapFn, filterFn));
+        return attachGlobalMapStateful(createFn, UserMetricsUtil.wrapBiFunction(mapFn, filterFn));
     }
 
     @Nonnull @Override
@@ -121,7 +121,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
         BiFunctionEx<C, T, CompletableFuture<Traverser<R>>> flatMapAsyncFn =
                 (c, t) -> mapAsyncFn.apply(c, t).thenApply(Traversers::singleton);
         return attachFlatMapUsingContextAsync("map", contextFactory,
-                UserMetricsUtil.wrap(flatMapAsyncFn, mapAsyncFn));
+                UserMetricsUtil.wrapBiFunction(flatMapAsyncFn, mapAsyncFn));
     }
 
     @Nonnull @Override
@@ -140,7 +140,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
         BiFunctionEx<C, T, CompletableFuture<Traverser<T>>> flatMapAsyncFn = (c, t) -> filterAsyncFn.apply(c, t)
                 .thenApply(passed -> passed ? singleton(t) : null);
         return attachFlatMapUsingContextAsync("filter", contextFactory,
-                UserMetricsUtil.wrap(flatMapAsyncFn, filterAsyncFn));
+                UserMetricsUtil.wrapBiFunction(flatMapAsyncFn, filterAsyncFn));
     }
 
     @Nonnull @Override

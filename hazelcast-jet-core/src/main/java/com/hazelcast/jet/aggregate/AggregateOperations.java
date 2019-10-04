@@ -63,7 +63,6 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.function.FunctionEx.identity;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static java.util.Arrays.asList;
 
 /**
  * Utility class with factory methods for several useful aggregate
@@ -1535,13 +1534,13 @@ public final class AggregateOperations {
                 exportFinishFn.apply(op0.finishFn().apply(acc.f0()), op1.finishFn().apply(acc.f1()));
 
         return AggregateOperation
-                .withCreate(UserMetricsUtil.wrapAll(createFn, asList(op0.createFn(), op1.createFn())))
-                .andAccumulate0(UserMetricsUtil.wrapConsumer(accumFn0, op0.accumulateFn()))
-                .andAccumulate1(UserMetricsUtil.wrapConsumer(accumFn1, op1.accumulateFn()))
-                .andCombine(UserMetricsUtil.wrapAll(combineFn, asList(op0.combineFn(), op1.combineFn())))
-                .andDeduct(UserMetricsUtil.wrapAll(deductFn, asList(op0.deductFn(), op1.deductFn())))
-                .andExport(UserMetricsUtil.wrapAll(exportFn, asList(op0.exportFn(), op1.exportFn())))
-                .andFinish(UserMetricsUtil.wrapAll(finishFn, asList(op0.finishFn(), op1.finishFn())));
+                .withCreate(UserMetricsUtil.wrapSupplier(createFn, op0.createFn(), op1.createFn()))
+                .andAccumulate0(UserMetricsUtil.wrapBiConsumer(accumFn0, op0.accumulateFn()))
+                .andAccumulate1(UserMetricsUtil.wrapBiConsumer(accumFn1, op1.accumulateFn()))
+                .andCombine(UserMetricsUtil.wrapBiConsumer(combineFn, op0.combineFn(), op1.combineFn()))
+                .andDeduct(UserMetricsUtil.wrapBiConsumer(deductFn, op0.deductFn(), op1.deductFn()))
+                .andExport(UserMetricsUtil.wrapFunction(exportFn, op0.exportFn(), op1.exportFn()))
+                .andFinish(UserMetricsUtil.wrapFunction(finishFn, op0.finishFn(), op1.finishFn()));
     }
 
     /**
@@ -1678,14 +1677,14 @@ public final class AggregateOperations {
         );
 
         return AggregateOperation
-                .withCreate(UserMetricsUtil.wrapAll(createFn, asList(op0.createFn(), op1.createFn(), op2.createFn())))
-                .andAccumulate0(UserMetricsUtil.wrapConsumer(accumFn0, op0.accumulateFn()))
-                .andAccumulate1(UserMetricsUtil.wrapConsumer(accumFn1, op1.accumulateFn()))
-                .andAccumulate2(UserMetricsUtil.wrapConsumer(accumFn2, op2.accumulateFn()))
-                .andCombine(UserMetricsUtil.wrapAll(combineFn, asList(op0.combineFn(), op1.combineFn(), op2.combineFn())))
-                .andDeduct(UserMetricsUtil.wrapAll(deductFn, asList(op0.deductFn(), op1.deductFn(), op2.deductFn())))
-                .andExport(UserMetricsUtil.wrapAll(exportFn, asList(op0.exportFn(), op1.exportFn(), op2.exportFn())))
-                .andFinish(UserMetricsUtil.wrapAll(finishFn, asList(op0.finishFn(), op1.finishFn(), op2.finishFn())));
+                .withCreate(UserMetricsUtil.wrapSupplier(createFn, op0.createFn(), op1.createFn(), op2.createFn()))
+                .andAccumulate0(UserMetricsUtil.wrapBiConsumer(accumFn0, op0.accumulateFn()))
+                .andAccumulate1(UserMetricsUtil.wrapBiConsumer(accumFn1, op1.accumulateFn()))
+                .andAccumulate2(UserMetricsUtil.wrapBiConsumer(accumFn2, op2.accumulateFn()))
+                .andCombine(UserMetricsUtil.wrapBiConsumer(combineFn, op0.combineFn(), op1.combineFn(), op2.combineFn()))
+                .andDeduct(UserMetricsUtil.wrapBiConsumer(deductFn, op0.deductFn(), op1.deductFn(), op2.deductFn()))
+                .andExport(UserMetricsUtil.wrapFunction(exportFn, op0.exportFn(), op1.exportFn(), op2.exportFn()))
+                .andFinish(UserMetricsUtil.wrapFunction(finishFn, op0.finishFn(), op1.finishFn(), op2.finishFn()));
     }
 
     /**

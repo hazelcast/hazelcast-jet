@@ -41,7 +41,6 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
-import static java.util.Arrays.asList;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -250,12 +249,12 @@ public interface GeneralStage<T> extends Stage {
     ) {
         BiConsumer<? super A, ? super T> accumulateFn = aggrOp.accumulateFn();
         Function<? super A, ? extends R> exportFn = aggrOp.exportFn();
-        BiFunctionEx<A, T, R> mapFn = UserMetricsUtil.wrapAll(
+        BiFunctionEx<A, T, R> mapFn = UserMetricsUtil.wrapBiFunction(
                 (acc, item) -> {
                     accumulateFn.accept(acc, item);
                     return exportFn.apply(acc);
                 },
-                asList(accumulateFn, exportFn));
+                accumulateFn, exportFn);
         SupplierEx<A> createFn = aggrOp.createFn();
         return mapStateful(createFn, mapFn);
     }
@@ -549,7 +548,7 @@ public interface GeneralStage<T> extends Stage {
         BiFunctionEx<ReplicatedMap<K, V>, T, R> mapUsingContextFn = (map, t) ->
                 mapFn.apply(t, map.get(lookupKeyFn.apply(t)));
         GeneralStage<R> res = mapUsingContext(ContextFactories.<K, V>replicatedMapContext(mapName),
-                UserMetricsUtil.wrap(mapUsingContextFn, mapFn));
+                UserMetricsUtil.wrapBiFunction(mapUsingContextFn, mapFn));
         return res.setName("mapUsingReplicatedMap");
     }
 
@@ -643,7 +642,7 @@ public interface GeneralStage<T> extends Stage {
         BiFunctionEx<IMapJet<K, V>, T, CompletableFuture<R>> mapAsyncFunction = (map, t) ->
                 toCompletableFuture(map.getAsync(lookupKeyFn.apply(t))).thenApply(e -> mapFn.apply(t, e));
         GeneralStage<R> res = mapUsingContextAsync(ContextFactories.iMapContext(mapName),
-                UserMetricsUtil.wrap(mapAsyncFunction, mapFn));
+                UserMetricsUtil.wrapBiFunction(mapAsyncFunction, mapFn));
         return res.setName("mapUsingIMap");
     }
 
