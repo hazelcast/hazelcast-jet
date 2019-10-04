@@ -738,7 +738,7 @@ public final class Processors {
      */
     @Nonnull
     public static <T> SupplierEx<Processor> filterP(@Nonnull PredicateEx<? super T> filterFn) {
-        return mapP((T t) -> filterFn.test(t) ? t : null);
+        return mapP(UserMetricsUtil.wrapFunction((T t) -> filterFn.test(t) ? t : null, filterFn));
     }
 
     /**
