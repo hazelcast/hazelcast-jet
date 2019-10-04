@@ -109,10 +109,6 @@
     </files>
     <fileSets>
         <fileSet>
-            <directory>${project.build.directory}/apidocs</directory>
-            <outputDirectory>docs/javadoc</outputDirectory>
-        </fileSet>
-        <fileSet>
             <directory>src/zip-root</directory>
             <outputDirectory/>
         </fileSet>
