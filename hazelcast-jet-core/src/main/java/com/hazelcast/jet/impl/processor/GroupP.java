@@ -46,7 +46,6 @@ import static java.util.Collections.singletonList;
 public class GroupP<K, A, R, OUT> extends AbstractProcessor implements ProvidesMetrics {
     @Nonnull private final List<FunctionEx<?, ? extends K>> groupKeyFns;
     @Nonnull private final AggregateOperation<A, R> aggrOp;
-    @Nonnull private final ProvidesMetrics metricsProvider;
 
     private final Map<K, A> keyToAcc = new HashMap<>();
     private Traverser<OUT> resultTraverser;
@@ -62,7 +61,6 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor implements ProvidesM
         this.groupKeyFns = groupKeyFns;
         this.aggrOp = aggrOp;
         this.mapToOutputFn = mapToOutputFn;
-        this.metricsProvider = UserMetricsUtil.cast(aggrOp);
     }
 
     public <T> GroupP(
@@ -95,7 +93,7 @@ public class GroupP<K, A, R, OUT> extends AbstractProcessor implements ProvidesM
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        metricsProvider.registerMetrics(context);
+        UserMetricsUtil.cast(aggrOp).registerMetrics(context);
     }
 
     private class ResultTraverser implements Traverser<Entry<K, A>> {

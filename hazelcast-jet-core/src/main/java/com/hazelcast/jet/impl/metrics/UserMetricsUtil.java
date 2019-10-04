@@ -45,7 +45,7 @@ import static java.util.stream.Collectors.toSet;
 
 public final class UserMetricsUtil {
 
-    private static final ProvidesMetrics DUMMY_METRICS_PROVIDER = context -> { };
+    private static final ProvidesMetrics NOOP_METRICS_PROVIDER = context -> { };
 
     private UserMetricsUtil() {
     }
@@ -54,7 +54,7 @@ public final class UserMetricsUtil {
         if (candidate instanceof ProvidesMetrics) {
             return (ProvidesMetrics) candidate;
         } else {
-            return DUMMY_METRICS_PROVIDER;
+            return NOOP_METRICS_PROVIDER;
         }
     }
 
