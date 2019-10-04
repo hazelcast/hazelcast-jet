@@ -118,8 +118,6 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor implements P
     @Probe(name = "totalKeysInFrames")
     private final AtomicLong totalKeysInFrames = new AtomicLong();
 
-    private final ProvidesMetrics metricsProvider;
-
     // Fields for early results emission
     private final long earlyResultsPeriod;
     private long lastTimeEarlyResultsEmitted;
@@ -160,7 +158,6 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor implements P
         this.keyFns = (List<Function<Object, ? extends K>>) keyFns;
         this.earlyResultsPeriod = earlyResultsPeriod;
         this.aggrOp = aggrOp;
-        this.metricsProvider = UserMetricsUtil.cast(aggrOp);
         this.combineFn = aggrOp.combineFn();
         this.mapToOutputFn = mapToOutputFn;
         this.isLastStage = isLastStage;
@@ -187,8 +184,8 @@ public class SlidingWindowP<K, A, R, OUT> extends AbstractProcessor implements P
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        this.metricsProvider.registerMetrics(context);
-        this.emptyAcc = aggrOp.createFn().get();
+        UserMetricsUtil.cast(aggrOp).registerMetrics(context);
+        emptyAcc = aggrOp.createFn().get();
     }
 
     @Override

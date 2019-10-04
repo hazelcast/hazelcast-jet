@@ -81,7 +81,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
     private final ContextFactory<C> contextFactory;
     private final BiFunctionEx<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
     private final Function<? super T, ? extends K> extractKeyFn;
-    private final ProvidesMetrics metricsProvider;
 
     private C contextObject;
     private ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Object>> resultQueue;
@@ -120,7 +119,6 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
         this.extractKeyFn = extractKeyFn;
-        this.metricsProvider = UserMetricsUtil.cast(callAsyncFn);
     }
 
     @Override
@@ -140,7 +138,7 @@ public final class AsyncTransformUsingContextUnorderedP<C, T, K, R> extends Abst
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        metricsProvider.registerMetrics(context);
+        UserMetricsUtil.cast(callAsyncFn).registerMetrics(context);
     }
 
     @Override

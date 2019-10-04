@@ -70,7 +70,6 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     @Probe(name = "numInFlightOps")
     private final AtomicInteger asyncOpsCounterMetric = new AtomicInteger();
-    private final ProvidesMetrics metricsProvider;
 
     /**
      * Constructs a processor with the given mapping function.
@@ -83,7 +82,6 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
         this.contextFactory = contextFactory;
         this.callAsyncFn = callAsyncFn;
         this.contextObject = contextObject;
-        this.metricsProvider = UserMetricsUtil.cast(callAsyncFn);
 
         assert contextObject == null ^ contextFactory.hasLocalSharing()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -106,7 +104,7 @@ public final class AsyncTransformUsingContextOrderedP<C, T, R> extends AbstractP
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        metricsProvider.registerMetrics(context);
+        UserMetricsUtil.cast(callAsyncFn).registerMetrics(context);
     }
 
     @Override

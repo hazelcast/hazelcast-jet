@@ -51,7 +51,6 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
 
     private Traverser<? extends R> outputTraverser;
     private final ResettableSingletonTraverser<R> singletonTraverser = new ResettableSingletonTraverser<>();
-    private final ProvidesMetrics metricsProvider;
 
     /**
      * Constructs a processor with the given mapping function.
@@ -65,7 +64,6 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
         this.contextFactory = contextFactory;
         this.flatMapFn = flatMapFn;
         this.contextObject = contextObject;
-        this.metricsProvider = UserMetricsUtil.cast(flatMapFn);
 
         assert contextObject == null ^ contextFactory.hasLocalSharing()
                 : "if contextObject is shared, it must be non-null, or vice versa";
@@ -86,7 +84,7 @@ public final class TransformUsingContextP<C, T, R> extends AbstractProcessor imp
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        metricsProvider.registerMetrics(context);
+        UserMetricsUtil.cast(flatMapFn).registerMetrics(context);
     }
 
     @Override

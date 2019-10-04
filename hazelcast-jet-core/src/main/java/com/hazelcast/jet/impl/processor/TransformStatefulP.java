@@ -71,8 +71,6 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements
     private final EvictingTraverser evictingTraverser = new EvictingTraverser();
     private final Traverser<?> evictingTraverserFlattened = evictingTraverser.flatMap(identity());
 
-    private final ProvidesMetrics metricsProvider;
-
     private long currentWm = Long.MIN_VALUE;
     private Traverser<? extends Entry<?, ?>> snapshotTraverser;
 
@@ -90,7 +88,6 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements
         this.createIfAbsentFn = k -> new TimestampedItem<>(Long.MIN_VALUE, createFn.get());
         this.statefulFlatMapFn = statefulFlatMapFn;
         this.onEvictFn = onEvictFn;
-        this.metricsProvider = UserMetricsUtil.cast(statefulFlatMapFn);
     }
 
     @Override
@@ -101,7 +98,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements
 
     @Override
     public void registerMetrics(MetricsContext context) {
-        metricsProvider.registerMetrics(context);
+        UserMetricsUtil.cast(statefulFlatMapFn).registerMetrics(context);
     }
 
     @Nonnull
