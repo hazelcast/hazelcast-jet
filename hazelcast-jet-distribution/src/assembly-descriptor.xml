@@ -109,7 +109,7 @@
     </files>
     <fileSets>
         <fileSet>
-            <directory>src/zip-root</directory>
+            <directory>src/root</directory>
             <outputDirectory/>
         </fileSet>
 
