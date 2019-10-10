@@ -59,6 +59,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements
     private final long ttl;
     private final Function<? super T, ? extends K> keyFn;
     private final ToLongFunction<? super T> timestampFn;
+    private final Supplier<? extends S> createFn;
     private final Function<K, TimestampedItem<S>> createIfAbsentFn;
     private final TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> statefulFlatMapFn;
     @Nullable
@@ -85,6 +86,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements
         this.ttl = ttl > 0 ? ttl : Long.MAX_VALUE;
         this.keyFn = keyFn;
         this.timestampFn = timestampFn;
+        this.createFn = createFn;
         this.createIfAbsentFn = k -> new TimestampedItem<>(Long.MIN_VALUE, createFn.get());
         this.statefulFlatMapFn = statefulFlatMapFn;
         this.onEvictFn = onEvictFn;
@@ -99,6 +101,8 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor implements
     @Override
     public void registerMetrics(MetricsContext context) {
         UserMetricsUtil.cast(statefulFlatMapFn).registerMetrics(context);
+        UserMetricsUtil.cast(onEvictFn).registerMetrics(context);
+        UserMetricsUtil.cast(createFn).registerMetrics(context);
     }
 
     @Nonnull

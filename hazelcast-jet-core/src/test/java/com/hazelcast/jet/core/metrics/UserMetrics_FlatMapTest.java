@@ -43,6 +43,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -51,6 +52,7 @@ public class UserMetrics_FlatMapTest extends JetTestSupport {
     private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
     private static final String FLAT_MAPPED = "flat_mapped";
+    private static final String EVICTED = "evicted";
 
     private JetInstance instance;
     private Pipeline pipeline;
@@ -265,6 +267,28 @@ public class UserMetrics_FlatMapTest extends JetTestSupport {
         assertCountersProduced(FLAT_MAPPED, 4);
     }
 
+    @Test
+    public void flatMapStatefulWithEvict_streamWithKey() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .groupingKey(l -> l % 3L)
+                .flatMapStateful(
+                        MINUTES.toMillis(1),
+                        LongAccumulator::new,
+                        new FlatMapTriFunctionProvidingMetrics<>((acc, key, l) -> {
+                            acc.add(1);
+                            return new Long[]{l, l + acc.get()};
+                        }),
+                        new EvictTriFunctionProvidingMetrics<>((counter, key, wm) -> Traversers.singleton(wm))
+                )
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(FLAT_MAPPED, 4, EVICTED, 0);
+    }
+
     private void assertCountersProduced(Object... expected) {
         Job job = instance.newJob(pipeline, JOB_CONFIG_WITH_METRICS);
 
@@ -390,6 +414,41 @@ public class UserMetrics_FlatMapTest extends JetTestSupport {
                 incrementCounter(expansion.length);
                 return Traversers.traverseItems(expansion);
             });
+        }
+    }
+
+    private abstract static class AbstractEviction implements MetricsProvider, Serializable {
+
+        private Counter evictedCounter;
+
+        @Override
+        public void registerMetrics(MetricsContext context) {
+            if (evictedCounter != null) {
+                /* We do this check explicitly because we want to detect situations when this method gets called
+                multiple times on the same object, but with different context parameters. */
+                throw new IllegalStateException("Should get initialised only once");
+            }
+            evictedCounter = context.registerCounter(EVICTED);
+        }
+
+        void incCounter() {
+            evictedCounter.increment();
+        }
+    }
+
+    private static class EvictTriFunctionProvidingMetrics<T, U, V> extends AbstractEviction
+            implements TriFunction<T, U, Long, Traverser<V>> {
+        private final TriFunction<T, U, Long, Traverser<V>> evictFunction;
+
+        EvictTriFunctionProvidingMetrics(TriFunction<T, U, Long, Traverser<V>> evictFunction) {
+            this.evictFunction = evictFunction;
+        }
+
+        @Override
+        public Traverser<V> applyEx(T t, U u, Long wm) {
+            Traverser<V> traverser = evictFunction.apply(t, u, wm);
+            incCounter();
+            return traverser;
         }
     }
 

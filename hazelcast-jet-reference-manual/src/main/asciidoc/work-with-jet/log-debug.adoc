@@ -299,26 +299,54 @@ everywhere. The list of supported Pipeline operations is as follows (showing onl
 
 -----
 filter                   (PredicateEx filterFn)
+
 filterUsingContext       (..., BiPredicateEx filterFn)
+                         (..., TriPredicate filterFn)
+
 filterUsingContextAsync  (..., BiFunctionEx filterAsyncFn)
+                         (..., TriFunction filterAsyncFn)
+
 filterStateful           (..., BiPredicateEx filterFn)
+
 map                      (FunctionEx mapFn)
+
 mapUsingContext          (..., BiFunctionEx mapFn)
+                         (..., TriFunction mapFn)
+
 mapUsingContextAsync     (..., BiFunctionEx mapAsyncFn)
+                         (..., TriFunction mapAsyncFn)
+
 mapStateful              (..., BiFunctionEx mapFn)
+                         (..., TriFunction mapFn)
+                         (..., TriFunction mapFn, TriFunction onEvictFn)
+
 mapUsingIMap             (..., BiFunctionEx mapFn)
+
 mapUsingReplicatedMap    (..., BiFunctionEx mapFn)
+
 flatMap                  (FunctionEx flatMapFn)
+
 flatMapUsingContext      (..., BiFunctionEx flatMapFn)
+                         (..., TriFunction flatMapFn)
+
 flatMapUsingContextAsync (..., BiFunctionEx flatMapAsyncFn)
+                         (..., TriFunction flatMapAsyncFn)
+
 flatMapStateful          (..., BiFunctionEx flatMapFn)
+                         (..., TriFunction flatMapFn)
+                         (..., TriFunction flatMapFn, TriFunction onEvictFn)
+
 aggregate                (AggregateOperation1 aggrOp)
+
 aggregate2               (AggregateOperation1 aggrOp0, ..., AggregateOperation1 aggrOp1)
-aggregate2               (..., AggregateOperation2 aggrOp)
+                         (..., AggregateOperation2 aggrOp)
+
 aggregate3               (AggregateOperation1 aggrOp0, ..., AggregateOperation1 aggrOp1, ..., AggregateOperation1 aggrOp2)
-aggregate3               (..., AggregateOperation3 aggrOp)
+                         (..., AggregateOperation3 aggrOp)
+
 aggregateBuilder         ()
-aggregateBuilder         (AggregateOperation1 aggrOp0)
+                         (AggregateOperation1 aggrOp0)
+
 rollingAggregate         (AggregateOperation1 aggrOp)
 -----
 

@@ -42,8 +42,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
@@ -52,6 +54,7 @@ public class UserMetrics_MapTest extends JetTestSupport {
     private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
     private static final String MAPPED = "mapped";
+    private static final String EVICTED = "evicted";
 
     private JetInstance instance;
     private Pipeline pipeline;
@@ -268,6 +271,29 @@ public class UserMetrics_MapTest extends JetTestSupport {
                 .drainTo(Sinks.logger());
 
         assertCountersProduced(MAPPED, 4);
+    }
+
+    @Test
+    public void mapStatefulWithEvict_streamWithKey() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .groupingKey(l -> l % 3L)
+                .mapStateful(
+                        MINUTES.toMillis(1),
+                        LongAccumulator::new,
+                        new MappingTriFunctionProvidingMetrics<>((acc, key, l) -> {
+                            acc.add(1);
+                            return l * acc.get() * key;
+                        }),
+                        new EvictTriFunctionProvidingMetrics<>((sum, key, time) ->
+                                entry(String.format("%s:totalForSession:%d", key, time), sum.get())
+                        ))
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced(MAPPED, 4, EVICTED, 0);
     }
 
     @Test
@@ -506,6 +532,41 @@ public class UserMetrics_MapTest extends JetTestSupport {
                 incCounter();
                 return triFunction.apply(t0, t1, t2);
             });
+        }
+    }
+
+    private abstract static class AbstractEviction implements MetricsProvider, Serializable {
+
+        private Counter evictedCounter;
+
+        @Override
+        public void registerMetrics(MetricsContext context) {
+            if (evictedCounter != null) {
+                /* We do this check explicitly because we want to detect situations when this method gets called
+                multiple times on the same object, but with different context parameters. */
+                throw new IllegalStateException("Should get initialised only once");
+            }
+            evictedCounter = context.registerCounter(EVICTED);
+        }
+
+        void incCounter() {
+            evictedCounter.increment();
+        }
+    }
+
+    private static class EvictTriFunctionProvidingMetrics<T, U, V, R> extends AbstractEviction
+            implements TriFunction<T, U, V, R> {
+
+        private final TriFunction<T, U, V, R> evictFunction;
+
+        EvictTriFunctionProvidingMetrics(TriFunction<T, U, V, R> evictFunction) {
+            this.evictFunction = evictFunction;
+        }
+
+        @Override
+        public R applyEx(T t, U u, V v) {
+            incCounter();
+            return evictFunction.apply(t, u, v);
         }
     }
 

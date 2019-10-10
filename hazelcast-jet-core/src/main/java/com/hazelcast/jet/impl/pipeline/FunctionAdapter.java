@@ -300,7 +300,9 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends JetEvent<R>> adaptOnEvictFn(
             @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
-        return (s, k, wm) -> jetEvent(wm, onEvictFn.apply(s, k, wm));
+        return UserMetricsUtil.wrapTriFunction(
+                (s, k, wm) -> jetEvent(wm, onEvictFn.apply(s, k, wm)),
+                onEvictFn);
     }
 
     @Nonnull @Override
@@ -317,7 +319,9 @@ class JetEventFunctionAdapter extends FunctionAdapter {
     <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<JetEvent<R>>> adaptOnEvictFlatMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
-        return (s, k, wm) -> onEvictFn.apply(s, k, wm).map(r -> jetEvent(wm, r));
+        return UserMetricsUtil.wrapTriFunction(
+                (s, k, wm) -> onEvictFn.apply(s, k, wm).map(r -> jetEvent(wm, r)),
+                onEvictFn);
     }
 
     @Nonnull @Override

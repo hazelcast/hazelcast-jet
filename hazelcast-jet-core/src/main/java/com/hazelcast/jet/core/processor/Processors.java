@@ -804,7 +804,7 @@ public final class Processors {
             final ResettableSingletonTraverser<R> evictTrav = new ResettableSingletonTraverser<>();
             // SpotBugs bug: https://github.com/spotbugs/spotbugs/issues/844
             @SuppressWarnings("UnnecessaryLocalVariable")
-            TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFnCopy = onEvictFn;
+            TriFunction<? super S, ? super K, ? super Long, ? extends R> clonedOnEvictFn = serde(onEvictFn);
             TriFunction<? super S, ? super K, ? super T, ? extends R> clonedStatefulMapFn = serde(statefulMapFn);
             TriFunction<S, K, T, Traverser<R>> statefulFlatMapFn = (state, key, item) -> {
                 mainTrav.accept(clonedStatefulMapFn.apply(state, key, item));
@@ -816,11 +816,14 @@ public final class Processors {
                     keyFn,
                     timestampFn,
                     clonedCreateFn,
-                    UserMetricsUtil.wrapTriFunction(statefulFlatMapFn, clonedStatefulMapFn, clonedCreateFn),
-                    onEvictFnCopy != null ? (s, k, wm) -> {
-                        evictTrav.accept(onEvictFnCopy.apply(s, k, wm));
-                        return evictTrav;
-                    } : null
+                    UserMetricsUtil.wrapTriFunction(statefulFlatMapFn, clonedStatefulMapFn),
+                    clonedOnEvictFn != null ? UserMetricsUtil.wrapTriFunction(
+                            (s, k, wm) -> {
+                                evictTrav.accept(clonedOnEvictFn.apply(s, k, wm));
+                                return evictTrav;
+                            },
+                            clonedOnEvictFn
+                    ) : null
             );
         };
     }
@@ -866,7 +869,7 @@ public final class Processors {
                 timestampFn,
                 createFn,
                 serde(statefulFlatMapFn),
-                onEvictFn
+                serde(onEvictFn)
         );
     }
 
