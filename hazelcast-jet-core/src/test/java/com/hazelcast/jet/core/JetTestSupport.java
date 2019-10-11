@@ -18,6 +18,7 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.Node;
@@ -32,7 +33,6 @@ import com.hazelcast.jet.impl.util.Util.RunnableExc;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
-import com.hazelcast.nio.Address;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;

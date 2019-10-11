@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.internal.util.function.SupplierEx;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
