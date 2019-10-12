@@ -113,8 +113,8 @@
             <outputDirectory/>
         </fileSet>
 
-        <!-- These two directories contain files with property placeholders that the
-             Maven Assembly Plugin must resolve (that's what "filtered" means). -->
+        <!-- Files in these two directories contain property placeholders that the
+             Maven Assembly Plugin must expand (that's what "filtered" means). -->
         <fileSet>
             <directory>src/bin-filemode-755</directory>
             <fileMode>0755</fileMode>
