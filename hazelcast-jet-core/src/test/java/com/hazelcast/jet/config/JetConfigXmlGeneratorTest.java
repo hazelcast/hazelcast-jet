@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.config;
 
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;

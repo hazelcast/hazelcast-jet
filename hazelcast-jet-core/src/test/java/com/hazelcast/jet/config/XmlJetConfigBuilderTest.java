@@ -17,7 +17,6 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
@@ -27,7 +26,6 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)

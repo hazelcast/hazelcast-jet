@@ -17,7 +17,6 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Rule;
 import org.junit.Test;

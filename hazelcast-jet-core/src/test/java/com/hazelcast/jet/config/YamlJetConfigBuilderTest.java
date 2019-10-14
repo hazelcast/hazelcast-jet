@@ -17,10 +17,9 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.config.MetricsConfig;
+import com.hazelcast.internal.util.RootCauseMatcher;
 import com.hazelcast.jet.impl.config.YamlJetConfigBuilder;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.internal.util.RootCauseMatcher;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -29,7 +28,6 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)

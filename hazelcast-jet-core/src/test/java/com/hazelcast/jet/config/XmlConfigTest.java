@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import static com.hazelcast.config.MetricsConfig.DEFAULT_METRICS_COLLECTION_SECONDS;
-import static com.hazelcast.config.MetricsConfig.DEFAULT_METRICS_RETENTION_SECONDS;
 import static com.hazelcast.jet.config.InstanceConfig.DEFAULT_FLOW_CONTROL_PERIOD_MS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -38,7 +36,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class XmlConfigTest {
@@ -56,12 +53,6 @@ public class XmlConfigTest {
         assertEquals(Runtime.getRuntime().availableProcessors(),
                 jetConfig.getInstanceConfig().getCooperativeThreadCount());
         assertEquals(DEFAULT_FLOW_CONTROL_PERIOD_MS, jetConfig.getInstanceConfig().getFlowControlPeriodMs());
-
-        assertTrue(jetConfig.getHazelcastConfig().getMetricsConfig().isEnabled());
-        assertTrue(jetConfig.getHazelcastConfig().getMetricsConfig().isJmxEnabled());
-        assertEquals(DEFAULT_METRICS_RETENTION_SECONDS, jetConfig.getHazelcastConfig().getMetricsConfig().getRetentionSeconds());
-        assertEquals(DEFAULT_METRICS_COLLECTION_SECONDS, jetConfig.getHazelcastConfig().getMetricsConfig().getCollectionIntervalSeconds());
-        assertFalse(jetConfig.getHazelcastConfig().getMetricsConfig().isMetricsForDataStructuresEnabled());
 
         assertDefaultMemberConfig(jetConfig.getHazelcastConfig());
     }
