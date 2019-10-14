@@ -144,7 +144,7 @@ public class JetDomConfigProcessor extends AbstractDomConfigProcessor {
     }
 
     protected void parseMetrics(Node metricsNode, JetConfig config) {
-        MetricsConfig metricsConfig = config.getMetricsConfig();
+        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
         getBooleanAttribute(metricsNode, "enabled").ifPresent(metricsConfig::setEnabled);
         getBooleanAttribute(metricsNode, "jmxEnabled").ifPresent(metricsConfig::setJmxEnabled);
         handleMetricsNode(metricsNode, metricsConfig);

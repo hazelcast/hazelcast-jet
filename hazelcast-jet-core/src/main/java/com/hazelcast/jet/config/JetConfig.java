@@ -18,14 +18,13 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.config.MetricsConfig;
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.config.YamlJetConfigBuilder;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.internal.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -35,10 +34,10 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import static com.hazelcast.jet.core.JetProperties.JET_HOME;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.internal.util.StringUtil.isNullOrEmptyAfterTrim;
 import static com.hazelcast.internal.util.StringUtil.stringToBytes;
+import static com.hazelcast.jet.core.JetProperties.JET_HOME;
 
 /**
  * Configuration object for a Jet instance.
@@ -491,24 +490,6 @@ public class JetConfig {
     public JetConfig setInstanceConfig(@Nonnull InstanceConfig instanceConfig) {
         Preconditions.checkNotNull(instanceConfig, "instanceConfig");
         this.instanceConfig = instanceConfig;
-        return this;
-    }
-
-    /**
-     * Returns the metrics collection config.
-     */
-    @Nonnull
-    public MetricsConfig getMetricsConfig() {
-        return getHazelcastConfig().getMetricsConfig();
-    }
-
-    /**
-     * Sets the metrics collection config.
-     */
-    @Nonnull
-    public JetConfig setMetricsConfig(@Nonnull MetricsConfig metricsConfig) {
-        Preconditions.checkNotNull(metricsConfig, "metricsConfig");
-        this.hazelcastConfig.setMetricsConfig(metricsConfig) ;
         return this;
     }
 

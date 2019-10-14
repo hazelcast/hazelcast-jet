@@ -18,7 +18,6 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.core.HazelcastException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
@@ -38,7 +37,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Abstract test class defining the common test cases for loading XML and YAML
@@ -87,13 +85,6 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
 
         assertEquals("value1", jetConfig.getProperties().getProperty("property1"));
         assertEquals("value2", jetConfig.getProperties().getProperty("property2"));
-
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
-        assertFalse("isEnabled", metricsCfg.isEnabled());
-        assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
-        assertEquals("metricsRetentionSeconds", 124, metricsCfg.getRetentionSeconds());
-        assertEquals("metricsCollectionInterval", 123, metricsCfg.getCollectionIntervalSeconds());
-        assertTrue("metricsForDataStructures", metricsCfg.isMetricsForDataStructuresEnabled());
     }
 
     protected static void assertDefaultMemberConfig(Config config) {
@@ -109,13 +100,13 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
 
     protected static void assertClientConfig(ClientConfig config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getInstanceName(), equalTo(TEST_GROUP_NAME));
+        assertThat(config.getClientName(), equalTo(TEST_GROUP_NAME));
         assertThat(config.getNetworkConfig().getAddresses(), hasItem("127.0.59.1:5701"));
     }
 
     protected static void assertDefaultClientConfig(ClientConfig config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getInstanceName(), equalTo("jet"));
+        assertThat(config.getClientName(), equalTo("jet"));
     }
 
 }

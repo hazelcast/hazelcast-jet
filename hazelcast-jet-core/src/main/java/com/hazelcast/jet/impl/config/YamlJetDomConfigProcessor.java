@@ -39,7 +39,7 @@ public class YamlJetDomConfigProcessor extends JetDomConfigProcessor {
 
     @Override
     protected void parseMetrics(Node node, JetConfig config) {
-        MetricsConfig metricsConfig = config.getMetricsConfig();
+        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
         for (Node metricsNode : childElements(node)) {
             if (metricsNode.getNodeName().equals("enabled")) {
                 metricsConfig.setEnabled(getBooleanValue(metricsNode.getNodeValue()));

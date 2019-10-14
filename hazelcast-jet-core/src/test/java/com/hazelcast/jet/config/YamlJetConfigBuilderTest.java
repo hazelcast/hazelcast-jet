@@ -53,30 +53,6 @@ public class YamlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
     }
 
     @Test
-    public void readMetricsConfig() {
-        //Given
-        String yaml = ""
-                + "hazelcast-jet:\n"
-                + "  metrics:\n"
-                + "    enabled: false\n"
-                + "    jmx-enabled: true\n"
-                + "    retention-seconds: 124\n"
-                + "    metrics-for-data-structures: true\n"
-                + "    collection-interval-seconds: 123\n";
-
-        //When
-        JetConfig jetConfig = buildConfig(yaml);
-
-        //Then
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
-        assertFalse("isEnabled", metricsCfg.isEnabled());
-        assertTrue("isJmxEnabled", metricsCfg.isJmxEnabled());
-        assertEquals("metricsRetentionSeconds", 124, metricsCfg.getRetentionSeconds());
-        assertEquals("metricsCollectionInterval", 123, metricsCfg.getCollectionIntervalSeconds());
-        assertTrue("metricsForDataStructures", metricsCfg.isMetricsForDataStructuresEnabled());
-    }
-
-    @Test
     public void readInstanceConfig() {
         //Given
         String yaml = ""

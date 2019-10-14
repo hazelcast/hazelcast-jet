@@ -45,11 +45,9 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     private final boolean isLocal;
 
     private final BiConsumer<Void, Throwable> callback = (response, t) -> {
+        numConcurrentOps.decrementAndGet();
         if (t != null) {
-            numConcurrentOps.decrementAndGet();
             firstError.compareAndSet(null, t);
-        } else {
-            numConcurrentOps.decrementAndGet();
         }
     };
 

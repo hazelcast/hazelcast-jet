@@ -84,7 +84,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         JetConfig jetConfig = JetConfig.loadXmlFromString(xml, properties);
 
         //Then
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
+        MetricsConfig metricsCfg = jetConfig.getHazelcastConfig().getMetricsConfig();
         assertFalse("isEnabled", metricsCfg.isEnabled());
         assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
         assertEquals("metricsCollectionInterval", 6, metricsCfg.getCollectionIntervalSeconds());
@@ -109,7 +109,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         JetConfig jetConfig = buildConfig(xml, "config.location", file.getAbsolutePath());
 
         //Then
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
+        MetricsConfig metricsCfg = jetConfig.getHazelcastConfig().getMetricsConfig();
         assertTrue("isEnabled", metricsCfg.isEnabled());
         assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
         assertEquals("metricsCollectionInterval", 122, metricsCfg.getCollectionIntervalSeconds());
@@ -139,7 +139,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         JetConfig jetConfig = JetConfig.loadXmlFromString(xml, properties);
 
         //Then
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
+        MetricsConfig metricsCfg = jetConfig.getHazelcastConfig().getMetricsConfig();
         assertTrue("isEnabled", metricsCfg.isEnabled());
         assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
         assertEquals("metricsCollectionInterval", 222, metricsCfg.getCollectionIntervalSeconds());
@@ -250,7 +250,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         JetConfig jetConfig = JetConfig.loadXmlFromString(xml);
 
         //Then
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
+        MetricsConfig metricsCfg = jetConfig.getHazelcastConfig().getMetricsConfig();
         assertFalse("isEnabled", metricsCfg.isEnabled());
         assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
         assertEquals("metricsRetentionSeconds", 124, metricsCfg.getRetentionSeconds());

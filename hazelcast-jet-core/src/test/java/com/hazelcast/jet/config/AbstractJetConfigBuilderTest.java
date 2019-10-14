@@ -45,9 +45,6 @@ public abstract class AbstractJetConfigBuilderTest {
     public abstract void testHazelcastJetTagAppearsTwice();
 
     @Test
-    public abstract void readMetricsConfig();
-
-    @Test
     public abstract void readInstanceConfig();
 
     @Test

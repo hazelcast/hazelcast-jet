@@ -105,7 +105,7 @@ public class TestApplicationContext {
 
         assertEquals("bar", jetConfig.getProperties().getProperty("foo"));
 
-        MetricsConfig metricsConfig = jetConfig.getMetricsConfig();
+        MetricsConfig metricsConfig = jetConfig.getHazelcastConfig().getMetricsConfig();
         assertFalse(metricsConfig.isEnabled());
         assertEquals(123, metricsConfig.getRetentionSeconds());
         assertEquals(10, metricsConfig.getCollectionIntervalSeconds());

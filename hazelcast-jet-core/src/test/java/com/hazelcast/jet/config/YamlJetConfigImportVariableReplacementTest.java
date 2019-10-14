@@ -69,7 +69,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         JetConfig config = JetConfig.loadYamlFromString(yaml, properties);
 
         // Then
-        MetricsConfig metricsConfig = config.getMetricsConfig();
+        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
         assertEquals(100, metricsConfig.getCollectionIntervalSeconds());
     }
 
@@ -94,7 +94,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         JetConfig config = buildConfig(yaml, "config.location", file.getAbsolutePath());
 
         //Then
-        MetricsConfig metricsConfig = config.getMetricsConfig();
+        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
         assertTrue(metricsConfig.isEnabled());
         assertFalse(metricsConfig.isJmxEnabled());
         assertEquals(101, metricsConfig.getCollectionIntervalSeconds());
@@ -126,7 +126,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         JetConfig config = JetConfig.loadYamlFromString(yaml, properties);
 
         //Then
-        MetricsConfig metricsConfig = config.getMetricsConfig();
+        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
         assertFalse(metricsConfig.isEnabled());
         assertTrue(metricsConfig.isJmxEnabled());
         assertEquals(505, metricsConfig.getCollectionIntervalSeconds());
@@ -230,8 +230,8 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         JetConfig config = JetConfig.loadYamlFromString(yaml);
         assertEquals("value1", config.getProperties().getProperty("prop1"));
         assertEquals("value2", config.getProperties().getProperty("prop2"));
-        assertFalse(config.getMetricsConfig().isEnabled());
-        assertFalse(config.getMetricsConfig().isJmxEnabled());
+        assertFalse(config.getHazelcastConfig().getMetricsConfig().isEnabled());
+        assertFalse(config.getHazelcastConfig().getMetricsConfig().isJmxEnabled());
 
     }
 
@@ -253,8 +253,8 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
                 + "    - file:///" + file.getAbsolutePath();
 
         JetConfig config = JetConfig.loadYamlFromString(yaml);
-        assertFalse(config.getMetricsConfig().isEnabled());
-        assertFalse(config.getMetricsConfig().isJmxEnabled());
+        assertFalse(config.getHazelcastConfig().getMetricsConfig().isEnabled());
+        assertFalse(config.getHazelcastConfig().getMetricsConfig().isJmxEnabled());
     }
 
     @Override

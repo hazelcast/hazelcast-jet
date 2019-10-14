@@ -133,7 +133,7 @@ public class XmlJetClientConfigWithSystemPropertyTest extends AbstractJetConfigW
         ClientConfig config = builder.build();
 
         // Then
-        assertEquals("group.name", "test", config.getInstanceName());
+        assertEquals("group.name", "test", config.getClientName());
         assertEquals("member", "19.0.0.2:5670", config.getNetworkConfig().getAddresses().iterator().next());
     }
 

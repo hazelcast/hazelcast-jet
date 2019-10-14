@@ -58,29 +58,6 @@ public class XmlJetConfigBuilderTest extends AbstractJetConfigBuilderTest {
     }
 
     @Test
-    public void readMetricsConfig() {
-        //Given
-        String xml = JET_START_TAG +
-                "   <metrics enabled=\"false\" jmxEnabled=\"false\">\n" +
-                "        <collection-interval-seconds>123</collection-interval-seconds>\n" +
-                "        <retention-seconds>124</retention-seconds>\n" +
-                "        <metrics-for-data-structures>true</metrics-for-data-structures>\n" +
-                "    </metrics>\n\n" +
-                JET_END_TAG;
-
-        //When
-        JetConfig jetConfig = buildConfig(xml);
-
-        //Then
-        MetricsConfig metricsCfg = jetConfig.getMetricsConfig();
-        assertFalse("isEnabled", metricsCfg.isEnabled());
-        assertFalse("isJmxEnabled", metricsCfg.isJmxEnabled());
-        assertEquals("metricsRetentionSeconds", 124, metricsCfg.getRetentionSeconds());
-        assertEquals("metricsCollectionInterval", 123, metricsCfg.getCollectionIntervalSeconds());
-        assertTrue("metricsForDataStructures", metricsCfg.isMetricsForDataStructuresEnabled());
-    }
-
-    @Test
     public void readInstanceConfig() {
         //Given
         String xml = JET_START_TAG +

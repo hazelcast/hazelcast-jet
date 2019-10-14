@@ -17,7 +17,6 @@
 package com.hazelcast.jet.config;
 
 import com.hazelcast.config.ConfigXmlGenerator.XmlGenerator;
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
@@ -71,7 +70,6 @@ public final class JetConfigXmlGenerator {
 
         instance(gen, jetConfig.getInstanceConfig());
         edgeDefaults(gen, jetConfig.getDefaultEdgeConfig());
-        metrics(gen, jetConfig.getMetricsConfig());
 
         gen.close();
 
@@ -128,14 +126,6 @@ public final class JetConfigXmlGenerator {
         if (LOGGER.isFinestEnabled()) {
             LOGGER.finest(message);
         }
-    }
-
-    private static void metrics(XmlGenerator gen, MetricsConfig metrics) {
-        gen.open("metrics", "enabled", metrics.isEnabled(), "jmxEnabled", metrics.isJmxEnabled())
-           .node("retention-seconds", metrics.getRetentionSeconds())
-           .node("collection-interval-seconds", metrics.getCollectionIntervalSeconds())
-           .node("metrics-for-data-structures", metrics.isMetricsForDataStructuresEnabled())
-           .close();
     }
 
     private static void edgeDefaults(XmlGenerator gen, EdgeConfig defaultEdge) {

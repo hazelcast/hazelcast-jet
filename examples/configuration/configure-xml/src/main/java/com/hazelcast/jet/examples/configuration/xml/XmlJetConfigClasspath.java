@@ -47,7 +47,7 @@ public class XmlJetConfigClasspath {
 
     private static void printInstanceAndMetricsConfig(JetInstance jet) {
         InstanceConfig instanceConfig = jet.getConfig().getInstanceConfig();
-        MetricsConfig metricsConfig = jet.getConfig().getMetricsConfig();
+        MetricsConfig metricsConfig = jet.getConfig().getHazelcastConfig().getMetricsConfig();
         System.out.println("Backup-count: " + instanceConfig.getBackupCount()
                 + ", Metrics enabled:" + metricsConfig.isEnabled()
         );

@@ -55,8 +55,8 @@ public class ReadMetricsTest extends JetTestSupport {
     @Test
     public void when_readMetricsAsync() throws Exception {
         JetConfig conf = new JetConfig();
-        conf.getMetricsConfig().setCollectionIntervalSeconds(1);
-        conf.getMetricsConfig().setMinimumLevel(ProbeLevel.INFO);
+        conf.getHazelcastConfig().getMetricsConfig().setCollectionIntervalSeconds(1);
+        conf.getHazelcastConfig().getMetricsConfig().setMinimumLevel(ProbeLevel.INFO);
         JetInstance instance = createJetMember(conf);
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
         Member member = instance.getHazelcastInstance().getCluster().getLocalMember();
@@ -92,7 +92,7 @@ public class ReadMetricsTest extends JetTestSupport {
     @Test
     public void when_metricsDisabled() throws ExecutionException, InterruptedException {
         JetConfig cfg = new JetConfig();
-        cfg.getMetricsConfig().setEnabled(false);
+        cfg.getHazelcastConfig().getMetricsConfig().setEnabled(false);
         JetInstance instance = createJetMember(cfg);
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
 

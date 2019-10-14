@@ -250,6 +250,6 @@ public final class Jet {
             hzConfig.getHotRestartPersistenceConfig().setEnabled(true);
         }
 
-        jetConfig.getMetricsConfig().setMinimumLevel(ProbeLevel.INFO);
+        jetConfig.getHazelcastConfig().getMetricsConfig().setMinimumLevel(ProbeLevel.INFO);
     }
 }

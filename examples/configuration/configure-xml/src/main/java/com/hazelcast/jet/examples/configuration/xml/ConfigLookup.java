@@ -29,7 +29,7 @@ public class ConfigLookup {
         // despite the presence of hazelcast-jet.yaml
         JetInstance jet = Jet.newJetInstance();
         InstanceConfig instanceConfig = jet.getConfig().getInstanceConfig();
-        MetricsConfig metricsConfig = jet.getConfig().getMetricsConfig();
+        MetricsConfig metricsConfig = jet.getConfig().getHazelcastConfig().getMetricsConfig();
         // the jet instance uses backup count of 1 and metrics disabled as configured in hazelcast-jet.xml
         // the underlying hazelcast member uses the port (7000) from the hazelcast.xml
         System.out.println("Backup-count: " + instanceConfig.getBackupCount()
@@ -44,7 +44,7 @@ public class ConfigLookup {
         // the underlying hazelcast member uses the port (7000) from the hazelcast.xml
         jet = Jet.newJetInstance(config);
         instanceConfig = jet.getConfig().getInstanceConfig();
-        metricsConfig = jet.getConfig().getMetricsConfig();
+        metricsConfig = jet.getConfig().getHazelcastConfig().getMetricsConfig();
         System.out.println("Backup-count: " + instanceConfig.getBackupCount()
                 + ", Metrics enabled:" + metricsConfig.isEnabled()
         );
