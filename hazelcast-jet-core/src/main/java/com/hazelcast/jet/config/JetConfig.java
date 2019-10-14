@@ -25,7 +25,7 @@ import com.hazelcast.jet.impl.config.XmlJetConfigBuilder;
 import com.hazelcast.jet.impl.config.YamlJetConfigBuilder;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.util.Preconditions;
+import com.hazelcast.internal.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -36,9 +36,9 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import static com.hazelcast.jet.core.JetProperties.JET_HOME;
-import static com.hazelcast.util.Preconditions.checkTrue;
-import static com.hazelcast.util.StringUtil.isNullOrEmptyAfterTrim;
-import static com.hazelcast.util.StringUtil.stringToBytes;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.util.StringUtil.isNullOrEmptyAfterTrim;
+import static com.hazelcast.internal.util.StringUtil.stringToBytes;
 
 /**
  * Configuration object for a Jet instance.
@@ -54,11 +54,9 @@ public class JetConfig {
     public static final int DEFAULT_JET_MULTICAST_PORT = 54326;
 
     /**
-     * The default group name for a Jet cluster
-     *
-     * See {@link com.hazelcast.config.GroupConfig}
+     * The default clustern name for a Jet cluster
      */
-    public static final String DEFAULT_GROUP_NAME = "jet";
+    public static final String DEFAULT_CLUSTER_NAME = "jet";
 
     private static final ILogger LOGGER = Logger.getLogger(JetConfig.class);
 
@@ -565,7 +563,7 @@ public class JetConfig {
     private static Config defaultHazelcastConfig() {
         Config config = new Config();
         config.getNetworkConfig().getJoin().getMulticastConfig().setMulticastPort(DEFAULT_JET_MULTICAST_PORT);
-        config.getGroupConfig().setName(DEFAULT_GROUP_NAME);
+        config.setClusterName(DEFAULT_CLUSTER_NAME);
         config.getHotRestartPersistenceConfig().setBaseDir(new File(jetHome(), "recovery").getAbsoluteFile());
         return config;
     }

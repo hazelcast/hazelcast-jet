@@ -21,7 +21,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.util.ConstantFunctionEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;

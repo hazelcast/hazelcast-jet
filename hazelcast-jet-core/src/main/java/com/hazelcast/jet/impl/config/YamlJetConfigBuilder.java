@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.config;
 
 import com.hazelcast.config.AbstractYamlConfigBuilder;
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.config.yaml.YamlDomChecker;
+import com.hazelcast.internal.config.yaml.YamlDomChecker;
 import com.hazelcast.internal.yaml.YamlLoader;
 import com.hazelcast.internal.yaml.YamlMapping;
 import com.hazelcast.internal.yaml.YamlNode;
@@ -30,9 +30,9 @@ import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.util.Properties;
 
-import static com.hazelcast.config.yaml.W3cDomUtil.asW3cNode;
+import static com.hazelcast.internal.config.yaml.W3cDomUtil.asW3cNode;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetMemberConfig;
-import static com.hazelcast.util.Preconditions.checkTrue;
 
 public class YamlJetConfigBuilder extends AbstractYamlConfigBuilder {
 

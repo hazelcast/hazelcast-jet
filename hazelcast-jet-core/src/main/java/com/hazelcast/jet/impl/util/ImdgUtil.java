@@ -26,21 +26,23 @@ import com.hazelcast.client.impl.proxy.ClientMapProxy;
 import com.hazelcast.client.impl.proxy.NearCachedClientMapProxy;
 import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.internal.nearcache.NearCache;
+import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.nio.BufferObjectDataOutput;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapEntries;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.map.impl.proxy.NearCachedMapProxyImpl;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.BufferObjectDataInput;
-import com.hazelcast.nio.BufferObjectDataOutput;
-import com.hazelcast.nio.Connection;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
@@ -48,9 +50,6 @@ import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationservice.OperationFactory;
 import com.hazelcast.spi.partition.IPartitionService;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -71,14 +70,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.Util.toCompletableFuture;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
-import static com.hazelcast.util.Preconditions.checkNotNull;
 import static java.lang.Math.ceil;
 import static java.lang.Math.log10;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -153,9 +150,9 @@ public final class ImdgUtil {
     /**
      * Async version of {@code IMap.putAll()}. This is based on IMDG's code and
      * currently does not invalidate the near cache.
-     *
+     * <p>
      * TODO remove this method once https://github.com/hazelcast/hazelcast/pull/15463 is released
-
+     *
      * @param targetIMap imap to write to
      * @param items      items to add
      */
@@ -167,7 +164,7 @@ public final class ImdgUtil {
         }
         if (items.size() == 1) {
             Entry<? extends K, ? extends V> onlyEntry = items.entrySet().iterator().next();
-            return toCompletableFuture(targetIMap.setAsync(onlyEntry.getKey(), onlyEntry.getValue()));
+            return targetIMap.setAsync(onlyEntry.getKey(), onlyEntry.getValue()).toCompletableFuture();
         }
 
         if (targetIMap instanceof MapProxyImpl) {
@@ -212,7 +209,7 @@ public final class ImdgUtil {
         int[] subPartitions = new int[memberPartitionsMap.values().stream().mapToInt(List::size).max().orElse(0)];
         MapEntries[] subEntries = new MapEntries[subPartitions.length];
         final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-        ExecutionCallback callback = createPutAllCallback(
+        BiConsumer consumer = createPutAllConsumer(
                 memberPartitionsMap.size(),
                 targetMap instanceof NearCachedMapProxyImpl ? ((NearCachedMapProxyImpl) targetMap).getNearCache() : null,
                 items.keySet(),
@@ -230,7 +227,7 @@ public final class ImdgUtil {
                 }
             }
             if (count == 0) {
-                callback.onResponse(null);
+                consumer.accept(null, null);
                 continue;
             }
             int[] subPartitionsTrimmed = Arrays.copyOf(subPartitions, count);
@@ -241,7 +238,7 @@ public final class ImdgUtil {
                         targetMap.getName(), subPartitionsTrimmed, subEntriesTrimmed);
                 targetMap.getOperationService().invokeOnPartitionsAsync(SERVICE_NAME, factory,
                         asIntegerList(subPartitionsTrimmed))
-                         .andThen(callback);
+                         .whenComplete(consumer);
             }
         }
 
@@ -276,7 +273,7 @@ public final class ImdgUtil {
         HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) targetMap.getContext().getHazelcastInstance();
         CompletableFuture<Void> resultFuture = new CompletableFuture<>();
 
-        ExecutionCallback callback = createPutAllCallback(
+        BiConsumer consumer = createPutAllConsumer(
                 entryMap.size(),
                 targetMap instanceof NearCachedClientMapProxy ? ((NearCachedClientMapProxy) targetMap).getNearCache()
                         : null,
@@ -291,17 +288,16 @@ public final class ImdgUtil {
                 Entry<Data, Data> onlyEntry = partitionEntries.getValue().get(0);
                 // cast to raw so that we can pass serialized key and value
                 ((IMap) targetMap).setAsync(onlyEntry.getKey(), onlyEntry.getValue())
-                                  .andThen(callback);
+                                  .whenComplete(consumer);
             } else {
                 ClientMessage request = MapPutAllCodec.encodeRequest(targetMap.getName(), partitionEntries.getValue());
-                new ClientInvocation(client, request, targetMap.getName(), partitionId).invoke()
-                                                                                       .andThen(callback);
+                new ClientInvocation(client, request, targetMap.getName(), partitionId).invoke().whenComplete(consumer);
             }
         }
         return resultFuture;
     }
 
-    private static ExecutionCallback<Object> createPutAllCallback(
+    private static BiConsumer<Object, Throwable> createPutAllConsumer(
             int participantCount,
             @Nullable NearCache<Object, Object> nearCache,
             @Nonnull Set<?> nonSerializedKeys,
@@ -309,10 +305,10 @@ public final class ImdgUtil {
             CompletableFuture<Void> resultFuture
     ) {
         AtomicInteger completionCounter = new AtomicInteger(participantCount);
-
-        return new ExecutionCallback<Object>() {
-            @Override
-            public void onResponse(Object response) {
+        return (response, throwable) -> {
+            if (throwable != null) {
+                resultFuture.completeExceptionally(throwable);
+            } else {
                 if (completionCounter.decrementAndGet() > 0) {
                     return;
                 }
@@ -327,11 +323,6 @@ public final class ImdgUtil {
                     }
                 }
                 resultFuture.complete(null);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                resultFuture.completeExceptionally(t);
             }
         };
     }
@@ -361,58 +352,6 @@ public final class ImdgUtil {
 
     public static Connection getMemberConnection(@Nonnull NodeEngine engine, @Nonnull Address memberAddr) {
         return ((NodeEngineImpl) engine).getNode().getEndpointManager().getConnection(memberAddr);
-    }
-
-    /**
-     * This method will generate an {@link ExecutionCallback} which
-     * allows to asynchronously get notified when the execution is completed,
-     * either successfully or with error by calling {@code onResponse} on success
-     * and {@code onError} on error respectively.
-     *
-     * @param onResponse function to call when execution is completed successfully
-     * @param onError function to call when execution is completed with error
-     * @param <T> type of the response
-     * @return {@link ExecutionCallback}
-     */
-    public static <T> ExecutionCallback<T> callbackOf(@Nonnull Consumer<T> onResponse,
-                                                      @Nonnull Consumer<Throwable> onError) {
-        return new ExecutionCallback<T>() {
-            @Override
-            public void onResponse(T o) {
-                onResponse.accept(o);
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                onError.accept(throwable);
-            }
-        };
-    }
-
-    /**
-     * This method will generate an {@link ExecutionCallback} which allows to
-     * asynchronously get notified when the execution is completed, either
-     * successfully or with an error.
-     *
-     * @param callback BiConsumer to call when execution is completed. Only one
-     *                of the passed values will be non-null, except for the
-     *                case the normal result is null, in which case both values
-     *                will be null
-     * @param <T> type of the response
-     * @return {@link ExecutionCallback}
-     */
-    public static <T> ExecutionCallback<T> callbackOf(BiConsumer<T, Throwable> callback) {
-        return new ExecutionCallback<T>() {
-            @Override
-            public void onResponse(T o) {
-                callback.accept(o, null);
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                callback.accept(null, throwable);
-            }
-        };
     }
 
     @Nonnull

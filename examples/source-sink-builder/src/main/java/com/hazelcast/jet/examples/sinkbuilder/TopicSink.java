@@ -28,7 +28,7 @@ import java.nio.file.Paths;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.pipeline.SinkBuilder.sinkBuilder;
-import static com.hazelcast.util.ExceptionUtil.rethrow;
+import static com.hazelcast.internal.util.ExceptionUtil.rethrow;
 
 /**
  * Shows how to use the {@link com.hazelcast.jet.pipeline.SinkBuilder} to

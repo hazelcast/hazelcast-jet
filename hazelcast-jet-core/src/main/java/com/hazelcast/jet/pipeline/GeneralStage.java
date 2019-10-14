@@ -16,6 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BiPredicateEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -25,20 +31,13 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BiPredicateEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
-import com.hazelcast.util.function.SupplierEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.Util.toCompletableFuture;
-import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -632,7 +631,7 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
         GeneralStage<R> res = mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName), (map, t) ->
-                toCompletableFuture(map.getAsync(lookupKeyFn.apply(t))).thenApply(e -> mapFn.apply(t, e)));
+                map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e)));
         return res.setName("mapUsingIMap");
     }
 

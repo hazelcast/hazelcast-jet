@@ -19,9 +19,9 @@ package com.hazelcast.jet.impl.pipeline.test;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.TimeUnit;

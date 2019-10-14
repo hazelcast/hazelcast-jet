@@ -16,10 +16,8 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
@@ -27,12 +25,13 @@ import com.hazelcast.jet.impl.util.ImdgUtil;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.impl.connector.HazelcastWriters.handleInstanceNotActive;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.ImdgUtil.callbackOf;
 import static com.hazelcast.jet.impl.util.Util.tryIncrement;
 
 public abstract class AsyncHazelcastWriterP implements Processor {
@@ -45,14 +44,14 @@ public abstract class AsyncHazelcastWriterP implements Processor {
     private final HazelcastInstance instance;
     private final boolean isLocal;
 
-    private final ExecutionCallback callback = callbackOf(
-        response -> numConcurrentOps.decrementAndGet(),
-        exception -> {
+    private final BiConsumer<Void, Throwable> callback = (response, t) -> {
+        if (t != null) {
             numConcurrentOps.decrementAndGet();
-            if (exception != null) {
-                firstError.compareAndSet(null, exception);
-            }
-        });
+            firstError.compareAndSet(null, t);
+        } else {
+            numConcurrentOps.decrementAndGet();
+        }
+    };
 
     AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
         this.instance = instance;
@@ -109,8 +108,8 @@ public abstract class AsyncHazelcastWriterP implements Processor {
 
     protected abstract void processInternal(Inbox inbox);
 
-    protected final void setCallback(ICompletableFuture future) {
-        future.andThen(callback);
+    protected final void setCallback(CompletableFuture future) {
+        future.whenCompleteAsync(callback);
     }
 
     @CheckReturnValue

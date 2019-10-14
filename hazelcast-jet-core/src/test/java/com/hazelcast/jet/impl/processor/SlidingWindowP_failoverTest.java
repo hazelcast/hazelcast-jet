@@ -29,7 +29,7 @@ import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.impl.processor.SlidingWindowP.Keys;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -41,7 +41,7 @@ import java.util.Map.Entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.util.function.Functions.entryKey;
+import static com.hazelcast.internal.util.function.Functions.entryKey;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 

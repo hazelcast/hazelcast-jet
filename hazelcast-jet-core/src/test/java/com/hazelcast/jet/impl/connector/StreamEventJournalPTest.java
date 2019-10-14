@@ -33,7 +33,7 @@ import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

@@ -25,8 +25,8 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import org.junit.Before;
 import org.junit.Test;
 

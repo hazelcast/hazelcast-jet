@@ -30,8 +30,8 @@ import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.WindowGroupAggregateBuilder1;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;

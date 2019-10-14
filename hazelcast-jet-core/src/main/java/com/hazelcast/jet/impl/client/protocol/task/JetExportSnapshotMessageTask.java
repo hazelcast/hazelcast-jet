@@ -20,7 +20,7 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.task.BlockingMessageTask;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.client.protocol.codec.JetExportSnapshotCodec;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetExportSnapshotMessageTask extends AbstractJetMessageTask<JetExportSnapshotCodec.RequestParameters, Void>

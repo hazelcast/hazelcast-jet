@@ -18,10 +18,10 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.ClientEngineImpl;
 import com.hazelcast.config.Config;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.metrics.impl.MetricsService;
+import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.services.ManagedService;
 import com.hazelcast.internal.services.MemberAttributeServiceEvent;
@@ -36,7 +36,6 @@ import com.hazelcast.jet.impl.metrics.JobMetricsPublisher;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Packet;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.operationservice.LiveOperations;
@@ -146,19 +145,15 @@ public class JetService
         Operation op = new NotifyMemberShutdownOperation();
         nodeEngine.getOperationService()
                   .invokeOnTarget(JetService.SERVICE_NAME, op, nodeEngine.getClusterService().getMasterAddress())
-                  .andThen(new ExecutionCallback<Object>() {
-                      @Override
-                      public void onResponse(Object response) {
-                          future.complete(null);
-                      }
-
-                      @Override
-                      public void onFailure(Throwable t) {
+                  .whenCompleteAsync((response, throwable) -> {
+                      if (throwable != null) {
                           logger.warning("Failed to notify master member that this member is shutting down," +
-                                  " will retry in " + NOTIFY_MEMBER_SHUTDOWN_DELAY + " seconds", t);
+                                  " will retry in " + NOTIFY_MEMBER_SHUTDOWN_DELAY + " seconds", throwable);
                           // recursive call
                           nodeEngine.getExecutionService().schedule(
                                   () -> notifyMasterWeAreShuttingDown(future), NOTIFY_MEMBER_SHUTDOWN_DELAY, SECONDS);
+                      } else {
+                          future.complete(null);
                       }
                   });
     }

@@ -20,7 +20,7 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.client.protocol.codec.JetJoinSubmittedJobCodec;
 import com.hazelcast.jet.impl.operation.JoinSubmittedJobOperation;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.InternalCompletableFuture;
 import com.hazelcast.spi.impl.operationservice.InvocationBuilder;
 import com.hazelcast.spi.impl.operationservice.Operation;
@@ -45,7 +45,7 @@ public class JetJoinSubmittedJobMessageTask
         InvocationBuilder builder = getInvocationBuilder(op).setResultDeserialized(false);
 
         InternalCompletableFuture<Object> invocation = builder.invoke();
-        invocation.andThen(this);
+        invocation.whenCompleteAsync(this);
     }
 
     @Override

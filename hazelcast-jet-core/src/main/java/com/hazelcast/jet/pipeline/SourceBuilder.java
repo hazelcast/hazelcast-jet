@@ -16,6 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
@@ -23,18 +27,14 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
-import com.hazelcast.util.Preconditions;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;
 
+import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientSourceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.convenientTimestampedSourceP;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * Top-level class for Jet custom source builders. It is associated

@@ -18,10 +18,9 @@ package com.hazelcast.jet.impl.client.protocol.task;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.task.AbstractInvocationMessageTask;
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.instance.impl.Node;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.jet.impl.JetService;
-import com.hazelcast.nio.Connection;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.InvocationBuilder;
 import com.hazelcast.spi.impl.operationservice.Operation;
@@ -29,7 +28,7 @@ import com.hazelcast.spi.impl.operationservice.Operation;
 import java.security.Permission;
 import java.util.function.Function;
 
-abstract class AbstractJetMessageTask<P, R> extends AbstractInvocationMessageTask<P> implements ExecutionCallback {
+abstract class AbstractJetMessageTask<P, R> extends AbstractInvocationMessageTask<P> {
     private final Function<ClientMessage, P> decoder;
     private final Function<R, ClientMessage> encoder;
 

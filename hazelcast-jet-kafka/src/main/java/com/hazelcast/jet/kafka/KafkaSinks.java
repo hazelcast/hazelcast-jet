@@ -18,7 +18,7 @@ package com.hazelcast.jet.kafka;
 
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import javax.annotation.Nonnull;

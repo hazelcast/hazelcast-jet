@@ -23,7 +23,7 @@ import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.core.HazelcastException;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.nio.IOUtil;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;

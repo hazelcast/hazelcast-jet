@@ -17,10 +17,9 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.Generated;
 import com.hazelcast.client.impl.protocol.codec.builtin.*;
-
-import javax.annotation.Generated;
-import java.util.ListIterator;
+import com.hazelcast.client.impl.protocol.codec.custom.*;
 
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
 import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
@@ -35,15 +34,15 @@ import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCod
 /**
  * TODO doc
  */
-@Generated({"0dea81b20aa35b37e2149f927f2cd887"})
+@Generated("8ea0ff3d3c5934a8067b1fbdad9d199f")
 public final class JetGetJobSubmissionTimeCodec {
-    //hex: 0x1A0700
-    public static final int REQUEST_MESSAGE_TYPE = 1705728;
-    //hex: 0x1A0701
-    public static final int RESPONSE_MESSAGE_TYPE = 1705729;
+    //hex: 0xFE0700
+    public static final int REQUEST_MESSAGE_TYPE = 16647936;
+    //hex: 0xFE0701
+    public static final int RESPONSE_MESSAGE_TYPE = 16647937;
     private static final int REQUEST_JOB_ID_FIELD_OFFSET = PARTITION_ID_FIELD_OFFSET + INT_SIZE_IN_BYTES;
     private static final int REQUEST_INITIAL_FRAME_SIZE = REQUEST_JOB_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
-    private static final int RESPONSE_RESPONSE_FIELD_OFFSET = CORRELATION_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_RESPONSE_FIELD_OFFSET = RESPONSE_BACKUP_ACKS_FIELD_OFFSET + INT_SIZE_IN_BYTES;
     private static final int RESPONSE_INITIAL_FRAME_SIZE = RESPONSE_RESPONSE_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
 
     private JetGetJobSubmissionTimeCodec() {
@@ -71,7 +70,7 @@ public final class JetGetJobSubmissionTimeCodec {
     }
 
     public static JetGetJobSubmissionTimeCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         RequestParameters request = new RequestParameters();
         ClientMessage.Frame initialFrame = iterator.next();
         request.jobId = decodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET);
@@ -91,14 +90,14 @@ public final class JetGetJobSubmissionTimeCodec {
         ClientMessage clientMessage = ClientMessage.createForEncode();
         ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, RESPONSE_MESSAGE_TYPE);
+        encodeLong(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET, response);
         clientMessage.add(initialFrame);
 
-        encodeLong(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET, response);
         return clientMessage;
     }
 
     public static JetGetJobSubmissionTimeCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         ResponseParameters response = new ResponseParameters();
         ClientMessage.Frame initialFrame = iterator.next();
         response.response = decodeLong(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET);

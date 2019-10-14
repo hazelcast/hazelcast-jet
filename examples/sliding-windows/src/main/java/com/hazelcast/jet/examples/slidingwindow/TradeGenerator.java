@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
 
 import java.io.BufferedReader;
 import java.io.IOException;

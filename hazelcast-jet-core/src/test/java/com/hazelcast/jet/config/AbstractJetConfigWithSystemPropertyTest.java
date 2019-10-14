@@ -28,8 +28,8 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
 import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -53,7 +53,6 @@ import static org.junit.Assert.assertTrue;
 public abstract class AbstractJetConfigWithSystemPropertyTest {
 
     protected static final String TEST_GROUP_NAME = "imdg";
-    protected static final String PASSWORD = "PASSWORD";
     protected static final String INSTANCE_NAME = "my-instance";
 
     @Before
@@ -99,25 +98,24 @@ public abstract class AbstractJetConfigWithSystemPropertyTest {
 
     protected static void assertDefaultMemberConfig(Config config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getGroupConfig().getName(), not(equalTo(TEST_GROUP_NAME)));
+        assertThat(config.getClusterName(), not(equalTo(TEST_GROUP_NAME)));
     }
 
     protected static void assertMemberConfig(Config config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getGroupConfig().getName(), equalTo(TEST_GROUP_NAME));
+        assertThat(config.getClusterName(), equalTo(TEST_GROUP_NAME));
     }
 
 
     protected static void assertClientConfig(ClientConfig config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getGroupConfig().getName(), equalTo(TEST_GROUP_NAME));
-        assertThat(config.getGroupConfig().getPassword(), equalTo(PASSWORD));
+        assertThat(config.getInstanceName(), equalTo(TEST_GROUP_NAME));
         assertThat(config.getNetworkConfig().getAddresses(), hasItem("127.0.59.1:5701"));
     }
 
     protected static void assertDefaultClientConfig(ClientConfig config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getGroupConfig().getName(), equalTo("jet"));
+        assertThat(config.getInstanceName(), equalTo("jet"));
     }
 
 }

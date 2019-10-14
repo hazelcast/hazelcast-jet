@@ -17,8 +17,8 @@
 package com.hazelcast.jet.avro;
 
 import com.hazelcast.jet.pipeline.BatchSource;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import org.apache.avro.io.DatumReader;
 
 import javax.annotation.Nonnull;

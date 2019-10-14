@@ -17,18 +17,18 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.cache.ICache;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
+import com.hazelcast.internal.util.function.PredicateEx;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.util.function.PredicateEx;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,10 +40,10 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
+import static com.hazelcast.internal.util.function.Functions.entryValue;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.util.function.Functions.entryValue;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -58,7 +58,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
     @BeforeClass
     public static void setUp() {
         Config config = new Config();
-        config.getGroupConfig().setName(randomName());
+        config.setClusterName(randomName());
         config.addCacheConfig(new CacheSimpleConfig().setName("*"));
         config.getMapConfig(JOURNALED_MAP_PREFIX + '*').getEventJournalConfig().setEnabled(true);
         config.getCacheConfig(JOURNALED_CACHE_PREFIX + '*').getEventJournalConfig().setEnabled(true);

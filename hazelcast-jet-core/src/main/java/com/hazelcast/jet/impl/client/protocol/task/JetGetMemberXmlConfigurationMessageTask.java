@@ -21,7 +21,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.ConfigXmlGenerator;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetMemberXmlConfigurationCodec;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetGetMemberXmlConfigurationMessageTask

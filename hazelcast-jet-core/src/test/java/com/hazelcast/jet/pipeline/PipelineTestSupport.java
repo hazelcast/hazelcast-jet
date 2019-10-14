@@ -27,7 +27,7 @@ import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import org.junit.Before;
 
 import javax.annotation.Nonnull;
@@ -212,7 +212,7 @@ public abstract class PipelineTestSupport extends TestInClusterSupport {
         ClientConfig clientConfig = new ClientConfig();
         Address address = instance.getCluster().getLocalMember().getAddress();
         clientConfig.getNetworkConfig().addAddress(address.getHost() + ':' + address.getPort());
-        clientConfig.getGroupConfig().setName(instance.getConfig().getGroupConfig().getName());
+        clientConfig.setClientName(instance.getConfig().getClusterName());
         return clientConfig;
     }
 }

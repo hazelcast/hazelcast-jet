@@ -18,9 +18,9 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;
@@ -33,7 +33,7 @@ import java.util.function.Function;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsQueueP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamJmsTopicP;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * See {@link Sources#jmsQueueBuilder} or {@link Sources#jmsTopicBuilder}.

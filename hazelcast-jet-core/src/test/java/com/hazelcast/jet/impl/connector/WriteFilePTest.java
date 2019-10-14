@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.collection.IList;
+import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.internal.util.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -26,9 +28,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.util.function.FunctionEx;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;

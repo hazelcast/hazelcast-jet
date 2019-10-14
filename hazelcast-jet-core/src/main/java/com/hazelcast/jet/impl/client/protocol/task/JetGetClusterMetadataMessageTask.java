@@ -21,7 +21,7 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.ClusterMetadata;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetClusterMetadataCodec;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetGetClusterMetadataMessageTask
@@ -42,11 +42,6 @@ public class JetGetClusterMetadataMessageTask
     @Override
     protected Operation prepareOperation() {
         return new GetClusterMetadataOperation();
-    }
-
-    @Override
-    public void onResponse(Object response) {
-        sendResponse(response);
     }
 
     @Override

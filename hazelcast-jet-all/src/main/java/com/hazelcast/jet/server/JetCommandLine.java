@@ -117,7 +117,7 @@ public class JetCommandLine implements Runnable {
             showDefaultValue = Visibility.ALWAYS,
             order = 2
     )
-    private String groupName;
+    private String clusterName;
 
     @Mixin(name = "verbosity")
     private Verbosity verbosity;
@@ -437,7 +437,7 @@ public class JetCommandLine implements Runnable {
         if (addresses != null) {
             ClientConfig config = new ClientConfig();
             config.getNetworkConfig().addAddress(addresses.toArray(new String[0]));
-            config.getGroupConfig().setName(groupName);
+            config.setClientName(clusterName);
             return config;
         }
         return ConfigProvider.locateAndGetClientConfig();

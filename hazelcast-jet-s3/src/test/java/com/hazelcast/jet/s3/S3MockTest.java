@@ -22,7 +22,7 @@ import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;

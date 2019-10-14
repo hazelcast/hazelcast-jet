@@ -17,10 +17,9 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.Generated;
 import com.hazelcast.client.impl.protocol.codec.builtin.*;
-
-import javax.annotation.Generated;
-import java.util.ListIterator;
+import com.hazelcast.client.impl.protocol.codec.custom.*;
 
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
 import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
@@ -35,14 +34,14 @@ import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCod
 /**
  * TODO doc
  */
-@Generated({"1ce19c4d439eeafe415644597312ddde"})
+@Generated("74e0515df76baba25930789ed6819913")
 public final class JetGetJobSummaryListCodec {
-    //hex: 0x1A0B00
-    public static final int REQUEST_MESSAGE_TYPE = 1706752;
-    //hex: 0x1A0B01
-    public static final int RESPONSE_MESSAGE_TYPE = 1706753;
+    //hex: 0xFE0C00
+    public static final int REQUEST_MESSAGE_TYPE = 16649216;
+    //hex: 0xFE0C01
+    public static final int RESPONSE_MESSAGE_TYPE = 16649217;
     private static final int REQUEST_INITIAL_FRAME_SIZE = PARTITION_ID_FIELD_OFFSET + INT_SIZE_IN_BYTES;
-    private static final int RESPONSE_INITIAL_FRAME_SIZE = CORRELATION_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_INITIAL_FRAME_SIZE = RESPONSE_BACKUP_ACKS_FIELD_OFFSET + INT_SIZE_IN_BYTES;
 
     private JetGetJobSummaryListCodec() {
     }
@@ -63,7 +62,7 @@ public final class JetGetJobSummaryListCodec {
     }
 
     public static JetGetJobSummaryListCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         RequestParameters request = new RequestParameters();
         //empty initial frame
         iterator.next();
@@ -90,7 +89,7 @@ public final class JetGetJobSummaryListCodec {
     }
 
     public static JetGetJobSummaryListCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         ResponseParameters response = new ResponseParameters();
         //empty initial frame
         iterator.next();

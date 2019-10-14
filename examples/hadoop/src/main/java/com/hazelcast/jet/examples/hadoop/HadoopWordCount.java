@@ -21,8 +21,8 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.util.function.Functions.wholeItem;
+import static com.hazelcast.internal.util.function.Functions.wholeItem;
 import static java.lang.System.nanoTime;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 

@@ -28,7 +28,7 @@ import com.hazelcast.jet.core.JobRestartWithSnapshotTest.SequencesInPartitionsGe
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

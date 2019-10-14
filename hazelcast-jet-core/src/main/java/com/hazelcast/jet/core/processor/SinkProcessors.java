@@ -17,6 +17,12 @@
 package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BinaryOperatorEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -27,12 +33,6 @@ import com.hazelcast.jet.impl.connector.WriteJdbcP;
 import com.hazelcast.jet.impl.connector.WriteJmsP;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.map.EntryProcessor;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BinaryOperatorEx;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;

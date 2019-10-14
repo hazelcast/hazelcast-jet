@@ -21,7 +21,7 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobSummaryListCodec;
 import com.hazelcast.jet.impl.operation.GetJobSummaryListOperation;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
@@ -40,9 +40,13 @@ public class JetGetJobSummaryListMessageTask
     }
 
     @Override
-    public void onResponse(Object response) {
-        SerializationService serializationService = nodeEngine.getSerializationService();
-        sendResponse(serializationService.toData(response));
+    public void accept(Object response, Throwable throwable) {
+        if (throwable == null) {
+            SerializationService serializationService = nodeEngine.getSerializationService();
+            sendResponse(serializationService.toData(response));
+        } else {
+            handleProcessingFailure(throwable);
+        }
     }
 
     @Override

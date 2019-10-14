@@ -17,7 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 

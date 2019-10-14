@@ -22,13 +22,13 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-import static com.hazelcast.util.function.Functions.wholeItem;
+import static com.hazelcast.internal.util.function.Functions.wholeItem;
 
 /**
  * Represents an intermediate step in the construction of a pipeline stage

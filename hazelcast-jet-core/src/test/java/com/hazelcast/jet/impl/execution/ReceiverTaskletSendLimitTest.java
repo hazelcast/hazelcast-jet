@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.instance.BuildInfoProvider;
-import com.hazelcast.logging.LoggingServiceImpl;
+import com.hazelcast.logging.impl.LoggingServiceImpl;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;

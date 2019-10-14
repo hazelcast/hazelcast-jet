@@ -20,7 +20,7 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.client.protocol.codec.JetSubmitJobCodec;
 import com.hazelcast.jet.impl.operation.SubmitJobOperation;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetSubmitJobMessageTask extends AbstractJetMessageTask<JetSubmitJobCodec.RequestParameters, Void> {

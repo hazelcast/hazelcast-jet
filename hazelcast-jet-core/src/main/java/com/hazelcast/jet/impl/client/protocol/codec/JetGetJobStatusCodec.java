@@ -17,10 +17,9 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.Generated;
 import com.hazelcast.client.impl.protocol.codec.builtin.*;
-
-import javax.annotation.Generated;
-import java.util.ListIterator;
+import com.hazelcast.client.impl.protocol.codec.custom.*;
 
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
 import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
@@ -35,15 +34,15 @@ import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCod
 /**
  * TODO doc
  */
-@Generated({"56f3ccc829e5b3ab20117b281dae0699"})
+@Generated("efdc8dfd04b42529707ae1f7af3cd5bb")
 public final class JetGetJobStatusCodec {
-    //hex: 0x1A0300
-    public static final int REQUEST_MESSAGE_TYPE = 1704704;
-    //hex: 0x1A0301
-    public static final int RESPONSE_MESSAGE_TYPE = 1704705;
+    //hex: 0xFE0300
+    public static final int REQUEST_MESSAGE_TYPE = 16646912;
+    //hex: 0xFE0301
+    public static final int RESPONSE_MESSAGE_TYPE = 16646913;
     private static final int REQUEST_JOB_ID_FIELD_OFFSET = PARTITION_ID_FIELD_OFFSET + INT_SIZE_IN_BYTES;
     private static final int REQUEST_INITIAL_FRAME_SIZE = REQUEST_JOB_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
-    private static final int RESPONSE_RESPONSE_FIELD_OFFSET = CORRELATION_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_RESPONSE_FIELD_OFFSET = RESPONSE_BACKUP_ACKS_FIELD_OFFSET + INT_SIZE_IN_BYTES;
     private static final int RESPONSE_INITIAL_FRAME_SIZE = RESPONSE_RESPONSE_FIELD_OFFSET + INT_SIZE_IN_BYTES;
 
     private JetGetJobStatusCodec() {
@@ -71,7 +70,7 @@ public final class JetGetJobStatusCodec {
     }
 
     public static JetGetJobStatusCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         RequestParameters request = new RequestParameters();
         ClientMessage.Frame initialFrame = iterator.next();
         request.jobId = decodeLong(initialFrame.content, REQUEST_JOB_ID_FIELD_OFFSET);
@@ -91,14 +90,14 @@ public final class JetGetJobStatusCodec {
         ClientMessage clientMessage = ClientMessage.createForEncode();
         ClientMessage.Frame initialFrame = new ClientMessage.Frame(new byte[RESPONSE_INITIAL_FRAME_SIZE], UNFRAGMENTED_MESSAGE);
         encodeInt(initialFrame.content, TYPE_FIELD_OFFSET, RESPONSE_MESSAGE_TYPE);
+        encodeInt(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET, response);
         clientMessage.add(initialFrame);
 
-        encodeInt(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET, response);
         return clientMessage;
     }
 
     public static JetGetJobStatusCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         ResponseParameters response = new ResponseParameters();
         ClientMessage.Frame initialFrame = iterator.next();
         response.response = decodeInt(initialFrame.content, RESPONSE_RESPONSE_FIELD_OFFSET);

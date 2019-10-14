@@ -21,7 +21,7 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.client.protocol.codec.JetTerminateJobCodec;
 import com.hazelcast.jet.impl.operation.TerminateJobOperation;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
 public class JetTerminateJobMessageTask extends AbstractJetMessageTask<JetTerminateJobCodec.RequestParameters, Void> {

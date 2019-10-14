@@ -23,7 +23,7 @@ import com.hazelcast.jet.impl.pipeline.FunctionAdapter;
 import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
-import com.hazelcast.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
 
 import java.util.HashMap;
 import java.util.List;

@@ -21,7 +21,7 @@ import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 
@@ -31,7 +31,7 @@ import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.DO_NOT_ADAPT;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 
 public class StreamSourceStageImpl<T> implements StreamSourceStage<T> {
 

@@ -27,7 +27,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +55,7 @@ public class RemoteCacheJournalSource {
             ClientConfig clientConfig = new ClientConfig();
 
             clientConfig.getNetworkConfig().addAddress(getAddress(remoteHz));
-            clientConfig.setGroupConfig(hzConfig.getGroupConfig());
+            clientConfig.setClientName(hzConfig.getClusterName());
 
             Pipeline p = Pipeline.create();
             p.drawFrom(Sources.<Integer, Integer>remoteCacheJournal(

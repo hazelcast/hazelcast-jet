@@ -19,6 +19,8 @@ package com.hazelcast.jet;
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -33,8 +35,6 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.replicatedmap.ReplicatedMap;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

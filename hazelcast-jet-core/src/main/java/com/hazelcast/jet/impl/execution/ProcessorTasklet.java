@@ -17,10 +17,11 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.internal.metrics.LongProbeFunction;
-import com.hazelcast.internal.metrics.ProbeBuilder;
+import com.hazelcast.internal.metrics.MetricTagger;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -34,7 +35,6 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.util.Preconditions;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -129,7 +129,7 @@ public class ProcessorTasklet implements Tasklet {
                             @Nonnull List<? extends OutboundEdgeStream> outstreams,
                             @Nonnull SnapshotContext ssContext,
                             @Nonnull OutboundCollector ssCollector,
-                            @Nullable ProbeBuilder probeBuilder
+                            @Nullable MetricTagger metricTagger
     ) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
@@ -157,8 +157,8 @@ public class ProcessorTasklet implements Tasklet {
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
-        if (probeBuilder != null) {
-            registerMetrics(instreams, probeBuilder);
+        if (metricTagger != null) {
+            registerMetrics(instreams, metricTagger);
         }
     }
 
@@ -170,42 +170,42 @@ public class ProcessorTasklet implements Tasklet {
                 : Logger.getLogger(getClass());
     }
 
-    private void registerMetrics(List<? extends InboundEdgeStream> instreams, final ProbeBuilder probeBuilder) {
+    private void registerMetrics(List<? extends InboundEdgeStream> instreams, final MetricTagger metricTagger) {
         for (int i = 0; i < instreams.size(); i++) {
             int finalI = i;
-            ProbeBuilder builderWithOrdinal = probeBuilder
+            MetricTagger metricTaggerWithOrdinal = metricTagger
                     .withTag(MetricTags.ORDINAL, String.valueOf(i));
-            builderWithOrdinal.register(this, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
+            metricTaggerWithOrdinal.registerStaticProbe(this, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
-            builderWithOrdinal.register(this, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT,
+            metricTaggerWithOrdinal.registerStaticProbe(this, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
 
             InboundEdgeStream instream = instreams.get(finalI);
-            builderWithOrdinal.register(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
+            metricTaggerWithOrdinal.registerStaticProbe(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                     (LongProbeFunction<ProcessorTasklet>) t -> instream.topObservedWm());
-            builderWithOrdinal.register(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
+            metricTaggerWithOrdinal.registerStaticProbe(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                     (LongProbeFunction<ProcessorTasklet>) t -> instream.coalescedWm());
         }
 
         for (int i = 0; i < emittedCounts.length() - (context.snapshottingEnabled() ? 0 : 1); i++) {
             int finalI = i;
-            probeBuilder
+            metricTagger
                     .withTag(MetricTags.ORDINAL, i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
-                    .register(this, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
+                    .registerStaticProbe(this, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
                             (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
         }
 
-        probeBuilder.register(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
+        metricTagger.registerStaticProbe(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.topObservedWm());
-        probeBuilder.register(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
+        metricTagger.registerStaticProbe(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.coalescedWm());
-        probeBuilder.register(this, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS,
+        metricTagger.registerStaticProbe(this, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.outbox.lastForwardedWm());
-        probeBuilder.register(this, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS,
+        metricTagger.registerStaticProbe(this, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS,
                 (LongProbeFunction<ProcessorTasklet>) t -> lastForwardedWmLatency());
-        probeBuilder.register(this, QUEUE_SIZES, ProbeLevel.INFO, ProbeUnit.COUNT,
+        metricTagger.registerStaticProbe(this, QUEUE_SIZES, ProbeLevel.INFO, ProbeUnit.COUNT,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
-        probeBuilder.register(this, QUEUE_CAPACITY, ProbeLevel.INFO, ProbeUnit.COUNT,
+        metricTagger.registerStaticProbe(this, QUEUE_CAPACITY, ProbeLevel.INFO, ProbeUnit.COUNT,
                 (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 

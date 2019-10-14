@@ -22,7 +22,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
-import com.hazelcast.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;

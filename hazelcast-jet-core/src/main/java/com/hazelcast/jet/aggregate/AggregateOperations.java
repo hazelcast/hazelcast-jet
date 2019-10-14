@@ -34,15 +34,15 @@ import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.map.IMap;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BinaryOperatorEx;
-import com.hazelcast.util.function.ComparatorEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
-import com.hazelcast.util.function.SupplierEx;
-import com.hazelcast.util.function.ToDoubleFunctionEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BinaryOperatorEx;
+import com.hazelcast.internal.util.function.ComparatorEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.ToDoubleFunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -61,7 +61,7 @@ import java.util.stream.Collectors;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.function.FunctionEx.identity;
+import static com.hazelcast.internal.util.function.FunctionEx.identity;
 
 /**
  * Utility class with factory methods for several useful aggregate

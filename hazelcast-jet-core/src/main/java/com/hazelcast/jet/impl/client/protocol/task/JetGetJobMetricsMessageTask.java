@@ -20,7 +20,7 @@ import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobMetricsCodec;
 import com.hazelcast.jet.impl.operation.GetJobMetricsOperation;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.operationservice.Operation;
 

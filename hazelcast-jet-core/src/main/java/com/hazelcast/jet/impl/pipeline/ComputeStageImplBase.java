@@ -39,12 +39,12 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BiPredicateEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
-import com.hazelcast.util.function.SupplierEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BiPredicateEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -65,7 +65,7 @@ import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatM
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingContextTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.mapUsingContextTransform;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;

@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.nio.BufferObjectDataOutput;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.logging.LoggingService;
-import com.hazelcast.nio.BufferObjectDataOutput;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;

@@ -41,7 +41,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.spi.merge.DiscardMergePolicy;
 import com.hazelcast.spi.properties.HazelcastProperties;
-import com.hazelcast.util.Preconditions;
+import com.hazelcast.internal.util.Preconditions;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;

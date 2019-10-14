@@ -23,9 +23,9 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobRepository;
-import com.hazelcast.util.UuidUtil;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.UuidUtil;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 import org.junit.Test;
 
 import java.io.BufferedReader;

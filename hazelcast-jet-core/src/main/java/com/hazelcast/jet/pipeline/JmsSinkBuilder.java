@@ -17,11 +17,11 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.impl.connector.WriteJmsP;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;
@@ -31,7 +31,7 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 /**
  * See {@link Sinks#jmsQueueBuilder} or {@link Sinks#jmsTopicBuilder}.

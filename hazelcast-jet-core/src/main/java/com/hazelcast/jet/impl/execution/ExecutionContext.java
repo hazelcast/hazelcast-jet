@@ -16,7 +16,8 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -29,10 +30,7 @@ import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.BufferObjectDataInput;
 import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -179,9 +177,6 @@ public class ExecutionContext {
                         + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
             }
         }
-        MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
-        processors.forEach(metricsRegistry::deregister);
-        tasklets.forEach(metricsRegistry::deregister);
     }
 
     /**

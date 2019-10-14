@@ -20,7 +20,7 @@ import com.hazelcast.jet.core.Partitioner;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;

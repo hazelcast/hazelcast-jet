@@ -24,7 +24,7 @@ import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 

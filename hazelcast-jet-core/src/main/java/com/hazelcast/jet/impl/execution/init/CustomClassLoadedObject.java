@@ -34,7 +34,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-import static com.hazelcast.nio.IOUtil.newObjectInputStream;
+import static com.hazelcast.internal.nio.IOUtil.newObjectInputStream;
 
 /**
  * Wrapper class used for deserialization using a custom class loader

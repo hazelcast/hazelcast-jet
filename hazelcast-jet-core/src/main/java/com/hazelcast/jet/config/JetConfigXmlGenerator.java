@@ -18,9 +18,9 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.ConfigXmlGenerator.XmlGenerator;
 import com.hazelcast.config.MetricsConfig;
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.util.Preconditions;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Source;
@@ -31,7 +31,7 @@ import javax.xml.transform.stream.StreamSource;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-import static com.hazelcast.nio.IOUtil.closeResource;
+import static com.hazelcast.internal.nio.IOUtil.closeResource;
 
 /**
  * The JetConfigXmlGenerator is responsible for transforming a

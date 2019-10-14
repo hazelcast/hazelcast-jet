@@ -27,7 +27,7 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.map.MapStore;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

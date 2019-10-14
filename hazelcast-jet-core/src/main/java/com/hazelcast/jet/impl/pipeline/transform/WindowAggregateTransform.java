@@ -29,7 +29,7 @@ import com.hazelcast.jet.impl.util.ConstantFunctionEx;
 import com.hazelcast.jet.pipeline.SessionWindowDefinition;
 import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;

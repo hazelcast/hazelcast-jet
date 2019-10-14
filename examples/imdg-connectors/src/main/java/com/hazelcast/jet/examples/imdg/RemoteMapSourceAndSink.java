@@ -80,7 +80,7 @@ public class RemoteMapSourceAndSink {
     private static ClientConfig clientConfigForExternalHazelcast() {
         ClientConfig cfg = new ClientConfig();
         cfg.getNetworkConfig().addAddress("localhost:6701");
-        cfg.getGroupConfig().setName("dev").setPassword("dev-pass");
+        cfg.setClientName("dev");
         return cfg;
     }
 }

@@ -26,7 +26,7 @@ import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

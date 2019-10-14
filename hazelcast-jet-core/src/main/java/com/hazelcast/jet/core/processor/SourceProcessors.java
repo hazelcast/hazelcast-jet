@@ -16,8 +16,14 @@
 
 package com.hazelcast.jet.core.processor;
 
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -43,12 +49,6 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
-import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;
@@ -62,13 +62,13 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 
+import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static com.hazelcast.jet.Util.cacheEventToEntry;
 import static com.hazelcast.jet.Util.cachePutEvents;
 import static com.hazelcast.jet.Util.mapEventToEntry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.impl.connector.StreamEventJournalP.streamRemoteCacheSupplier;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkNotNegative;
 
 /**
  * Static utility class with factories of source processors (the DAG

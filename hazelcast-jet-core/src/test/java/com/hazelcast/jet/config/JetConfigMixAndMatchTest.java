@@ -25,7 +25,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
 import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -112,7 +112,7 @@ public class JetConfigMixAndMatchTest {
         assertEquals("scaleUpDelayMillis", 1234, jetConfig.getInstanceConfig().getScaleUpDelayMillis());
         assertFalse("losslessRestartEnabled", jetConfig.getInstanceConfig().isLosslessRestartEnabled());
         assertThat(hzConfig, not(nullValue()));
-        assertThat(hzConfig.getGroupConfig().getName(), equalTo("imdg"));
+        assertThat(hzConfig.getClusterName(), equalTo("imdg"));
     }
 
 }

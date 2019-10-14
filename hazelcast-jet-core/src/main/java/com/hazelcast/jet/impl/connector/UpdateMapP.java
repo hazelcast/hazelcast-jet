@@ -20,10 +20,11 @@ import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.client.impl.proxy.ClientMapProxy;
 import com.hazelcast.client.impl.spi.ClientPartitionService;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.SerializationServiceAware;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.JetDataSerializerHook;
@@ -36,9 +37,8 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.spi.impl.InternalCompletableFuture;
 import com.hazelcast.spi.partition.IPartitionService;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.FunctionEx;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.CheckReturnValue;
@@ -54,7 +54,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
-import static com.hazelcast.util.MapUtil.createHashMap;
+import static com.hazelcast.internal.util.MapUtil.createHashMap;
 
 public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
 
@@ -179,7 +179,7 @@ public final class UpdateMapP<T, K, V, R> extends AsyncHazelcastWriterP {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, V, R> ICompletableFuture<Map<K, V>> submitToKeys(
+    private static <K, V, R> InternalCompletableFuture<Map<K, V>> submitToKeys(
             IMap<K, V> map, Set<Data> keys, EntryProcessor<K, V, R> entryProcessor) {
         // TODO remove this method once submitToKeys is public API
         // we force Set<Data> instead of Set<K> to avoid re-serialization of keys

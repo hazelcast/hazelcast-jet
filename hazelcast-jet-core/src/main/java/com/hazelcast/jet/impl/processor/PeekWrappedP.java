@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.BitSet;

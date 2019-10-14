@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.nio.Bits;
+import com.hazelcast.internal.nio.BufferObjectDataOutput;
+import com.hazelcast.internal.nio.Connection;
+import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.Bits;
-import com.hazelcast.nio.BufferObjectDataOutput;
-import com.hazelcast.nio.Connection;
-import com.hazelcast.nio.Packet;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nonnull;

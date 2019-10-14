@@ -114,8 +114,7 @@ public class TestApplicationContext {
 
     private void assertHazelcastConfig(Config cfg) {
         assertTrue(cfg.getManagedContext() instanceof SpringManagedContext);
-        assertEquals("jet-spring", cfg.getGroupConfig().getName());
-        assertEquals("jet-spring-pass", cfg.getGroupConfig().getPassword());
+        assertEquals("jet-spring", cfg.getClusterName());
 
         NetworkConfig networkConfig = cfg.getNetworkConfig();
         assertEquals(5707, networkConfig.getPort());

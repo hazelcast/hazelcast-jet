@@ -34,7 +34,7 @@ import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;

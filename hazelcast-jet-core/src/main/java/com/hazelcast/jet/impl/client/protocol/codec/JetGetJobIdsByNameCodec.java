@@ -17,10 +17,9 @@
 package com.hazelcast.jet.impl.client.protocol.codec;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
+import com.hazelcast.client.impl.protocol.Generated;
 import com.hazelcast.client.impl.protocol.codec.builtin.*;
-
-import javax.annotation.Generated;
-import java.util.ListIterator;
+import com.hazelcast.client.impl.protocol.codec.custom.*;
 
 import static com.hazelcast.client.impl.protocol.ClientMessage.*;
 import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCodec.*;
@@ -35,14 +34,14 @@ import static com.hazelcast.client.impl.protocol.codec.builtin.FixedSizeTypesCod
 /**
  * TODO doc
  */
-@Generated({"29d99477b90de39f0b9ec9b2e7911265"})
+@Generated("fb7f2038d4587e4df90185d3f0446f7d")
 public final class JetGetJobIdsByNameCodec {
-    //hex: 0x1A0600
-    public static final int REQUEST_MESSAGE_TYPE = 1705472;
-    //hex: 0x1A0601
-    public static final int RESPONSE_MESSAGE_TYPE = 1705473;
+    //hex: 0xFE0600
+    public static final int REQUEST_MESSAGE_TYPE = 16647680;
+    //hex: 0xFE0601
+    public static final int RESPONSE_MESSAGE_TYPE = 16647681;
     private static final int REQUEST_INITIAL_FRAME_SIZE = PARTITION_ID_FIELD_OFFSET + INT_SIZE_IN_BYTES;
-    private static final int RESPONSE_INITIAL_FRAME_SIZE = CORRELATION_ID_FIELD_OFFSET + LONG_SIZE_IN_BYTES;
+    private static final int RESPONSE_INITIAL_FRAME_SIZE = RESPONSE_BACKUP_ACKS_FIELD_OFFSET + INT_SIZE_IN_BYTES;
 
     private JetGetJobIdsByNameCodec() {
     }
@@ -69,7 +68,7 @@ public final class JetGetJobIdsByNameCodec {
     }
 
     public static JetGetJobIdsByNameCodec.RequestParameters decodeRequest(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         RequestParameters request = new RequestParameters();
         //empty initial frame
         iterator.next();
@@ -97,7 +96,7 @@ public final class JetGetJobIdsByNameCodec {
     }
 
     public static JetGetJobIdsByNameCodec.ResponseParameters decodeResponse(ClientMessage clientMessage) {
-        ListIterator<ClientMessage.Frame> iterator = clientMessage.listIterator();
+        ClientMessage.ForwardFrameIterator iterator = clientMessage.frameIterator();
         ResponseParameters response = new ResponseParameters();
         //empty initial frame
         iterator.next();

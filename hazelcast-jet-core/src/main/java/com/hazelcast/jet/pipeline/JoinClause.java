@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import java.util.Map.Entry;
 

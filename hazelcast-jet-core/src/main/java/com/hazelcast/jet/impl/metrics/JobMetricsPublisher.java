@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.cluster.Member;
+import com.hazelcast.internal.metrics.MetricTarget;
 import com.hazelcast.internal.metrics.MetricsPublisher;
 import com.hazelcast.internal.metrics.managementcenter.MetricsCompressor;
 import com.hazelcast.jet.impl.JobExecutionService;
@@ -53,7 +54,7 @@ public class JobMetricsPublisher implements MetricsPublisher {
     }
 
     @Override
-    public void publishLong(String name, long value) {
+    public void publishLong(String name, long value, Set<MetricTarget> excludedTargets) {
         MetricsCompressor metricsCompressor = getCompressor(name);
         if (metricsCompressor != null) {
             metricsCompressor.addLong(addPrefixToDescriptor(name, namePrefix), value);
@@ -61,7 +62,7 @@ public class JobMetricsPublisher implements MetricsPublisher {
     }
 
     @Override
-    public void publishDouble(String name, double value) {
+    public void publishDouble(String name, double value, Set<MetricTarget> excludedTargets) {
         MetricsCompressor metricsCompressor = getCompressor(name);
         if (metricsCompressor != null) {
             metricsCompressor.addDouble(addPrefixToDescriptor(name, namePrefix), value);

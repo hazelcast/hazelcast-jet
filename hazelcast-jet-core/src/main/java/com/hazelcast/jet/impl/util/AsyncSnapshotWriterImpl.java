@@ -16,9 +16,8 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.core.ExecutionCallback;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.core.ICompletableFuture;
+import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.serialization.impl.HeapData;
 import com.hazelcast.internal.serialization.impl.SerializationConstants;
 import com.hazelcast.jet.impl.JetService;
@@ -26,7 +25,6 @@ import com.hazelcast.jet.impl.execution.SnapshotContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
-import com.hazelcast.nio.Bits;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
@@ -43,8 +41,10 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
@@ -77,22 +77,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     private long totalChunks;
     private long totalPayloadBytes;
 
-    private final ExecutionCallback<Object> callback = new ExecutionCallback<Object>() {
-        @Override
-        public void onResponse(Object response) {
-            assert response == null : "put operation overwrote a previous value: " + response;
-            numActiveFlushes.decrementAndGet();
-            numConcurrentAsyncOps.decrementAndGet();
-        }
-
-        @Override
-        public void onFailure(Throwable t) {
-            logger.severe("Error writing to snapshot map", t);
-            firstError.compareAndSet(null, t);
-            numActiveFlushes.decrementAndGet();
-            numConcurrentAsyncOps.decrementAndGet();
-        }
-    };
+    private BiConsumer<Object, Throwable> putResponseConsumer = putResponseConsumer();
 
     public AsyncSnapshotWriterImpl(NodeEngine nodeEngine, SnapshotContext snapshotContext, String vertexName,
                                    int memberIndex, int memberCount) {
@@ -133,6 +118,21 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         valueTerminator = Arrays.copyOfRange(valueTerminatorWithHeader, HeapData.TYPE_OFFSET,
                 valueTerminatorWithHeader.length);
         usableChunkSize = chunkSize - valueTerminator.length;
+    }
+
+    private BiConsumer<Object, Throwable> putResponseConsumer() {
+        return (response, throwable) -> {
+            if (throwable != null) {
+                logger.severe("Error writing to snapshot map", throwable);
+                firstError.compareAndSet(null, throwable);
+                numActiveFlushes.decrementAndGet();
+                numConcurrentAsyncOps.decrementAndGet();
+            } else {
+                assert response == null : "put operation overwrote a previous value: " + response;
+                numActiveFlushes.decrementAndGet();
+                numConcurrentAsyncOps.decrementAndGet();
+            }
+        };
     }
 
     @Override
@@ -231,11 +231,11 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
             Data data = dataSupplier.get();
             totalPayloadBytes += data.dataSize();
             totalChunks++;
-            ICompletableFuture<Object> future = currentMap.putAsync(
+            CompletableFuture<Object> future = currentMap.putAsync(
                     new SnapshotDataKey(partitionKeys[partitionId], currentSnapshotId, vertexName, partitionSequence),
-                    data);
+                    data).toCompletableFuture();
             partitionSequence += memberCount;
-            future.andThen(callback);
+            future.whenCompleteAsync(putResponseConsumer);
             numActiveFlushes.incrementAndGet();
         } catch (HazelcastInstanceNotActiveException ignored) {
             return false;
@@ -399,7 +399,8 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
         public static final IdentifiedDataSerializable INSTANCE = new SnapshotDataValueTerminator();
 
-        private SnapshotDataValueTerminator() { }
+        private SnapshotDataValueTerminator() {
+        }
 
         @Override
         public int getFactoryId() {

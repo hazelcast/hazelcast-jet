@@ -36,10 +36,10 @@ import com.hazelcast.jet.impl.client.protocol.codec.JetJoinSubmittedJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetResumeJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetSubmitJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetTerminateJobCodec;
-import com.hazelcast.nio.Connection;
+import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.util.collection.Int2ObjectHashMap;
+import com.hazelcast.internal.util.collection.Int2ObjectHashMap;
 
 public class JetMessageTaskFactoryProvider implements MessageTaskFactoryProvider {
     private final Int2ObjectHashMap<MessageTaskFactory> factories = new Int2ObjectHashMap<>(50);

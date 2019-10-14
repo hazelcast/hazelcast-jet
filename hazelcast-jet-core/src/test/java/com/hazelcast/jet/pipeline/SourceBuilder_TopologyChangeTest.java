@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.util.UuidUtil;
+import com.hazelcast.internal.util.UuidUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

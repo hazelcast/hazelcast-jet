@@ -16,16 +16,18 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.journal.EventJournalInitialSubscriberState;
 import com.hazelcast.internal.journal.EventJournalReader;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
@@ -40,12 +42,9 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.partition.Partition;
 import com.hazelcast.ringbuffer.ReadResultSet;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -54,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -110,7 +110,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Nonnull
     private final long[] readOffsets;
 
-    private ICompletableFuture<ReadResultSet<T>>[] readFutures;
+    private CompletableFuture<ReadResultSet<T>>[] readFutures;
 
     // currently processed resultSet, it's partitionId and iterating position
     @Nullable
@@ -158,7 +158,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         @SuppressWarnings("unchecked")
-        ICompletableFuture<EventJournalInitialSubscriberState>[] futures = new ICompletableFuture[partitionIds.length];
+        CompletableFuture<EventJournalInitialSubscriberState>[] futures = new CompletableFuture[partitionIds.length];
         Arrays.setAll(futures, i -> eventJournalReader.subscribeToEventJournal(partitionIds[i]));
         for (int i = 0; i < futures.length; i++) {
             emitOffsets[i] = readOffsets[i] = getSequence(futures[i].get());
@@ -223,7 +223,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
 
         if (snapshotTraverser == null) {
-            snapshotTraverser = traverseStream(IntStream.range(0, partitionIds.length)
+            snapshotTraverser = traverseStream(IntStream
+                    .range(0, partitionIds.length)
                     .mapToObj(pIdx -> entry(
                             broadcastKey(partitionIds[pIdx]),
                             // Always use partition index of 0, treating all the partitions the
@@ -264,7 +265,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     @SuppressWarnings("unchecked")
     private void initialRead() {
-        readFutures = new ICompletableFuture[partitionIds.length];
+        readFutures = new CompletableFuture[partitionIds.length];
         for (int i = 0; i < readFutures.length; i++) {
             readFutures[i] = readFromJournal(partitionIds[i], readOffsets[i]);
         }
@@ -276,7 +277,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     private void tryGetNextResultSet() {
         while (resultSet == null && ++currentPartitionIndex < partitionIds.length) {
-            ICompletableFuture<ReadResultSet<T>> future = readFutures[currentPartitionIndex];
+            CompletableFuture<ReadResultSet<T>> future = readFutures[currentPartitionIndex];
             if (!future.isDone()) {
                 continue;
             }
@@ -287,7 +288,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                 long prevSequence = readOffsets[currentPartitionIndex];
                 long lostCount = resultSet.getNextSequenceToReadFrom() - resultSet.readCount() - prevSequence;
                 if (lostCount > 0) {
-                    getLogger().warning(lostCount +  " events lost for partition "
+                    getLogger().warning(lostCount + " events lost for partition "
                             + partitionId + " due to journal overflow when reading from event journal."
                             + " Increase journal size to avoid this error. nextSequenceToReadFrom="
                             + resultSet.getNextSequenceToReadFrom() + ", readCount=" + resultSet.readCount()
@@ -305,7 +306,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
     }
 
-    private ReadResultSet<T> toResultSet(ICompletableFuture<ReadResultSet<T>> future) {
+    private ReadResultSet<T> toResultSet(CompletableFuture<ReadResultSet<T>> future) {
         try {
             return future.get();
         } catch (ExecutionException e) {
@@ -326,8 +327,9 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
     }
 
-    private ICompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
-        return eventJournalReader.readFromEventJournal(offset, 1, MAX_FETCH_SIZE, partition, predicate, projection);
+    private CompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
+        return eventJournalReader.readFromEventJournal(offset, 1, MAX_FETCH_SIZE, partition, predicate, projection)
+                                 .toCompletableFuture();
     }
 
     private static class ClusterMetaSupplier<E, T> implements ProcessorMetaSupplier {
@@ -392,7 +394,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
                                                  mapping(Partition::getPartitionId, toList())));
         }
 
-        @Override @Nonnull
+        @Override
+        @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             if (addrToPartitions == null) {
                 // assign each remote partition to a member
@@ -466,7 +469,8 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
             }
         }
 
-        @Override @Nonnull
+        @Override
+        @Nonnull
         public List<Processor> get(int count) {
             return processorToPartitions(count, ownedPartitions)
                     .values().stream()

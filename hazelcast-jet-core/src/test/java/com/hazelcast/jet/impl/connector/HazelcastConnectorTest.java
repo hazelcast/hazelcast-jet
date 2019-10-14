@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.Config;
 import com.hazelcast.jet.JetCacheManager;

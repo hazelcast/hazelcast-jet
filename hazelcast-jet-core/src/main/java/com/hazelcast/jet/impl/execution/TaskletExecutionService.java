@@ -27,8 +27,8 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.spi.properties.HazelcastProperty;
-import com.hazelcast.util.concurrent.BackoffIdleStrategy;
-import com.hazelcast.util.concurrent.IdleStrategy;
+import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
+import com.hazelcast.internal.util.concurrent.IdleStrategy;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -93,9 +93,9 @@ public class TaskletExecutionService {
             properties, JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS, JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS
         );
 
-        nodeEngine.getMetricsRegistry().newProbeBuilder()
+        nodeEngine.getMetricsRegistry().newMetricTagger()
                        .withTag(MetricTags.MODULE, "jet")
-                       .scanAndRegister(this);
+                       .registerStaticMetrics(this);
 
         Arrays.setAll(cooperativeWorkers, i -> new CooperativeWorker());
         Arrays.setAll(cooperativeThreadPool, i -> new Thread(cooperativeWorkers[i],
@@ -103,10 +103,10 @@ public class TaskletExecutionService {
         Arrays.stream(cooperativeThreadPool).forEach(Thread::start);
 
         for (int i = 0; i < cooperativeWorkers.length; i++) {
-            nodeEngine.getMetricsRegistry().newProbeBuilder()
+            nodeEngine.getMetricsRegistry().newMetricTagger()
                            .withTag(MetricTags.MODULE, "jet")
                            .withTag(MetricTags.COOPERATIVE_WORKER, String.valueOf(i))
-                           .scanAndRegister(cooperativeWorkers[i]);
+                           .registerStaticMetrics(cooperativeWorkers[i]);
         }
     }
 

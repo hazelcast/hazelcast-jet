@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
 import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 import static junit.framework.TestCase.assertEquals;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -232,7 +232,6 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
         System.setProperty(SYSPROP_MEMBER_CONFIG, "classpath:" + JET_MEMBER_TEST_YAML);
 
         Properties properties = new Properties();
-        properties.put("imdg.pass", PASSWORD);
         properties.put("imdg.instance.name", INSTANCE_NAME);
 
         // When
@@ -240,7 +239,6 @@ public class YamlJetConfigWithSystemPropertyTest extends AbstractJetMemberConfig
 
         // Then
         assertMemberConfig(jetConfig.getHazelcastConfig());
-        assertThat(jetConfig.getHazelcastConfig().getGroupConfig().getPassword(), equalTo(PASSWORD));
         assertThat(jetConfig.getHazelcastConfig().getInstanceName(), equalTo(INSTANCE_NAME));
     }
 

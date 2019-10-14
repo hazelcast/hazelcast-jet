@@ -17,8 +17,9 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
@@ -36,7 +37,6 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.nio.Address;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.test.HazelcastSerialClassRunner;
@@ -93,7 +93,7 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
         CacheSimpleConfig cacheConfig = new CacheSimpleConfig().setName("*");
         cacheConfig.getEventJournalConfig().setEnabled(true);
         config.addCacheConfig(cacheConfig);
-        config.getGroupConfig().setName(randomName());
+        config.setClusterName(randomName());
         MapConfig mapConfig = new MapConfig();
         mapConfig.setName("*").getEventJournalConfig().setEnabled(true);
         config.addMapConfig(mapConfig);
@@ -101,7 +101,7 @@ public class HazelcastRemoteConnectorTest extends JetTestSupport {
         HazelcastInstance hz2 = Hazelcast.newHazelcastInstance(config);
 
         clientConfig = new ClientConfig();
-        clientConfig.getGroupConfig().setName(config.getGroupConfig().getName());
+        clientConfig.setClientName(config.getClusterName());
         Address address = hz.getCluster().getLocalMember().getAddress();
         clientConfig.getNetworkConfig().addAddress(address.getHost() + ':' + address.getPort());
 

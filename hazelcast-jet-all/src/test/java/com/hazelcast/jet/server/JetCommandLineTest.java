@@ -17,7 +17,9 @@
 package com.hazelcast.jet.server;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.collection.IList;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -28,8 +30,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -99,10 +99,10 @@ public class JetCommandLineTest extends JetTestSupport {
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().getMapConfig(SOURCE_NAME).getEventJournalConfig().setEnabled(true);
         String groupName = randomName();
-        cfg.getHazelcastConfig().getGroupConfig().setName(groupName);
+        cfg.getHazelcastConfig().setClusterName(groupName);
         jet = createJetMember(cfg);
         ClientConfig clientConfig = new ClientConfig();
-        clientConfig.getGroupConfig().setName(groupName);
+        clientConfig.setClientName(groupName);
         client = createJetClient(clientConfig);
         resetOut();
 
@@ -392,7 +392,7 @@ public class JetCommandLineTest extends JetTestSupport {
 
         // Then
         String actual = captureOut();
-        assertContains(actual, jet.getCluster().getLocalMember().getUuid());
+        assertContains(actual, jet.getCluster().getLocalMember().getUuid().toString());
         assertContains(actual, "ACTIVE");
     }
 
@@ -468,7 +468,7 @@ public class JetCommandLineTest extends JetTestSupport {
         run(this::createJetClient, "-f", configFile, "cluster");
 
         String actual = captureOut();
-        assertContains(actual, jet.getCluster().getLocalMember().getUuid());
+        assertContains(actual, jet.getCluster().getLocalMember().getUuid().toString());
         assertContains(actual, "ACTIVE");
     }
 

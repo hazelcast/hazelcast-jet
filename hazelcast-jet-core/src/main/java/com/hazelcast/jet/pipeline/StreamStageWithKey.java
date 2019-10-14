@@ -25,10 +25,10 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.map.IMap;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BiPredicateEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BiPredicateEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

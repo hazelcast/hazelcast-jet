@@ -20,7 +20,7 @@ import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.impl.config.YamlJetConfigBuilder;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.util.RootCauseMatcher;
+import com.hazelcast.internal.util.RootCauseMatcher;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

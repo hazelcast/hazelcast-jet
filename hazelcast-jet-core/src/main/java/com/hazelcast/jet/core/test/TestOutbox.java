@@ -38,7 +38,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.util.Preconditions.checkNotNegative;
+import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static java.util.function.Function.identity;
 
 /**

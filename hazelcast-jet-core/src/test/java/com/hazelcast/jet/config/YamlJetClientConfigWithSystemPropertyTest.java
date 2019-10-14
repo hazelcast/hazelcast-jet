@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
@@ -122,7 +122,6 @@ public class YamlJetClientConfigWithSystemPropertyTest extends AbstractJetConfig
         System.setProperty(SYSPROP_CLIENT_CONFIG, "classpath:" + JET_CLIENT_WITH_VARIABLES_YAML);
         Properties properties = new Properties();
         properties.setProperty("group.name", "test");
-        properties.setProperty("group.pass", String.valueOf(1234));
         properties.setProperty("member", "19.0.0.2:5670");
 
         // When
@@ -134,8 +133,7 @@ public class YamlJetClientConfigWithSystemPropertyTest extends AbstractJetConfig
 
 
         // Then
-        assertEquals("group.name", "test", config.getGroupConfig().getName());
-        assertEquals("group.pass", "1234", config.getGroupConfig().getPassword());
+        assertEquals("group.name", "test", config.getInstanceName());
         assertEquals("member", "19.0.0.2:5670", config.getNetworkConfig().getAddresses().iterator().next());
     }
 

@@ -33,7 +33,7 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
-import static com.hazelcast.util.Preconditions.checkPositive;
+import static com.hazelcast.internal.util.Preconditions.checkPositive;
 
 public class OutboxImpl implements OutboxInternal {
 

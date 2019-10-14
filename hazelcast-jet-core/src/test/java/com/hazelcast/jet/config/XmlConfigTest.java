@@ -148,7 +148,7 @@ public class XmlConfigTest {
 
     private static void assertDefaultMemberConfig(Config config) {
         assertThat(config, not(nullValue()));
-        assertThat(config.getGroupConfig().getName(), not(equalTo(TEST_XML_2_GROUP_NAME)));
+        assertThat(config.getClusterName(), not(equalTo(TEST_XML_2_GROUP_NAME)));
     }
 
 }

@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.config;
 
 import com.hazelcast.config.AbstractConfigLocator;
 
-import static com.hazelcast.config.DeclarativeConfigUtil.XML_ACCEPTED_SUFFIXES;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.XML_ACCEPTED_SUFFIXES;
 import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 
 /**

@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,7 +53,7 @@ public final class UpdateMapWithEntryProcessorP<T, K, V, R> extends AsyncHazelca
             T item = (T) object;
             EntryProcessor<K, V, R> entryProcessor = toEntryProcessorFn.apply(item);
             K key = toKeyFn.apply(item);
-            setCallback(map.submitToKey(key, entryProcessor));
+            setCallback(map.submitToKey(key, entryProcessor).toCompletableFuture());
             inbox.remove();
         }
     }

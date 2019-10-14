@@ -16,6 +16,10 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BiPredicateEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -25,10 +29,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.map.IMap;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BiPredicateEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -37,7 +37,6 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.Util.toCompletableFuture;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -479,7 +478,8 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
         return mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName),
-                (map, key, item) -> toCompletableFuture(map.getAsync(key)).thenApply(value -> mapFn.apply(item, value)));
+                (map, key, item) -> map.getAsync(key).toCompletableFuture()
+                                       .thenApply(value -> mapFn.apply(item, value)));
     }
 
     /**

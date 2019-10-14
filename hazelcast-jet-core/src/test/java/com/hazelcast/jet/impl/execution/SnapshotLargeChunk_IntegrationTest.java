@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -27,7 +28,6 @@ import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriterImpl;
 import com.hazelcast.map.IMap;
-import com.hazelcast.nio.Bits;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;

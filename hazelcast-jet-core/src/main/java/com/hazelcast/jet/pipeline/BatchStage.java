@@ -29,11 +29,11 @@ import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
-import com.hazelcast.util.function.BiFunctionEx;
-import com.hazelcast.util.function.BiPredicateEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.PredicateEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.internal.util.function.BiPredicateEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +41,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-import static com.hazelcast.util.function.Functions.wholeItem;
+import static com.hazelcast.internal.util.function.Functions.wholeItem;
 
 /**
  * A stage in a distributed computation {@link Pipeline pipeline} that will

@@ -41,7 +41,7 @@ public class GetClusterMetadataOperation extends Operation implements
         JetService service = getService();
         HazelcastInstance instance = service.getJetInstance().getHazelcastInstance();
         Cluster cluster = instance.getCluster();
-        String name = instance.getConfig().getGroupConfig().getName();
+        String name = instance.getConfig().getClusterName();
         response = new ClusterMetadata(name, cluster);
     }
 

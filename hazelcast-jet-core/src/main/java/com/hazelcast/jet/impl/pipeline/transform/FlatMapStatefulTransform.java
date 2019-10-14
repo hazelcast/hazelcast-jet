@@ -20,8 +20,8 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

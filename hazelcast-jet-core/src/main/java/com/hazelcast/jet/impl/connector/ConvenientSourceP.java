@@ -23,8 +23,8 @@ import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.impl.JetEvent;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

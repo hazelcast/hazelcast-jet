@@ -17,15 +17,15 @@
 package com.hazelcast.jet.impl.aggregate;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.FunctionEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 
 public class AggregateOperationImpl<A, R> implements AggregateOperation<A, R> {
     final BiConsumerEx<? super A, ?>[] accumulateFns;

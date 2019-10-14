@@ -28,9 +28,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Properties;
 
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
-import static com.hazelcast.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
-import static com.hazelcast.config.DeclarativeConfigUtil.validateSuffixInSystemProperty;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_CLIENT_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_MEMBER_CONFIG;
+import static com.hazelcast.internal.config.DeclarativeConfigUtil.validateSuffixInSystemProperty;
 import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET_CONFIG;
 
 /**

@@ -20,10 +20,10 @@ import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.jet.impl.pipeline.test.AssertionP;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.spi.annotation.Beta;
-import com.hazelcast.util.Preconditions;
-import com.hazelcast.util.function.BiConsumerEx;
-import com.hazelcast.util.function.ConsumerEx;
-import com.hazelcast.util.function.SupplierEx;
+import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.internal.util.function.BiConsumerEx;
+import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.internal.util.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 

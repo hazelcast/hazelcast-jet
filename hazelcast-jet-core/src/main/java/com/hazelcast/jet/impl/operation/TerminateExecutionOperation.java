@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.spi.impl.operationservice.ExceptionAction;

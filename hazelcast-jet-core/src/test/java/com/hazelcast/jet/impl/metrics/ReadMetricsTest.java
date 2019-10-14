@@ -16,17 +16,20 @@
 
 package com.hazelcast.jet.impl.metrics;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.impl.MemberImpl;
 import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.internal.metrics.managementcenter.Metric;
+import com.hazelcast.internal.metrics.managementcenter.MetricConsumer;
+import com.hazelcast.internal.metrics.managementcenter.MetricsCompressor;
 import com.hazelcast.internal.metrics.managementcenter.MetricsResultSet;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
-import com.hazelcast.nio.Address;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.util.UuidUtil;
 import com.hazelcast.version.MemberVersion;
 import org.hamcrest.Matchers;
 import org.junit.Rule;
@@ -34,7 +37,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static org.junit.Assert.assertFalse;
@@ -61,10 +67,13 @@ public class ReadMetricsTest extends JetTestSupport {
             nextSequence = result.nextSequence();
             // call should not return empty result - it should wait until a result is available
             assertFalse("empty result", result.collections().isEmpty());
-            assertTrue(
-                    StreamSupport.stream(result.collections().get(0).spliterator(), false)
-                                 .anyMatch(m -> m.key().equals("[metric=cluster.size]"))
-            );
+            final MetricKeyConsumer metricConsumer = new MetricKeyConsumer();
+            assertTrue(metricStream(result.collections().get(0).getValue())
+                    .map(metric -> {
+                        metric.provide(metricConsumer);
+                        return metricConsumer.key;
+                    })
+                    .anyMatch(name -> name.equals("[unit=count,metric=cluster.size]")));
         }
     }
 
@@ -74,7 +83,7 @@ public class ReadMetricsTest extends JetTestSupport {
         JetClientInstanceImpl client = (JetClientInstanceImpl) createJetClient();
         Address addr = instance.getCluster().getLocalMember().getAddress();
         MemberVersion ver = instance.getCluster().getLocalMember().getVersion();
-        MemberImpl member = new MemberImpl(addr, ver, false, UuidUtil.newUnsecureUuidString());
+        MemberImpl member = new MemberImpl(addr, ver, false, UuidUtil.newUnsecureUUID());
 
         exception.expectCause(Matchers.instanceOf(IllegalArgumentException.class));
         client.readMetricsAsync(member, 0).get();
@@ -89,5 +98,28 @@ public class ReadMetricsTest extends JetTestSupport {
 
         exception.expectCause(Matchers.instanceOf(IllegalArgumentException.class));
         client.readMetricsAsync(instance.getCluster().getLocalMember(), 0).get();
+    }
+
+    private static Stream<Metric> metricStream(byte[] bytes) {
+        return StreamSupport.stream(
+                Spliterators.spliteratorUnknownSize(
+                        MetricsCompressor.decompressingIterator(bytes),
+                        Spliterator.NONNULL
+                ), false
+        );
+    }
+
+    private static class MetricKeyConsumer implements MetricConsumer {
+        String key;
+
+        @Override
+        public void consumeLong(String key, long value) {
+            this.key = key;
+        }
+
+        @Override
+        public void consumeDouble(String key, double value) {
+            this.key = key;
+        }
     }
 }

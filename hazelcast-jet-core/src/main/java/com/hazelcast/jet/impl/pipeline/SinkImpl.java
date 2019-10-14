@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.pipeline;
 
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

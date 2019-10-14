@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.function.Supplier;

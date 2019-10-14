@@ -43,7 +43,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -70,7 +70,7 @@ public class SinksTest extends PipelineTestSupport {
     @BeforeClass
     public static void setUp() {
         Config config = new Config();
-        config.getGroupConfig().setName(randomName());
+        config.setClusterName(randomName());
         config.addCacheConfig(new CacheSimpleConfig().setName("*"));
         remoteHz = createRemoteCluster(config, 2).get(0);
         clientConfig = getClientConfigForRemoteCluster(remoteHz);

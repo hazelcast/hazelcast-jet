@@ -27,7 +27,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.util.UuidUtil;
+import com.hazelcast.internal.util.UuidUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

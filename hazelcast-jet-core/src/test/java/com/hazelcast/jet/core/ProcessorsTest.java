@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

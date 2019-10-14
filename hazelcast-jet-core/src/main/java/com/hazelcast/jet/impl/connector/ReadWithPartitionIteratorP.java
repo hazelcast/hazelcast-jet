@@ -36,11 +36,11 @@ import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.MigrationWatcher;
 import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
-import com.hazelcast.nio.Address;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.partition.Partition;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.util.function.FunctionEx;
+import com.hazelcast.internal.util.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Collections;

@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.logging.LogManager;
 
-import static com.hazelcast.nio.IOUtil.closeResource;
+import static com.hazelcast.internal.nio.IOUtil.closeResource;
 
 /**
  * Main class that starts a Hazelcast Jet instance.
