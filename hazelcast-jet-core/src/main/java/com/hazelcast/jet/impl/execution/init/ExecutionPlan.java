@@ -17,10 +17,7 @@
 package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.metrics.LongProbeFunction;
 import com.hazelcast.internal.metrics.MetricTagger;
-import com.hazelcast.internal.metrics.ProbeLevel;
-import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
@@ -68,7 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -76,10 +72,6 @@ import java.util.stream.IntStream;
 import static com.hazelcast.internal.util.concurrent.ConcurrentConveyor.concurrentConveyor;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.EdgeConfig.DEFAULT_QUEUE_SIZE;
-import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_BYTES_IN;
-import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_BYTES_OUT;
-import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_ITEMS_IN;
-import static com.hazelcast.jet.core.metrics.MetricNames.DISTRIBUTED_ITEMS_OUT;
 import static com.hazelcast.jet.impl.execution.OutboundCollector.compositeCollector;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ImdgUtil.readList;
@@ -390,7 +382,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
             }
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
             if (edge.isDistributed()) {
-                memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge, builder);
+                memberToSenderConveyorMap = memberToSenderConveyorMap(edgeSenderConveyorMap, edge);
             }
             outboundStreams.add(createOutboundEdgeStream(edge, processorIdx, memberToSenderConveyorMap, builder));
         }
@@ -403,15 +395,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
      * Populates the {@link #senderMap} and {@link #tasklets} fields.
      */
     private Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap(
-            Map<String, Map<Address, ConcurrentConveyor<Object>>> edgeSenderConveyorMap, EdgeDef edge,
-            @Nullable MetricTagger metricTagger
+            Map<String, Map<Address, ConcurrentConveyor<Object>>> edgeSenderConveyorMap, EdgeDef edge
     ) {
         assert edge.isDistributed() : "Edge is not distributed";
         return edgeSenderConveyorMap.computeIfAbsent(edge.edgeId(), x -> {
             final Map<Address, ConcurrentConveyor<Object>> addrToConveyor = new HashMap<>();
-            List<AtomicLong> bytesCounters = new ArrayList<>();
-            List<AtomicLong> itemsCounters = new ArrayList<>();
-            Tasklet firstTasklet = null;
             for (Address destAddr : remoteMembers.get()) {
                 final ConcurrentConveyor<Object> conveyor = createConveyorArray(
                         1, edge.sourceVertex().localParallelism(), edge.getConfig().getQueueSize())[0];
@@ -419,42 +407,16 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         "sender-toVertex:" + edge.destVertex().name() + "-toMember:"
                                 + destAddr.toString().replace('.', '-'));
                 final int destVertexId = edge.destVertex().vertexId();
-                final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine,
-                        destAddr, executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
-                if (firstTasklet == null) {
-                    firstTasklet = t;
-                }
-                bytesCounters.add(t.getBytesOutCounter());
-                itemsCounters.add(t.getItemsOutCounter());
+                final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine, destAddr,
+                        edge.sourceVertex().name(), executionId, destVertexId, edge.getConfig().getPacketSizeLimit());
                 senderMap.computeIfAbsent(destVertexId, xx -> new HashMap<>())
                          .computeIfAbsent(edge.destOrdinal(), xx -> new HashMap<>())
                          .put(destAddr, t);
                 tasklets.add(t);
                 addrToConveyor.put(destAddr, conveyor);
             }
-
-            // We register the metrics to the first tasklet. The metrics itself aggregate counters from all tasklets
-            // and don't use the reference to source, but we use the source to deregister the metrics when the job
-            // finishes.
-            if (metricTagger != null && firstTasklet != null) {
-                metricTagger.registerStaticProbe(firstTasklet, DISTRIBUTED_BYTES_OUT, ProbeLevel.INFO, ProbeUnit.BYTES,
-                        addCountersProbeFunction(bytesCounters));
-                metricTagger.registerStaticProbe(firstTasklet, DISTRIBUTED_ITEMS_OUT, ProbeLevel.INFO, ProbeUnit.BYTES,
-                        addCountersProbeFunction(itemsCounters));
-            }
             return addrToConveyor;
         });
-    }
-
-    private static <T> LongProbeFunction<T> addCountersProbeFunction(List<AtomicLong> counters) {
-        AtomicLong[] countersArray = counters.toArray(new AtomicLong[0]);
-        return source -> {
-            long total = 0;
-            for (AtomicLong counter : countersArray) {
-                total += counter.get();
-            }
-            return total;
-        };
     }
 
     @SuppressWarnings("unchecked")
@@ -566,9 +528,6 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                        Map<Address, ReceiverTasklet> addrToTasklet = new HashMap<>();
                        //create a receiver per address
                        int offset = 0;
-                       List<AtomicLong> itemCounters = new ArrayList<>();
-                       List<AtomicLong> bytesCounters = new ArrayList<>();
-                       Tasklet firstTasklet = null;
                        for (Address addr : ptionArrgmt.remotePartitionAssignment.get().keySet()) {
                            final OutboundCollector[] collectors = new OutboundCollector[ptionsPerProcessor.length];
                            // assign the queues starting from end
@@ -580,23 +539,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                            ReceiverTasklet receiverTasklet = new ReceiverTasklet(
                                    collector, edge.getConfig().getReceiveWindowMultiplier(),
                                    getConfig().getInstanceConfig().getFlowControlPeriodMs(),
-                                   nodeEngine.getLoggingService(),
-                                   "receiverFor:" + edge.destVertex().name() + "#" + edge.destOrdinal());
+                                   nodeEngine.getLoggingService(), edge.destOrdinal(), edge.destVertex().name());
                            addrToTasklet.put(addr, receiverTasklet);
-                           if (firstTasklet == null) {
-                               firstTasklet = receiverTasklet;
-                           }
-                           itemCounters.add(receiverTasklet.getItemsInCounter());
-                           bytesCounters.add(receiverTasklet.getBytesInCounter());
-                       }
-                       if (metricTagger != null && firstTasklet != null) {
-                           // We register the metrics to the first tasklet. The metrics itself aggregate counters from
-                           // all tasklets and don't use the reference to source, but we use the source to deregister
-                           // the metrics when the job finishes.
-                           metricTagger.registerStaticProbe(firstTasklet, DISTRIBUTED_ITEMS_IN, ProbeLevel.INFO,
-                                   ProbeUnit.COUNT, addCountersProbeFunction(itemCounters));
-                           metricTagger.registerStaticProbe(firstTasklet, DISTRIBUTED_BYTES_IN, ProbeLevel.INFO,
-                                   ProbeUnit.COUNT, addCountersProbeFunction(bytesCounters));
                        }
                        return addrToTasklet;
                    });

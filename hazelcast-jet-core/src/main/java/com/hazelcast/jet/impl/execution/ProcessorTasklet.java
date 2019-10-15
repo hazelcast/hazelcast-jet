@@ -16,10 +16,8 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.LongProbeFunction;
 import com.hazelcast.internal.metrics.MetricTagger;
-import com.hazelcast.internal.metrics.ProbeLevel;
-import com.hazelcast.internal.metrics.ProbeUnit;
+import com.hazelcast.internal.metrics.MetricsExtractor;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
@@ -50,15 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Predicate;
 
-import static com.hazelcast.jet.core.metrics.MetricNames.COALESCED_WM;
-import static com.hazelcast.jet.core.metrics.MetricNames.EMITTED_COUNT;
-import static com.hazelcast.jet.core.metrics.MetricNames.LAST_FORWARDED_WM;
-import static com.hazelcast.jet.core.metrics.MetricNames.LAST_FORWARDED_WM_LATENCY;
-import static com.hazelcast.jet.core.metrics.MetricNames.QUEUE_CAPACITY;
-import static com.hazelcast.jet.core.metrics.MetricNames.QUEUE_SIZES;
-import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_BATCHES;
-import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_COUNT;
-import static com.hazelcast.jet.core.metrics.MetricNames.TOP_OBSERVED_WM;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
@@ -98,6 +87,7 @@ public class ProcessorTasklet implements Tasklet {
     private final WatermarkCoalescer watermarkCoalescer;
     private final ILogger logger;
     private final SerializationService serializationService;
+    private final List<? extends InboundEdgeStream> instreams;
 
     private int numActiveOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
@@ -136,6 +126,7 @@ public class ProcessorTasklet implements Tasklet {
         this.serializationService = serializationService;
         this.processor = processor;
         this.numActiveOrdinals = instreams.size();
+        this.instreams = instreams;
         this.instreamGroupQueue = new ArrayDeque<>(instreams.stream()
                 .collect(groupingBy(InboundEdgeStream::priority, TreeMap::new,
                         toCollection(ArrayList<InboundEdgeStream>::new)))
@@ -157,9 +148,6 @@ public class ProcessorTasklet implements Tasklet {
         waitForAllBarriers = ssContext.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE;
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
-        if (metricTagger != null) {
-            registerMetrics(instreams, metricTagger);
-        }
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
@@ -168,45 +156,6 @@ public class ProcessorTasklet implements Tasklet {
         return context.jetInstance() != null
                 ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString())
                 : Logger.getLogger(getClass());
-    }
-
-    private void registerMetrics(List<? extends InboundEdgeStream> instreams, final MetricTagger metricTagger) {
-        for (int i = 0; i < instreams.size(); i++) {
-            int finalI = i;
-            MetricTagger metricTaggerWithOrdinal = metricTagger
-                    .withTag(MetricTags.ORDINAL, String.valueOf(i));
-            metricTaggerWithOrdinal.registerStaticProbe(this, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
-                            (LongProbeFunction<ProcessorTasklet>) t -> t.receivedCounts.get(finalI));
-            metricTaggerWithOrdinal.registerStaticProbe(this, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT,
-                            (LongProbeFunction<ProcessorTasklet>) t -> t.receivedBatches.get(finalI));
-
-            InboundEdgeStream instream = instreams.get(finalI);
-            metricTaggerWithOrdinal.registerStaticProbe(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
-                    (LongProbeFunction<ProcessorTasklet>) t -> instream.topObservedWm());
-            metricTaggerWithOrdinal.registerStaticProbe(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
-                    (LongProbeFunction<ProcessorTasklet>) t -> instream.coalescedWm());
-        }
-
-        for (int i = 0; i < emittedCounts.length() - (context.snapshottingEnabled() ? 0 : 1); i++) {
-            int finalI = i;
-            metricTagger
-                    .withTag(MetricTags.ORDINAL, i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i))
-                    .registerStaticProbe(this, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT,
-                            (LongProbeFunction<ProcessorTasklet>) t -> t.emittedCounts.get(finalI));
-        }
-
-        metricTagger.registerStaticProbe(this, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS,
-                (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.topObservedWm());
-        metricTagger.registerStaticProbe(this, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS,
-                (LongProbeFunction<ProcessorTasklet>) t -> t.watermarkCoalescer.coalescedWm());
-        metricTagger.registerStaticProbe(this, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS,
-                (LongProbeFunction<ProcessorTasklet>) t -> t.outbox.lastForwardedWm());
-        metricTagger.registerStaticProbe(this, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS,
-                (LongProbeFunction<ProcessorTasklet>) t -> lastForwardedWmLatency());
-        metricTagger.registerStaticProbe(this, QUEUE_SIZES, ProbeLevel.INFO, ProbeUnit.COUNT,
-                (LongProbeFunction<ProcessorTasklet>) t -> t.queuesSize.get());
-        metricTagger.registerStaticProbe(this, QUEUE_CAPACITY, ProbeLevel.INFO, ProbeUnit.COUNT,
-                (LongProbeFunction<ProcessorTasklet>) t -> t.queuesCapacity.get());
     }
 
     private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {
@@ -526,5 +475,35 @@ public class ProcessorTasklet implements Tasklet {
             closeProcessor();
             processorClosed = true;
         }
+    }
+
+    @Override
+    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
+        tagger = tagger.withTag(MetricTags.VERTEX, this.context.vertexName())
+                       .withTag(MetricTags.PROCESSOR_TYPE, this.processor.getClass().getSimpleName())
+                       .withTag(MetricTags.PROCESSOR, Integer.toString(this.context.globalProcessorIndex()));
+
+        for (int i = 0; i < instreams.size(); i++) {
+//            MetricTagger taggerWithOrdinal = tagger.withTag(MetricTags.ORDINAL, String.valueOf(i));
+//            extractor.
+//            collect(taggerWithOrdinal, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, receivedCounts.get(i));
+//            extractor.
+//            collect(taggerWithOrdinal, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT, receivedBatches.get(i));
+        }
+
+        for (int i = 0; i < emittedCounts.length() - (context.snapshottingEnabled() ? 0 : 1); i++) {
+//            String ordinal = i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i);
+//            MetricTagger taggerWithOrdinal = tagger.withTag(MetricTags.ORDINAL, ordinal);
+//            extractor.collect(taggerWithOrdinal, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, emittedCounts.get(i));
+        }
+
+//        extractor.collect(tagger, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.topObservedWm());
+//        extractor.collect(tagger, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.coalescedWm());
+//        extractor.collect(tagger, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS, outbox.lastForwardedWm());
+//        extractor.collect(tagger, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS, lastForwardedWmLatency());
+//        extractor.collect(tagger, QUEUE_SIZES, ProbeLevel.INFO, ProbeUnit.COUNT, queuesSize.get());
+//        extractor.collect(tagger, QUEUE_CAPACITY, ProbeLevel.INFO, ProbeUnit.COUNT, queuesCapacity.get());
+
+        extractor.extractMetrics(tagger, this.processor);
     }
 }

@@ -17,10 +17,13 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.MetricsExtractor;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
@@ -266,4 +269,13 @@ public class ExecutionContext {
     public void setJobMetrics(RawJobMetrics jobMetrics) {
         this.jobMetrics = jobMetrics;
     }
+
+    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
+        tagger.withTag(MetricTags.EXECUTION, idToString(executionId));
+        tagger.withTag(MetricTags.JOB, idToString(jobId));
+        for (Tasklet tasklet : tasklets) {
+            tasklet.collectMetrics(tagger, extractor);
+        }
+    }
+
 }

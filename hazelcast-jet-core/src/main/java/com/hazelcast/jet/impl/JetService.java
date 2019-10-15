@@ -56,8 +56,7 @@ import static com.hazelcast.spi.properties.GroupProperty.SHUTDOWNHOOK_POLICY;
 import static java.lang.Boolean.parseBoolean;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-public class JetService
-        implements ManagedService, MembershipAwareService, LiveOperationsTracker {
+public class JetService implements ManagedService, MembershipAwareService, LiveOperationsTracker {
 
     public static final String SERVICE_NAME = "hz:impl:jetService";
     public static final int MAX_PARALLEL_ASYNC_OPS = 1000;
@@ -109,6 +108,7 @@ public class JetService
         MetricsService metricsService = nodeEngine.getService(MetricsService.SERVICE_NAME);
         metricsService.registerPublisher(nodeEngine -> new JobMetricsPublisher(jobExecutionService,
                 nodeEngine.getLocalMember()));
+        nodeEngine.getMetricsRegistry().registerDynamicMetricsProvider(jobExecutionService);
         networking = new Networking(engine, jobExecutionService, config.getInstanceConfig().getFlowControlPeriodMs());
 
         ClientEngineImpl clientEngine = engine.getService(ClientEngineImpl.SERVICE_NAME);

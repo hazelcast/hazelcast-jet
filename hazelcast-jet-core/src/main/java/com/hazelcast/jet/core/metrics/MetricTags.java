@@ -111,6 +111,11 @@ public final class MetricTags {
      */
     public static final String UNIT = "unit";
 
+    /**
+     * Destination member address for items sent in a distributed edge
+     */
+    public static final String DESTINATION_ADDRESS = "destinationAddress";
+
     private MetricTags() {
     }
 }

@@ -110,11 +110,11 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
     @Nonnull
     private final long[] readOffsets;
 
-    private CompletableFuture<ReadResultSet<T>>[] readFutures;
+    private CompletableFuture<? extends ReadResultSet<? extends T>>[] readFutures;
 
     // currently processed resultSet, it's partitionId and iterating position
     @Nullable
-    private ReadResultSet<T> resultSet;
+    private ReadResultSet<? extends T> resultSet;
     private int currentPartitionIndex = -1;
     private int resultSetPosition;
 
@@ -277,7 +277,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
 
     private void tryGetNextResultSet() {
         while (resultSet == null && ++currentPartitionIndex < partitionIds.length) {
-            CompletableFuture<ReadResultSet<T>> future = readFutures[currentPartitionIndex];
+            CompletableFuture<? extends ReadResultSet<? extends T>> future = readFutures[currentPartitionIndex];
             if (!future.isDone()) {
                 continue;
             }
@@ -306,7 +306,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
     }
 
-    private ReadResultSet<T> toResultSet(CompletableFuture<ReadResultSet<T>> future) {
+    private ReadResultSet<? extends T> toResultSet(CompletableFuture<? extends ReadResultSet<? extends T>> future) {
         try {
             return future.get();
         } catch (ExecutionException e) {
@@ -327,7 +327,7 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         }
     }
 
-    private CompletableFuture<ReadResultSet<T>> readFromJournal(int partition, long offset) {
+    private CompletableFuture<? extends ReadResultSet<? extends T>> readFromJournal(int partition, long offset) {
         return eventJournalReader.readFromEventJournal(offset, 1, MAX_FETCH_SIZE, partition, predicate, projection)
                                  .toCompletableFuture();
     }

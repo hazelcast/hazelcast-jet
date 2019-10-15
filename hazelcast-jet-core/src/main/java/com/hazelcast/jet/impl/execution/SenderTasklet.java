@@ -17,11 +17,17 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.MetricsExtractor;
+import com.hazelcast.internal.metrics.Probe;
+import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.nio.BufferObjectDataOutput;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.jet.RestartableException;
+import com.hazelcast.jet.core.metrics.MetricNames;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -52,8 +58,14 @@ public class SenderTasklet implements Tasklet {
     private final InboundEdgeStream inboundEdgeStream;
     private final BufferObjectDataOutput outputBuffer;
     private final int bufPosPastHeader;
+    private Address destinationAddress;
+    private String sourceVertexName;
     private final int packetSizeLimit;
+
+    @Probe(name = MetricNames.DISTRIBUTED_ITEMS_OUT)
     private final AtomicLong itemsOutCounter = new AtomicLong();
+
+    @Probe(name = MetricNames.DISTRIBUTED_BYTES_OUT, unit = ProbeUnit.BYTES)
     private final AtomicLong bytesOutCounter = new AtomicLong();
 
     private boolean instreamExhausted;
@@ -64,9 +76,16 @@ public class SenderTasklet implements Tasklet {
     private volatile int sendSeqLimitCompressed;
     private Predicate<Object> addToInboxFunction = inbox::add;
 
-    public SenderTasklet(InboundEdgeStream inboundEdgeStream, NodeEngine nodeEngine, Address destinationAddress,
-                         long executionId, int destinationVertexId, int packetSizeLimit) {
+    public SenderTasklet(
+            InboundEdgeStream inboundEdgeStream,
+            NodeEngine nodeEngine,
+            Address destinationAddress,
+            String sourceVertexName,
+            long executionId, int destinationVertexId, int packetSizeLimit
+    ) {
         this.inboundEdgeStream = inboundEdgeStream;
+        this.destinationAddress = destinationAddress;
+        this.sourceVertexName = sourceVertexName;
         this.packetSizeLimit = packetSizeLimit;
         // we use Connection directly because we rely on packets not being transparently skipped or reordered
         this.connection = getMemberConnection(nodeEngine, destinationAddress);
@@ -163,11 +182,12 @@ public class SenderTasklet implements Tasklet {
         return compressSeq(sentSeq) - sendSeqLimitCompressed <= 0;
     }
 
-    public AtomicLong getItemsOutCounter() {
-        return itemsOutCounter;
-    }
+    @Override
+    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
+        tagger = tagger.withTag(MetricTags.VERTEX, sourceVertexName)
+                        .withTag(MetricTags.ORDINAL, Integer.toString(inboundEdgeStream.ordinal()))
+                        .withTag(MetricTags.DESTINATION_ADDRESS, destinationAddress.toString());
 
-    public AtomicLong getBytesOutCounter() {
-        return bytesOutCounter;
+        extractor.extractMetrics(tagger, this);
     }
 }

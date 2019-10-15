@@ -16,9 +16,15 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.MetricsExtractor;
+import com.hazelcast.internal.metrics.Probe;
+import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.internal.util.concurrent.MPSCQueue;
 import com.hazelcast.jet.config.InstanceConfig;
+import com.hazelcast.jet.core.metrics.MetricNames;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -74,6 +80,8 @@ public class ReceiverTasklet implements Tasklet {
      */
     private final int rwinMultiplier;
     private final double flowControlPeriodNs;
+    private final int ordinal;
+    private final String destinationVertexName;
     private final ILogger logger;
 
     private final Queue<BufferObjectDataInput> incoming = new MPSCQueue<>(null);
@@ -83,7 +91,10 @@ public class ReceiverTasklet implements Tasklet {
 
     private boolean receptionDone;
 
+    @Probe(name = MetricNames.DISTRIBUTED_ITEMS_IN)
     private final AtomicLong itemsInCounter = new AtomicLong();
+
+    @Probe(name = MetricNames.DISTRIBUTED_BYTES_IN, unit = ProbeUnit.BYTES)
     private final AtomicLong bytesInCounter = new AtomicLong();
 
     //                    FLOW-CONTROL STATE
@@ -102,12 +113,16 @@ public class ReceiverTasklet implements Tasklet {
 
     public ReceiverTasklet(
             OutboundCollector collector, int rwinMultiplier, int flowControlPeriodMs,
-            LoggingService loggingService, String debugName
+            LoggingService loggingService,
+            int ordinal, String destinationVertexName
     ) {
         this.collector = collector;
         this.rwinMultiplier = rwinMultiplier;
         this.flowControlPeriodNs = (double) MILLISECONDS.toNanos(flowControlPeriodMs);
-        this.logger = loggingService.getLogger(getClass().getName() + '.' + debugName);
+        this.ordinal = ordinal;
+        this.destinationVertexName = destinationVertexName;
+        String loggerName = String.format("%s.receiverFor:%s#%d", getClass().getName(), destinationVertexName, ordinal);
+        this.logger = loggingService.getLogger(loggerName);
         this.receiveWindowCompressed = INITIAL_RECEIVE_WINDOW_COMPRESSED;
     }
 
@@ -283,11 +298,11 @@ public class ReceiverTasklet implements Tasklet {
         }
     }
 
-    public AtomicLong getItemsInCounter() {
-        return itemsInCounter;
-    }
+    @Override
+    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
+        tagger = tagger.withTag(MetricTags.VERTEX, destinationVertexName)
+                       .withTag(MetricTags.ORDINAL, Integer.toString(ordinal));
 
-    public AtomicLong getBytesInCounter() {
-        return bytesInCounter;
+        extractor.extractMetrics(tagger, this);
     }
 }
