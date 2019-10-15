@@ -249,7 +249,7 @@ public class WordCountTest extends HazelcastTestSupport implements Serializable 
         }
     }
 
-    private static class WordCountAggregator extends Aggregator<Map.Entry<Integer, String>, Map<String, Long>> {
+    private static class WordCountAggregator implements Aggregator<Map.Entry<Integer, String>, Map<String, Long>> {
         private static final Pattern PATTERN = Pattern.compile("\\w+");
 
         private Map<String, Long> counts = new HashMap<>();
