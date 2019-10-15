@@ -46,15 +46,10 @@
         <jet:properties>
             <hz:property name="foo">bar</hz:property>
         </jet:properties>
-        <jet:metrics-config enabled="false"
-                            jmxEnabled="false"
-                            retention-seconds="123"
-                            metrics-for-data-structures-enabled="true"
-                            collection-interval-seconds="10"
-        />
     </jet:instance>
 
     <jet:client id="jet-client" depends-on="jet-instance">
+        <jet:client-name>jet-spring</jet:client-name>
         <jet:network>
             <hz:member>127.0.0.1:5707</hz:member>
         </jet:network>

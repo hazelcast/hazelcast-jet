@@ -28,7 +28,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.map.IMap;
 import com.hazelcast.spring.CustomSpringJUnit4ClassRunner;
 import com.hazelcast.spring.context.SpringManagedContext;
@@ -104,12 +103,6 @@ public class TestApplicationContext {
         assertEquals(5, edgeConfig.getReceiveWindowMultiplier());
 
         assertEquals("bar", jetConfig.getProperties().getProperty("foo"));
-
-        MetricsConfig metricsConfig = jetConfig.getHazelcastConfig().getMetricsConfig();
-        assertFalse(metricsConfig.isEnabled());
-        assertEquals(123, metricsConfig.getRetentionSeconds());
-        assertEquals(10, metricsConfig.getCollectionIntervalSeconds());
-        assertTrue(metricsConfig.isMetricsForDataStructuresEnabled());
     }
 
     private void assertHazelcastConfig(Config cfg) {
