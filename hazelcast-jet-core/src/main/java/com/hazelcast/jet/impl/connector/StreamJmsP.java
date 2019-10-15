@@ -129,8 +129,12 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        consumer.close();
-        session.close();
+        if (consumer != null) {
+            consumer.close();
+        }
+        if (session != null) {
+            session.close();
+        }
     }
 
     private static final class Supplier<T> implements ProcessorSupplier {

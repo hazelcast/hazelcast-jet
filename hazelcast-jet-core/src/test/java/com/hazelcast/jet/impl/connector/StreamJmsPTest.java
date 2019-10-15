@@ -24,14 +24,15 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.junit.EmbeddedActiveMQBroker;
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
+import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -49,7 +50,7 @@ import static org.junit.Assert.assertEquals;
 public class StreamJmsPTest extends JetTestSupport {
 
     @ClassRule
-    public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
+    public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
 
     private StreamJmsP processor;
     private TestOutbox outbox;
@@ -106,7 +107,7 @@ public class StreamJmsPTest extends JetTestSupport {
     }
 
     private void initializeProcessor(String destinationName, boolean isQueue) throws Exception {
-        processorConnection = broker.createConnectionFactory().createConnection();
+        processorConnection = getConnectionFactory().createConnection();
         processorConnection.start();
 
         FunctionEx<Connection, Session> sessionFn = c -> c.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -123,8 +124,7 @@ public class StreamJmsPTest extends JetTestSupport {
     private String sendMessage(String destinationName, boolean isQueue) throws Exception {
         String message = randomString();
 
-        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
-        Connection connection = connectionFactory.createConnection();
+        Connection connection = getConnectionFactory().createConnection();
         connection.start();
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -139,8 +139,7 @@ public class StreamJmsPTest extends JetTestSupport {
     }
 
     private int queueSize(String queueName) throws Exception {
-        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
-        Connection connection = connectionFactory.createConnection();
+        Connection connection = getConnectionFactory().createConnection();
         connection.start();
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -154,5 +153,9 @@ public class StreamJmsPTest extends JetTestSupport {
         session.close();
         connection.close();
         return size;
+    }
+
+    private static ConnectionFactory getConnectionFactory() {
+        return new ActiveMQConnectionFactory(resource.getVmURL());
     }
 }

@@ -100,16 +100,24 @@
         <!--TEST DEPENDENCIES-->
         <dependency>
             <groupId>org.apache.activemq</groupId>
-            <artifactId>activemq-all</artifactId>
-            <version>${activemq.version}</version>
+            <artifactId>apache-artemis</artifactId>
+            <version>${activemq-artemis.version}</version>
             <scope>test</scope>
+            <!-- needed to handle https://issues.apache.org/jira/browse/ARTEMIS-2204 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.activemq</groupId>
+                    <artifactId>artemis-jms-client-all</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
-            <groupId>org.apache.activemq.tooling</groupId>
-            <artifactId>activemq-junit</artifactId>
-            <version>${activemq.version}</version>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>artemis-junit</artifactId>
+            <version>${activemq-artemis.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>nl.jqno.equalsverifier</groupId>
             <artifactId>equalsverifier</artifactId>

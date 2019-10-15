@@ -106,8 +106,8 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
     @Test
     public void testWriteToTopic() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map(sourceImapName))
-         .drainTo(KafkaSinks.kafka(properties, topic));
+        p.readFrom(Sources.map(sourceImapName))
+         .writeTo(KafkaSinks.kafka(properties, topic));
         instance().newJob(p).join();
 
         assertTopicContentsEventually(sourceIMap, false);
@@ -118,8 +118,8 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
         String localTopic = topic;
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String, String>map(sourceImapName))
-         .drainTo(KafkaSinks.kafka(properties, e ->
+        p.readFrom(Sources.<String, String>map(sourceImapName))
+         .writeTo(KafkaSinks.kafka(properties, e ->
                  new ProducerRecord<>(localTopic, Integer.valueOf(e.getKey()), e.getKey(), e.getValue()))
          );
         instance().newJob(p).join();
@@ -134,9 +134,9 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
 
         // Given
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Entry<String, String>>batchFromProcessor("source",
+        p.readFrom(Sources.<Entry<String, String>>batchFromProcessor("source",
                 ProcessorMetaSupplier.of(ProcessorWithEntryAndLatch::new)))
-         .drainTo(KafkaSinks.kafka(properties, topic));
+         .writeTo(KafkaSinks.kafka(properties, topic));
 
         Job job = instance().newJob(p);
 
@@ -168,9 +168,9 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
 
         // Given
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Entry<String, String>>batchFromProcessor("source",
+        p.readFrom(Sources.<Entry<String, String>>batchFromProcessor("source",
                 ProcessorMetaSupplier.of(ProcessorWithEntryAndLatch::new)))
-         .drainTo(KafkaSinks.<Entry<String, String>>kafka(properties)
+         .writeTo(KafkaSinks.<Entry<String, String>>kafka(properties)
                             .topic(topic)
                             .extractKeyFn(Entry::getKey)
                             .extractValueFn(Entry::getValue)
@@ -208,7 +208,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
         int numItems = 1000;
         Pipeline p = Pipeline.create();
         String topicLocal = topic;
-        p.drawFrom(SourceBuilder.stream("src", procCtx -> new int[1])
+        p.readFrom(SourceBuilder.stream("src", procCtx -> new int[1])
                                 .fillBufferFn((ctx, buf) -> {
                                     if (ctx[0] < numItems) {
                                         buf.add(ctx[0]++);
@@ -222,7 +222,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
          .map(String::valueOf)
          .setLocalParallelism(1)
          // produce to a single partition to have the items sorted
-         .drainTo(KafkaSinks.kafka(properties).toRecordFn(v -> new ProducerRecord<>(topicLocal, 0, null, v)).build())
+         .writeTo(KafkaSinks.kafka(properties).toRecordFn(v -> new ProducerRecord<>(topicLocal, 0, null, v)).build())
          .setLocalParallelism(1);
 
         JobConfig config = new JobConfig()
