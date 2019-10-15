@@ -19,47 +19,47 @@ package com.hazelcast.jet.core.metrics;
 import javax.annotation.Nonnull;
 
 /**
- * Can be used to explicitly set the value of one particular
- * user-defined metric.
- *
- * Implementation is thread-safe, calling all methods is safe to be done
- * from any thread.
+ * A handler to manipulate one user-defined metric. To obtain an instance, use
+ * {@link UserMetrics#get}.
+ * <p>
+ * Implementation is not thread-safe, the methods must be called only from the
+ * processor thread.
  */
 public interface Counter {
 
     /**
-     * Returns the name of the metric being manipulated.
+     * Returns the name of the associated metric.
      */
     @Nonnull
     String name();
 
     /**
-     * Sets the counter to the specified value.
+     * Sets the metric to the specified value.
      */
     void set(long newValue);
 
     /**
-     * Increments the current value with 1.
+     * Increments the current value by 1.
      */
     void increment();
 
     /**
-     * Increments the current value with the specified amount.
+     * Increments the current value by the specified amount.
      */
-    void increment(long increment);
+    void add(long amount);
 
     /**
-     * Decrements the current value with 1.
+     * Decrements the current value by 1.
      */
     void decrement();
 
     /**
-     * Decrements the current value with the specified amount.
+     * Decrements the current value by the specified amount.
      */
-    void decrement(long decrement);
+    void subtract(long amount);
 
     /**
-     * Returns the current value of the counter
+     * Returns the current value of the metric.
      */
-    long value();
+    long get();
 }

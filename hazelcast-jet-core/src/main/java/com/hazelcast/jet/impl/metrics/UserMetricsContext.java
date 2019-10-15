@@ -45,7 +45,7 @@ public class UserMetricsContext {
             } else {
                 RegisteredCounter counter = new RegisteredCounter(metric);
                 probeBuilder.register(source, metric, level, unit,
-                        (LongProbeFunction<ProcessorTasklet>) t -> counter.value());
+                        (LongProbeFunction<ProcessorTasklet>) t -> counter.get());
                 return counter;
             }
         };
@@ -107,7 +107,7 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void increment(long increment) {
+        public void add(long increment) {
             VOLATILE_VALUE_UPDATER.lazySet(this, value + increment);
         }
 
@@ -117,12 +117,12 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void decrement(long decrement) {
+        public void subtract(long decrement) {
             VOLATILE_VALUE_UPDATER.lazySet(this, value - decrement);
         }
 
         @Override
-        public long value() {
+        public long get() {
             return value;
         }
     }
@@ -152,7 +152,7 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void increment(long increment) {
+        public void add(long increment) {
             this.value += increment;
         }
 
@@ -162,12 +162,12 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void decrement(long decrement) {
+        public void subtract(long decrement) {
             this.value -= decrement;
         }
 
         @Override
-        public long value() {
+        public long get() {
             return value;
         }
     }
