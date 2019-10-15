@@ -19,7 +19,6 @@ package com.hazelcast.jet.config;
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.IdentityReplacer;
 import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.TestReplacer;
 import com.hazelcast.config.InvalidConfigurationException;
-import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.impl.util.Util;
@@ -59,18 +58,17 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         // Given
         String yaml = ""
                 + "hazelcast-jet:\n"
-                + "  metrics:\n"
-                + "    collection-interval-seconds: ${interval}\n";
+                + "  instance:\n"
+                + "    backup-count: ${backup-count}\n";
 
         Properties properties = new Properties();
-        properties.setProperty("interval", "100");
+        properties.setProperty("backup-count", "4");
 
         // When
         JetConfig config = JetConfig.loadYamlFromString(yaml, properties);
 
         // Then
-        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
-        assertEquals(100, metricsConfig.getCollectionIntervalSeconds());
+        assertEquals(4, config.getInstanceConfig().getBackupCount());
     }
 
     @Override
@@ -78,13 +76,11 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigStr = ""
+        String backupCountConfigStr = ""
                 + "hazelcast-jet:\n"
-                + "  metrics:\n"
-                + "    enabled: true\n"
-                + "    jmx-enabled: false\n"
-                + "    collection-interval-seconds: 101\n";
-        writeStringToStreamAndClose(os, metricsConfigStr);
+                + "  instance:\n"
+                + "    backup-count: 4\n";
+        writeStringToStreamAndClose(os, backupCountConfigStr);
         String yaml = ""
                 + "hazelcast-jet:\n"
                 + "  import:\n"
@@ -94,10 +90,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         JetConfig config = buildConfig(yaml, "config.location", file.getAbsolutePath());
 
         //Then
-        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
-        assertTrue(metricsConfig.isEnabled());
-        assertFalse(metricsConfig.isJmxEnabled());
-        assertEquals(101, metricsConfig.getCollectionIntervalSeconds());
+        assertEquals(4, config.getInstanceConfig().getBackupCount());
     }
 
     @Override
@@ -105,31 +98,24 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         //Given
         File file = createConfigFile("foo", "bar");
         FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigStr = ""
+        String backupCountConfigStr = ""
                 + "hazelcast-jet:\n"
-                + "  metrics:\n"
-                + "    enabled: ${metrics.enabled}\n"
-                + "    jmx-enabled: ${metrics.jmx.enabled}\n"
-                + "    collection-interval-seconds: ${metrics.interval}\n";
-        writeStringToStreamAndClose(os, metricsConfigStr);
+                + "  instance:\n"
+                + "    backup-count: ${backup-count}\n";
+        writeStringToStreamAndClose(os, backupCountConfigStr);
         String yaml = ""
                 + "hazelcast-jet:\n"
                 + "  import:\n"
                 + "    - ${config.location}\n";
         Properties properties = new Properties();
         properties.setProperty("config.location", file.getAbsolutePath());
-        properties.setProperty("metrics.enabled", "false");
-        properties.setProperty("metrics.jmx.enabled", "true");
-        properties.setProperty("metrics.interval", "505");
+        properties.setProperty("backup-count", "4");
 
         //When
         JetConfig config = JetConfig.loadYamlFromString(yaml, properties);
 
         //Then
-        MetricsConfig metricsConfig = config.getHazelcastConfig().getMetricsConfig();
-        assertFalse(metricsConfig.isEnabled());
-        assertTrue(metricsConfig.isJmxEnabled());
-        assertEquals(505, metricsConfig.getCollectionIntervalSeconds());
+        assertEquals(4, config.getInstanceConfig().getBackupCount());
     }
 
     @Override
@@ -223,38 +209,13 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         String yaml = ""
                 + "import:\n"
                 + "  - file:///" + file.getAbsolutePath() + "\n"
-                + "metrics:\n"
-                + "  enabled: false\n"
-                + "  jmx-enabled: false\n"
-                + "  collection-interval-seconds: 101\n";
+                + "instance:\n"
+                + "  backup-count: 5\n";
         JetConfig config = JetConfig.loadYamlFromString(yaml);
         assertEquals("value1", config.getProperties().getProperty("prop1"));
         assertEquals("value2", config.getProperties().getProperty("prop2"));
-        assertFalse(config.getHazelcastConfig().getMetricsConfig().isEnabled());
-        assertFalse(config.getHazelcastConfig().getMetricsConfig().isJmxEnabled());
+        assertEquals(5, config.getInstanceConfig().getBackupCount());
 
-    }
-
-    @Override
-    public void testImportMetricsConfigFromFile() throws Exception {
-        File file = createConfigFile("foo", "bar");
-        FileOutputStream os = new FileOutputStream(file);
-        String metricsConfigStr = ""
-                + "hazelcast-jet:\n"
-                + "  metrics:\n"
-                + "    enabled: false\n"
-                + "    jmx-enabled: false\n"
-                + "    collection-interval-seconds: 101\n";
-        writeStringToStreamAndClose(os, metricsConfigStr);
-
-        String yaml = ""
-                + "hazelcast-jet:\n"
-                + "  import:\n"
-                + "    - file:///" + file.getAbsolutePath();
-
-        JetConfig config = JetConfig.loadYamlFromString(yaml);
-        assertFalse(config.getHazelcastConfig().getMetricsConfig().isEnabled());
-        assertFalse(config.getHazelcastConfig().getMetricsConfig().isJmxEnabled());
     }
 
     @Override

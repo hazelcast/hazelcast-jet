@@ -83,9 +83,6 @@ public abstract class AbstractJetConfigImportVariableReplacementTest {
     public abstract void testImportNotExistingResourceThrowsException();
 
     @Test
-    public abstract void testImportMetricsConfigFromFile() throws Exception;
-
-    @Test
     public abstract void testImportInstanceConfigFromFile() throws Exception;
 
     @Test
