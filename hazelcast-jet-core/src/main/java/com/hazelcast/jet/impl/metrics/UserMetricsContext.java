@@ -22,12 +22,11 @@ import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.core.metrics.Counter;
 import com.hazelcast.jet.impl.execution.ProcessorTasklet;
-import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.Function;
 
 public class UserMetricsContext {
@@ -41,11 +40,13 @@ public class UserMetricsContext {
     public UserMetricsContext(ProbeBuilder probeBuilder, ProcessorTasklet source, ProbeLevel level, ProbeUnit unit) {
         this.counterSupplier = metric -> {
             if (probeBuilder == null) {
-                return new UnregisteredCounter(metric);
+                // used when metrics are disabled
+                return new NonRegisteredCounter(metric);
             } else {
-                AtomicLong value = new AtomicLong();
-                probeBuilder.register(source, metric, level, unit, (LongProbeFunction<ProcessorTasklet>) t -> value.get());
-                return new RegisteredCounter(metric, value);
+                RegisteredCounter counter = new RegisteredCounter(metric);
+                probeBuilder.register(source, metric, level, unit,
+                        (LongProbeFunction<ProcessorTasklet>) t -> counter.value());
+                return counter;
             }
         };
     }
@@ -61,7 +62,7 @@ public class UserMetricsContext {
         if (res == null) {
             res = counterSupplier.apply(metric);
             if (onlyMetric == null) {
-                // the first on so far the only metric
+                // the first and so far the only metric
                 onlyMetric = metric;
                 onlyCounter = res;
             } else {
@@ -80,62 +81,62 @@ public class UserMetricsContext {
 
     private static final class RegisteredCounter implements Counter {
 
-        private final String name;
-        private final AtomicLong value;
+        private static final AtomicLongFieldUpdater<RegisteredCounter> VOLATILE_VALUE_UPDATER =
+                AtomicLongFieldUpdater.newUpdater(RegisteredCounter.class, "value");
 
-        RegisteredCounter(String name, AtomicLong value) {
+        private final String name;
+        private volatile long value;
+
+        RegisteredCounter(String name) {
             this.name = name;
-            this.value = value;
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public String name() {
             return name;
         }
 
         @Override
         public void set(long newValue) {
-            value.lazySet(newValue);
+            VOLATILE_VALUE_UPDATER.lazySet(this, newValue);
         }
 
         @Override
         public void increment() {
-            Util.lazyAdd(value, 1L);
+            VOLATILE_VALUE_UPDATER.lazySet(this, value + 1);
         }
 
         @Override
         public void increment(long increment) {
-            Util.lazyAdd(value, increment);
+            VOLATILE_VALUE_UPDATER.lazySet(this, value + increment);
         }
 
         @Override
         public void decrement() {
-            Util.lazyAdd(value, -1L);
+            VOLATILE_VALUE_UPDATER.lazySet(this, value - 1);
         }
 
         @Override
         public void decrement(long decrement) {
-            Util.lazyAdd(value, -1L * decrement);
+            VOLATILE_VALUE_UPDATER.lazySet(this, value - decrement);
         }
 
         @Override
         public long value() {
-            return value.get();
+            return value;
         }
     }
 
-    private static final class UnregisteredCounter implements Counter {
+    private static final class NonRegisteredCounter implements Counter {
 
         private final String name;
         private long value;
 
-        UnregisteredCounter(String name) {
+        NonRegisteredCounter(String name) {
             this.name = name;
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public String name() {
             return name;
         }
@@ -170,5 +171,4 @@ public class UserMetricsContext {
             return value;
         }
     }
-
 }
