@@ -16,12 +16,13 @@
 
 package integration;
 
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.collection.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.examples.enrichment.datamodel.Person;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -29,14 +30,13 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.jet.examples.enrichment.datamodel.Person;
 
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.internal.util.function.FunctionEx.identity;
 import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 public class ImdgConnectors {
     static void s1() {
@@ -111,7 +111,7 @@ public class ImdgConnectors {
     static void s7() {
         //tag::s7[]
         ClientConfig cfg = new ClientConfig();
-        cfg.getGroupConfig().setName("myGroup");
+        cfg.setClientName("myGroup");
         cfg.getNetworkConfig().addAddress("node1.mydomain.com", "node2.mydomain.com");
 
         Pipeline p = Pipeline.create();
@@ -215,8 +215,7 @@ public class ImdgConnectors {
     static void s15() {
         //tag::s15[]
         ClientConfig clientConfig = new ClientConfig();
-        clientConfig.getGroupConfig()
-                    .setName("myGroup");
+        clientConfig.setClientName("myGroup");
         clientConfig.getNetworkConfig()
                     .addAddress("node1.mydomain.com", "node2.mydomain.com");
 
