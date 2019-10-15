@@ -26,6 +26,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricTags;
+import com.hazelcast.jet.impl.metrics.UserMetricsContext;
+import com.hazelcast.jet.impl.metrics.UserMetricsImp;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -120,6 +122,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLong queuesSize = new AtomicLong();
     private final AtomicLong queuesCapacity = new AtomicLong();
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
+    private final UserMetricsContext userMetricsContext;
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public ProcessorTasklet(@Nonnull Context context,
@@ -160,6 +163,8 @@ public class ProcessorTasklet implements Tasklet {
         if (probeBuilder != null) {
             registerMetrics(instreams, probeBuilder);
         }
+
+        this.userMetricsContext = new UserMetricsContext(probeBuilder, this, ProbeLevel.INFO, ProbeUnit.MS);
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
@@ -232,10 +237,17 @@ public class ProcessorTasklet implements Tasklet {
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
+
+        if (!processor.isCooperative()) {
+            UserMetricsImp.set(userMetricsContext);
+        }
     }
 
     @Override @Nonnull
     public ProgressState call() {
+        if (processor.isCooperative()) {
+            UserMetricsImp.set(userMetricsContext);
+        }
         assert !processorClosed : "processor closed";
         progTracker.reset();
         outbox.reset();
@@ -244,6 +256,9 @@ public class ProcessorTasklet implements Tasklet {
         if (progressState.isDone()) {
             closeProcessor();
             processorClosed = true;
+        }
+        if (processor.isCooperative()) {
+            UserMetricsImp.set(null);
         }
         return progressState;
     }
