@@ -25,6 +25,7 @@ import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.Address;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -139,6 +140,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
+        @SuppressFBWarnings("SE_BAD_FIELD")
         private final Configuration configuration;
         private final BiFunctionEx<K, V, R> projectionFn;
 
@@ -174,6 +176,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     private static class Supplier<K, V, R> implements ProcessorSupplier {
         static final long serialVersionUID = 1L;
 
+        @SuppressFBWarnings("SE_BAD_FIELD")
         private Configuration configuration;
         private BiFunctionEx<K, V, R> projectionFn;
         private List<IndexedInputSplit> assignedSplits;

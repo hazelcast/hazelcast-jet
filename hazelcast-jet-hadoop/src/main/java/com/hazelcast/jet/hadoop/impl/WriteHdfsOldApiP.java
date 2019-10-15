@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.nio.Address;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContextImpl;
 import org.apache.hadoop.mapred.JobID;
@@ -91,6 +92,7 @@ public final class WriteHdfsOldApiP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
+        @SuppressFBWarnings("SE_BAD_FIELD")
         private final JobConf jobConf;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;
@@ -136,6 +138,7 @@ public final class WriteHdfsOldApiP<T, K, V> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
+        @SuppressFBWarnings("SE_BAD_FIELD")
         private final JobConf jobConf;
         private final FunctionEx<? super T, K> extractKeyFn;
         private final FunctionEx<? super T, V> extractValueFn;

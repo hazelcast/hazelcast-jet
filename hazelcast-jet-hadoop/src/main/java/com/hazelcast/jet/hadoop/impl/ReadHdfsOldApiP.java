@@ -26,6 +26,7 @@ import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.Address;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -91,6 +92,7 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
+        @SuppressFBWarnings("SE_BAD_FIELD")
         private final JobConf jobConf;
         private final BiFunctionEx<K, V, R> projectionFn;
 
@@ -132,6 +134,7 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
     private static class Supplier<K, V, R> implements ProcessorSupplier {
         static final long serialVersionUID = 1L;
 
+        @SuppressFBWarnings("SE_BAD_FIELD")
         private JobConf jobConf;
         private BiFunctionEx<K, V, R> projectionFn;
         private List<IndexedInputSplit> assignedSplits;
@@ -142,15 +145,17 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
             this.assignedSplits = assignedSplits;
         }
 
-        @Override @Nonnull
+        @Override
+        @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, assignedSplits);
             InputFormat inputFormat = jobConf.getInputFormat();
+            Processor noopProcessor = Processors.noopP().get();
 
             return processorToSplits
                     .values().stream()
                     .map(splits -> splits.isEmpty()
-                            ? Processors.noopP().get()
+                            ? noopProcessor
                             : new ReadHdfsOldApiP<>(splits.stream()
                                                           .map(IndexedInputSplit::getOldSplit)
                                                           .map(split -> uncheckCall(() ->
