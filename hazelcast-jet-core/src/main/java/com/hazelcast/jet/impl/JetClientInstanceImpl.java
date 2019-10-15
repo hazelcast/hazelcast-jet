@@ -22,7 +22,7 @@ import com.hazelcast.client.impl.clientside.ClientMessageDecoder;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
-import com.hazelcast.client.impl.protocol.codec.MetricsReadMetricsCodec;
+import com.hazelcast.client.impl.protocol.codec.MCReadMetricsCodec;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Cluster;
@@ -62,7 +62,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     private final SerializationService serializationService;
 
     private final ClientMessageDecoder decodeMetricsResponse = (ClientMessageDecoder<MetricsResultSet>) msg -> {
-        MetricsReadMetricsCodec.ResponseParameters response = MetricsReadMetricsCodec.decodeResponse(msg);
+        MCReadMetricsCodec.ResponseParameters response = MCReadMetricsCodec.decodeResponse(msg);
         return new MetricsResultSet(response.nextSequence, response.elements);
     };
 
@@ -101,7 +101,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
      */
     @Nonnull
     public CompletableFuture<MetricsResultSet> readMetricsAsync(Member member, long startSequence) {
-        ClientMessage request = MetricsReadMetricsCodec.encodeRequest(member.getUuid(), startSequence);
+        ClientMessage request = MCReadMetricsCodec.encodeRequest(member.getUuid(), startSequence);
         ClientInvocation invocation = new ClientInvocation(client, request, null, member.getAddress());
         return new ClientDelegatingFuture<>(
                 invocation.invoke(), serializationService, decodeMetricsResponse, false

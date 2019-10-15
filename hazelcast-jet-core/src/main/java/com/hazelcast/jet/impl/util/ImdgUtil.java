@@ -19,70 +19,41 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConfigXmlGenerator;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
-import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
-import com.hazelcast.client.impl.protocol.ClientMessage;
-import com.hazelcast.client.impl.protocol.codec.MapPutAllCodec;
 import com.hazelcast.client.impl.proxy.ClientMapProxy;
-import com.hazelcast.client.impl.proxy.NearCachedClientMapProxy;
-import com.hazelcast.client.impl.spi.ClientPartitionService;
-import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.internal.nearcache.NearCache;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.internal.nio.BufferObjectDataOutput;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.util.function.BiFunctionEx;
 import com.hazelcast.internal.util.function.FunctionEx;
 import com.hazelcast.internal.util.function.PredicateEx;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.map.impl.MapEntries;
 import com.hazelcast.map.impl.proxy.MapProxyImpl;
-import com.hazelcast.map.impl.proxy.NearCachedMapProxyImpl;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
-import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.spi.impl.operationservice.OperationFactory;
-import com.hazelcast.spi.partition.IPartitionService;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractList;
-import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
-import static com.hazelcast.internal.util.Preconditions.checkNotNull;
-import static com.hazelcast.map.impl.MapService.SERVICE_NAME;
-import static java.lang.Math.ceil;
-import static java.lang.Math.log10;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toList;
 
 public final class ImdgUtil {
-    private static final float PUT_ALL_INITIAL_SIZE_MAGIC = 20f;
     private static final int BUFFER_SIZE = 1 << 15;
 
     private ImdgUtil() {
@@ -168,177 +139,12 @@ public final class ImdgUtil {
         }
 
         if (targetIMap instanceof MapProxyImpl) {
-            return mapPutAllAsync((MapProxyImpl<K, V>) targetIMap, items);
+            return ((MapProxyImpl<K, V>) targetIMap).putAllAsync(items);
         } else if (targetIMap instanceof ClientMapProxy) {
-            return mapPutAllAsync((ClientMapProxy<K, V>) targetIMap, items);
+            return  ((ClientMapProxy<K, V>) targetIMap).putAllAsync(items);
         } else {
             throw new RuntimeException("Unexpected map class: " + targetIMap.getClass().getName());
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <K, V> CompletionStage<Void> mapPutAllAsync(
-            @Nonnull MapProxyImpl<K, V> targetMap,
-            @Nonnull Map<? extends K, ? extends V> items
-    ) {
-        NodeEngine nodeEngine = targetMap.getNodeEngine();
-        SerializationService serializationService = nodeEngine.getSerializationService();
-        IPartitionService partitionService = nodeEngine.getPartitionService();
-        Map<Address, List<Integer>> memberPartitionsMap = partitionService.getMemberPartitionsMap();
-
-        MapEntries[] entries = new MapEntries[partitionService.getPartitionCount()];
-        // this is an educated guess for the initial size of the entries per partition, depending on the map size
-        int initialSize = (int) ceil(PUT_ALL_INITIAL_SIZE_MAGIC * items.size() /
-                partitionService.getPartitionCount() / log10(items.size()));
-
-        for (Entry<? extends K, ? extends V> entry : items.entrySet()) {
-            checkNotNull(entry.getKey(), "Null key is not allowed");
-            checkNotNull(entry.getValue(), "Null value is not allowed");
-
-            Data keyData = serializationService.toData(entry.getKey(), targetMap.getPartitionStrategy());
-            int partitionId = partitionService.getPartitionId(keyData);
-            MapEntries partitionEntries = entries[partitionId];
-            if (partitionEntries == null) {
-                partitionEntries = new MapEntries(initialSize);
-                entries[partitionId] = partitionEntries;
-            }
-
-            partitionEntries.add(keyData, serializationService.toData(entry.getValue()));
-        }
-
-        int[] subPartitions = new int[memberPartitionsMap.values().stream().mapToInt(List::size).max().orElse(0)];
-        MapEntries[] subEntries = new MapEntries[subPartitions.length];
-        final CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-        BiConsumer consumer = createPutAllConsumer(
-                memberPartitionsMap.size(),
-                targetMap instanceof NearCachedMapProxyImpl ? ((NearCachedMapProxyImpl) targetMap).getNearCache() : null,
-                items.keySet(),
-                Stream.of(entries).filter(Objects::nonNull).flatMap(e -> e.entries().stream()).map(Entry::getKey),
-                resultFuture);
-
-        for (Entry<Address, List<Integer>> entry : memberPartitionsMap.entrySet()) {
-            List<Integer> memberPartitions = entry.getValue();
-            int count = 0;
-            for (int partitionId : memberPartitions) {
-                if (entries[partitionId] != null) {
-                    subPartitions[count] = partitionId;
-                    subEntries[count] = entries[partitionId];
-                    count++;
-                }
-            }
-            if (count == 0) {
-                consumer.accept(null, null);
-                continue;
-            }
-            int[] subPartitionsTrimmed = Arrays.copyOf(subPartitions, count);
-            MapEntries[] subEntriesTrimmed = Arrays.copyOf(subEntries, count);
-
-            if (count > 0) {
-                OperationFactory factory = targetMap.getOperationProvider().createPutAllOperationFactory(
-                        targetMap.getName(), subPartitionsTrimmed, subEntriesTrimmed);
-                targetMap.getOperationService().invokeOnPartitionsAsync(SERVICE_NAME, factory,
-                        asIntegerList(subPartitionsTrimmed))
-                         .whenComplete(consumer);
-            }
-        }
-
-        return resultFuture;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <K, V> CompletionStage<Void> mapPutAllAsync(
-            ClientMapProxy<K, V> targetMap,
-            Map<? extends K, ? extends V> items
-    ) {
-        if (items.isEmpty()) {
-            return completedFuture(null);
-        }
-        checkNotNull(targetMap, "Null argument map is not allowed");
-        ClientPartitionService partitionService = targetMap.getContext().getPartitionService();
-        int partitionCount = partitionService.getPartitionCount();
-        Map<Integer, List<Map.Entry<Data, Data>>> entryMap = new HashMap<>(partitionCount);
-        InternalSerializationService serializationService = targetMap.getContext().getSerializationService();
-
-        for (Entry<? extends K, ? extends V> entry : items.entrySet()) {
-            checkNotNull(entry.getKey(), "Null key is not allowed");
-            checkNotNull(entry.getValue(), "Null value is not allowed");
-
-            Data keyData = serializationService.toData(entry.getKey());
-            int partitionId = partitionService.getPartitionId(keyData);
-            entryMap
-                    .computeIfAbsent(partitionId, k -> new ArrayList<>())
-                    .add(new AbstractMap.SimpleEntry<>(keyData, serializationService.toData(entry.getValue())));
-        }
-
-        HazelcastClientInstanceImpl client = (HazelcastClientInstanceImpl) targetMap.getContext().getHazelcastInstance();
-        CompletableFuture<Void> resultFuture = new CompletableFuture<>();
-
-        BiConsumer consumer = createPutAllConsumer(
-                entryMap.size(),
-                targetMap instanceof NearCachedClientMapProxy ? ((NearCachedClientMapProxy) targetMap).getNearCache()
-                        : null,
-                items.keySet(),
-                entryMap.values().stream().flatMap(List::stream).map(Entry::getKey),
-                resultFuture);
-
-        for (Entry<Integer, List<Map.Entry<Data, Data>>> partitionEntries : entryMap.entrySet()) {
-            Integer partitionId = partitionEntries.getKey();
-            // use setAsync if there's only one entry
-            if (partitionEntries.getValue().size() == 1) {
-                Entry<Data, Data> onlyEntry = partitionEntries.getValue().get(0);
-                // cast to raw so that we can pass serialized key and value
-                ((IMap) targetMap).setAsync(onlyEntry.getKey(), onlyEntry.getValue())
-                                  .whenComplete(consumer);
-            } else {
-                ClientMessage request = MapPutAllCodec.encodeRequest(targetMap.getName(), partitionEntries.getValue());
-                new ClientInvocation(client, request, targetMap.getName(), partitionId).invoke().whenComplete(consumer);
-            }
-        }
-        return resultFuture;
-    }
-
-    private static BiConsumer<Object, Throwable> createPutAllConsumer(
-            int participantCount,
-            @Nullable NearCache<Object, Object> nearCache,
-            @Nonnull Set<?> nonSerializedKeys,
-            @Nonnull Stream<Data> serializedKeys,
-            CompletableFuture<Void> resultFuture
-    ) {
-        AtomicInteger completionCounter = new AtomicInteger(participantCount);
-        return (response, throwable) -> {
-            if (throwable != null) {
-                resultFuture.completeExceptionally(throwable);
-            } else {
-                if (completionCounter.decrementAndGet() > 0) {
-                    return;
-                }
-
-                if (nearCache != null) {
-                    if (nearCache.isSerializeKeys()) {
-                        serializedKeys.forEach(nearCache::invalidate);
-                    } else {
-                        for (Object key : nonSerializedKeys) {
-                            nearCache.invalidate(key);
-                        }
-                    }
-                }
-                resultFuture.complete(null);
-            }
-        };
-    }
-
-    private static List<Integer> asIntegerList(int[] array) {
-        return new AbstractList<Integer>() {
-            @Override
-            public Integer get(int index) {
-                return array[index];
-            }
-
-            @Override
-            public int size() {
-                return array.length;
-            }
-        };
     }
 
     @Nonnull

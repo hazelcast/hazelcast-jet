@@ -22,6 +22,8 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.util.ImdgUtil;
+import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -32,24 +34,26 @@ import java.util.function.BiConsumer;
 
 import static com.hazelcast.jet.impl.connector.HazelcastWriters.handleInstanceNotActive;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.Util.tryIncrement;
 
 public abstract class AsyncHazelcastWriterP implements Processor {
 
     static final int MAX_PARALLEL_ASYNC_OPS_DEFAULT = 1000;
 
+    private final ILogger logger = Logger.getLogger(AsyncHazelcastWriterP.class);
     private final int maxParallelAsyncOps;
     private final AtomicInteger numConcurrentOps = new AtomicInteger();
     private final AtomicReference<Throwable> firstError = new AtomicReference<>();
     private final HazelcastInstance instance;
     private final boolean isLocal;
 
-    private final BiConsumer<Void, Throwable> callback = (response, t) -> {
+    private final BiConsumer callback = withTryCatch(logger, (response, t) -> {
         numConcurrentOps.decrementAndGet();
         if (t != null) {
             firstError.compareAndSet(null, t);
         }
-    };
+    });
 
     AsyncHazelcastWriterP(HazelcastInstance instance, int maxParallelAsyncOps) {
         this.instance = instance;
