@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.hadoop.cloud;
+package com.hazelcast.jet.examples.hadoop.cloud.avro;
 
-import com.hazelcast.jet.examples.hadoop.HadoopWordCount;
+import com.hazelcast.jet.examples.hadoop.HadoopAvro;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
- * Word count example adapted to read from and write to Azure Cloud Storage
- * using HDFS source and sink.
+ * A simple example adapted to read from and write to Azure Cloud Storage using
+ * HDFS source and sink. The example uses Apache Avro input and output format.
  * <p>
- * The job reads objects from the given container {@link #CONTAINER_NAME} and
- * writes the word count results to a folder inside that container.
+ * The job reads records from the given bucket {@link #CONTAINER_NAME}, filters
+ * according to a field of the record and writes back the records to a folder
+ * inside that bucket.
  * <p>
  * To be able to read from and write to Azure Cloud Storage, HDFS needs {@code
  * hadoop-azure} as dependency and an access key of a Storage Account.
@@ -33,12 +34,12 @@ import org.apache.hadoop.mapred.JobConf;
  * @see <a href="https://hadoop.apache.org/docs/r3.0.3/hadoop-azure/index.html">
  * Hadoop Azure Support</a> for more information
  */
-public class AzureCloudStorageExample {
+public class AzureCloudStorageAvro {
 
     private static final String ACCESS_KEY = "";
 
     private static final String ACCOUNT_NAME = "";
-    private static final String CONTAINER_NAME = "jet-azure-hdfs-example-container";
+    private static final String CONTAINER_NAME = "jet-azure-hdfs-avro-container";
 
     public static void main(String[] args) throws Exception {
         Path inputPath = new Path("wasbs://" + CONTAINER_NAME + "@" + ACCOUNT_NAME + ".blob.core.windows.net/");
@@ -47,6 +48,6 @@ public class AzureCloudStorageExample {
         JobConf jobConf = new JobConf();
         jobConf.set("fs.azure.account.key." + ACCOUNT_NAME + ".blob.core.windows.net", ACCESS_KEY);
 
-        HadoopWordCount.executeSample(jobConf, inputPath, outputPath);
+        HadoopAvro.executeSample(jobConf, inputPath, outputPath);
     }
 }

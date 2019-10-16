@@ -37,7 +37,7 @@ import org.apache.hadoop.mapred.JobConf;
  * @see <a href="https://hadoop.apache.org/docs/r3.0.3/hadoop-aws/tools/hadoop-aws/index.html">
  *     Hadoop-AWS Module</a> for more information
  */
-public class AmazonS3Example {
+public class AmazonS3 {
 
     private static final String ACCESS_KEY = "";
     private static final String SECRET_KEY = "";

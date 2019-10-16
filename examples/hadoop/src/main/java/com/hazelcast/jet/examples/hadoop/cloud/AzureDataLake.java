@@ -35,7 +35,7 @@ import org.apache.hadoop.mapred.JobConf;
  * @see <a href="https://hadoop.apache.org/docs/r3.0.3/hadoop-azure-datalake/index.html">
  * Hadoop Azure Data Lake Support</a> for more information
  */
-public class AzureDataLakeExample {
+public class AzureDataLake {
 
 
     private static final String ACCOUNT_NAME = "";

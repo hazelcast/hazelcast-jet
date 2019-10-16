@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.hadoop.avro;
+package com.hazelcast.jet.examples.hadoop;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
@@ -58,39 +58,35 @@ public class HadoopAvro {
     }
 
     public static void main(String[] args) throws Exception {
-        new HadoopAvro().go();
-    }
-
-    private void go() throws Exception {
-        try {
-            createAvroFile();
-            JetInstance jet = Jet.newJetInstance();
-
-            JobConf jobConfig = createJobConfig();
-            jet.newJob(buildPipeline(jobConfig)).join();
-
-        } finally {
-            Jet.shutdownAll();
-        }
-    }
-
-    private JobConf createJobConfig() throws IOException {
         Path inputPath = new Path(INPUT_PATH);
         Path outputPath = new Path(OUTPUT_PATH);
 
         FileSystem.get(new Configuration()).delete(outputPath, true);
 
-        JobConf jobConfig = new JobConf();
-        jobConfig.setInputFormat(AvroInputFormat.class);
-        jobConfig.setOutputFormat(AvroOutputFormat.class);
-        AvroOutputFormat.setOutputPath(jobConfig, outputPath);
-        AvroInputFormat.addInputPath(jobConfig, inputPath);
-        jobConfig.set(AvroJob.OUTPUT_SCHEMA, User.SCHEMA.toString());
-        jobConfig.set(AvroJob.INPUT_SCHEMA, User.SCHEMA.toString());
-        return jobConfig;
+        createAvroFile();
+
+        executeSample(new JobConf(), inputPath, outputPath);
     }
 
-    private void createAvroFile() throws IOException {
+    public static void executeSample(JobConf jobConf, Path inputPath, Path outputPath) {
+        try {
+            JetInstance jet = Jet.newJetInstance();
+            Jet.newJetInstance();
+
+            jobConf.setInputFormat(AvroInputFormat.class);
+            jobConf.setOutputFormat(AvroOutputFormat.class);
+            AvroOutputFormat.setOutputPath(jobConf, outputPath);
+            AvroInputFormat.addInputPath(jobConf, inputPath);
+            jobConf.set(AvroJob.OUTPUT_SCHEMA, User.SCHEMA.toString());
+            jobConf.set(AvroJob.INPUT_SCHEMA, User.SCHEMA.toString());
+
+            jet.newJob(buildPipeline(jobConf)).join();
+        } finally {
+            Jet.shutdownAll();
+        }
+    }
+
+    private static void createAvroFile() throws IOException {
         Path inputPath = new Path(INPUT_PATH);
         FileSystem fs = FileSystem.get(new Configuration());
         fs.delete(inputPath, true);

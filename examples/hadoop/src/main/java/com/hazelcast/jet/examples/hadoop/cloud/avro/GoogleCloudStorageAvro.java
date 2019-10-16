@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.hadoop.cloud;
+package com.hazelcast.jet.examples.hadoop.cloud.avro;
 
-import com.hazelcast.jet.examples.hadoop.HadoopWordCount;
+import com.hazelcast.jet.examples.hadoop.HadoopAvro;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 
 /**
- * Word count example adapted to read from and write to Google Cloud Storage
- * using HDFS source and sink.
+ * A simple example adapted to read from and write to Google Cloud Storage
+ * using HDFS source and sink. The example uses Apache Avro input and output
+ * format.
  * <p>
- * The job reads objects from the given bucket {@link #BUCKET_NAME} and writes
- * the word count results to a folder inside that bucket.
+ * The job reads records from the given bucket {@link #BUCKET_NAME}, filters
+ * according to a field of the record and writes back the records to a folder
+ * inside that bucket.
  * <p>
  * To be able to read from and write to Google Cloud Storage, HDFS needs couple
  * of dependencies and the json key file for GCS. Necessary dependencies:
@@ -37,11 +39,11 @@ import org.apache.hadoop.mapred.JobConf;
  * @see <a href="https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage">
  *     Google Cloud Storage Connector</a> for more information
  */
-public class GoogleCloudStorageExample {
+public class GoogleCloudStorageAvro {
 
     private static final String JSON_KEY_FILE = "path-to-the-json-key-file";
 
-    private static final String BUCKET_NAME = "jet-s3-hdfs-example-bucket";
+    private static final String BUCKET_NAME = "jet-gcs-hdfs-avro-bucket";
 
     public static void main(String[] args) throws Exception {
         Path inputPath = new Path("gs://" + BUCKET_NAME + "/");
@@ -52,6 +54,6 @@ public class GoogleCloudStorageExample {
         jobConf.set("fs.gs.auth.service.account.enable", "true");
         jobConf.set("fs.gs.auth.service.account.json.keyfile", JSON_KEY_FILE);
 
-        HadoopWordCount.executeSample(jobConf, inputPath, outputPath);
+        HadoopAvro.executeSample(jobConf, inputPath, outputPath);
     }
 }
