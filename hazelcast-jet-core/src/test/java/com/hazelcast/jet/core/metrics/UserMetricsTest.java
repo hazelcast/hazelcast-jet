@@ -18,6 +18,7 @@ package com.hazelcast.jet.core.metrics;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -36,9 +37,6 @@ public class UserMetricsTest extends JetTestSupport {
 
     private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
-    private static final String DROPPED = "dropped";
-    private static final String TOTAL = "total";
-
     private JetInstance instance;
     private Pipeline pipeline;
 
@@ -49,13 +47,13 @@ public class UserMetricsTest extends JetTestSupport {
     }
 
     @Test
-    public void non_usage() {
+    public void counter_not_used() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .filter(l -> {
                     boolean pass = l % 2 == 0;
 
                     if (!pass) {
-                        UserMetrics.get(DROPPED); //retrieve "dropped" counter, but never use it
+                        UserMetrics.getCounter("dropped"); //retrieve "dropped" counter, but never use it
                     }
                     //not even retrieve "total" counter
 
@@ -63,26 +61,72 @@ public class UserMetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced(DROPPED, 0, TOTAL, null);
+        assertCountersProduced("dropped", 0, "total", null);
     }
 
     @Test
-    public void filter() {
+    public void counter() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .filter(l -> {
                     boolean pass = l % 2 == 0;
 
                     if (!pass) {
-                        Counter dropped = UserMetrics.get(DROPPED);
-                        dropped.increment();
+                        Counter dropped = UserMetrics.getCounter("dropped");
+                        dropped.inc();
                     }
-                    UserMetrics.get(TOTAL).increment();
+                    UserMetrics.getCounter("total").inc();
 
                     return pass;
                 })
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced(DROPPED, 2, TOTAL, 5);
+        assertCountersProduced("dropped", 2, "total", 5);
+    }
+
+    @Test
+    public void gauge() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .mapStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    Gauge gauge = UserMetrics.getGauge("sum", Unit.COUNT);
+                    gauge.set(acc.get());
+                    return acc.get();
+                })
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced("sum", 10);
+    }
+
+    @Test
+    public void gauge_not_used() {
+        pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .mapStateful(LongAccumulator::new, (acc, i) -> {
+                    acc.add(i);
+                    UserMetrics.getGauge("sum", Unit.COUNT);
+                    return acc.get();
+                })
+                .drainTo(Sinks.logger());
+
+        assertCountersProduced("sum", 0L);
+    }
+
+    @Test
+    public void metrics_disabled() {
+        Long[] input = {0L, 1L, 2L, 3L, 4L};
+        pipeline.drawFrom(TestSources.items(input))
+                .map(l -> {
+                    UserMetrics.getCounter("mapped").inc();
+                    UserMetrics.getGauge("total", Unit.COUNT).set(input.length);
+                    return l;
+                })
+                .drainTo(Sinks.logger());
+
+        Job job = instance.newJob(pipeline, new JobConfig().setMetricsEnabled(false));
+        job.join();
+
+        JobMetrics metrics = job.getMetrics();
+        assertTrue(metrics.get("mapped").isEmpty());
+        assertTrue(metrics.get("total").isEmpty());
     }
 
     private void assertCountersProduced(Object... expected) {

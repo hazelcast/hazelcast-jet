@@ -27,7 +27,6 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.metrics.UserMetricsContext;
-import com.hazelcast.jet.impl.metrics.UserMetricsImp;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -164,7 +163,7 @@ public class ProcessorTasklet implements Tasklet {
             registerMetrics(instreams, probeBuilder);
         }
 
-        this.userMetricsContext = new UserMetricsContext(probeBuilder, this, ProbeLevel.INFO, ProbeUnit.MS);
+        this.userMetricsContext = new UserMetricsContext(probeBuilder, this, ProbeLevel.INFO);
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
@@ -237,17 +236,10 @@ public class ProcessorTasklet implements Tasklet {
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
-
-        if (!processor.isCooperative()) {
-            UserMetricsImp.set(userMetricsContext);
-        }
     }
 
     @Override @Nonnull
     public ProgressState call() {
-        if (processor.isCooperative()) {
-            UserMetricsImp.set(userMetricsContext);
-        }
         assert !processorClosed : "processor closed";
         progTracker.reset();
         outbox.reset();
@@ -256,9 +248,6 @@ public class ProcessorTasklet implements Tasklet {
         if (progressState.isDone()) {
             closeProcessor();
             processorClosed = true;
-        }
-        if (processor.isCooperative()) {
-            UserMetricsImp.set(null);
         }
         return progressState;
     }
@@ -271,6 +260,10 @@ public class ProcessorTasklet implements Tasklet {
             logger.severe(jobNameAndExecutionId(context.jobConfig().getName(), context.executionId())
                     + " encountered an exception in Processor.close(), ignoring it", e);
         }
+    }
+
+    public UserMetricsContext getUserMetricsContext() {
+        return userMetricsContext;
     }
 
     @SuppressWarnings("checkstyle:returncount")

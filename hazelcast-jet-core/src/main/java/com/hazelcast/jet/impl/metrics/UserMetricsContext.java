@@ -21,73 +21,107 @@ import com.hazelcast.internal.metrics.ProbeBuilder;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.core.metrics.Counter;
+import com.hazelcast.jet.core.metrics.Gauge;
+import com.hazelcast.jet.core.metrics.Unit;
 import com.hazelcast.jet.impl.execution.ProcessorTasklet;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.function.Function;
 
 public class UserMetricsContext {
 
-    private final Function<String, Counter> counterSupplier;
+    private final ProbeBuilder probeBuilder;
+    private final ProcessorTasklet source;
+    private final ProbeLevel level;
 
-    private String onlyMetric;
-    private Counter onlyCounter;
-    private Map<String, Counter> metrics;
+    private String onlyName;
+    private Metric onlyMetric;
+    private Map<String, Metric> metrics;
 
-    public UserMetricsContext(ProbeBuilder probeBuilder, ProcessorTasklet source, ProbeLevel level, ProbeUnit unit) {
-        this.counterSupplier = metric -> {
-            if (probeBuilder == null) {
-                // used when metrics are disabled
-                return new NonRegisteredCounter(metric);
-            } else {
-                RegisteredCounter counter = new RegisteredCounter(metric);
-                probeBuilder.register(source, metric, level, unit,
-                        (LongProbeFunction<ProcessorTasklet>) t -> counter.get());
-                return counter;
-            }
-        };
+    public UserMetricsContext(ProbeBuilder probeBuilder, ProcessorTasklet source, ProbeLevel level) {
+        this.probeBuilder = probeBuilder;
+        this.source = source;
+        this.level = level;
     }
 
-    Counter get(String metric) {
-        Counter res = null;
-        if (metric.equals(onlyMetric)) {
-            res = onlyCounter;
+    Counter getCounter(String name) {
+        return getMetric(name, Unit.COUNT);
+    }
+
+    Gauge getGauge(String name, Unit unit) {
+        return getMetric(name, unit);
+    }
+
+    private Metric getMetric(String name, Unit unit) {
+        Metric res = null;
+        if (name.equals(onlyName)) {
+            res = onlyMetric;
         } else if (metrics != null) {
-            res = metrics.get(metric);
+            res = metrics.get(name);
         }
         // register metric on first use
         if (res == null) {
-            res = counterSupplier.apply(metric);
-            if (onlyMetric == null) {
+            res = initMetric(name, unit);
+            if (onlyName == null) {
                 // the first and so far the only metric
-                onlyMetric = metric;
-                onlyCounter = res;
+                onlyName = name;
+                onlyMetric = res;
             } else {
                 // 2 or more metrics
                 if (metrics == null) {
                     metrics = new HashMap<>();
-                    metrics.put(onlyMetric, onlyCounter);
+                    metrics.put(onlyName, onlyMetric);
+                    onlyName = null;
                     onlyMetric = null;
-                    onlyCounter = null;
                 }
-                metrics.put(metric, res);
+                metrics.put(name, res);
             }
         }
         return res;
     }
 
-    private static final class RegisteredCounter implements Counter {
+    private Metric initMetric(String name, Unit unit) {
+        if (probeBuilder == null) {
+            // used when metrics are disabled
+            return new NonRegisteredMetric(name);
+        } else {
+            RegisteredMetric metric = new RegisteredMetric(name);
+            LongProbeFunction<ProcessorTasklet> longProbeFunction = t -> metric.get();
+            probeBuilder.register(source, name, level, toProbeUnit(unit), longProbeFunction);
+            return metric;
+        }
+    }
 
-        private static final AtomicLongFieldUpdater<RegisteredCounter> VOLATILE_VALUE_UPDATER =
-                AtomicLongFieldUpdater.newUpdater(RegisteredCounter.class, "value");
+    private ProbeUnit toProbeUnit(Unit unit) {
+        switch (unit) {
+            case COUNT:
+                return ProbeUnit.COUNT;
+            case MS:
+                return ProbeUnit.MS;
+            case BYTES:
+                return ProbeUnit.BYTES;
+            default:
+                throw new RuntimeException("Unhandled metrics unit " + unit);
+        }
+    }
+
+    private interface Metric extends Counter, Gauge {
+
+        long get();
+
+    }
+
+    private static final class RegisteredMetric implements Metric {
+
+        private static final AtomicLongFieldUpdater<RegisteredMetric> VOLATILE_VALUE_UPDATER =
+                AtomicLongFieldUpdater.newUpdater(RegisteredMetric.class, "value");
 
         private final String name;
         private volatile long value;
 
-        RegisteredCounter(String name) {
+        RegisteredMetric(String name) {
             this.name = name;
         }
 
@@ -102,7 +136,7 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void increment() {
+        public void inc() {
             VOLATILE_VALUE_UPDATER.lazySet(this, value + 1);
         }
 
@@ -112,12 +146,12 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void decrement() {
+        public void dec() {
             VOLATILE_VALUE_UPDATER.lazySet(this, value - 1);
         }
 
         @Override
-        public void subtract(long decrement) {
+        public void sub(long decrement) {
             VOLATILE_VALUE_UPDATER.lazySet(this, value - decrement);
         }
 
@@ -127,12 +161,12 @@ public class UserMetricsContext {
         }
     }
 
-    private static final class NonRegisteredCounter implements Counter {
+    private static final class NonRegisteredMetric implements Metric {
 
         private final String name;
         private long value;
 
-        NonRegisteredCounter(String name) {
+        NonRegisteredMetric(String name) {
             this.name = name;
         }
 
@@ -147,7 +181,7 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void increment() {
+        public void inc() {
             this.value++;
         }
 
@@ -157,12 +191,12 @@ public class UserMetricsContext {
         }
 
         @Override
-        public void decrement() {
+        public void dec() {
             this.value--;
         }
 
         @Override
-        public void subtract(long decrement) {
+        public void sub(long decrement) {
             this.value -= decrement;
         }
 

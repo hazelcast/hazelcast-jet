@@ -19,15 +19,15 @@ package com.hazelcast.jet.core.metrics;
 import javax.annotation.Nonnull;
 
 /**
- * A counter-like handler for manipulating one user-defined metric.
+ * A measurement-like handler for manipulating one user-defined metric.
  * <p>
  * Metrics are, in essence just simple integer values, but their semantics
  * can differ from case-to-case. This representation should be used for
- * metrics that are meant for counting things.
+ * metrics that are meant to represent things that get measured.
  * <p>
- * To obtain an instance, use {@link UserMetrics#getCounter}.
+ * To obtain an instance, use {@link UserMetrics#getGauge}.
  */
-public interface Counter {
+public interface Gauge {
 
     /**
      * Returns the name of the associated metric.
@@ -36,22 +36,7 @@ public interface Counter {
     String name();
 
     /**
-     * Increments the current value by 1.
+     * Sets the metric to the specified value.
      */
-    void inc();
-
-    /**
-     * Increments the current value by the specified amount.
-     */
-    void add(long amount);
-
-    /**
-     * Decrements the current value by 1.
-     */
-    void dec();
-
-    /**
-     * Decrements the current value by the specified amount.
-     */
-    void sub(long amount);
+    void set(long newValue);
 }

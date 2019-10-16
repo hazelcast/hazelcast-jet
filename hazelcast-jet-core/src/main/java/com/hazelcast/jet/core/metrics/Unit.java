@@ -14,24 +14,21 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.metrics;
+package com.hazelcast.jet.core.metrics;
 
-import com.hazelcast.jet.core.metrics.Counter;
-
-public final class UserMetricsImp {
-
-    private static final ThreadLocal<UserMetricsContext> CONTEXT = new ThreadLocal<>();
-
-    private UserMetricsImp() {
-    }
-
-    public static void set(UserMetricsContext context) {
-        CONTEXT.set(context);
-    }
-
-    public static Counter get(String name) {
-        UserMetricsContext context = CONTEXT.get();
-        return context.get(name);
-    }
-
+/**
+ * Measurement unit of user metric gauges (see {@link Gauge}). Meant to
+ * provide further information on the type of value measured by user
+ * metrics.
+ * <p>
+ * The unit values will end up populating the metric tag
+ * {@link MetricTags#UNIT}.
+ */
+public enum Unit {
+    /** Size, counter, represented in bytes */
+    BYTES,
+    /** Timestamp or duration represented in ms */
+    MS,
+    /** Number of items: size, counter... */
+    COUNT,
 }

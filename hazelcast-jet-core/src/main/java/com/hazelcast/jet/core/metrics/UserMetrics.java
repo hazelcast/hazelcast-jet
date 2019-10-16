@@ -16,21 +16,43 @@
 
 package com.hazelcast.jet.core.metrics;
 
-import com.hazelcast.jet.impl.metrics.UserMetricsImp;
+import com.hazelcast.jet.impl.metrics.UserMetricsImpl;
 
 /**
- * TODO: fill in
+ * Utility class for obtaining handler to user-defined metrics.
+ * <p>
+ * User-defined metric are simple numeric values used to count or
+ * measure things, just like the built-in ones, the difference being
+ * that they can be set up by users to measure and count thing
+ * they do in pipeline user code they write.
+ * <p>
+ * This class provides methods for creating various types of handlers
+ * for setting up and manipulating the values of such metrics. There is
+ * a version which makes it possible to count things (see {@link Counter}),
+ * or one that is more generic and can be used to set all types of values,
+ * including counters (see {@link Gauge}).
  */
+@SuppressWarnings("WeakerAccess")
 public final class UserMetrics {
 
     private UserMetrics() {
     }
 
     /**
-     * TODO: fill in
+     * Returns a counter type handler for manipulating the metric with
+     * the specified name. Is equivalent with a gauge of the unit
+     * {@link Unit#COUNT}.
      */
-    public static Counter get(String name) {
-        return UserMetricsImp.get(name);
+    public static Counter getCounter(String name) {
+        return UserMetricsImpl.getCounter(name);
+    }
+
+    /**
+     * Returns a gauge type handler for manipulating the metric with the
+     * specified name.
+     */
+    public static Gauge getGauge(String name, Unit unit) {
+        return UserMetricsImpl.getGauge(name, unit);
     }
 
 }

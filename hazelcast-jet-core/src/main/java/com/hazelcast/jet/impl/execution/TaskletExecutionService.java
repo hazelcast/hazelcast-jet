@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.metrics.MetricTags;
+import com.hazelcast.jet.impl.metrics.UserMetricsImpl;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -290,6 +291,7 @@ public class TaskletExecutionService {
 
         private boolean finestLogEnabled;
         private Thread myThread;
+        private UserMetricsImpl.Container userMetricsContextContainer;
 
         CooperativeWorker() {
             this.trackers = new CopyOnWriteArrayList<>();
@@ -298,6 +300,8 @@ public class TaskletExecutionService {
         @Override
         public void run() {
             myThread = currentThread();
+            userMetricsContextContainer = UserMetricsImpl.init();
+
             IdleStrategy idlerLocal = idlerCooperative;
             long idleCount = 0;
 
@@ -324,7 +328,9 @@ public class TaskletExecutionService {
             }
             try {
                 myThread.setContextClassLoader(t.jobClassLoader);
+                userMetricsContextContainer.setContext(t.tasklet);
                 final ProgressState result = t.tasklet.call();
+                userMetricsContextContainer.setContext(null);
                 if (result.isDone()) {
                     dismissTasklet(t);
                 }
