@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.metrics.MetricTagger;
-import com.hazelcast.internal.metrics.MetricsExtractor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
@@ -80,6 +81,7 @@ public class ReceiverTasklet implements Tasklet {
      */
     private final int rwinMultiplier;
     private final double flowControlPeriodNs;
+    private Address sourceAddress;
     private final int ordinal;
     private final String destinationVertexName;
     private final ILogger logger;
@@ -114,11 +116,12 @@ public class ReceiverTasklet implements Tasklet {
     public ReceiverTasklet(
             OutboundCollector collector, int rwinMultiplier, int flowControlPeriodMs,
             LoggingService loggingService,
-            int ordinal, String destinationVertexName
+            Address sourceAddress, int ordinal, String destinationVertexName
     ) {
         this.collector = collector;
         this.rwinMultiplier = rwinMultiplier;
         this.flowControlPeriodNs = (double) MILLISECONDS.toNanos(flowControlPeriodMs);
+        this.sourceAddress = sourceAddress;
         this.ordinal = ordinal;
         this.destinationVertexName = destinationVertexName;
         String loggerName = String.format("%s.receiverFor:%s#%d", getClass().getName(), destinationVertexName, ordinal);
@@ -299,10 +302,11 @@ public class ReceiverTasklet implements Tasklet {
     }
 
     @Override
-    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
+    public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
         tagger = tagger.withTag(MetricTags.VERTEX, destinationVertexName)
+                       .withTag(MetricTags.SOURCE_ADDRESS, sourceAddress.toString())
                        .withTag(MetricTags.ORDINAL, Integer.toString(ordinal));
 
-        extractor.extractMetrics(tagger, this);
+        context.collect(tagger, this);
     }
 }
