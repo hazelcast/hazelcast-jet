@@ -110,8 +110,8 @@ public class JetCommandLine implements Runnable {
     )
     private List<String> addresses;
 
-    @Option(names = {"-g", "--group"},
-            description = "The group name to use when connecting to the cluster " +
+    @Option(names = {"-n", "--cluster-name"},
+            description = "The cluster name to use when connecting to the cluster " +
                     "specified by the <addresses> parameter. ",
             defaultValue = "jet",
             showDefaultValue = Visibility.ALWAYS,
