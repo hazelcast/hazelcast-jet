@@ -58,10 +58,12 @@ public class SenderTasklet implements Tasklet {
     private final InboundEdgeStream inboundEdgeStream;
     private final BufferObjectDataOutput outputBuffer;
     private final int bufPosPastHeader;
-    private Address destinationAddress;
-    private String sourceVertexName;
-    private int sourceOrdinal;
     private final int packetSizeLimit;
+
+    /* Used for metrics */
+    private final Address destinationAddress;
+    private final int sourceOrdinal;
+    private final String sourceVertexName;
 
     @Probe(name = MetricNames.DISTRIBUTED_ITEMS_OUT)
     private final AtomicLong itemsOutCounter = new AtomicLong();

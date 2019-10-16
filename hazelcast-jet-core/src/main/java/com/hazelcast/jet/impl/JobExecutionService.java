@@ -364,7 +364,7 @@ public class JobExecutionService implements DynamicMetricsProvider {
 
     @Override
     public void provideDynamicMetrics(MetricTaggerSupplier taggerSupplier, MetricsCollectionContext context) {
-        MetricTagger tagger = taggerSupplier.getMetricTagger(null)
+        MetricTagger tagger = taggerSupplier.getMetricTagger()
                                             .withTag(MetricTags.MODULE, "jet");
         executionContexts.forEach((id, ctx) -> {
             ctx.collectMetrics(tagger, context);

@@ -38,7 +38,6 @@ public interface Tasklet {
     }
 
     default void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
-
     }
 
 }

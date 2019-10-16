@@ -498,11 +498,10 @@ public class ProcessorTasklet implements Tasklet {
                        .withTag(MetricTags.PROCESSOR_TYPE, this.processor.getClass().getSimpleName())
                        .withTag(MetricTags.PROCESSOR, Integer.toString(this.context.globalProcessorIndex()));
 
-        if (this.instreams.size() == 0 && !VertexDef.isSnapshotVertex(this.context.vertexName())) {
+        if (instreams.size() == 0 && !VertexDef.isSnapshotVertex(this.context.vertexName())) {
             tagger = tagger.withTag(MetricTags.SOURCE, "true");
         }
-        // has only snapshot edge outgoing
-        if (outstreams.length == 1) {
+        if (outstreams.length == 0) {
             tagger = tagger.withTag(MetricTags.SINK, "true");
         }
 

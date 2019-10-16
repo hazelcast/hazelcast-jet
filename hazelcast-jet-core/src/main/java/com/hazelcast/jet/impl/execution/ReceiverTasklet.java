@@ -81,10 +81,12 @@ public class ReceiverTasklet implements Tasklet {
      */
     private final int rwinMultiplier;
     private final double flowControlPeriodNs;
-    private Address sourceAddress;
+    private final ILogger logger;
+
+    /* Used for metrics */
+    private final Address sourceAddress;
     private final int ordinal;
     private final String destinationVertexName;
-    private final ILogger logger;
 
     private final Queue<BufferObjectDataInput> incoming = new MPSCQueue<>(null);
     private final ProgressTracker tracker = new ProgressTracker();
