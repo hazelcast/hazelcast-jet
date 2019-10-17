@@ -40,10 +40,13 @@ import javax.jms.MessageProducer;
 import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Queue;
 
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -75,17 +78,18 @@ public class StreamJmsPTest extends JetTestSupport {
         Queue<Object> queue = outbox.queue(0);
 
         // Even though both messages are in queue, the processor might not see them
-        // because it uses `consumer.receiveNoWait()`, so if it's not yet available, it doesn't
-        // block and it should be available later.
+        // because it uses `consumer.receiveNoWait()`, so if they are not available immediately,
+        // it doesn't block and items should be available later.
         // See https://github.com/hazelcast/hazelcast-jet/issues/1010
+        List<Object> actualOutput = new ArrayList<>();
         assertTrueEventually(() -> {
+            outbox.reset();
             processor.complete();
-            assertEquals(message1, queue.poll());
-        });
-        outbox.reset();
-        assertTrueEventually(() -> {
-            processor.complete();
-            assertEquals(message2, queue.poll());
+            Object item = queue.poll();
+            if (item != null) {
+                actualOutput.add(item);
+            }
+            assertEquals(asList(message1, message2), actualOutput);
         });
     }
 
