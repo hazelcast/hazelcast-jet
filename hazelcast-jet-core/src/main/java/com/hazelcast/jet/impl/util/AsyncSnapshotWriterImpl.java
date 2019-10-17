@@ -77,7 +77,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     private long totalChunks;
     private long totalPayloadBytes;
 
-    private BiConsumer<Object, Throwable> putResponseConsumer = putResponseConsumer();
+    private BiConsumer<Object, Throwable> putResponseConsumer = this::consumePutResponse;
 
     public AsyncSnapshotWriterImpl(NodeEngine nodeEngine, SnapshotContext snapshotContext, String vertexName,
                                    int memberIndex, int memberCount) {
@@ -120,19 +120,17 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         usableChunkSize = chunkSize - valueTerminator.length;
     }
 
-    private BiConsumer<Object, Throwable> putResponseConsumer() {
-        return (response, throwable) -> {
-            if (throwable != null) {
-                logger.severe("Error writing to snapshot map", throwable);
-                firstError.compareAndSet(null, throwable);
-                numActiveFlushes.decrementAndGet();
-                numConcurrentAsyncOps.decrementAndGet();
-            } else {
-                assert response == null : "put operation overwrote a previous value: " + response;
-                numActiveFlushes.decrementAndGet();
-                numConcurrentAsyncOps.decrementAndGet();
-            }
-        };
+    private void consumePutResponse(Object response, Throwable throwable) {
+        if (throwable != null) {
+            logger.severe("Error writing to snapshot map", throwable);
+            firstError.compareAndSet(null, throwable);
+            numActiveFlushes.decrementAndGet();
+            numConcurrentAsyncOps.decrementAndGet();
+        } else {
+            assert response == null : "put operation overwrote a previous value: " + response;
+            numActiveFlushes.decrementAndGet();
+            numConcurrentAsyncOps.decrementAndGet();
+        }
     }
 
     @Override
