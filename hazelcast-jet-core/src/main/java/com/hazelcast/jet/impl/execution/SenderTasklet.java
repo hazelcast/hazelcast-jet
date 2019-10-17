@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.metrics.MetricTagger;
-import com.hazelcast.internal.metrics.MetricsExtractor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.Bits;
@@ -58,9 +58,12 @@ public class SenderTasklet implements Tasklet {
     private final InboundEdgeStream inboundEdgeStream;
     private final BufferObjectDataOutput outputBuffer;
     private final int bufPosPastHeader;
-    private Address destinationAddress;
-    private String sourceVertexName;
     private final int packetSizeLimit;
+
+    /* Used for metrics */
+    private final Address destinationAddress;
+    private final int sourceOrdinal;
+    private final String sourceVertexName;
 
     @Probe(name = MetricNames.DISTRIBUTED_ITEMS_OUT)
     private final AtomicLong itemsOutCounter = new AtomicLong();
@@ -80,12 +83,13 @@ public class SenderTasklet implements Tasklet {
             InboundEdgeStream inboundEdgeStream,
             NodeEngine nodeEngine,
             Address destinationAddress,
-            String sourceVertexName,
-            long executionId, int destinationVertexId, int packetSizeLimit
+            int destinationVertexId, int packetSizeLimit, long executionId,
+            String sourceVertexName, int sourceOrdinal
     ) {
         this.inboundEdgeStream = inboundEdgeStream;
         this.destinationAddress = destinationAddress;
         this.sourceVertexName = sourceVertexName;
+        this.sourceOrdinal = sourceOrdinal;
         this.packetSizeLimit = packetSizeLimit;
         // we use Connection directly because we rely on packets not being transparently skipped or reordered
         this.connection = getMemberConnection(nodeEngine, destinationAddress);
@@ -169,7 +173,11 @@ public class SenderTasklet implements Tasklet {
 
     @Override
     public String toString() {
-        return "SenderTasklet " + connection.getEndPoint();
+        return "SenderTasklet{" +
+                "ordinal=" + inboundEdgeStream.ordinal() +
+                ", destinationAddress=" + destinationAddress +
+                ", sourceVertexName='" + sourceVertexName + '\'' +
+                '}';
     }
 
     /**
@@ -183,11 +191,11 @@ public class SenderTasklet implements Tasklet {
     }
 
     @Override
-    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
+    public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
         tagger = tagger.withTag(MetricTags.VERTEX, sourceVertexName)
-                        .withTag(MetricTags.ORDINAL, Integer.toString(inboundEdgeStream.ordinal()))
+                        .withTag(MetricTags.ORDINAL, Integer.toString(sourceOrdinal))
                         .withTag(MetricTags.DESTINATION_ADDRESS, destinationAddress.toString());
 
-        extractor.extractMetrics(tagger, this);
+        context.collect(tagger, this);
     }
 }

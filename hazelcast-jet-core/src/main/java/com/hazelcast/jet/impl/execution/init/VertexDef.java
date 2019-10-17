@@ -82,10 +82,6 @@ public class VertexDef implements IdentifiedDataSerializable {
         return processorSupplier;
     }
 
-    boolean isSnapshotVertex() {
-        return name.startsWith(MasterJobContext.SNAPSHOT_VERTEX_PREFIX);
-    }
-
     /**
      * Returns true in any of the following cases:<ul>
      *     <li>this vertex is a higher-priority source for some of its
@@ -115,6 +111,10 @@ public class VertexDef implements IdentifiedDataSerializable {
             stack.addAll(downstream.outboundEdges);
         }
         return false;
+    }
+
+    public static boolean isSnapshotVertex(String vertexName) {
+        return vertexName.startsWith(MasterJobContext.SNAPSHOT_VERTEX_PREFIX);
     }
 
     @Override

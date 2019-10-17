@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.metrics.MetricTagger;
-import com.hazelcast.internal.metrics.MetricsExtractor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
@@ -113,7 +113,7 @@ public class ExecutionContext {
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
         boolean registerMetrics = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, registerMetrics);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
@@ -270,12 +270,14 @@ public class ExecutionContext {
         this.jobMetrics = jobMetrics;
     }
 
-    public void collectMetrics(MetricTagger tagger, MetricsExtractor extractor) {
-        tagger.withTag(MetricTags.EXECUTION, idToString(executionId));
-        tagger.withTag(MetricTags.JOB, idToString(jobId));
+    public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
+        if (!jobConfig.isMetricsEnabled()) {
+            return;
+        }
+        tagger = tagger.withTag(MetricTags.JOB, idToString(jobId))
+                       .withTag(MetricTags.EXECUTION, idToString(executionId));
         for (Tasklet tasklet : tasklets) {
-            tasklet.collectMetrics(tagger, extractor);
+            tasklet.collectMetrics(tagger, context);
         }
     }
-
 }

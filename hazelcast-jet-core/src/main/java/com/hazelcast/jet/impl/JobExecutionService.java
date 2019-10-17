@@ -25,7 +25,7 @@ import com.hazelcast.internal.cluster.impl.operations.TriggerMemberListPublishOp
 import com.hazelcast.internal.metrics.DynamicMetricsProvider;
 import com.hazelcast.internal.metrics.MetricTagger;
 import com.hazelcast.internal.metrics.MetricTaggerSupplier;
-import com.hazelcast.internal.metrics.MetricsExtractor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -363,11 +363,11 @@ public class JobExecutionService implements DynamicMetricsProvider {
     }
 
     @Override
-    public void provideDynamicMetrics(MetricTaggerSupplier taggerSupplier, MetricsExtractor extractor) {
-        MetricTagger tagger = taggerSupplier.getMetricTagger("jet");
-        tagger.withTag(MetricTags.MODULE, "jet");
+    public void provideDynamicMetrics(MetricTaggerSupplier taggerSupplier, MetricsCollectionContext context) {
+        MetricTagger tagger = taggerSupplier.getMetricTagger()
+                                            .withTag(MetricTags.MODULE, "jet");
         executionContexts.forEach((id, ctx) -> {
-            ctx.collectMetrics(tagger, extractor);
+            ctx.collectMetrics(tagger, context);
         });
     }
 }
