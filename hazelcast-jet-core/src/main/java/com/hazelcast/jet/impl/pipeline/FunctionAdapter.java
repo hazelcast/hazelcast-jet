@@ -328,7 +328,8 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return (C context, JetEvent<T> e) ->
-                flatMapAsyncFn.apply(context, e.payload()).thenApply(trav -> trav.map(re -> jetEvent(e.timestamp(), re)));
+                flatMapAsyncFn.apply(context, e.payload())
+                        .thenApply(trav -> trav == null ? null : trav.map(re -> jetEvent(e.timestamp(), re)));
     }
 
     @Nonnull @Override
