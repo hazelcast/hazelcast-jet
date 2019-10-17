@@ -20,15 +20,28 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ResettableSingletonTraverser;
+import com.hazelcast.jet.core.TestProcessors;
+import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
+import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -61,7 +74,7 @@ public class UserMetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced("dropped", 0, "total", null);
+        assertMetricsProduced(pipeline, "dropped", 0, "total", null);
     }
 
     @Test
@@ -80,7 +93,7 @@ public class UserMetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced("dropped", 2, "total", 5);
+        assertMetricsProduced(pipeline, "dropped", 2, "total", 5);
     }
 
     @Test
@@ -94,7 +107,7 @@ public class UserMetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced("sum", 10);
+        assertMetricsProduced(pipeline, "sum", 10);
     }
 
     @Test
@@ -107,7 +120,28 @@ public class UserMetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertCountersProduced("sum", 0L);
+        assertMetricsProduced(pipeline, "sum", 0L);
+    }
+
+    @Test
+    public void non_cooperative_processor() {
+        DAG dag = new DAG();
+
+        Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(asList(1L, 2L, 3L)));
+        Vertex map = dag.newVertex("map", new NonCoopTransformPSupplier((FunctionEx<Long, Long>) l -> {
+            Counter counter = UserMetrics.getCounter("mapped");
+            counter.inc();
+            return l * 10L;
+        }));
+        Vertex sink = dag.newVertex("sink", writeListP("results"));
+
+        dag.edge(between(source, map)).edge(between(map, sink));
+
+        assertMetricsProduced(dag, "mapped", 3L);
+        assertEquals(
+                new HashSet<>(Arrays.asList(10L, 20L, 30L)),
+                new HashSet<>(instance.getList("results"))
+        );
     }
 
     @Test
@@ -129,20 +163,31 @@ public class UserMetricsTest extends JetTestSupport {
         assertTrue(metrics.get("total").isEmpty());
     }
 
-    private void assertCountersProduced(Object... expected) {
+    private void assertMetricsProduced(Pipeline pipeline, Object... expected) {
         Job job = instance.newJob(pipeline, JOB_CONFIG_WITH_METRICS);
-
         job.join();
 
         JobMetrics metrics = job.getMetrics();
         for (int i = 0; i < expected.length; i += 2) {
             String name = (String) expected[i];
             List<Measurement> measurements = metrics.get(name);
-            assertCounterValue(name, measurements, expected[i + 1]);
+            assertMetricValue(name, measurements, expected[i + 1]);
         }
     }
 
-    private void assertCounterValue(String name, List<Measurement> measurements, Object expected) {
+    private void assertMetricsProduced(DAG dag, Object... expected) {
+        Job job = instance.newJob(dag, JOB_CONFIG_WITH_METRICS);
+        job.join();
+
+        JobMetrics metrics = job.getMetrics();
+        for (int i = 0; i < expected.length; i += 2) {
+            String name = (String) expected[i];
+            List<Measurement> measurements = metrics.get(name);
+            assertMetricValue(name, measurements, expected[i + 1]);
+        }
+    }
+
+    private void assertMetricValue(String name, List<Measurement> measurements, Object expected) {
         if (expected == null) {
             assertTrue(
                     String.format("Did not expect measurements for metric '%s', but there were some", name),
@@ -171,6 +216,29 @@ public class UserMetricsTest extends JetTestSupport {
                         expectedMinValue <= actualValue && actualValue <= expectedMaxValue
                 );
             }
+        }
+    }
+
+    private static class NonCoopTransformPSupplier implements SupplierEx<Processor> {
+
+        private final FunctionEx<Long, Long> mappingFn;
+
+        NonCoopTransformPSupplier(FunctionEx<Long, Long> mappingFn) {
+            this.mappingFn = mappingFn;
+        }
+
+        @Override
+        public Processor getEx() {
+            final ResettableSingletonTraverser<Long> trav = new ResettableSingletonTraverser<>();
+            return new TransformP<Long, Long>(item -> {
+                trav.accept(((FunctionEx<? super Long, ? extends Long>) mappingFn).apply(item));
+                return trav;
+            }) {
+                @Override
+                public boolean isCooperative() {
+                    return false;
+                }
+            };
         }
     }
 

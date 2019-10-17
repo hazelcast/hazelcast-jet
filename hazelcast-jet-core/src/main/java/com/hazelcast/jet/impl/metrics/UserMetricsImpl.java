@@ -24,22 +24,13 @@ import com.hazelcast.jet.impl.execution.Tasklet;
 
 public final class UserMetricsImpl {
 
-    private static final ThreadLocal<Container> CONTEXT = new ThreadLocal<>();
+    private static final ThreadLocal<Container> CONTEXT = ThreadLocal.withInitial(Container::new);
 
     private UserMetricsImpl() {
     }
 
-    public static Container init() {
-        Container container = CONTEXT.get();
-        if (container != null) {
-            throw new IllegalStateException(String.format("Thread-local state for thread %s already initialized",
-                            Thread.currentThread()));
-        }
-
-        container = new Container();
-        CONTEXT.set(container);
-
-        return container;
+    public static Container getContainer() {
+        return CONTEXT.get();
     }
 
     public static Counter getCounter(String name) {
