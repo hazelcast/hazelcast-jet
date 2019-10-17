@@ -157,9 +157,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         String queueName = destinationName;
         StreamSource<String> source = Sources.jmsQueueBuilder(JmsIntegrationTest::getConnectionFactory)
                 .connectionFn(ConnectionFactory::createConnection)
-                .sessionFn(connection -> connection.createSession(false, AUTO_ACKNOWLEDGE))
                 .consumerFn(session -> session.createConsumer(session.createQueue(queueName)))
-                .flushFn(ConsumerEx.noop())
                 .build(TEXT_MESSAGE_FN);
 
         p.readFrom(source).withoutTimestamps().writeTo(sink);
@@ -210,26 +208,6 @@ public class JmsIntegrationTest extends PipelineTestSupport {
     @Test
     public void sourceTopic_whenBuilder() {
         StreamSource<String> source = Sources.jmsTopicBuilder(JmsIntegrationTest::getConnectionFactory)
-                .destinationName(destinationName)
-                .build(TEXT_MESSAGE_FN);
-
-        p.readFrom(source).withoutTimestamps().writeTo(sink);
-
-        startJob(true);
-        sleepSeconds(1);
-
-        List<Object> messages = sendMessages(false);
-        assertEqualsEventually(sinkList::size, messages.size());
-        assertContainsAll(sinkList, messages);
-
-        cancelJob();
-    }
-
-    @Test
-    public void sourceTopic_whenBuilder_withParameters() {
-        StreamSource<String> source = Sources.jmsTopicBuilder(JmsIntegrationTest::getConnectionFactory)
-                .connectionParams(null, null)
-                .sessionParams(false, AUTO_ACKNOWLEDGE)
                 .destinationName(destinationName)
                 .build(TEXT_MESSAGE_FN);
 

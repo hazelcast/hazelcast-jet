@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
@@ -41,6 +40,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.stream.IntStream.range;
+import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 /**
  * Private API. Access via {@link SourceProcessors#streamJmsQueueP} or {@link
@@ -54,9 +54,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
     public static final int PREFERRED_LOCAL_PARALLELISM = 4;
 
     private final Connection connection;
-    private final FunctionEx<? super Connection, ? extends Session> newSessionFn;
     private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
-    private final ConsumerEx<? super Session> flushFn;
     private final FunctionEx<? super Message, ? extends T> projectionFn;
     private final EventTimeMapper<? super T> eventTimeMapper;
 
@@ -64,17 +62,14 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private MessageConsumer consumer;
     private Traverser<Object> traverser;
 
-    StreamJmsP(Connection connection,
-               FunctionEx<? super Connection, ? extends Session> newSessionFn,
-               FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
-               ConsumerEx<? super Session> flushFn,
-               FunctionEx<? super Message, ? extends T> projectionFn,
-               EventTimePolicy<? super T> eventTimePolicy
+    StreamJmsP(
+            Connection connection,
+            FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
+            FunctionEx<? super Message, ? extends T> projectionFn,
+            EventTimePolicy<? super T> eventTimePolicy
     ) {
         this.connection = connection;
-        this.newSessionFn = newSessionFn;
         this.consumerFn = consumerFn;
-        this.flushFn = flushFn;
         this.projectionFn = projectionFn;
 
         eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
@@ -88,28 +83,23 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @Nonnull
     public static <T> ProcessorSupplier supplier(
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
-            @Nonnull FunctionEx<? super Connection, ? extends Session> newSessionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
-            @Nonnull ConsumerEx<? super Session> flushFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy
     ) {
         checkSerializable(newConnectionFn, "newConnectionFn");
-        checkSerializable(newSessionFn, "newSessionFn");
         checkSerializable(consumerFn, "consumerFn");
-        checkSerializable(flushFn, "flushFn");
         checkSerializable(projectionFn, "projectionFn");
 
-        return new Supplier<>(newConnectionFn, newSessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy);
+        return new Supplier<>(newConnectionFn, consumerFn, projectionFn, eventTimePolicy);
     }
 
     @Override
-    protected void init(@Nonnull Context context) {
-        session = newSessionFn.apply(connection);
+    protected void init(@Nonnull Context context) throws Exception {
+        session = connection.createSession(false, AUTO_ACKNOWLEDGE);
         consumer = consumerFn.apply(session);
         traverser = ((Traverser<Message>) () -> uncheckCall(() -> consumer.receiveNoWait()))
-                .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)))
-                .peek(item -> flushFn.accept(session));
+                .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
     }
 
     private static long handleJmsTimestamp(Message msg) {
@@ -142,25 +132,19 @@ public class StreamJmsP<T> extends AbstractProcessor {
         static final long serialVersionUID = 1L;
 
         private final SupplierEx<? extends Connection> newConnectionFn;
-        private final FunctionEx<? super Connection, ? extends Session> sessionFn;
         private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
-        private final ConsumerEx<? super Session> flushFn;
         private final FunctionEx<? super Message, ? extends T> projectionFn;
         private final EventTimePolicy<? super T> eventTimePolicy;
 
         private transient Connection connection;
 
         private Supplier(SupplierEx<? extends Connection> newConnectionFn,
-                         FunctionEx<? super Connection, ? extends Session> sessionFn,
                          FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
-                         ConsumerEx<? super Session> flushFn,
                          FunctionEx<? super Message, ? extends T> projectionFn,
                          EventTimePolicy<? super T> eventTimePolicy
         ) {
             this.newConnectionFn = newConnectionFn;
-            this.sessionFn = sessionFn;
             this.consumerFn = consumerFn;
-            this.flushFn = flushFn;
             this.projectionFn = projectionFn;
             this.eventTimePolicy = eventTimePolicy;
         }
@@ -183,7 +167,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         public Collection<? extends Processor> get(int count) {
             return range(0, count)
                     .mapToObj(i ->
-                            new StreamJmsP<>(connection, sessionFn, consumerFn, flushFn, projectionFn, eventTimePolicy))
+                            new StreamJmsP<>(connection, consumerFn, projectionFn, eventTimePolicy))
                     .collect(Collectors.toList());
         }
     }

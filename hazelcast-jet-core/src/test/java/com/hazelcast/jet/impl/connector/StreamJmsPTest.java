@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor.Context;
@@ -114,12 +113,11 @@ public class StreamJmsPTest extends JetTestSupport {
         processorConnection = getConnectionFactory().createConnection();
         processorConnection.start();
 
-        FunctionEx<Connection, Session> sessionFn = c -> c.createSession(false, Session.AUTO_ACKNOWLEDGE);
         FunctionEx<Session, MessageConsumer> consumerFn = s ->
                 s.createConsumer(isQueue ? s.createQueue(destinationName) : s.createTopic(destinationName));
         FunctionEx<Message, String> textMessageFn = m -> ((TextMessage) m).getText();
         processor = new StreamJmsP<>(
-                processorConnection, sessionFn, consumerFn, ConsumerEx.noop(), textMessageFn, noEventTime());
+                processorConnection, consumerFn, textMessageFn, noEventTime());
         outbox = new TestOutbox(1);
         Context ctx = new TestProcessorContext().setLogger(Logger.getLogger(StreamJmsP.class));
         processor.init(outbox, ctx);
