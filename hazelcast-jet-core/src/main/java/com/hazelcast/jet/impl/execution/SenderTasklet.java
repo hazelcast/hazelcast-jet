@@ -61,8 +61,8 @@ public class SenderTasklet implements Tasklet {
     private final int packetSizeLimit;
 
     /* Used for metrics */
-    private final Address destinationAddress;
-    private final int sourceOrdinal;
+    private final String destinationAddressString;
+    private final String sourceOrdinalString;
     private final String sourceVertexName;
 
     @Probe(name = MetricNames.DISTRIBUTED_ITEMS_OUT)
@@ -87,9 +87,9 @@ public class SenderTasklet implements Tasklet {
             String sourceVertexName, int sourceOrdinal
     ) {
         this.inboundEdgeStream = inboundEdgeStream;
-        this.destinationAddress = destinationAddress;
+        this.destinationAddressString = destinationAddress.toString();
         this.sourceVertexName = sourceVertexName;
-        this.sourceOrdinal = sourceOrdinal;
+        this.sourceOrdinalString = "" + sourceOrdinal;
         this.packetSizeLimit = packetSizeLimit;
         // we use Connection directly because we rely on packets not being transparently skipped or reordered
         this.connection = getMemberConnection(nodeEngine, destinationAddress);
@@ -175,7 +175,7 @@ public class SenderTasklet implements Tasklet {
     public String toString() {
         return "SenderTasklet{" +
                 "ordinal=" + inboundEdgeStream.ordinal() +
-                ", destinationAddress=" + destinationAddress +
+                ", destinationAddress=" + destinationAddressString +
                 ", sourceVertexName='" + sourceVertexName + '\'' +
                 '}';
     }
@@ -193,8 +193,8 @@ public class SenderTasklet implements Tasklet {
     @Override
     public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
         tagger = tagger.withTag(MetricTags.VERTEX, sourceVertexName)
-                        .withTag(MetricTags.ORDINAL, Integer.toString(sourceOrdinal))
-                        .withTag(MetricTags.DESTINATION_ADDRESS, destinationAddress.toString());
+                        .withTag(MetricTags.ORDINAL, sourceOrdinalString)
+                        .withTag(MetricTags.DESTINATION_ADDRESS, destinationAddressString);
 
         context.collect(tagger, this);
     }

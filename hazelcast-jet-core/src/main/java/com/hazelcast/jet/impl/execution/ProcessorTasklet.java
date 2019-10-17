@@ -119,10 +119,10 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLongArray receivedBatches;
     private final AtomicLongArray emittedCounts;
 
-    @Probe(name = MetricNames.QUEUE_SIZES)
+    @Probe(name = MetricNames.QUEUES_SIZE)
     private final AtomicLong queuesSize = new AtomicLong();
 
-    @Probe(name = MetricNames.QUEUE_CAPACITY)
+    @Probe(name = MetricNames.QUEUES_CAPACITY)
     private final AtomicLong queuesCapacity = new AtomicLong();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;

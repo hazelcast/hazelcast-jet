@@ -84,8 +84,8 @@ public class ReceiverTasklet implements Tasklet {
     private final ILogger logger;
 
     /* Used for metrics */
-    private final Address sourceAddress;
-    private final int ordinal;
+    private final String sourceAddressString;
+    private final String ordinalString;
     private final String destinationVertexName;
 
     private final Queue<BufferObjectDataInput> incoming = new MPSCQueue<>(null);
@@ -123,8 +123,8 @@ public class ReceiverTasklet implements Tasklet {
         this.collector = collector;
         this.rwinMultiplier = rwinMultiplier;
         this.flowControlPeriodNs = (double) MILLISECONDS.toNanos(flowControlPeriodMs);
-        this.sourceAddress = sourceAddress;
-        this.ordinal = ordinal;
+        this.sourceAddressString = sourceAddress.toString();
+        this.ordinalString = "" + ordinal;
         this.destinationVertexName = destinationVertexName;
         String loggerName = String.format("%s.receiverFor:%s#%d", getClass().getName(), destinationVertexName, ordinal);
         this.logger = loggingService.getLogger(loggerName);
@@ -306,8 +306,8 @@ public class ReceiverTasklet implements Tasklet {
     @Override
     public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
         tagger = tagger.withTag(MetricTags.VERTEX, destinationVertexName)
-                       .withTag(MetricTags.SOURCE_ADDRESS, sourceAddress.toString())
-                       .withTag(MetricTags.ORDINAL, Integer.toString(ordinal));
+                       .withTag(MetricTags.SOURCE_ADDRESS, sourceAddressString)
+                       .withTag(MetricTags.ORDINAL, ordinalString);
 
         context.collect(tagger, this);
     }

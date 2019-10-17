@@ -53,7 +53,7 @@ public class JetConfig {
     public static final int DEFAULT_JET_MULTICAST_PORT = 54326;
 
     /**
-     * The default clustern name for a Jet cluster
+     * The default cluster name for a Jet cluster.
      */
     public static final String DEFAULT_CLUSTER_NAME = "jet";
 
