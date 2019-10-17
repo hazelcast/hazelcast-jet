@@ -16,20 +16,15 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.client.impl.ClientDelegatingFuture;
 import com.hazelcast.client.impl.client.DistributedObjectInfo;
-import com.hazelcast.client.impl.clientside.ClientMessageDecoder;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
-import com.hazelcast.client.impl.protocol.codec.MCReadMetricsCodec;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Cluster;
-import com.hazelcast.cluster.Member;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryXmlConfig;
-import com.hazelcast.internal.metrics.managementcenter.MetricsResultSet;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -47,7 +42,6 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -60,11 +54,6 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     private final HazelcastClientInstanceImpl client;
     private final SerializationService serializationService;
-
-    private final ClientMessageDecoder decodeMetricsResponse = (ClientMessageDecoder<MetricsResultSet>) msg -> {
-        MCReadMetricsCodec.ResponseParameters response = MCReadMetricsCodec.decodeResponse(msg);
-        return new MetricsResultSet(response.nextSequence, response.elements);
-    };
 
     public JetClientInstanceImpl(HazelcastClientInstanceImpl hazelcastInstance) {
         super(hazelcastInstance);
@@ -94,18 +83,6 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         } catch (Throwable t) {
             throw rethrow(t);
         }
-    }
-
-    /**
-     * Reads the metrics journal for a given number starting from a specific sequence.
-     */
-    @Nonnull
-    public CompletableFuture<MetricsResultSet> readMetricsAsync(Member member, long startSequence) {
-        ClientMessage request = MCReadMetricsCodec.encodeRequest(member.getUuid(), startSequence);
-        ClientInvocation invocation = new ClientInvocation(client, request, null, member.getAddress());
-        return new ClientDelegatingFuture<>(
-                invocation.invoke(), serializationService, decodeMetricsResponse, false
-        );
     }
 
     /**

@@ -33,9 +33,9 @@ import static com.hazelcast.internal.nio.IOUtil.closeResource;
  *
  * @since 3.0
  */
-public final class StartServer {
+public final class JetMemberStarter {
 
-    private StartServer() {
+    private JetMemberStarter() {
     }
 
     /**
@@ -50,7 +50,7 @@ public final class StartServer {
     }
 
     public static void configureLogging() throws IOException {
-        InputStream input = StartServer.class.getClassLoader().getResourceAsStream("logging.properties");
+        InputStream input = JetMemberStarter.class.getClassLoader().getResourceAsStream("logging.properties");
         LogManager.getLogManager().readConfiguration(input);
     }
 
