@@ -17,7 +17,7 @@
 package com.hazelcast.jet.examples.jms;
 
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -38,7 +38,7 @@ public final class JmsMessageProducer {
 
     JmsMessageProducer(String destinationName, DestinationType destinationType) {
         producerThread = new Thread(() -> {
-            ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(ActiveMQBroker.BROKER_URL);
+            ConnectionFactory connectionFactory = new ActiveMQConnectionFactory("vm://0");
             Connection connection = null;
             try {
                 connection = connectionFactory.createConnection();

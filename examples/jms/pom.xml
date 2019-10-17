@@ -30,8 +30,15 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.activemq</groupId>
-            <artifactId>activemq-all</artifactId>
-            <version>5.15.3</version>
+            <artifactId>apache-artemis</artifactId>
+            <version>2.10.1</version>
+            <!-- needed to handle https://issues.apache.org/jira/browse/ARTEMIS-2204 -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.activemq</groupId>
+                    <artifactId>artemis-jms-client-all</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 </project>
