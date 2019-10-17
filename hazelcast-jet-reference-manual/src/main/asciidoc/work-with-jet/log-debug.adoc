@@ -260,6 +260,40 @@ these metrics for each processor instance _N_, the _N_ denotes the global
 processor index.
 |===
 
+=== User-defined metrics ===
+
+User-defined metrics are actually a subset of job metrics. What distinguishes them
+from regular job-specific metrics is exactly what their name implies: they are not
+built-in, but defined when processing pipelines are written.
+
+Since user metrics are also job metrics, they will have the same tag structure. Only
+their names will differ.
+
+Let's see how one would go about defining user metrics. For example if you would
+like to monitor your filtering step you could write code like this:
+
+[source]
+----
+include::{javasource}/LogDebug.java[tag=s5]
+----
+
+There are two types of "handlers" that can be used for user metrics (for details see the
+`{jet-javadoc}/core/metrics/UserMetrics.html[UserMetrics Javadoc]`):
+
+* `{jet-javadoc}/core/metrics/Counter.html[counters]`: useful for incrementally
+counting things, like number of certain events
+* `{jet-javadoc}/core/metrics/Gauge.html[gages]`: useful for storing measured values,
+like queue length, load-factor and such
+
+User metrics can be used anywhere in pipeline definitions where custom code can be added.
+This means (just to name the most important ones): filtering, mapping and flat-mapping
+functions, various constituent functions of aggregations (accumulate, create, combine,
+deduct, export & finish), key extraction function when grouping and so on.
+
+They can also be used both with the high-level <<pipeline-api, Pipeline API>> and
+the low-level <<expert-zone, Core API>>.
+
+
 === Exposing metrics ===
 The main method Jet has for exposing the metrics to the outside world is the
 JVM's standard JMX interface. Since Jet 3.2 there is also an alternative to JMX

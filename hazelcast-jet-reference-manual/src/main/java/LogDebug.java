@@ -16,10 +16,15 @@
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.metrics.UserMetrics;
+import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.test.TestSources;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
@@ -66,8 +71,26 @@ public class LogDebug {
     }
 
     static void s5() {
+        BatchSource<Long> source = TestSources.items(0L, 1L, 2L, 3L, 4L);
+        Sink<Long> sink = Sinks.logger();
+        Pipeline p = Pipeline.create();
+
         //tag::s5[]
+        p.drawFrom(source)
+         .filter(l -> {
+             boolean pass = l % 2 == 0;
+             if (!pass) {
+                 UserMetrics.getCounter("dropped").inc();
+             }
+             UserMetrics.getCounter("total").inc();
+             return pass;
+         })
+         .drainTo(sink);
         //end::s5[]
+
+        JetInstance jet = Jet.newJetInstance();
+        Job job = jet.newJob(p);
+        job.join();
     }
 
     static void s6() {
