@@ -375,7 +375,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                                 + destAddr.toString().replace('.', '-'));
                 final int destVertexId = edge.destVertex().vertexId();
                 final SenderTasklet t = new SenderTasklet(inboundEdgeStream, nodeEngine, destAddr,
-                        destVertexId, edge.getConfig().getPacketSizeLimit(), executionId, edge.sourceVertex().name(), edge.sourceOrdinal()
+                        destVertexId, edge.getConfig().getPacketSizeLimit(), executionId,
+                        edge.sourceVertex().name(), edge.sourceOrdinal()
                 );
                 senderMap.computeIfAbsent(destVertexId, xx -> new HashMap<>())
                          .computeIfAbsent(edge.destOrdinal(), xx -> new HashMap<>())
