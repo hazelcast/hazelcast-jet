@@ -23,8 +23,11 @@ import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -37,6 +40,31 @@ import static com.hazelcast.jet.hadoop.HdfsProcessors.readHdfsP;
  * @since 3.0
  */
 public final class HdfsSources {
+
+    /**
+     * With the new HDFS API, some of the {@link RecordReader}s return the same
+     * key/value objects for each record, for example {@link LineRecordReader}.
+     * The source makes a copy of each object ot emit them to downstream. But
+     * for the readers which creates a new object for each record, the source
+     * can be configured to not copy the objects but to reuse them.
+     * <p>
+     * Also if you are using a mapper function which creates a new object for
+     * each record then it makes sense to set this property to {@code true} to
+     * avoid unnecessary copying.
+     * <p>
+     * The source copies the objects by serializing and de-serializing it. The
+     * objects should be either {@link Writable} or serializable in a way that
+     * Jet instance can serialize/de-serialize.
+     * <p>
+     * Here is how you can configure the source. Default value is {@code false}.
+     * <pre>{@code
+     * Configuration conf = new Configuration();
+     * conf.set(HdfsSources.REUSE_OBJECT, "true");
+     *
+     * BatchSource<Entry<K, V>> source = HdfsSources.hdfs(conf);
+     * }</pre>
+     */
+    public static final String REUSE_OBJECT = "REUSE_OBJECTS_FOR_JET_HDFS_SOURCE";
 
     private HdfsSources() {
     }
@@ -56,7 +84,7 @@ public final class HdfsSources {
      * stored under {@value MRJobConfig#INPUT_FORMAT_CLASS_ATTR}, the new API
      * will be used. Otherwise, the old API will be used. If you get the
      * configuration from {@link Job#getConfiguration()}, the new API will be
-     * used.
+     * used. Please see {@link #REUSE_OBJECT} if you are using the new API.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
@@ -68,7 +96,7 @@ public final class HdfsSources {
      * @param <V>           value type of the records
      * @param <E>           the type of the emitted value
      * @param configuration JobConf for reading files with the appropriate
-     *                     input format and path
+     *                      input format and path
      * @param projectionFn  function to create output objects from key and value.
      *                      If the projection returns a {@code null} for an item, that item
      *                      will be filtered out

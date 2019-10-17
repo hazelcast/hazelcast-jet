@@ -17,6 +17,8 @@
 package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.core.Member;
+import com.hazelcast.instance.HazelcastInstanceImpl;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
@@ -50,6 +52,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
+import static com.hazelcast.jet.hadoop.HdfsSources.REUSE_OBJECT;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
@@ -66,6 +69,8 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     private final BetterByteArrayOutputStream cloneBuffer = new BetterByteArrayOutputStream();
     private final DataOutputStream cloneBufferDataOutput = new DataOutputStream(cloneBuffer);
 
+    private InternalSerializationService serializationService;
+
     private ReadHdfsNewApiP(
             @Nonnull Configuration configuration,
             @Nonnull InputFormat inputFormat,
@@ -77,6 +82,12 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         this.trav = traverseIterable(splits)
                 .flatMap(this::traverseSplit);
         this.projectionFn = projectionFn;
+    }
+
+    @Override
+    protected void init(@Nonnull Context context) {
+        HazelcastInstanceImpl instance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
+        serializationService = instance.getSerializationService();
     }
 
     @Override
@@ -103,11 +114,11 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return () -> {
             try {
                 while (reader.nextKeyValue()) {
-                    // we have to clone the the value returned by `reader.getCurrentKey()` because
-                    // the next call to `reader.nextKeyValue()` will mutate the returned value instead
-                    // of creating a new value. Same for value.
-                    K key = serdeWritable(reader.getCurrentKey());
-                    V value = serdeWritable(reader.getCurrentValue());
+                    // we clone the key/value if not configured to reuse the object because some
+                    // of the record-readers return the same object for `reader.getCurrentKey()`
+                    // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`
+                    K key = cloneIfNecessary(reader.getCurrentKey());
+                    V value = cloneIfNecessary(reader.getCurrentValue());
                     R projectedRecord = projectionFn.apply(key, value);
                     if (projectedRecord != null) {
                         return projectedRecord;
@@ -122,13 +133,19 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T serdeWritable(T o) throws IOException, IllegalAccessException, InstantiationException {
-        ((Writable) o).write(cloneBufferDataOutput);
-        Writable newO = (Writable) o.getClass().newInstance();
-        newO.readFields(cloneBuffer.getDataInputStream());
-        o = (T) newO;
-        cloneBuffer.reset();
-        return o;
+    private <T> T cloneIfNecessary(T o) throws IOException, IllegalAccessException, InstantiationException {
+        if (configuration.getBoolean(REUSE_OBJECT, false)) {
+            return o;
+        }
+        if (o instanceof Writable) {
+            ((Writable) o).write(cloneBufferDataOutput);
+            Writable newO = (Writable) o.getClass().newInstance();
+            newO.readFields(cloneBuffer.getDataInputStream());
+            o = (T) newO;
+            cloneBuffer.reset();
+            return o;
+        }
+        return serializationService.toObject(serializationService.toData(o));
     }
 
     private static InputFormat getInputFormat(Configuration configuration) {
