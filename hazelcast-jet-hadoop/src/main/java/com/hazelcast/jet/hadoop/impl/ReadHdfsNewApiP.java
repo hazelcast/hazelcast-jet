@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.BiFunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.Address;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -46,6 +47,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +153,21 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
     private static InputFormat getInputFormat(Configuration configuration) {
         Class<?> inputFormatClass = configuration.getClass(MRJobConfig.INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
-        return (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
+        try {
+            return (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
+        } finally {
+            removeInputFormatFromCache(inputFormatClass);
+        }
+    }
+
+    private static void removeInputFormatFromCache(Class<?> inputFormatClass) {
+        try {
+            Field constructorCacheField = ReflectionUtils.class.getDeclaredField("CONSTRUCTOR_CACHE");
+            constructorCacheField.setAccessible(true);
+            ((Map<Class<?>, Constructor<?>>) constructorCacheField.get(null)).remove(inputFormatClass);
+        } catch (Exception e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
     }
 
     public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase {

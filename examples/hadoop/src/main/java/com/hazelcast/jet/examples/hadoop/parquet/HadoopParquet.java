@@ -37,8 +37,6 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.Util.entry;
-
 /**
  * A sample which reads records from Apache Parquet file from HDFS
  * using Apache Avro schema, filters and writes back to HDFS
@@ -55,8 +53,7 @@ public class HadoopParquet {
         p.drawFrom(HdfsSources.<String, User, User>hdfs(configuration, (s, user) -> user))
          .filter(user -> user.get(3).equals(Boolean.TRUE))
          .peek()
-         .map(user -> entry(user.get(0), user))
-         .drainTo(HdfsSinks.hdfs(configuration));
+         .drainTo(HdfsSinks.hdfs(configuration, o -> null, o -> o));
         return p;
     }
 

@@ -59,8 +59,7 @@ public final class HdfsSinks {
      * used.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
-     * the items will likely be duplicated, providing an <i>at-least-once</i>
-     * guarantee. TODO [viliam] wrong, don't we overwrite files?
+     * the files will be overwritten.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
