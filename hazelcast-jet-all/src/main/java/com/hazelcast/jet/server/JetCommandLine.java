@@ -453,7 +453,7 @@ public class JetCommandLine implements Runnable {
     }
 
     private void configureLogging() throws IOException {
-        StartServer.configureLogging();
+        JetMemberStarter.configureLogging();
         Level logLevel = Level.WARNING;
         if (verbosity.isVerbose) {
             println("Verbose mode is on, setting logging level to INFO");

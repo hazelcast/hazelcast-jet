@@ -45,7 +45,7 @@
                         <index>true</index>
                         <compress>true</compress>
                         <manifest>
-                            <mainClass>com.hazelcast.jet.server.StartServer</mainClass>
+                            <mainClass>com.hazelcast.jet.server.JetMemberStarter</mainClass>
                         </manifest>
                         <manifestEntries>
                             <Automatic-Module-Name>com.hazelcast.jet</Automatic-Module-Name>
