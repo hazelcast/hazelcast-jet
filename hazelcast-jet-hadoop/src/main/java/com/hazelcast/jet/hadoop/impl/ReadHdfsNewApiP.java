@@ -48,14 +48,13 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.hadoop.HdfsSources.REUSE_OBJECT;
+import static com.hazelcast.jet.hadoop.HdfsSources.COPY_ON_READ;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
@@ -64,6 +63,8 @@ import static java.util.stream.Collectors.toList;
  * See {@link HdfsSources#hdfs}.
  */
 public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
+
+    private static final Class<?>[] EMPTY_ARRAY = new Class[0];
 
     private final Configuration configuration;
     private final InputFormat inputFormat;
@@ -117,11 +118,11 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return () -> {
             try {
                 while (reader.nextKeyValue()) {
-                    // we clone the key/value if not configured to reuse the object because some
-                    // of the record-readers return the same object for `reader.getCurrentKey()`
+                    // we clone the key/value if configured so because some of the
+                    // record-readers return the same object for `reader.getCurrentKey()`
                     // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`
-                    K key = cloneIfNecessary(reader.getCurrentKey());
-                    V value = cloneIfNecessary(reader.getCurrentValue());
+                    K key = copyIfConfigured(reader.getCurrentKey());
+                    V value = copyIfConfigured(reader.getCurrentValue());
                     R projectedRecord = projectionFn.apply(key, value);
                     if (projectedRecord != null) {
                         return projectedRecord;
@@ -136,8 +137,8 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T cloneIfNecessary(T o) throws IOException, IllegalAccessException, InstantiationException {
-        if (configuration.getBoolean(REUSE_OBJECT, false)) {
+    private <T> T copyIfConfigured(T o) throws IOException, IllegalAccessException, InstantiationException {
+        if (!configuration.getBoolean(COPY_ON_READ, true)) {
             return o;
         }
         if (o instanceof Writable) {
@@ -152,19 +153,14 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     }
 
     private static InputFormat getInputFormat(Configuration configuration) {
-        Class<?> inputFormatClass = configuration.getClass(MRJobConfig.INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
         try {
-            return (InputFormat) ReflectionUtils.newInstance(inputFormatClass, configuration);
-        } finally {
-            removeInputFormatFromCache(inputFormatClass);
-        }
-    }
+            Class<?> inputFormatClass = configuration.getClass(MRJobConfig.INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
+            Constructor<?> constructor = inputFormatClass.getDeclaredConstructor(EMPTY_ARRAY);
+            constructor.setAccessible(true);
 
-    private static void removeInputFormatFromCache(Class<?> inputFormatClass) {
-        try {
-            Field constructorCacheField = ReflectionUtils.class.getDeclaredField("CONSTRUCTOR_CACHE");
-            constructorCacheField.setAccessible(true);
-            ((Map<Class<?>, Constructor<?>>) constructorCacheField.get(null)).remove(inputFormatClass);
+            InputFormat inputFormat = (InputFormat) constructor.newInstance();
+            ReflectionUtils.setConf(inputFormat, configuration);
+            return inputFormat;
         } catch (Exception e) {
             throw ExceptionUtil.sneakyThrow(e);
         }

@@ -46,25 +46,25 @@ public final class HdfsSources {
      * key/value objects for each record, for example {@link LineRecordReader}.
      * The source makes a copy of each object ot emit them to downstream. But
      * for the readers which creates a new object for each record, the source
-     * can be configured to not copy the objects but to reuse them.
+     * can be configured to not copy the objects.
      * <p>
      * Also if you are using a mapper function which creates a new object for
-     * each record then it makes sense to set this property to {@code true} to
+     * each record then it makes sense to set this property to {@code false} to
      * avoid unnecessary copying.
      * <p>
      * The source copies the objects by serializing and de-serializing it. The
      * objects should be either {@link Writable} or serializable in a way that
      * Jet instance can serialize/de-serialize.
      * <p>
-     * Here is how you can configure the source. Default value is {@code false}.
+     * Here is how you can configure the source. Default value is {@code true}.
      * <pre>{@code
      * Configuration conf = new Configuration();
-     * conf.set(HdfsSources.REUSE_OBJECT, "true");
+     * conf.set(HdfsSources.COPY_ON_READ, "false");
      *
      * BatchSource<Entry<K, V>> source = HdfsSources.hdfs(conf);
      * }</pre>
      */
-    public static final String REUSE_OBJECT = "REUSE_OBJECTS_FOR_JET_HDFS_SOURCE";
+    public static final String COPY_ON_READ = "JET_HDFS_SOURCE_COPY_ON_READ";
 
     private HdfsSources() {
     }
@@ -84,7 +84,7 @@ public final class HdfsSources {
      * stored under {@value MRJobConfig#INPUT_FORMAT_CLASS_ATTR}, the new API
      * will be used. Otherwise, the old API will be used. If you get the
      * configuration from {@link Job#getConfiguration()}, the new API will be
-     * used. Please see {@link #REUSE_OBJECT} if you are using the new API.
+     * used. Please see {@link #COPY_ON_READ} if you are using the new API.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
