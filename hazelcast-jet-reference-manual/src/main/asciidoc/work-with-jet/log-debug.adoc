@@ -293,6 +293,24 @@ deduct, export & finish), key extraction function when grouping and so on.
 They can also be used both with the high-level <<pipeline-api, Pipeline API>> and
 the low-level <<expert-zone, Core API>>.
 
+NOTE: User metrics are accessible only when the user code is running on *internal Jet
+worker threads*. Normally this isn't a concern, but there are special operations when
+care needs to be taken. Such operations include `filterUsingContextAsync`,
+`mapUsingContextAsync` and `flatMapUsingContextAsync`, their common trait being that
+they can execute user code passed to them on "foreign" threads, for example on the
+`{jdk-javadoc}/java/util/concurrent/ForkJoinPool.html[ForkJoinPool]`.
+
+For example, following code will throw an exception:
+[source]
+----
+include::{javasource}/LogDebug.java[tag=s6]
+----
+
+The way for fixing it would be:
+[source]
+----
+include::{javasource}/LogDebug.java[tag=s7]
+----
 
 === Exposing metrics ===
 The main method Jet has for exposing the metrics to the outside world is the

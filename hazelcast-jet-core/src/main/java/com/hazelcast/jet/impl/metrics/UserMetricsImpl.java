@@ -43,14 +43,9 @@ public final class UserMetricsImpl {
 
     private static UserMetricsContext getContext() {
         Container container = CONTEXT.get();
-        if (container == null) {
-            throw new IllegalStateException(String.format("Thread-local state for thread %s not initialized",
-                    Thread.currentThread()));
-        }
-
         UserMetricsContext context = container.getContext();
         if (context == null) {
-            throw new IllegalStateException("User metrics context not initialized");
+            throw new RuntimeException("User metrics are accessible only from internal worker threads");
         }
         return context;
     }

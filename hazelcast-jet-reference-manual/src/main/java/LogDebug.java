@@ -18,13 +18,17 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.core.metrics.Counter;
 import com.hazelcast.jet.core.metrics.UserMetrics;
 import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.TestSources;
+
+import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
@@ -94,13 +98,46 @@ public class LogDebug {
     }
 
     static void s6() {
-        //tag::s6[]
-        //end::s6[]
+        Pipeline p = Pipeline.create();
+        p.drawFrom(TestSources.items(0, 1, 2, 3))
+            //tag::s6[]
+            .filterUsingContextAsync(
+                ContextFactory.withCreateFn(i -> 0L),
+                (ctx, l) -> CompletableFuture.supplyAsync(
+                    () -> {
+                        boolean pass = l % 2L == ctx;
+                        if (!pass) {
+                            UserMetrics.getCounter("dropped").inc();
+                        }
+                        return pass;
+                    }
+                )
+            )
+            //end::s6[]
+            .drainTo(Sinks.logger());
     }
 
     static void s7() {
-        //tag::s7[]
-        //end::s7[]
+        Pipeline p = Pipeline.create();
+        p.drawFrom(TestSources.items(0, 1, 2, 3))
+            //tag::s7[]
+            .filterUsingContextAsync(
+                ContextFactory.withCreateFn(i -> 0L),
+                (ctx, l) -> {
+                    Counter dropped = UserMetrics.getCounter("dropped");
+                    return CompletableFuture.supplyAsync(
+                        () -> {
+                            boolean pass = l % 2L == ctx;
+                            if (!pass) {
+                                dropped.inc();
+                            }
+                            return pass;
+                        }
+                    );
+                }
+            )
+            //end::s7[]
+            .drainTo(Sinks.logger());
     }
 
     static void s8() {
