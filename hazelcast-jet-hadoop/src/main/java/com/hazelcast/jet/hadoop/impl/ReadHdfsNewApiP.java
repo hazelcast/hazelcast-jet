@@ -170,6 +170,10 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
         static final long serialVersionUID = 1L;
 
+        /**
+         * The instance is either {@link SerializableConfiguration} or {@link
+         *  SerializableJobConf}, which are serializable.
+         */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private final Configuration configuration;
         private final BiFunctionEx<K, V, R> projectionFn;
@@ -206,6 +210,10 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     private static class Supplier<K, V, R> implements ProcessorSupplier {
         static final long serialVersionUID = 1L;
 
+        /**
+         * The instance is either {@link SerializableConfiguration} or {@link
+         *  SerializableJobConf}, which are serializable.
+         */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private Configuration configuration;
         private BiFunctionEx<K, V, R> projectionFn;
