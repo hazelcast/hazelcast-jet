@@ -23,7 +23,7 @@ import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
+import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -55,7 +55,7 @@ import static com.hazelcast.jet.Util.entry;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class WriteHdfsPTest extends HdfsTestSupport {
 
     @Parameterized.Parameter
