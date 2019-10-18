@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
+import com.hazelcast.collection.IList;
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.collection.IList;
-import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -60,7 +60,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
 public class ReadHdfsPTest extends HdfsTestSupport {
 
     private static final String[] ENTRIES = {
