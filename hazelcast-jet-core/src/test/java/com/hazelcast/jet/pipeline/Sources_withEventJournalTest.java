@@ -154,9 +154,8 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         String mapName = JOURNALED_MAP_PREFIX + randomName();
 
         // When
-        StreamSource<String> source = Sources.mapJournal(jet().getMap(mapName), mapPutEvents(),
-                (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(),
-                START_FROM_OLDEST);
+        StreamSource<String> source = Sources.mapJournal(jet().getMap(mapName), START_FROM_OLDEST, (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(), mapPutEvents()
+        );
 
         // Then
         testMapJournal_withProjectionToNull_then_nullsSkipped(mapName, source);
@@ -168,9 +167,8 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         String mapName = JOURNALED_MAP_PREFIX + randomName();
 
         // When
-        StreamSource<String> source = Sources.mapJournal(mapName, mapPutEvents(),
-                (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(),
-                START_FROM_OLDEST);
+        StreamSource<String> source = Sources.mapJournal(mapName, START_FROM_OLDEST, (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(), mapPutEvents()
+        );
 
         // Then
         testMapJournal_withProjectionToNull_then_nullsSkipped(mapName, source);
@@ -270,7 +268,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.mapJournal(
-                mapName, p, EventJournalMapEvent::getNewValue, START_FROM_OLDEST);
+                mapName, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, p);
 
         // Then
         testMapJournal_withPredicateAndProjection(map, source);
@@ -285,7 +283,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.remoteMapJournal(
-                mapName, clientConfig, p, EventJournalMapEvent::getNewValue, START_FROM_OLDEST);
+                mapName, clientConfig, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, p);
 
         // Then
         testMapJournal_withPredicateAndProjection(map, source);
@@ -420,7 +418,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.cacheJournal(
-                cacheName, p, EventJournalCacheEvent::getNewValue, START_FROM_OLDEST);
+                cacheName, START_FROM_OLDEST, EventJournalCacheEvent::getNewValue, p);
 
         // Then
         testCacheJournal_withPredicateAndProjection(cache, source);
@@ -435,7 +433,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.remoteCacheJournal(
-                cacheName, clientConfig, p, EventJournalCacheEvent::getNewValue, START_FROM_OLDEST);
+                cacheName, clientConfig, START_FROM_OLDEST, EventJournalCacheEvent::getNewValue, p);
 
         // Then
         testCacheJournal_withPredicateAndProjection(cache, source);

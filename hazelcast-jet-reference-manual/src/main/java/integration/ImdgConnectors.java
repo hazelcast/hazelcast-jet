@@ -172,10 +172,10 @@ public class ImdgConnectors {
         Pipeline p = Pipeline.create();
         StreamSourceStage<EventJournalMapEvent<String, Long>> allFromMap = p.drawFrom(
             Sources.mapJournal("inputMap",
-                    alwaysTrue(), identity(), START_FROM_CURRENT));
+                    START_FROM_CURRENT, identity(), alwaysTrue()));
         StreamSourceStage<EventJournalCacheEvent<String, Long>> allFromCache = p.drawFrom(
             Sources.cacheJournal("inputMap",
-                    alwaysTrue(), identity(), START_FROM_CURRENT));
+                    START_FROM_CURRENT, identity(), alwaysTrue()));
         //end::s12[]
     }
 
