@@ -154,7 +154,9 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         String mapName = JOURNALED_MAP_PREFIX + randomName();
 
         // When
-        StreamSource<String> source = Sources.mapJournal(jet().getMap(mapName), START_FROM_OLDEST, (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(), mapPutEvents()
+        StreamSource<String> source = Sources.mapJournal(jet().getMap(mapName), START_FROM_OLDEST,
+                (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(),
+                mapPutEvents()
         );
 
         // Then
@@ -167,7 +169,9 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         String mapName = JOURNALED_MAP_PREFIX + randomName();
 
         // When
-        StreamSource<String> source = Sources.mapJournal(mapName, START_FROM_OLDEST, (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(), mapPutEvents()
+        StreamSource<String> source = Sources.mapJournal(mapName, START_FROM_OLDEST,
+                (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(),
+                mapPutEvents()
         );
 
         // Then
