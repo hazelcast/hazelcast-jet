@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
+import com.hazelcast.cluster.Address;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.hadoop.HdfsSinks;
-import com.hazelcast.nio.Address;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
@@ -122,8 +122,9 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
             jobContext = new JobContextImpl(configuration, new JobID());
             OutputFormat outputFormat = getOutputFormat(configuration);
             // TODO [viliam] remove the use of UUID
+
             outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
-                    context.jetInstance().getCluster().getLocalMember().getUuid()));
+                    getUuid(context)));
             outputCommitter.setupJob(jobContext);
         }
 
@@ -197,7 +198,7 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
     }
 
     private static String getUuid(@Nonnull ProcessorMetaSupplier.Context context) {
-        return context.jetInstance().getCluster().getLocalMember().getUuid();
+        return context.jetInstance().getCluster().getLocalMember().getUuid().toString();
     }
 
     private static OutputFormat getOutputFormat(Configuration config) {

@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.hadoop.HdfsSinks;
 import com.hazelcast.jet.hadoop.HdfsSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -71,17 +71,17 @@ public class WriteHdfsPTest extends HdfsTestSupport {
     public static Collection<Object[]> parameters() {
         return Arrays.asList(
                 // old api classes
-                new Object[] {TextOutputFormat.class, TextInputFormat.class},
-                new Object[] {LazyOutputFormat.class, TextInputFormat.class},
-                new Object[] {SequenceFileOutputFormat.class, SequenceFileInputFormat.class},
+                new Object[]{TextOutputFormat.class, TextInputFormat.class},
+                new Object[]{LazyOutputFormat.class, TextInputFormat.class},
+                new Object[]{SequenceFileOutputFormat.class, SequenceFileInputFormat.class},
                 // new api classes
-                new Object[] {
+                new Object[]{
                         org.apache.hadoop.mapreduce.lib.output.TextOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
-                new Object[] {
+                new Object[]{
                         org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class},
-                new Object[] {
+                new Object[]{
                         org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat.class,
                         org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat.class}
         );

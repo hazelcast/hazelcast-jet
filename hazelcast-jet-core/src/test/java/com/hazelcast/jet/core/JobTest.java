@@ -18,7 +18,9 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientNetworkConfig;
-import com.hazelcast.client.spi.properties.ClientProperty;
+import com.hazelcast.client.properties.ClientProperty;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobAlreadyExistsException;
@@ -29,8 +31,6 @@ import com.hazelcast.jet.core.TestProcessors.Identity;
 import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.nio.Address;
 import com.hazelcast.test.ExpectedRuntimeException;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.hamcrest.Matchers;
@@ -72,6 +72,7 @@ public class JobTest extends JetTestSupport {
 
     private static final int NODE_COUNT = 2;
     private static final int LOCAL_PARALLELISM = 1;
+    private static final int TOTAL_PARALLELISM = NODE_COUNT * LOCAL_PARALLELISM;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -81,7 +82,7 @@ public class JobTest extends JetTestSupport {
 
     @Before
     public void setup() {
-        TestProcessors.reset(NODE_COUNT * LOCAL_PARALLELISM);
+        TestProcessors.reset(TOTAL_PARALLELISM);
 
         JetConfig config = new JetConfig();
         config.getInstanceConfig().setCooperativeThreadCount(LOCAL_PARALLELISM);
@@ -778,7 +779,11 @@ public class JobTest extends JetTestSupport {
         Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSecs));
 
         // When
+        NoOutputSourceP.initCount.set(0);
         instance1.getHazelcastInstance().getLifecycleService().terminate();
+        // wait for job to be restarted on remaining node
+        assertTrueEventually(() -> assertEquals(LOCAL_PARALLELISM, NoOutputSourceP.initCount.get()));
+
         RuntimeException ex = new RuntimeException("Faulty job");
         NoOutputSourceP.failure.set(ex);
 
@@ -809,7 +814,11 @@ public class JobTest extends JetTestSupport {
         Thread.sleep(TimeUnit.SECONDS.toMillis(timeoutSecs));
 
         // When
+        NoOutputSourceP.initCount.set(0);
         instance1.getHazelcastInstance().getLifecycleService().terminate();
+        // wait for job to be restarted on remaining node
+        assertTrueEventually(() -> assertEquals(LOCAL_PARALLELISM, NoOutputSourceP.initCount.get()));
+
         RuntimeException ex = new RuntimeException("Faulty job");
         NoOutputSourceP.failure.set(ex);
 

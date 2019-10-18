@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.hadoop.impl;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
 
 import javax.annotation.Nonnull;
 import java.net.InetAddress;

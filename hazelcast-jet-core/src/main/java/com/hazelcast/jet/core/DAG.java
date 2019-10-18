@@ -18,12 +18,13 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.internal.json.JsonArray;
 import com.hazelcast.internal.json.JsonObject;
+import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.core.Edge.RoutingPolicy;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.util.StringUtil;
+import com.hazelcast.internal.util.StringUtil;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -42,7 +43,7 @@ import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.impl.TopologicalSorter.topologicalSort;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static com.hazelcast.jet.impl.util.Util.escapeGraphviz;
-import static com.hazelcast.util.Preconditions.checkTrue;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.newSetFromMap;
 import static java.util.stream.Collectors.groupingBy;
@@ -397,7 +398,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                 : String.valueOf(localParallelism);
             builder.append("\t\"")
                    .append(escapeGraphviz(v.getName()))
-                   .append("\" [tooltip=\"local-parallelism=").append(parallelism).append("\"]")
+                   .append("\" [localParallelism=").append(parallelism).append("]")
                    .append(";\n");
         }
 
@@ -421,6 +422,9 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
                 if (inOutCounts.get(e.getSourceName())[0] > 1) {
                     attributes.add("taillabel=" + e.getSourceOrdinal());
                 }
+                int queueSize = e.getConfig() == null ? EdgeConfig.DEFAULT_QUEUE_SIZE :
+                        e.getConfig().getQueueSize();
+                attributes.add("queueSize=" + queueSize);
 
                 boolean inSubgraph = e.getSourceName().equals(e.getDestName() + FIRST_STAGE_VERTEX_NAME_SUFFIX);
                 if (inSubgraph) {
@@ -500,7 +504,7 @@ public class DAG implements IdentifiedDataSerializable, Iterable<Vertex> {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetDataSerializerHook.DAG;
     }
 }
