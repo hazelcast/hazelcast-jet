@@ -26,11 +26,15 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.processor.TransformP;
+import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,9 +42,12 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
+import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -60,7 +67,7 @@ public class UserMetricsTest extends JetTestSupport {
     }
 
     @Test
-    public void counter_not_used() {
+    public void counter_notUsed() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .filter(l -> {
                     boolean pass = l % 2 == 0;
@@ -111,7 +118,7 @@ public class UserMetricsTest extends JetTestSupport {
     }
 
     @Test
-    public void gauge_not_used() {
+    public void gauge_notUsed() {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .mapStateful(LongAccumulator::new, (acc, i) -> {
                     acc.add(i);
@@ -124,7 +131,7 @@ public class UserMetricsTest extends JetTestSupport {
     }
 
     @Test
-    public void non_cooperative_processor() {
+    public void nonCooperativeProcessor() {
         DAG dag = new DAG();
 
         Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(asList(1L, 2L, 3L)));
@@ -145,7 +152,7 @@ public class UserMetricsTest extends JetTestSupport {
     }
 
     @Test
-    public void metrics_disabled() {
+    public void metricsDisabled() {
         Long[] input = {0L, 1L, 2L, 3L, 4L};
         pipeline.drawFrom(TestSources.items(input))
                 .map(l -> {
@@ -161,6 +168,35 @@ public class UserMetricsTest extends JetTestSupport {
         JobMetrics metrics = job.getMetrics();
         assertTrue(metrics.get("mapped").isEmpty());
         assertTrue(metrics.get("total").isEmpty());
+    }
+
+    @Test
+    public void usingContextAsync() {
+        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+                .addTimestamps(i -> i, 0L)
+                .window(WindowDefinition.tumbling(3))
+                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
+                .map(WindowResult::result)
+                .filterUsingContextAsync(
+                        ContextFactory.withCreateFn(i -> 0L),
+                        (ctx, l) -> {
+                            Counter dropped = UserMetrics.getCounter("dropped");
+                            Counter total = UserMetrics.getCounter("total");
+                            return CompletableFuture.supplyAsync(
+                                    () -> {
+                                        boolean pass = l % 2L == ctx;
+                                        if (!pass) {
+                                            dropped.inc();
+                                        }
+                                        total.inc();
+                                        return pass;
+                                    }
+                            );
+                        }
+                )
+                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+
+        assertMetricsProduced(pipeline, "dropped", 2L, "total", 4L);
     }
 
     private void assertMetricsProduced(Pipeline pipeline, Object... expected) {
