@@ -17,12 +17,12 @@
 package com.hazelcast.jet.core.processor;
 
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.BiFunctionEx;
-import com.hazelcast.internal.util.function.BinaryOperatorEx;
-import com.hazelcast.internal.util.function.ConsumerEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BinaryOperatorEx;
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;

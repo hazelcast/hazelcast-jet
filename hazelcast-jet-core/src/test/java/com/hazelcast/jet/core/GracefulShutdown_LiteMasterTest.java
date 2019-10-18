@@ -22,7 +22,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.DummyStatefulP;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

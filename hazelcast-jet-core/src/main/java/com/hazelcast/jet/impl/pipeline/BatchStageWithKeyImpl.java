@@ -30,9 +30,9 @@ import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.ContextFactory;
-import com.hazelcast.internal.util.function.BiPredicateEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

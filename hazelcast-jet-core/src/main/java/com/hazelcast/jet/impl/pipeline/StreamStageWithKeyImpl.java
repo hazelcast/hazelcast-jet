@@ -25,9 +25,9 @@ import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.internal.util.function.BiPredicateEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;

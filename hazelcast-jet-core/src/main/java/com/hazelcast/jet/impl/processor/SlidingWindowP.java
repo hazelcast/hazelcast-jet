@@ -63,7 +63,7 @@ import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
 import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
-import static com.hazelcast.internal.util.function.ComparatorEx.naturalOrder;
+import static com.hazelcast.function.ComparatorEx.naturalOrder;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptyMap;

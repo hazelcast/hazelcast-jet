@@ -26,8 +26,8 @@ import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.internal.util.concurrent.IdleStrategy;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.sql.Connection;

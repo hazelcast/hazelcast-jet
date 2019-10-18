@@ -21,9 +21,9 @@ import com.hazelcast.jet.impl.pipeline.test.AssertionP;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.spi.annotation.Beta;
 import com.hazelcast.internal.util.Preconditions;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.ConsumerEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 

@@ -17,7 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 
 import javax.annotation.Nonnull;

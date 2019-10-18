@@ -17,11 +17,11 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.impl.connector.WriteJmsP;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.BiFunctionEx;
-import com.hazelcast.internal.util.function.ConsumerEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;

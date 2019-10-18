@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import com.hazelcast.test.annotation.ParallelJVMTest;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

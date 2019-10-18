@@ -17,9 +17,9 @@
 package com.hazelcast.jet.impl.aggregate;
 
 import com.hazelcast.jet.aggregate.AggregateOperation;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

@@ -24,16 +24,16 @@ import com.hazelcast.jet.impl.connector.WriteLoggerP;
 import com.hazelcast.jet.impl.processor.PeekWrappedP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
 import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.PredicateEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 
 /**
  * Static utility class with factories of sinks and wrappers that log

@@ -23,7 +23,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;

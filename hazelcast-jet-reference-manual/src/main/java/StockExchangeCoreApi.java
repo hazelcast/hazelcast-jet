@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.ToLongFunctionEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
@@ -33,8 +33,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-import static com.hazelcast.internal.util.function.Functions.entryKey;
-import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.function.Functions.entryKey;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;

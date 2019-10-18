@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.internal.util.function.BiFunctionEx;
-import com.hazelcast.internal.util.function.BiPredicateEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.PredicateEx;
-import com.hazelcast.internal.util.function.SupplierEx;
-import com.hazelcast.internal.util.function.ToLongFunctionEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage

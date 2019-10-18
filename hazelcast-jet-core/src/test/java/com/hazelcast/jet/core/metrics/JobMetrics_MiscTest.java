@@ -32,7 +32,7 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

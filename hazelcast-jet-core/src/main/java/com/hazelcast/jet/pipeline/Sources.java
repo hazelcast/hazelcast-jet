@@ -38,9 +38,9 @@ import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
 import com.hazelcast.query.Predicates;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.PredicateEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;

@@ -24,11 +24,11 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.BiFunctionEx;
-import com.hazelcast.internal.util.function.BinaryOperatorEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BinaryOperatorEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
@@ -54,8 +54,8 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
-import static com.hazelcast.internal.util.function.Functions.entryKey;
-import static com.hazelcast.internal.util.function.Functions.entryValue;
+import static com.hazelcast.function.Functions.entryKey;
+import static com.hazelcast.function.Functions.entryValue;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**

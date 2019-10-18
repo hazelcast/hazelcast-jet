@@ -25,7 +25,7 @@ import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 

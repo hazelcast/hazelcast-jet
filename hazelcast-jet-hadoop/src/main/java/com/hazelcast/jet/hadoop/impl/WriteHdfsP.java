@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HdfsProcessors;
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContextImpl;
 import org.apache.hadoop.mapred.JobID;

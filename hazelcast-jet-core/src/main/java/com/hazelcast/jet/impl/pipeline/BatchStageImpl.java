@@ -30,11 +30,11 @@ import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
-import com.hazelcast.internal.util.function.BiFunctionEx;
-import com.hazelcast.internal.util.function.BiPredicateEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.PredicateEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;

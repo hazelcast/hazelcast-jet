@@ -18,7 +18,7 @@ package com.hazelcast.jet.pipeline.test;
 
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.spi.annotation.Beta;
-import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.function.ConsumerEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

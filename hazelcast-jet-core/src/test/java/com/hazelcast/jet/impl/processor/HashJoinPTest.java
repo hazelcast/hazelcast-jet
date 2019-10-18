@@ -25,7 +25,7 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.processor.HashJoinCollectP.HashJoinArrayList;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import com.hazelcast.test.annotation.ParallelJVMTest;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;

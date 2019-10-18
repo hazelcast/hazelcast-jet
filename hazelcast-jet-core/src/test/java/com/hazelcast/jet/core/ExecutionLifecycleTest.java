@@ -37,7 +37,7 @@ import com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;

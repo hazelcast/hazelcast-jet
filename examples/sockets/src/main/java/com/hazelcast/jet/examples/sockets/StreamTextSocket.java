@@ -21,7 +21,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.internal.util.function.ConsumerEx;
+import com.hazelcast.function.ConsumerEx;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

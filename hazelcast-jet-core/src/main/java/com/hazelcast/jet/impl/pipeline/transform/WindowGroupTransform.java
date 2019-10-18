@@ -28,8 +28,8 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.SessionWindowDefinition;
 import com.hazelcast.jet.pipeline.SlidingWindowDefinition;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.ToLongFunctionEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -44,7 +44,7 @@ import static com.hazelcast.jet.core.processor.Processors.combineToSlidingWindow
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.transform.AbstractTransform.Optimization.MEMORY;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
-import static com.hazelcast.internal.util.function.Functions.entryKey;
+import static com.hazelcast.function.Functions.entryKey;
 import static java.util.Collections.nCopies;
 
 public class WindowGroupTransform<K, R> extends AbstractTransform {

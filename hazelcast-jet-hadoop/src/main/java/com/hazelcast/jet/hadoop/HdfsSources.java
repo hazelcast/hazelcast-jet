@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsP.MetaSupplier;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.internal.util.function.BiFunctionEx;
+import com.hazelcast.function.BiFunctionEx;
 import org.apache.hadoop.mapred.JobConf;
 
 import javax.annotation.Nonnull;

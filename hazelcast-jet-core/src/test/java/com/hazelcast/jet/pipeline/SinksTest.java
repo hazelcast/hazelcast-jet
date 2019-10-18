@@ -43,7 +43,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
-import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

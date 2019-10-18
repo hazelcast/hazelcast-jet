@@ -18,8 +18,8 @@ package com.hazelcast.jet.impl.pipeline.transform;
 
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
 
 import javax.annotation.Nonnull;
 

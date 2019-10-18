@@ -39,7 +39,7 @@ import com.hazelcast.map.IMap;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
-import static com.hazelcast.internal.util.function.ComparatorEx.comparing;
+import static com.hazelcast.function.ComparatorEx.comparing;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapEventNewValue;

@@ -21,7 +21,7 @@ import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.internal.util.function.ToLongFunctionEx;
+import com.hazelcast.function.ToLongFunctionEx;
 
 import javax.annotation.Nonnull;
 

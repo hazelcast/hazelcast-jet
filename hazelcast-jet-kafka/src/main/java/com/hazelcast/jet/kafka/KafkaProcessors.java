@@ -21,7 +21,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.kafka.impl.StreamKafkaP;
 import com.hazelcast.jet.kafka.impl.WriteKafkaP;
 import com.hazelcast.internal.util.Preconditions;
-import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.ProducerRecord;
 

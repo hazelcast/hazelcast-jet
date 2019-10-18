@@ -34,8 +34,8 @@ import com.hazelcast.map.journal.EventJournalMapEvent;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
-import static com.hazelcast.internal.util.function.FunctionEx.identity;
-import static com.hazelcast.internal.util.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.function.FunctionEx.identity;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 public class ImdgConnectors {

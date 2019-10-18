@@ -24,7 +24,7 @@ import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.instance.impl.HazelcastInstanceFactory;
-import com.hazelcast.internal.util.function.PredicateEx;
+import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.map.IMap;
@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
-import static com.hazelcast.internal.util.function.Functions.entryValue;
+import static com.hazelcast.function.Functions.entryValue;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;

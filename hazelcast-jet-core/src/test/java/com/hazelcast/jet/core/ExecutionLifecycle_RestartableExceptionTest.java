@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.core.TestProcessors.MockPS;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

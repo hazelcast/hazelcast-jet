@@ -31,7 +31,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

@@ -18,8 +18,8 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
-import com.hazelcast.internal.util.function.BiFunctionEx;
-import com.hazelcast.internal.util.function.FunctionEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 

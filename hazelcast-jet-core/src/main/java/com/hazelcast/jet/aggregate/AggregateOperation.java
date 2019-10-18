@@ -19,9 +19,9 @@ package com.hazelcast.jet.aggregate;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.impl.aggregate.AggregateOperation1Impl;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
-import com.hazelcast.internal.util.function.BiConsumerEx;
-import com.hazelcast.internal.util.function.FunctionEx;
-import com.hazelcast.internal.util.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
