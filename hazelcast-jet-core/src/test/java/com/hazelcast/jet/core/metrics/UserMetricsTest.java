@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -27,9 +30,6 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
