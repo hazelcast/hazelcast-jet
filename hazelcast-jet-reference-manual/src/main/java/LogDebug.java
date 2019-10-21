@@ -125,7 +125,7 @@ public class LogDebug {
             .filterUsingContextAsync(
                 ContextFactory.withCreateFn(i -> 0L),
                 (ctx, l) -> {
-                    Metric dropped = Metrics.metric("dropped", Unit.COUNT, true);
+                    Metric dropped = Metrics.threadSafeMetric("dropped", Unit.COUNT);
                     return CompletableFuture.supplyAsync(
                         () -> {
                             boolean pass = l % 2L == ctx;
