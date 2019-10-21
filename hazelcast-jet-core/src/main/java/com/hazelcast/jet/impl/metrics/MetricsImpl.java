@@ -18,8 +18,9 @@ package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.jet.core.metrics.Metric;
 import com.hazelcast.jet.core.metrics.Unit;
-import com.hazelcast.jet.impl.execution.ProcessorTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
+
+import javax.annotation.Nullable;
 
 public final class MetricsImpl {
 
@@ -36,30 +37,30 @@ public final class MetricsImpl {
         return getContext().metric(name, unit, threadSafe);
     }
 
-    private static UserMetricsContext getContext() {
+    private static MetricsContext getContext() {
         Container container = CONTEXT.get();
-        UserMetricsContext context = container.getContext();
+        MetricsContext context = container.getContext();
         if (context == null) {
-            throw new RuntimeException("User metrics are accessible only from internal worker threads");
+            throw new RuntimeException("Thread %s has no user-metrics context set; this is a bug only " +
+                    "if it is an internal Jet thread; otherwise user-metrics related code needs to be " +
+                    "modified so that it is not explicitly run on foreign threads");
         }
         return context;
     }
 
     public static class Container {
 
-        private UserMetricsContext context;
+        private MetricsContext context;
 
         Container() {
         }
 
-        public UserMetricsContext getContext() {
+        public MetricsContext getContext() {
             return context;
         }
 
-        public void setContext(Tasklet tasklet) {
-            if (tasklet instanceof ProcessorTasklet) {
-                this.context = ((ProcessorTasklet) tasklet).getUserMetricsContext();
-            }
+        public void setContext(@Nullable Tasklet tasklet) {
+            this.context = tasklet == null ? null : tasklet.getMetricsContext();
         }
     }
 

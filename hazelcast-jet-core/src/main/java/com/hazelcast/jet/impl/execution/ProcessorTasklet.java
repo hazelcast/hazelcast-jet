@@ -31,7 +31,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricNames;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.execution.init.VertexDef;
-import com.hazelcast.jet.impl.metrics.UserMetricsContext;
+import com.hazelcast.jet.impl.metrics.MetricsContext;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -127,7 +127,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLong queuesCapacity = new AtomicLong();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
-    private final UserMetricsContext userMetricsContext;
+    private final MetricsContext metricsContext;
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public ProcessorTasklet(@Nonnull Context context,
@@ -166,7 +166,7 @@ public class ProcessorTasklet implements Tasklet {
 
         watermarkCoalescer = WatermarkCoalescer.create(instreams.size());
 
-        userMetricsContext = new UserMetricsContext();
+        metricsContext = new MetricsContext();
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
@@ -226,8 +226,9 @@ public class ProcessorTasklet implements Tasklet {
         }
     }
 
-    public UserMetricsContext getUserMetricsContext() {
-        return userMetricsContext;
+    @Override
+    public MetricsContext getMetricsContext() {
+        return metricsContext;
     }
 
     @SuppressWarnings("checkstyle:returncount")
@@ -533,6 +534,6 @@ public class ProcessorTasklet implements Tasklet {
         context.collect(tagger, this);
         context.collect(tagger, this.processor);
 
-        userMetricsContext.collectMetrics(tagger, context);
+        metricsContext.collectMetrics(tagger, context);
     }
 }

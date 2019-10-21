@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-public class UserMetricsContext {
+public class MetricsContext {
 
     private String onlyName;
     private Metric onlyMetric;
