@@ -29,16 +29,16 @@ public final class UserMetricsImpl {
     private UserMetricsImpl() {
     }
 
-    public static Container getContainer() {
+    public static Container container() {
         return CONTEXT.get();
     }
 
-    public static Counter getCounter(String name) {
-        return getContext().getCounter(name);
+    public static Counter counter(String name) {
+        return getContext().counter(name);
     }
 
-    public static Gauge getGauge(String name, Unit unit) {
-        return getContext().getGauge(name, unit);
+    public static Gauge gauge(String name, Unit unit) {
+        return getContext().gauge(name, unit);
     }
 
     private static UserMetricsContext getContext() {

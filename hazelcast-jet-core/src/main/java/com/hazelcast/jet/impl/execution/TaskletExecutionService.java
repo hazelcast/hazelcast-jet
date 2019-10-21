@@ -245,8 +245,8 @@ public class TaskletExecutionService {
             IdleStrategy idlerLocal = idlerNonCooperative;
 
             try {
-                UserMetricsImpl.getContainer().setContext(t);
                 blockingWorkerCount.incrementAndGet();
+                UserMetricsImpl.container().setContext(t);
                 startedLatch.countDown();
                 t.init();
                 long idleCount = 0;
@@ -266,7 +266,7 @@ public class TaskletExecutionService {
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
             } finally {
                 blockingWorkerCount.decrementAndGet();
-                UserMetricsImpl.getContainer().setContext(null);
+                UserMetricsImpl.container().setContext(null);
                 currentThread().setContextClassLoader(clBackup);
                 tracker.executionTracker.taskletDone();
             }
@@ -296,7 +296,7 @@ public class TaskletExecutionService {
         @Override
         public void run() {
             myThread = currentThread();
-            userMetricsContextContainer = UserMetricsImpl.getContainer();
+            userMetricsContextContainer = UserMetricsImpl.container();
 
             IdleStrategy idlerLocal = idlerCooperative;
             long idleCount = 0;

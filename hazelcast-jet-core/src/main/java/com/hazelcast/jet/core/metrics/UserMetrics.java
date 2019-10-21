@@ -44,7 +44,7 @@ public final class UserMetrics {
      * {@link Unit#COUNT}.
      */
     public static Counter getCounter(String name) {
-        return UserMetricsImpl.getCounter(name);
+        return UserMetricsImpl.counter(name);
     }
 
     /**
@@ -52,7 +52,7 @@ public final class UserMetrics {
      * specified name.
      */
     public static Gauge getGauge(String name, Unit unit) {
-        return UserMetricsImpl.getGauge(name, unit);
+        return UserMetricsImpl.gauge(name, unit);
     }
 
 }

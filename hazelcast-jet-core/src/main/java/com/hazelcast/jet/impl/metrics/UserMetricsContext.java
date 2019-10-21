@@ -31,19 +31,17 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 public class UserMetricsContext {
 
-    private static final ProbeLevel LEVEL = ProbeLevel.INFO;
-
     private String onlyName;
     private Metric onlyMetric;
     private Unit onlyUnit;
 
     private Map<String, Metric> metrics;
 
-    Counter getCounter(String name) {
+    Counter counter(String name) {
         return getMetric(name, Unit.COUNT);
     }
 
-    Gauge getGauge(String name, Unit unit) {
+    Gauge gauge(String name, Unit unit) {
         return getMetric(name, unit);
     }
 
