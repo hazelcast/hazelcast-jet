@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.function.BiFunction;
 
 public class MetricsContext {
 
@@ -37,7 +38,15 @@ public class MetricsContext {
 
     private Map<String, Metric> metrics;
 
-    Metric metric(String name, Unit unit, boolean threadSafe) {
+    Metric metric(String name, Unit unit) {
+        return metric(name, unit, SimpleMetric::new);
+    }
+
+    Metric threadSafeMetric(String name, Unit unit) {
+        return metric(name, unit, ThreadSafeMetric::new);
+    }
+
+    private Metric metric(String name, Unit unit, BiFunction<String, Unit, Metric> metricSupplier) {
         Metric res = null;
         if (name.equals(onlyName)) {
             res = onlyMetric;
@@ -46,7 +55,7 @@ public class MetricsContext {
         }
         // register metric on first use
         if (res == null) {
-            res = threadSafe ? new ThreadSafeMetric(name, unit) : new SimpleMetric(name, unit);
+            res = metricSupplier.apply(name, unit);
             if (onlyName == null) {
                 // the first and so far the only metric
                 onlyName = name;

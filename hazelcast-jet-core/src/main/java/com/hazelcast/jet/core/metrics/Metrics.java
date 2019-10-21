@@ -39,7 +39,7 @@ public final class Metrics {
      * Returns a handler for manipulating the metric with the specified name.
      */
     public static Metric metric(String name) {
-        return MetricsImpl.metric(name, Unit.COUNT, false);
+        return MetricsImpl.metric(name, Unit.COUNT);
     }
 
     /**
@@ -47,21 +47,20 @@ public final class Metrics {
      * specified name and measurement unit.
      */
     public static Metric metric(String name, Unit unit) {
-        return MetricsImpl.metric(name, unit, false);
+        return MetricsImpl.metric(name, unit);
     }
 
     /**
      * Returns a handler for manipulating the metric with the
-     * specified name and measurement unit.
+     * specified name and measurement unit. This handle will have a
+     * different threading behaviour, then the default.
      * <p>
-     * Also has a parameter which can be used to specify the threading
-     * behaviour of the returned metric. Normally this is no concern. The
-     * default metric type is non-thread-safe, the user-code gets executed
-     * in such a way that it will still function properly. However it is
-     * possible to write user code in such a way that it will get executed
-     * on "foreign" (ie. not Jet internal threads) and in those situations
-     * we must set this threadSafe parameter to true. See following example
-     * code:
+     * Normally threading behaviour is no concern. The default metric type
+     * is non-thread-safe and the user-code gets executed in such a way
+     * that it will still function properly. However it is possible to write
+     * user code in such a way that it will get executed on "foreign"
+     * (ie. not Jet internal) threads and in those situations we must use
+     * such a thread-safe handler. See following example code:
      * <pre>
      * {@code
      *  p.drawFrom(..)
@@ -86,8 +85,8 @@ public final class Metrics {
      *
      *
      */
-    public static Metric metric(String name, Unit unit, boolean threadSafe) {
-        return MetricsImpl.metric(name, unit, threadSafe);
+    public static Metric threadSafeMetric(String name, Unit unit) {
+        return MetricsImpl.threadSafeMetric(name, unit);
     }
 
 }

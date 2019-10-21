@@ -33,8 +33,12 @@ public final class MetricsImpl {
         return CONTEXT.get();
     }
 
-    public static Metric metric(String name, Unit unit, boolean threadSafe) {
-        return getContext().metric(name, unit, threadSafe);
+    public static Metric metric(String name, Unit unit) {
+        return getContext().metric(name, unit);
+    }
+
+    public static Metric threadSafeMetric(String name, Unit unit) {
+        return getContext().threadSafeMetric(name, unit);
     }
 
     private static MetricsContext getContext() {
