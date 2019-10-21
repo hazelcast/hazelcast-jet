@@ -18,8 +18,8 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.metrics.Counter;
-import com.hazelcast.jet.core.metrics.UserMetrics;
+import com.hazelcast.jet.core.metrics.Metric;
+import com.hazelcast.jet.core.metrics.Metrics;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -30,9 +30,9 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.function.Functions.wholeItem;
 import static java.util.Arrays.asList;
 
 public class LogDebug {
@@ -84,9 +84,9 @@ public class LogDebug {
          .filter(l -> {
              boolean pass = l % 2 == 0;
              if (!pass) {
-                 UserMetrics.getCounter("dropped").inc();
+                 Metrics.metric("dropped").inc();
              }
-             UserMetrics.getCounter("total").inc();
+             Metrics.metric("total").inc();
              return pass;
          })
          .drainTo(sink);
@@ -107,7 +107,7 @@ public class LogDebug {
                     () -> {
                         boolean pass = l % 2L == ctx;
                         if (!pass) {
-                            UserMetrics.getCounter("dropped").inc();
+                            Metrics.metric("dropped").inc();
                         }
                         return pass;
                     }
@@ -124,7 +124,7 @@ public class LogDebug {
             .filterUsingContextAsync(
                 ContextFactory.withCreateFn(i -> 0L),
                 (ctx, l) -> {
-                    Counter dropped = UserMetrics.getCounter("dropped");
+                    Metric dropped = Metrics.metric("dropped");
                     return CompletableFuture.supplyAsync(
                         () -> {
                             boolean pass = l % 2L == ctx;

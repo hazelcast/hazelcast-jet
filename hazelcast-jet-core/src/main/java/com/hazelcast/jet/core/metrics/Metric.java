@@ -19,21 +19,31 @@ package com.hazelcast.jet.core.metrics;
 import javax.annotation.Nonnull;
 
 /**
- * A counter-like handler for manipulating one user-defined metric.
+ * Handler for manipulating one user-defined metric.
  * <p>
- * Metrics are, in essence just simple integer values, but their semantics
- * can differ from case-to-case. This representation should be used for
- * metrics that are meant for counting things.
+ * Metrics are, in essence just simple integer values, with various semantics.
+ * They can be used for example for counting things (like number of certain
+ * events) or for storing standalone values (like measurements). The various
+ * methods of this interface are meant to facilitate all these use-cases.
  * <p>
- * To obtain an instance, use {@link UserMetrics#getCounter}.
+ * To obtain an instance, use {@link Metrics#metric}.
  */
-public interface Counter {
+public interface Metric {
 
     /**
      * Returns the name of the associated metric.
      */
     @Nonnull
     String name();
+
+    /**
+     * Return the unit of measurement of the associated metric. Meant
+     * to provide further information on the type of value measured
+     * by the user-metric. Doesn't affect the functionality of the metric,
+     * it still remains a simple numeric value, but is used to
+     * populate the {@link MetricTags#UNIT} tag in the metric's description.
+     */
+    Unit unit();
 
     /**
      * Increments the current value by 1.
@@ -54,4 +64,15 @@ public interface Counter {
      * Decrements the current value by the specified amount.
      */
     void sub(long amount);
+
+    /**
+     * Sets the current value.
+     */
+    void set(long newValue);
+
+    /**
+     * Returns the current value.
+     */
+    long get();
+
 }

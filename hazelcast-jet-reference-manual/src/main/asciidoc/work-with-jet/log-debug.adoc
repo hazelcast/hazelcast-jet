@@ -277,13 +277,11 @@ like to monitor your filtering step you could write code like this:
 include::{javasource}/LogDebug.java[tag=s5]
 ----
 
-There are two types of "handlers" that can be used for user metrics (for details see the
-`{jet-javadoc}/core/metrics/UserMetrics.html[UserMetrics Javadoc]`):
-
-* `{jet-javadoc}/core/metrics/Counter.html[counters]`: useful for incrementally
-counting things, like number of certain events
-* `{jet-javadoc}/core/metrics/Gauge.html[gages]`: useful for storing measured values,
-like queue length, load-factor and such
+The handler for manipulating user metrics is the `{jet-javadoc}/core/metrics/Metric.html[Metric]`
+class, instances can be obtained via the utility class
+`{jet-javadoc}/core/metrics/Metrics.html[Metrics]`). The `Metric` interface allows both
+for storing simple measured values (like queue length, load-factor and such) and for
+incrementally counting things (like number of certain events).
 
 User metrics can be used anywhere in pipeline definitions where custom code can be added.
 This means (just to name the most important ones): filtering, mapping and flat-mapping

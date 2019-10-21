@@ -20,8 +20,7 @@ import com.hazelcast.internal.metrics.MetricTagger;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
-import com.hazelcast.jet.core.metrics.Counter;
-import com.hazelcast.jet.core.metrics.Gauge;
+import com.hazelcast.jet.core.metrics.Metric;
 import com.hazelcast.jet.core.metrics.Unit;
 
 import javax.annotation.Nonnull;
@@ -37,11 +36,7 @@ public class UserMetricsContext {
 
     private Map<String, Metric> metrics;
 
-    Counter counter(String name) {
-        return getMetric(name, Unit.COUNT);
-    }
-
-    Gauge gauge(String name, Unit unit) {
+    Metric metric(String name, Unit unit) {
         return getMetric(name, unit);
     }
 
@@ -96,14 +91,6 @@ public class UserMetricsContext {
             default:
                 throw new RuntimeException("Unhandled metrics unit " + unit);
         }
-    }
-
-    private interface Metric extends Counter, Gauge {
-
-        long get();
-
-        Unit unit();
-
     }
 
     private static final class MetricImpl implements Metric {

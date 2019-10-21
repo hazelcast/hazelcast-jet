@@ -23,7 +23,7 @@ import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.internal.util.concurrent.IdleStrategy;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.impl.metrics.UserMetricsImpl;
+import com.hazelcast.jet.impl.metrics.MetricsImpl;
 import com.hazelcast.jet.impl.util.NonCompletableFuture;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -246,7 +246,7 @@ public class TaskletExecutionService {
 
             try {
                 blockingWorkerCount.incrementAndGet();
-                UserMetricsImpl.container().setContext(t);
+                MetricsImpl.container().setContext(t);
                 startedLatch.countDown();
                 t.init();
                 long idleCount = 0;
@@ -266,7 +266,7 @@ public class TaskletExecutionService {
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
             } finally {
                 blockingWorkerCount.decrementAndGet();
-                UserMetricsImpl.container().setContext(null);
+                MetricsImpl.container().setContext(null);
                 currentThread().setContextClassLoader(clBackup);
                 tracker.executionTracker.taskletDone();
             }
@@ -287,7 +287,7 @@ public class TaskletExecutionService {
 
         private boolean finestLogEnabled;
         private Thread myThread;
-        private UserMetricsImpl.Container userMetricsContextContainer;
+        private MetricsImpl.Container userMetricsContextContainer;
 
         CooperativeWorker() {
             this.trackers = new CopyOnWriteArrayList<>();
@@ -296,7 +296,7 @@ public class TaskletExecutionService {
         @Override
         public void run() {
             myThread = currentThread();
-            userMetricsContextContainer = UserMetricsImpl.container();
+            userMetricsContextContainer = MetricsImpl.container();
 
             IdleStrategy idlerLocal = idlerCooperative;
             long idleCount = 0;

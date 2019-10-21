@@ -16,29 +16,24 @@
 
 package com.hazelcast.jet.impl.metrics;
 
-import com.hazelcast.jet.core.metrics.Counter;
-import com.hazelcast.jet.core.metrics.Gauge;
+import com.hazelcast.jet.core.metrics.Metric;
 import com.hazelcast.jet.core.metrics.Unit;
 import com.hazelcast.jet.impl.execution.ProcessorTasklet;
 import com.hazelcast.jet.impl.execution.Tasklet;
 
-public final class UserMetricsImpl {
+public final class MetricsImpl {
 
     private static final ThreadLocal<Container> CONTEXT = ThreadLocal.withInitial(Container::new);
 
-    private UserMetricsImpl() {
+    private MetricsImpl() {
     }
 
     public static Container container() {
         return CONTEXT.get();
     }
 
-    public static Counter counter(String name) {
-        return getContext().counter(name);
-    }
-
-    public static Gauge gauge(String name, Unit unit) {
-        return getContext().gauge(name, unit);
+    public static Metric metric(String name, Unit unit) {
+        return getContext().metric(name, unit);
     }
 
     private static UserMetricsContext getContext() {

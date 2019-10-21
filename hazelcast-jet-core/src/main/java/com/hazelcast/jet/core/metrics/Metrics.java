@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.core.metrics;
 
-import com.hazelcast.jet.impl.metrics.UserMetricsImpl;
+import com.hazelcast.jet.impl.metrics.MetricsImpl;
 
 /**
  * Utility class for obtaining handler to user-defined metrics.
@@ -26,33 +26,28 @@ import com.hazelcast.jet.impl.metrics.UserMetricsImpl;
  * that they can be set up by users to measure and count thing
  * they do in pipeline user code they write.
  * <p>
- * This class provides methods for creating various types of handlers
- * for setting up and manipulating the values of such metrics. There is
- * a version which makes it possible to count things (see {@link Counter}),
- * or one that is more generic and can be used to set all types of values,
- * including counters (see {@link Gauge}).
+ * This class provides provides the means for creating of handlers
+ * for setting up and manipulating the values of such metrics.
  */
 @SuppressWarnings("WeakerAccess")
-public final class UserMetrics {
+public final class Metrics {
 
-    private UserMetrics() {
+    private Metrics() {
     }
 
     /**
-     * Returns a counter type handler for manipulating the metric with
-     * the specified name. Is equivalent with a gauge of the unit
-     * {@link Unit#COUNT}.
+     * Returns a handler for manipulating the metric with the specified name.
      */
-    public static Counter getCounter(String name) {
-        return UserMetricsImpl.counter(name);
+    public static Metric metric(String name) {
+        return MetricsImpl.metric(name, Unit.COUNT);
     }
 
     /**
-     * Returns a gauge type handler for manipulating the metric with the
-     * specified name.
+     * Returns a handler for manipulating the metric with the
+     * specified name and measurement unit.
      */
-    public static Gauge getGauge(String name, Unit unit) {
-        return UserMetricsImpl.gauge(name, unit);
+    public static Metric metric(String name, Unit unit) {
+        return MetricsImpl.metric(name, unit);
     }
 
 }

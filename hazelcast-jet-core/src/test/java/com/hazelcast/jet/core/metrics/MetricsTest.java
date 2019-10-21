@@ -53,7 +53,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class UserMetricsTest extends JetTestSupport {
+public class MetricsTest extends JetTestSupport {
 
     private static final JobConfig JOB_CONFIG_WITH_METRICS = new JobConfig().setStoreMetricsAfterJobCompletion(true);
 
@@ -73,7 +73,7 @@ public class UserMetricsTest extends JetTestSupport {
                     boolean pass = l % 2 == 0;
 
                     if (!pass) {
-                        UserMetrics.getCounter("dropped"); //retrieve "dropped" counter, but never use it
+                        Metrics.metric("dropped"); //retrieve "dropped" counter, but never use it
                     }
                     //not even retrieve "total" counter
 
@@ -91,10 +91,9 @@ public class UserMetricsTest extends JetTestSupport {
                     boolean pass = l % 2 == 0;
 
                     if (!pass) {
-                        Counter dropped = UserMetrics.getCounter("dropped");
-                        dropped.inc();
+                        Metrics.metric("dropped").inc();
                     }
-                    UserMetrics.getCounter("total").inc();
+                    Metrics.metric("total").inc();
 
                     return pass;
                 })
@@ -108,8 +107,8 @@ public class UserMetricsTest extends JetTestSupport {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .mapStateful(LongAccumulator::new, (acc, i) -> {
                     acc.add(i);
-                    Gauge gauge = UserMetrics.getGauge("sum", Unit.COUNT);
-                    gauge.set(acc.get());
+                    Metric metric = Metrics.metric("sum", Unit.COUNT);
+                    metric.set(acc.get());
                     return acc.get();
                 })
                 .drainTo(Sinks.logger());
@@ -122,7 +121,7 @@ public class UserMetricsTest extends JetTestSupport {
         pipeline.drawFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .mapStateful(LongAccumulator::new, (acc, i) -> {
                     acc.add(i);
-                    UserMetrics.getGauge("sum", Unit.COUNT);
+                    Metrics.metric("sum", Unit.COUNT);
                     return acc.get();
                 })
                 .drainTo(Sinks.logger());
@@ -136,8 +135,7 @@ public class UserMetricsTest extends JetTestSupport {
 
         Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(asList(1L, 2L, 3L)));
         Vertex map = dag.newVertex("map", new NonCoopTransformPSupplier((FunctionEx<Long, Long>) l -> {
-            Counter counter = UserMetrics.getCounter("mapped");
-            counter.inc();
+            Metrics.metric("mapped").inc();
             return l * 10L;
         }));
         Vertex sink = dag.newVertex("sink", writeListP("results"));
@@ -156,8 +154,8 @@ public class UserMetricsTest extends JetTestSupport {
         Long[] input = {0L, 1L, 2L, 3L, 4L};
         pipeline.drawFrom(TestSources.items(input))
                 .map(l -> {
-                    UserMetrics.getCounter("mapped").inc();
-                    UserMetrics.getGauge("total", Unit.COUNT).set(input.length);
+                    Metrics.metric("mapped").inc();
+                    Metrics.metric("total", Unit.COUNT).set(input.length);
                     return l;
                 })
                 .drainTo(Sinks.logger());
@@ -180,8 +178,8 @@ public class UserMetricsTest extends JetTestSupport {
                 .filterUsingContextAsync(
                         ContextFactory.withCreateFn(i -> 0L),
                         (ctx, l) -> {
-                            Counter dropped = UserMetrics.getCounter("dropped");
-                            Counter total = UserMetrics.getCounter("total");
+                            Metric dropped = Metrics.metric("dropped");
+                            Metric total = Metrics.metric("total");
                             return CompletableFuture.supplyAsync(
                                     () -> {
                                         boolean pass = l % 2L == ctx;
