@@ -20,6 +20,7 @@ import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.metrics.Metric;
 import com.hazelcast.jet.core.metrics.Metrics;
+import com.hazelcast.jet.core.metrics.Unit;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -124,7 +125,7 @@ public class LogDebug {
             .filterUsingContextAsync(
                 ContextFactory.withCreateFn(i -> 0L),
                 (ctx, l) -> {
-                    Metric dropped = Metrics.metric("dropped");
+                    Metric dropped = Metrics.metric("dropped", Unit.COUNT, true);
                     return CompletableFuture.supplyAsync(
                         () -> {
                             boolean pass = l % 2L == ctx;

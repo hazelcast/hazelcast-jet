@@ -30,8 +30,8 @@ import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricNames;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.impl.metrics.UserMetricsContext;
 import com.hazelcast.jet.impl.execution.init.VertexDef;
+import com.hazelcast.jet.impl.metrics.UserMetricsContext;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -533,6 +533,6 @@ public class ProcessorTasklet implements Tasklet {
         context.collect(tagger, this);
         context.collect(tagger, this.processor);
 
-        userMetricsContext.collect(tagger, context);
+        userMetricsContext.collectMetrics(tagger, context);
     }
 }

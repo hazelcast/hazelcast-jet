@@ -310,6 +310,10 @@ The way for fixing it would be:
 include::{javasource}/LogDebug.java[tag=s7]
 ----
 
+Take note that the fix not only moves the code for obtaining the `Metric` instance
+outside of the block executing on the ForkJoinPool, it also creates a "thread-safe"
+type of metric.
+
 === Exposing metrics ===
 The main method Jet has for exposing the metrics to the outside world is the
 JVM's standard JMX interface. Since Jet 3.2 there is also an alternative to JMX

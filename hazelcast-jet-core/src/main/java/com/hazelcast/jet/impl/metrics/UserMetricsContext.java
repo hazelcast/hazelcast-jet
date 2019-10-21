@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.metrics.Unit;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 public class UserMetricsContext {
@@ -36,20 +37,7 @@ public class UserMetricsContext {
 
     private Map<String, Metric> metrics;
 
-    Metric metric(String name, Unit unit) {
-        return getMetric(name, unit);
-    }
-
-    public void collect(MetricTagger tagger, MetricsCollectionContext context) {
-        if (onlyMetric != null) {
-            context.collect(tagger, onlyName, ProbeLevel.INFO, toProbeUnit(onlyUnit), onlyMetric.get());
-        } else if (metrics != null) {
-            metrics.forEach((name, metric) ->
-                    context.collect(tagger, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
-        }
-    }
-
-    private Metric getMetric(String name, Unit unit) {
+    Metric metric(String name, Unit unit, boolean threadSafe) {
         Metric res = null;
         if (name.equals(onlyName)) {
             res = onlyMetric;
@@ -58,7 +46,7 @@ public class UserMetricsContext {
         }
         // register metric on first use
         if (res == null) {
-            res = new MetricImpl(name, unit);
+            res = threadSafe ? new ThreadSafeMetric(name, unit) : new SimpleMetric(name, unit);
             if (onlyName == null) {
                 // the first and so far the only metric
                 onlyName = name;
@@ -80,6 +68,15 @@ public class UserMetricsContext {
         return res;
     }
 
+    public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
+        if (onlyMetric != null) {
+            context.collect(tagger, onlyName, ProbeLevel.INFO, toProbeUnit(onlyUnit), onlyMetric.get());
+        } else if (metrics != null) {
+            metrics.forEach((name, metric) ->
+                    context.collect(tagger, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
+        }
+    }
+
     private ProbeUnit toProbeUnit(Unit unit) {
         switch (unit) {
             case COUNT:
@@ -93,16 +90,16 @@ public class UserMetricsContext {
         }
     }
 
-    private static final class MetricImpl implements Metric {
+    private static final class SimpleMetric implements Metric {
 
-        private static final AtomicLongFieldUpdater<MetricImpl> VOLATILE_VALUE_UPDATER =
-                AtomicLongFieldUpdater.newUpdater(MetricImpl.class, "value");
+        private static final AtomicLongFieldUpdater<SimpleMetric> VOLATILE_VALUE_UPDATER =
+                AtomicLongFieldUpdater.newUpdater(SimpleMetric.class, "value");
 
         private final String name;
         private final Unit unit;
         private volatile long value;
 
-        MetricImpl(String name, Unit unit) {
+        SimpleMetric(String name, Unit unit) {
             this.name = name;
             this.unit = unit;
         }
@@ -145,6 +142,59 @@ public class UserMetricsContext {
         @Override
         public long get() {
             return value;
+        }
+    }
+
+    private static final class ThreadSafeMetric implements Metric {
+
+        private final String name;
+        private final Unit unit;
+        private AtomicLong value = new AtomicLong();
+
+        ThreadSafeMetric(String name, Unit unit) {
+            this.name = name;
+            this.unit = unit;
+        }
+
+        @Nonnull
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Unit unit() {
+            return unit;
+        }
+
+        @Override
+        public void inc() {
+            value.incrementAndGet();
+        }
+
+        @Override
+        public void add(long amount) {
+            value.addAndGet(amount);
+        }
+
+        @Override
+        public void dec() {
+            value.decrementAndGet();
+        }
+
+        @Override
+        public void sub(long amount) {
+            value.addAndGet(-amount);
+        }
+
+        @Override
+        public void set(long newValue) {
+            value.set(newValue);
+        }
+
+        @Override
+        public long get() {
+            return value.get();
         }
     }
 }

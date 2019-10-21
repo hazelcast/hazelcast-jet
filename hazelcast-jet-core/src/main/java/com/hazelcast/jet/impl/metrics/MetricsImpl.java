@@ -32,8 +32,8 @@ public final class MetricsImpl {
         return CONTEXT.get();
     }
 
-    public static Metric metric(String name, Unit unit) {
-        return getContext().metric(name, unit);
+    public static Metric metric(String name, Unit unit, boolean threadSafe) {
+        return getContext().metric(name, unit, threadSafe);
     }
 
     private static UserMetricsContext getContext() {
