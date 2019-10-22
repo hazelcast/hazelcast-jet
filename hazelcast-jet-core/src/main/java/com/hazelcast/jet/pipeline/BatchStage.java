@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
@@ -28,12 +26,14 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +41,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.function.Functions.wholeItem;
 
 /**
  * A stage in a distributed computation {@link Pipeline pipeline} that will
@@ -91,38 +91,38 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
-    <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
+    <C, R> BatchStage<R> mapUsingService(
+            @Nonnull ServiceFactory<C> serviceFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
     );
 
     @Nonnull @Override
-    <C, R> BatchStage<R> mapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
+    <C, R> BatchStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<C> serviceFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     @Nonnull @Override
-    <C> BatchStage<T> filterUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
+    <C> BatchStage<T> filterUsingService(
+            @Nonnull ServiceFactory<C> serviceFactory,
             @Nonnull BiPredicateEx<? super C, ? super T> filterFn
     );
 
     @Nonnull @Override
-    <C> BatchStage<T> filterUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
+    <C> BatchStage<T> filterUsingServiceAsync(
+            @Nonnull ServiceFactory<C> serviceFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     @Nonnull @Override
-    <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
+    <C, R> BatchStage<R> flatMapUsingService(
+            @Nonnull ServiceFactory<C> serviceFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     @Nonnull @Override
-    <C, R> BatchStage<R> flatMapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
+    <C, R> BatchStage<R> flatMapUsingServiceAsync(
+            @Nonnull ServiceFactory<C> serviceFactory,
             @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     );

@@ -16,15 +16,13 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.collection.IList;
 import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
-import com.hazelcast.instance.Node;
-import com.hazelcast.jet.ICacheJet;
-import com.hazelcast.jet.IListJet;
-import com.hazelcast.jet.IMapJet;
+import com.hazelcast.instance.impl.Node;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
@@ -35,9 +33,8 @@ import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.util.Util.RunnableExc;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
-import com.hazelcast.nio.Address;
+import com.hazelcast.map.IMap;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.test.AssertTask;
 import com.hazelcast.test.HazelcastTestSupport;
 import org.junit.After;
 
@@ -111,11 +108,11 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         return instanceFactory.newMember(config, blockedAddress);
     }
 
-    protected static <K, V> IMapJet<K, V> getMap(JetInstance instance) {
+    protected static <K, V> IMap<K, V> getMap(JetInstance instance) {
         return instance.getMap(randomName());
     }
 
-    protected static <K, V> ICacheJet<K, V> getCache(JetInstance instance) {
+    protected static <K, V> ICache<K, V> getCache(JetInstance instance) {
         return instance.getCacheManager().getCache(randomName());
     }
 
@@ -130,7 +127,7 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         }
     }
 
-    protected static <E> IListJet<E> getList(JetInstance instance) {
+    protected static <E> IList<E> getList(JetInstance instance) {
         return instance.getList(randomName());
     }
 
@@ -159,22 +156,6 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
                 assertEquals("jobId=" + idToString(job.getId()), expected, job.getStatus()), timeoutSeconds);
     }
 
-    public static void assertTrueEventually(RunnableExc runnable) {
-        HazelcastTestSupport.assertTrueEventually(assertTask(runnable));
-    }
-
-    public static void assertTrueEventually(RunnableExc runnable, long timeoutSeconds) {
-        HazelcastTestSupport.assertTrueEventually(assertTask(runnable), timeoutSeconds);
-    }
-
-    public static void assertTrueAllTheTime(RunnableExc runnable, long durationSeconds) {
-        HazelcastTestSupport.assertTrueAllTheTime(assertTask(runnable), durationSeconds);
-    }
-
-    public static void assertTrueFiveSeconds(RunnableExc runnable) {
-        HazelcastTestSupport.assertTrueFiveSeconds(assertTask(runnable));
-    }
-
     public static void assertClusterSizeEventually(int size, JetInstance jetInstance) {
         HazelcastTestSupport.assertClusterSizeEventually(size, jetInstance.getHazelcastInstance());
     }
@@ -197,15 +178,6 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
 
     public static NodeEngineImpl getNodeEngineImpl(JetInstance instance) {
         return getNodeEngineImpl(hz(instance));
-    }
-
-    private static <T extends Exception> AssertTask assertTask(RunnableExc<T> runnable) {
-        return new AssertTask() {
-            @Override
-            public void run() throws T {
-                runnable.run();
-            }
-        };
     }
 
     public Address nextAddress() {

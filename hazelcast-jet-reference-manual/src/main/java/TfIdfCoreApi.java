@@ -21,9 +21,9 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -49,9 +49,9 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.jet.function.Functions.wholeItem;
+import static com.hazelcast.function.Functions.wholeItem;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -84,8 +84,8 @@ public class TfIdfCoreApi {
         //end::s4[]
 
         //tag::s5[]
-        Vertex docLines = dag.newVertex("doc-lines", flatMapUsingContextP(
-                ContextFactory.withCreateFn(jet -> null).toNonCooperative(),
+        Vertex docLines = dag.newVertex("doc-lines", flatMapUsingServiceP(
+                ServiceFactory.withCreateFn(jet -> null).toNonCooperative(),
                 (Object ctx, Entry<Long, String> e) ->
                 traverseStream(docLines("books/" + e.getValue())
                     .map(line -> entry(e.getKey(), line)))));

@@ -65,7 +65,7 @@ public class SnapshotCompleteOperation extends AsyncJobOperation {
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.SNAPSHOT_COMPLETE_OPERATION;
     }
 

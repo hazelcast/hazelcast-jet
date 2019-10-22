@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 
