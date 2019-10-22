@@ -246,7 +246,7 @@ public class TaskletExecutionService {
 
             try {
                 blockingWorkerCount.incrementAndGet();
-                MetricsImpl.container().setContext(t);
+                MetricsImpl.container().setContext(t.getMetricsContext());
                 startedLatch.countDown();
                 t.init();
                 long idleCount = 0;
@@ -324,7 +324,7 @@ public class TaskletExecutionService {
             }
             try {
                 myThread.setContextClassLoader(t.jobClassLoader);
-                userMetricsContextContainer.setContext(t.tasklet);
+                userMetricsContextContainer.setContext(t.tasklet.getMetricsContext());
                 final ProgressState result = t.tasklet.call();
                 if (result.isDone()) {
                     dismissTasklet(t);

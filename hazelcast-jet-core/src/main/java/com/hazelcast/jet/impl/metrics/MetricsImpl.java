@@ -18,9 +18,6 @@ package com.hazelcast.jet.impl.metrics;
 
 import com.hazelcast.jet.core.metrics.Metric;
 import com.hazelcast.jet.core.metrics.Unit;
-import com.hazelcast.jet.impl.execution.Tasklet;
-
-import javax.annotation.Nullable;
 
 public final class MetricsImpl {
 
@@ -63,8 +60,8 @@ public final class MetricsImpl {
             return context;
         }
 
-        public void setContext(@Nullable Tasklet tasklet) {
-            this.context = tasklet == null ? null : tasklet.getMetricsContext();
+        public void setContext(MetricsContext context) {
+            this.context = context;
         }
     }
 
