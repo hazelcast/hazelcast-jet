@@ -42,9 +42,8 @@ public final class MetricsImpl {
         Container container = CONTEXT.get();
         MetricsContext context = container.getContext();
         if (context == null) {
-            throw new RuntimeException("Thread %s has no user-metrics context set; this is a bug only " +
-                    "if it is an internal Jet thread; otherwise user-metrics related code needs to be " +
-                    "modified so that it is not explicitly run on foreign threads");
+            throw new RuntimeException("Thread %s has no user-metrics context set, this method can " +
+                    "be called only on threads executing the job's processors");
         }
         return context;
     }

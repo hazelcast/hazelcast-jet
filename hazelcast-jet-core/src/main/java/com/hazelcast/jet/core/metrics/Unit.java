@@ -21,8 +21,9 @@ package com.hazelcast.jet.core.metrics;
  * provide further information on the type of value measured by user
  * metrics.
  * <p>
- * The unit values will end up populating the metric tag
- * {@link MetricTags#UNIT}.
+ * The unit values will end up populating the metric tag {@link
+ * MetricTags#UNIT}. It can be used by UI tools to format the value and it's
+ * not used by Jet itself.
  */
 public enum Unit {
     /** Size, counter, represented in bytes */

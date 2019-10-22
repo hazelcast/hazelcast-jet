@@ -53,9 +53,9 @@ public class MetricsContext {
                 onlyName = name;
                 return onlyMetric;
             } else { //one single already defined metric
-                if (name.equals(onlyName)) { //single already defined metric same as one requested
+                if (name.equals(onlyName)) { //single already defined metric same as the requested one
                     return onlyMetric;
-                } else { //single already defined metric different than one requested
+                } else { //single already defined metric different from the requested one
                     metrics = new HashMap<>();
                     metrics.put(onlyName, onlyMetric);
 
@@ -67,15 +67,13 @@ public class MetricsContext {
                     return metric;
                 }
             }
-        } else { //multiple already defined metrics
+        } else { //multiple metrics already defined
             Metric metric = metrics.get(name);
             if (metric == null) { //requested metric not yet defined
                 metric = metricSupplier.apply(name, unit);
                 metrics.put(name, metric);
-                return metric;
-            } else { //requested metric already defined
-                return metric;
             }
+            return metric;
         }
     }
 

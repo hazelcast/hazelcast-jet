@@ -24,17 +24,17 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.JetEvent;
+import com.hazelcast.jet.impl.processor.ProcessorWrapper;
+import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
+import com.hazelcast.jet.pipeline.JoinClause;
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.function.ToLongFunctionEx;
-import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.JetEvent;
-import com.hazelcast.jet.impl.processor.ProcessorWrapper;
-import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
-import com.hazelcast.jet.pipeline.JoinClause;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
@@ -328,8 +328,7 @@ class JetEventFunctionAdapter extends FunctionAdapter {
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return (S s, JetEvent<T> e) ->
-                flatMapAsyncFn.apply(s, e.payload())
-                        .thenApply(trav -> trav == null ? null : trav.map(re -> jetEvent(e.timestamp(), re)));
+                flatMapAsyncFn.apply(s, e.payload()).thenApply(trav -> trav.map(re -> jetEvent(e.timestamp(), re)));
     }
 
     @Nonnull @Override

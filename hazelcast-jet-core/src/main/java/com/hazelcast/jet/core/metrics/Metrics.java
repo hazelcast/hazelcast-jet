@@ -16,18 +16,18 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.jet.Job;
 import com.hazelcast.jet.impl.metrics.MetricsImpl;
 
 /**
- * Utility class for obtaining handler to user-defined metrics.
+ * Utility class for obtaining handlers to user-defined metrics.
  * <p>
- * User-defined metric are simple numeric values used to count or
- * measure things, just like the built-in ones, the difference being
- * that they can be set up by users to measure and count thing
- * they do in pipeline user code they write.
+ * User-defined metric are simple numeric values used to count or measure
+ * things. A code submitted to Jet can use them to publish any custom run-time
+ * values.
  * <p>
- * This class provides provides the means for creating of handlers
- * for setting up and manipulating the values of such metrics.
+ * This class provides the means for creating of handlers
+ * for setting up and manipulating the user-defined metrics.
  */
 @SuppressWarnings("WeakerAccess")
 public final class Metrics {
@@ -36,41 +36,52 @@ public final class Metrics {
     }
 
     /**
-     * Returns a handler for manipulating the metric with the specified name.
+     * Returns a non-thread-safe handler for manipulating the metric with the
+     * specified name.
+     * <p>
+     * This method only works if called from a processor thread and the
+     * returned handler is tied to the processor that is currently executing.
+     * The handler is created on the first call, subsequent calls return the
+     * cached instance and ignore the requested unit or thread safety. Until
+     * the first call is made, the metric is not visible in JMX or using {@link
+     * Job#getMetrics()}.
      */
     public static Metric metric(String name) {
         return MetricsImpl.metric(name, Unit.COUNT);
     }
 
     /**
-     * Returns a handler for manipulating the metric with the
+     * Returns a non-thread-safe handler for manipulating the metric with the
      * specified name and measurement unit.
+     * <p>
+     * This method only works if called from a processor thread and the
+     * returned handler is tied to the processor that is currently executing.
+     * The handler is created on the first call, subsequent calls return the
+     * cached instance and ignore the requested unit or thread safety. Until
+     * the first call is made, the metric is not visible in JMX or using {@link
+     * Job#getMetrics()}.
      */
     public static Metric metric(String name, Unit unit) {
         return MetricsImpl.metric(name, unit);
     }
 
     /**
-     * Returns a handler for manipulating the metric with the
-     * specified name and measurement unit. This handle will have a
-     * different threading behaviour, then the default.
+     * Returns a thread-safe handler for manipulating the metric with the
+     * specified name and measurement unit.
      * <p>
-     * Normally threading behaviour is no concern. The default metric type
-     * is non-thread-safe and the user-code gets executed in such a way
-     * that it will still function properly. However it is possible to write
-     * user code in such a way that it will get executed on "foreign"
-     * (ie. not Jet internal) threads and in those situations we must use
-     * such a thread-safe handler. See following example code:
+     * You need the thread-safe method if you submit work to other threads and
+     * want to manipulate the metric in those threads. For example:
      * <pre>
      * {@code
-     *  p.drawFrom(..)
-     *   .filterUsingContextAsync(
-     *       ContextFactory.withCreateFn(i -> 0L),
-     *       (ctx, l) -> {
-     *           Metric dropped = Metrics.metric("dropped", Unit.COUNT, true);
+     *  p.drawFrom(...)
+     *   .filterUsingServiceAsync(
+     *       ServiceFactory.withCreateFn(i -> "foo"),
+     *       (ctx, item) -> {
+     *           Metric dropped = Metrics.threadSafeMetric("dropCount", Unit.COUNT);
      *           return CompletableFuture.supplyAsync(
      *               () -> {
-     *                   boolean pass = l % 2L == ctx;
+     *                   // the callback runs on another thread
+     *                   boolean pass = item % 2L == 0;
      *                   if (!pass) {
      *                       dropped.inc();
      *                   }
@@ -79,14 +90,17 @@ public final class Metrics {
      *           );
      *       }
      *   )
-     *   .drainTo(...);
-     * }
-     * </pre>
+     * }</pre>
      *
-     *
+     * <p>
+     * This method only works if called from a processor thread and the
+     * returned handler is tied to the processor that is currently executing.
+     * The handler is created on the first call, subsequent calls return the
+     * cached instance and ignore the requested unit or thread safety. Until
+     * the first call is made, the metric is not visible in JMX or using {@link
+     * Job#getMetrics()}.
      */
     public static Metric threadSafeMetric(String name, Unit unit) {
         return MetricsImpl.threadSafeMetric(name, unit);
     }
-
 }

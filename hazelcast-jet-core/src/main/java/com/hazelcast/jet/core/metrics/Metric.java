@@ -21,12 +21,13 @@ import javax.annotation.Nonnull;
 /**
  * Handler for manipulating one user-defined metric.
  * <p>
- * Metrics are, in essence just simple integer values, with various semantics.
+ * Metrics are in essence just simple {@code long} values, with any semantics.
  * They can be used for example for counting things (like number of certain
- * events) or for storing standalone values (like measurements). The various
- * methods of this interface are meant to facilitate all these use-cases.
+ * events) or for storing standalone values (like measurements).
  * <p>
- * To obtain an instance, use {@link Metrics#metric}.
+ * To obtain an instance, use {@link Metrics#metric}. The instance is tied to
+ * the processor it was created for and is or is not thread-safe based on the
+ * method that was used to create it.
  */
 public interface Metric {
 
@@ -37,7 +38,7 @@ public interface Metric {
     String name();
 
     /**
-     * Return the unit of measurement of the associated metric. Meant
+     * Return the measurement unit for the associated metric. Meant
      * to provide further information on the type of value measured
      * by the user-metric. Doesn't affect the functionality of the metric,
      * it still remains a simple numeric value, but is used to
