@@ -19,6 +19,8 @@ package com.hazelcast.jet.impl.metrics;
 import com.hazelcast.jet.core.metrics.Metric;
 import com.hazelcast.jet.core.metrics.Unit;
 
+import javax.annotation.Nullable;
+
 public final class MetricsImpl {
 
     private static final ThreadLocal<Container> CONTEXT = ThreadLocal.withInitial(Container::new);
@@ -50,16 +52,18 @@ public final class MetricsImpl {
 
     public static class Container {
 
+        @Nullable
         private MetricsContext context;
 
         Container() {
         }
 
+        @Nullable
         public MetricsContext getContext() {
             return context;
         }
 
-        public void setContext(MetricsContext context) {
+        public void setContext(@Nullable MetricsContext context) {
             this.context = context;
         }
     }

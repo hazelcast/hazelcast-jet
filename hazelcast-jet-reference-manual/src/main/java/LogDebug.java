@@ -85,9 +85,9 @@ public class LogDebug {
          .filter(l -> {
              boolean pass = l % 2 == 0;
              if (!pass) {
-                 Metrics.metric("dropped").inc();
+                 Metrics.metric("dropped").increment();
              }
-             Metrics.metric("total").inc();
+             Metrics.metric("total").increment();
              return pass;
          })
          .drainTo(sink);
@@ -108,7 +108,7 @@ public class LogDebug {
                     () -> {
                         boolean pass = l % 2L == ctx;
                         if (!pass) {
-                            Metrics.metric("dropped").inc();
+                            Metrics.metric("dropped").increment();
                         }
                         return pass;
                     }
@@ -131,7 +131,7 @@ public class LogDebug {
                         () -> {
                             boolean pass = item % 2L == 0;
                             if (!pass) {
-                                dropped.inc();
+                                dropped.increment();
                             }
                             return pass;
                         }

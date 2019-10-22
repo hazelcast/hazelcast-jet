@@ -27,11 +27,13 @@ import com.hazelcast.jet.core.metrics.Unit;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.BiFunction;
 
 public class MetricsContext {
+
+    private static final BiFunction<String, Unit, Metric> CREATE_SINGLE_WRITER_METRIC = SingleWriterMetric::new;
+    private static final BiFunction<String, Unit, Metric> CREATE_THREAD_SAFE_METRICS = ThreadSafeMetric::new;
 
     private String onlyName;
     private Metric onlyMetric;
@@ -39,11 +41,11 @@ public class MetricsContext {
     private Map<String, Metric> metrics;
 
     Metric metric(String name, Unit unit) {
-        return metric(name, unit, SimpleMetric::new);
+        return metric(name, unit, CREATE_SINGLE_WRITER_METRIC);
     }
 
     Metric threadSafeMetric(String name, Unit unit) {
-        return metric(name, unit, ThreadSafeMetric::new);
+        return metric(name, unit, CREATE_THREAD_SAFE_METRICS);
     }
 
     private Metric metric(String name, Unit unit, BiFunction<String, Unit, Metric> metricSupplier) {
@@ -105,16 +107,16 @@ public class MetricsContext {
         }
     }
 
-    private static final class SimpleMetric implements Metric {
+    private static final class SingleWriterMetric implements Metric {
 
-        private static final AtomicLongFieldUpdater<SimpleMetric> VOLATILE_VALUE_UPDATER =
-                AtomicLongFieldUpdater.newUpdater(SimpleMetric.class, "value");
+        private static final AtomicLongFieldUpdater<SingleWriterMetric> VOLATILE_VALUE_UPDATER =
+                AtomicLongFieldUpdater.newUpdater(SingleWriterMetric.class, "value");
 
         private final String name;
         private final Unit unit;
         private volatile long value;
 
-        SimpleMetric(String name, Unit unit) {
+        SingleWriterMetric(String name, Unit unit) {
             this.name = name;
             this.unit = unit;
         }
@@ -135,22 +137,22 @@ public class MetricsContext {
         }
 
         @Override
-        public void inc() {
+        public void increment() {
             VOLATILE_VALUE_UPDATER.lazySet(this, value + 1);
         }
 
         @Override
-        public void add(long increment) {
+        public void increment(long increment) {
             VOLATILE_VALUE_UPDATER.lazySet(this, value + increment);
         }
 
         @Override
-        public void dec() {
+        public void decrement() {
             VOLATILE_VALUE_UPDATER.lazySet(this, value - 1);
         }
 
         @Override
-        public void subtract(long decrement) {
+        public void decrement(long decrement) {
             VOLATILE_VALUE_UPDATER.lazySet(this, value - decrement);
         }
 
@@ -162,9 +164,12 @@ public class MetricsContext {
 
     private static final class ThreadSafeMetric implements Metric {
 
+        private static final AtomicLongFieldUpdater<ThreadSafeMetric> VOLATILE_VALUE_UPDATER =
+                AtomicLongFieldUpdater.newUpdater(ThreadSafeMetric.class, "value");
+
         private final String name;
         private final Unit unit;
-        private AtomicLong value = new AtomicLong();
+        private volatile long value;
 
         ThreadSafeMetric(String name, Unit unit) {
             this.name = name;
@@ -183,33 +188,33 @@ public class MetricsContext {
         }
 
         @Override
-        public void inc() {
-            value.incrementAndGet();
+        public void increment() {
+            VOLATILE_VALUE_UPDATER.incrementAndGet(this);
         }
 
         @Override
-        public void add(long amount) {
-            value.addAndGet(amount);
+        public void increment(long amount) {
+            VOLATILE_VALUE_UPDATER.addAndGet(this, amount);
         }
 
         @Override
-        public void dec() {
-            value.decrementAndGet();
+        public void decrement() {
+            VOLATILE_VALUE_UPDATER.decrementAndGet(this);
         }
 
         @Override
-        public void subtract(long amount) {
-            value.addAndGet(-amount);
+        public void decrement(long amount) {
+            VOLATILE_VALUE_UPDATER.addAndGet(this, -amount);
         }
 
         @Override
         public void set(long newValue) {
-            value.set(newValue);
+            VOLATILE_VALUE_UPDATER.set(this, newValue);
         }
 
         @Override
         public long get() {
-            return value.get();
+            return VOLATILE_VALUE_UPDATER.get(this);
         }
     }
 }

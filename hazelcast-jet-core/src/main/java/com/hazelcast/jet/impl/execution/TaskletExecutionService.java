@@ -232,6 +232,8 @@ public class TaskletExecutionService {
         private final TaskletTracker tracker;
         private final CountDownLatch startedLatch;
 
+        private MetricsImpl.Container userMetricsContextContainer;
+
         private BlockingWorker(TaskletTracker tracker, CountDownLatch startedLatch) {
             this.tracker = tracker;
             this.startedLatch = startedLatch;
@@ -243,10 +245,11 @@ public class TaskletExecutionService {
             Tasklet t = tracker.tasklet;
             currentThread().setContextClassLoader(tracker.jobClassLoader);
             IdleStrategy idlerLocal = idlerNonCooperative;
+            userMetricsContextContainer = MetricsImpl.container();
 
             try {
                 blockingWorkerCount.incrementAndGet();
-                MetricsImpl.container().setContext(t.getMetricsContext());
+                userMetricsContextContainer.setContext(t.getMetricsContext());
                 startedLatch.countDown();
                 t.init();
                 long idleCount = 0;

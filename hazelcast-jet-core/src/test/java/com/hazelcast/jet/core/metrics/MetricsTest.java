@@ -91,9 +91,9 @@ public class MetricsTest extends JetTestSupport {
                     boolean pass = l % 2 == 0;
 
                     if (!pass) {
-                        Metrics.metric("dropped").inc();
+                        Metrics.metric("dropped").increment();
                     }
-                    Metrics.metric("total").inc();
+                    Metrics.metric("total").increment();
 
                     return pass;
                 })
@@ -135,7 +135,7 @@ public class MetricsTest extends JetTestSupport {
 
         Vertex source = dag.newVertex("source", TestProcessors.ListSource.supplier(asList(1L, 2L, 3L)));
         Vertex map = dag.newVertex("map", new NonCoopTransformPSupplier((FunctionEx<Long, Long>) l -> {
-            Metrics.metric("mapped").inc();
+            Metrics.metric("mapped").increment();
             return l * 10L;
         }));
         Vertex sink = dag.newVertex("sink", writeListP("results"));
@@ -154,7 +154,7 @@ public class MetricsTest extends JetTestSupport {
         Long[] input = {0L, 1L, 2L, 3L, 4L};
         pipeline.drawFrom(TestSources.items(input))
                 .map(l -> {
-                    Metrics.metric("mapped").inc();
+                    Metrics.metric("mapped").increment();
                     Metrics.metric("total", Unit.COUNT).set(input.length);
                     return l;
                 })
@@ -184,9 +184,9 @@ public class MetricsTest extends JetTestSupport {
                                     () -> {
                                         boolean pass = l % 2L == ctx;
                                         if (!pass) {
-                                            dropped.inc();
+                                            dropped.increment();
                                         }
-                                        total.inc();
+                                        total.increment();
                                         return pass;
                                     }
                             );
