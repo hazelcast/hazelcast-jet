@@ -31,8 +31,8 @@ import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.processor.TransformP;
-import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -175,8 +175,8 @@ public class MetricsTest extends JetTestSupport {
                 .window(WindowDefinition.tumbling(3))
                 .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
                 .map(WindowResult::result)
-                .filterUsingContextAsync(
-                        ContextFactory.withCreateFn(i -> 0L),
+                .filterUsingServiceAsync(
+                        ServiceFactory.withCreateFn(i -> 0L),
                         (ctx, l) -> {
                             Metric dropped = Metrics.metric("dropped");
                             Metric total = Metrics.metric("total");
