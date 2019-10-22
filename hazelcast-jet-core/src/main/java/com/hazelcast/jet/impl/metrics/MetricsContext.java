@@ -152,7 +152,7 @@ public class MetricsContext {
         }
 
         @Override
-        public void sub(long decrement) {
+        public void subtract(long decrement) {
             VOLATILE_VALUE_UPDATER.lazySet(this, value - decrement);
         }
 
@@ -200,7 +200,7 @@ public class MetricsContext {
         }
 
         @Override
-        public void sub(long amount) {
+        public void subtract(long amount) {
             value.addAndGet(-amount);
         }
 

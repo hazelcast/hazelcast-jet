@@ -63,7 +63,7 @@ public interface Metric {
     /**
      * Decrements the current value by the specified amount.
      */
-    void sub(long amount);
+    void subtract(long amount);
 
     /**
      * Sets the current value.
