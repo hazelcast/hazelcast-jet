@@ -43,25 +43,27 @@ public final class HdfsSources {
 
     /**
      * With the new HDFS API, some of the {@link RecordReader}s return the same
-     * key/value objects for each record, for example {@link LineRecordReader}.
-     * The source makes a copy of each object ot emit them to downstream. But
-     * for the readers which creates a new object for each record, the source
-     * can be configured to not copy the objects.
+     * key/value instances for each record, for example {@link LineRecordReader}.
+     * If this property is set to {@code true}, the source makes a copy of each
+     * object before emitting it. For readers which create a new instance for
+     * each record, the source can be configured to not copy the objects for
+     * performance.
      * <p>
-     * Also if you are using a mapper function which creates a new object for
-     * each record then it makes sense to set this property to {@code false} to
-     * avoid unnecessary copying.
+     * Also if you are using a projection function which doesn't refer to any
+     * mutable state from the key or value, then it makes sense to set this
+     * property to {@code false} to avoid unnecessary copying.
      * <p>
-     * The source copies the objects by serializing and de-serializing it. The
-     * objects should be either {@link Writable} or serializable in a way that
-     * Jet instance can serialize/de-serialize.
+     * The source copies the objects by serializing and de-serializing them. The
+     * objects should be either {@link Writable} or serializable in a way which
+     * Jet can serialize/de-serialize.
      * <p>
-     * Here is how you can configure the source. Default value is {@code true}.
-     * <pre>{@code
-     * Configuration conf = new Configuration();
-     * conf.set(HdfsSources.COPY_ON_READ, "false");
+     * Here is how you can configure the source. Default and always safe value is
+     * {@code true}:
      *
-     * BatchSource<Entry<K, V>> source = HdfsSources.hdfs(conf);
+     * <pre>{@code
+     *     Configuration conf = new Configuration();
+     *     conf.set(HdfsSources.COPY_ON_READ, "false");
+     *     BatchSource<Entry<K, V>> source = HdfsSources.hdfs(conf);
      * }</pre>
      */
     public static final String COPY_ON_READ = "jet.source.copyonread";

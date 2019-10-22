@@ -59,7 +59,9 @@ public final class HdfsSinks {
      * used.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
-     * the files will be overwritten.
+     * the files will be overwritten. If the cluster members change, some files
+     * will be overwritten and some not - we don't clean the directory before
+     * the execution starts.
      * <p>
      * Default local parallelism for this processor is 2 (or less if less CPUs
      * are available).
