@@ -121,6 +121,12 @@ public final class MetricTags {
      */
     public static final String SOURCE_ADDRESS = "sourceAddress";
 
+    /**
+     * Boolean flag which is true if the metric is an user-defined one
+     * (as opposed to build-in).
+     */
+    public static final String USER = "user";
+
     private MetricTags() {
     }
 }

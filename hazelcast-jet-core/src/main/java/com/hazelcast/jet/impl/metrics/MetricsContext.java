@@ -21,6 +21,7 @@ import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.core.metrics.Metric;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.core.metrics.Unit;
 
 import javax.annotation.Nonnull;
@@ -79,11 +80,17 @@ public class MetricsContext {
 
     public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
         if (onlyMetric != null) {
-            context.collect(tagger, onlyName, ProbeLevel.INFO, toProbeUnit(onlyUnit), onlyMetric.get());
+            MetricTagger withUserFlag = addUserTag(tagger);
+            context.collect(withUserFlag, onlyName, ProbeLevel.INFO, toProbeUnit(onlyUnit), onlyMetric.get());
         } else if (metrics != null) {
+            MetricTagger withUserFlag = addUserTag(tagger);
             metrics.forEach((name, metric) ->
-                    context.collect(tagger, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
+                    context.collect(withUserFlag, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
         }
+    }
+
+    private MetricTagger addUserTag(MetricTagger tagger) {
+        return tagger.withTag(MetricTags.USER, "true");
     }
 
     private ProbeUnit toProbeUnit(Unit unit) {
