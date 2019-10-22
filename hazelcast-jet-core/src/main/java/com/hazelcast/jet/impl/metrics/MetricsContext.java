@@ -35,7 +35,6 @@ public class MetricsContext {
 
     private String onlyName;
     private Metric onlyMetric;
-    private Unit onlyUnit;
 
     private Map<String, Metric> metrics;
 
@@ -48,40 +47,42 @@ public class MetricsContext {
     }
 
     private Metric metric(String name, Unit unit, BiFunction<String, Unit, Metric> metricSupplier) {
-        Metric res = null;
-        if (name.equals(onlyName)) {
-            res = onlyMetric;
-        } else if (metrics != null) {
-            res = metrics.get(name);
-        }
-        // register metric on first use
-        if (res == null) {
-            res = metricSupplier.apply(name, unit);
-            if (onlyName == null) {
-                // the first and so far the only metric
+        if (metrics == null) { //at most one already defined metric
+            if (onlyMetric == null) { //no already defined metrics
+                onlyMetric = metricSupplier.apply(name, unit);
                 onlyName = name;
-                onlyMetric = res;
-                onlyUnit = unit;
-            } else {
-                // 2 or more metrics
-                if (metrics == null) {
+                return onlyMetric;
+            } else { //one single already defined metric
+                if (name.equals(onlyName)) { //single already defined metric same as one requested
+                    return onlyMetric;
+                } else { //single already defined metric different than one requested
                     metrics = new HashMap<>();
                     metrics.put(onlyName, onlyMetric);
 
-                    onlyName = null;
                     onlyMetric = null;
-                    onlyUnit = null;
+                    onlyName = null;
+
+                    Metric metric = metricSupplier.apply(name, unit);
+                    metrics.put(name, metric);
+                    return metric;
                 }
-                metrics.put(name, res);
+            }
+        } else { //multiple already defined metrics
+            Metric metric = metrics.get(name);
+            if (metric == null) { //requested metric not yet defined
+                metric = metricSupplier.apply(name, unit);
+                metrics.put(name, metric);
+                return metric;
+            } else { //requested metric already defined
+                return metric;
             }
         }
-        return res;
     }
 
     public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
         if (onlyMetric != null) {
             MetricTagger withUserFlag = addUserTag(tagger);
-            context.collect(withUserFlag, onlyName, ProbeLevel.INFO, toProbeUnit(onlyUnit), onlyMetric.get());
+            context.collect(withUserFlag, onlyName, ProbeLevel.INFO, toProbeUnit(onlyMetric.unit()), onlyMetric.get());
         } else if (metrics != null) {
             MetricTagger withUserFlag = addUserTag(tagger);
             metrics.forEach((name, metric) ->
