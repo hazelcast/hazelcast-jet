@@ -123,12 +123,13 @@ public class LogDebug {
         p.drawFrom(TestSources.items(0, 1, 2, 3))
             //tag::s7[]
             .filterUsingServiceAsync(
-                ServiceFactory.withCreateFn(i -> 0L),
-                (ctx, l) -> {
+                ServiceFactory.withCreateFn(i -> "foo"),
+                (ctx, item) -> {
+                    // need to use thread-safe metric since it will be mutated for another thread
                     Metric dropped = Metrics.threadSafeMetric("dropped", Unit.COUNT);
                     return CompletableFuture.supplyAsync(
                         () -> {
-                            boolean pass = l % 2L == ctx;
+                            boolean pass = item % 2L == 0;
                             if (!pass) {
                                 dropped.inc();
                             }
