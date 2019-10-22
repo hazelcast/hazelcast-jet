@@ -121,7 +121,6 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
         public void init(@Nonnull Context context) throws Exception {
             jobContext = new JobContextImpl(configuration, new JobID());
             OutputFormat outputFormat = getOutputFormat(configuration);
-            // TODO [viliam] remove the use of UUID
 
             outputCommitter = outputFormat.getOutputCommitter(getTaskAttemptContext(configuration, jobContext,
                     getUuid(context)));

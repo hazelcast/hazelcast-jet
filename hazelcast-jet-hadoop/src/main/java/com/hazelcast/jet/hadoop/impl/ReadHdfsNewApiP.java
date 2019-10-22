@@ -26,7 +26,6 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.hadoop.HdfsSources;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +55,8 @@ import java.util.function.Function;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.hadoop.HdfsSources.COPY_ON_READ;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
@@ -128,10 +129,11 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
                         return projectedRecord;
                     }
                 }
-                reader.close();
                 return null;
             } catch (Exception e) {
                 throw sneakyThrow(e);
+            } finally {
+                uncheckRun(reader::close);
             }
         };
     }
@@ -152,18 +154,14 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return serializationService.toObject(serializationService.toData(o));
     }
 
-    private static InputFormat getInputFormat(Configuration configuration) {
-        try {
-            Class<?> inputFormatClass = configuration.getClass(MRJobConfig.INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
-            Constructor<?> constructor = inputFormatClass.getDeclaredConstructor(EMPTY_ARRAY);
-            constructor.setAccessible(true);
+    private static InputFormat getInputFormat(Configuration configuration) throws Exception {
+        Class<?> inputFormatClass = configuration.getClass(MRJobConfig.INPUT_FORMAT_CLASS_ATTR, TextInputFormat.class);
+        Constructor<?> constructor = inputFormatClass.getDeclaredConstructor(EMPTY_ARRAY);
+        constructor.setAccessible(true);
 
-            InputFormat inputFormat = (InputFormat) constructor.newInstance();
-            ReflectionUtils.setConf(inputFormat, configuration);
-            return inputFormat;
-        } catch (Exception e) {
-            throw ExceptionUtil.sneakyThrow(e);
-        }
+        InputFormat inputFormat = (InputFormat) constructor.newInstance();
+        ReflectionUtils.setConf(inputFormat, configuration);
+        return inputFormat;
     }
 
     public static class MetaSupplier<K, V, R> extends ReadHdfsMetaSupplierBase {
@@ -172,7 +170,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
         /**
          * The instance is either {@link SerializableConfiguration} or {@link
-         *  SerializableJobConf}, which are serializable.
+         * SerializableJobConf}, which are serializable.
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private final Configuration configuration;
@@ -212,7 +210,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
 
         /**
          * The instance is either {@link SerializableConfiguration} or {@link
-         *  SerializableJobConf}, which are serializable.
+         * SerializableJobConf}, which are serializable.
          */
         @SuppressFBWarnings("SE_BAD_FIELD")
         private Configuration configuration;
@@ -232,7 +230,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         @Override @Nonnull
         public List<Processor> get(int count) {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, assignedSplits);
-            InputFormat inputFormat = getInputFormat(configuration);
+            InputFormat inputFormat = uncheckCall(() -> getInputFormat(configuration));
 
             return processorToSplits
                     .values().stream()

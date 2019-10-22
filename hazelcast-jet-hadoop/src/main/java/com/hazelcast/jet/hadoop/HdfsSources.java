@@ -64,7 +64,7 @@ public final class HdfsSources {
      * BatchSource<Entry<K, V>> source = HdfsSources.hdfs(conf);
      * }</pre>
      */
-    public static final String COPY_ON_READ = "JET_HDFS_SOURCE_COPY_ON_READ";
+    public static final String COPY_ON_READ = "jet.source.copyonread";
 
     private HdfsSources() {
     }
