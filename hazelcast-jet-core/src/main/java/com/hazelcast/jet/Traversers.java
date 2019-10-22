@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -38,7 +39,44 @@ import static java.util.Objects.requireNonNull;
  */
 public final class Traversers {
 
-    private static final Traverser<Object> EMPTY_TRAVERSER = () -> null;
+    private static final Traverser<Object> EMPTY_TRAVERSER = new Traverser<Object>() {
+        @Override
+        public Object next() {
+            return null;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Nonnull @Override
+        public <R> Traverser<R> map(@Nonnull Function<? super Object, ? extends R> mapFn) {
+            return (Traverser<R>) this;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Nonnull @Override
+        public <R> Traverser<R> flatMap(@Nonnull Function<? super Object, ? extends Traverser<? extends R>> flatMapFn) {
+            return (Traverser<R>) this;
+        }
+
+        @Nonnull @Override
+        public Traverser<Object> filter(@Nonnull Predicate<? super Object> filterFn) {
+            return this;
+        }
+
+        @Nonnull @Override
+        public Traverser<Object> takeWhile(@Nonnull Predicate<? super Object> predicate) {
+            return this;
+        }
+
+        @Nonnull @Override
+        public Traverser<Object> dropWhile(@Nonnull Predicate<? super Object> predicate) {
+            return this;
+        }
+
+        @Nonnull @Override
+        public Traverser<Object> peek(@Nonnull Consumer<? super Object> action) {
+            return this;
+        }
+    };
 
     private Traversers() {
     }
