@@ -136,6 +136,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
                         return projectedRecord;
                     }
                 }
+                reader.close();
                 return null;
             } catch (Exception e) {
                 throw sneakyThrow(e);
