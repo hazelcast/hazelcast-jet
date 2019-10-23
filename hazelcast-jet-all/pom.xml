@@ -164,13 +164,6 @@
             <scope>test</scope>
             <classifier>tests</classifier>
         </dependency>
-        <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client</artifactId>
-            <version>${hazelcast.version}</version>
-            <scope>test</scope>
-            <classifier>tests</classifier>
-        </dependency>
 
 
         <!-- Optional dependencies: required for building, optional at run time -->
