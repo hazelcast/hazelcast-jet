@@ -56,7 +56,6 @@ import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.hadoop.HdfsSources.COPY_ON_READ;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
