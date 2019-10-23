@@ -232,8 +232,6 @@ public class TaskletExecutionService {
         private final TaskletTracker tracker;
         private final CountDownLatch startedLatch;
 
-        private MetricsImpl.Container userMetricsContextContainer;
-
         private BlockingWorker(TaskletTracker tracker, CountDownLatch startedLatch) {
             this.tracker = tracker;
             this.startedLatch = startedLatch;
@@ -242,10 +240,10 @@ public class TaskletExecutionService {
         @Override
         public void run() {
             final ClassLoader clBackup = currentThread().getContextClassLoader();
-            Tasklet t = tracker.tasklet;
+            final Tasklet t = tracker.tasklet;
             currentThread().setContextClassLoader(tracker.jobClassLoader);
             IdleStrategy idlerLocal = idlerNonCooperative;
-            userMetricsContextContainer = MetricsImpl.container();
+            MetricsImpl.Container userMetricsContextContainer = MetricsImpl.container();
 
             try {
                 blockingWorkerCount.incrementAndGet();
@@ -269,7 +267,7 @@ public class TaskletExecutionService {
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
             } finally {
                 blockingWorkerCount.decrementAndGet();
-                MetricsImpl.container().setContext(null);
+                userMetricsContextContainer.setContext(null);
                 currentThread().setContextClassLoader(clBackup);
                 tracker.executionTracker.taskletDone();
             }

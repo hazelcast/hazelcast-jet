@@ -22,7 +22,7 @@ import com.hazelcast.jet.impl.metrics.MetricsImpl;
 /**
  * Utility class for obtaining handlers to user-defined metrics.
  * <p>
- * User-defined metric are simple numeric values used to count or measure
+ * User-defined metrics are simple numeric values used to count or measure
  * things. A code submitted to Jet can use them to publish any custom run-time
  * values.
  */
