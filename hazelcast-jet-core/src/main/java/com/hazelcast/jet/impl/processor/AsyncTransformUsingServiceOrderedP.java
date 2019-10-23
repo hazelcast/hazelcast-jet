@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
@@ -26,7 +27,6 @@ import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.function.BiFunctionEx;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -206,9 +206,9 @@ public final class AsyncTransformUsingServiceOrderedP<S, T, R> extends AbstractP
      * The {@link ResettableSingletonTraverser} is passed as a first argument to
      * {@code callAsyncFn}, it can be used if needed.
      */
-    public static <C, T, R> ProcessorSupplier supplier(
-            @Nonnull ServiceFactory<C> serviceFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
+    public static <S, T, R> ProcessorSupplier supplier(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return supplierWithService(serviceFactory,
                 (serviceFn, service) -> new AsyncTransformUsingServiceOrderedP<>(serviceFn, service, callAsyncFn)

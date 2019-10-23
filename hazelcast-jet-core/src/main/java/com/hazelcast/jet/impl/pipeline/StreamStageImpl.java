@@ -16,6 +16,11 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -23,17 +28,12 @@ import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.transform.AbstractTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.JoinClause;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.StageWithWindow;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.BiPredicateEx;
-import com.hazelcast.function.FunctionEx;
-import com.hazelcast.function.PredicateEx;
-import com.hazelcast.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -104,9 +104,9 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public <C, R> StreamStage<R> mapUsingService(
-            @Nonnull ServiceFactory<C> serviceFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
+    public <S, R> StreamStage<R> mapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     ) {
         return attachMapUsingService(serviceFactory, mapFn);
     }

@@ -51,6 +51,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.junit.ClassRule;
+import org.junit.rules.Timeout;
 
 import static com.hazelcast.jet.Util.idToString;
 import static org.junit.Assert.assertEquals;
@@ -59,6 +61,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public abstract class JetTestSupport extends HazelcastTestSupport {
+
+    /**
+     * This is needed to finish tests which got stuck in @Before, @BeforeClass, @After or @AfterClass method.
+     */
+    @ClassRule
+    public static Timeout globalTimeout = Timeout.seconds(15 * 60);
 
     protected ILogger logger = Logger.getLogger(getClass());
     private JetTestInstanceFactory instanceFactory;

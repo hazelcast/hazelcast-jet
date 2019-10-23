@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.function.BiFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -70,9 +70,9 @@ public final class ProcessorSupplierWithService<S> implements ProcessorSupplier 
     }
 
     @Nonnull
-    public static <C> ProcessorSupplier supplierWithService(
-            @Nonnull ServiceFactory<C> serviceFactory,
-            @Nonnull BiFunctionEx<ServiceFactory<C>, C, Processor> createProcessorFn
+    public static <S> ProcessorSupplier supplierWithService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<ServiceFactory<S>, S, Processor> createProcessorFn
     ) {
         return new ProcessorSupplierWithService<>(serviceFactory, createProcessorFn);
     }

@@ -36,8 +36,8 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
+import static com.hazelcast.jet.Util.entry;
 
 /**
  * {@code Outbox} implementation suitable to be used in tests.
