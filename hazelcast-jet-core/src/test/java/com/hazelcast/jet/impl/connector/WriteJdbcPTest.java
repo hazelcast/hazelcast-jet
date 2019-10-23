@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.h2.tools.DeleteDbFiles;

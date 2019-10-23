@@ -16,15 +16,15 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
 
 import javax.annotation.Nonnull;
 import javax.jms.Connection;

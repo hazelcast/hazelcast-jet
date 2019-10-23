@@ -15,10 +15,10 @@
  */
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
@@ -40,35 +40,34 @@ import com.hazelcast.jet.examples.enrichment.datamodel.Product;
 import com.hazelcast.jet.examples.enrichment.datamodel.StockInfo;
 import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
 import com.hazelcast.jet.examples.enrichment.datamodel.Tweet;
-import com.hazelcast.jet.function.ComparatorEx;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
-import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.GroupAggregateBuilder;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamHashJoinBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.map.IMap;
 
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapEventNewValue;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.Util.toCompletableFuture;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
@@ -291,8 +290,8 @@ class BuildComputation {
         // The primary stream (stream to be enriched): trades
         IMap<Long, Trade> tradesMap = instance.getMap("trades");
         StreamStage<Trade> trades = p.drawFrom(
-                Sources.mapJournal(tradesMap, mapPutEvents(),
-                        mapEventNewValue(), START_FROM_CURRENT))
+                Sources.mapJournal(tradesMap, START_FROM_CURRENT, mapEventNewValue(), mapPutEvents()
+                ))
                 .withoutTimestamps();
 
         // The enriching streams: products and brokers
@@ -335,8 +334,8 @@ class BuildComputation {
         // The stream to be enriched: trades
         IMap<Long, Trade> tradesMap = instance.getMap("trades");
         StreamStage<Trade> trades = p.drawFrom(
-                Sources.mapJournal(tradesMap, mapPutEvents(),
-                        mapEventNewValue(), START_FROM_CURRENT))
+                Sources.mapJournal(tradesMap, START_FROM_CURRENT, mapEventNewValue(), mapPutEvents()
+                ))
                 .withoutTimestamps();
 
         // The enriching streams: products, brokers and markets
@@ -432,7 +431,7 @@ class BuildComputation {
         //tag::s16[]
         IMap<String, StockInfo> stockMap = jet.getMap("stock-info"); //<1>
         StreamSource<Trade> tradesSource = Sources.mapJournal("trades",
-                mapPutEvents(), mapEventNewValue(), START_FROM_CURRENT);
+                START_FROM_CURRENT, mapEventNewValue(), mapPutEvents());
 
         Pipeline p = Pipeline.create();
         p.drawFrom(tradesSource)
@@ -445,7 +444,7 @@ class BuildComputation {
 
     static void s16a() {
         //tag::s16a[]
-        ContextFactory<IMap<String, StockInfo>> ctxFac = ContextFactory
+        ServiceFactory<IMap<String, StockInfo>> ctxFac = ServiceFactory
                 .withCreateFn(x -> {
                     ClientConfig cc = new ClientConfig();
                     cc.getNearCacheConfigMap().put("stock-info",
@@ -456,14 +455,14 @@ class BuildComputation {
                 })
                 .withLocalSharing();
         StreamSource<Trade> tradesSource = Sources.mapJournal("trades",
-                mapPutEvents(), mapEventNewValue(), START_FROM_CURRENT);
+                START_FROM_CURRENT, mapEventNewValue(), mapPutEvents());
 
         Pipeline p = Pipeline.create();
         p.drawFrom(tradesSource)
          .withoutTimestamps()
          .groupingKey(Trade::ticker)
-         .mapUsingContextAsync(ctxFac,
-                 (map, key, trade) -> toCompletableFuture(map.getAsync(key))
+         .mapUsingServiceAsync(ctxFac,
+                 (map, key, trade) -> map.getAsync(key).toCompletableFuture()
                          .thenApply(trade::setStockInfo))
          .drainTo(Sinks.list("result"));
         //end::s16a[]
@@ -487,12 +486,12 @@ class BuildComputation {
         IMap<Long, Trade> tradesNewYorkMap = instance.getMap("trades-newyork");
         IMap<Long, Trade> tradesTokyoMap = instance.getMap("trades-tokyo");
         StreamStage<Trade> tradesNewYork = p.drawFrom(
-                Sources.mapJournal(tradesNewYorkMap, mapPutEvents(),
-                        mapEventNewValue(), START_FROM_CURRENT))
+                Sources.mapJournal(tradesNewYorkMap, START_FROM_CURRENT, mapEventNewValue(), mapPutEvents()
+                ))
                 .withNativeTimestamps(5_000);
         StreamStage<Trade> tradesTokyo = p.drawFrom(
-                Sources.mapJournal(tradesTokyoMap, mapPutEvents(),
-                        mapEventNewValue(), START_FROM_CURRENT))
+                Sources.mapJournal(tradesTokyoMap, START_FROM_CURRENT, mapEventNewValue(), mapPutEvents()
+                ))
                 .withNativeTimestamps(5_000);
         StreamStage<Trade> merged = tradesNewYork.merge(tradesTokyo);
         //end::s18[]
@@ -502,7 +501,7 @@ class BuildComputation {
         //tag::s19[]
         Pipeline p = Pipeline.create();
         StreamSource<Trade> tradesSource = Sources.mapJournal("trades",
-                mapPutEvents(), mapEventNewValue(), START_FROM_CURRENT);
+                START_FROM_CURRENT, mapEventNewValue(), mapPutEvents());
         StreamStage<Trade> currLargestTrade =
                 p.drawFrom(tradesSource)
                  .withoutTimestamps()

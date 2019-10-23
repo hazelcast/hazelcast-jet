@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.s3;
 
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
 import org.junit.Before;

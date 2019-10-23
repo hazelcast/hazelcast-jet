@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.kafka.impl;
 
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -29,8 +31,6 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.kafka.KafkaProcessors;

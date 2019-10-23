@@ -64,7 +64,7 @@ instance that can serialize itself.
 
 None of the functional interfaces in the JDK extend `Serializable`, so
 we had to mirror the entire `java.util.function` package in our own
-`com.hazelcast.jet.function` with all the interfaces subtyped and made
+`com.hazelcast.function` with all the interfaces subtyped and made
 `Serializable`. Each subtype has the name of the original with
 `Ex` appended. For example, a `FunctionEx` is just
 like `Function`, but implements `Serializable`. We use these types
@@ -141,7 +141,7 @@ on the target machine.
 This refers to a `static final` field in the JDK, so the instance is
 available on any JVM. If this is not available, you may create a
 static final field in your own class, but you can also use
-`mapUsingContext()`. In this case you provide a serializable factory
+`mapUsingService()`. In this case you provide a serializable factory
 that Jet will ask to create an object on the target member. The object
 it returns doesn't have to be serializable. Here's an example of that:
 
@@ -150,8 +150,8 @@ it returns doesn't have to be serializable. Here's an example of that:
 include::{javasource}/PerformanceConsiderations.java[tag=s8]
 ----
 
-<1> Create a `ContextFactory`.
-<2> Supply it to `mapUsingContext()`.
+<1> Create a `ServiceFactory`.
+<2> Supply it to `mapUsingService()`.
 <3> Your mapping function now gets the object the factory created.
 
 [[job]]
@@ -235,7 +235,7 @@ may get a quite confusing exception:
 java.lang.ClassCastException:
 cannot assign instance of java.lang.invoke.SerializedLambda
 to field com.hazelcast.jet.core.ProcessorMetaSupplier$1.val$addressToSupplier
-of type com.hazelcast.jet.function.FunctionEx
+of type com.hazelcast.function.FunctionEx
 in instance of com.hazelcast.jet.core.ProcessorMetaSupplier$1
 ----
 

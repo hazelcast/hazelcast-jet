@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.SlidingWindowPolicy;
 import com.hazelcast.jet.core.TimestampKind;
@@ -22,26 +24,24 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
-import com.hazelcast.jet.pipeline.ContextFactory;
-import com.hazelcast.jet.pipeline.JournalInitialPosition;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
+import com.hazelcast.jet.pipeline.JournalInitialPosition;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.map.journal.EventJournalMapEvent;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+import static com.hazelcast.function.Functions.entryKey;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.slidingWinPolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
-import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
-import static com.hazelcast.jet.function.Functions.entryKey;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -86,8 +86,8 @@ public class StockExchangeCoreApi {
         Vertex slidingStage2 = dag.newVertex("sliding-stage-2",
             Processors.combineToSlidingWindowP(winPolicy, counting(),
                     KeyedWindowResult::new));
-        Vertex formatOutput = dag.newVertex("format-output", mapUsingContextP(    // <7>
-            ContextFactory.withCreateFn(x -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
+        Vertex formatOutput = dag.newVertex("format-output", mapUsingServiceP(    // <7>
+            ServiceFactory.withCreateFn(x -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")),
             (DateTimeFormatter timeFormat, KeyedWindowResult<String, Long> kwr) ->
                 String.format("%s %5s %4d",
                     timeFormat.format(Instant.ofEpochMilli(kwr.end())

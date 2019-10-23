@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.core.processor;
 
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.connector.WriteLoggerP;
 import com.hazelcast.jet.impl.processor.PeekWrappedP;
 import com.hazelcast.jet.impl.util.WrappingProcessorMetaSupplier;
@@ -31,8 +31,8 @@ import com.hazelcast.jet.impl.util.WrappingProcessorSupplier;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**

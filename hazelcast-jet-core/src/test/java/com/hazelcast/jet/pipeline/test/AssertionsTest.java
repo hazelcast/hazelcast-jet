@@ -31,9 +31,9 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollectedEventually;
 import static org.junit.Assert.assertEquals;
