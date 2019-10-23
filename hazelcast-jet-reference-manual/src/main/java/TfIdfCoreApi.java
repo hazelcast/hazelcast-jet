@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -21,9 +23,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.pipeline.ContextFactory;
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.lazy;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.Traversers.traverseStream;
@@ -49,9 +50,8 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
-import static com.hazelcast.function.Functions.wholeItem;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -84,8 +84,8 @@ public class TfIdfCoreApi {
         //end::s4[]
 
         //tag::s5[]
-        Vertex docLines = dag.newVertex("doc-lines", flatMapUsingContextP(
-                ContextFactory.withCreateFn(jet -> null).toNonCooperative(),
+        Vertex docLines = dag.newVertex("doc-lines", flatMapUsingServiceP(
+                ServiceFactory.withCreateFn(jet -> null).toNonCooperative(),
                 (Object ctx, Entry<Long, String> e) ->
                 traverseStream(docLines("books/" + e.getValue())
                     .map(line -> entry(e.getKey(), line)))));

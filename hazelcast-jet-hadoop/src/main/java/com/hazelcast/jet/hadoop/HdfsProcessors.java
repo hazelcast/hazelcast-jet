@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.hadoop;
 
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsNewApiP;
 import com.hazelcast.jet.hadoop.impl.ReadHdfsOldApiP;
@@ -23,8 +25,6 @@ import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsNewApiP;
 import com.hazelcast.jet.hadoop.impl.WriteHdfsOldApiP;
 import org.apache.hadoop.conf.Configuration;
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.FunctionEx;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 

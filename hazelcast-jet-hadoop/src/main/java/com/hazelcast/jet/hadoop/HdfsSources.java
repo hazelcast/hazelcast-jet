@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.hadoop;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.hadoop.impl.SerializableConfiguration;
@@ -27,7 +28,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
-import com.hazelcast.function.BiFunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

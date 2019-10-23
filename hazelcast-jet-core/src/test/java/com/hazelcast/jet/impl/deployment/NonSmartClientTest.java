@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -29,7 +30,6 @@ import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.cluster.Address;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +57,7 @@ public class NonSmartClientTest extends JetTestSupport {
         Address address = jetInstance.getCluster().getLocalMember().getAddress();
         ClientConfig clientConfig = new ClientConfig();
         clientConfig.getNetworkConfig().setSmartRouting(false);
-        clientConfig.setClientName(jetConfig.getHazelcastConfig().getClusterName());
+        clientConfig.setClusterName(jetConfig.getHazelcastConfig().getClusterName());
         clientConfig.getNetworkConfig().getAddresses().clear();
         clientConfig.getNetworkConfig().getAddresses().add(address.getHost() + ":" + address.getPort());
         client = createJetClient(clientConfig);

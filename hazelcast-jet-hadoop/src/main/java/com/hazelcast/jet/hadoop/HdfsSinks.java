@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.hadoop;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import com.hazelcast.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;

@@ -90,24 +90,6 @@ public class ReadHdfsPTest extends HdfsTestSupport {
                 Arrays.asList(EMapperType.values()));
     }
 
-    /**
-     * Returns all possible combinations that contain one item from each of the
-     * given {@code lists}.
-     */
-    private static Collection<Object[]> combinations(List<?>... lists) {
-        Stream<Object[]> stream = Stream.<Object[]>of(new Object[0]);
-        for (int i = 0; i < lists.length; i++) {
-            int finalI = i;
-            stream = stream.flatMap(tuple -> lists[finalI].stream()
-                    .map(item -> {
-                        Object[] res = Arrays.copyOf(tuple, tuple.length + 1);
-                        res[tuple.length] = item;
-                        return res;
-                    }));
-        }
-        return stream.collect(toList());
-    }
-
     @BeforeClass
     public static void beforeClass() {
         initialize(2, null);
@@ -174,6 +156,33 @@ public class ReadHdfsPTest extends HdfsTestSupport {
         }
     }
 
+    private org.apache.hadoop.fs.Path createPath() {
+        try {
+            String fileName = Files.createTempFile(directory, getClass().getName(), null).toString();
+            return new org.apache.hadoop.fs.Path(fileName);
+        } catch (IOException e) {
+            throw ExceptionUtil.sneakyThrow(e);
+        }
+    }
+
+    /**
+     * Returns all possible combinations that contain one item from each of the
+     * given {@code lists}.
+     */
+    private static Collection<Object[]> combinations(List<?>... lists) {
+        Stream<Object[]> stream = Stream.<Object[]>of(new Object[0]);
+        for (int i = 0; i < lists.length; i++) {
+            int finalI = i;
+            stream = stream.flatMap(tuple -> lists[finalI].stream()
+                                                          .map(item -> {
+                                                              Object[] res = Arrays.copyOf(tuple, tuple.length + 1);
+                                                              res[tuple.length] = item;
+                                                              return res;
+                                                          }));
+        }
+        return stream.collect(toList());
+    }
+
     private static void createInputTextFiles(LocalFileSystem local, org.apache.hadoop.fs.Path path) throws IOException {
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(local.create(path)))) {
             for (String value : ENTRIES) {
@@ -195,15 +204,6 @@ public class ReadHdfsPTest extends HdfsTestSupport {
                 value.set(ENTRIES[i]);
                 writer.append(key, value);
             }
-        }
-    }
-
-    private org.apache.hadoop.fs.Path createPath() {
-        try {
-            String fileName = Files.createTempFile(directory, getClass().getName(), null).toString();
-            return new org.apache.hadoop.fs.Path(fileName);
-        } catch (IOException e) {
-            throw ExceptionUtil.sneakyThrow(e);
         }
     }
 

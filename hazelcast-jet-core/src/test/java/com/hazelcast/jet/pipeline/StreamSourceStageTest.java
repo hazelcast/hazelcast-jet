@@ -32,9 +32,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
 
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertEquals;
@@ -50,8 +50,9 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     }
 
     private static StreamSource<Integer> createSourceJournal() {
-        return Sources.<Integer, Integer, Integer>mapJournal(JOURNALED_MAP_NAME, alwaysTrue(),
-                EventJournalMapEvent::getKey, START_FROM_OLDEST);
+        return Sources.<Integer, Integer, Integer>mapJournal(
+                JOURNALED_MAP_NAME, START_FROM_OLDEST, EventJournalMapEvent::getKey, alwaysTrue()
+        );
     }
 
     private static StreamSource<Integer> createTimestampedSourceBuilder() {

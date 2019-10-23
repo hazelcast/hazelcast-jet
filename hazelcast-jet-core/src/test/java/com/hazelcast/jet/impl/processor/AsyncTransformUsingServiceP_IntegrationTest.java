@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.collection.IList;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -28,15 +30,13 @@ import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.journal.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.FunctionEx;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -54,6 +54,8 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.FunctionEx.identity;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
@@ -61,11 +63,9 @@ import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingContextAsyncP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.function.FunctionEx.identity;
-import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
@@ -75,7 +75,7 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClusterSupport {
+public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int NUM_ITEMS = 100;
 
@@ -83,7 +83,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     public boolean ordered;
 
     private IMap<Integer, Integer> journaledMap;
-    private ContextFactory<ExecutorService> contextFactory;
+    private ServiceFactory<ExecutorService> serviceFactory;
     private IList<Object> sinkList;
     private JobConfig jobConfig;
 
@@ -111,9 +111,9 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
         sinkList = instance().getList(randomMapName("sinkList"));
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
-        contextFactory = ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).withLocalSharing();
+        serviceFactory = ServiceFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).withLocalSharing();
         if (!ordered) {
-            contextFactory = contextFactory.withUnorderedAsyncResponses();
+            serviceFactory = serviceFactory.withUnorderedAsyncResponses();
         }
     }
 
@@ -146,7 +146,7 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
                         10, 0, 0
                 )), 5000));
         Vertex map = dag.newVertex("map",
-                flatMapUsingContextAsyncP(contextFactory, identity(), transformNotPartitionedFn(
+                flatMapUsingServiceAsyncP(serviceFactory, identity(), transformNotPartitionedFn(
                         item -> traverseItems(item + "-1", item + "-2", item + "-3", item + "-4", item + "-5"))))
                         .localParallelism(2);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(sinkList.getName()));
@@ -181,9 +181,9 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_flatMapNotPartitioned() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+        p.drawFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
-         .flatMapUsingContextAsync(contextFactory,
+         .flatMapUsingServiceAsync(serviceFactory,
                  transformNotPartitionedFn(i -> traverseItems(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5")))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
@@ -195,9 +195,9 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_mapNotPartitioned() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+        p.drawFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
-         .mapUsingContextAsync(contextFactory,
+         .mapUsingServiceAsync(serviceFactory,
                  transformNotPartitionedFn(i -> i + "-1"))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
@@ -209,9 +209,9 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_filterNotPartitioned() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+        p.drawFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
-         .filterUsingContextAsync(contextFactory,
+         .filterUsingServiceAsync(serviceFactory,
                  transformNotPartitionedFn(i -> i % 2 == 0))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
@@ -223,10 +223,10 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_flatMapPartitioned() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+        p.drawFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
          .groupingKey(i -> i % 10)
-         .flatMapUsingContextAsync(contextFactory,
+         .flatMapUsingServiceAsync(serviceFactory,
                  transformPartitionedFn(i -> traverseItems(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5")))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
@@ -238,10 +238,10 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_mapPartitioned() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+        p.drawFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
          .groupingKey(i -> i % 10)
-         .mapUsingContextAsync(contextFactory,
+         .mapUsingServiceAsync(serviceFactory,
                  transformPartitionedFn(i -> i + "-1"))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
@@ -253,10 +253,10 @@ public class AsyncTransformUsingContextP_IntegrationTest extends SimpleTestInClu
     @Test
     public void test_pipelineApi_filterPartitioned() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(journaledMap, alwaysTrue(), EventJournalMapEvent::getNewValue, START_FROM_OLDEST))
+        p.drawFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
          .groupingKey(i -> i % 10)
-         .filterUsingContextAsync(contextFactory,
+         .filterUsingServiceAsync(serviceFactory,
                  transformPartitionedFn(i -> i % 2 == 0))
          .setLocalParallelism(2)
          .drainTo(Sinks.list(sinkList));
