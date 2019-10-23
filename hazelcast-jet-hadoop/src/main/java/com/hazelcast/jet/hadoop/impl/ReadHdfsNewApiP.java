@@ -75,6 +75,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     private final DataOutputStream cloneBufferDataOutput = new DataOutputStream(cloneBuffer);
 
     private InternalSerializationService serializationService;
+    private RecordReader<K, V> reader;
 
     private ReadHdfsNewApiP(
             @Nonnull Configuration configuration,
@@ -105,9 +106,15 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
         return emitFromTraverser(trav);
     }
 
+    @Override
+    public void close() throws Exception {
+        if (reader != null) {
+            reader.close();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private Traverser<R> traverseSplit(InputSplit split) {
-        RecordReader<K, V> reader;
         try {
             TaskAttemptContextImpl attemptContext = new TaskAttemptContextImpl(configuration, new TaskAttemptID());
             reader = inputFormat.createRecordReader(split, attemptContext);
@@ -129,10 +136,8 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
                         return projectedRecord;
                     }
                 }
-                reader.close();
                 return null;
             } catch (Exception e) {
-                uncheckRun(reader::close);
                 throw sneakyThrow(e);
             }
         };
