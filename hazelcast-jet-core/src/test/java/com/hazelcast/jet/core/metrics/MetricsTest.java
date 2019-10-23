@@ -18,7 +18,6 @@ package com.hazelcast.jet.core.metrics;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -29,12 +28,10 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ResettableSingletonTraverser;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.processor.TransformP;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.WindowDefinition;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,10 +41,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.aggregate.AggregateOperations.summingLong;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
-import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -81,7 +76,8 @@ public class MetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertMetricsProduced(pipeline, "dropped", 0, "total", null);
+        Job job = runPipeline(pipeline.toDag());
+        assertMetricsProduced(job, "dropped", 0, "total", null);
     }
 
     @Test
@@ -94,12 +90,14 @@ public class MetricsTest extends JetTestSupport {
                         Metrics.metric("dropped").increment();
                     }
                     Metrics.metric("total").increment();
+                    Metrics.metric("last").set(l);
 
                     return pass;
                 })
                 .drainTo(Sinks.logger());
 
-        assertMetricsProduced(pipeline, "dropped", 2, "total", 5);
+        Job job = runPipeline(pipeline.toDag());
+        assertMetricsProduced(job, "dropped", 2, "total", 5);
     }
 
     @Test
@@ -113,7 +111,8 @@ public class MetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertMetricsProduced(pipeline, "sum", 10);
+        Job job = runPipeline(pipeline.toDag());
+        assertMetricsProduced(job, "sum", 10);
     }
 
     @Test
@@ -126,7 +125,8 @@ public class MetricsTest extends JetTestSupport {
                 })
                 .drainTo(Sinks.logger());
 
-        assertMetricsProduced(pipeline, "sum", 0L);
+        Job job = runPipeline(pipeline.toDag());
+        assertMetricsProduced(job, "sum", 0L);
     }
 
     @Test
@@ -142,7 +142,8 @@ public class MetricsTest extends JetTestSupport {
 
         dag.edge(between(source, map)).edge(between(map, sink));
 
-        assertMetricsProduced(dag, "mapped", 3L);
+        Job job = runPipeline(dag);
+        assertMetricsProduced(job, "mapped", 3L);
         assertEquals(
                 new HashSet<>(Arrays.asList(10L, 20L, 30L)),
                 new HashSet<>(instance.getList("results"))
@@ -170,16 +171,18 @@ public class MetricsTest extends JetTestSupport {
 
     @Test
     public void usingContextAsync() {
-        pipeline.drawFrom(TestSources.items(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+        int inputSize = 100_000;
+
+        Integer[] inputs = new Integer[inputSize];
+        Arrays.setAll(inputs, i -> i);
+
+        pipeline.drawFrom(TestSources.items(inputs))
                 .addTimestamps(i -> i, 0L)
-                .window(WindowDefinition.tumbling(3))
-                .aggregate(summingLong((ToLongFunctionEx<Integer>) Integer::longValue))
-                .map(WindowResult::result)
                 .filterUsingServiceAsync(
                         ServiceFactory.withCreateFn(i -> 0L),
                         (ctx, l) -> {
-                            Metric dropped = Metrics.metric("dropped");
-                            Metric total = Metrics.metric("total");
+                            Metric dropped = Metrics.threadSafeMetric("dropped", Unit.COUNT);
+                            Metric total = Metrics.threadSafeMetric("total", Unit.COUNT);
                             return CompletableFuture.supplyAsync(
                                     () -> {
                                         boolean pass = l % 2L == ctx;
@@ -192,27 +195,23 @@ public class MetricsTest extends JetTestSupport {
                             );
                         }
                 )
-                .drainTo(assertAnyOrder(Arrays.asList(12L, 30L)));
+                .drainTo(Sinks.logger());
 
-        assertMetricsProduced(pipeline, "dropped", 2L, "total", 4L);
-    }
-
-    private void assertMetricsProduced(Pipeline pipeline, Object... expected) {
         Job job = instance.newJob(pipeline, JOB_CONFIG_WITH_METRICS);
+        assertTrueEventually(() -> assertEquals(inputSize,
+                job.getMetrics().get("total").stream().mapToLong(Measurement::getValue).sum()));
+        assertTrueEventually(() -> assertEquals(inputSize / 2,
+                job.getMetrics().get("dropped").stream().mapToLong(Measurement::getValue).sum()));
         job.join();
-
-        JobMetrics metrics = job.getMetrics();
-        for (int i = 0; i < expected.length; i += 2) {
-            String name = (String) expected[i];
-            List<Measurement> measurements = metrics.get(name);
-            assertMetricValue(name, measurements, expected[i + 1]);
-        }
     }
 
-    private void assertMetricsProduced(DAG dag, Object... expected) {
+    private Job runPipeline(DAG dag) {
         Job job = instance.newJob(dag, JOB_CONFIG_WITH_METRICS);
         job.join();
+        return job;
+    }
 
+    private void assertMetricsProduced(Job job, Object... expected) {
         JobMetrics metrics = job.getMetrics();
         for (int i = 0; i < expected.length; i += 2) {
             String name = (String) expected[i];

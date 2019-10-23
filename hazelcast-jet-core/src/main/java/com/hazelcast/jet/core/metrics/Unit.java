@@ -30,6 +30,12 @@ public enum Unit {
     BYTES,
     /** Timestamp or duration represented in ms */
     MS,
+    /** An integer mostly in range 0..100 or a double mostly in range 0..1 */
+    PERCENT,
     /** Number of items: size, counter... */
     COUNT,
+    /** 0 or 1 */
+    BOOLEAN,
+    /** 0..n, ordinal of an enum */
+    ENUM,
 }

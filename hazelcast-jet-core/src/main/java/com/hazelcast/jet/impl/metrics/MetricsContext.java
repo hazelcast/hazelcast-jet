@@ -96,12 +96,18 @@ public class MetricsContext {
 
     private ProbeUnit toProbeUnit(Unit unit) {
         switch (unit) {
-            case COUNT:
-                return ProbeUnit.COUNT;
-            case MS:
-                return ProbeUnit.MS;
             case BYTES:
                 return ProbeUnit.BYTES;
+            case MS:
+                return ProbeUnit.MS;
+            case PERCENT:
+                return ProbeUnit.PERCENT;
+            case COUNT:
+                return ProbeUnit.COUNT;
+            case BOOLEAN:
+                return ProbeUnit.BOOLEAN;
+            case ENUM:
+                return ProbeUnit.ENUM;
             default:
                 throw new RuntimeException("Unhandled metrics unit " + unit);
         }

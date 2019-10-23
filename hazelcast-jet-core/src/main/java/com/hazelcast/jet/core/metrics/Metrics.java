@@ -83,7 +83,7 @@ public final class Metrics {
      *                   // the callback runs on another thread
      *                   boolean pass = item % 2L == 0;
      *                   if (!pass) {
-     *                       dropped.inc();
+     *                       dropped.increment();
      *                   }
      *                   return pass;
      *               }
