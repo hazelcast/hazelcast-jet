@@ -348,7 +348,7 @@ public class MasterJobContext {
 
         if (localStatus == SUSPENDED) {
             try {
-                mc.coordinationService().completeJob(mc, System.currentTimeMillis(), new CancellationException()).get();
+                mc.coordinationService().completeJob(mc, new CancellationException()).get();
             } catch (Exception e) {
                 throw rethrow(e);
             }
@@ -662,7 +662,7 @@ public class MasterJobContext {
                         return;
                     }
                     mc.coordinationService()
-                      .completeJob(mc, System.currentTimeMillis(), failure)
+                      .completeJob(mc, failure)
                       .whenComplete(withTryCatch(logger, (r, f) -> {
                           if (f != null) {
                               logger.warning("Completion of " + mc.jobIdString() + " failed", f);

@@ -104,7 +104,6 @@ public class TaskletExecutionService {
         MetricsRegistry registry = nodeEngine.getMetricsRegistry();
         MetricTagger tagger = registry.newMetricTagger()
                                         .withTag(MetricTags.MODULE, "jet");
-
         registry.registerStaticMetrics(tagger, this);
         for (int i = 0; i < cooperativeWorkers.length; i++) {
             registry.registerStaticMetrics(

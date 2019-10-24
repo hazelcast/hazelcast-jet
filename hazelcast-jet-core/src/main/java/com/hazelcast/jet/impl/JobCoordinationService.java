@@ -23,6 +23,9 @@ import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.ClusterService;
+import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.internal.util.Clock;
 import com.hazelcast.jet.JetException;
@@ -33,6 +36,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
@@ -129,6 +133,7 @@ public class JobCoordinationService {
     private volatile boolean jobsScanned;
 
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
+    private final Stats stats = new Stats();
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
                            JobRepository jobRepository) {
@@ -140,6 +145,13 @@ public class JobCoordinationService {
 
         ExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
+
+        // register metrics
+        MetricsRegistry registry = nodeEngine.getMetricsRegistry();
+        MetricTagger tagger = registry.newMetricTagger()
+                .withTag(MetricTags.MODULE, "jet");
+        registry.registerStaticMetrics(tagger, this);
+        registry.registerStaticMetrics(tagger, stats);
     }
 
     public JobRepository jobRepository() {
@@ -156,6 +168,7 @@ public class JobCoordinationService {
 
     public CompletableFuture<Void> submitJob(long jobId, Data dag, Data serializedConfig) {
         CompletableFuture<Void> res = new CompletableFuture<>();
+        stats.jobSubmitted();
         submitToCoordinatorThread(() -> {
             MasterContext masterContext;
             try {
@@ -298,6 +311,7 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> terminateJob(long jobId, TerminationMode terminationMode) {
+        stats.executionTerminated();
         return runWithJob(jobId,
                 masterContext -> {
                     // User can cancel in any state, other terminations are allowed only when running.
@@ -419,6 +433,7 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> resumeJob(long jobId) {
+        stats.executionStarted();
         return runWithJob(jobId,
                 masterContext -> masterContext.jobContext().resumeJob(jobRepository::newExecutionId),
                 jobResult -> {
@@ -606,7 +621,8 @@ public class JobCoordinationService {
      * causes the method to return {@code false}.
      */
     private boolean allMembersHaveSameState(ClusterState clusterState) {
-        // TODO remove once the issue is fixed on the IMDG side
+        //TODO remove once the issue is fixed on the IMDG side
+        // (https://github.com/hazelcast/hazelcast-enterprise/issues/2747)
         try {
             Set<Member> members = nodeEngine.getClusterService().getMembers();
             List<Future<ClusterMetadata>> futures =
@@ -674,7 +690,8 @@ public class JobCoordinationService {
      * Completes the job which is coordinated with the given master context object.
      */
     @CheckReturnValue
-    CompletableFuture<Void> completeJob(MasterContext masterContext, long completionTime, Throwable error) {
+    CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error) {
+        long completionTime = System.currentTimeMillis();
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             long jobId = masterContext.jobId();
@@ -686,6 +703,7 @@ public class JobCoordinationService {
             jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 logger.fine(masterContext.jobIdString() + " is completed");
+                stats.jobCompleted(error);
             } else {
                 MasterContext existing = masterContexts.get(jobId);
                 if (existing != null) {
@@ -889,6 +907,7 @@ public class JobCoordinationService {
     }
 
     private void tryStartJob(MasterContext masterContext) {
+        stats.executionStarted();
         masterContext.jobContext().tryStartJob(jobRepository::newExecutionId);
     }
 
@@ -997,5 +1016,43 @@ public class JobCoordinationService {
 
     void assertOnCoordinatorThread() {
         assert IS_JOB_COORDINATOR_THREAD.get() : "not on coordinator thread";
+    }
+
+    private static class Stats {
+
+        @Probe(name = "jobs.submitted")
+        private final AtomicInteger jobSubmitted = new AtomicInteger();
+
+        @Probe(name = "jobs.completed_successfully")
+        private final AtomicInteger jobCompletedSuccessfully = new AtomicInteger();
+
+        @Probe(name = "jobs.completed_with_failure")
+        private final AtomicInteger jobCompletedWithFailure = new AtomicInteger();
+
+        @Probe(name = "jobs.execution_started")
+        private final AtomicInteger executionStarted = new AtomicInteger();
+
+        @Probe(name = "jobs.execution_terminated")
+        private final AtomicInteger executionTerminated = new AtomicInteger();
+
+        void jobSubmitted() {
+            jobSubmitted.incrementAndGet();
+        }
+
+        void jobCompleted(Throwable error) {
+            if (error == null) {
+                jobCompletedSuccessfully.incrementAndGet();
+            } else {
+                jobCompletedWithFailure.incrementAndGet();
+            }
+        }
+
+        public void executionStarted() {
+            executionStarted.incrementAndGet();
+        }
+
+        void executionTerminated() {
+            executionTerminated.incrementAndGet();
+        }
     }
 }
