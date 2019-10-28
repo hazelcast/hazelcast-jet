@@ -50,8 +50,7 @@ if [ "x$JET_LICENCE_KEY" != "x" ]; then
     JAVA_OPTS+=("-Dhazelcast.enterprise.license.key=${JET_LICENCE_KEY}")
 fi
 
-CLASSPATH="$JET_HOME/lib/hazelcast-jet-${project.version}.jar:$CLASSPATH"
-CLASSPATH="$JET_HOME/lib/log4j-${log4j.version}.jar:$CLASSPATH"
+CLASSPATH="$JET_HOME/lib/*:$CLASSPATH"
 JAVA_OPTS+=(\
 "-Dlog4j.configuration=file:$JET_HOME/config/log4j.properties" \
 "-Djet.home=$JET_HOME" \
