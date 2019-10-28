@@ -221,7 +221,7 @@ public class JetCommandLine implements Runnable {
     }
 
     @Command(
-            description = "Cancel a running job"
+            description = "Cancels a running job"
     )
     public void cancel(
             @Mixin(name = "verbosity") Verbosity verbosity,
@@ -248,7 +248,7 @@ public class JetCommandLine implements Runnable {
             @Mixin(name = "verbosity") Verbosity verbosity,
             @Parameters(index = "0",
                     paramLabel = "<job name or id>",
-                    description = "Name of the job to cancel")
+                    description = "Name of the job to take the snapshot from")
                     String jobName,
             @Parameters(index = "1",
                     paramLabel = "<snapshot name>",
