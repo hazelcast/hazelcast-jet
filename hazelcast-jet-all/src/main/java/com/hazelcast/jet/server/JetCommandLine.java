@@ -51,6 +51,7 @@ import picocli.CommandLine.RunAll;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Comparator;
@@ -557,7 +558,7 @@ public class JetCommandLine implements Runnable {
             if (jetCmd.verbosity.isVerbose) {
                 ex.printStackTrace(err());
             } else {
-                err().println("ERROR: " + ex.getCause().getMessage());
+                err().println("ERROR: " + peel(ex.getCause()).getMessage());
                 err().println();
                 err().println("To see the full stack trace, re-run with the -v/--verbosity option");
             }
@@ -566,5 +567,13 @@ public class JetCommandLine implements Runnable {
             }
             throw ex;
         }
+
+        static Throwable peel(Throwable e) {
+            if (e instanceof InvocationTargetException) {
+                return e.getCause();
+            }
+            return e;
+        }
     }
+
 }

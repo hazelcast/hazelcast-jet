@@ -20,34 +20,38 @@ import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.server.JetBootstrap;
 import com.hazelcast.map.IMap;
+import org.apache.log4j.Logger;
 
-import java.nio.channels.Pipe;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Util.entry;
 
 /**
- * Demonstrates a simple Word Count job in the Pipeline API. Inserts the
- * text of The Complete Works of William Shakespeare into a Hazelcast
- * IMap, then lets Jet count the words in it and write its findings to
- * another IMap. The example looks at Jet's output and prints the 100 most
- * frequent words.
+ * Demonstrates a simple job which calculates the top 10 numbers from a
+ * stream of random numbers.
  */
 public class HelloWorld {
 
-    private static Pipeline buildPipeline() {
+    private static final String KEY = "top10";
+    private static Logger LOGGER = Logger.getLogger(HelloWorld.class);
+
+    private static Pipeline buildPipeline(String mapName) {
         Pipeline p = Pipeline.create();
         p.drawFrom(TestSources.itemStream(10, (ts, seq) -> nextRandomNumber()))
          .withIngestionTimestamps()
          .rollingAggregate(AggregateOperations.topN(10, ComparatorEx.comparingLong(l -> l)))
-         .map(l -> entry("top10", l))
-         .drainTo(Sinks.map("top10"));
+         .map(l -> entry(KEY, l))
+         .drainTo(Sinks.map(mapName))
+         .setLocalParallelism(1);
         return p;
     }
 
@@ -58,18 +62,25 @@ public class HelloWorld {
     public static void main(String[] args) throws InterruptedException {
         JetInstance jet = JetBootstrap.getInstance();
 
-        Pipeline p = buildPipeline();
-        Job job = jet.newJob(p);
+        String mapName = "top10_" + UUID.randomUUID().toString();
+        Pipeline p = buildPipeline(mapName);
 
+        JobConfig config = new JobConfig();
+        config.setName("hello-world");
+        config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
+        Job job = jet.newJob(p, config);
+
+        LOGGER.info("Generating a stream of random numbers and calculating the top 10");
+        LOGGER.info("The results will be written to a distributed map");
         while (true) {
-            IMap<String, List<Long>> top10Map = jet.getMap("top10");
+            IMap<String, List<Long>> top10Map = jet.getMap(mapName);
 
-            List<Long> top10numbers = top10Map.get("top10");
+            List<Long> top10numbers = top10Map.get(KEY);
             if (top10numbers != null) {
-                System.out.println("Top 10 numbers are: ");
-                top10numbers.forEach(n -> {
-                    System.out.println(n);
-                });
+                LOGGER.info("Top 10 random numbers observed so far in the stream are: ");
+                for (int i = 0; i < top10numbers.size(); i++) {
+                    LOGGER.info(String.format("%d. %,d", i, top10numbers.get(i)));
+                }
             }
             Thread.sleep(1000);
         }

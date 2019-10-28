@@ -6,7 +6,6 @@ PID_FILE=$JET_HOME/bin/jet_instance.pid
 if [ $JAVA_HOME ]; then
     JAVA="$JAVA_HOME/bin/java"
 else
-    echo "JAVA_HOME environment variable not available."
     JAVA="$(which java 2>/dev/null)"
 fi
 

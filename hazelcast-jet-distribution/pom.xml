@@ -86,7 +86,7 @@
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>
@@ -96,26 +96,31 @@
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-avro</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-hadoop</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-kafka</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-s3</artifactId>
-            <version>${project.parent.version}</version>
+            <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet.examples</groupId>
+            <artifactId>hazelcast-jet-examples-hello-world</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>
