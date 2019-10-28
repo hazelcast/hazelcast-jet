@@ -53,7 +53,6 @@ fi
 CLASSPATH="$JET_HOME/lib/hazelcast-jet-${project.version}.jar:$CLASSPATH"
 CLASSPATH="$JET_HOME/lib/log4j-${log4j.version}.jar:$CLASSPATH"
 JAVA_OPTS+=(\
-"-Dhazelcast.logging.type=log4j" \
 "-Dlog4j.configuration=file:$JET_HOME/config/log4j.properties" \
 "-Djet.home=$JET_HOME" \
 "-Dhazelcast.config=$JET_HOME/config/hazelcast.yaml" \

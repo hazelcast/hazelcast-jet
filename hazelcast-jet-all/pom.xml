@@ -171,24 +171,28 @@
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>
             <version>${jsr107.api.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>javax.jms</groupId>
             <artifactId>javax.jms-api</artifactId>
             <version>${jms.api.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
             <version>${osgi.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>${jsr250.api.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
 
@@ -197,18 +201,21 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
             <version>${log4j2.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.api.version}</version>
+            <scope>provided</scope>
             <optional>true</optional>
         </dependency>
     </dependencies>

@@ -38,23 +38,6 @@
         </dependencySet>
     </dependencySets>
     <files>
-        <!-- Default YAML config files -->
-        <file>
-            <source>${configs.from.jar}/hazelcast-jet-default.yaml</source>
-            <destName>hazelcast-jet.yaml</destName>
-            <outputDirectory>config</outputDirectory>
-        </file>
-        <file>
-            <source>${configs.from.jar}/hazelcast-jet-member-default.yaml</source>
-            <destName>hazelcast.yaml</destName>
-            <outputDirectory>config</outputDirectory>
-        </file>
-        <file>
-            <source>${configs.from.jar}/hazelcast-jet-client-default.yaml</source>
-            <destName>hazelcast-client.yaml</destName>
-            <outputDirectory>config</outputDirectory>
-        </file>
-
         <!-- Full Example YAML config files -->
         <file>
             <source>${configs.from.jar}/hazelcast-jet-full-example.yaml</source>
