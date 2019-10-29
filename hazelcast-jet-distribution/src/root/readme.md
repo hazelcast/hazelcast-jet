@@ -6,7 +6,7 @@ batch processing engine.
 ## What's included
 
 * `bin/jet-start`: Command for starting a new Jet instance
-* `bin/jet-stopt`: Command for stopping all running Jet instances
+* `bin/jet-stop`: Command for stopping all running Jet instances
 * `bin/jet`: The Jet Command Line Client, used to submit jobs and interact
    with the cluster (for example, list running jobs, cancel a job)
 * `bin/jet-cluster-admin`: Command line for make cluster-wide state changes 
