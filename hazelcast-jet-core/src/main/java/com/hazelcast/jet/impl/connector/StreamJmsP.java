@@ -112,19 +112,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        Connection connection = newConnectionFn.get();
-        if (snapshotUtility.externalGuarantee() == ProcessingGuarantee.EXACTLY_ONCE) {
-            if (!(connection instanceof XAConnection)) {
-                throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
-            }
-            session = ((XAConnection) connection).createXASession();
-        } else {
-            session = connection.createSession(false, AUTO_ACKNOWLEDGE);
-        }
-        consumer = consumerFn.apply(session);
-        traverser = ((Traverser<Message>) () -> uncheckCall(() -> consumer.receiveNoWait()))
-                .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
-
         snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, context.processingGuarantee(),
                 transactional -> new JmsTransaction((XASession) session,
                         new JmsTransactionId(context, context.globalProcessorIndex(), transactionIndex++)),
@@ -141,6 +128,19 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     recoverTransaction(new JmsTransactionId(context, index, 1).xid, false);
                 }
         );
+        Connection connection = newConnectionFn.get();
+        connection.start();
+        if (snapshotUtility.externalGuarantee() == ProcessingGuarantee.EXACTLY_ONCE) {
+            if (!(connection instanceof XAConnection)) {
+                throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
+            }
+            session = ((XAConnection) connection).createXASession();
+        } else {
+            session = connection.createSession(false, AUTO_ACKNOWLEDGE);
+        }
+        consumer = consumerFn.apply(session);
+        traverser = ((Traverser<Message>) () -> uncheckCall(() -> consumer.receiveNoWait()))
+                .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
     }
 
     private void recoverTransaction(Xid xid, boolean commit) {
