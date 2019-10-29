@@ -16,18 +16,22 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.collection.IList;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.jet.pipeline.PipelineTestSupport;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -57,7 +61,7 @@ import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class JmsIntegrationTest extends PipelineTestSupport {
+public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @ClassRule
     public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
@@ -68,12 +72,27 @@ public class JmsIntegrationTest extends PipelineTestSupport {
     private String destinationName = randomString();
     private Job job;
 
+    private Pipeline p = Pipeline.create();
+    private IList<Object> srcList;
+    private IList<Object> sinkList;
+
+    @BeforeClass
+    public static void beforeClass() {
+        initialize(2, null);
+    }
+
+    @Before
+    public void before() {
+        srcList = instance().getList("src-" + randomName());
+        sinkList = instance().getList("sink-" + randomName());
+    }
+
     @Test
     public void sourceQueue() {
         p.readFrom(Sources.jmsQueue(JmsIntegrationTest::getConnectionFactory, destinationName))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
-         .writeTo(sink);
+         .writeTo(Sinks.list(sinkList));
 
         startJob(true);
 
@@ -89,7 +108,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         p.readFrom(Sources.jmsTopic(JmsIntegrationTest::getConnectionFactory, destinationName))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
-         .writeTo(sink);
+         .writeTo(Sinks.list(sinkList));
 
         startJob(true);
         sleepSeconds(1);
@@ -141,7 +160,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         p.readFrom(source)
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
-         .writeTo(sink);
+         .writeTo(Sinks.list(sinkList));
 
         startJob(true);
 
@@ -160,7 +179,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
                 .consumerFn(session -> session.createConsumer(session.createQueue(queueName)))
                 .build(TEXT_MESSAGE_FN);
 
-        p.readFrom(source).withoutTimestamps().writeTo(sink);
+        p.readFrom(source).withoutTimestamps().writeTo(Sinks.list(sinkList));
 
         startJob(true);
 
@@ -178,7 +197,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
          .map(Message::getJMSTimestamp)
          .window(tumbling(1))
          .aggregate(counting())
-         .writeTo(sink);
+         .writeTo(Sinks.list(sinkList));
 
         startJob(true);
         sendMessages(false);
@@ -211,7 +230,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
                 .destinationName(destinationName)
                 .build(TEXT_MESSAGE_FN);
 
-        p.readFrom(source).withoutTimestamps().writeTo(sink);
+        p.readFrom(source).withoutTimestamps().writeTo(Sinks.list(sinkList));
 
         startJob(true);
         sleepSeconds(1);
@@ -341,7 +360,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
     }
 
     private void startJob(boolean waitForRunning) {
-        job = start();
+        job = instance().newJob(p);
         // batch jobs can be completed before we observe RUNNING status
         if (waitForRunning) {
             assertJobStatusEventually(job, JobStatus.RUNNING, 10);
