@@ -343,7 +343,7 @@ public final class SourceProcessors {
             @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.of(
             StreamJmsP.PREFERRED_LOCAL_PARALLELISM,
-            StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy)
+            ProcessorSupplier.of(StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy))
         );
     }
 
@@ -357,7 +357,7 @@ public final class SourceProcessors {
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
         return ProcessorMetaSupplier.forceTotalParallelismOne(
-                StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy));
+                ProcessorSupplier.of(StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy)));
     }
 
     /**

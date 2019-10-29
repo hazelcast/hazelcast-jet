@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.kafka.impl;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -152,6 +153,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         transaction.producer.flush();
         LoggingUtil.logFinest(context.logger(), "flush in complete() done, %s", transaction.transactionId);
         checkError();
+        snapshotUtility.afterCompleted();
         return true;
     }
 
@@ -283,6 +285,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     // TODO [viliam] better serialization
     public static class KafkaTransactionId implements TwoPhaseSnapshotCommitUtility.TransactionId, Serializable {
         private final long jobId;
+        // TODO [viliam] add jobName for better txnId uniqueness
         private final String vertexId;
         private final int processorIndex;
         private final int transactionIndex;

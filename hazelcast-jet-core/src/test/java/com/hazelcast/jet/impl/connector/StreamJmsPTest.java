@@ -117,7 +117,7 @@ public class StreamJmsPTest extends JetTestSupport {
                 s.createConsumer(isQueue ? s.createQueue(destinationName) : s.createTopic(destinationName));
         FunctionEx<Message, String> textMessageFn = m -> ((TextMessage) m).getText();
         processor = new StreamJmsP<>(
-                processorConnection, consumerFn, textMessageFn, noEventTime());
+                () -> processorConnection, consumerFn, textMessageFn, noEventTime());
         outbox = new TestOutbox(1);
         Context ctx = new TestProcessorContext().setLogger(Logger.getLogger(StreamJmsP.class));
         processor.init(outbox, ctx);
