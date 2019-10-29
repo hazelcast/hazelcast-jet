@@ -1,59 +1,30 @@
-#!/bin/bash
 SCRIPT_DIR="$(dirname "$0")"
-JET_HOME="$(cd "$SCRIPT_DIR/.."; pwd)"
-PID_FILE=$JET_HOME/bin/jet_instance.pid
+JET_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-if [ $JAVA_HOME ]; then
+if [ "$JAVA_HOME" ]; then
     JAVA="$JAVA_HOME/bin/java"
 else
     JAVA="$(which java 2>/dev/null)"
 fi
 
 if [ -z "$JAVA" ]; then
-    echo "Java could not be found in your system."
+    echo "Cannot find a way to start the JVM: neither JAVA_HOME is set nor the java command is on the PATH"
     exit 1
 fi
 
-#### you can enable following variables by uncommenting them
-#### minimum heap size
-# MIN_HEAP_SIZE=1G
+CLASSPATH="$JET_HOME/lib/*:$CLASSPATH:$CLASSPATH_DEFAULT"
 
-#### maximum heap size
-# MAX_HEAP_SIZE=1G
-
-#convert existing opts to an array, separated by space
-JAVA_OPTS=($JAVA_OPTS)
-
-if [ "x$MIN_HEAP_SIZE" != "x" ]; then
-    JAVA_OPTS+=("-Xms${MIN_HEAP_SIZE}")
-fi
-
-if [ "x$MAX_HEAP_SIZE" != "x" ]; then
-    JAVA_OPTS+=("-Xmx${MAX_HEAP_SIZE}")
-fi
-
-#### add classpath and java opts entries that come from docker image if defined
-if [ "x$CLASSPATH_DEFAULT" != "x" ]; then
-    CLASSPATH="${CLASSPATH_DEFAULT}:${CLASSPATH}"
-fi
-
-if [ "x$JAVA_OPTS_DEFAULT" != "x" ]; then
-    JAVA_OPTS+=("${JAVA_OPTS_DEFAULT}")
-fi
-
-if [ "x$JET_LICENSE_KEY" != "x" ]; then
-    JAVA_OPTS+=("-Dhazelcast.enterprise.license.key=${JET_LICENSE_KEY}")
-fi
-
-if [ "x$JET_LICENCE_KEY" != "x" ]; then
-    JAVA_OPTS+=("-Dhazelcast.enterprise.license.key=${JET_LICENCE_KEY}")
-fi
-
-CLASSPATH="$JET_HOME/lib/*:$CLASSPATH"
-JAVA_OPTS+=(\
+JAVA_OPTS_ARRAY=(\
+$JAVA_OPTS \
+$JAVA_OPTS_DEFAULT \
+"-Dhazelcast.logging.type=log4j" \
 "-Dlog4j.configuration=file:$JET_HOME/config/log4j.properties" \
 "-Djet.home=$JET_HOME" \
 "-Dhazelcast.config=$JET_HOME/config/hazelcast.yaml" \
 "-Dhazelcast.client.config=$JET_HOME/config/hazelcast-client.yaml" \
 "-Dhazelcast.jet.config=$JET_HOME/config/hazelcast-jet.yaml" \
 )
+
+if [ "$JET_LICENSE_KEY" ]; then
+  JAVA_OPTS_ARRAY+=("-Dhazelcast.enterprise.license.key=${JET_LICENSE_KEY}")
+fi
