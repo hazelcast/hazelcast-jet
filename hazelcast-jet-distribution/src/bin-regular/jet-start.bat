@@ -6,25 +6,12 @@ if NOT DEFINED JAVA_HOME goto error
 set RUN_JAVA=%JAVA_HOME%\bin\java
 set JET_HOME=%~dp0..
 
-REM ******* you can enable following variables by uncommenting them
-
-REM ******* minimum heap size
-REM set MIN_HEAP_SIZE=1G
-
-REM ******* maximum heap size
-REM set MAX_HEAP_SIZE=1G
-
-if NOT "%MIN_HEAP_SIZE%" == "" (
-    set JAVA_OPTS=%JAVA_OPTS% -Xms%MIN_HEAP_SIZE%
-)
-
-if NOT "%MAX_HEAP_SIZE%" == "" (
-    set JAVA_OPTS=%JAVA_OPTS% -Xmx%MAX_HEAP_SIZE%
-)
-
 set JAVA_OPTS=%JAVA_OPTS%^
- "-Dhazelcast.jet.config=%JET_HOME%\config\hazelcast-jet.xml"^
- "-Dhazelcast.config=%JET_HOME%\config\hazelcast.xml"^
+ "-Dhazelcast.logging.type=log4j"^
+ "-Dlog4j.configuration=file:$JET_HOME/config/log4j.properties"^
+ "-Dhazelcast.config=%JET_HOME%\config\hazelcast.yaml"^
+ "-Dhazelcast.client.config=$JET_HOME/config/hazelcast-client.yaml"^
+ "-Dhazelcast.jet.config=%JET_HOME%\config\hazelcast-jet.yaml"^
  "-Djet.home=%JET_HOME%"
 
 set CLASSPATH="%JET_HOME%\lib\${hazelcast.jet.artifact}-${project.version}.jar";%CLASSPATH%
@@ -33,15 +20,14 @@ ECHO ########################################
 ECHO # RUN_JAVA=%RUN_JAVA%
 ECHO # JAVA_OPTS=%JAVA_OPTS%
 ECHO # CLASSPATH=%CLASSPATH%
-ECHO # starting now....
 ECHO ########################################
+ECHO Starting Hazelcast Jet.
 
-start "hazelcast-jet" "%RUN_JAVA%" %JAVA_OPTS% -cp %CLASSPATH% com.hazelcast.jet.server.JetMemberStarter"
+start "hazelcast-jet" "%RUN_JAVA%" %JAVA_OPTS% -cp "%CLASSPATH%" com.hazelcast.jet.server.JetMemberStarter
 goto endofscript
 
 :error
-ECHO JAVA_HOME environment variable must be set!
-pause
+ECHO JAVA_HOME not defined, cannot start the JVM
 
 :endofscript
 
