@@ -27,6 +27,7 @@ import javax.jms.ConnectionFactory;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
+import javax.jms.XAConnectionFactory;
 import java.util.function.Function;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
@@ -129,7 +130,9 @@ public final class JmsSourceBuilder {
         boolean isTopicLocal = isTopic;
 
         if (connectionFn == null) {
-            connectionFn = factory -> factory.createConnection(usernameLocal, passwordLocal);
+            connectionFn = factory -> factory instanceof XAConnectionFactory
+                    ? ((XAConnectionFactory) factory).createXAConnection(usernameLocal, passwordLocal)
+                    : factory.createConnection(usernameLocal, passwordLocal);
         }
         if (consumerFn == null) {
             checkNotNull(nameLocal);

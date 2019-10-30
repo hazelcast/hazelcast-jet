@@ -50,12 +50,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.Collections.synchronizedList;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static org.junit.Assert.assertEquals;
@@ -88,7 +86,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void sourceQueue() {
+    public void sourceQueue() throws JMSException {
         p.readFrom(Sources.jmsQueue(JmsIntegrationTest::getConnectionFactory, destinationName))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
@@ -104,7 +102,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void sourceTopic() {
+    public void sourceTopic() throws JMSException {
         p.readFrom(Sources.jmsTopic(JmsIntegrationTest::getConnectionFactory, destinationName))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
@@ -152,7 +150,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void sourceQueue_whenBuilder() {
+    public void sourceQueue_whenBuilder() throws JMSException {
         StreamSource<Message> source = Sources.jmsQueueBuilder(JmsIntegrationTest::getConnectionFactory)
                                               .destinationName(destinationName)
                                               .build();
@@ -172,7 +170,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void sourceQueue_whenBuilder_withFunctions() {
+    public void sourceQueue_whenBuilder_withFunctions() throws JMSException {
         String queueName = destinationName;
         StreamSource<String> source = Sources.jmsQueueBuilder(JmsIntegrationTest::getConnectionFactory)
                 .connectionFn(ConnectionFactory::createConnection)
@@ -204,7 +202,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         // sleep some time and emit a flushing message, that won't make it to the output, because
         // the messages with the highest timestamp are not emitted
         sleepMillis(500);
-        sendMessage(destinationName, false);
+        sendMessages(false, 1);
 
         assertTrueEventually(() -> {
             long countSum = sinkList.stream().mapToLong(o -> ((WindowResult<Long>) o).result()).sum();
@@ -225,7 +223,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void sourceTopic_whenBuilder() {
+    public void sourceTopic_whenBuilder() throws JMSException {
         StreamSource<String> source = Sources.jmsTopicBuilder(JmsIntegrationTest::getConnectionFactory)
                 .destinationName(destinationName)
                 .build(TEXT_MESSAGE_FN);
@@ -349,10 +347,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         return messages;
     }
 
-    private List<Object> sendMessages(boolean isQueue) {
-        return range(0, MESSAGE_COUNT)
-                .mapToObj(i -> uncheckCall(() -> sendMessage(destinationName, isQueue)))
-                .collect(toList());
+    private List<Object> sendMessages(boolean isQueue) throws JMSException {
+        return sendMessages(isQueue, MESSAGE_COUNT);
     }
 
     private void populateList() {
@@ -372,21 +368,21 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         assertJobStatusEventually(job, JobStatus.FAILED, 10);
     }
 
-    private String sendMessage(String destinationName, boolean isQueue) throws Exception {
-        String message = randomString();
-
-        ConnectionFactory connectionFactory = getConnectionFactory();
-        Connection connection = connectionFactory.createConnection();
-        connection.start();
-
-        Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
-        Destination destination = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
-        MessageProducer producer = session.createProducer(destination);
-        TextMessage textMessage = session.createTextMessage(message);
-        producer.send(textMessage);
-        session.close();
-        connection.close();
-        return message;
+    private List<Object> sendMessages(boolean isQueue, int count) throws JMSException {
+        try (
+                Connection conn = getConnectionFactory().createConnection();
+                Session session = conn.createSession(false, AUTO_ACKNOWLEDGE);
+                MessageProducer producer = session.createProducer(
+                        isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName));
+        ) {
+            List<Object> res = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                String message = randomString();
+                producer.send(session.createTextMessage(message));
+                res.add(message);
+            }
+            return res;
+        }
     }
 
     private static ConnectionFactory getConnectionFactory() {

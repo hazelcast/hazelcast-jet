@@ -32,8 +32,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
@@ -52,6 +52,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     private final List<TXN> transactions = Arrays.asList(null, null);
     private int activeTransactionIndex;
+    private boolean transactionBegun;
     private boolean snapshotInProgress;
     private boolean processorCompleted;
     private boolean transactionsReleased;
@@ -84,14 +85,17 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
                     throw new JetException("The transaction must have an ID.index equal to this processor's global " +
                             "processor index");
                 }
-                try {
-                    activeTransaction.beginTransaction();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
-                }
             } else {
                 activeTransaction = createTxnFn().apply(false);
                 transactions.set(activeTransactionIndex, activeTransaction);
+            }
+        }
+        if (externalGuarantee() == EXACTLY_ONCE && !transactionBegun) {
+            try {
+                activeTransaction.beginTransaction();
+                transactionBegun = true;
+            } catch (Exception e) {
+                throw sneakyThrow(e);
             }
         }
         return activeTransaction;
@@ -100,16 +104,24 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     @Override
     public boolean saveToSnapshot() {
         assert !snapshotInProgress : "snapshot in progress";
+        // TODO [viliam] avoid doing work if transaction wasn't begun
         TXN activeTransaction = activeTransaction();
+        assert activeTransaction != null : "null activeTransaction";
         if (externalGuarantee() == EXACTLY_ONCE) {
             if (!getOutbox().offerToSnapshot(broadcastKey(activeTransaction.id()), false)) {
                 return false;
             }
             snapshotInProgress = true;
-        }
-        if (externalGuarantee() != NONE) {
+            transactionBegun = false;
             try {
-                activeTransaction.flush(false);
+                activeTransaction.prepare();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
+        if (externalGuarantee() == AT_LEAST_ONCE) {
+            try {
+                activeTransaction.flush();
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
@@ -126,7 +138,6 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
                 TXN oldTransaction = transactions.get(activeTransactionIndex);
                 oldTransaction.commit();
                 procContext().logger().finest("beginTransaction");
-                oldTransaction.beginTransaction();
                 activeTransactionIndex ^= 1;
             } catch (Exception e) {
                 throw sneakyThrow(e);
@@ -162,7 +173,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         // Rollback other transactions. We do this by probing transaction IDs beyond those of the
         // current execution, up to 5x of the current member count.
         for (
-                int index = procContext().globalProcessorIndex() + procContext().totalParallelism();
+                int index = procContext().globalProcessorIndex();
                 index < procContext().totalParallelism() * TXN_PROBING_FACTOR;
                 index += procContext().totalParallelism()
         ) {

@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -239,7 +238,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         private final KafkaProducer<K, V> producer;
         private final ILogger logger;
         private final KafkaTransactionId transactionId;
-        private final AtomicBoolean txnInitialized = new AtomicBoolean();
+        private boolean txnInitialized;
 
         private KafkaTransaction(KafkaTransactionId transactionId, Map<String, Object> properties, ILogger logger) {
             this.transactionId = transactionId;
@@ -254,8 +253,9 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
         @Override
         public void beginTransaction() {
-            if (txnInitialized.compareAndSet(false, true)) {
+            if (!txnInitialized) {
                 LoggingUtil.logFinest(logger, "initTransactions %s", transactionId);
+                txnInitialized = true;
                 producer.initTransactions();
                 transactionId.updateProducerAndEpoch(producer);
             }
@@ -264,7 +264,13 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
 
         @Override
-        public void flush(boolean finalFlush) {
+        public void prepare() {
+            LoggingUtil.logFinest(logger, "prepare %s", transactionId);
+            producer.flush();
+        }
+
+        @Override
+        public void flush() throws Exception {
             LoggingUtil.logFinest(logger, "flush %s", transactionId);
             producer.flush();
         }

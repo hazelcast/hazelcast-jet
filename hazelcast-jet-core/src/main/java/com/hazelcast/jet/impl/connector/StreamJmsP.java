@@ -32,6 +32,7 @@ import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.TwoTransactionProcessorUtility;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.transaction.impl.xa.SerializableXID;
 
 import javax.annotation.Nonnull;
@@ -49,6 +50,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
@@ -112,25 +114,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, context.processingGuarantee(),
-                transactional -> new JmsTransaction((XASession) session,
-                        new JmsTransactionId(context, context.globalProcessorIndex(), transactionIndex++)),
-                txnId -> {
-                    try {
-                        recoverTransaction(txnId.xid, true);
-                    } catch (Exception e) {
-                        context.logger().warning("Failed to finish the commit of a transaction ID saved in the " +
-                                "snapshot, data loss can occur. Transaction id: " + txnId, e);
-                    }
-                },
-                index -> {
-                    recoverTransaction(new JmsTransactionId(context, index, 0).xid, false);
-                    recoverTransaction(new JmsTransactionId(context, index, 1).xid, false);
-                }
-        );
         Connection connection = newConnectionFn.get();
         connection.start();
-        if (snapshotUtility.externalGuarantee() == ProcessingGuarantee.EXACTLY_ONCE) {
+        if (context.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE) {
             if (!(connection instanceof XAConnection)) {
                 throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
             }
@@ -138,8 +124,25 @@ public class StreamJmsP<T> extends AbstractProcessor {
         } else {
             session = connection.createSession(false, AUTO_ACKNOWLEDGE);
         }
+        snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, context.processingGuarantee(),
+                transactional -> new JmsTransaction((XASession) session,
+                        new JmsTransactionId(context, context.globalProcessorIndex(), transactionIndex++)),
+                txnId -> {
+                    try {
+                        recoverTransaction(txnId, true);
+                    } catch (Exception e) {
+                        context.logger().warning("Failed to finish the commit of a transaction ID saved in the " +
+                                "snapshot, data loss can occur. Transaction id: " + txnId, e);
+                    }
+                },
+                index -> {
+                    recoverTransaction(new JmsTransactionId(context, index, 0), false);
+                    recoverTransaction(new JmsTransactionId(context, index, 1), false);
+                }
+        );
         consumer = consumerFn.apply(session);
-        traverser = ((Traverser<Message>) () -> uncheckCall(() -> consumer.receiveNoWait()))
+        traverser = ((Traverser<Message>) () -> uncheckCall(() ->
+                        snapshotUtility.activeTransaction() != null ? consumer.receiveNoWait() : null))
                 .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
     }
 
@@ -151,22 +154,25 @@ public class StreamJmsP<T> extends AbstractProcessor {
             } catch (XAException e) {
                 switch (e.errorCode) {
                     case XAException.XA_HEURCOM:
-                        getLogger().fine("Due to a heuristic decision, the work done on behalf of the specified " +
-                                "transaction branch was committed. Transaction ID: " + xid, e);
+                        LoggingUtil.logFine(getLogger() , "Due to a heuristic decision, the work done on behalf of the " +
+                                "specified transaction branch was already committed. Transaction ID: %s", xid);
                         break;
                     case XAException.XA_HEURRB:
-                        getLogger().warning("Due to a heuristic decision, the work done on behalf of the specified " +
-                                "transaction branch was rolled back. Messages written in that transaction are lost. " +
-                                "Transaction ID: " + xid, e);
+                        getLogger().warning("Due to a heuristic decision, the work done on behalf of the restored " +
+                                "transaction ID was rolled back. Messages written in that transaction are lost. " +
+                                "Transaction ID: " + xid, handleXAException(e, xid));
                         break;
                     case XAException.XAER_NOTA:
-                        getLogger().warning("Failed to commit XID restored from snapshot: The specified XID is not " +
-                                "known to the resource manager. Transaction might already be committed or was forgotten " +
-                                "by the RM, data loss is possible. Transaction ID: " + xid, e);
+                        getLogger().info("Failed to commit XID restored from snapshot: The specified XID is not " +
+                                "known to the resource manager. This happens commonly when the transaction was " +
+                                "committed in phase 2 of the snapshot and can be ignored, but can happen also if the " +
+                                "transaction wasn't committed in phase 2 and the RM lost it (in this case data written " +
+                                "in it is lost). Transaction ID: " + xid);
                         break;
                     default:
                         getLogger().warning("Failed to commit XID restored from the snapshot, XA error code: " +
-                                e.errorCode + ". Data loss is possible. Transaction ID: " + xid, e);
+                                e.errorCode + ". Data loss is possible. Transaction ID: " + xid,
+                                handleXAException(e, xid));
                 }
             }
         } else {
@@ -174,7 +180,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
                 session.getXAResource().rollback(xid);
             } catch (XAException e) {
                 // we ignore rollback failures
-                getLogger().fine("Failed to rollback transaction, transaction ID: " + xid, e);
+                LoggingUtil.logFine(getLogger(), "Failed to rollback transaction, transaction ID: %s. Error: %s",
+                        xid, handleXAException(e, xid));
             }
         }
     }
@@ -207,6 +214,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @SuppressWarnings("unchecked")
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        // TODO [viliam] remove casting here
         snapshotUtility.restoreFromSnapshot(entry((BroadcastKey<JmsTransactionId>) key, (Boolean) value));
     }
 
@@ -217,7 +225,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     public void close() throws Exception {
-        snapshotUtility.close();
+        if (snapshotUtility != null) {
+            snapshotUtility.close();
+        }
         if (consumer != null) {
             consumer.close();
         }
@@ -226,7 +236,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
     }
 
-    private static final class JmsTransactionId implements TransactionId {
+    private static final class JmsTransactionId extends SerializableXID implements TransactionId {
 
         /**
          * Number generated out of thin air.
@@ -240,24 +250,24 @@ public class StreamJmsP<T> extends AbstractProcessor {
         private static final int OFFSET_TRANSACTION_INDEX = OFFSET_PROCESSOR_INDEX + Bits.INT_SIZE_IN_BYTES;
         private static final int GTRID_LENGTH = OFFSET_TRANSACTION_INDEX + Bits.INT_SIZE_IN_BYTES;
 
-        private final int transactionIndex;
-        private final SerializableXID xid;
+        @SuppressWarnings("unused") // needed for deserialization
+        private JmsTransactionId() {
+        }
 
         private JmsTransactionId(Processor.Context context, int processorIndex, int transactionIndex) {
-            long jobNameHash = stringHash(context.jobConfig().getName());
-            long vertexIdHash = stringHash(context.vertexName());
-            this.transactionIndex = transactionIndex;
-
-            xid = new SerializableXID(JET_FORMAT_ID,
-                    createGtrid(context.jobId(), jobNameHash, vertexIdHash, processorIndex, transactionIndex),
+            super(JET_FORMAT_ID,
+                    createGtrid(context.jobId(),
+                            stringHash(context.jobConfig().getName()),
+                            stringHash(context.vertexName()),
+                            processorIndex, transactionIndex),
                     new byte[1]);
         }
 
         private JmsTransactionId(Xid xid) {
-            this.xid = new SerializableXID(xid.getFormatId(), xid.getGlobalTransactionId(), xid.getBranchQualifier());
-            transactionIndex = Bits.readInt(xid.getGlobalTransactionId(), OFFSET_TRANSACTION_INDEX, true);
+            super(xid.getFormatId(), xid.getGlobalTransactionId(), xid.getBranchQualifier());
         }
 
+        // TODO [viliam] use recover to recover more transactions?
         private static JmsTransactionId fromXid(Xid xid) {
             byte[] bytes = xid.getGlobalTransactionId();
             if (bytes == null || bytes.length != GTRID_LENGTH
@@ -291,16 +301,21 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public int index() {
-            return transactionIndex;
+            return Bits.readInt(getGlobalTransactionId(), OFFSET_PROCESSOR_INDEX, true);
         }
 
         @Override
         public String toString() {
-            return xid.toString();
+            return JmsTransactionId.class.getSimpleName() + "{"
+                    + "jobId=" + idToString(Bits.readLong(getGlobalTransactionId(), OFFSET_JOB_ID, true)) + ", "
+                    + "jobNameHash=" + Bits.readLong(getGlobalTransactionId(), OFFSET_JOB_NAME_HASH, true) + ", "
+                    + "vertexIdHash=" + Bits.readLong(getGlobalTransactionId(), OFFSET_VERTEX_ID_HASH, true) + ", "
+                    + "processorIndex=" + index() + ", "
+                    + "transactionIndex=" + Bits.readInt(getGlobalTransactionId(), OFFSET_TRANSACTION_INDEX, true) + "}";
         }
     }
 
-    private static final class JmsTransaction implements TransactionalResource<JmsTransactionId> {
+    private final class JmsTransaction implements TransactionalResource<JmsTransactionId> {
 
         private final XASession session;
         private final JmsTransactionId txnId;
@@ -317,22 +332,55 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void beginTransaction() throws Exception {
-            session.getXAResource().start(txnId.xid, XAResource.TMNOFLAGS);
+            getLogger().info("aaa start, " + txnId); // TODO [viliam] remove
+            try {
+                session.getXAResource().start(txnId, XAResource.TMNOFLAGS);
+            } catch (XAException e) {
+                throw handleXAException(e, txnId);
+            }
         }
 
         @Override
-        public void flush(boolean finalFlush) throws Exception {
-            session.getXAResource().prepare(txnId.xid);
+        public void prepare() throws Exception {
+            getLogger().info("aaa end & prepare, " + txnId); // TODO [viliam] remove
+            try {
+                session.getXAResource().end(txnId, XAResource.TMSUCCESS);
+                session.getXAResource().prepare(txnId);
+            } catch (XAException e) {
+                throw handleXAException(e, txnId);
+            }
         }
 
         @Override
         public void commit() throws Exception {
-            session.getXAResource().commit(txnId.xid, false);
+            getLogger().info("aaa commit, " + txnId); // TODO [viliam] remove
+            try {
+                session.getXAResource().commit(txnId, false);
+            } catch (XAException e) {
+                throw handleXAException(e, txnId);
+            }
         }
 
         @Override
-        public void release() throws Exception {
-            session.getXAResource().end(txnId.xid, XAResource.TMSUSPEND);
+        public void release() {
+            getLogger().info("aaa release (do nothing), " + txnId); // TODO [viliam] remove
         }
+    }
+
+    private static final class BetterXAException extends XAException {
+        private BetterXAException(String message, int errorCode, Throwable cause) {
+            super(message);
+            initCause(cause);
+            this.errorCode = errorCode;
+        }
+    }
+
+    private XAException handleXAException(XAException e, Xid xid) {
+        if (e.getMessage() == null) {
+            // workaround for https://issues.apache.org/jira/browse/ARTEMIS-2532
+            // the exception has `errorCode` field, but no message, let's throw a new one with errorCode in the message
+            return new BetterXAException("errorCode=" + e.errorCode + (xid != null ? ", xid=" + xid : ""), e.errorCode, e);
+        }
+        return e;
     }
 }
