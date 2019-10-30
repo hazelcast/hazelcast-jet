@@ -7,15 +7,25 @@ if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  -s, --state       Changes the cluster state. Valid states: 'active', 'frozen', 'passive'."
     echo "  -a, --address     IP address to connect to. The default is 127.0.0.1."
     echo "  -p, --port        TCP port to connect to. The default is 5701."
-    echo "  -g, --groupname   The group name of the cluster. The default is 'jet'."
+    echo "  -c, --clustername The name of the cluster. The default is 'jet'."
     echo "  -P, --password    The password of the cluster. The default is 'jet-pass'."
     echo "  -v, --version     The cluster version to change to. To be used with '-o change-cluster-version'."
+    echo
+    echo "HTTPS-related (releveant only when TLS is enabled on the Hazelcast Jet cluster):"
+    echo "  --https     Use the HTTPS protocol for REST calls."
+    echo "  --insecure  Disable member certificate verification."
+    echo "  --cacert    Path to the trusted PEM-encoded certificate, used to verify member certificates."
+    echo "  --cert      Path to the PEM-encoded client certificate. Needed for client certificate authentication."
+    echo "  --key       Path to the PEM-encoded client private key. Needed for client certificate authentication."
     exit 0
 fi
 
 command -v curl >/dev/null 2>&1 || { \
     echo >&2 "The 'curl' command is not on the path. Cannot proceed."; exit 1; \
 }
+
+URL_SCHEME="http"
+CURL_ARGS="--silent"
 
 while [ $# -gt 1 ]
 do
@@ -33,8 +43,8 @@ case "$key" in
     PORT="$2"
     shift
     ;;
-    -g|--groupname)
-    GROUPNAME="$2"
+    -c|--clustername)
+    CLUSTERNAME="$2"
     shift
     ;;
     -P|--password)
@@ -48,6 +58,24 @@ case "$key" in
     -v|--version)
     CLUSTER_VERSION="$2"
     shift
+    ;;
+    -d|--debug)
+    CURL_ARGS="$CURL_ARGS --show-error"
+    ;;
+    --https)
+    URL_SCHEME="https"
+    ;;
+    --cert|--key)
+    CURL_ARGS="$CURL_ARGS $1 $2"
+    shift
+    ;;
+    --cacert)
+    CURL_ARGS="$CURL_ARGS --capath /dev/null $1 $2"
+    shift
+    ;;
+    --insecure)
+    echo "WARNING: You're using the --insecure switch. Hazelcast member TLS certificates will not be verified." >&2
+    CURL_ARGS="$CURL_ARGS $1"
     ;;
     *)
 esac
@@ -64,9 +92,9 @@ if [ -z "$PORT" ]; then
     PORT="5701"
 fi
 
-if [ -z "$GROUPNAME" ]; then
-    echo "No groupname specified, assuming 'jet'."
-    GROUPNAME="jet"
+if [ -z "$CLUSTERNAME" ]; then
+    echo "No clustername specified, assuming 'jet'."
+    CLUSTERNAME="jet"
 fi
 
 if [ -z "$PASSWORD" ]; then
@@ -81,15 +109,21 @@ fi
 
 make_request () {
     echo "Contacting ${ADDRESS}:${PORT}"
-    local request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/$1"
+    local curl_cmd="curl $CURL_ARGS"
+    local url="${URL_SCHEME}://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/$1"
     if [ "$1" = "version" ] && [ -z "$2" ]; then
-        RESPONSE=$(curl --silent "${request}");
+        RESPONSE=$($curl_cmd "$url");
     else
-        local data="${GROUPNAME}&${PASSWORD}"
+        local data="${CLUSTERNAME}&${PASSWORD}"
         if [ "$2" ]; then
             data="${data}&$2"
         fi
-        RESPONSE=$(curl --data "${data}" --silent "${request}");
+        RESPONSE=$($curl_cmd --data "$data" "$url");
+    fi
+    local curl_exit_code=$?
+    if [ $curl_exit_code != 0 ]; then
+        echo curl invocation failed with exit code $curl_exit_code
+        exit $curl_exit_code
     fi
     STATUS=$(echo "${RESPONSE}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
     if [ "$STATUS" = "fail" ] && [ "$1" != "changeState" ]; then
