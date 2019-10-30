@@ -51,6 +51,7 @@ import java.util.concurrent.locks.LockSupport;
 import static com.hazelcast.jet.impl.JobMetricsUtil.toJobMetrics;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * {@link Job} proxy on client.
@@ -58,7 +59,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     private static final long RETRY_DELAY_NS = MILLISECONDS.toNanos(200);
-    private static final int RETRY_MAX_COUNT = 10;
+    private static final long RETRY_TIME_NS = SECONDS.toNanos(60);
 
     ClientJobProxy(JetClientInstanceImpl client, long jobId) {
         super(client, jobId);
@@ -184,11 +185,12 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
     }
 
     private <T> T callAndRetryIfTargetNotFound(Callable<T> action) {
-        for (int retryCount = 0; ; retryCount++) {
+        long timeLimit = System.nanoTime() + RETRY_TIME_NS;
+        for (;;) {
             try {
                 return action.call();
             } catch (Exception e) {
-                if (retryCount < RETRY_MAX_COUNT
+                if (System.nanoTime() < timeLimit
                         && e instanceof ExecutionException
                         && e.getCause() instanceof TargetNotMemberException
                 ) {
