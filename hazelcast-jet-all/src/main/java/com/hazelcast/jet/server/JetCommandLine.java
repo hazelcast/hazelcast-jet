@@ -71,10 +71,8 @@ import static java.util.Collections.emptyList;
 
 @Command(
         name = "jet",
-        description = "Utility to interact with a Hazelcast Jet cluster." +
-                "%n%n" +
-                "The command line tool uses the Jet client to connect to and perform operations" +
-                " on the cluster. By default it uses the file config/hazelcast-client.yaml" +
+        description = "Utility to perform operations on a Hazelcast Jet cluster.%n" +
+                "By default it uses the file config/hazelcast-client.yaml to configure the client connection." +
                 "%n%n" +
                 "Global options are:%n",
         versionProvider = JetVersionProvider.class,
@@ -193,12 +191,12 @@ public class JetCommandLine implements Runnable {
         if (!file.exists()) {
             throw new Exception("File " + file + " could not be found.");
         }
-        printf("Submitting JAR '%s' with arguments %s%n", file, params);
+        printf("Submitting JAR '%s' with arguments %s", file, params);
         if (name != null) {
-            printf("Using job name '%s'%n", name);
+            printf("Using job name '%s'", name);
         }
         if (snapshotName != null) {
-            printf("Will restore the job from the snapshot with name '%s'%n", snapshotName);
+            printf("Will restore the job from the snapshot with name '%s'", snapshotName);
         }
         JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
     }
@@ -214,7 +212,7 @@ public class JetCommandLine implements Runnable {
         runWithJet(verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobRunning(name, job);
-            printf("Suspending job %s...%n", formatJob(job));
+            printf("Suspending job %s...", formatJob(job));
             job.suspend();
             waitForJobStatus(job, JobStatus.SUSPENDED);
             println("Job suspended.");
@@ -234,7 +232,7 @@ public class JetCommandLine implements Runnable {
         runWithJet(verbosity, jet -> {
             Job job = getJob(jet, name);
             assertJobActive(name, job);
-            printf("Cancelling job %s...%n", formatJob(job));
+            printf("Cancelling job %s", formatJob(job));
             job.cancel();
             waitForJobStatus(job, JobStatus.FAILED);
             println("Job cancelled.");
@@ -263,16 +261,16 @@ public class JetCommandLine implements Runnable {
             Job job = getJob(jet, jobName);
             assertJobActive(jobName, job);
             if (isTerminal) {
-                printf("Saving snapshot with name '%s' from job '%s' and cancelling the job...%n",
+                printf("Saving snapshot with name '%s' from job '%s' and cancelling the job...",
                         snapshotName, formatJob(job)
                 );
                 job.cancelAndExportSnapshot(snapshotName);
                 waitForJobStatus(job, JobStatus.FAILED);
             } else {
-                printf("Saving snapshot with name '%s' from job '%s'...%n", snapshotName, formatJob(job));
+                printf("Saving snapshot with name '%s' from job '%s'...", snapshotName, formatJob(job));
                 job.exportSnapshot(snapshotName);
             }
-            printf("Exported snapshot '%s'.%n", snapshotName);
+            printf("Exported snapshot '%s'.", snapshotName);
         });
     }
 
@@ -293,7 +291,7 @@ public class JetCommandLine implements Runnable {
                 throw new JetException(String.format("Didn't find a snapshot named '%s'", snapshotName));
             }
             jobStateSnapshot.destroy();
-            printf("Deleted snapshot '%s'.%n", snapshotName);
+            printf("Deleted snapshot '%s'.", snapshotName);
         });
     }
 
@@ -352,7 +350,7 @@ public class JetCommandLine implements Runnable {
         runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             List<JobSummary> summaries = client.getJobSummaryList();
-            String format = "%-19s %-18s %-23s %s%n";
+            String format = "%-19s %-18s %-23s %s";
             printf(format, "ID", "STATUS", "SUBMISSION TIME", "NAME");
             summaries.stream()
                      .filter(job -> listAll || isActive(job.getStatus()))
@@ -375,7 +373,7 @@ public class JetCommandLine implements Runnable {
                     boolean fullJobName) throws IOException {
         runWithJet(verbosity, jet -> {
             Collection<JobStateSnapshot> snapshots = jet.getJobStateSnapshots();
-            printf("%-23s %-15s %-24s %s%n", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
+            printf("%-23s %-15s %-24s %s", "TIME", "SIZE (bytes)", "JOB NAME", "SNAPSHOT NAME");
             snapshots.stream()
                      .sorted(Comparator.comparing(JobStateSnapshot::name))
                      .forEach(ss -> {
@@ -384,7 +382,7 @@ public class JetCommandLine implements Runnable {
                          if (!fullJobName) {
                              jobName = shorten(jobName);
                          }
-                         printf("%-23s %-,15d %-24s %s%n", creationTime, ss.payloadSize(), jobName, ss.name());
+                         printf("%-23s %-,15d %-24s %s", creationTime, ss.payloadSize(), jobName, ss.name());
                      });
         });
     }
@@ -406,7 +404,7 @@ public class JetCommandLine implements Runnable {
 
             println("");
 
-            String format = "%-24s %-19s%n";
+            String format = "%-24s %-19s";
             printf(format, "ADDRESS", "UUID");
             cluster.getMembers().forEach(member -> printf(format, member.getAddress(), member.getUuid()));
         });
@@ -474,7 +472,7 @@ public class JetCommandLine implements Runnable {
     }
 
     private void printf(String format, Object... objects) {
-        out.printf(format, objects);
+        out.printf(format + "%n", objects);
     }
 
     private void println(String msg) {

@@ -1,16 +1,21 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "parameters:"
-    echo "  -o, --operation   : Executes cluster-wide operation. Operation can be 'get-state','change-state','shutdown','force-start','get-cluster-version','change-cluster-version'."
-    echo "  -s, --state       : Updates state of the cluster to new state. New state can be 'active', 'frozen', 'passive'"
-    echo "  -a, --address     : Defines which ip address hazelcast is running. Default value is '127.0.0.1'."
-    echo "  -p, --port        : Defines which port hazelcast is running. Default value is '5701'."
-    echo "  -g, --groupname   : Defines groupname of the cluster. Default value is 'jet'."
-    echo "  -P, --password    : Defines password of the cluster. Default value is 'jet-pass'."
-    echo "  -v, --version     : Defines the cluster version to change to. To be used in conjunction with '-o change-cluster-version'."
+    echo "  -o, --operation   Specifies the operation to perform, one of 'get-state', 'change-state',"
+    echo "                    'shutdown', 'force-start', 'get-cluster-version', 'change-cluster-version'."
+    echo "  -s, --state       Changes the cluster state. Valid states: 'active', 'frozen', 'passive'."
+    echo "  -a, --address     IP address to connect to. The default is 127.0.0.1."
+    echo "  -p, --port        TCP port to connect to. The default is 5701."
+    echo "  -g, --groupname   The group name of the cluster. The default is 'jet'."
+    echo "  -P, --password    The password of the cluster. The default is 'jet-pass'."
+    echo "  -v, --version     The cluster version to change to. To be used with '-o change-cluster-version'."
     exit 0
 fi
+
+command -v curl >/dev/null 2>&1 || { \
+    echo >&2 "The 'curl' command is not on the path. Cannot proceed."; exit 1; \
+}
 
 while [ $# -gt 1 ]
 do
@@ -18,270 +23,168 @@ key="$1"
 case "$key" in
     -o|--operation)
     OPERATION="$2"
-    shift # past argument
+    shift # removes the recognized command-line option
     ;;
     -s|--state)
-    STATE="$2"
-    shift # past argument
+    DESIRED_STATE="$2"
+    shift
     ;;
     -p|--port)
     PORT="$2"
-    shift # past argument
+    shift
     ;;
     -g|--groupname)
     GROUPNAME="$2"
-    shift # past argument
+    shift
     ;;
     -P|--password)
     PASSWORD="$2"
-    shift # past argument
+    shift
      ;;
      -a|--address)
     ADDRESS="$2"
-    shift # past argument
+    shift
     ;;
     -v|--version)
     CLUSTER_VERSION="$2"
-    shift # past argument
+    shift
     ;;
     *)
 esac
-shift # past argument or value
+shift # removes either an unrecognized option or the recognized option's argument
 done
 
 if [ -z "$OPERATION" ]; then
-    echo "No operation is defined, running script with default operation : 'get-state'."
+    echo "No operation specified, assuming 'get-state'."
     OPERATION="get-state"
 fi
 
 if [ -z "$PORT" ]; then
-    echo "No port is defined, running script with default port : '5701'."
+    echo "No port specified, assuming 5701."
     PORT="5701"
 fi
 
 if [ -z "$GROUPNAME" ]; then
-    echo "No groupname is defined, running script with default groupname : 'jet'."
+    echo "No groupname specified, assuming 'jet'."
     GROUPNAME="jet"
 fi
 
 if [ -z "$PASSWORD" ]; then
-    echo "No password is defined, running script with default password : 'jet-pass'."
+    echo "No password specified, assuming 'jet-pass'."
     PASSWORD="jet-pass"
 fi
 
 if [ -z "$ADDRESS" ]; then
-    echo "No specific ip address is defined, running script with default ip : '127.0.0.1'."
+    echo "No IP address specified, assuming 127.0.0.1."
     ADDRESS="127.0.0.1"
 fi
 
-command -v curl >/dev/null 2>&1 || { echo >&2 "Cluster state script requires curl but it's not installed. Aborting."; exit 1; }
-
-if [ "$OPERATION" != "get-state" ] && [ "$OPERATION" != "change-state" ] && [ "$OPERATION" != "shutdown" ] &&  [ "$OPERATION" != "force-start" ] && [ "$OPERATION" != "partial-start" ] && [ "$OPERATION" != "get-cluster-version" ] && [ "$OPERATION" != "change-cluster-version" ]; then
-    echo "Not a valid cluster operation, valid operations  are 'get-state' || 'change-state' || 'shutdown' || 'force-start' || 'partial-start' || 'get-cluster-version' || 'change-cluster-version'"
-    exit 0
-fi
+make_request () {
+    echo "Contacting ${ADDRESS}:${PORT}"
+    local request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/$1"
+    if [ "$1" = "version" ] && [ -z "$2" ]; then
+        RESPONSE=$(curl --silent "${request}");
+    else
+        local data="${GROUPNAME}&${PASSWORD}"
+        if [ "$2" ]; then
+            data="${data}&$2"
+        fi
+        RESPONSE=$(curl --data "${data}" --silent "${request}");
+    fi
+    STATUS=$(echo "${RESPONSE}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
+    if [ "$STATUS" = "fail" ] && [ "$1" != "changeState" ]; then
+        echo "Got error response: $RESPONSE";
+        exit 0
+    fi
+    if [ "$STATUS" = "forbidden" ]; then
+        echo "Operation forbidden, wrong group name or password.";
+        exit 0
+    fi
+    if [ "$STATUS" != "success" ] && [ "$STATUS" != "fail" ]; then
+        echo "Didn't get a valid response. Make sure that there's a member of a"
+        echo "Hazelcast Jet cluster running on ${ADDRESS}:${PORT} and that it"
+        echo "has REST enabled (-Dhazelcast.rest.enabled=true)"
+        exit 0
+    fi
+}
 
 if [ "$OPERATION" = "get-state" ]; then
-    echo "Getting cluster state on ip ${ADDRESS} on port ${PORT}"
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/state"
-    response=$(curl --data "${GROUPNAME}&${PASSWORD}" --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-    if [ "$STATUS" = "fail" ];then
-        echo "An error occured while listing!";
-        exit 0
-    fi
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Please make sure you provide valid user/pass.";
-        exit 0
-    fi
-    if [ "$STATUS" = "success" ];then
-        CURRSTATE=$(echo "${response}" | sed -e 's/^.*"state"[ ]*:[ ]*"//' -e 's/".*//');
-        echo "Cluster is in ${CURRSTATE} state."
-        exit 0
-    fi
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    make_request state
+    CURRSTATE=$(echo "${RESPONSE}" | sed -e 's/^.*"state"[ ]*:[ ]*"//' -e 's/".*//');
+    echo "The cluster state is '${CURRSTATE}'."
     exit 0
 fi
 
 if [ "$OPERATION" = "change-state" ]; then
-
-    if [ -z "$STATE" ]; then
-        echo "No new state is defined, Please define new state with --state 'active', 'frozen', 'passive' "
+    if [ -z "$DESIRED_STATE" ]; then
+        echo "Please specify the desired new cluster state: --state 'active' | 'frozen' | 'passive'"
         exit 0
     fi
-
-    if [ "$STATE" != "frozen" ] && [ "$STATE" != "active" ] && [ "$STATE" != "passive" ]; then
-        echo "Not a valid cluster state, valid states  are 'active' || 'frozen' || 'passive'"
+    if [ "$DESIRED_STATE" != "frozen" ] && [ "$DESIRED_STATE" != "active" ] && [ "$DESIRED_STATE" != "passive" ]; then
+        echo "$DESIRED_STATE is not a valid cluster state, must be one of 'active', 'frozen' or 'passive'"
         exit 0
     fi
-
-    echo "Changing cluster state to ${STATE} on ip ${ADDRESS} on port ${PORT}"
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/changeState"
-    response=$(curl --data "${GROUPNAME}&${PASSWORD}&${STATE}" --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-
-    if [ "$STATUS" = "fail" ];then
-       NEWSTATE=$(echo "${response}" | sed -e 's/^.*"state"[ ]*:[ ]*"//' -e 's/".*//');
-       if [ "$NEWSTATE" != "null" ]; then
-           echo "Cluster is already in ${STATE} state}"
-       else
-            echo "An error occured while changing cluster state!";
-       fi
-       exit 0
-    fi
-
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Please make sure you provide valid user/pass.";
+    echo "Changing cluster state to ${DESIRED_STATE}"
+    make_request changeState "${DESIRED_STATE}"
+    NEWSTATE=$(echo "${RESPONSE}" | sed -e 's/^.*"state"[ ]*:[ ]*"//' -e 's/".*//');
+    if [ "$STATUS" = "fail" ]; then
+        if [ "$NEWSTATE" != "null" ]; then
+            echo "Cluster is already in the ${DESIRED_STATE} state."
+        else
+            echo "Got error response: $RESPONSE";
+        fi
         exit 0
     fi
-
-    if [ "$STATUS" = "success" ];then
-        NEWSTATE=$(echo "${response}" | sed -e 's/^.*"state"[ ]*:[ ]*"//' -e 's/".*//');
-        echo "State of the cluster changed to ${NEWSTATE} state"
-        exit 0
-    fi
-
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    echo "The cluster is now in the '${NEWSTATE}' state"
     exit 0
 fi
 
 if [ "$OPERATION" = "force-start" ]; then
-    echo "Force-start makes cluster operational if cluster start is blocked by problematic members. Please make sure you provide valid user/pass."
-    echo "Starting cluster from member on ip ${ADDRESS} on port ${PORT}"
-
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/forceStart"
-    response=$(curl --data "${GROUPNAME}&${PASSWORD}" --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-
-    if [ "$STATUS" = "fail" ];then
-        echo "An error occurred while force starting the cluster!";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Please make sure you provide valid user/pass.";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "success" ];then
-        echo "Cluster force-start completed!"
-        exit 0
-    fi
-
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    echo "Force-starting the cluster. Expected state: cluster blocked during initialization,"
+    echo "waiting for all the members to finish reloading persistent data."
+    echo "Expected outcome: all members delete their persistent data and start empty."
+    make_request forceStart
+    echo "Cluster force-start completed."
     exit 0
 fi
 
 if [ "$OPERATION" = "partial-start" ]; then
-    echo "Partial-start makes cluster operational by starting only a portion of available members if cluster start is blocked by problematic members. Please make sure you provide valid user/pass."
-    echo "Starting cluster from member on ip ${ADDRESS} on port ${PORT}"
-
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/partialStart"
-    response=$(curl --data "${GROUPNAME}&${PASSWORD}" --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-
-    if [ "$STATUS" = "fail" ];then
-        echo "An error occurred while partially starting the cluster!";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Please make sure you provide valid user/pass.";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "success" ];then
-        echo "Cluster partial-start completed!"
-        exit 0
-    fi
-
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    echo "Partially starting the cluster. Expected state: cluster blocked during initialization,"
+    echo "waiting for all the members to finish reloading persistent data."
+    echo "Expected outcome: members that haven't finished reloading are ejected from the cluster"
+    echo "and their persistent data is lost."
+    make_request partialStart
+    echo "Cluster partial-start completed."
     exit 0
 fi
 
 if [ "$OPERATION" = "shutdown" ]; then
-
-    echo "You are shutting down the cluster. Please make sure you provide valid user/pass."
-    echo "Shutting down from member on ip ${ADDRESS} on port ${PORT}"
-
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/clusterShutdown"
-    response=$(curl --data "${GROUPNAME}&${PASSWORD}" --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-
-    if [ "$STATUS" = "fail" ];then
-        echo "An error occured while shutting down cluster!";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Wrong user/pass!";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "success" ];then
-        echo "Cluster shutdown completed!"
-        exit 0
-    fi
-
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    echo "Shutting down the cluster."
+    make_request clusterShutdown
+    echo "Cluster shutdown completed."
     exit 0
 fi
 
 if [ "$OPERATION" = "get-cluster-version" ]; then
-    echo "Getting cluster version on ip ${ADDRESS} on port ${PORT}"
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/version"
-    response=$(curl --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-    if [ "$STATUS" = "fail" ];then
-        echo "An error occured while listing!";
-        exit 0
-    fi
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Please make sure you provide valid user/pass.";
-        exit 0
-    fi
-    if [ "$STATUS" = "success" ];then
-        CURRVERSION=$(echo "${response}" | sed -e 's/^.*"version"[ ]*:[ ]*"//' -e 's/".*//');
-        echo "Cluster operates in version ${CURRVERSION}."
-        exit 0
-    fi
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    echo "Getting cluster version."
+    make_request version
+    CURRVERSION=$(echo "${RESPONSE}" | sed -e 's/^.*"version"[ ]*:[ ]*"//' -e 's/".*//');
+    echo "Cluster is at version ${CURRVERSION}."
     exit 0
 fi
 
 if [ "$OPERATION" = "change-cluster-version" ]; then
-
     if [ -z "$CLUSTER_VERSION" ]; then
-        echo "No new cluster version is defined, Please define new cluster version with --version MAJOR.MINOR (for example --version 3.8)"
+        echo "Please specify the desired new cluster version with --version MAJOR.MINOR."
+        echo "Example: --version 4.0"
         exit 0
     fi
-
-    echo "Changing cluster version to ${CLUSTER_VERSION} on ip ${ADDRESS} on port ${PORT}"
-    request="http://${ADDRESS}:${PORT}/hazelcast/rest/management/cluster/version"
-    response=$(curl --data "${GROUPNAME}&${PASSWORD}&${CLUSTER_VERSION}" --silent "${request}");
-    STATUS=$(echo "${response}" | sed -e 's/^.*"status"[ ]*:[ ]*"//' -e 's/".*//');
-
-    if [ "$STATUS" = "fail" ];then
-        NEWVERSION=$(echo "${response}" | sed -e 's/^.*"version"[ ]*:[ ]*"//' -e 's/".*//');
-        if [ "$NEWVERSION" != "null" ]; then
-            echo "Cluster is in ${NEWVERSION}, change failed."
-        else
-            echo "An error occured while changing cluster version!";
-        fi
-        exit 0
-    fi
-
-    if [ "$STATUS" = "forbidden" ];then
-        echo "Please make sure you provide valid user/pass.";
-        exit 0
-    fi
-
-    if [ "$STATUS" = "success" ];then
-        NEWVERSION=$(echo "${response}" | sed -e 's/^.*"version"[ ]*:[ ]*"//' -e 's/".*//');
-        echo "Cluster version changed to ${NEWVERSION}."
-        exit 0
-    fi
-
-    echo "No hazelcast cluster is running on ip ${ADDRESS} on port ${PORT}."
+    echo "Changing cluster version to $CLUSTER_VERSION."
+    make_request version $CLUSTER_VERSION
+    NEWVERSION=$(echo "${RESPONSE}" | sed -e 's/^.*"version"[ ]*:[ ]*"//' -e 's/".*//');
+    echo "Cluster version changed to $NEWVERSION."
     exit 0
 fi
+
+echo "$OPERATION is not a valid cluster operation, must be one of 'get-state', 'change-state',"
+echo "'shutdown', 'force-start', 'partial-start', 'get-cluster-version', 'change-cluster-version'."
