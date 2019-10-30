@@ -1,16 +1,16 @@
 # Hazelcast Jet 
 
-Hazelcast Jet is an open-source, cloud-native, distributed stream and
-batch processing engine.
+Hazelcast Jet is an open-source, cloud-native, distributed stream
+processing engine. It handles both unbounded (stream) and bounded 
+(batch) data sources.
 
 ## What's included
 
-* `bin/jet-start`: Command for starting a new Jet instance
-* `bin/jet-stop`: Command for stopping all running Jet instances
-* `bin/jet`: The Jet Command Line Client, used to submit jobs and interact
-   with the cluster (for example, list running jobs, cancel a job)
-* `bin/jet-cluster-admin`: Command line for make cluster-wide state changes 
-   (for example, shutdown whole cluster)
+* `bin/jet-start`: starts a new Jet instance
+* `bin/jet-stop`: stops all Jet instances running on this machine
+* `bin/jet`: submits and manages jobs
+* `bin/jet-cluster-admin`: manages the Jet cluster (for example, shutting
+  down the cluster)
 * `config/hazelcast-jet.yaml`: The jet configuration file
 * `config/hazelcast.yaml`: The IMDG configuration used by the Jet instance
 * `config/hazelcast-client.yaml`: The client configuration file used by the 
@@ -44,9 +44,11 @@ Members {size:2, ver:2} [
 ]
 ```
 
-Note: By default multicast is used, which may be disabled in some environments. 
-In this case, please have a look at enabling the TCP-IP join inside `config/hazelcast.yaml`.
-For more details, please see the [section on Hazelcast manual](https://docs.hazelcast.org/docs/3.12.3/manual/html-single/index.html#setting-up-clusters)
+Note: By default Jet uses multicast, which may be disabled in some
+environments. In this case you can enable the TCP-IP join inside 
+`config/hazelcast.yaml`. For more details, please see the the section on
+setting up clusters in [Hazelcast IMDG's reference
+manual](https://docs.hazelcast.org/docs/3.12.3/manual/html-single/index.html#setting-up-clusters)
 
 ### 3. Submitting a Job
 
