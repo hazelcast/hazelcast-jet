@@ -165,23 +165,27 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     public abstract void close() throws Exception;
 
     /**
-     * A handle for a transaction.
+     * A handle for a transactional resource.
      * <p>
      * This is the process if the transaction was created with a {@code true}
-     * parameter to the {@link #createTxnFn()}:
+     * parameter to the {@link #createTxnFn()} (with transactions):
      * <ol>
      *     <li>{@link #beginTransaction()}
-     *     <li>{@link #flush(boolean)} - can be called zero or multiple times.
-     *     If called with true, it will not be called again, nor can the
-     *     transaction be begun again.
+     *     <li>{@link #prepare()} - after this the transaction will no longer
+     *     returned from {@link #activeTransaction()}, i.e. no more data will
+     *     be written to it
      *     <li>{@link #commit()}
-     *     <li>if the utility recycles transaction, the process can start over
+     *     <li>if the utility recycles transaction, the process can go to (1)
+     *     <li>{@link #release()}
      * </ol>
      *
      * If the transaction was created with a {@code false} parameter to the
-     * {@link #createTxnFn()}, the process is as follows:
+     * {@link #createTxnFn()} (resource without transactions), the process is
+     * as follows:
      * <ol>
-     *     <li>{@link #flush(boolean)} - zero or multiple times
+     *     <li>{@link #flush()} - zero or multiple times. Called to ensure
+     *     at-least-once processing guarantee.
+     *     <li>{@link #release()}
      * </ol>
      *
      * @param <TXN_ID> type of transaction identifier. Must be serializable, will
@@ -204,17 +208,22 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         void beginTransaction() throws Exception;
 
         /**
-         * Flushes all previous writes to a durable storage, but not yet
-         * visible to others. To achieve correctness, it must be able to
-         * eventually commit them if this transaction recovers.
-         * <p>
-         * There can be subsequent writes to the transaction and multiple or no
-         * flush calls.
-         *
-         * @param finalFlush true if this transaction will never again be
-         *                  returned from {@link #activeTransaction()}
+         * Flushes all previous writes to a durable storage. This method can be
+         * called multiple times.
          */
-        void flush(boolean finalFlush) throws Exception;
+        default void flush() throws Exception {
+        }
+
+        /**
+         * Flushes all previous writes to a durable storage and prepares for
+         * commit. To achieve correctness, the transaction must be eventually
+         * able to successfully commit.
+         * <p>
+         * After this call, the transaction will never again be returned from
+         * {@link #activeTransaction()} until it's committed.
+         */
+        default void prepare() throws Exception {
+        }
 
         /**
          * Flushes the outstanding items and makes them visible to others.
