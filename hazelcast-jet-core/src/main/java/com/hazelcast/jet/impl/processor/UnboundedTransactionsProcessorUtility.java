@@ -102,7 +102,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
         try {
             if (externalGuarantee() == EXACTLY_ONCE) {
                 pendingTransactions.put(activeTransaction.id(), activeTransaction);
-                activeTransaction.flush(true);
+                activeTransaction.prepare();
             } else if (activeTransaction != null) {
                 activeTransaction.release();
             }
@@ -146,29 +146,43 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     @Override
     public boolean saveToSnapshot() {
         procContext().logger().info("aaa saveToSnapshot");
-        if (externalGuarantee() != EXACTLY_ONCE) {
-            return true;
-        }
-        waitingForPhase2 = true;
-        if (snapshotQueue.isEmpty()) {
-            if (activeTransaction != null) {
-                pendingTransactions.put(activeTransaction.id(), activeTransaction);
+        switch (externalGuarantee()) {
+            case NONE:
+                return true;
+
+            case AT_LEAST_ONCE:
                 try {
-                    activeTransaction.flush(true);
+                    activeTransaction.flush();
                 } catch (Exception e) {
                     throw sneakyThrow(e);
                 }
-                activeTransaction = null;
-            }
-            snapshotQueue.addAll(pendingTransactions.keySet());
+                return true;
+
+            case EXACTLY_ONCE:
+                waitingForPhase2 = true;
+                if (snapshotQueue.isEmpty()) {
+                    if (activeTransaction != null) {
+                        pendingTransactions.put(activeTransaction.id(), activeTransaction);
+                        try {
+                            activeTransaction.prepare();
+                        } catch (Exception e) {
+                            throw sneakyThrow(e);
+                        }
+                        activeTransaction = null;
+                    }
+                    snapshotQueue.addAll(pendingTransactions.keySet());
+                }
+                for (TXN_ID txnId; (txnId = snapshotQueue.peek()) != null; ) {
+                    if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
+                        return false;
+                    }
+                    snapshotQueue.remove();
+                }
+                return true;
+
+            default:
+                throw new UnsupportedOperationException(externalGuarantee().toString());
         }
-        for (TXN_ID txnId; (txnId = snapshotQueue.peek()) != null; ) {
-            if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
-                return false;
-            }
-            snapshotQueue.remove();
-        }
-        return true;
     }
 
     @Override

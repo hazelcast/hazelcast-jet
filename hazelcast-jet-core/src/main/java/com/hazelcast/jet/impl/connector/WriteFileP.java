@@ -315,16 +315,15 @@ public final class WriteFileP<T> implements Processor {
         }
 
         @Override
-        public void flush(boolean finalFlush) throws IOException {
-            assert finalFlush : "all flushes should be final in our case";
-            context.logger().info("aaa flush " + id());
+        public void prepare() throws IOException {
+            context.logger().info("aaa prepare " + id());
             release();
         }
 
         @Override
         public void release() throws IOException {
             if (writer != null) {
-                context.logger().info("aaa release (maybe flush?) " + id());
+                context.logger().info("aaa release (maybe prepare?) " + id());
                 writer.close();
                 writer = null;
             }
@@ -375,7 +374,7 @@ public final class WriteFileP<T> implements Processor {
         }
     }
 
-    private final class SizeTrackingStream extends OutputStream {
+    private static final class SizeTrackingStream extends OutputStream {
         private final OutputStream target;
         private long size;
 
