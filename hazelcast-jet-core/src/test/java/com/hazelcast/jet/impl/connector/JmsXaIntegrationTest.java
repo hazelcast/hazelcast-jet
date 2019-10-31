@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -26,8 +26,6 @@ import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.map.IMap;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
@@ -39,13 +37,12 @@ import javax.jms.JMSContext;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -63,19 +60,21 @@ public class JmsXaIntegrationTest extends JetTestSupport {
 
         final int MESSAGE_COUNT = 3_000; // TODO [viliam] change to more
         Pipeline p = Pipeline.create();
-        IMap<Long, List<Long>> sinkMap = instance1.getMap("sinkMap");
+        IList<List<Long>> sinkList = instance1.getList("sinkList");
         String queueName = "queue-" + randomName();
         p.drawFrom(
                 Sources.jmsQueueBuilder(JmsXaIntegrationTest::getConnectionFactory)
                        .destinationName(queueName)
-                       .build())
-         .withTimestamps(msg -> Long.parseLong(((TextMessage) msg).getText()), 0)
-         .map(msg -> Long.parseLong(((TextMessage) msg).getText()))
-         .window(WindowDefinition.tumbling(MESSAGE_COUNT))
-         .aggregate(AggregateOperations.toList())
+                       .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
+         .withoutTimestamps()
          .peek()
-         .map(winResult -> entry(winResult.start(), winResult.result()))
-         .drainTo(Sinks.map(sinkMap));
+         .mapStateful(() -> (List<Long>) new ArrayList<Long>(),
+                 (list, item) -> {
+                     assert list.size() < MESSAGE_COUNT;
+                     list.add(item);
+                     return list.size() == MESSAGE_COUNT ? list : null;
+                 })
+         .drainTo(Sinks.list(sinkList));
 
         Job job = instance1.newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
@@ -91,11 +90,7 @@ public class JmsXaIntegrationTest extends JetTestSupport {
                     MessageProducer producer = session.createProducer(session.createQueue(queueName))
             ) {
                 long startTime = System.nanoTime();
-                // produce 2*MESSAGE_COUNT items. This will create 2 full tumbling windows, but the 2nd
-                // window won't close because there won't be a 3rd window to cause the watermark to go beyond
-                // the 2nd window. And we do the full 2nd window in order to be likely that all processors will
-                // have item in it so that the WM can be coalesced and emitted.
-                for (int i = 0; i < MESSAGE_COUNT * 2; i++) {
+                for (int i = 0; i < MESSAGE_COUNT; i++) {
                     producer.send(session.createTextMessage(String.valueOf(i)));
                     Thread.sleep(Math.max(0,
                             Math.min(MESSAGE_COUNT, i) - NANOSECONDS.toMillis(System.nanoTime() - startTime)));
@@ -106,14 +101,16 @@ public class JmsXaIntegrationTest extends JetTestSupport {
         });
 
         while (!producerFuture.isDone()) {
-            Thread.sleep(100 + ThreadLocalRandom.current().nextInt(400));
+            // TODO [viliam] revert
+//            Thread.sleep(50 + ThreadLocalRandom.current().nextInt(400));
+            Thread.sleep(100);
             ((JobProxy) job).restart(false);
             assertJobStatusEventually(job, RUNNING);
         }
         producerFuture.get(); // call for the side-effect of throwing if the producer failed
 
-        assertEquals(1, sinkMap.size());
-        List<Long> result = sinkMap.get(0L);
+        assertTrueEventually(() -> assertGreaterOrEquals("size", sinkList.size(), 1), 20);
+        List<Long> result = sinkList.get(0);
         assertEquals(
                 LongStream.range(0, MESSAGE_COUNT).mapToObj(Long::toString).collect(Collectors.joining("\n")),
                 result.stream().sorted().map(Object::toString).collect(Collectors.joining("\n")));

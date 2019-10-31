@@ -58,13 +58,11 @@ import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 /**
  * Private API. Access via {@link SourceProcessors#streamJmsQueueP} or {@link
  * SourceProcessors#streamJmsTopicP}.
- * <p>
- * Since we use a non-blocking version of JMS consumer API, the processor is
- * marked as cooperative.
  */
 public class StreamJmsP<T> extends AbstractProcessor {
 
-    public static final int PREFERRED_LOCAL_PARALLELISM = 4;
+    public static final int PREFERRED_LOCAL_PARALLELISM = 1;
+    private static final int COMMIT_RETRY_DELAY_MS = 100;
 
     private final SupplierEx<? extends Connection> newConnectionFn;
     private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
@@ -128,9 +126,10 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     JmsTransactionId txnId = new JmsTransactionId(context, context.globalProcessorIndex(),
                             transactionIndex++);
                     if (transactional) {
-                        // rollback the transaction first before trying to use it. If it was used before and unfinished (such
-                        // as before the 1st snapshot), we could fail to start it again with XAER_DUPID.
+                        // rollback the transaction first before trying to use it. If it was used before and unfinished
+                        // (such as before the 1st snapshot), we could fail to start it again with XAER_DUPID.
                         try {
+                            LoggingUtil.logFine(getLogger(), "Preemptively rolling back %s", txnId);
                             ((XASession) session).getXAResource().rollback(txnId);
                         } catch (XAException e) {
                             if (e.errorCode != XAException.XAER_NOTA) {
@@ -159,34 +158,48 @@ public class StreamJmsP<T> extends AbstractProcessor {
                 .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
     }
 
-    private void recoverTransaction(Xid xid, boolean commit) {
+    @Override
+    public boolean isCooperative() {
+        return false;
+    }
+
+    private void recoverTransaction(Xid xid, boolean commit) throws InterruptedException {
         XASession session = (XASession) this.session;
         if (commit) {
-            try {
-                session.getXAResource().commit(xid, false);
-            } catch (XAException e) {
-                switch (e.errorCode) {
-                    case XAException.XA_HEURCOM:
-                        LoggingUtil.logFine(getLogger(), "Due to a heuristic decision, the work done on behalf of the " +
-                                "specified transaction branch was already committed. Transaction ID: %s", xid);
-                        break;
-                    case XAException.XA_HEURRB:
-                        getLogger().warning("Due to a heuristic decision, the work done on behalf of the restored " +
-                                "transaction ID was rolled back. Messages written in that transaction are lost. " +
-                                "Transaction ID: " + xid, handleXAException(e, xid));
-                        break;
-                    case XAException.XAER_NOTA:
-                        LoggingUtil.logFine(getLogger(), "Failed to commit XID restored from snapshot: The specified " +
-                                "XID is not known to the resource manager. This happens normally when the transaction " +
-                                "was committed in phase 2 of the snapshot and can be ignored, but can happen also if " +
-                                "the transaction wasn't committed in phase 2 and the RM lost it (in this case data " +
-                                "written in it is lost). Transaction ID: %s", xid);
-                        break;
-                    default:
-                        getLogger().warning("Failed to commit XID restored from the snapshot, XA error code: " +
-                                e.errorCode + ". Data loss is possible. Transaction ID: " + xid,
-                                handleXAException(e, xid));
+            for (;;) {
+                try {
+                    session.getXAResource().commit(xid, false);
+                    getLogger().info("Successfully committed restored transaction ID: " + xid);
+                } catch (XAException e) {
+                    switch (e.errorCode) {
+                        case XAException.XA_RETRY:
+                            LoggingUtil.logFine(getLogger(), "Commit failed with XA_RETRY, will retry in %s ms. XID: %s",
+                                    COMMIT_RETRY_DELAY_MS, xid);
+                            Thread.sleep(COMMIT_RETRY_DELAY_MS);
+                            continue;
+                        case XAException.XA_HEURCOM:
+                            LoggingUtil.logFine(getLogger(), "Due to a heuristic decision, the work done on behalf of " +
+                                    "the specified transaction branch was already committed. Transaction ID: %s", xid);
+                            break;
+                        case XAException.XA_HEURRB:
+                            getLogger().warning("Due to a heuristic decision, the work done on behalf of the restored " +
+                                    "transaction ID was rolled back. Messages written in that transaction are lost. " +
+                                    "Transaction ID: " + xid, handleXAException(e, xid));
+                            break;
+                        case XAException.XAER_NOTA:
+                            LoggingUtil.logFine(getLogger(), "Failed to commit XID restored from snapshot: The " +
+                                    "specified XID is not known to the resource manager. This happens normally when the " +
+                                    "transaction was committed in phase 2 of the snapshot and can be ignored, but can " +
+                                    "happen also if the transaction wasn't committed in phase 2 and the RM lost it (in " +
+                                    "this case data written in it is lost). Transaction ID: %s", xid);
+                            break;
+                        default:
+                            getLogger().warning("Failed to commit XID restored from the snapshot, XA error code: " +
+                                    e.errorCode + ". Data loss is possible. Transaction ID: " + xid,
+                                    handleXAException(e, xid));
+                    }
                 }
+                break;
             }
         } else {
             try {
@@ -228,6 +241,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         // TODO [viliam] remove casting here
+        // TODO [viliam] we must use the other transaction than the one we restored!!
         snapshotUtility.restoreFromSnapshot(entry((BroadcastKey<JmsTransactionId>) key, (Boolean) value));
     }
 
@@ -343,7 +357,13 @@ public class StreamJmsP<T> extends AbstractProcessor {
             LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId); // TODO [viliam] use finest
             try {
                 session.getXAResource().end(txnId, XAResource.TMSUCCESS);
-                session.getXAResource().prepare(txnId);
+                int res = session.getXAResource().prepare(txnId);
+                if (res == XAResource.XA_RDONLY) {
+                    // According to X/Open Distributed Transaction Specification, if prepare
+                    // returns XA_RDONLY, the transactions is non-existent afterwards. There's
+                    // no need to call commit and the commit can even fail
+                    // TODO [viliam] ensure that we don't call the commit
+                }
             } catch (XAException e) {
                 throw handleXAException(e, txnId);
             }
