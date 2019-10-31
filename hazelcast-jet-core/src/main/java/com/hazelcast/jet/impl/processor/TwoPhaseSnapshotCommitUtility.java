@@ -199,7 +199,9 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         TXN_ID id();
 
         /**
-         * Begins the transaction.
+         * Begins the transaction. The implementation needs to ensure that in
+         * case the transaction ID was used before, the work from before is
+         * rolled back before the new transaction is begun.
          *
          * @throws UnsupportedOperationException if the transaction was created
          * with {@code false} parameter to the {@link #createTxnFn()},
