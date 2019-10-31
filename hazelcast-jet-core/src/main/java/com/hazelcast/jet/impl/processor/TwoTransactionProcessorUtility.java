@@ -173,7 +173,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         // Rollback other transactions. We do this by probing transaction IDs beyond those of the
         // current execution, up to 5x of the current member count.
         for (
-                int index = procContext().globalProcessorIndex();
+                int index = procContext().globalProcessorIndex() + procContext().totalParallelism();
                 index < procContext().totalParallelism() * TXN_PROBING_FACTOR;
                 index += procContext().totalParallelism()
         ) {

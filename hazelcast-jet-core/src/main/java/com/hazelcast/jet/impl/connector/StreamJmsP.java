@@ -47,7 +47,6 @@ import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -125,8 +124,22 @@ public class StreamJmsP<T> extends AbstractProcessor {
             session = connection.createSession(false, AUTO_ACKNOWLEDGE);
         }
         snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, context.processingGuarantee(),
-                transactional -> new JmsTransaction((XASession) session,
-                        new JmsTransactionId(context, context.globalProcessorIndex(), transactionIndex++)),
+                transactional -> {
+                    JmsTransactionId txnId = new JmsTransactionId(context, context.globalProcessorIndex(),
+                            transactionIndex++);
+                    if (transactional) {
+                        // rollback the transaction first before trying to use it. If it was used before and unfinished (such
+                        // as before the 1st snapshot), we could fail to start it again with XAER_DUPID.
+                        try {
+                            ((XASession) session).getXAResource().rollback(txnId);
+                        } catch (XAException e) {
+                            if (e.errorCode != XAException.XAER_NOTA) {
+                                throw handleXAException(e, txnId);
+                            }
+                        }
+                    }
+                    return new JmsTransaction((XASession) session, txnId);
+                },
                 txnId -> {
                     try {
                         recoverTransaction(txnId, true);
@@ -154,7 +167,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
             } catch (XAException e) {
                 switch (e.errorCode) {
                     case XAException.XA_HEURCOM:
-                        LoggingUtil.logFine(getLogger() , "Due to a heuristic decision, the work done on behalf of the " +
+                        LoggingUtil.logFine(getLogger(), "Due to a heuristic decision, the work done on behalf of the " +
                                 "specified transaction branch was already committed. Transaction ID: %s", xid);
                         break;
                     case XAException.XA_HEURRB:
@@ -163,11 +176,11 @@ public class StreamJmsP<T> extends AbstractProcessor {
                                 "Transaction ID: " + xid, handleXAException(e, xid));
                         break;
                     case XAException.XAER_NOTA:
-                        getLogger().info("Failed to commit XID restored from snapshot: The specified XID is not " +
-                                "known to the resource manager. This happens commonly when the transaction was " +
-                                "committed in phase 2 of the snapshot and can be ignored, but can happen also if the " +
-                                "transaction wasn't committed in phase 2 and the RM lost it (in this case data written " +
-                                "in it is lost). Transaction ID: " + xid);
+                        LoggingUtil.logFine(getLogger(), "Failed to commit XID restored from snapshot: The specified " +
+                                "XID is not known to the resource manager. This happens normally when the transaction " +
+                                "was committed in phase 2 of the snapshot and can be ignored, but can happen also if " +
+                                "the transaction wasn't committed in phase 2 and the RM lost it (in this case data " +
+                                "written in it is lost). Transaction ID: %s", xid);
                         break;
                     default:
                         getLogger().warning("Failed to commit XID restored from the snapshot, XA error code: " +
@@ -263,21 +276,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     new byte[1]);
         }
 
-        private JmsTransactionId(Xid xid) {
-            super(xid.getFormatId(), xid.getGlobalTransactionId(), xid.getBranchQualifier());
-        }
-
-        // TODO [viliam] use recover to recover more transactions?
-        private static JmsTransactionId fromXid(Xid xid) {
-            byte[] bytes = xid.getGlobalTransactionId();
-            if (bytes == null || bytes.length != GTRID_LENGTH
-                    || xid.getFormatId() != JET_FORMAT_ID
-                    || !Arrays.equals(xid.getBranchQualifier(), new byte[1])) {
-                return null;
-            }
-            return new JmsTransactionId(xid);
-        }
-
         private static long stringHash(String string) {
             byte[] bytes = String.valueOf(string).getBytes(StandardCharsets.UTF_8);
             return HashUtil.MurmurHash3_x64_64(bytes, 0, bytes.length);
@@ -332,7 +330,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void beginTransaction() throws Exception {
-            getLogger().info("aaa start, " + txnId); // TODO [viliam] remove
+            LoggingUtil.logFine(getLogger(), "start, %s", txnId); // TODO [viliam] use finest
             try {
                 session.getXAResource().start(txnId, XAResource.TMNOFLAGS);
             } catch (XAException e) {
@@ -342,7 +340,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void prepare() throws Exception {
-            getLogger().info("aaa end & prepare, " + txnId); // TODO [viliam] remove
+            LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId); // TODO [viliam] use finest
             try {
                 session.getXAResource().end(txnId, XAResource.TMSUCCESS);
                 session.getXAResource().prepare(txnId);
@@ -353,7 +351,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void commit() throws Exception {
-            getLogger().info("aaa commit, " + txnId); // TODO [viliam] remove
+            LoggingUtil.logFine(getLogger(), "commit, %s",  txnId); // TODO [viliam] use finest
             try {
                 session.getXAResource().commit(txnId, false);
             } catch (XAException e) {
@@ -363,15 +361,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void release() {
-            getLogger().info("aaa release (do nothing), " + txnId); // TODO [viliam] remove
-        }
-    }
-
-    private static final class BetterXAException extends XAException {
-        private BetterXAException(String message, int errorCode, Throwable cause) {
-            super(message);
-            initCause(cause);
-            this.errorCode = errorCode;
         }
     }
 
@@ -382,5 +371,13 @@ public class StreamJmsP<T> extends AbstractProcessor {
             return new BetterXAException("errorCode=" + e.errorCode + (xid != null ? ", xid=" + xid : ""), e.errorCode, e);
         }
         return e;
+    }
+
+    private static final class BetterXAException extends XAException {
+        private BetterXAException(String message, int errorCode, Throwable cause) {
+            super(message);
+            initCause(cause);
+            this.errorCode = errorCode;
+        }
     }
 }

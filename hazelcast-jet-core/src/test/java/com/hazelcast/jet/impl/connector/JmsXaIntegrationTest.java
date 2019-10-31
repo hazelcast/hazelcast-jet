@@ -42,6 +42,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -105,7 +106,7 @@ public class JmsXaIntegrationTest extends JetTestSupport {
         });
 
         while (!producerFuture.isDone()) {
-            Thread.sleep(1000);
+            Thread.sleep(100 + ThreadLocalRandom.current().nextInt(400));
             ((JobProxy) job).restart(false);
             assertJobStatusEventually(job, RUNNING);
         }
