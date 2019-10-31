@@ -16,19 +16,18 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.WindowDefinition;
+import com.hazelcast.map.IMap;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
@@ -46,6 +45,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
+import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -63,7 +63,7 @@ public class JmsXaIntegrationTest extends JetTestSupport {
 
         final int MESSAGE_COUNT = 3_000; // TODO [viliam] change to more
         Pipeline p = Pipeline.create();
-        IList<List<Long>> sinkList = instance1.getList("sinkList");
+        IMap<Long, List<Long>> sinkMap = instance1.getMap("sinkMap");
         String queueName = "queue-" + randomName();
         p.drawFrom(
                 Sources.jmsQueueBuilder(JmsXaIntegrationTest::getConnectionFactory)
@@ -74,8 +74,8 @@ public class JmsXaIntegrationTest extends JetTestSupport {
          .window(WindowDefinition.tumbling(MESSAGE_COUNT))
          .aggregate(AggregateOperations.toList())
          .peek()
-         .map(WindowResult::result)
-         .drainTo(Sinks.list(sinkList));
+         .map(winResult -> entry(winResult.start(), winResult.result()))
+         .drainTo(Sinks.map(sinkMap));
 
         Job job = instance1.newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
@@ -112,8 +112,8 @@ public class JmsXaIntegrationTest extends JetTestSupport {
         }
         producerFuture.get(); // call for the side-effect of throwing if the producer failed
 
-        assertEquals(1, sinkList.size());
-        List<Long> result = sinkList.get(0);
+        assertEquals(1, sinkMap.size());
+        List<Long> result = sinkMap.get(0L);
         assertEquals(
                 LongStream.range(0, MESSAGE_COUNT).mapToObj(Long::toString).collect(Collectors.joining("\n")),
                 result.stream().sorted().map(Object::toString).collect(Collectors.joining("\n")));
