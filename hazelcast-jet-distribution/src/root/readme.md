@@ -58,8 +58,9 @@ You can submit the hello world example to the cluster using the command below:
 $ bin/jet submit examples/hello-word.jar
 ```
 
-This job creates a random stream of randoms and then calculates the
+This job creates a stream of random numbers and then calculates the
 top 10 largest values observed so far, writing the results to an IMap.
+The contents of the IMap are then periodically printed out. 
 You can play around with the various fault tolerance features of Jet by
 adding a second node, and then killing it again and observing 
 how the job is affected. You can also monitor the job using the Jet 
