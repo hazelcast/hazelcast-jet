@@ -55,7 +55,7 @@ manual](https://docs.hazelcast.org/docs/3.12.3/manual/html-single/index.html#set
 You can submit the hello world example to the cluster using the command below:
 
 ```
-$ bin/jet submit examples/hello-word.jar
+$ bin/jet submit examples/hello-world.jar
 ```
 
 This job creates a stream of random numbers and then calculates the
