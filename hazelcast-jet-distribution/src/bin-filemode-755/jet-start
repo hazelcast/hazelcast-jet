@@ -9,7 +9,7 @@ echo "# JAVA=$JAVA"
 echo "# JAVA_OPTS=${JAVA_OPTS_ARRAY[*]}"
 echo "# CLASSPATH=$CLASSPATH"
 echo "########################################"
-echo "Starting Hazelcast Jet."
+echo "Starting Hazelcast Jet"
 
 set -x
 $JAVA "${JAVA_OPTS_ARRAY[@]}" -cp "$CLASSPATH" com.hazelcast.jet.server.JetMemberStarter

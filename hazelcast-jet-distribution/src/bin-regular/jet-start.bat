@@ -8,22 +8,22 @@ set JET_HOME=%~dp0..
 
 set JAVA_OPTS=%JAVA_OPTS%^
  "-Dhazelcast.logging.type=log4j"^
- "-Dlog4j.configuration=file:$JET_HOME/config/log4j.properties"^
+ "-Dlog4j.configuration=file:%JET_HOME%\config\log4j.properties"^
  "-Dhazelcast.config=%JET_HOME%\config\hazelcast.yaml"^
- "-Dhazelcast.client.config=$JET_HOME/config/hazelcast-client.yaml"^
+ "-Dhazelcast.client.config=%JET_HOME%\config\hazelcast-client.yaml"^
  "-Dhazelcast.jet.config=%JET_HOME%\config\hazelcast-jet.yaml"^
  "-Djet.home=%JET_HOME%"
 
-set CLASSPATH="%JET_HOME%\lib\${hazelcast.jet.artifact}-${project.version}.jar";%CLASSPATH%
+set CLASSPATH="%JET_HOME%\lib\*";%CLASSPATH%
 
 ECHO ########################################
 ECHO # RUN_JAVA=%RUN_JAVA%
 ECHO # JAVA_OPTS=%JAVA_OPTS%
 ECHO # CLASSPATH=%CLASSPATH%
 ECHO ########################################
-ECHO Starting Hazelcast Jet.
+ECHO Starting Hazelcast Jet
 
-start "hazelcast-jet" "%RUN_JAVA%" %JAVA_OPTS% -cp "%CLASSPATH%" com.hazelcast.jet.server.JetMemberStarter
+start "hazelcast-jet" "%RUN_JAVA%" %JAVA_OPTS% -cp %CLASSPATH% com.hazelcast.jet.server.JetMemberStarter
 goto endofscript
 
 :error
