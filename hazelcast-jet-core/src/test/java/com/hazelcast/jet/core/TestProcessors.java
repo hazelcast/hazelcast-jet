@@ -309,7 +309,6 @@ public final class TestProcessors {
 
         @Override
         protected void init(@Nonnull Context context) {
-            getLogger().info("init");
             initCount.incrementAndGet();
             if (initError != null) {
                 throw sneakyThrow(initError);
@@ -326,7 +325,6 @@ public final class TestProcessors {
 
         @Override
         public boolean complete() {
-            getLogger().info("complete");
             if (completeError != null) {
                 throw sneakyThrow(completeError);
             }
