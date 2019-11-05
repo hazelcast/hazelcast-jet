@@ -67,6 +67,7 @@ import static com.hazelcast.jet.core.TestUtil.executeAndPeel;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
 import static com.hazelcast.jet.impl.JobExecutionRecord.NO_SNAPSHOT;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -80,7 +81,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
     private static final int MEMBER_COUNT = 2;
     private static final int PARALLELISM = Runtime.getRuntime().availableProcessors();
 
-    private static final RuntimeException MOCK_ERROR = new RuntimeException("mock error");
+    private static final Throwable MOCK_ERROR = new AssertionError("mock error");
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -221,7 +222,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_psGetOnOtherNodeThrows_then_jobFails() throws Throwable {
+    public void when_psGetOnOtherNodeThrows_then_jobFails() {
         // Given
         final int localPort = instance().getCluster().getLocalMember().getAddress().getPort();
 
@@ -229,16 +230,17 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
                 ProcessorMetaSupplier.of(
                         (Address address) -> ProcessorSupplier.of(
                                 address.getPort() == localPort ? noopP() : () -> {
-                                    throw MOCK_ERROR;
+                                    throw sneakyThrow(MOCK_ERROR);
                                 })
                 )));
 
-        // Then
-        expectedException.expect(MOCK_ERROR.getClass());
-        expectedException.expectMessage(MOCK_ERROR.getMessage());
-
         // When
-        executeAndPeel(instance().newJob(dag));
+        try {
+            executeAndPeel(instance().newJob(dag));
+        } catch (Throwable caught) {
+            // Then
+            assertExceptionInCauses(MOCK_ERROR, caught);
+        }
     }
 
     @Test
@@ -383,7 +385,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_executionCancelled_then_jobCompletedWithCancellationException() throws Throwable {
+    public void when_executionCancelled_then_jobCompletedWithCancellationException() throws Exception {
         // Given
         DAG dag = new DAG().vertex(new Vertex("test",
                 new MockPMS(() -> new MockPS(NoOutputSourceP::new, MEMBER_COUNT))));
@@ -506,7 +508,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
         DAG dag = new DAG();
         Vertex noop = dag.newVertex("noop", (SupplierEx<Processor>) NoOutputSourceP::new)
                 .localParallelism(1);
-        Vertex faulty = dag.newVertex("faulty", () -> new MockP().setCompleteError(new RuntimeException("error")))
+        Vertex faulty = dag.newVertex("faulty", () -> new MockP().setCompleteError(MOCK_ERROR))
                 .localParallelism(1);
         dag.edge(between(noop, faulty));
 
@@ -604,7 +606,7 @@ public class ExecutionLifecycleTest extends SimpleTestInClusterSupport {
         assertNull("receivedCloseError", MockPMS.receivedCloseError.get());
     }
 
-    private void assertPmsClosedWithError(RuntimeException e) {
+    private void assertPmsClosedWithError(Throwable e) {
         assertTrue("initCalled", MockPMS.initCalled.get());
         assertTrue("closeCalled", MockPMS.closeCalled.get());
         assertExceptionInCauses(e, MockPMS.receivedCloseError.get());
