@@ -206,7 +206,9 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * with {@code false} parameter to the {@link #createTxnFn()},
          * otherwise it will be called immediately after creation.
          */
-        void beginTransaction() throws Exception;
+        default void beginTransaction() throws Exception {
+            throw new UnsupportedOperationException("Resource without transaction support");
+        }
 
         /**
          * Flushes all previous writes to a durable storage. This method can be
