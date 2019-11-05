@@ -308,10 +308,6 @@ public final class WriteFileP<T> implements Processor {
         }
 
         @Override
-        public void beginTransaction() {
-        }
-
-        @Override
         public void prepare() throws IOException {
             context.logger().info("aaa prepare " + id());
             release();
