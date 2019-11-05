@@ -167,6 +167,9 @@ public final class AsyncTransformUsingServiceUnorderedP<S, T, K, R> extends Abst
 
     @Override
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        if (getOutbox().hasUnfinishedItem() && !emitFromTraverser(currentTraverser)) {
+            return false;
+        }
         assert lastEmittedWm <= lastReceivedWm : "lastEmittedWm=" + lastEmittedWm + ", lastReceivedWm=" + lastReceivedWm;
         // Ignore a watermark that is going back. This is possible after restoring from a snapshot
         // taken in at-least-once mode.
