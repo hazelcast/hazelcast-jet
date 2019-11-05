@@ -135,7 +135,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     }
 
     public void initialize(
-        NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext, boolean metricsEnabled
+            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext, boolean metricsEnabled
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;

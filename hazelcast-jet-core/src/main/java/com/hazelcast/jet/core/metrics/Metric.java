@@ -44,6 +44,7 @@ public interface Metric {
      * metric, it still remains a simple numeric value, but is used to
      * populate the {@link MetricTags#UNIT} tag in the metric's description.
      */
+    @Nonnull
     Unit unit();
 
     /**
@@ -70,10 +71,5 @@ public interface Metric {
      * Sets the current value.
      */
     void set(long newValue);
-
-    /**
-     * Returns the current value.
-     */
-    long get();
 
 }

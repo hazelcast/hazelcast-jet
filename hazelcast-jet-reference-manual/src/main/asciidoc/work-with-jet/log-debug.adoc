@@ -272,7 +272,7 @@ their name implies: they are not built-in, but defined when processing
 pipelines are written.
 
 Since user-defined metrics are also job metrics, they will have all the tags
-job metrics have. They also have an extra tag, called `USER` which is
+job metrics have. They also have an extra tag, called `user` which is
 of type `boolean` and is set to `true`.
 
 NOTE: Due to the extra tag user-defined metrics have it's not possible
@@ -297,15 +297,12 @@ length, load-factor and such) and to incrementally count things (like
 number of certain events).
 
 When obtaining `Metric` instances from the `Metrics` utility class it's
-possible to specify the desired `{jet-javadoc}/core/metrics/Unit.html[measurement unit]`
-of the metrics. It's important to note though that this measurement unit
-serves a purely informative purpose only (it's being used to set one of the
-tags of the metrics, for details see the
-`{jet-javadoc}/core/metrics/Unit.html[javadoc]`), no validation is being
-done on it. The `Metric` instance for a certain name can be requested multiple times
-from the utility class with different `Unit` values and this will not generate
-any errors. The first `Unit` value from the first request will take effect,
-subsequent ones will be ignored.
+possible to specify the desired
+`{jet-javadoc}/core/metrics/Unit.html[measurement unit]`
+of the metrics. The unit can be used by UI tools to format the value, it's
+ignored by Jet. If you request a metric multiple times with different unit,
+the unit of the first request will be used to register the metric, others
+will be ignored.
 
 User-defined metrics can be used anywhere in pipeline definitions where
 custom code can be added. This means (just to name the most important ones):
