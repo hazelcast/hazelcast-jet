@@ -129,7 +129,7 @@ public final class WriteFileP<T> implements Processor {
         try {
             for (Object item; (item = inbox.poll()) != null; ) {
                 @SuppressWarnings("unchecked")
-                    T castedItem = (T) item;
+                T castedItem = (T) item;
                 writer.write(toStringFn.apply(castedItem));
                 writer.write(System.lineSeparator());
                 if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
@@ -227,10 +227,11 @@ public final class WriteFileP<T> implements Processor {
     private void recoverAndCommit(FileId fileId) throws IOException {
         this.context.logger().info("aaa recoverAndCommit " + fileId);
         Path tempFile = directory.resolve(fileId.fileName + TEMP_FILE_SUFFIX);
+        Path finalFile = directory.resolve(fileId.fileName);
         if (Files.exists(tempFile)) {
-            Files.move(tempFile, directory.resolve(fileId.fileName), StandardCopyOption.ATOMIC_MOVE);
-        } else {
-            context.logger().warning("Uncommitted temporary file from previous execution didn't exist, data loss " +
+            Files.move(tempFile, finalFile, StandardCopyOption.ATOMIC_MOVE);
+        } else if (!Files.exists(finalFile)) {
+            context.logger().warning("Neither temporary nor final file from previous execution exist, data loss " +
                     "might occur: " + tempFile);
         }
     }
@@ -351,7 +352,7 @@ public final class WriteFileP<T> implements Processor {
 
         FileWithTransaction(@Nonnull FileId fileId) {
             super(fileId);
-            tempFile = directory.resolve(fileId + TEMP_FILE_SUFFIX);
+            tempFile = directory.resolve(fileId.fileName + TEMP_FILE_SUFFIX);
         }
 
         @Override
