@@ -31,7 +31,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId,
         TXN extends TransactionalResource<TXN_ID>> {
@@ -39,7 +38,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     private final Outbox outbox;
     private final Context procContext;
     private final ProcessingGuarantee externalGuarantee;
-    private final Function<Boolean, TXN> createTxnFn;
+    private final FunctionEx<TXN_ID, TXN> createTxnFn;
     private final Consumer<TXN_ID> recoverAndCommitFn;
     private final ConsumerEx<Integer> recoverAndAbortFn;
 
@@ -47,7 +46,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
             @Nonnull ProcessingGuarantee externalGuarantee,
-            @Nonnull FunctionEx<Boolean, TXN> createTxnFn,
+            @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
             @Nonnull ConsumerEx<Integer> recoverAndAbortFn
     ) {
@@ -78,7 +77,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         return procContext;
     }
 
-    protected Function<Boolean, TXN> createTxnFn() {
+    protected FunctionEx<TXN_ID, TXN> createTxnFn() {
         return createTxnFn;
     }
 
