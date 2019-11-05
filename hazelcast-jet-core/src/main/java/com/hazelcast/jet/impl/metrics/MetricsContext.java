@@ -32,20 +32,25 @@ import java.util.function.BiFunction;
 
 public class MetricsContext {
 
-    private static final BiFunction<String, Unit, Metric> CREATE_SINGLE_WRITER_METRIC = SingleWriterMetric::new;
-    private static final BiFunction<String, Unit, Metric> CREATE_THREAD_SAFE_METRICS = ThreadSafeMetric::new;
+    private final BiFunction<String, Unit, Metric> singleWriterMetricSupplier;
+    private final BiFunction<String, Unit, Metric> threadSafeMetricSupplier;
 
     private String onlyName;
     private Metric onlyMetric;
 
     private Map<String, Metric> metrics;
 
+    public MetricsContext(boolean enabled) {
+        this.singleWriterMetricSupplier = enabled ? SingleWriterMetric::new : DummyMetric::new;
+        this.threadSafeMetricSupplier = enabled ? ThreadSafeMetric::new : DummyMetric::new;
+    }
+
     Metric metric(String name, Unit unit) {
-        return metric(name, unit, CREATE_SINGLE_WRITER_METRIC);
+        return metric(name, unit, singleWriterMetricSupplier);
     }
 
     Metric threadSafeMetric(String name, Unit unit) {
-        return metric(name, unit, CREATE_THREAD_SAFE_METRICS);
+        return metric(name, unit, threadSafeMetricSupplier);
     }
 
     private Metric metric(String name, Unit unit, BiFunction<String, Unit, Metric> metricSupplier) {
@@ -206,6 +211,53 @@ public class MetricsContext {
         @Override
         public long get() {
             return VOLATILE_VALUE_UPDATER.get(this);
+        }
+    }
+
+    private static final class DummyMetric implements Metric {
+
+        private final String name;
+        private final Unit unit;
+
+        DummyMetric(String name, Unit unit) {
+            this.name = name;
+            this.unit = unit;
+        }
+
+        @Nonnull
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Unit unit() {
+            return unit;
+        }
+
+        @Override
+        public void increment() {
+        }
+
+        @Override
+        public void increment(long amount) {
+        }
+
+        @Override
+        public void decrement() {
+        }
+
+        @Override
+        public void decrement(long amount) {
+        }
+
+        @Override
+        public void set(long newValue) {
+        }
+
+        @Override
+        public long get() {
+            return 0;
         }
     }
 }

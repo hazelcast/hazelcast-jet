@@ -127,7 +127,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLong queuesCapacity = new AtomicLong();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
-    private final MetricsContext metricsContext = new MetricsContext();
+    private final MetricsContext metricsContext;
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public ProcessorTasklet(@Nonnull Context context,
@@ -136,7 +136,8 @@ public class ProcessorTasklet implements Tasklet {
             @Nonnull List<? extends InboundEdgeStream> instreams,
             @Nonnull List<? extends OutboundEdgeStream> outstreams,
             @Nonnull SnapshotContext ssContext,
-            @Nonnull OutboundCollector ssCollector
+            @Nonnull OutboundCollector ssCollector,
+            boolean metricsEnabled
     ) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
@@ -153,6 +154,8 @@ public class ProcessorTasklet implements Tasklet {
                                     .toArray(OutboundEdgeStream[]::new);
         this.ssContext = ssContext;
         this.logger = getLogger(context);
+
+        this.metricsContext = new MetricsContext(metricsEnabled);
 
         instreamCursor = popInstreamGroup();
         receivedCounts = new AtomicLongArray(instreams.size());

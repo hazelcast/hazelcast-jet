@@ -85,6 +85,8 @@ public class ExecutionContext {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
+    private boolean metricsEnabled;
+
     private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
@@ -112,8 +114,8 @@ public class ExecutionContext {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
-        boolean registerMetrics = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
+        metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, metricsEnabled);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
@@ -271,7 +273,7 @@ public class ExecutionContext {
     }
 
     public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
-        if (!jobConfig.isMetricsEnabled()) {
+        if (!metricsEnabled) {
             return;
         }
         tagger = tagger.withTag(MetricTags.JOB, idToString(jobId))
