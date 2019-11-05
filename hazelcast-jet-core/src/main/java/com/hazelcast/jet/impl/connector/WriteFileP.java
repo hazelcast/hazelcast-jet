@@ -82,13 +82,6 @@ public final class WriteFileP<T> implements Processor {
 
     /**
      * Rolling by date is based on system clock, not on event time.
-     *
-     * @param directoryName
-     * @param toStringFn
-     * @param charset
-     * @param append
-     * @param dateFormatter
-     * @param maxFileSize
      */
     private WriteFileP(
             @Nonnull String directoryName,
@@ -117,7 +110,8 @@ public final class WriteFileP<T> implements Processor {
                 outbox,
                 context,
                 context.processingGuarantee(),
-                this::newFile,
+                this::newFileName,
+                this::newFileResource,
                 this::recoverAndCommit,
                 this::abortUnfinishedTransactions
         );
@@ -134,7 +128,9 @@ public final class WriteFileP<T> implements Processor {
         Writer writer = transaction.writer();
         try {
             for (Object item; (item = inbox.poll()) != null; ) {
-                writer.write(toStringFn.apply((T) item));
+                @SuppressWarnings("unchecked")
+                    T castedItem = (T) item;
+                writer.write(toStringFn.apply(castedItem));
                 writer.write(System.lineSeparator());
                 if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
                     writer = utility.newActiveTransaction().writer();
@@ -182,13 +178,7 @@ public final class WriteFileP<T> implements Processor {
         return utility.finishSnapshotRestore();
     }
 
-    /**
-     * Creates a new file name and returns FileResource for it.
-     *
-     * @param checkExistingFiles true if we should check existing files to
-     *                           find a next free sequence number
-     */
-    private FileResource newFile(boolean checkExistingFiles) {
+    private FileId newFileName() {
         StringBuilder sb = new StringBuilder();
         if (dateFormatter != null) {
             lastFileDate = dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong()));
@@ -203,7 +193,7 @@ public final class WriteFileP<T> implements Processor {
             //  build the set only if the first sequence fails and only if fileSequence == 0, otherwise
             //  we can just check the generated file
             Set<String> existingFiles;
-            if (checkExistingFiles) {
+            if (utility.externalGuarantee() == EXACTLY_ONCE) {
                 try (Stream<Path> fileListStream = Files.list(directory)) {
                     existingFiles = fileListStream
                             .map(f -> f.getFileName().toString())
@@ -221,11 +211,17 @@ public final class WriteFileP<T> implements Processor {
                 sb.setLength(prefixLength);
             } while (existingFiles.contains(file) || existingFiles.contains(file + TEMP_FILE_SUFFIX));
         }
+        return new FileId(file, context.globalProcessorIndex());
+    }
 
-        logFine(context.logger(), "Creating %s", file); // TODO [viliam] logFinest
+    /**
+     * Returns a FileResource for a fileId.
+     */
+    private FileResource newFileResource(FileId fileId) {
+        logFine(context.logger(), "Creating %s", fileId.fileName); // TODO [viliam] logFinest
         return utility.externalGuarantee() == EXACTLY_ONCE
-                ? new FileWithTransaction(file)
-                : new FileWithoutTransaction(file);
+                ? new FileWithTransaction(fileId)
+                : new FileWithoutTransaction(fileId);
     }
 
     private void recoverAndCommit(FileId fileId) throws IOException {
@@ -300,9 +296,9 @@ public final class WriteFileP<T> implements Processor {
 
         @SuppressFBWarnings(value = "NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
                 justification = "targetFile always has fileName")
-        FileResource(Path targetFile) {
-            this.targetFile = targetFile;
-            this.fileId = new FileId(targetFile.getFileName().toString(), context.globalProcessorIndex());
+        FileResource(FileId fileId) {
+            this.fileId = fileId;
+            this.targetFile = directory.resolve(fileId.fileName);
         }
 
         @Override
@@ -336,8 +332,8 @@ public final class WriteFileP<T> implements Processor {
 
     private final class FileWithoutTransaction extends FileResource {
 
-        FileWithoutTransaction(@Nonnull String fileName) {
-            super(directory.resolve(fileName));
+        FileWithoutTransaction(@Nonnull FileId fileId) {
+            super(fileId);
         }
 
         @Override
@@ -353,9 +349,9 @@ public final class WriteFileP<T> implements Processor {
 
         private final Path tempFile;
 
-        FileWithTransaction(@Nonnull String fileName) {
-            super(directory.resolve(fileName));
-            tempFile = directory.resolve(fileName + TEMP_FILE_SUFFIX);
+        FileWithTransaction(@Nonnull FileId fileId) {
+            super(fileId);
+            tempFile = directory.resolve(fileId + TEMP_FILE_SUFFIX);
         }
 
         @Override
@@ -389,7 +385,7 @@ public final class WriteFileP<T> implements Processor {
         }
 
         @Override
-        public void write(byte[] b, int off, int len) throws IOException {
+        public void write(@Nonnull byte[] b, int off, int len) throws IOException {
             size += len;
             target.write(b, off, len);
         }

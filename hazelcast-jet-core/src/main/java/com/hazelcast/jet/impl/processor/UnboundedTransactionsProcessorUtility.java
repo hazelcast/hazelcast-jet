@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
+import java.util.function.Supplier;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
@@ -47,6 +48,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId, TXN extends TransactionalResource<TXN_ID>>
         extends TwoPhaseSnapshotCommitUtility<TXN_ID, TXN> {
 
+    private final Supplier<TXN_ID> createTxnIdFn;
     private final RunnableExc abortUnfinishedTransactions;
 
     private TXN activeTransaction;
@@ -72,7 +74,8 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
             @Nonnull ProcessingGuarantee externalGuarantee,
-            @Nonnull FunctionEx<Boolean, TXN> createTxnFn,
+            @Nonnull Supplier<TXN_ID> createTxnIdFn,
+            @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
             @Nonnull RunnableExc abortUnfinishedTransactions
     ) {
@@ -80,13 +83,14 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
                 txnId -> {
                     throw new UnsupportedOperationException();
                 });
+        this.createTxnIdFn = createTxnIdFn;
         this.abortUnfinishedTransactions = abortUnfinishedTransactions;
     }
 
     @Nonnull @Override
     public TXN activeTransaction() {
         if (activeTransaction == null) {
-            activeTransaction = createTxnFn().apply(externalGuarantee() == EXACTLY_ONCE);
+            activeTransaction = createTxnFn().apply(createTxnIdFn.get());
             if (externalGuarantee() == EXACTLY_ONCE) {
                 try {
                     activeTransaction.beginTransaction();
