@@ -73,7 +73,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private MessageConsumer consumer;
     private Traverser<Object> traverser;
 
-    private TwoTransactionProcessorUtility<JmsTransactionId, JmsTransaction> snapshotUtility;
+    private TwoTransactionProcessorUtility<JmsTransactionId, TransactionalResource<JmsTransactionId>> snapshotUtility;
 
     StreamJmsP(
             SupplierEx<? extends Connection> newConnectionFn,
@@ -134,8 +134,10 @@ public class StreamJmsP<T> extends AbstractProcessor {
                                 throw handleXAException(e, txnId);
                             }
                         }
+                        return new JmsTransaction((XASession) session, txnId);
+                    } else {
+                        return new JmsNoTransaction(txnId);
                     }
-                    return new JmsTransaction((XASession) session, txnId);
                 },
                 txnId -> {
                     try {
@@ -376,6 +378,19 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void release() {
+        }
+    }
+
+    private final class JmsNoTransaction implements TransactionalResource<JmsTransactionId> {
+        private final JmsTransactionId id;
+
+        private JmsNoTransaction(JmsTransactionId id) {
+            this.id = id;
+        }
+
+        @Override
+        public JmsTransactionId id() {
+            return id;
         }
     }
 

@@ -68,12 +68,12 @@ public class StreamJmsPTest extends JetTestSupport {
     public void when_queue() throws Exception {
         String queueName = randomString();
         logger.info("using queue: " + queueName);
-        initializeProcessor(queueName, true);
         String message1 = sendMessage(queueName, true);
         String message2 = sendMessage(queueName, true);
 
         assertTrueEventually(() -> assertEquals(2, queueSize(queueName)));
 
+        initializeProcessor(queueName, true);
         Queue<Object> queue = outbox.queue(0);
 
         // Even though both messages are in queue, the processor might not see them
