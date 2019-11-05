@@ -67,7 +67,6 @@ public final class WriteKafkaP<T, K, V> implements Processor {
             lastError.compareAndSet(null, exception);
         }
     };
-    private int transactionIndex;
 
     private WriteKafkaP(
             @Nonnull Map<String, Object> properties,
@@ -88,10 +87,10 @@ public final class WriteKafkaP<T, K, V> implements Processor {
                 context.processingGuarantee() == EXACTLY_ONCE && !exactlyOnce
                         ? AT_LEAST_ONCE
                         : context.processingGuarantee(),
-                transactional -> {
-                    KafkaTransactionId txnId = new KafkaTransactionId(
-                            context.jobId(), context.vertexName(), context.globalProcessorIndex(), transactionIndex++);
-                    if (transactional) {
+                (processorIndex, txnIndex) -> new KafkaTransactionId(
+                        context.jobId(), context.vertexName(), processorIndex, txnIndex),
+                txnId -> {
+                    if (txnId != null) {
                         properties.put("transactional.id", txnId.getKafkaId());
                     }
                     return new KafkaTransaction<>(txnId, properties, context.logger());
@@ -104,10 +103,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
                                 "snapshot, data loss can occur. Transaction id: " + txnId.getKafkaId(), e);
                     }
                 },
-                index -> {
-                    recoverTransaction(new KafkaTransactionId(context.jobId(), context.vertexName(), index, 0), false);
-                    recoverTransaction(new KafkaTransactionId(context.jobId(), context.vertexName(), index, 1), false);
-                }
+                txnId -> recoverTransaction(txnId, false)
         );
     }
 
@@ -270,7 +266,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
 
         @Override
-        public void flush() throws Exception {
+        public void flush() {
             LoggingUtil.logFinest(logger, "flush %s", transactionId);
             producer.flush();
         }
@@ -291,7 +287,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     // TODO [viliam] better serialization
     public static class KafkaTransactionId implements TwoPhaseSnapshotCommitUtility.TransactionId, Serializable {
         private final long jobId;
-        // TODO [viliam] add jobName for better txnId uniqueness
+        // TODO [viliam] add jobId and jobName for better txnId uniqueness
         private final String vertexId;
         private final int processorIndex;
         private final int transactionIndex;

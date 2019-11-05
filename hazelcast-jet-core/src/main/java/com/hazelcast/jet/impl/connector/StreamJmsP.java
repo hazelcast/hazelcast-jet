@@ -69,7 +69,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private final FunctionEx<? super Message, ? extends T> projectionFn;
     private final EventTimeMapper<? super T> eventTimeMapper;
 
-    private int transactionIndex;
     private Session session;
     private MessageConsumer consumer;
     private Traverser<Object> traverser;
@@ -122,11 +121,10 @@ public class StreamJmsP<T> extends AbstractProcessor {
             session = connection.createSession(false, AUTO_ACKNOWLEDGE);
         }
         snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, context.processingGuarantee(),
-                transactional -> {
-                    JmsTransactionId txnId = new JmsTransactionId(context, context.globalProcessorIndex(),
-                            transactionIndex++);
-                    if (transactional) {
-                        // rollback the transaction first before trying to use it. If it was used before and unfinished
+                (processorIndex, txnIndex) -> new JmsTransactionId(context, processorIndex, txnIndex),
+                txnId -> {
+                    if (txnId != null) {
+                        // rollback the transaction first before trying to use it. If it was used before and is unfinished
                         // (such as before the 1st snapshot), we could fail to start it again with XAER_DUPID.
                         try {
                             LoggingUtil.logFine(getLogger(), "Preemptively rolling back %s", txnId);
@@ -147,10 +145,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                                 "snapshot, data loss can occur. Transaction id: " + txnId, e);
                     }
                 },
-                index -> {
-                    recoverTransaction(new JmsTransactionId(context, index, 0), false);
-                    recoverTransaction(new JmsTransactionId(context, index, 1), false);
-                }
+                txnId -> recoverTransaction(txnId, false)
         );
         consumer = consumerFn.apply(session);
         traverser = ((Traverser<Message>) () -> uncheckCall(() ->

@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Outbox;
@@ -31,11 +31,13 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.util.Collections.singletonList;
 
 /**
  * Utility to handle transactions where each local processor uses a pair of
@@ -50,22 +52,41 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     private static final int TXN_PROBING_FACTOR = 5;
 
-    private final List<TXN> transactions = Arrays.asList(null, null);
+    private List<TXN> transactions;
+    private final List<TXN_ID> transactionIds;
     private int activeTransactionIndex;
     private boolean transactionBegun;
     private boolean snapshotInProgress;
     private boolean processorCompleted;
     private boolean transactionsReleased;
 
+    /**
+     * @param createTxnIdFn input is {processorIndex, transactionIndex}
+     */
     public TwoTransactionProcessorUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
             @Nonnull ProcessingGuarantee externalGuarantee,
-            @Nonnull FunctionEx<Boolean, TXN> createTxnFn,
+            @Nonnull BiFunctionEx<Integer, Integer, TXN_ID> createTxnIdFn,
+            @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
-            @Nonnull ConsumerEx<Integer> recoverAndAbortFn
+            @Nonnull ConsumerEx<TXN_ID> recoverAndAbortFn
     ) {
-        super(outbox, procContext, externalGuarantee, createTxnFn, recoverAndCommitFn, recoverAndAbortFn);
+        super(outbox, procContext, externalGuarantee, createTxnFn, recoverAndCommitFn,
+                processorIndex -> {
+                    recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, 0));
+                    recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, 1));
+                });
+
+        if (externalGuarantee() == EXACTLY_ONCE) {
+            transactionIds = Arrays.asList(
+                    createTxnIdFn.apply(procContext().globalProcessorIndex(), 0),
+                    createTxnIdFn.apply(procContext().globalProcessorIndex(), 1)
+            );
+            assert !transactionIds.get(0).equals(transactionIds.get(1)) : "two equal IDs generated";
+        } else {
+            transactionIds = null;
+        }
     }
 
     @Nullable @Override
@@ -73,23 +94,17 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         if (snapshotInProgress) {
             return null;
         }
-        TXN activeTransaction = transactions.get(activeTransactionIndex);
-        if (activeTransaction == null) {
+        if (transactions == null) {
             if (transactionsReleased) {
-                throw new IllegalStateException("transaction already released");
+                throw new IllegalStateException("transactions already released");
             }
             if (externalGuarantee() == EXACTLY_ONCE) {
-                activeTransaction = createTxnFn().apply(true);
-                transactions.set(activeTransactionIndex, activeTransaction);
-                if (activeTransaction.id().index() != procContext().globalProcessorIndex()) {
-                    throw new JetException("The transaction must have an ID.index equal to this processor's global " +
-                            "processor index");
-                }
+                transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
             } else {
-                activeTransaction = createTxnFn().apply(false);
-                transactions.set(activeTransactionIndex, activeTransaction);
+                transactions = singletonList(createTxnFn().apply(null));
             }
         }
+        TXN activeTransaction = transactions.get(activeTransactionIndex);
         if (externalGuarantee() == EXACTLY_ONCE && !transactionBegun) {
             try {
                 activeTransaction.beginTransaction();
@@ -161,9 +176,19 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     @Override
     public void restoreFromSnapshot(@Nonnull Entry<BroadcastKey<TXN_ID>, Boolean> snapshotEntry) {
-        assert transactions.get(0) == null : "transactions already created";
+        assert !transactionBegun : "transaction already begun";
         TXN_ID txnId = snapshotEntry.getKey().key();
-        if (txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
+        if (externalGuarantee() == EXACTLY_ONCE
+                && txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
+            if (transactionIds.get(0).equals(txnId)) {
+                // If we restored txnId of the 0th transaction, make the other transaction active.
+                // We must avoid using the same transaction that we committed in the snapshot
+                // we're restoring from, because if the job fails without creating a snapshot, we
+                // would commit the transaction that should be rolled back.
+                // Note that we can restore a TxnId that is neither of our current two IDs in case
+                // the job is upgraded and has a new jobId.
+                activeTransactionIndex = 1;
+            }
             recoverAndCommitFn().accept(txnId);
         }
     }
@@ -192,12 +217,14 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
             return;
         }
         transactionsReleased = true;
-        for (TXN txn : transactions) {
-            if (txn != null) {
-                try {
-                    txn.release();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
+        if (transactions != null) {
+            for (TXN txn : transactions) {
+                if (txn != null) {
+                    try {
+                        txn.release();
+                    } catch (Exception e) {
+                        throw sneakyThrow(e);
+                    }
                 }
             }
         }

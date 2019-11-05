@@ -26,11 +26,14 @@ import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import javax.jms.Connection;
 import javax.jms.JMSContext;
@@ -40,6 +43,7 @@ import javax.jms.TextMessage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -48,17 +52,19 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.junit.Assert.assertEquals;
 
+@RunWith(HazelcastSerialClassRunner.class)
 public class JmsXaIntegrationTest extends JetTestSupport {
 
     @ClassRule
     public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
 
     @Test
+    @Repeat(20)
     public void test() throws Exception {
         JetInstance instance1 = createJetMember();
         JetInstance instance2 = createJetMember();
 
-        final int MESSAGE_COUNT = 3_000; // TODO [viliam] change to more
+        final int MESSAGE_COUNT = 10_000; // TODO [viliam] change to more
         Pipeline p = Pipeline.create();
         IList<List<Long>> sinkList = instance1.getList("sinkList");
         String queueName = "queue-" + randomName();
@@ -70,7 +76,7 @@ public class JmsXaIntegrationTest extends JetTestSupport {
          .peek()
          .mapStateful(() -> (List<Long>) new ArrayList<Long>(),
                  (list, item) -> {
-                     assert list.size() < MESSAGE_COUNT;
+                     assert list.size() < MESSAGE_COUNT : "list size exceeded. List=" + list + ", item=" + item;
                      list.add(item);
                      return list.size() == MESSAGE_COUNT ? list : null;
                  })
@@ -102,19 +108,21 @@ public class JmsXaIntegrationTest extends JetTestSupport {
 
         while (!producerFuture.isDone()) {
             // TODO [viliam] revert
-//            Thread.sleep(50 + ThreadLocalRandom.current().nextInt(400));
-            Thread.sleep(100);
+            Thread.sleep(50 + ThreadLocalRandom.current().nextInt(400));
+//            Thread.sleep(100);
             ((JobProxy) job).restart(false);
             assertJobStatusEventually(job, RUNNING);
         }
         producerFuture.get(); // call for the side-effect of throwing if the producer failed
 
-        assertTrueEventually(() -> assertGreaterOrEquals("size", sinkList.size(), 1), 20);
+        assertTrueEventually(() -> assertGreaterOrEquals("size", sinkList.size(), 1), 10); // TODO [viliam] longer timeout
         List<Long> result = sinkList.get(0);
         assertEquals(
                 LongStream.range(0, MESSAGE_COUNT).mapToObj(Long::toString).collect(Collectors.joining("\n")),
                 result.stream().sorted().map(Object::toString).collect(Collectors.joining("\n")));
     }
+
+    // TODO [viliam] test upgrading from transacted to non-transacted and vice versa
 
     private static ActiveMQConnectionFactory getConnectionFactory() {
         return new ActiveMQXAConnectionFactory(resource.getVmURL());
