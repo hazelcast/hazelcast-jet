@@ -57,19 +57,29 @@ public class JmsXaIntegrationTest extends JetTestSupport {
     @ClassRule
     public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
 
-    @Test
-    public void test() throws Exception {
-        JetInstance instance1 = createJetMember();
-        JetInstance instance2 = createJetMember();
+    private static int counter;
 
-        final int MESSAGE_COUNT = 10_000; // TODO [viliam] change to more
+    @Test
+    public void stressTest_forceful() throws Exception {
+        stressTest(false);
+    }
+
+    @Test
+    public void stressTest_graceful() throws Exception {
+        stressTest(true);
+    }
+
+    private void stressTest(boolean graceful) throws Exception {
+        JetInstance instance1 = createJetMember();
+        createJetMember();
+
+        final int MESSAGE_COUNT = 10_000;
         Pipeline p = Pipeline.create();
         IList<List<Long>> sinkList = instance1.getList("sinkList");
-        String queueName = "queue-" + randomName();
-        p.drawFrom(
-                Sources.jmsQueueBuilder(JmsXaIntegrationTest::getConnectionFactory)
-                       .destinationName(queueName)
-                       .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
+        String queueName = "queue-" + counter++;
+        p.drawFrom(Sources.jmsQueueBuilder(JmsXaIntegrationTest::getConnectionFactory)
+                .destinationName(queueName)
+                .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
          .peek()
          .mapStateful(() -> (List<Long>) new ArrayList<Long>(),
@@ -83,10 +93,9 @@ public class JmsXaIntegrationTest extends JetTestSupport {
         Job job = instance1.newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(50));
-
         assertJobStatusEventually(job, RUNNING);
 
-        // start a producer that will produce MESSAGE_COUNT messages on the background, 1000 msgs/s
+        // start a producer that will produce MESSAGE_COUNT messages on the background to the queue, 1000 msgs/s
         Future producerFuture = spawn(() -> {
             try (
                     Connection connection = getConnectionFactory().createConnection();
@@ -105,15 +114,14 @@ public class JmsXaIntegrationTest extends JetTestSupport {
         });
 
         while (!producerFuture.isDone()) {
-            // TODO [viliam] revert
-            Thread.sleep(50 + ThreadLocalRandom.current().nextInt(400));
-//            Thread.sleep(100);
-            ((JobProxy) job).restart(false);
+            Thread.sleep(ThreadLocalRandom.current().nextInt(200));
+            ((JobProxy) job).restart(graceful);
             assertJobStatusEventually(job, RUNNING);
         }
         producerFuture.get(); // call for the side-effect of throwing if the producer failed
 
-        assertTrueEventually(() -> assertGreaterOrEquals("size", sinkList.size(), 1), 10); // TODO [viliam] longer timeout
+        // the list can contain the result multiple times, the sink isn't idempotent
+        assertTrueEventually(() -> assertGreaterOrEquals("size", sinkList.size(), 1), 30);
         List<Long> result = sinkList.get(0);
         assertEquals(
                 LongStream.range(0, MESSAGE_COUNT).mapToObj(Long::toString).collect(Collectors.joining("\n")),
