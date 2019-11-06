@@ -88,7 +88,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
                         ? AT_LEAST_ONCE
                         : context.processingGuarantee(),
                 (processorIndex, txnIndex) -> new KafkaTransactionId(
-                        context.jobId(), context.vertexName(), processorIndex, txnIndex),
+                        context.jobId(), context.jobConfig().getName(), context.vertexName(), processorIndex, txnIndex),
                 txnId -> {
                     if (txnId != null) {
                         properties.put("transactional.id", txnId.getKafkaId());
@@ -287,15 +287,16 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     // TODO [viliam] better serialization
     public static class KafkaTransactionId implements TwoPhaseSnapshotCommitUtility.TransactionId, Serializable {
         private final long jobId;
-        // TODO [viliam] add jobId and jobName for better txnId uniqueness
+        private final String jobName;
         private final String vertexId;
         private final int processorIndex;
         private final int transactionIndex;
         private long producerId = -1;
         private short epoch = -1;
 
-        KafkaTransactionId(long jobId, @Nonnull String vertexId, int processorIndex, int transactionIndex) {
+        KafkaTransactionId(long jobId, String jobName, @Nonnull String vertexId, int processorIndex, int transactionIndex) {
             this.jobId = jobId;
+            this.jobName = jobName;
             this.vertexId = vertexId;
             this.processorIndex = processorIndex;
             this.transactionIndex = transactionIndex;
@@ -336,9 +337,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
                 return false;
             }
             KafkaTransactionId that = (KafkaTransactionId) o;
-            return jobId == that.jobId &&
-                    processorIndex == that.processorIndex &&
-                    vertexId.equals(that.vertexId);
+            return this.getKafkaId().equals(that.getKafkaId());
         }
 
         @Override
@@ -348,7 +347,15 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
         @Nonnull
         String getKafkaId() {
-            return "jet.job-" + idToString(jobId) + '.' + vertexId + '.' + processorIndex + "-" + transactionIndex;
+            return "jet.job-" + idToString(jobId) + '.' + sanitize(jobName) + '.' + sanitize(vertexId) + '.'
+                    + processorIndex + "-" + transactionIndex;
+        }
+
+        private static String sanitize(String s) {
+            if (s == null) {
+                return "null";
+            }
+            return s.replaceAll("[^\\p{Alnum}.\\-_$#/{}\\[\\]]", "_");
         }
     }
 }
