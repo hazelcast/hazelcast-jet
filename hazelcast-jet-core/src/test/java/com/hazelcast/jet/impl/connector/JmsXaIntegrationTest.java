@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
@@ -59,7 +58,6 @@ public class JmsXaIntegrationTest extends JetTestSupport {
     public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
 
     @Test
-    @Repeat(20)
     public void test() throws Exception {
         JetInstance instance1 = createJetMember();
         JetInstance instance2 = createJetMember();
