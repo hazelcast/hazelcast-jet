@@ -38,6 +38,7 @@ import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -169,7 +170,9 @@ public class ProcessorTasklet implements Tasklet {
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
             justification = "jetInstance() can be null in TestProcessorContext")
     private ILogger getLogger(@Nonnull Context context) {
-        return context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString());
+        return context.jetInstance() != null
+                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString())
+                : Logger.getLogger(getClass());
     }
 
     private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {
