@@ -38,7 +38,6 @@ import com.hazelcast.jet.impl.util.CircularListCursor;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.logging.Logger;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -127,7 +126,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLong queuesCapacity = new AtomicLong();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
-    private final MetricsContext metricsContext;
+    private final MetricsContext metricsContext = new MetricsContext();
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public ProcessorTasklet(@Nonnull Context context,
@@ -136,8 +135,7 @@ public class ProcessorTasklet implements Tasklet {
             @Nonnull List<? extends InboundEdgeStream> instreams,
             @Nonnull List<? extends OutboundEdgeStream> outstreams,
             @Nonnull SnapshotContext ssContext,
-            @Nonnull OutboundCollector ssCollector,
-            boolean metricsEnabled
+            @Nonnull OutboundCollector ssCollector
     ) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
@@ -155,8 +153,6 @@ public class ProcessorTasklet implements Tasklet {
         this.ssContext = ssContext;
         this.logger = getLogger(context);
 
-        this.metricsContext = new MetricsContext(metricsEnabled);
-
         instreamCursor = popInstreamGroup();
         receivedCounts = new AtomicLongArray(instreams.size());
         receivedBatches = new AtomicLongArray(instreams.size());
@@ -173,9 +169,7 @@ public class ProcessorTasklet implements Tasklet {
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
             justification = "jetInstance() can be null in TestProcessorContext")
     private ILogger getLogger(@Nonnull Context context) {
-        return context.jetInstance() != null
-                ? context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString())
-                : Logger.getLogger(getClass());
+        return context.jetInstance().getHazelcastInstance().getLoggingService().getLogger(getClass() + "." + toString());
     }
 
     private OutboxImpl createOutbox(@Nonnull OutboundCollector ssCollector) {

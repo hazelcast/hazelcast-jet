@@ -21,7 +21,6 @@ import com.hazelcast.internal.metrics.MetricTagger;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.JetService;
@@ -70,7 +69,6 @@ public class ExecutionContext {
     private Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap = emptyMap();
 
     private List<ProcessorSupplier> procSuppliers = emptyList();
-    private List<Processor> processors = emptyList();
 
     private List<Tasklet> tasklets = emptyList();
 
@@ -110,12 +108,11 @@ public class ExecutionContext {
         // Must be populated early, so all processor suppliers are
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
-        processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, metricsEnabled);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());

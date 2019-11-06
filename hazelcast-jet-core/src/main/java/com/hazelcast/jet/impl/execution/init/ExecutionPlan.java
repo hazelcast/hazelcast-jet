@@ -135,7 +135,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     }
 
     public void initialize(
-            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext, boolean metricsEnabled
+            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
@@ -196,7 +196,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, localProcessorIdx, null);
 
                 ProcessorTasklet processorTasklet = new ProcessorTasklet(context, nodeEngine.getSerializationService(),
-                        processor, inboundStreams, outboundStreams, snapshotContext, snapshotCollector, metricsEnabled
+                        processor, inboundStreams, outboundStreams, snapshotContext, snapshotCollector
                 );
                 tasklets.add(processorTasklet);
                 this.processors.add(processor);

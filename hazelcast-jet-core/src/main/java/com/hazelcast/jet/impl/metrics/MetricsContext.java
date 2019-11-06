@@ -32,27 +32,20 @@ import java.util.function.BiFunction;
 
 public class MetricsContext {
 
-    private final boolean enabled;
-    private final BiFunction<String, Unit, AbstractMetric> singleWriterMetricSupplier;
-    private final BiFunction<String, Unit, AbstractMetric> threadSafeMetricSupplier;
+    private static final BiFunction<String, Unit, AbstractMetric> CREATE_SINGLE_WRITER_METRIC = SingleWriterMetric::new;
+    private static final BiFunction<String, Unit, AbstractMetric> CREATE_THREAD_SAFE_METRICS = ThreadSafeMetric::new;
 
     private String onlyName;
     private AbstractMetric onlyMetric;
 
     private Map<String, AbstractMetric> metrics;
 
-    public MetricsContext(boolean enabled) {
-        this.enabled = enabled;
-        this.singleWriterMetricSupplier = enabled ? SingleWriterMetric::new : NoopMetric::new;
-        this.threadSafeMetricSupplier = enabled ? ThreadSafeMetric::new : NoopMetric::new;
-    }
-
     Metric metric(String name, Unit unit) {
-        return metric(name, unit, singleWriterMetricSupplier);
+        return metric(name, unit, CREATE_SINGLE_WRITER_METRIC);
     }
 
     Metric threadSafeMetric(String name, Unit unit) {
-        return metric(name, unit, threadSafeMetricSupplier);
+        return metric(name, unit, CREATE_THREAD_SAFE_METRICS);
     }
 
     private Metric metric(String name, Unit unit, BiFunction<String, Unit, AbstractMetric> metricSupplier) {
@@ -87,19 +80,13 @@ public class MetricsContext {
     }
 
     public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
-        if (!enabled) {
-            return;
-        }
-
         if (onlyMetric != null) {
             MetricTagger withUserFlag = addUserTag(tagger);
-            context.collect(withUserFlag, onlyName, ProbeLevel.INFO, toProbeUnit(onlyMetric.unit()),
-                    onlyMetric.get());
+            context.collect(withUserFlag, onlyName, ProbeLevel.INFO, toProbeUnit(onlyMetric.unit()), onlyMetric.get());
         } else if (metrics != null) {
             MetricTagger withUserFlag = addUserTag(tagger);
             metrics.forEach((name, metric) ->
-                    context.collect(withUserFlag, name, ProbeLevel.INFO, toProbeUnit(metric.unit()),
-                            metric.get()));
+                    context.collect(withUserFlag, name, ProbeLevel.INFO, toProbeUnit(metric.unit()), metric.get()));
         }
     }
 
@@ -219,35 +206,4 @@ public class MetricsContext {
         }
     }
 
-    private static final class NoopMetric extends AbstractMetric {
-
-        NoopMetric(String name, Unit unit) {
-            super(name, unit);
-        }
-
-        @Override
-        public void increment() {
-        }
-
-        @Override
-        public void increment(long amount) {
-        }
-
-        @Override
-        public void decrement() {
-        }
-
-        @Override
-        public void decrement(long amount) {
-        }
-
-        @Override
-        public void set(long newValue) {
-        }
-
-        @Override
-        protected long get() {
-            throw new UnsupportedOperationException("Shouldn't have been called");
-        }
-    }
 }
