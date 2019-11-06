@@ -102,6 +102,7 @@
             <groupId>org.apache.activemq</groupId>
             <artifactId>apache-artemis</artifactId>
             <version>${activemq-artemis.version}</version>
+            <type>pom</type>
             <scope>test</scope>
             <!-- needed to handle https://issues.apache.org/jira/browse/ARTEMIS-2204 -->
             <exclusions>
