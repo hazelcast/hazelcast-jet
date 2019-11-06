@@ -122,6 +122,7 @@ class MasterSnapshotContext {
         String snapshotMapName;
         CompletableFuture<Void> future;
         mc.lock();
+        long localExecutionId;
         try {
             if (mc.jobStatus() != RUNNING) {
                 logger.fine("Not beginning snapshot, " + mc.jobIdString() + " is not RUNNING, but " + mc.jobStatus());
@@ -145,6 +146,7 @@ class MasterSnapshotContext {
             isTerminal = requestedSnapshot.f1();
             future = requestedSnapshot.f2();
             mc.jobExecutionRecord().startNewSnapshot(snapshotMapName);
+            localExecutionId = mc.executionId();
         } finally {
             mc.unlock();
         }
@@ -159,11 +161,10 @@ class MasterSnapshotContext {
                 newSnapshotId, mc.jobIdString(), isTerminal ? "yes" : "no", snapshotMapName);
 
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotPhase1Operation(mc.jobId(), mc.executionId(), newSnapshotId, finalMapName, isTerminal);
+                plan -> new SnapshotPhase1Operation(mc.jobId(), localExecutionId, newSnapshotId, finalMapName, isTerminal);
 
         // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
         // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
-        long localExecutionId = mc.executionId();
         mc.invokeOnParticipants(
                 factory,
                 responses -> onSnapshotPhase1Complete(responses, localExecutionId, newSnapshotId, finalMapName, isExport,

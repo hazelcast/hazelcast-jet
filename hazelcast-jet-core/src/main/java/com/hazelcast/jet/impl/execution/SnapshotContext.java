@@ -254,7 +254,7 @@ public class SnapshotContext {
     synchronized CompletableFuture<Void> startNewSnapshotPhase2(long snapshotId, boolean success) {
         if (snapshotId == activeSnapshotIdPhase2) {
             // this is possible in case when the operation packet was lost and retried
-            logger.warning("Second request for phase 2 snapshot with id=" + snapshotId);
+            logger.warning("Second request for phase 2 for snapshot " + snapshotId);
             CompletableFuture<Void> res = this.phase2Future;
             if (res == null) {
                 // if there's no ongoing phase 2, we don't know what was the response. We reply with
