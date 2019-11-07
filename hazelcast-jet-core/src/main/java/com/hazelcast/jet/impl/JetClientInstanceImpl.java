@@ -27,6 +27,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryXmlConfig;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -160,6 +161,11 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Override
     public ILogger getLogger() {
         return client.getLoggingService().getLogger(getClass());
+    }
+
+    @Override
+    public <T> Observable<T> getObservable(@Nonnull String name) {
+        throw new UnsupportedOperationException(); //todo: implement?
     }
 
     private <S> S invokeRequestOnMasterAndDecodeResponse(ClientMessage request,

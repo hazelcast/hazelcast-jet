@@ -35,6 +35,7 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -295,6 +296,14 @@ public interface JetInstance {
     <E> IList<E> getList(@Nonnull String name);
 
     /**
+     * Returns a distributed topic instance with the specified name.
+     *
+     * @param name name of the distributed topic
+     * @return distributed topic instance with specified name
+     */
+    <E> ITopic<E> getTopic(@Nonnull String name);
+
+    /**
      * Obtain the {@link JetCacheManager} that provides access to JSR-107 (JCache) caches
      * configured on a Hazelcast Jet cluster.
      * <p>
@@ -305,6 +314,14 @@ public interface JetInstance {
      */
     @Nonnull
     JetCacheManager getCacheManager();
+
+    /**
+     * Returns an {@link Observable} instance with the specified name.
+     *
+     * @param name name of the observable
+     * @return observable with the specified name
+     */
+    <T> Observable<T> getObservable(@Nonnull String name);
 
     /**
      * Shuts down the current instance. If this is a client instance, it

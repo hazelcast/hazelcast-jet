@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -32,6 +33,7 @@ import com.hazelcast.jet.impl.util.ConcurrentMemoizingSupplier;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -251,6 +253,16 @@ public final class JetBootstrap {
         @Nonnull @Override
         public <E> IList<E> getList(@Nonnull String name) {
             return instance.getList(name);
+        }
+
+        @Nonnull @Override
+        public <T> ITopic<T> getTopic(@Nonnull String name) {
+            return instance.getTopic(name);
+        }
+
+        @Override
+        public <T> Observable<T> getObservable(@Nonnull String name) {
+            return instance.getObservable(name);
         }
 
         @Override

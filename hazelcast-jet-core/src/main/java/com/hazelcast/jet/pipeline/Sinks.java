@@ -24,6 +24,7 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.Observer;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
@@ -938,4 +939,23 @@ public final class Sinks {
     ) {
         return Sinks.jdbc(updateQuery, () -> DriverManager.getConnection(connectionUrl), bindFn);
     }
+
+    /**
+     * Blah blah blah... //todo: write useful doc
+     * @param name name of observable we want this sink to write into
+     */
+    @Nonnull
+    public static <T> Sink<T> observable(String name) {
+        return Sinks.fromProcessor(String.format("observableSink(%s)", name),
+                SinkProcessors.writeObservableP(name));
+    }
+
+    /**
+     * Blah blah blah... //todo: write useful doc
+     */
+    @Nonnull
+    public static <T> Sink<T> observable(Observer<T> observer) {
+        throw new UnsupportedOperationException(); //todo
+    }
+
 }

@@ -31,6 +31,7 @@ import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -131,6 +132,11 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Nonnull @Override
     public <E> IList<E> getList(@Nonnull String name) {
         return hazelcastInstance.getList(name);
+    }
+
+    @Nonnull @Override
+    public <T> ITopic<T> getTopic(@Nonnull String name) {
+        return hazelcastInstance.getTopic(name);
     }
 
     @Nonnull @Override

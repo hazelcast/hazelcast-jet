@@ -152,6 +152,10 @@ public final class HazelcastWriters {
         ));
     }
 
+    public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
+        return ProcessorMetaSupplier.of(WriteObservableP.supplier(name));
+    }
+
     static RuntimeException handleInstanceNotActive(HazelcastInstanceNotActiveException e, boolean isLocal) {
         // if we are writing to a local instance, restarting the job should resolve the error
         return isLocal ? new RestartableException(e) : e;
