@@ -31,6 +31,7 @@ import com.hazelcast.logging.ILogger;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.errors.InvalidTxnStateException;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.TimeoutException;
 
@@ -189,7 +190,14 @@ public final class WriteKafkaP<T, K, V> implements Processor {
             if (commit) {
                 ResumeTransactionUtil.resumeTransaction(context.logger(), p, txnId.producerId(), txnId.epoch(),
                         txnId.getKafkaId());
-                p.commitTransaction();
+                try {
+                    p.commitTransaction();
+                } catch (InvalidTxnStateException e) {
+                    context.logger().fine("Failed to commit transaction with ID restored from the snapshot. This " +
+                            "happens normally when the transaction was committed in phase 2 of the snapshot and can " +
+                            "be ignored, but can happen also if the transaction wasn't committed in phase 2 and the " +
+                            "broker lost it (in this case data written in it is lost). Transaction ID: " + txnId, e);
+                }
             } else {
                 p.initTransactions();
             }

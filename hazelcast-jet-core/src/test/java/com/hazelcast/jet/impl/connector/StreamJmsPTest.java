@@ -16,11 +16,17 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.cluster.Address;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
+import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
@@ -43,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Queue;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
@@ -61,8 +68,12 @@ public class StreamJmsPTest extends JetTestSupport {
 
     @After
     public void stopProcessor() throws Exception {
-        processor.close();
-        processorConnection.close();
+        if (processor != null) {
+            processor.close();
+        }
+        if (processorConnection != null) {
+            processorConnection.close();
+        }
     }
 
     @Test
@@ -108,6 +119,27 @@ public class StreamJmsPTest extends JetTestSupport {
             processor.complete();
             assertEquals(message2, queue.poll());
         });
+    }
+
+    @Test
+    public void when_sharedConsumer_then_twoProcessorsUsed() throws Exception {
+        String topicName = randomString();
+        logger.info("using topic: " + topicName);
+        StreamSource<Message> source = Sources.jmsTopicBuilder(StreamJmsPTest::getConnectionFactory)
+                // When
+                .destinationName("foo")
+                .sharedConsumer(false)
+                .build();
+        ProcessorMetaSupplier metaSupplier =
+                ((StreamSourceTransform<Message>) source).metaSupplierFn.apply(noEventTime());
+        Address address1 = new Address("127.0.0.1", 1);
+        Address address2 = new Address("127.0.0.1", 2);
+        Function<? super Address, ? extends ProcessorSupplier> function = metaSupplier.get(asList(address1, address2));
+
+        // Then
+        // assert that processors for both addresses are actually StreamJmsP, not a noopP
+        assertInstanceOf(StreamJmsP.class, function.apply(address1).get(1).iterator().next());
+        assertInstanceOf(StreamJmsP.class, function.apply(address2).get(1).iterator().next());
     }
 
     private void initializeProcessor(String destinationName, boolean isQueue) throws Exception {

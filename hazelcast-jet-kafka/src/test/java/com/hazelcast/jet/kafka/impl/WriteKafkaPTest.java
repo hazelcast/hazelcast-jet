@@ -57,7 +57,6 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.HOURS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -148,7 +147,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
         // Then
         ProcessorWithEntryAndLatch.isDone = true;
         job.join();
-        System.out.println("Job finished");
+        logger.info("Job finished");
         assertTopicContentsEventually(singletonMap("k", "v"), false);
     }
 
@@ -232,21 +231,23 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
 
         try {
             KafkaConsumer<String, String> consumer = kafkaTestSupport.createConsumer(topic);
-            long start = System.nanoTime();
+            long endTime = System.nanoTime() + SECONDS.toNanos(60);
             StringBuilder actualSinkContents = new StringBuilder();
 
+            int actualCount = 0;
             for (;;) {
                 assertJobStatusEventually(job, RUNNING);
                 sleepMillis(100);
                 job.restart(graceful);
                 try {
-                    int actualCount = 0;
-                    for (ConsumerRecords<String, String> records;
-                         !(records = consumer.poll(Duration.ofSeconds(2))).isEmpty();
+                    ConsumerRecords<String, String> records;
+                    for (int countThisRound = 0;
+                         countThisRound < 50 && !(records = consumer.poll(Duration.ofSeconds(2))).isEmpty();
                     ) {
                         for (ConsumerRecord<String, String> record : records) {
                             actualSinkContents.append(record.value()).append('\n');
                             actualCount++;
+                            countThisRound++;
                         }
                     }
 
@@ -259,7 +260,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
                     // if content matches, break the loop. Otherwise restart and try again
                     break;
                 } catch (AssertionError e) {
-                    if (NANOSECONDS.toSeconds(System.nanoTime() - start) >= 20) { // TODO [viliam] use 60
+                    if (System.nanoTime() >= endTime) {
                         throw e;
                     }
                 }
