@@ -24,6 +24,7 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -334,30 +335,48 @@ public final class SourceProcessors {
 
     /**
      * Returns a supplier of processors for {@link Sources#jmsQueueBuilder}.
+     *
+     * @param maxGuarantee maximum processing guarantee for the source. You can
+     *      use it to disable acknowledging in transactions to save transaction
+     *      overhead
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier streamJmsQueueP(
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
-            @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
-        return ProcessorMetaSupplier.of(
-            StreamJmsP.PREFERRED_LOCAL_PARALLELISM,
-            ProcessorSupplier.of(StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy))
-        );
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy,
+            ProcessingGuarantee maxGuarantee
+    ) {
+        ProcessorSupplier pSupplier = ProcessorSupplier.of(
+                StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy, maxGuarantee));
+        return ProcessorMetaSupplier.of(StreamJmsP.PREFERRED_LOCAL_PARALLELISM, pSupplier);
     }
 
     /**
      * Returns a supplier of processors for {@link Sources#jmsTopicBuilder}.
+     *
+     * @param isSharedConsumer true, if {@code createSharedConsumer()} or
+     *      {@code createSharedDurableConsumer()} was used to create the
+     *      consumer in the {@code consumerFn}
+     * @param maxGuarantee maximum processing guarantee for the source. You can
+     *      use it to disable acknowledging in transactions to save transaction
+     *      overhead
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier streamJmsTopicP(
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
+            boolean isSharedConsumer,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
-            @Nonnull EventTimePolicy<? super T> eventTimePolicy) {
-        return ProcessorMetaSupplier.forceTotalParallelismOne(
-                ProcessorSupplier.of(StreamJmsP.supplier(newConnectionFn, consumerFn, projectionFn, eventTimePolicy)));
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy,
+            ProcessingGuarantee maxGuarantee
+    ) {
+        ProcessorSupplier pSupplier = ProcessorSupplier.of(StreamJmsP.supplier(
+                newConnectionFn, consumerFn, projectionFn, eventTimePolicy, maxGuarantee));
+        return isSharedConsumer
+                ? ProcessorMetaSupplier.of(StreamJmsP.PREFERRED_LOCAL_PARALLELISM, pSupplier)
+                : ProcessorMetaSupplier.forceTotalParallelismOne(pSupplier);
     }
 
     /**
@@ -382,14 +401,6 @@ public final class SourceProcessors {
             @Nonnull FunctionEx<? super ResultSet, ? extends T> mapOutputFn
     ) {
         return ReadJdbcP.supplier(connectionURL, query, mapOutputFn);
-    }
-
-    private static <I, O> Projection<I, O> toProjection(FunctionEx<I, O> projectionFn) {
-        return new Projection<I, O>() {
-            @Override public O transform(I input) {
-                return projectionFn.apply(input);
-            }
-        };
     }
 
     /**

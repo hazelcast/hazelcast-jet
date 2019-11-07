@@ -33,6 +33,8 @@ import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.Transactio
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.TwoTransactionProcessorUtility;
 import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.transaction.impl.xa.SerializableXID;
 
 import javax.annotation.Nonnull;
@@ -50,14 +52,15 @@ import java.nio.charset.StandardCharsets;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 /**
- * Private API. Access via {@link SourceProcessors#streamJmsQueueP} or {@link
- * SourceProcessors#streamJmsTopicP}.
+ * Private API. Access via {@link Sources#jmsTopic} or {@link
+ * Sources#jmsQueue}.
  */
 public class StreamJmsP<T> extends AbstractProcessor {
 
@@ -68,6 +71,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
     private final FunctionEx<? super Message, ? extends T> projectionFn;
     private final EventTimeMapper<? super T> eventTimeMapper;
+    private final ProcessingGuarantee maxGuarantee;
 
     private Session session;
     private MessageConsumer consumer;
@@ -79,14 +83,15 @@ public class StreamJmsP<T> extends AbstractProcessor {
             SupplierEx<? extends Connection> newConnectionFn,
             FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             FunctionEx<? super Message, ? extends T> projectionFn,
-            EventTimePolicy<? super T> eventTimePolicy
-            // TODO [viliam] add user-requested processing guarantee
+            EventTimePolicy<? super T> eventTimePolicy,
+            ProcessingGuarantee maxGuarantee
     ) {
         this.newConnectionFn = newConnectionFn;
         this.consumerFn = consumerFn;
         this.projectionFn = projectionFn;
 
         eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
+        this.maxGuarantee = maxGuarantee;
         eventTimeMapper.addPartitions(1);
     }
 
@@ -99,44 +104,52 @@ public class StreamJmsP<T> extends AbstractProcessor {
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
-            @Nonnull EventTimePolicy<? super T> eventTimePolicy
+            @Nonnull EventTimePolicy<? super T> eventTimePolicy,
+            ProcessingGuarantee sourceGuarantee
     ) {
         checkSerializable(newConnectionFn, "newConnectionFn");
         checkSerializable(consumerFn, "consumerFn");
         checkSerializable(projectionFn, "projectionFn");
 
-        return () -> new StreamJmsP<>(newConnectionFn, consumerFn, projectionFn, eventTimePolicy);
+        return () -> new StreamJmsP<>(newConnectionFn, consumerFn, projectionFn, eventTimePolicy, sourceGuarantee);
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
         Connection connection = newConnectionFn.get();
         connection.start();
-        if (context.processingGuarantee() == ProcessingGuarantee.EXACTLY_ONCE) {
-            if (!(connection instanceof XAConnection)) {
-                throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
-            }
+        ProcessingGuarantee guarantee = Util.min(maxGuarantee, context.processingGuarantee());
+        if (guarantee == EXACTLY_ONCE && !(connection instanceof XAConnection)) {
+            throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
+        }
+        if (connection instanceof XAConnection && guarantee != NONE) {
             session = ((XAConnection) connection).createXASession();
         } else {
-            session = connection.createSession(false, AUTO_ACKNOWLEDGE);
+            session = connection.createSession(false,
+                    guarantee == NONE ? Session.AUTO_ACKNOWLEDGE : Session.SESSION_TRANSACTED);
         }
-        snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, context.processingGuarantee(),
+        snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, guarantee,
                 (processorIndex, txnIndex) -> new JmsTransactionId(context, processorIndex, txnIndex),
                 txnId -> {
                     if (txnId != null) {
-                        // rollback the transaction first before trying to use it. If it was used before and is unfinished
-                        // (such as before the 1st snapshot), we could fail to start it again with XAER_DUPID.
-                        try {
-                            LoggingUtil.logFine(getLogger(), "Preemptively rolling back %s", txnId);
-                            ((XASession) session).getXAResource().rollback(txnId);
-                        } catch (XAException e) {
-                            if (e.errorCode != XAException.XAER_NOTA) {
-                                throw handleXAException(e, txnId);
+                        if (session instanceof XASession) {
+                            // rollback the transaction first before trying to use it. If it was used before and is
+                            // unfinished (such as before the 1st snapshot), we could fail to start it again with
+                            // XAER_DUPID.
+                            try {
+                                LoggingUtil.logFine(getLogger(), "Preemptively rolling back %s", txnId);
+                                ((XASession) session).getXAResource().rollback(txnId);
+                            } catch (XAException e) {
+                                if (e.errorCode != XAException.XAER_NOTA) {
+                                    throw handleXAException(e, txnId);
+                                }
                             }
+                            return new JmsXATransaction((XASession) session, txnId);
+                        } else {
+                            return new JmsTransaction(session, txnId);
                         }
-                        return new JmsTransaction((XASession) session, txnId);
                     } else {
-                        return new JmsNoTransaction(txnId);
+                        return new JmsNoTransaction();
                     }
                 },
                 txnId -> {
@@ -324,12 +337,12 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
     }
 
-    private final class JmsTransaction implements TransactionalResource<JmsTransactionId> {
+    private final class JmsXATransaction implements TransactionalResource<JmsTransactionId> {
 
         private final XASession session;
         private final JmsTransactionId txnId;
 
-        JmsTransaction(XASession session, JmsTransactionId txnId) {
+        JmsXATransaction(XASession session, JmsTransactionId txnId) {
             this.session = session;
             this.txnId = txnId;
         }
@@ -381,16 +394,49 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
     }
 
-    private final class JmsNoTransaction implements TransactionalResource<JmsTransactionId> {
-        private final JmsTransactionId id;
+    private final class JmsTransaction implements TransactionalResource<JmsTransactionId> {
 
-        private JmsNoTransaction(JmsTransactionId id) {
-            this.id = id;
+        private final Session session;
+        private final JmsTransactionId txnId;
+
+        JmsTransaction(Session session, JmsTransactionId txnId) {
+            this.session = session;
+            this.txnId = txnId;
         }
 
         @Override
         public JmsTransactionId id() {
-            return id;
+            return txnId;
+        }
+
+        @Override
+        public void beginTransaction() {
+        }
+
+        @Override
+        public void prepare() {
+        }
+
+        @Override
+        public void commit() throws Exception {
+            getLogger().fine("commit"); // TODO [viliam] use finest
+            session.commit();
+        }
+
+        @Override
+        public void release() {
+        }
+    }
+
+    // TODO [viliam] can we provide some generic no-transaction?
+    private static final class JmsNoTransaction implements TransactionalResource<JmsTransactionId> {
+
+        private JmsNoTransaction() {
+        }
+
+        @Override
+        public JmsTransactionId id() {
+            return null;
         }
     }
 

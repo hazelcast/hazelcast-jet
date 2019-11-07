@@ -217,20 +217,31 @@ public final class KafkaSinks {
          * guarantee will match that of the job. In other words, sink's
          * guarantee cannot be higher than job's, but can be lower to avoid the
          * additional overhead.
-         *
+         * <p>
          * Exactly-once behavior is achieved using Kafka transactions. Records
          * will be only committed after a successful snapshot was done. If a
          * read-committed consumer is used, it will see the records with much
          * higher latency depending on the snapshot interval. The throughput is
-         * also limited because while waiting for all the members doing the
-         * snapshot, no more items can be produced to Kafka.
-         *
+         * also very slightly limited because while waiting for all the members
+         * doing the snapshot, no more items can be produced to Kafka.
+         * <p>
+         * When using transactions pay attention to your {@code
+         * transaction.timeout.ms} config property. It limits the entire
+         * duration of the transaction since it is begun, not just inactivity
+         * timeout. It must not be smaller than your snapshot interval,
+         * otherwise the Kafka broker will roll back the transaction before Jet
+         * is done with it. Also it should be large enough so that Jet has time
+         * to restart after a failure: a member can crash just before it's
+         * about to commit, and Jet will attempt to commit the transaction
+         * after the restart, but the transaction must be still waiting in the
+         * broker.
+         * <p>
          * The default value is true.
          *
-         * @return this instance for fluent API
          * @param enable If true, sink's guarantee will match the job
          *      guarantee. If false, sink's guarantee will be at-least-once
          *      even if job's is exactly-once
+         * @return this instance for fluent API
          */
         public Builder<E> exactlyOnce(boolean enable) {
             exactlyOnce = enable;

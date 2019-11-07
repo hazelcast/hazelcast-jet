@@ -294,7 +294,8 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         private long producerId = -1;
         private short epoch = -1;
 
-        KafkaTransactionId(long jobId, String jobName, @Nonnull String vertexId, int processorIndex, int transactionIndex) {
+        KafkaTransactionId(long jobId, String jobName, @Nonnull String vertexId, int processorIndex,
+                           int transactionIndex) {
             this.jobId = jobId;
             this.jobName = jobName;
             this.vertexId = vertexId;

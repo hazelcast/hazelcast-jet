@@ -44,6 +44,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Queue;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -117,7 +118,7 @@ public class StreamJmsPTest extends JetTestSupport {
                 s.createConsumer(isQueue ? s.createQueue(destinationName) : s.createTopic(destinationName));
         FunctionEx<Message, String> textMessageFn = m -> ((TextMessage) m).getText();
         processor = new StreamJmsP<>(
-                () -> processorConnection, consumerFn, textMessageFn, noEventTime());
+                () -> processorConnection, consumerFn, textMessageFn, noEventTime(), EXACTLY_ONCE);
         outbox = new TestOutbox(1);
         Context ctx = new TestProcessorContext().setLogger(Logger.getLogger(StreamJmsP.class));
         processor.init(outbox, ctx);

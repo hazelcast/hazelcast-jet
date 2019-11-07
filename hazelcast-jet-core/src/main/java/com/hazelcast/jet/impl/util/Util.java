@@ -20,6 +20,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
@@ -444,4 +445,16 @@ public final class Util {
         }
     }
 
+    /**
+     * Returns the lower of given guarantees.
+     */
+    public static ProcessingGuarantee min(ProcessingGuarantee g1, ProcessingGuarantee g2) {
+        if (g1 == ProcessingGuarantee.NONE || g2 == ProcessingGuarantee.NONE) {
+            return ProcessingGuarantee.NONE;
+        }
+        if (g1 == ProcessingGuarantee.AT_LEAST_ONCE || g2 == ProcessingGuarantee.AT_LEAST_ONCE) {
+            return ProcessingGuarantee.AT_LEAST_ONCE;
+        }
+        return ProcessingGuarantee.EXACTLY_ONCE;
+    }
 }

@@ -73,7 +73,7 @@ public class JmsXaIntegrationTest extends JetTestSupport {
         JetInstance instance1 = createJetMember();
         createJetMember();
 
-        final int MESSAGE_COUNT = 10_000;
+        final int MESSAGE_COUNT = 7_000;
         Pipeline p = Pipeline.create();
         IList<List<Long>> sinkList = instance1.getList("sinkList");
         String queueName = "queue-" + counter++;
