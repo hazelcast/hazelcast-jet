@@ -19,12 +19,12 @@ package com.hazelcast.jet.impl.pipeline.transform;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
-import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
 import java.util.Random;
 
-import static com.hazelcast.jet.core.processor.Processors.mapUsingContextP;
+import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceP;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 
 public class RepartitionTransform<T> extends AbstractTransform {
@@ -41,9 +41,9 @@ public class RepartitionTransform<T> extends AbstractTransform {
 
     @Override
     public void addToDag(Planner p) {
-        ContextFactory<Random> contextFactory = ContextFactory.withCreateFn(jet -> new Random());
+        ServiceFactory<Random> serviceFactory = ServiceFactory.withCreateFn(jet -> new Random());
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
-                mapUsingContextP(contextFactory, (Random random, JetEvent item) ->
+                mapUsingServiceP(serviceFactory, (Random random, JetEvent item) ->
                         jetEvent(item.payload(), random.nextInt(), item.timestamp())));
         p.addEdges(this, pv.v, e -> {
             if (global) {
