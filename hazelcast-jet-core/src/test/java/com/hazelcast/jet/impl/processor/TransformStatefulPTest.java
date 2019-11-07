@@ -16,19 +16,19 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.core.test.TestSupport;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -53,9 +53,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
-@Category(ParallelTest.class)
+@Category(ParallelJVMTest.class)
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastParallelParametersRunnerFactory.class)
 @SuppressWarnings("checkstyle:declarationorder")
 public class TransformStatefulPTest {
 
@@ -149,6 +149,66 @@ public class TransformStatefulPTest {
                            wm(4),
                            jetEvent(entry("b", 4L), "b", 4)
                    ));
+    }
+
+    @Test
+    public void mapStateful_withTtl_surviveWm() {
+        SupplierEx<Processor> supplier = createSupplier(
+                2,
+                JetEvent::key,
+                JetEvent::timestamp,
+                () -> new long[1],
+                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                    s[0] += e.payload().getValue();
+                    return jetEvent(entry(k, s[0]), e.key(), e.timestamp());
+                },
+                null,
+                expandJetEventFn
+        );
+
+        TestSupport.verifyProcessor(supplier)
+                .input(asList(
+                        jetEvent(entry("b", 1L), "b", 1),
+                        wm(2),
+                        jetEvent(entry("b", 2L), "b", 2)
+                ))
+                .expectOutput(asExpandedList(expandJetEventFn,
+                        jetEvent(entry("b", 1L), "b", 1),
+                        wm(2),
+                        jetEvent(entry("b", 3L), "b", 2)
+                ));
+    }
+
+    @Test
+    public void mapStateful_withTtl_evictOnlyExpired() {
+        SupplierEx<Processor> supplier = createSupplier(
+                2,
+                JetEvent::key,
+                JetEvent::timestamp,
+                () -> new long[1],
+                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                    s[0] += e.payload().getValue();
+                    return jetEvent(entry(k, s[0]), e.key(), e.timestamp());
+                },
+                null,
+                expandJetEventFn
+        );
+
+        TestSupport.verifyProcessor(supplier)
+                .input(asList(
+                        jetEvent(entry("a", 1L), "a", 0),
+                        jetEvent(entry("b", 2L), "b", 1),
+                        wm(3),
+                        jetEvent(entry("a", 3L), "a", 3),
+                        jetEvent(entry("b", 4L), "b", 3)
+                ))
+                .expectOutput(asExpandedList(expandJetEventFn,
+                        jetEvent(entry("a", 1L), "a", 0),
+                        jetEvent(entry("b", 2L), "b", 1),
+                        wm(3),
+                        jetEvent(entry("a", 3L), "a", 3),
+                        jetEvent(entry("b", 6L), "b", 3)
+                ));
     }
 
     @Test

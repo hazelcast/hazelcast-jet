@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.h2.tools.DeleteDbFiles;
@@ -128,7 +128,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
 
             @Override
             public Connection getEx() throws SQLException {
-                if (exceptionThrown) {
+                if (!exceptionThrown) {
                     exceptionThrown = true;
                     throw new SQLException();
                 }
@@ -143,7 +143,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
 
             @Override
             public void acceptEx(PreparedStatement stmt, Person item) throws SQLException {
-                if (exceptionThrown) {
+                if (!exceptionThrown) {
                     exceptionThrown = true;
                     throw new SQLException();
                 }

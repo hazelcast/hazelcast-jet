@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.examples.jdbc;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 import org.h2.tools.DeleteDbFiles;
 
 import java.nio.file.Files;
@@ -83,7 +83,7 @@ public class JdbcSink {
         jet = Jet.newJetInstance();
         Jet.newJetInstance();
 
-        IMapJet<Integer, User> map = jet.getMap(MAP_NAME);
+        IMap<Integer, User> map = jet.getMap(MAP_NAME);
         // populate the source IMap
         for (int i = 0; i < 100; i++) {
             map.put(i, new User(i, "name-" + i));

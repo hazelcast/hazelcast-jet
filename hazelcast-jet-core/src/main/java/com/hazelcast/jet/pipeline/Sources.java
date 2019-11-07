@@ -17,29 +17,30 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.cache.CacheEventType;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.EventJournalConfig;
 import com.hazelcast.core.EntryEventType;
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.ToResultSetFunction;
 import com.hazelcast.jet.impl.pipeline.transform.BatchSourceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
-import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.map.IMap;
+import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.projection.Projections;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.PredicateBuilder;
+import com.hazelcast.query.Predicates;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
@@ -115,17 +116,15 @@ public final class Sources {
      * If you are implementing a custom source processor, be sure to check out
      * the {@link EventTimeMapper} class that will help you correctly implement
      * watermark emission.
-     *
-     * @param sourceName user-friendly source name
-     * @param metaSupplierFn factory of processor meta-suppliers
+     *  @param sourceName user-friendly source name
      * @param supportsNativeTimestamps true, if the processor is able to work
-     *                                 without timestampFn in EventTimePolicy
+     * @param metaSupplierFn factory of processor meta-suppliers
      */
     @Nonnull
     public static <T> StreamSource<T> streamFromProcessorWithWatermarks(
             @Nonnull String sourceName,
-            @Nonnull Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFn,
-            boolean supportsNativeTimestamps
+            boolean supportsNativeTimestamps,
+            @Nonnull Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFn
     ) {
         return new StreamSourceTransform<>(sourceName, metaSupplierFn, true, supportsNativeTimestamps);
     }
@@ -210,7 +209,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and
      * {@link Projections#multiAttribute}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or {@link PredicateBuilder}
+     * using the {@link Predicates} factory or {@link PredicateBuilder}
      * to create the predicate. In this case Jet can test the predicate and
      * apply the projection without deserializing the whole object.
      * <p>
@@ -247,7 +246,7 @@ public final class Sources {
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events. If you want to specify just the
      *                  projection, use {@link
-     *                  GenericPredicates#alwaysTrue()} as a pass-through
+     *                  Predicates#alwaysTrue()} as a pass-through
      *                  predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -257,7 +256,7 @@ public final class Sources {
     @Nonnull
     public static <T, K, V> BatchSource<T> map(
             @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
@@ -280,7 +279,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and
      * {@link Projections#multiAttribute}) to create your projection instance
-     * and using the {@link GenericPredicates} factory or {@link PredicateBuilder}
+     * and using the {@link Predicates} factory or {@link PredicateBuilder}
      * to create the predicate. In this case Jet can test the predicate and
      * apply the projection without deserializing the whole object.
      * <p>
@@ -317,7 +316,7 @@ public final class Sources {
      * @param map        the Hazelcast map to draw data from
      * @param predicate  the predicate to filter the events. If you want to specify just the
      *                   projection, use {@link
-     *                   GenericPredicates#alwaysTrue()} as a pass-through
+     *                   Predicates#alwaysTrue()} as a pass-through
      *                   predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -327,39 +326,8 @@ public final class Sources {
     @Nonnull
     public static <T, K, V> BatchSource<T> map(
             @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return map(map.getName(), predicate, projection);
-    }
-
-    /**
-     * Convenience for {@link #map(String, Predicate, Projection)}
-     * which uses a {@link FunctionEx} as the projection function.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> map(
-            @Nonnull String mapName,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return batchFromProcessor("mapSource(" + mapName + ')', readMapP(mapName, predicate, projection));
-    }
-
-    /**
-     * Convenience for {@link #map(IMap, Predicate, Projection)} which uses a
-     * {@link FunctionEx} as the projection function.
-     * <p>
-     * <strong>NOTE:</strong> Jet only remembers the name of the map you supply
-     * and acquires a map with that name on the local cluster. If you supply a
-     * map instance from another cluster, no error will be thrown to indicate
-     * this.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> map(
-            @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return map(map.getName(), predicate, projection);
     }
@@ -401,27 +369,27 @@ public final class Sources {
      * add a subsequent {@link GeneralStage#map map} or {@link GeneralStage#filter
      * filter} stage.
      *
-     * @param mapName      the name of the map
-     * @param predicateFn  the predicate to filter the events. If you want to specify just the
-     *                     projection, use {@link Util#mapPutEvents} to pass
-     *                     only {@link EntryEventType#ADDED ADDED} and
-     *                     {@link EntryEventType#UPDATED UPDATED} events.
-     * @param projectionFn the projection to map the events. If the projection returns a {@code
-     *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#mapEventToEntry()} to extract just the key and
-     *                     the new value.
-     * @param initialPos   describes which event to start receiving from
      * @param <T>          type of emitted item
+     * @param mapName      the name of the map
+     * @param initialPos   describes which event to start receiving from
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+*                     null} for an item, that item will be filtered out. You may use {@link
+*                     Util#mapEventToEntry()} to extract just the key and
+*                     the new value.
+     * @param predicateFn  the predicate to filter the events. If you want to specify just the
+*                     projection, use {@link Util#mapPutEvents} to pass
+*                     only {@link EntryEventType#ADDED ADDED} and
+*                     {@link EntryEventType#UPDATED UPDATED} events.
      */
     @Nonnull
     public static <T, K, V> StreamSource<T> mapJournal(
             @Nonnull String mapName,
-            @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn,
+            @Nonnull JournalInitialPosition initialPos,
             @Nonnull FunctionEx<? super EventJournalMapEvent<K, V>, ? extends T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn
     ) {
         return streamFromProcessorWithWatermarks("mapJournalSource(" + mapName + ')',
-                w -> streamMapP(mapName, predicateFn, projectionFn, initialPos, w), false);
+                false, w -> streamMapP(mapName, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
@@ -483,31 +451,30 @@ public final class Sources {
      * it takes long until all partitions see an event to allow emitting of a
      * coalesced watermark.
      *
-     * @param map          the map to draw data from
-     * @param predicateFn  the predicate to filter the events. If you want to specify just the
-     *                     projection, use {@link Util#mapPutEvents} to pass
-     *                     only {@link EntryEventType#ADDED ADDED} and
-     *                     {@link EntryEventType#UPDATED UPDATED} events.
-     * @param projectionFn the projection to map the events. If the projection returns a {@code
-     *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#mapEventToEntry()} to extract just the key and
-     *                     the new value.
-     * @param initialPos   describes which event to start receiving from
      * @param <T>          type of emitted item
+     * @param map          the map to draw data from
+     * @param initialPos   describes which event to start receiving from
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+*                     null} for an item, that item will be filtered out. You may use {@link
+*                     Util#mapEventToEntry()} to extract just the key and
+*                     the new value.
+     * @param predicateFn  the predicate to filter the events. If you want to specify just the
+*                     projection, use {@link Util#mapPutEvents} to pass
+*                     only {@link EntryEventType#ADDED ADDED} and
+*                     {@link EntryEventType#UPDATED UPDATED} events.
      */
     @Nonnull
     public static <T, K, V> StreamSource<T> mapJournal(
             @Nonnull IMap<? extends K, ? extends V> map,
-            @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn,
+            @Nonnull JournalInitialPosition initialPos,
             @Nonnull FunctionEx<? super EventJournalMapEvent<K, V>, ? extends T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn
     ) {
-        return mapJournal(map.getName(), predicateFn, projectionFn, initialPos);
+        return mapJournal(map.getName(), initialPos, projectionFn, predicateFn);
     }
 
     /**
-     * Convenience for {@link #mapJournal(String, PredicateEx,
-     * FunctionEx, JournalInitialPosition)}
+     * Convenience for {@link #mapJournal(String, JournalInitialPosition, FunctionEx, PredicateEx)}
      * which will pass only {@link EntryEventType#ADDED ADDED} and
      * {@link EntryEventType#UPDATED UPDATED} events and will project the
      * event's key and new value into a {@code Map.Entry}.
@@ -517,12 +484,11 @@ public final class Sources {
             @Nonnull String mapName,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return mapJournal(mapName, mapPutEvents(), mapEventToEntry(), initialPos);
+        return mapJournal(mapName, initialPos, mapEventToEntry(), mapPutEvents());
     }
 
     /**
-     * Convenience for {@link #mapJournal(IMap, PredicateEx,
-     * FunctionEx, JournalInitialPosition)}
+     * Convenience for {@link #mapJournal(IMap, JournalInitialPosition, FunctionEx, PredicateEx)}
      * which will pass only {@link EntryEventType#ADDED
      * ADDED} and {@link EntryEventType#UPDATED UPDATED}
      * events and will project the event's key and new value into a {@code
@@ -538,7 +504,7 @@ public final class Sources {
             @Nonnull IMap<? extends K, ? extends V> map,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return mapJournal(map.getName(), mapPutEvents(), mapEventToEntry(), initialPos);
+        return mapJournal(map.getName(), initialPos, mapEventToEntry(), mapPutEvents());
     }
 
     /**
@@ -579,7 +545,7 @@ public final class Sources {
      * portable serialization format</a>, there are additional optimizations
      * available when using {@link Projections#singleAttribute} and {@link
      * Projections#multiAttribute}) to create your projection instance and
-     * using the {@link GenericPredicates} factory or
+     * using the {@link Predicates} factory or
      * {@link PredicateBuilder PredicateBuilder} to create
      * the predicate. In this case Jet can test the predicate and apply the
      * projection without deserializing the whole object.
@@ -612,7 +578,7 @@ public final class Sources {
      *
      * @param mapName the name of the map
      * @param predicate the predicate to filter the events. If you want to specify just the
-     *                  projection, use {@link GenericPredicates#alwaysTrue()}
+     *                  projection, use {@link Predicates#alwaysTrue()}
      *                  as a pass-through predicate
      * @param projection the projection to map the events. If the projection returns a {@code
      *                   null} for an item, that item will be filtered out. If you want to
@@ -623,23 +589,8 @@ public final class Sources {
     public static <T, K, V> BatchSource<T> remoteMap(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
+            @Nonnull Predicate<K, V> predicate,
             @Nonnull Projection<? super Entry<K, V>, ? extends T> projection
-    ) {
-        return batchFromProcessor("remoteMapSource(" + mapName + ')',
-                ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig, predicate, projection)));
-    }
-
-    /**
-     * Convenience for {@link #remoteMap(String, ClientConfig, Predicate, Projection)}
-     * which use a {@link FunctionEx} as the projection function.
-     */
-    @Nonnull
-    public static <T, K, V> BatchSource<T> remoteMap(
-            @Nonnull String mapName,
-            @Nonnull ClientConfig clientConfig,
-            @Nonnull Predicate<? super K, ? super V> predicate,
-            @Nonnull FunctionEx<? super Entry<K, V>, ? extends T> projection
     ) {
         return batchFromProcessor("remoteMapSource(" + mapName + ')',
                 ProcessorMetaSupplier.of(readRemoteMapP(mapName, clientConfig, predicate, projection)));
@@ -678,37 +629,35 @@ public final class Sources {
      * requirements, use {@link #remoteMapJournal(String, ClientConfig, JournalInitialPosition)}
      * and add a subsequent {@link GeneralStage#map map} or
      * {@link GeneralStage#filter filter} stage.
-     *
-     * @param mapName the name of the map
-     * @param clientConfig configuration for the client to connect to the remote cluster
-     * @param predicateFn the predicate to filter the events. You may use {@link
-     *                    Util#mapPutEvents} to pass only {@link
-     *                    EntryEventType#ADDED ADDED} and {@link EntryEventType#UPDATED UPDATED}
-     *                    events.
-     * @param projectionFn the projection to map the events. If the projection returns a {@code
-     *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#mapEventToEntry()} to extract just the key and
-     *                     the new value.
-     * @param initialPos describes which event to start receiving from
-     * @param <K> type of key
+     *  @param <K> type of key
      * @param <V> type of value
      * @param <T> type of emitted item
+     * @param mapName the name of the map
+     * @param clientConfig configuration for the client to connect to the remote cluster
+     * @param initialPos describes which event to start receiving from
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+*                     null} for an item, that item will be filtered out. You may use {@link
+*                     Util#mapEventToEntry()} to extract just the key and
+*                     the new value.
+     * @param predicateFn the predicate to filter the events. You may use {@link
+*                    Util#mapPutEvents} to pass only {@link
+*                    EntryEventType#ADDED ADDED} and {@link EntryEventType#UPDATED UPDATED}
+*                    events.
      */
     @Nonnull
     public static <T, K, V> StreamSource<T> remoteMapJournal(
             @Nonnull String mapName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn,
+            @Nonnull JournalInitialPosition initialPos,
             @Nonnull FunctionEx<? super EventJournalMapEvent<K, V>, ? extends T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull PredicateEx<? super EventJournalMapEvent<K, V>> predicateFn
     ) {
         return streamFromProcessorWithWatermarks("remoteMapJournalSource(" + mapName + ')',
-                w -> streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, w), false);
+                false, w -> streamRemoteMapP(mapName, clientConfig, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
-     * Convenience for {@link #remoteMapJournal(String, ClientConfig,
-     * PredicateEx, FunctionEx, JournalInitialPosition)}
+     * Convenience for {@link #remoteMapJournal(String, ClientConfig, JournalInitialPosition, FunctionEx, PredicateEx)}
      * which will pass only {@link EntryEventType#ADDED ADDED}
      * and {@link EntryEventType#UPDATED UPDATED} events and will
      * project the event's key and new value into a {@code Map.Entry}.
@@ -719,7 +668,7 @@ public final class Sources {
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return remoteMapJournal(mapName, clientConfig, mapPutEvents(), mapEventToEntry(), initialPos);
+        return remoteMapJournal(mapName, clientConfig, initialPos, mapEventToEntry(), mapPutEvents());
     }
 
     /**
@@ -783,32 +732,31 @@ public final class Sources {
      * and add a subsequent {@link GeneralStage#map map} or
      * {@link GeneralStage#filter filter} stage.
      *
-     * @param cacheName the name of the cache
-     * @param predicateFn the predicate to filter the events. You may use {@link
-     *                    Util#cachePutEvents()} to pass only {@link
-     *                    CacheEventType#CREATED CREATED} and {@link
-     *                    CacheEventType#UPDATED UPDATED} events.
-     * @param projectionFn the projection to map the events. If the projection returns a {@code
-     *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#cacheEventToEntry()} to extract just the key
-     *                     and the new value.
-     * @param initialPos describes which event to start receiving from
      * @param <T> type of emitted item
+     * @param cacheName the name of the cache
+     * @param initialPos describes which event to start receiving from
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+*                     null} for an item, that item will be filtered out. You may use {@link
+*                     Util#cacheEventToEntry()} to extract just the key
+*                     and the new value.
+     * @param predicateFn the predicate to filter the events. You may use {@link
+*                    Util#cachePutEvents()} to pass only {@link
+*                    CacheEventType#CREATED CREATED} and {@link
+*                    CacheEventType#UPDATED UPDATED} events.
      */
     @Nonnull
     public static <T, K, V> StreamSource<T> cacheJournal(
             @Nonnull String cacheName,
-            @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn,
+            @Nonnull JournalInitialPosition initialPos,
             @Nonnull FunctionEx<? super EventJournalCacheEvent<K, V>, ? extends T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn
     ) {
         return streamFromProcessorWithWatermarks("cacheJournalSource(" + cacheName + ')',
-                w -> streamCacheP(cacheName, predicateFn, projectionFn, initialPos, w), false);
+                false, w -> streamCacheP(cacheName, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
-     * Convenience for {@link #cacheJournal(String, PredicateEx,
-     * FunctionEx, JournalInitialPosition)}
+     * Convenience for {@link #cacheJournal(String, JournalInitialPosition, FunctionEx, PredicateEx)}
      * which will pass only {@link CacheEventType#CREATED
      * CREATED} and {@link CacheEventType#UPDATED UPDATED}
      * events and will project the event's key and new value into a {@code
@@ -819,7 +767,7 @@ public final class Sources {
             @Nonnull String cacheName,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return cacheJournal(cacheName, cachePutEvents(), cacheEventToEntry(), initialPos);
+        return cacheJournal(cacheName, initialPos, cacheEventToEntry(), cachePutEvents());
     }
 
     /**
@@ -882,34 +830,33 @@ public final class Sources {
      * and add a subsequent {@link GeneralStage#map map} or
      * {@link GeneralStage#filter filter} stage.
      *
+     * @param <T> type of emitted item
      * @param cacheName the name of the cache
      * @param clientConfig configuration for the client to connect to the remote cluster
-     * @param predicateFn the predicate to filter the events. You may use {@link
-     *                    Util#cachePutEvents()} to pass only {@link
-     *                    CacheEventType#CREATED CREATED} and {@link
-     *                    CacheEventType#UPDATED UPDATED} events.
-     * @param projectionFn the projection to map the events. If the projection returns a {@code
-     *                     null} for an item, that item will be filtered out. You may use {@link
-     *                     Util#cacheEventToEntry()} to extract just the key
-     *                     and the new value.
      * @param initialPos describes which event to start receiving from
-     * @param <T> type of emitted item
+     * @param projectionFn the projection to map the events. If the projection returns a {@code
+*                     null} for an item, that item will be filtered out. You may use {@link
+*                     Util#cacheEventToEntry()} to extract just the key
+*                     and the new value.
+     * @param predicateFn the predicate to filter the events. You may use {@link
+*                    Util#cachePutEvents()} to pass only {@link
+*                    CacheEventType#CREATED CREATED} and {@link
+*                    CacheEventType#UPDATED UPDATED} events.
      */
     @Nonnull
     public static <T, K, V> StreamSource<T> remoteCacheJournal(
             @Nonnull String cacheName,
             @Nonnull ClientConfig clientConfig,
-            @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn,
+            @Nonnull JournalInitialPosition initialPos,
             @Nonnull FunctionEx<? super EventJournalCacheEvent<K, V>, ? extends T> projectionFn,
-            @Nonnull JournalInitialPosition initialPos
+            @Nonnull PredicateEx<? super EventJournalCacheEvent<K, V>> predicateFn
     ) {
         return streamFromProcessorWithWatermarks("remoteCacheJournalSource(" + cacheName + ')',
-                w -> streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, w), false);
+                false, w -> streamRemoteCacheP(cacheName, clientConfig, predicateFn, projectionFn, initialPos, w));
     }
 
     /**
-     * Convenience for {@link #remoteCacheJournal(String, ClientConfig,
-     * PredicateEx, FunctionEx, JournalInitialPosition)}
+     * Convenience for {@link #remoteCacheJournal(String, ClientConfig, JournalInitialPosition, FunctionEx, PredicateEx)}
      * which will pass only
      * {@link CacheEventType#CREATED CREATED}
      * and {@link CacheEventType#UPDATED UPDATED}
@@ -922,7 +869,7 @@ public final class Sources {
             @Nonnull ClientConfig clientConfig,
             @Nonnull JournalInitialPosition initialPos
     ) {
-        return remoteCacheJournal(cacheName, clientConfig, cachePutEvents(), cacheEventToEntry(), initialPos);
+        return remoteCacheJournal(cacheName, clientConfig, initialPos, cacheEventToEntry(), cachePutEvents());
     }
 
     /**

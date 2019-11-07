@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.hazelcast.jet.function.ConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.spi.annotation.Beta;
@@ -80,7 +80,7 @@ public final class Assertions {
      * <pre>{@code
      * p.drawFrom(TestSources.items(1, 2, 3, 4))
      *  .apply(Assertions.assertOrderedArrays.asList(1, 2, 3, 4)))
-     *  .drainTo(Sinks.logger())
+     *  .drainTo(Sinks.logger());
      * }</pre>
      *
      * <b>Note:</b> Since Jet jobs are distributed, input from multiple upstream
@@ -167,7 +167,7 @@ public final class Assertions {
      * Example:
      * <pre>{@code
      * p.drawFrom(TestSources.items(4, 3, 2, 1))
-     *  .apply(Assertions.assertAnyOrder(Arrays.asList(1, 3)))
+     *  .apply(Assertions.assertContains(Arrays.asList(1, 3)))
      *  .drainTo(Sinks.logger())
      * }</pre>
      */

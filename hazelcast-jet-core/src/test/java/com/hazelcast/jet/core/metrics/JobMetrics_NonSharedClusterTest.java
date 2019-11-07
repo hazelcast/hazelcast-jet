@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -24,7 +25,6 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.jet.core.TestProcessors.NoOutputSourceP;
-import com.hazelcast.jet.function.SupplierEx;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -46,8 +46,7 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
 
     @Test
     public void when_metricsCollectionOff_then_emptyMetrics() {
-        JetConfig config = new JetConfig();
-        config.getMetricsConfig().setEnabled(false);
+        JetConfig config = new JetConfig().configureHazelcast(c -> c.getMetricsConfig().setEnabled(false));
         JetInstance inst = createJetMember(config);
 
         DAG dag = new DAG();
@@ -58,8 +57,8 @@ public class JobMetrics_NonSharedClusterTest extends JetTestSupport {
 
     @Test
     public void when_noMetricCollectionYet_then_emptyMetrics() {
-        JetConfig config = new JetConfig();
-        config.getMetricsConfig().setCollectionIntervalSeconds(10_000);
+        JetConfig config = new JetConfig()
+                .configureHazelcast(c -> c.getMetricsConfig().setCollectionIntervalSeconds(10_000));
         JetInstance inst = createJetMember(config);
 
         DAG dag = new DAG();

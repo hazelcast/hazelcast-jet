@@ -17,18 +17,18 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.cache.ICache;
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.hazelcast.instance.HazelcastInstanceFactory;
-import com.hazelcast.jet.IListJet;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.instance.impl.HazelcastInstanceFactory;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.map.IMap;
+import com.hazelcast.map.EventJournalMapEvent;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,9 +40,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.Functions.entryValue;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapPutEvents;
-import static com.hazelcast.jet.function.Functions.entryValue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -58,10 +58,10 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
     @BeforeClass
     public static void setUp() {
         Config config = new Config();
-        config.getGroupConfig().setName(randomName());
+        config.setClusterName(randomName());
         config.addCacheConfig(new CacheSimpleConfig().setName("*"));
-        config.getMapEventJournalConfig(JOURNALED_MAP_PREFIX + '*').setEnabled(true);
-        config.getCacheEventJournalConfig(JOURNALED_CACHE_PREFIX + '*').setEnabled(true);
+        config.getMapConfig(JOURNALED_MAP_PREFIX + '*').getEventJournalConfig().setEnabled(true);
+        config.getCacheConfig(JOURNALED_CACHE_PREFIX + '*').getEventJournalConfig().setEnabled(true);
 
         remoteHz = createRemoteCluster(config, 2).get(0);
         clientConfig = getClientConfigForRemoteCluster(remoteHz);
@@ -154,9 +154,10 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         String mapName = JOURNALED_MAP_PREFIX + randomName();
 
         // When
-        StreamSource<String> source = Sources.mapJournal(jet().getMap(mapName), mapPutEvents(),
+        StreamSource<String> source = Sources.mapJournal(jet().getMap(mapName), START_FROM_OLDEST,
                 (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(),
-                START_FROM_OLDEST);
+                mapPutEvents()
+        );
 
         // Then
         testMapJournal_withProjectionToNull_then_nullsSkipped(mapName, source);
@@ -168,9 +169,10 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         String mapName = JOURNALED_MAP_PREFIX + randomName();
 
         // When
-        StreamSource<String> source = Sources.mapJournal(mapName, mapPutEvents(),
+        StreamSource<String> source = Sources.mapJournal(mapName, START_FROM_OLDEST,
                 (EventJournalMapEvent<Integer, Entry<Integer, String>> entry) -> entry.getNewValue().getValue(),
-                START_FROM_OLDEST);
+                mapPutEvents()
+        );
 
         // Then
         testMapJournal_withProjectionToNull_then_nullsSkipped(mapName, source);
@@ -216,7 +218,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         // Then
         p.drawFrom(source).withoutTimestamps().drainTo(sink);
         jet().newJob(p);
-        IListJet<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
+        IList<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
         assertTrueEventually(() -> {
                     assertEquals(2, sinkList.size());
 
@@ -246,7 +248,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
         // Then
         p.drawFrom(source).withoutTimestamps().drainTo(sink);
         jet().newJob(p);
-        IListJet<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
+        IList<Entry<Integer, Integer>> sinkList = jet().getList(sinkName);
         assertTrueEventually(() -> {
                     assertEquals(2, sinkList.size());
 
@@ -270,7 +272,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.mapJournal(
-                mapName, p, EventJournalMapEvent::getNewValue, START_FROM_OLDEST);
+                mapName, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, p);
 
         // Then
         testMapJournal_withPredicateAndProjection(map, source);
@@ -285,7 +287,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.remoteMapJournal(
-                mapName, clientConfig, p, EventJournalMapEvent::getNewValue, START_FROM_OLDEST);
+                mapName, clientConfig, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, p);
 
         // Then
         testMapJournal_withPredicateAndProjection(map, source);
@@ -420,7 +422,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.cacheJournal(
-                cacheName, p, EventJournalCacheEvent::getNewValue, START_FROM_OLDEST);
+                cacheName, START_FROM_OLDEST, EventJournalCacheEvent::getNewValue, p);
 
         // Then
         testCacheJournal_withPredicateAndProjection(cache, source);
@@ -435,7 +437,7 @@ public class Sources_withEventJournalTest extends PipelineTestSupport {
 
         // When
         StreamSource<Integer> source = Sources.remoteCacheJournal(
-                cacheName, clientConfig, p, EventJournalCacheEvent::getNewValue, START_FROM_OLDEST);
+                cacheName, clientConfig, START_FROM_OLDEST, EventJournalCacheEvent::getNewValue, p);
 
         // Then
         testCacheJournal_withPredicateAndProjection(cache, source);

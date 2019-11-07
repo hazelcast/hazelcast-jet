@@ -16,6 +16,12 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -25,12 +31,6 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
@@ -117,34 +117,35 @@ public class JetEventFunctionAdapter {
     }
 
     @Nonnull
-    <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T, ?>, ? extends JetEvent<R, ?>> adaptMapUsingContextFn(
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
+    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T, ?>, ? extends JetEvent<R, ?>> adaptMapUsingServiceFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     ) {
-        return (context, e) -> jetEvent(mapFn.apply(context, e.payload()), e.key(), e.timestamp());
+        return (s, e) -> jetEvent(mapFn.apply(s, e.payload()), e.key(), e.timestamp());
     }
 
     @Nonnull
-    <C, T> BiPredicateEx<? super C, ? super JetEvent<T, ?>> adaptFilterUsingContextFn(
-            @Nonnull BiPredicateEx<? super C, ? super T> filterFn
+    <S, T> BiPredicateEx<? super S, ? super JetEvent<T, ?>> adaptFilterUsingServiceFn(
+            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
-        return (context, e) -> filterFn.test(context, e.payload());
+        return (s, e) -> filterFn.test(s, e.payload());
     }
 
     @Nonnull
-    <C, T, R> BiFunctionEx<? super C, ? super JetEvent<T, ?>, ? extends Traverser<JetEvent<R, ?>>>
-    adaptFlatMapUsingContextFn(
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T, ?>, ? extends Traverser<JetEvent<R, ?>>>
+    adaptFlatMapUsingServiceFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (context, e) -> flatMapFn.apply(context, e.payload()).map(r -> jetEvent(r, e.key(), e.timestamp()));
+        return (s, e) -> flatMapFn.apply(s, e.payload()).map(r -> jetEvent(r, e.key(), e.timestamp()));
     }
 
     @Nonnull
-    <C, T, R> BiFunctionEx<? super C, ?, ? extends CompletableFuture<Traverser<?>>>
-    adaptFlatMapUsingContextAsyncFn(
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    <S, T, R> BiFunctionEx<? super S, ?, ? extends CompletableFuture<Traverser<?>>>
+    adaptFlatMapUsingServiceAsyncFn(
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return (C context, JetEvent<T, ?> e) ->
-                flatMapAsyncFn.apply(context, e.payload()).thenApply(trav -> trav.map(re -> jetEvent(re, e.key(), e.timestamp())));
+        return (S s, JetEvent<T, ?> e) ->
+                flatMapAsyncFn.apply(s, e.payload())
+                              .thenApply(trav -> trav.map(re -> jetEvent(re, e.key(), e.timestamp())));
     }
 
     @Nonnull
@@ -299,7 +300,7 @@ public class JetEventFunctionAdapter {
         }
 
         @Override
-        public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
+        public void initWrapper(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
             super.init(new AdaptingOutbox(outbox, context.globalProcessorIndex()), context);
         }
     }

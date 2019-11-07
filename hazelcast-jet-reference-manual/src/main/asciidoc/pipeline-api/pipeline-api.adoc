@@ -58,6 +58,7 @@ contents and their event journal as an infinite source
 - a directory on the filesystem, both as a batch source of the current
   file contents and an infinite source of append events to the files
 - Apache Avro files (batch)
+- Amazon AWS S3 (batch)
 - any source/sink you create on your own by using the
 {jet-javadoc}/pipeline/SourceBuilder.html[`SourceBuilder`] and the
 {jet-javadoc}/pipeline/SinkBuilder.html[`SinkBuilder`].
@@ -66,29 +67,95 @@ You can access most of these via the
 {jet-javadoc}/pipeline/Sources.html[`Sources`] and
 {jet-javadoc}/pipeline/Sinks.html[`Sinks`] utility classes.
 {jet-javadoc}/kafka/KafkaSources.html[Kafka],
-{jet-javadoc}/hadoop/HdfsSources.html[HDFS] and
+{jet-javadoc}/hadoop/HdfsSources.html[HDFS],
+{jet-javadoc}/s3/S3Sources.html[S3] and
 {jet-javadoc}/avro/AvroSources.html[Avro] connectors are in their
 separate modules. The
-{jet-javadoc}/pipeline/SourceBuilder.html#batch-java.lang.String-com.hazelcast.jet.function.FunctionEx-[source]
-and {jet-javadoc}/pipeline/SinkBuilder.html#sinkBuilder-java.lang.String-com.hazelcast.jet.function.FunctionEx-[sink]
+{jet-javadoc}/pipeline/SourceBuilder.html#batch-java.lang.String-com.hazelcast.function.FunctionEx-[source]
+and {jet-javadoc}/pipeline/SinkBuilder.html#sinkBuilder-java.lang.String-com.hazelcast.function.FunctionEx-[sink]
 builder factories are in their respective classes.
 
 There's a <<source-sink-connectors, dedicated chapter>> that discusses
 the topic of data sources and sinks in more detail.
 
-= Basic Transforms: map, filter, flatMap
+= Clean Up and Normalize Input Using Stateless Transforms
 
 The simplest kind of transformation is one that can be done on each item
-individually and independent of other items. The major examples are
+individually and independent of other items. These are
 {jet-javadoc}/pipeline/BatchStage.html#map-com.hazelcast.jet.function.FunctionEx-[`map`],
 {jet-javadoc}/pipeline/BatchStage.html#filter-com.hazelcast.jet.function.PredicateEx-[`filter`]
 and
-{jet-javadoc}/pipeline/BatchStage.html#flatMap-com.hazelcast.jet.function.FunctionEx-[`flatMap`].
+{jet-javadoc}/pipeline/BatchStage.html#flatMap-com.hazelcast.function.FunctionEx-[`flatMap`].
 We already saw them in use in the previous examples. `map` transforms
 each item to another item; `filter` discards items that don't match its
 predicate; and `flatMap` transforms each item into zero or more output
-items. You can refer to their Javadoc for finer detail and here we'll
-move on to other kinds of transformations.
+items. These transforms are most often used to perform simple cleanup of
+the input stream by discarding unneeded data, adapting it to your data
+model, flattening nested lists into the top-level stream, etc.
+
+We won't spend much time on these transforms here; you can refer to
+their Javadoc for finer detail.
+
+[[stateful-mapping]]
+= Detect Patterns Using Stateful Transforms
+
+When you start with basic mapping and add to it an arbitrary object
+available over the entire lifetime of the processing job, you get a
+quite general and powerful tool: stateful mapping.
+
+The major use case of stateful mapping is recognizing a pattern in the
+event stream, such as matching start-transaction with end-transaction
+events based on an event correlation ID. More generally, you can
+implement any kind of state machine and detect patterns in the input of
+any complexity.
+
+Instead of keeping just one state object, you can define a grouping key
+and keep a separate object per distinct key. This is what you need for
+the above example of matching on correlation ID.
+
+When you define a grouping key, you should also consider key expiration.
+Usually a given key will occur in the input stream only for a while and
+then become stale. Jet offers you a way to specify the time-to-live (TTL)
+for keys. If more than TTL milliseconds (in terms of event time) pass
+without observing the same key again, Jet evicts the state object from
+memory. You can also provide a function Jet will call when discarding
+the object. On the example of transaction tracking, you can detect stuck
+transactions here and react to them.
+
+Here's the code sample that implements pattern matching on a stream of
+transaction-start and transaction-end events:
+
+[source]
+----
+include::{javasource}/BuildComputation.java[tag=s20]
+----
+<1> `transactionOutcomes` emits pairs
+`(transactionId, transactionDurationMillis)`. Transaction duration can
+also be the special value `TIMED_OUT`.
+<2> This function creates the state object: an array of
+`TransactionEvent` s. The first slot is for the start event, the second
+for the end event.
+<3> The mapping function takes the state, the grouping key, and the input item.
+It places the event into the appropriate array slot and emits the output if
+both slots are now occupied.
+<4> This function reacts to state eviction. It takes the state object
+being evicted, the key associated with it, and the current watermark
+(i.e., current event time). If it detects that a slot in the array was
+left unoccupied, it outputs "transaction timed out".
+
+Another thing you can do with stateful mapping is _rolling aggregation_,
+like accumulating the sum of a quantity across events, or its extreme
+values. You can also achieve these with the dedicated <<rolling-aggregation,
+rolling aggregation>> transform to reuse Jet's ready-made aggregate
+operations. However, if you can't find an existing aggregate operation
+to reuse, it's usually simpler to implement it with stateful mapping.
+
+There is one major caveat when considering to solve your problem with
+stateful mapping: it's sensitive to the order of the events in the stream.
+If the sequence of events in the stream can be different from the order of
+their occurrence in the real world, your state-updating logic will have to
+account for that, possibly leading to an explosion in complexity.
+
 
 [[distinct]]
 = Suppress Duplicates
@@ -141,7 +208,7 @@ you should use this approach.
 [[hash-join]]
 = Hash-Join
 
-{jet-javadoc}/pipeline/BatchStage.html#hashJoin-com.hazelcast.jet.pipeline.BatchStage-com.hazelcast.jet.pipeline.JoinClause-com.hazelcast.jet.function.BiFunctionEx-[Hash-join]
+{jet-javadoc}/pipeline/BatchStage.html#hashJoin-com.hazelcast.jet.pipeline.BatchStage-com.hazelcast.jet.pipeline.JoinClause-com.hazelcast.function.BiFunctionEx-[Hash-join]
 is a kind of join operation optimized for the use case of data
 enrichment. It is like a many-to-one SQL JOIN that matches a foreign key
 in the stream-to-be-enriched with the primary key in the enriching
@@ -253,8 +320,8 @@ basically takes a snapshot of the enriching dataset at the beginning of
 the job. You may also encounter RAM shortage if your enriching dataset
 is very large.
 
-The `xUsingY` transforms (such as <<map-using-context,
-`filterUsingContext`>> or <<map-using-imap, `mapUsingIMap`>>) can
+The `xUsingY` transforms (such as <<map-using-service,
+`filterUsingService`>> or <<map-using-imap, `mapUsingIMap`>>) can
 enrich a stream by looking up from the original data source each time.
 There's direct support for <<map-using-imap, Hazelcast maps>> and Jet
 <<map-using-context, exposes the underlying machinery>> as well so you
@@ -335,7 +402,7 @@ only CPU-bound and doesn't do any IO.
 
 You can also specify a function that extracts a key from your items
 using
-{jet-javadoc}/pipeline/GeneralStage.html#groupingKey-com.hazelcast.jet.function.FunctionEx-[`groupingKey()`].
+{jet-javadoc}/pipeline/GeneralStage.html#groupingKey-com.hazelcast.function.FunctionEx-[`groupingKey()`].
 Even though Jet won't do any lookup or grouping by that key, it will set
 up the job so that all the items with the same key get paired with the
 same context object.
@@ -459,7 +526,7 @@ and right). The constraint, as already noted, is that the join condition
 cannot be fully general, but must amount to matching a computed key.
 
 We have a full code sample at our
-{jet-samples}/co-group/src/main/java/BatchCoGroup.java[code samples
+{jet-examples}/co-group/src/main/java/com/hazelcast/jet/examples/cogroup/BatchCoGroup.java[code samples
 repository]. Here we'll show a simple example where we calculate the
 ratio of page visits to add-to-cart actions for each user. We accumulate
 the event counts and then do the maths on them in the end:
@@ -603,7 +670,7 @@ declares that the stream will use source's native timestamps. This
 typically refers to the timestamps that the external source system sets
 on each event.
 
-- {jet-javadoc}/pipeline/StreamSourceStage.html#withTimestamps-com.hazelcast.jet.function.ToLongFunctionEx-long-[`withTimestamps(timestampFn)`]
+- {jet-javadoc}/pipeline/StreamSourceStage.html#withTimestamps-com.hazelcast.function.ToLongFunctionEx-long-[`withTimestamps(timestampFn)`]
 provides a function to the source that determines the timestamp of
 each event.
 
@@ -790,6 +857,22 @@ after a new record-breaking trade.
 ----
 include::{javasource}/BuildComputation.java[tag=s19]
 ----
+
+[TIP]
+====
+Rolling aggregation is just a special case of <<stateful-mapping,
+stateful mapping>>, equivalent to this:
+
+[source]
+----
+include::{javasource}/BuildComputation.java[tag=s21]
+----
+
+The main advantage of rolling aggregation over stateful mapping is that
+it's the simplest way to reuse an existing `AggregateOperation`. If
+you're starting from scratch with the rolling aggregation logic, it will
+probably be simpler to implement it as stateful mapping.
+====
 
 = Apply a User-Defined Transformation
 

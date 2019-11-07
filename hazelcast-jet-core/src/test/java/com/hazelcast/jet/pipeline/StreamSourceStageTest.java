@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IList;
-import com.hazelcast.core.IMap;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.map.journal.EventJournalMapEvent;
+import com.hazelcast.map.IMap;
+import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -32,8 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map.Entry;
 
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -50,8 +50,9 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
     }
 
     private static StreamSource<Integer> createSourceJournal() {
-        return Sources.<Integer, Integer, Integer>mapJournal(JOURNALED_MAP_NAME, alwaysTrue(),
-                EventJournalMapEvent::getKey, START_FROM_OLDEST);
+        return Sources.<Integer, Integer, Integer>mapJournal(
+                JOURNALED_MAP_NAME, START_FROM_OLDEST, EventJournalMapEvent::getKey, alwaysTrue()
+        );
     }
 
     private static StreamSource<Integer> createTimestampedSourceBuilder() {
@@ -166,7 +167,7 @@ public class StreamSourceStageTest extends StreamSourceStageTestBase {
         Vertex tsVertex = dag.getVertex("src-add-timestamps");
         assertEquals(lp, srcVertex.determineLocalParallelism(-1));
         assertEquals(lp,  tsVertex.determineLocalParallelism(-1));
-    }
+}
 
     @Test
     public void when_sourceHasExplicitLocalParallelism_then_lpMatchSource() {

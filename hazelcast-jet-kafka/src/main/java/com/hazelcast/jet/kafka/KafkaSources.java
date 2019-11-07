@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.kafka;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.Stage;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
@@ -29,10 +29,10 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.kafka.KafkaProcessors.streamKafkaP;
 import static com.hazelcast.jet.pipeline.Sources.streamFromProcessorWithWatermarks;
-import static com.hazelcast.util.Preconditions.checkPositive;
 
 /**
  * Contains factory methods for Apache Kafka sources.
@@ -133,6 +133,6 @@ public final class KafkaSources {
     ) {
         checkPositive(topics.length, "At least one topic required");
         return streamFromProcessorWithWatermarks("streamKafka(" + String.join(",", topics) + ")",
-                w -> streamKafkaP(properties, projectionFn, w, topics), true);
+                true, w -> streamKafkaP(properties, projectionFn, w, topics));
     }
 }

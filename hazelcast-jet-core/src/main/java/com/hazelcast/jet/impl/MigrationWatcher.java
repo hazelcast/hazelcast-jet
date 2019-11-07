@@ -16,20 +16,23 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.cluster.Endpoint;
+import com.hazelcast.cluster.MemberAttributeEvent;
+import com.hazelcast.cluster.MembershipEvent;
+import com.hazelcast.cluster.MembershipListener;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.MemberAttributeEvent;
-import com.hazelcast.core.MembershipEvent;
-import com.hazelcast.core.MembershipListener;
-import com.hazelcast.core.MigrationEvent;
-import com.hazelcast.core.MigrationListener;
+import com.hazelcast.partition.MigrationListener;
+import com.hazelcast.partition.MigrationState;
+import com.hazelcast.partition.ReplicaMigrationEvent;
 
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 
 public class MigrationWatcher {
     private final HazelcastInstance instance;
-    private final String membershipListenerReg;
-    private final String migrationListenerReg;
+    private final UUID membershipListenerReg;
+    private final UUID migrationListenerReg;
     private final AtomicInteger changeCount = new AtomicInteger();
 
     public MigrationWatcher(HazelcastInstance instance) {
@@ -54,10 +57,18 @@ public class MigrationWatcher {
         }
     }
 
-    private String registerMembershipListener(HazelcastInstance instance) {
+    private UUID registerMembershipListener(HazelcastInstance instance) {
         return instance.getCluster().addMembershipListener(new MembershipListener() {
             @Override
-            public void memberAdded(MembershipEvent membershipEvent) {
+            public void memberAdded(MembershipEvent event) {
+                Endpoint endpoint = instance.getLocalEndpoint();
+                if (endpoint != null && endpoint.getUuid() != null
+                        && endpoint.getUuid().equals(event.getMember().getUuid())) {
+                    // Ignore self. This listener is executed in an async way. When executing for the
+                    // local member, jobs can be already running before we get to increment the counter.
+                    // This solves the issue if there's just 1 member.
+                    return;
+                }
                 changeCount.incrementAndGet();
             }
 
@@ -72,21 +83,26 @@ public class MigrationWatcher {
         });
     }
 
-    private String registerMigrationListener(HazelcastInstance instance) {
+    private UUID registerMigrationListener(HazelcastInstance instance) {
         try {
             return instance.getPartitionService().addMigrationListener(new MigrationListener() {
                 @Override
-                public void migrationStarted(MigrationEvent migrationEvent) {
+                public void migrationStarted(MigrationState state) {
                     changeCount.incrementAndGet();
                 }
 
                 @Override
-                public void migrationCompleted(MigrationEvent migrationEvent) {
+                public void migrationFinished(MigrationState state) {
                     changeCount.incrementAndGet();
                 }
 
                 @Override
-                public void migrationFailed(MigrationEvent migrationEvent) {
+                public void replicaMigrationCompleted(ReplicaMigrationEvent event) {
+                    changeCount.incrementAndGet();
+                }
+
+                @Override
+                public void replicaMigrationFailed(ReplicaMigrationEvent event) {
                     changeCount.incrementAndGet();
                 }
             });

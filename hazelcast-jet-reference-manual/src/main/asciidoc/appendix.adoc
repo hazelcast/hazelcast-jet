@@ -75,7 +75,7 @@ newer PATCH version without losing the state of a running job.
 
 == Command Line Tools and Configuration Files
 
-The command line tools provided such as `jet.sh` and the configuration
+The command line tools provided such as `jet` and the configuration
 XML files are backwards-compatible between MINOR versions. This means
 that when upgrading a cluster to a new minor version, the XML configuration
 for the previous version can be used without any modification.
@@ -259,7 +259,7 @@ The following information is sent in a phone home:
 
 == Phone Home Code
 
-The phone home code itself is open source. Please see https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/main/java/com/hazelcast/util/PhoneHome.java[here].
+The phone home code itself is open source. Please see https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/main/java/com/hazelcast/internal/util/PhoneHome.java[here].
 
 == Disabling Phone Homes
 
@@ -327,7 +327,7 @@ apply.
 === picocli
 
 picocli is a command line parser which is used for the implementation of
-`jet.sh` command line tool.
+`jet` command line tool.
 
 picocli is distributed under the terms of the
 http://www.apache.org/licenses/LICENSE-2.0[Apache License 2].

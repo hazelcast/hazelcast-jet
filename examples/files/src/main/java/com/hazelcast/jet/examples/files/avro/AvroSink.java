@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.examples.files.avro;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.avro.AvroSinks;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 
@@ -72,7 +72,7 @@ public class AvroSink {
         jet = Jet.newJetInstance();
         Jet.newJetInstance();
 
-        IMapJet<String, User> map = jet.getMap(MAP_NAME);
+        IMap<String, User> map = jet.getMap(MAP_NAME);
         for (int i = 0; i < 100; i++) {
             User user = new User("User" + i, "pass" + i, i, i % 2 == 0);
             map.put(user.getUsername(), user);
