@@ -128,7 +128,7 @@ public class StreamJmsPTest extends JetTestSupport {
         StreamSource<Message> source = Sources.jmsTopicBuilder(StreamJmsPTest::getConnectionFactory)
                 // When
                 .destinationName("foo")
-                .sharedConsumer(false)
+                .sharedConsumer(true)
                 .build();
         ProcessorMetaSupplier metaSupplier =
                 ((StreamSourceTransform<Message>) source).metaSupplierFn.apply(noEventTime());
