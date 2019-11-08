@@ -362,7 +362,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
         private static String sanitize(String s) {
             if (s == null) {
-                return "null";
+                return "";
             }
             return s.replaceAll("[^\\p{Alnum}.\\-_$#/{}\\[\\]]", "_");
         }
