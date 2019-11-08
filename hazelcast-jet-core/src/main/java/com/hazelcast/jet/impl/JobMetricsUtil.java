@@ -18,17 +18,16 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.cluster.Member;
 import com.hazelcast.internal.metrics.MetricDescriptor;
-import com.hazelcast.internal.metrics.MetricTarget;
 import com.hazelcast.internal.metrics.managementcenter.Metric;
 import com.hazelcast.internal.metrics.managementcenter.MetricConsumer;
 import com.hazelcast.internal.metrics.managementcenter.MetricsCompressor;
+import com.hazelcast.internal.util.MapUtil;
 import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.core.metrics.Measurement;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 
 import javax.annotation.Nonnull;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
@@ -45,9 +44,6 @@ public final class JobMetricsUtil {
     }
 
     public static Long getExecutionIdFromMetricsDescriptor(MetricDescriptor descriptor) {
-        if (descriptor.isTargetExcluded(MetricTarget.JET_JOB)) {
-            return null;
-        }
         if (!MetricTags.EXECUTION.equals(descriptor.discriminator())) {
             return null;
         }
@@ -61,11 +57,10 @@ public final class JobMetricsUtil {
     }
 
     static JobMetrics toJobMetrics(List<RawJobMetrics> rawJobMetrics) {
-        MetricKeyValueConsumer consumer = new MetricKeyValueConsumer();
+        JobMetricsConsumer consumer = new JobMetricsConsumer();
         return JobMetrics.of(rawJobMetrics.stream()
-                                          .filter(r -> r.getBlob() != null)
-                                          .flatMap(r -> metricStream(r).map(metric ->
-                                                  toMeasurement(r.getTimestamp(), metric, consumer)))
+              .filter(r -> r.getBlob() != null)
+              .flatMap(r -> metricStream(r).map(m -> toMeasurement(r.getTimestamp(), m, consumer)))
         );
     }
 
@@ -78,28 +73,28 @@ public final class JobMetricsUtil {
         );
     }
 
-    private static Measurement toMeasurement(long timestamp, Metric metric, MetricKeyValueConsumer kvConsumer) {
+    private static Measurement toMeasurement(long timestamp, Metric metric, JobMetricsConsumer kvConsumer) {
         metric.provide(kvConsumer);
-        MetricDescriptor descriptor = kvConsumer.key;
-        Map<String, String> tags = new HashMap<>(descriptor.tagCount());
+        MetricDescriptor descriptor = kvConsumer.descriptor;
+        Map<String, String> tags = MapUtil.createHashMap(descriptor.tagCount());
         descriptor.readTags(tags::put);
-        return Measurement.of(kvConsumer.key.metric(), kvConsumer.value, timestamp, tags);
+        return Measurement.of(kvConsumer.descriptor.metric(), kvConsumer.value, timestamp, tags);
     }
 
-    private static class MetricKeyValueConsumer implements MetricConsumer {
+    private static class JobMetricsConsumer implements MetricConsumer {
 
-        MetricDescriptor key;
+        MetricDescriptor descriptor;
         long value;
 
         @Override
-        public void consumeLong(MetricDescriptor key, long value) {
-            this.key = key;
+        public void consumeLong(MetricDescriptor descriptor, long value) {
+            this.descriptor = descriptor;
             this.value = value;
         }
 
         @Override
-        public void consumeDouble(MetricDescriptor key, double value) {
-            this.key = key;
+        public void consumeDouble(MetricDescriptor descriptor, double value) {
+            this.descriptor = descriptor;
             this.value = (long) value;
         }
     }
