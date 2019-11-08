@@ -100,7 +100,6 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.partitioningBy;
 
 /**
@@ -119,7 +118,7 @@ public class MasterJobContext {
     private final ILogger logger;
     private final int defaultParallelism;
 
-    private volatile long executionStartTime = System.nanoTime();
+    private volatile long executionStartTime = System.currentTimeMillis();
     private volatile ExecutionFailureCallback executionFailureCallback;
     private volatile Set<Vertex> vertices;
     @Nonnull
@@ -181,7 +180,7 @@ public class MasterJobContext {
      */
     void tryStartJob(Supplier<Long> executionIdSupplier) {
         mc.coordinationService().submitToCoordinatorThread(() -> {
-            executionStartTime = System.nanoTime();
+            executionStartTime = System.currentTimeMillis();
             try {
                 JobExecutionRecord jobExecRec = mc.jobExecutionRecord();
                 jobExecRec.markExecuted();
@@ -681,18 +680,23 @@ public class MasterJobContext {
     }
 
     private boolean isSuccess(@Nullable Throwable failure) {
-        long elapsed = NANOSECONDS.toMillis(System.nanoTime() - executionStartTime);
         if (failure == null) {
-            logger.info(String.format("Execution of %s completed in %,d ms", mc.jobIdString(), elapsed));
+            logger.info(formatExecutionSummary("completed successfully"));
             return true;
         }
         if (failure instanceof CancellationException || failure instanceof JobTerminateRequestedException) {
-            logger.info(String.format("Execution of %s completed in %,d ms, reason=%s",
-                    mc.jobIdString(), elapsed, failure));
+            logger.info(formatExecutionSummary(String.format("got terminated, reason=%s", failure)));
             return false;
         }
-        logger.severe(String.format("Execution of %s failed after %,d ms", mc.jobIdString(), elapsed), failure);
+        logger.severe(formatExecutionSummary("failed"), failure);
         return false;
+    }
+
+    private String formatExecutionSummary(String conclusion) {
+        long executionEndTime = System.currentTimeMillis();
+        return String.format("Running %s %s", mc.jobIdString(), conclusion) +
+                "\n\t" + "Start time: " + Util.toLocalDateTime(executionStartTime) +
+                "\n\t" + "Duration: " + String.format("%,d ms", executionEndTime - executionStartTime);
     }
 
     private void logIgnoredCompletion(@Nullable Throwable failure, JobStatus status) {
