@@ -70,6 +70,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.IntStream.range;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class JmsIntegrationTest extends SimpleTestInClusterSupport {
@@ -79,6 +80,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     private static final int MESSAGE_COUNT = 100;
     private static final FunctionEx<Message, String> TEXT_MESSAGE_FN = m -> ((TextMessage) m).getText();
+    private static volatile List<Long> lastListInStressTest;
 
     private static int counter;
     private String destinationName = "dest" + counter++;
@@ -340,16 +342,17 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void stressTest_forceful() throws Exception {
-        stressTest(false);
+    public void xaStressTest_forceful() throws Exception {
+        xaStressTest(false);
     }
 
     @Test
-    public void stressTest_graceful() throws Exception {
-        stressTest(true);
+    public void xaStressTest_graceful() throws Exception {
+        xaStressTest(true);
     }
 
-    private void stressTest(boolean graceful) throws Exception {
+    private void xaStressTest(boolean graceful) throws Exception {
+        lastListInStressTest = null;
         JetInstance instance1 = createJetMember();
         createJetMember();
 
@@ -362,8 +365,9 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
          .peek()
-         .mapStateful(() -> (List<Long>) new ArrayList<Long>(),
+         .mapStateful(() -> new ArrayList<Long>(),
                  (list, item) -> {
+                     lastListInStressTest = list;
                      assert list.size() < MESSAGE_COUNT : "list size exceeded. List=" + list + ", item=" + item;
                      list.add(item);
                      return list.size() == MESSAGE_COUNT ? list : null;
@@ -385,23 +389,26 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                 long startTime = System.nanoTime();
                 for (int i = 0; i < MESSAGE_COUNT; i++) {
                     producer.send(session.createTextMessage(String.valueOf(i)));
-                    Thread.sleep(Math.max(0,
-                            Math.min(MESSAGE_COUNT, i) - NANOSECONDS.toMillis(System.nanoTime() - startTime)));
+                    Thread.sleep(Math.max(0, i - NANOSECONDS.toMillis(System.nanoTime() - startTime)));
                 }
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
         });
 
+        int i = 0;
         while (!producerFuture.isDone()) {
-            Thread.sleep(ThreadLocalRandom.current().nextInt(200));
+            // use longer delay before the first restart, to workaround https://issues.apache.org/jira/browse/ARTEMIS-2546
+            Thread.sleep(i++ == 0 ? 2000 : ThreadLocalRandom.current().nextInt(200));
             ((JobProxy) job).restart(graceful);
             assertJobStatusEventually(job, RUNNING);
         }
         producerFuture.get(); // call for the side-effect of throwing if the producer failed
 
-        // the list can contain the result multiple times, the sink isn't idempotent
-        assertTrueEventually(() -> assertGreaterOrEquals("size", sinkList.size(), 1), 30);
+        assertTrueEventually(() ->
+                assertFalse("the sink is empty, probably didn't receive enough items. Items: " + lastListInStressTest,
+                        sinkList.isEmpty()), 30);
+        // the list can contain the result multiple times, the sink isn't idempotent, we take the 1st
         List<Long> result = sinkList.get(0);
         assertEquals(
                 LongStream.range(0, MESSAGE_COUNT).mapToObj(Long::toString).collect(Collectors.joining("\n")),
