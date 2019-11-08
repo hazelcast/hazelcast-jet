@@ -52,6 +52,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -237,7 +238,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
             int actualCount = 0;
             for (;;) {
                 assertJobStatusEventually(job, RUNNING);
-                sleepMillis(100);
+                sleepMillis(ThreadLocalRandom.current().nextInt(200));
                 job.restart(graceful);
                 try {
                     ConsumerRecords<String, String> records;
