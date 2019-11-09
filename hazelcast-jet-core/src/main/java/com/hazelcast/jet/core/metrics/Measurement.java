@@ -96,7 +96,7 @@ public final class Measurement implements IdentifiedDataSerializable {
     }
 
     /**
-     * Returns the ame of the metric. For a list of different metrics
+     * Returns the name of the metric. For a list of different metrics
      * see {@link MetricNames}.
      */
     @Nonnull
