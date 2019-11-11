@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.collection.IList;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
@@ -27,6 +28,7 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobProxy;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -50,14 +52,16 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+import javax.jms.XAConnection;
+import javax.jms.XAConnectionFactory;
+import javax.jms.XASession;
+import javax.transaction.xa.XAResource;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -74,7 +78,12 @@ import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
@@ -408,26 +417,43 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_emptyTransaction_then_notCommittedInPhase2() throws Exception {
+    public void when_emptyTransaction_then_notCommittedInPhase2() {
+        SupplierEx<ConnectionFactory> mockSupplier = () -> {
+            XAConnectionFactory mockConnectionFactory = mock(XAConnectionFactory.class,
+                    withSettings().extraInterfaces(ConnectionFactory.class));
+            XAConnection mockConn = mock(XAConnection.class);
+            XASession mockSession = mock(XASession.class);
+            XAResource mockResource = mock(XAResource.class);
+            MessageConsumer mockConsumer = mock(MessageConsumer.class);
+            when(mockConnectionFactory.createXAConnection(null, null)).thenReturn(mockConn);
+            when(mockConn.createXASession()).thenReturn(mockSession);
+            when(mockSession.getXAResource()).thenReturn(mockResource);
+            when(mockSession.createConsumer(any())).thenReturn(mockConsumer);
+            // When
+            when(mockResource.prepare(any())).thenReturn(XAResource.XA_RDONLY);
+            // Then
+            doThrow(new AssertionError("commit should not have been called")).when(mockResource).commit(any(), anyBoolean());
+
+            return (ConnectionFactory) mockConnectionFactory;
+        };
+
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.jmsQueueBuilder(() -> getConnectionFactory(true))
-                .destinationName(destinationName)
-                .build())
+        p.drawFrom(Sources.jmsQueueBuilder(mockSupplier)
+                          .destinationName(destinationName)
+                          .build())
          .withoutTimestamps()
          .drainTo(Sinks.logger());
 
-        job = instance().newJob(p, new JobConfig()
+        Job job = instance().newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(100));
 
-        // Then
-        // We can't assert that it's not committed. We just assert that even if the source
-        // doesn't consume anything and is doing snapshots, it doesn't fail.
-        try {
-            job.getFuture().get(3, TimeUnit.SECONDS);
-            fail();
-        } catch (TimeoutException expected) {
-        }
+        JobRepository jr = new JobRepository(instance());
+        waitForFirstSnapshot(jr, job.getId(), 10, true);
+        // wait for the 2nd snapshot because we commit in the 2nd phase and the snapshot is
+        // successful after the 1st phase
+        waitForNextSnapshot(jr, job.getId(), 10, true);
+        assertEquals(RUNNING, job.getStatus());
     }
 
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
