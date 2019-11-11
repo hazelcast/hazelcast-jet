@@ -20,6 +20,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -41,27 +42,45 @@ public final class KafkaSinks {
     }
 
     /**
-     * Returns a source that publishes messages to an Apache Kafka topic.
-     * It transforms each received item to a {@code ProducerRecord} using the
+     * Returns a source that publishes messages to Apache Kafka topic(s). It
+     * transforms each received item to a {@code ProducerRecord} using the
      * supplied mapping function.
      * <p>
-     * The source creates a single {@code KafkaProducer} per cluster
-     * member using the supplied {@code properties}.
+     * The source creates a single {@code KafkaProducer} per processor using
+     * the supplied {@code properties}.
      * <p>
-     * Behavior on job restart: the processor is stateless. On snapshot we only
-     * make sure that all async operations are done. If the job is restarted,
-     * duplicate events can occur. If you need exactly-once behavior, you must
-     * ensure idempotence on the application level.
+     * The behavior depends on the job's processing guarantee:
+     * <ul>
+     *     <li><em>EXACTLY_ONCE:</em> the source will use Kafka transactions to
+     *     commit the messages. This brings some overhead on the broker side,
+     *     slight throughput reduction (we don't send messages between snapshot
+     *     phases) and, most importantly, increases the latency of the messages
+     *     because they are only visible to consumers after they are committed.
+     *     <p>
+     *     When using transactions pay attention to your {@code
+     *     transaction.timeout.ms} config property. It limits the entire
+     *     duration of the transaction since it is begun, not just inactivity
+     *     timeout. It must not be smaller than your snapshot interval,
+     *     otherwise the Kafka broker will roll the transaction back before Jet
+     *     is done with it. Also it should be large enough so that Jet has time
+     *     to restart after a failure: a member can crash just before it's
+     *     about to commit, and Jet will attempt to commit the transaction
+     *     after the restart, but the transaction must be still waiting in the
+     *     broker.
+     *
+     *     <li><em>AT_LEAST_ONCE:</em> the source will flush the messages at
+     *     1st snapshot phase. This ensures that each message is written if the
+     *     job fails, but might be written again after the job restarts.
+     * </ul>
+     *
+     * If you want to avoid the overhead of transactions, you can reduce the
+     * guarantee just for the sink. To do so, use the builder version and call
+     * {@link Builder#exactlyOnce(boolean) exactlyOnce(false)} on the builder.
      * <p>
      * IO failures are generally handled by Kafka producer and do not cause the
      * processor to fail. Refer to Kafka documentation for details.
      * <p>
-     * Default local parallelism for this processor is 2 (or less if less CPUs
-     * are available).
-     *
-     * TODO [viliam] document exactly-once behavior. Document also:
-     *  - the txn timeout and possible loss of data
-     *  - the overhead of transactions, greater latency
+     * Default local parallelism for this processor is 1.
      *
      * @param properties     producer properties which should contain broker
      *                       address and key/value serializers
@@ -76,7 +95,7 @@ public final class KafkaSinks {
             @Nonnull Properties properties,
             @Nonnull FunctionEx<? super E, ProducerRecord<K, V>> toRecordFn
     ) {
-        // TODO [viliam] default for exactlyOnce?
+        // TODO [viliam] what should be the default for exactlyOnce?
         return Sinks.fromProcessor("writeKafka", writeKafkaP(properties, toRecordFn, true));
     }
 
@@ -122,10 +141,48 @@ public final class KafkaSinks {
     }
 
     /**
-     * TODO [viliam]
-     * @param properties
-     * @param <E>
-     * @return
+     * Returns a builder object that you can use to create an Apache Kafka
+     * pipeline source.
+     * <p>
+     * The source creates a single {@code KafkaProducer} per processor using
+     * the supplied {@code properties}.
+     * <p>
+     * The behavior depends on the job's processing guarantee:
+     * <ul>
+     *     <li><em>EXACTLY_ONCE:</em> the source will use Kafka transactions to
+     *     commit the messages. This brings some overhead on the broker side,
+     *     slight throughput reduction (we don't send messages between snapshot
+     *     phases) and, most importantly, increases the latency of the messages
+     *     because they are only visible to consumers after they are committed.
+     *     <p>
+     *     When using transactions pay attention to your {@code
+     *     transaction.timeout.ms} config property. It limits the entire
+     *     duration of the transaction since it is begun, not just inactivity
+     *     timeout. It must not be smaller than your snapshot interval,
+     *     otherwise the Kafka broker will roll the transaction back before Jet
+     *     is done with it. Also it should be large enough so that Jet has time
+     *     to restart after a failure: a member can crash just before it's
+     *     about to commit, and Jet will attempt to commit the transaction
+     *     after the restart, but the transaction must be still waiting in the
+     *     broker.
+     *
+     *     <li><em>AT_LEAST_ONCE:</em> the source will flush the messages at
+     *     1st snapshot phase. This ensures that each message is written if the
+     *     job fails, but might be written again after the job restarts.
+     * </ul>
+     *
+     * If you want to avoid the overhead of transactions, you can reduce the
+     * guarantee just for the sink by calling {@link
+     * Builder#exactlyOnce(boolean) exactlyOnce(false)}.
+     * <p>
+     * IO failures are generally handled by Kafka producer and do not cause the
+     * processor to fail. Refer to Kafka documentation for details.
+     * <p>
+     * Default local parallelism for this processor is 1.
+     *
+     * @param properties     producer properties which should contain broker
+     *                       address and key/value serializers
+     * @param <E> type of stream item
      */
     @Nonnull
     public static <E> Builder<E> kafka(@Nonnull Properties properties) {
@@ -133,8 +190,9 @@ public final class KafkaSinks {
     }
 
     /**
-     * TODO [viliam]
-     * @param <E>
+     * A builder for Kafka sink.
+     *
+     * @param <E> type of stream item
      */
     public static final class Builder<E> {
 
@@ -150,8 +208,67 @@ public final class KafkaSinks {
         }
 
         /**
-         * TODO [viliam]
-         * @param toRecordFn a function to convert sunk items into Kafka's
+         * Sets the topic to write the messages to, if you write all messages
+         * to a single topic. If you write each message to a different topic,
+         * use {@link #toRecordFn(FunctionEx)}. If you call this method, you
+         * can't call the {@code toRecordFn()} method.
+         *
+         * @param topic the topic name
+         * @return this instance for fluent API
+         */
+        public Builder<E> topic(String topic) {
+            if (toRecordFn != null) {
+                throw new IllegalArgumentException("toRecordFn already set, you can't use topic if it's set");
+            }
+            this.topic = topic;
+            return this;
+        }
+
+        /**
+         * Sets the function to extract the key from the stream items. You
+         * can't use this method in combination with {@link
+         * #toRecordFn(FunctionEx)}.
+         * <p>
+         * The default is to use {@code null} key.
+         *
+         * @param extractKeyFn a function to extract the key from the stream item
+         * @return this instance for fluent API
+         */
+        public Builder<E> extractKeyFn(@Nonnull FunctionEx<? super E, ?> extractKeyFn) {
+            if (toRecordFn != null) {
+                throw new IllegalArgumentException("toRecordFn already set, you can't use extractKeyFn if it's set");
+            }
+            this.extractKeyFn = extractKeyFn;
+            return this;
+        }
+
+        /**
+         * Sets the function to extract the value from the stream items. You
+         * can't use this method in combination with {@link
+         * #toRecordFn(FunctionEx)}.
+         * <p>
+         * The default is to use the input item directly.
+         *
+         * @param extractValueFn a function to extract the value from the stream item
+         * @return this instance for fluent API
+         */
+        public Builder<E> extractValueFn(@Nonnull FunctionEx<? super E, ?> extractValueFn) {
+            if (toRecordFn != null) {
+                throw new IllegalArgumentException("toRecordFn already set, you can't use extractValueFn if it's set");
+            }
+            this.extractValueFn = extractValueFn;
+            return this;
+        }
+
+        /**
+         * Sets the function to convert stream items into Kafka's {@code
+         * ProducerRecord}. This method allows you to specify all aspects of
+         * the record (different topic for each message, partition,
+         * timestamp...). If you use this method, you can't use {@link
+         * #topic(String)}, {@link #extractKeyFn(FunctionEx)} or {@link
+         * #extractValueFn(FunctionEx)}.
+         *
+         * @param toRecordFn a function to convert stream items into Kafka's
          *      {@code ProducerRecord}
          * @return this instance for fluent API
          */
@@ -166,49 +283,6 @@ public final class KafkaSinks {
         }
 
         /**
-         * TODO [viliam]
-         * @param topic the topic name
-         * @return this instance for fluent API
-         */
-        public Builder<E> topic(String topic) {
-            if (toRecordFn != null) {
-                throw new IllegalArgumentException("toRecordFn already set, you can't use topic if it's set");
-            }
-            this.topic = topic;
-            return this;
-        }
-
-        /**
-         * TODO [viliam]
-         * The default is to use {@code null} key.
-         *
-         * @param extractKeyFn a function to extract the key from the sunk item
-         * @return this instance for fluent API
-         */
-        public Builder<E> extractKeyFn(@Nonnull FunctionEx<? super E, ?> extractKeyFn) {
-            if (toRecordFn != null) {
-                throw new IllegalArgumentException("toRecordFn already set, you can't use extractKeyFn if it's set");
-            }
-            this.extractKeyFn = extractKeyFn;
-            return this;
-        }
-
-        /**
-         * TODO [viliam]
-         * The default is to use the input item directly.
-         *
-         * @param extractValueFn a function to extract the value from the sunk item
-         * @return this instance for fluent API
-         */
-        public Builder<E> extractValueFn(@Nonnull FunctionEx<? super E, ?> extractValueFn) {
-            if (toRecordFn != null) {
-                throw new IllegalArgumentException("toRecordFn already set, you can't use extractValueFn if it's set");
-            }
-            this.extractValueFn = extractValueFn;
-            return this;
-        }
-
-        /**
          * Enables or disables the exactly-once behavior of the sink using
          * two-phase commit of state snapshots. If enabled, the {@linkplain
          * JobConfig#setProcessingGuarantee(ProcessingGuarantee) processing
@@ -218,23 +292,7 @@ public final class KafkaSinks {
          * guarantee cannot be higher than job's, but can be lower to avoid the
          * additional overhead.
          * <p>
-         * Exactly-once behavior is achieved using Kafka transactions. Records
-         * will be only committed after a successful snapshot was done. If a
-         * read-committed consumer is used, it will see the records with much
-         * higher latency depending on the snapshot interval. The throughput is
-         * also very slightly limited because while waiting for all the members
-         * doing the snapshot, no more items can be produced to Kafka.
-         * <p>
-         * When using transactions pay attention to your {@code
-         * transaction.timeout.ms} config property. It limits the entire
-         * duration of the transaction since it is begun, not just inactivity
-         * timeout. It must not be smaller than your snapshot interval,
-         * otherwise the Kafka broker will roll back the transaction before Jet
-         * is done with it. Also it should be large enough so that Jet has time
-         * to restart after a failure: a member can crash just before it's
-         * about to commit, and Jet will attempt to commit the transaction
-         * after the restart, but the transaction must be still waiting in the
-         * broker.
+         * See {@link #kafka(Properties)} for more information.
          * <p>
          * The default value is true.
          *
@@ -249,8 +307,8 @@ public final class KafkaSinks {
         }
 
         /**
-         * TODO [viliam]
-         * @return this instance for fluent API
+         * Builds the Sink object that you pass to the {@link
+         * GeneralStage#drainTo(Sink)} method.
          */
         public Sink<E> build() {
             if ((extractValueFn != null || extractKeyFn != null) && topic == null) {
