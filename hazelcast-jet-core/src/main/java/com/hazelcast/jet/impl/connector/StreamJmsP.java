@@ -24,7 +24,6 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.AbstractProcessor;
-import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
@@ -50,7 +49,6 @@ import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
 import java.nio.charset.StandardCharsets;
 
-import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
@@ -250,12 +248,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
         return snapshotUtility.onSnapshotCompleted(commitTransactions);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        // TODO [viliam] remove casting here
-        // TODO [viliam] we must use the other transaction than the one we restored!!
-        snapshotUtility.restoreFromSnapshot(entry((BroadcastKey<JmsTransactionId>) key, (Boolean) value));
+        snapshotUtility.restoreFromSnapshot(key, value);
     }
 
     @Override
@@ -339,6 +334,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         private final XASession session;
         private final JmsTransactionId txnId;
+        private boolean readOnlyInPrepare;
 
         JmsXATransaction(XASession session, JmsTransactionId txnId) {
             this.session = session;
@@ -352,7 +348,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void beginTransaction() throws Exception {
-            LoggingUtil.logFine(getLogger(), "start, %s", txnId); // TODO [viliam] use finest
+            LoggingUtil.logFine(getLogger(), "start, %s", txnId);
             try {
                 session.getXAResource().start(txnId, XAResource.TMNOFLAGS);
             } catch (XAException e) {
@@ -362,7 +358,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void prepare() throws Exception {
-            LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId); // TODO [viliam] use finest
+            LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId);
             try {
                 session.getXAResource().end(txnId, XAResource.TMSUCCESS);
                 int res = session.getXAResource().prepare(txnId);
@@ -370,7 +366,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                     // According to X/Open Distributed Transaction Specification, if prepare
                     // returns XA_RDONLY, the transactions is non-existent afterwards. There's
                     // no need to call commit and the commit can even fail
-                    // TODO [viliam] ensure that we don't call the commit
+                    readOnlyInPrepare = true;
                 }
             } catch (XAException e) {
                 throw handleXAException(e, txnId);
@@ -379,9 +375,14 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void commit() throws Exception {
-            LoggingUtil.logFine(getLogger(), "commit, %s",  txnId); // TODO [viliam] use finest
             try {
-                session.getXAResource().commit(txnId, false);
+                if (readOnlyInPrepare) {
+                    readOnlyInPrepare = false;
+                    LoggingUtil.logFine(getLogger(), "commit ignored, transaction returned XA_RDONLY in prepare, %s",  txnId);
+                } else {
+                    LoggingUtil.logFine(getLogger(), "commit, %s",  txnId);
+                    session.getXAResource().commit(txnId, false);
+                }
             } catch (XAException e) {
                 throw handleXAException(e, txnId);
             }
@@ -417,7 +418,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void commit() throws Exception {
-            getLogger().fine("commit"); // TODO [viliam] use finest
+            getLogger().fine("commit");
             session.commit();
         }
 
@@ -426,11 +427,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
     }
 
-    // TODO [viliam] can we provide some generic no-transaction?
     private static final class JmsNoTransaction implements TransactionalResource<JmsTransactionId> {
 
-        private JmsNoTransaction() {
-        }
+        private JmsNoTransaction() { }
 
         @Override
         public JmsTransactionId id() {

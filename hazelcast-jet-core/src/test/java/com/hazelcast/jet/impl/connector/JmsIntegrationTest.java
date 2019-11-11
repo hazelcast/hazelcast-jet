@@ -56,6 +56,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -72,6 +74,7 @@ import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
@@ -113,8 +116,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         List<Object> messages = sendMessages(true);
         assertEqualsEventually(sinkList::size, messages.size());
         assertContainsAll(sinkList, messages);
-
-        cancelJob();
     }
 
     @Test
@@ -125,13 +126,19 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
          .writeTo(Sinks.list(sinkList));
 
         startJob(true);
-        sleepSeconds(1);
+        waitForTopicConsumption();
 
         List<Object> messages = sendMessages(false);
-        assertEqualsEventually(sinkList::size, MESSAGE_COUNT);
-        assertContainsAll(sinkList, messages);
+        assertTrueEventually(() -> assertContainsAll(sinkList, messages));
+    }
 
-        cancelJob();
+    private void waitForTopicConsumption() {
+        // the source starts consuming messages some time after the job is running. Send some
+        // messages first until we see they're consumed
+        assertTrueEventually(() -> {
+            sendMessages(false, 1);
+            assertFalse("nothing in sink", sinkList.isEmpty());
+        });
     }
 
     @Test
@@ -181,8 +188,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         List<Object> messages = sendMessages(true);
         assertEqualsEventually(sinkList::size, messages.size());
         assertContainsAll(sinkList, messages);
-
-        cancelJob();
     }
 
     @Test
@@ -200,8 +205,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         List<Object> messages = sendMessages(true);
         assertEqualsEventually(sinkList::size, messages.size());
         assertContainsAll(sinkList, messages);
-
-        cancelJob();
     }
 
     @Test
@@ -214,28 +217,20 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
          .writeTo(Sinks.list(sinkList));
 
         startJob(true);
+        waitForTopicConsumption();
         sendMessages(false);
-        // sleep some time and emit a flushing message, that won't make it to the output, because
-        // the messages with the highest timestamp are not emitted
-        sleepMillis(500);
-        sendMessages(false, 1);
 
         assertTrueEventually(() -> {
-            long countSum = sinkList.stream().mapToLong(o -> ((WindowResult<Long>) o).result()).sum();
-            assertEquals(MESSAGE_COUNT, countSum);
-
             // There's no way to see the JetEvent's timestamp by the user code. In order to check
             // the native timestamp, we aggregate the events into tumbling(1) windows and check
             // the timestamps of the windows: we assert that it is around the current time.
             long avgTime = (long) sinkList.stream().mapToLong(o -> ((WindowResult<Long>) o).end())
                                           .average().orElse(0);
-            long tenMinutes = MINUTES.toMillis(1);
+            long oneMinute = MINUTES.toMillis(1);
             long now = System.currentTimeMillis();
             assertTrue("Time too much off: " + Instant.ofEpochMilli(avgTime).atZone(ZoneId.systemDefault()),
-                    avgTime > now - tenMinutes && avgTime < now + tenMinutes);
+                    avgTime > now - oneMinute && avgTime < now + oneMinute);
         }, 10);
-
-        cancelJob();
     }
 
     @Test
@@ -247,13 +242,10 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(source).withoutTimestamps().writeTo(Sinks.list(sinkList));
 
         startJob(true);
-        sleepSeconds(1);
+        waitForTopicConsumption();
 
         List<Object> messages = sendMessages(false);
-        assertEqualsEventually(sinkList::size, messages.size());
-        assertContainsAll(sinkList, messages);
-
-        cancelJob();
+        assertTrueEventually(() -> assertContainsAll(sinkList, messages));
     }
 
     @Test
@@ -416,8 +408,26 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_emptyTransaction_then_notCommittedInPhase2() {
-        // TODO [viliam]
+    public void when_emptyTransaction_then_notCommittedInPhase2() throws Exception {
+        Pipeline p = Pipeline.create();
+        p.drawFrom(Sources.jmsQueueBuilder(() -> getConnectionFactory(true))
+                .destinationName(destinationName)
+                .build())
+         .withoutTimestamps()
+         .drainTo(Sinks.logger());
+
+        job = instance().newJob(p, new JobConfig()
+                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setSnapshotIntervalMillis(100));
+
+        // Then
+        // We can't assert that it's not committed. We just assert that even if the source
+        // doesn't consume anything and is doing snapshots, it doesn't fail.
+        try {
+            job.getFuture().get(3, TimeUnit.SECONDS);
+            fail();
+        } catch (TimeoutException expected) {
+        }
     }
 
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
@@ -460,11 +470,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         if (waitForRunning) {
             assertJobStatusEventually(job, JobStatus.RUNNING, 10);
         }
-    }
-
-    private void cancelJob() {
-        job.cancel();
-        assertJobStatusEventually(job, JobStatus.FAILED, 10);
     }
 
     private static ConnectionFactory getConnectionFactory(boolean xa) {

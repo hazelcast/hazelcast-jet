@@ -30,7 +30,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
@@ -195,9 +194,10 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     }
 
     @Override
-    public void restoreFromSnapshot(@Nonnull Entry<BroadcastKey<TXN_ID>, Boolean> snapshotEntry) {
+    public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         assert !transactionBegun : "transaction already begun";
-        TXN_ID txnId = snapshotEntry.getKey().key();
+        @SuppressWarnings("unchecked")
+        TXN_ID txnId = ((BroadcastKey<TXN_ID>)key).key();
         if (externalGuarantee() == EXACTLY_ONCE
                 && txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
             if (transactionIds.get(0).equals(txnId)) {
