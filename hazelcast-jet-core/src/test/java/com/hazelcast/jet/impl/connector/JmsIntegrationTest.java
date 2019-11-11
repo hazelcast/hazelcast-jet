@@ -415,6 +415,11 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                 result.stream().sorted().map(Object::toString).collect(Collectors.joining("\n")));
     }
 
+    @Test
+    public void when_emptyTransaction_then_notCommittedInPhase2() {
+        // TODO [viliam]
+    }
+
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
         ConnectionFactory connectionFactory = getConnectionFactory(false);
         Connection connection = connectionFactory.createConnection();
@@ -441,6 +446,10 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         return sendMessages(isQueue, MESSAGE_COUNT);
     }
 
+    private List<Object> sendMessages(boolean isQueue, int messageCount) throws JMSException {
+        return JmsTestUtil.sendMessages(getConnectionFactory(false), destinationName, isQueue, messageCount);
+    }
+
     private void populateList() {
         range(0, MESSAGE_COUNT).mapToObj(i -> randomString()).forEach(srcList::add);
     }
@@ -456,23 +465,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     private void cancelJob() {
         job.cancel();
         assertJobStatusEventually(job, JobStatus.FAILED, 10);
-    }
-
-    private List<Object> sendMessages(boolean isQueue, int count) throws JMSException {
-        try (
-                Connection conn = getConnectionFactory(false).createConnection();
-                Session session = conn.createSession(false, AUTO_ACKNOWLEDGE);
-                MessageProducer producer = session.createProducer(
-                        isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName));
-        ) {
-            List<Object> res = new ArrayList<>(count);
-            for (int i = 0; i < count; i++) {
-                String message = randomString();
-                producer.send(session.createTextMessage(message));
-                res.add(message);
-            }
-            return res;
-        }
     }
 
     private static ConnectionFactory getConnectionFactory(boolean xa) {

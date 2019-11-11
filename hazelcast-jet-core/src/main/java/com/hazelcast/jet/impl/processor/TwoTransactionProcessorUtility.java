@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.Collections.singletonList;
@@ -95,6 +96,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
             return null;
         }
         if (transactions == null) {
+            rollbackOtherTransactions();
             if (transactionsReleased) {
                 throw new IllegalStateException("transactions already released");
             }
@@ -114,6 +116,24 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
             }
         }
         return activeTransaction;
+    }
+
+    private void rollbackOtherTransactions() {
+        if (externalGuarantee() == NONE) {
+            return;
+        }
+        // If a member is removed or the local parallelism is reduced, the transactions
+        // with higher processor index won't be used. We need to roll them back.
+        // We probe transaction IDs beyond those of the current execution, up to 5x
+        // (the TXN_PROBING_FACTOR) of the current total parallelism. We only roll
+        // back "our" transactions, that is those where index%parallelism = ourIndex
+        for (
+                int index = procContext().totalParallelism() + procContext().globalProcessorIndex();
+                index < procContext().totalParallelism() * TXN_PROBING_FACTOR;
+                index += procContext().totalParallelism()
+        ) {
+            recoverAndAbortFn().accept(index);
+        }
     }
 
     @Override
@@ -195,15 +215,6 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     @Override
     public boolean finishSnapshotRestore() {
-        // Rollback other transactions. We do this by probing transaction IDs beyond those of the
-        // current execution, up to 5x of the current member count.
-        for (
-                int index = procContext().globalProcessorIndex() + procContext().totalParallelism();
-                index < procContext().totalParallelism() * TXN_PROBING_FACTOR;
-                index += procContext().totalParallelism()
-        ) {
-            recoverAndAbortFn().accept(index);
-        }
         return true;
     }
 

@@ -174,6 +174,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
     }
 
     private void recoverTransaction(Xid xid, boolean commit) throws InterruptedException {
+        if (!(session instanceof XASession)) {
+            return;
+        }
         XASession session = (XASession) this.session;
         if (commit) {
             for (;;) {
