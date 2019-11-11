@@ -35,6 +35,7 @@ import java.util.Queue;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
@@ -54,6 +55,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     private TXN activeTransaction;
     private final Map<TXN_ID, TXN> pendingTransactions = new LinkedHashMap<>();
     private final Queue<TXN_ID> snapshotQueue = new ArrayDeque<>();
+    private boolean initialized;
     private boolean waitingForPhase2;
 
     /**
@@ -90,6 +92,14 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     @Nonnull @Override
     public TXN activeTransaction() {
         if (activeTransaction == null) {
+            if (!initialized && externalGuarantee() != NONE) {
+                initialized = true;
+                try {
+                    abortUnfinishedTransactions.run();
+                } catch (Exception e) {
+                    throw sneakyThrow(e);
+                }
+            }
             activeTransaction = createTxnFn().apply(createTxnIdFn.get());
             if (externalGuarantee() == EXACTLY_ONCE) {
                 try {
@@ -214,16 +224,6 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
         if (txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
             recoverAndCommitFn().accept(txnId);
         }
-    }
-
-    @Override
-    public boolean finishSnapshotRestore() {
-        try {
-            abortUnfinishedTransactions.run();
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
-        return true;
     }
 
     @Override

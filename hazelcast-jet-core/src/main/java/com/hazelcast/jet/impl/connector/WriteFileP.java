@@ -173,11 +173,6 @@ public final class WriteFileP<T> implements Processor {
         utility.restoreFromSnapshot(inbox);
     }
 
-    @Override
-    public boolean finishSnapshotRestore() {
-        return utility.finishSnapshotRestore();
-    }
-
     private FileId newFileName() {
         StringBuilder sb = new StringBuilder();
         if (dateFormatter != null) {
@@ -309,14 +304,14 @@ public final class WriteFileP<T> implements Processor {
 
         @Override
         public void prepare() throws IOException {
-            context.logger().info("aaa prepare " + id());
+            context.logger().info("aaa prepare " + id().fileName);
             release();
         }
 
         @Override
         public void release() throws IOException {
             if (writer != null) {
-                context.logger().info("aaa release (maybe prepare?) " + id());
+                context.logger().info("aaa release (maybe prepare?) " + id().fileName);
                 writer.close();
                 writer = null;
             }
