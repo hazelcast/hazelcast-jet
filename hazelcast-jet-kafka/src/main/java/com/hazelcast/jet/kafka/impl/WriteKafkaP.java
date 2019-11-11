@@ -173,11 +173,6 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     }
 
     @Override
-    public boolean finishSnapshotRestore() {
-        return snapshotUtility.finishSnapshotRestore();
-    }
-
-    @Override
     public boolean isCooperative() {
         return false;
     }

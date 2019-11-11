@@ -259,11 +259,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
     }
 
     @Override
-    public boolean finishSnapshotRestore() {
-        return snapshotUtility.finishSnapshotRestore();
-    }
-
-    @Override
     public void close() throws Exception {
         if (snapshotUtility != null) {
             snapshotUtility.close();

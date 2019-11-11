@@ -27,10 +27,11 @@ import java.util.List;
 import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
-class JmsTestUtil {
+final class JmsTestUtil {
+    private JmsTestUtil() { }
+
     static List<Object> sendMessages(ConnectionFactory cf, String destinationName, boolean isQueue, int count)
-            throws JMSException
-    {
+            throws JMSException {
         try (
                 Connection conn = cf.createConnection();
                 Session session = conn.createSession(false, AUTO_ACKNOWLEDGE);

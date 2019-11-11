@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.collection.IList;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -59,7 +58,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
          .withoutTimestamps()
          .drainTo(Sinks.list(sinkList));
 
-        Job job = instance1.newJob(p, new JobConfig()
+        instance1.newJob(p, new JobConfig()
                 .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(DAYS.toMillis(1)));
 
@@ -70,7 +69,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
         // messages will be stalled in the unfinished transaction until it is rolled back by Artemis
         // after the default 5 minutes.
         instance2.getHazelcastInstance().getLifecycleService().terminate();
-        assertTrueEventually(() -> assertEquals("items should be emitted twice", messageCount * 2, sinkList.size()), 3); // TODO [viliam] longer timeout
+        assertTrueEventually(() -> assertEquals("items should be emitted twice", messageCount * 2, sinkList.size()), 20);
     }
 
     private static ConnectionFactory getConnectionFactory(boolean xa) {

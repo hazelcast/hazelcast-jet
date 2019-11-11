@@ -214,11 +214,6 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     }
 
     @Override
-    public boolean finishSnapshotRestore() {
-        return true;
-    }
-
-    @Override
     public void close() {
         doRelease();
     }
