@@ -378,7 +378,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
             try {
                 if (readOnlyInPrepare) {
                     readOnlyInPrepare = false;
-                    LoggingUtil.logFine(getLogger(), "commit ignored, transaction returned XA_RDONLY in prepare, %s",  txnId);
+                    LoggingUtil.logFine(getLogger(), "commit ignored, transaction returned XA_RDONLY in prepare, %s",
+                            txnId);
                 } else {
                     LoggingUtil.logFine(getLogger(), "commit, %s",  txnId);
                     session.getXAResource().commit(txnId, false);

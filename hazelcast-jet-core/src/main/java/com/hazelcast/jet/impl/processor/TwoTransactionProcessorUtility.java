@@ -197,7 +197,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         assert !transactionBegun : "transaction already begun";
         @SuppressWarnings("unchecked")
-        TXN_ID txnId = ((BroadcastKey<TXN_ID>)key).key();
+        TXN_ID txnId = ((BroadcastKey<TXN_ID>) key).key();
         if (externalGuarantee() == EXACTLY_ONCE
                 && txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
             if (transactionIds.get(0).equals(txnId)) {
