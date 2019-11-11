@@ -147,14 +147,6 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     public abstract void restoreFromSnapshot(@Nonnull Entry<BroadcastKey<TXN_ID>, Boolean> snapshotEntry);
 
     /**
-     * Delegate handling of {@link Processor#finishSnapshotRestore()} to this
-     * method.
-     *
-     * @return value to return from {@code finishSnapshotRestore()}
-     */
-    public abstract boolean finishSnapshotRestore();
-
-    /**
      * Call from {@link Processor#close()}.
      *
      * The implementation must not commit or rollback any pending transactions
