@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -124,27 +125,29 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      * Delegate handling of {@link Processor#restoreFromSnapshot(Inbox)} to
      * this method. If you save custom items to snapshot besides those saved by
      * {@link #saveToSnapshot()} of this utility, use {@link
-     * #restoreFromSnapshot(Entry)} to pass only entries not handled by your
-     * processor.
+     * #restoreFromSnapshot(Object, Object)} to pass only entries not handled
+     * by your processor.
      *
-     * @param inbox the inbox passed to {@code restoreFromSnapshot()}
+     * @param inbox the inbox passed to {@code Processor.restoreFromSnapshot()}
      */
     @SuppressWarnings("unchecked")
     public void restoreFromSnapshot(@Nonnull Inbox inbox) {
         for (Object item; (item = inbox.poll()) != null; ) {
-            restoreFromSnapshot((Entry<BroadcastKey<TXN_ID>, Boolean>) item);
+            Entry<BroadcastKey<TXN_ID>, Boolean> castedItem = (Entry<BroadcastKey<TXN_ID>, Boolean>) item;
+            restoreFromSnapshot(castedItem.getKey(), castedItem.getValue());
         }
     }
 
     /**
-     * Delegate handling of {@link Processor#restoreFromSnapshot(Inbox)} to
-     * this method.
+     * Delegate handling of {@link
+     * AbstractProcessor#restoreFromSnapshot(Object, Object)} to this method.
      * <p>
      * See also {@link #restoreFromSnapshot(Inbox)}.
      *
-     * @param snapshotEntry an entry from the inbox
+     * @param key a key from the snapshot
+     * @param value a value from the snapshot
      */
-    public abstract void restoreFromSnapshot(@Nonnull Entry<BroadcastKey<TXN_ID>, Boolean> snapshotEntry);
+    public abstract void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value);
 
     /**
      * Call from {@link Processor#close()}.
