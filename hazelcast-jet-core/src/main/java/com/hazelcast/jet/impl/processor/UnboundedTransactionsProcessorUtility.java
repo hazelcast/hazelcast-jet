@@ -30,7 +30,6 @@ import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.function.Supplier;
 
@@ -219,8 +218,9 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     }
 
     @Override
-    public void restoreFromSnapshot(@Nonnull Entry<BroadcastKey<TXN_ID>, Boolean> snapshotEntry) {
-        TXN_ID txnId = snapshotEntry.getKey().key();
+    public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        @SuppressWarnings("unchecked")
+        TXN_ID txnId = ((BroadcastKey<TXN_ID>) key).key();
         if (txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
             recoverAndCommitFn().accept(txnId);
         }
