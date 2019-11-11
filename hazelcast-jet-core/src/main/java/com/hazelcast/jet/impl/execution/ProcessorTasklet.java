@@ -259,10 +259,8 @@ public class ProcessorTasklet implements Tasklet {
 
             case NULLARY_TRY_PROCESS:
                 if (isSnapshotInbox() || processor.tryProcess()) {
-                    assert !outbox.hasUnfinishedItem() : isSnapshotInbox()
-                            ? "Unfinished item before fillInbox call"
-                            : "Processor.tryProcess() returned true, but there's unfinished item in the outbox";
                     state = PROCESS_INBOX;
+                        outbox.reset();
                     stateMachineStep(); // recursion
                 }
                 break;
@@ -274,8 +272,8 @@ public class ProcessorTasklet implements Tasklet {
             case COMPLETE_EDGE:
                 if (isSnapshotInbox()
                         ? processor.finishSnapshotRestore() : processor.completeEdge(currInstream.ordinal())) {
-                    assert !outbox.hasUnfinishedItem() :
-                            "outbox has unfinished item after successful completeEdge() or finishSnapshotRestore()";
+                    assert !outbox.hasUnfinishedItem() || !isSnapshotInbox() :
+                            "outbox has an unfinished item after successful finishSnapshotRestore()";
                     progTracker.madeProgress();
                     state = processingState();
                 }
