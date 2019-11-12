@@ -206,10 +206,15 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         }
 
         /**
-         * Flushes all previous writes to a durable storage. This method can be
+         * Flushes all previous writes to a durable storage and emits all
+         * non-acknowledged records to the downstream. This method can be
          * called multiple times.
+         *
+         * @return if all was flushed and emitted. If method returns false, it
+         *      should be called again before any other method is called.
          */
-        default void flush() throws Exception {
+        default boolean flush() throws Exception {
+            return true;
         }
 
         /**
