@@ -32,7 +32,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
@@ -137,10 +136,19 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     @Override
     public boolean saveToSnapshot() {
+        assert externalGuarantee() != NONE : "externalGuarantee==NONE";
         assert !snapshotInProgress : "snapshot in progress";
         // TODO [viliam] avoid doing work if transaction wasn't begun
         TXN activeTransaction = activeTransaction();
         assert activeTransaction != null : "null activeTransaction";
+        try {
+            if (!activeTransaction.flush()) {
+                return false;
+            }
+        } catch (Exception e) {
+            throw sneakyThrow(e);
+        }
+
         if (externalGuarantee() == EXACTLY_ONCE) {
             if (!getOutbox().offerToSnapshot(broadcastKey(activeTransaction.id()), false)) {
                 return false;
@@ -153,18 +161,12 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
                 throw sneakyThrow(e);
             }
         }
-        if (externalGuarantee() == AT_LEAST_ONCE) {
-            try {
-                activeTransaction.flush();
-            } catch (Exception e) {
-                throw sneakyThrow(e);
-            }
-        }
         return true;
     }
 
     @Override
     public boolean onSnapshotCompleted(boolean commitTransactions) {
+        assert externalGuarantee() != NONE : "externalGuarantee==NONE";
         snapshotInProgress = false;
         if (externalGuarantee() == EXACTLY_ONCE && commitTransactions) {
             try {

@@ -60,6 +60,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -96,7 +97,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     private static int counter;
     private String destinationName = "dest" + counter++;
-    private Job job;
 
     private Pipeline p = Pipeline.create();
     private IList<Object> srcList;
@@ -366,7 +366,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
          .peek()
-         .mapStateful(() -> new ArrayList<Long>(),
+         .mapStateful(() -> new CopyOnWriteArrayList(),
                  (list, item) -> {
                      lastListInStressTest = list;
                      assert list.size() < MESSAGE_COUNT : "list size exceeded. List=" + list + ", item=" + item;
@@ -457,6 +457,10 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         assertEquals(RUNNING, job.getStatus());
     }
 
+    // TODO [viliam] test at-least-once mode with XA transaction - should commit in phase 2
+    // TODO [viliam] test at-least-once mode with transaction - should commit in phase 2
+    // TODO [viliam] test marking the processor as idle
+
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
         ConnectionFactory connectionFactory = getConnectionFactory(false);
         Connection connection = connectionFactory.createConnection();
@@ -492,7 +496,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     private void startJob(boolean waitForRunning) {
-        job = instance().newJob(p);
+        Job job = instance().newJob(p);
         // batch jobs can be completed before we observe RUNNING status
         if (waitForRunning) {
             assertJobStatusEventually(job, JobStatus.RUNNING, 10);

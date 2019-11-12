@@ -269,9 +269,10 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
 
         @Override
-        public void flush() {
+        public boolean flush() {
             LoggingUtil.logFinest(logger, "flush %s", transactionId);
             producer.flush();
+            return true;
         }
 
         @Override

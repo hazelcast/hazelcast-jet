@@ -22,6 +22,7 @@ import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.util.HashUtil;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.EventTimeMapper;
@@ -54,7 +55,6 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 /**
  * Private API. Access via {@link Sources#jmsTopic} or {@link
@@ -73,7 +73,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     private Session session;
     private MessageConsumer consumer;
-    private Traverser<Object> traverser;
+    private Traverser<Object> pendingTraverser = Traversers.empty();
 
     private TwoTransactionProcessorUtility<JmsTransactionId, TransactionalResource<JmsTransactionId>> snapshotUtility;
 
@@ -161,9 +161,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
                 txnId -> recoverTransaction(txnId, false)
         );
         consumer = consumerFn.apply(session);
-        traverser = ((Traverser<Message>) () -> uncheckCall(() ->
-                        snapshotUtility.activeTransaction() != null ? consumer.receiveNoWait() : null))
-                .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
     }
 
     @Override
@@ -234,7 +231,18 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        emitFromTraverser(traverser);
+        boolean hasMoreMsgs = snapshotUtility.activeTransaction() != null;
+        while (emitFromTraverser(pendingTraverser) && hasMoreMsgs) {
+            try {
+                Message t = consumer.receiveNoWait();
+                hasMoreMsgs = t != null;
+                pendingTraverser = hasMoreMsgs
+                        ? eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t))
+                        : eventTimeMapper.flatMapIdle();
+            } catch (JMSException e) {
+                throw sneakyThrow(e);
+            }
+        }
         return false;
     }
 
@@ -357,6 +365,11 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
+        public boolean flush() {
+            return emitFromTraverser(pendingTraverser);
+        }
+
+        @Override
         public void prepare() throws Exception {
             LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId);
             try {
@@ -411,6 +424,11 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void beginTransaction() {
+        }
+
+        @Override
+        public boolean flush() {
+            return emitFromTraverser(pendingTraverser);
         }
 
         @Override
