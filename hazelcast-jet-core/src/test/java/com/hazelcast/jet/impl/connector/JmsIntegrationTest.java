@@ -432,7 +432,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
             // When
             when(mockResource.prepare(any())).thenReturn(XAResource.XA_RDONLY);
             // Then
-            doThrow(new AssertionError("commit should not have been called")).when(mockResource).commit(any(), anyBoolean());
+            doThrow(new AssertionError("commit should not have been called"))
+                    .when(mockResource).commit(any(), anyBoolean());
 
             return (ConnectionFactory) mockConnectionFactory;
         };
