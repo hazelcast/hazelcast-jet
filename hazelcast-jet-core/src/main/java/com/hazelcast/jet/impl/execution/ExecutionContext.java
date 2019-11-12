@@ -276,7 +276,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
             return;
         }
         descriptor = descriptor.withTag(MetricTags.JOB, idToString(jobId))
-                       .withDiscriminator(MetricTags.EXECUTION, idToString(executionId));
+                               .withTag(MetricTags.EXECUTION, idToString(executionId));
         for (Tasklet tasklet : tasklets) {
             tasklet.provideDynamicMetrics(descriptor.copy(), context);
         }

@@ -44,10 +44,13 @@ public final class JobMetricsUtil {
     }
 
     public static Long getExecutionIdFromMetricsDescriptor(MetricDescriptor descriptor) {
-        if (!MetricTags.EXECUTION.equals(descriptor.discriminator())) {
-            return null;
-        }
-        return idFromString(descriptor.discriminatorValue());
+        final String[] val = new String[1];
+        descriptor.readTags((k, v) -> {
+            if (MetricTags.EXECUTION.equals(k)) {
+                val[0] = v;
+            }
+        });
+        return idFromString(val[0]);
     }
 
     public static UnaryOperator<MetricDescriptor> addMemberPrefixFn(@Nonnull Member member) {
