@@ -43,6 +43,18 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     private final Consumer<TXN_ID> recoverAndCommitFn;
     private final ConsumerEx<Integer> recoverAndAbortFn;
 
+    /**
+     *
+     * @param outbox
+     * @param procContext
+     * @param externalGuarantee
+     * @param createTxnFn creates a {@link TransactionalResource} based on a
+     *      transaction id. The implementation needs to ensure that in case
+     *      when the transaction ID was used before, the work from the previous
+     *      use is rolled back.
+     * @param recoverAndCommitFn
+     * @param recoverAndAbortFn
+     */
     public TwoPhaseSnapshotCommitUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
@@ -161,26 +173,42 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     /**
      * A handle for a transactional resource.
      * <p>
-     * This is the process if the transaction was created with a {@code true}
-     * parameter to the {@link #createTxnFn()} (with transactions):
+     * The methods are called depending on the external guarantee:<ul>
+     *
+     * <li>EXACTLY_ONCE
+     *
      * <ol>
-     *     <li>{@link #beginTransaction()}
-     *     <li>{@link #prepare()} - after this the transaction will no longer
-     *     returned from {@link #activeTransaction()}, i.e. no more data will
-     *     be written to it
-     *     <li>{@link #commit()}
+     *     <li>{@link #begin()} - called before the transaction is first
+     *         returned from {@link #activeTransaction()}
+     *     <li>{@link #flush()}
+     *     <li>{@link #endAndPrepare()} - after this the transaction will no
+     *         longer be returned from {@link #activeTransaction()}, i.e. no
+     *         more data will be written to it. Called in the 1st snapshot
+     *         phase
+     *     <li>{@link #commit()} - called in the 2nd snapshot phase
      *     <li>if the utility recycles transaction, the process can go to (1)
      *     <li>{@link #release()}
      * </ol>
      *
-     * If the transaction was created with a {@code false} parameter to the
-     * {@link #createTxnFn()} (resource without transactions), the process is
-     * as follows:
+     * <li>AT_LEAST_ONCE
+
      * <ol>
-     *     <li>{@link #flush()} - zero or multiple times. Called to ensure
-     *     at-least-once processing guarantee.
+     *     <li>{@link #flush()} - ensure all writes are stored in the external
+     *         system. Called in the 1st snapshot phase
+     *     <li>{@link #commit()} - acknowledge the consumption of items
+     *         when they don't need to be delivered again. Called in the 2nd
+     *         snapshot phase
+     *     <li>if the utility recycles transaction, the process can go to (1)
      *     <li>{@link #release()}
      * </ol>
+     *
+     * <li>NONE
+     *
+     * <ol>
+     *     <li>{@link #release()}
+     * </ol>
+     *
+     * </ul>
      *
      * @param <TXN_ID> type of transaction identifier. Must be serializable, will
      *                be saved to state snapshot
@@ -188,48 +216,54 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     public interface TransactionalResource<TXN_ID> {
 
         /**
-         * Returns the ID of this transaction.
+         * Returns the ID of this transaction, it should be the ID passed to
+         * the {@link #createTxnFn()}.
          */
         TXN_ID id();
 
         /**
-         * Begins the transaction. The implementation needs to ensure that in
-         * case the transaction ID was used before, the work from before is
-         * rolled back before the new transaction is begun.
+         * Begins the transaction. The method will be called before the
+         * transaction is returned from {@link #activeTransaction()} for the
+         * first time after creation or after {@link #commit()}.
+         * <p>
+         * See also the {@linkplain TransactionalResource class javadoc}.
          *
          * @throws UnsupportedOperationException if the transaction was created
-         * with {@code false} parameter to the {@link #createTxnFn()},
-         * otherwise it will be called immediately after creation.
+         * with {@code null} id passed to the {@link #createTxnFn()}
          */
-        default void beginTransaction() throws Exception {
+        default void begin() throws Exception {
             throw new UnsupportedOperationException("Resource without transaction support");
         }
 
         /**
-         * Flushes all previous writes to a durable storage and emits all
-         * non-acknowledged records to the downstream. This method can be
-         * called multiple times.
+         * Flushes all previous writes to the external system and ensures all
+         * pending items are emitted to the downstream.
+         * <p>
+         * See also the {@linkplain TransactionalResource class javadoc}.
          *
-         * @return if all was flushed and emitted. If method returns false, it
-         *      should be called again before any other method is called.
+         * @return if all was flushed and emitted. If the method returns false,
+         *      it will be called again before any other method is called.
          */
         default boolean flush() throws Exception {
             return true;
         }
 
         /**
-         * Flushes all previous writes to a durable storage and prepares for
-         * commit. To achieve correctness, the transaction must be eventually
-         * able to successfully commit.
+         * Prepares for a commit. To achieve correctness, the transaction must
+         * be able to eventually commit after this call.
          * <p>
          * After this call, the transaction will never again be returned from
          * {@link #activeTransaction()} until it's committed.
+         * <p>
+         * See also the {@linkplain TransactionalResource class javadoc}.
          */
-        default void prepare() throws Exception {
+        default void endAndPrepare() throws Exception {
         }
 
         /**
-         * Flushes the outstanding items and makes them visible to others.
+         * Makes the changes visible to others and acknowledges consumed items.
+         * <p>
+         * See also the {@linkplain TransactionalResource class javadoc}.
          */
         default void commit() throws Exception {
             throw new UnsupportedOperationException();
@@ -239,6 +273,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * Release the resources associated with the transaction. Must not
          * commit or rollback it, the transaction can be later recovered from
          * the durable storage and continued.
+         * <p>
+         * See also the {@linkplain TransactionalResource class javadoc}.
          */
         default void release() throws Exception {
         }
@@ -248,7 +284,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
 
         /**
          * Returns the index of the processor that will handle this transaction
-         * ID. Used when restoring transaction to determine which processor
+         * ID. Used when restoring transaction IDs to determine which processor
          * owns which transactions.
          * <p>
          * After restoring the ID from the snapshot the index might be out of
