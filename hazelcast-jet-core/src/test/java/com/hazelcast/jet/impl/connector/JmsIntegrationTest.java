@@ -34,6 +34,7 @@ import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
+import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
@@ -343,6 +344,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
+    @Repeat(50)
     public void xaStressTest_forceful() throws Exception {
         xaStressTest(false);
     }
