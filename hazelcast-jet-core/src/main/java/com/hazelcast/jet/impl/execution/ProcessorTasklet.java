@@ -520,7 +520,6 @@ public class ProcessorTasklet implements Tasklet {
         for (int i = 0; i < emittedCounts.length() - (this.context.snapshottingEnabled() ? 0 : 1); i++) {
             String ordinal = i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i);
             MetricDescriptor descriptorWithOrdinal = descriptor.copy().withTag(MetricTags.ORDINAL, ordinal);
-            System.out.println(descriptorWithOrdinal.metricName());
             context.collect(descriptorWithOrdinal, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, emittedCounts.get(i));
         }
 
