@@ -368,7 +368,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
          .peek()
-         .mapStateful(() -> new CopyOnWriteArrayList(),
+         .mapStateful(() -> new CopyOnWriteArrayList<Long>(),
                  (list, item) -> {
                      lastListInStressTest = list;
                      assert list.size() < MESSAGE_COUNT : "list size exceeded. List=" + list + ", item=" + item;
