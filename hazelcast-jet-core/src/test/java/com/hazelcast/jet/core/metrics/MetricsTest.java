@@ -390,7 +390,7 @@ public class MetricsTest extends JetTestSupport {
         List<String> mBeanNames = new ArrayList<>();
         String memberName = instance.getHazelcastInstance().getName();
         String jobId = job.getIdString();
-        String execId = job.getMetrics().get("total").get(0).getTag("exec");
+        String execId = job.getMetrics().get("total").get(0).tag("exec");
         int availableProcessors = Runtime.getRuntime().availableProcessors();
         for (int i = 0; i < availableProcessors; i++) {
             StringBuilder sb = new StringBuilder();
