@@ -82,8 +82,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
         // Then
         Pipeline p = Pipeline.create();
-        p.drawFrom(fileSource)
-                .drainTo(sinkList());
+        p.readFrom(fileSource)
+                .writeTo(sinkList());
 
         jet().newJob(p).join();
 
@@ -115,8 +115,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
         // Then
         Pipeline p = Pipeline.create();
-        p.drawFrom(fileSource)
-                .drainTo(sinkList());
+        p.readFrom(fileSource)
+                .writeTo(sinkList());
         jet().newJob(p).join();
 
         Map<String, Integer> actual = sinkToBag();
@@ -150,8 +150,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             // Then
             Pipeline p = Pipeline.create();
-            p.drawFrom(socketSource)
-             .drainTo(sinkList());
+            p.readFrom(socketSource)
+             .writeTo(sinkList());
             jet().newJob(p).join();
             List<String> expected = IntStream.range(0, itemCount).mapToObj(i -> "line" + i).collect(toList());
             assertEquals(expected, new ArrayList<>(sinkList));
@@ -182,8 +182,8 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             // Then
             Pipeline p = Pipeline.create();
-            p.drawFrom(socketSource)
-             .drainTo(sinkList());
+            p.readFrom(socketSource)
+             .writeTo(sinkList());
             jet().newJob(p).join();
 
             Map<String, Integer> expected = IntStream.range(0, itemCount)
@@ -219,11 +219,11 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             // Then
             Pipeline p = Pipeline.create();
-            p.drawFrom(socketSource)
+            p.readFrom(socketSource)
                     .addTimestamps(timestampFn, 0)
                     .window(tumbling(1))
                     .aggregate(AggregateOperations.counting())
-                    .drainTo(sinkList());
+                    .writeTo(sinkList());
 
             jet().newJob(p).join();
 
@@ -260,11 +260,11 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             // Then
             Pipeline p = Pipeline.create();
-            p.drawFrom(socketSource)
+            p.readFrom(socketSource)
                     .withNativeTimestamps(lateness)
                     .window(tumbling(1))
                     .aggregate(AggregateOperations.counting())
-                    .drainTo(sinkList());
+                    .writeTo(sinkList());
 
             jet().newJob(p);
 
@@ -302,11 +302,11 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
             // Then
             Pipeline p = Pipeline.create();
-            p.drawFrom(socketSource)
+            p.readFrom(socketSource)
                     .addTimestamps(timestampFn, 1000)
                     .window(tumbling(1))
                     .aggregate(AggregateOperations.counting())
-                    .drainTo(sinkList());
+                    .writeTo(sinkList());
 
             jet().newJob(p).join();
 
@@ -354,12 +354,12 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
         IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(source)
+        p.readFrom(source)
                 .withNativeTimestamps(0)
                 .window(tumbling(windowSize))
                 .aggregate(AggregateOperations.counting())
                 .peek()
-                .drainTo(Sinks.list(result));
+                .writeTo(Sinks.list(result));
 
         Job job = jet().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
         assertTrueEventually(() -> assertFalse("result list is still empty", result.isEmpty()));
@@ -389,12 +389,12 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
         IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(source)
+        p.readFrom(source)
                 .withNativeTimestamps(0)
                 .window(tumbling(windowSize))
                 .aggregate(AggregateOperations.counting())
                 .peek()
-                .drainTo(Sinks.list(result));
+                .writeTo(Sinks.list(result));
 
         Job job = jet().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
         assertTrueEventually(() -> assertFalse("result list is still empty", result.isEmpty()));
@@ -434,12 +434,12 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
         IList<WindowResult<Long>> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(source)
+        p.readFrom(source)
                 .withNativeTimestamps(0)
                 .window(tumbling(windowSize))
                 .aggregate(AggregateOperations.counting())
                 .peek()
-                .drainTo(Sinks.list(result));
+                .writeTo(Sinks.list(result));
 
         Job job = jet().newJob(p);
         assertTrueEventually(() -> assertFalse("result list is still empty", result.isEmpty()));
@@ -484,9 +484,9 @@ public class SourceBuilderTest extends PipelineStreamTestSupport {
 
         Pipeline p = Pipeline.create();
         IList<Integer> result = jet().getList("result-" + UuidUtil.newUnsecureUuidString());
-        p.drawFrom(source)
+        p.readFrom(source)
          .withoutTimestamps()
-         .drainTo(Sinks.list(result));
+         .writeTo(Sinks.list(result));
 
         Job job = jet().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(100));
         JobRepository jr = new JobRepository(jet());
