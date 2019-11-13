@@ -55,7 +55,6 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     private final List<TXN_ID> transactionIds;
     private int activeTransactionIndex;
     private boolean transactionBegun;
-    private boolean snapshotInProgress;
     private boolean processorCompleted;
     private boolean transactionsReleased;
 
@@ -90,7 +89,11 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     @Nullable @Override
     public TXN activeTransaction() {
-        if (snapshotInProgress) {
+        if (isSnapshotInProgress() && externalGuarantee() == EXACTLY_ONCE) {
+            // Between snapshot phases we don't allow more writes only in ex-once mode.
+            // In at-least-once mode it's more complicated: we can do more writes, but can't
+            // do acknowledgements - if we acknowledged, message won't be re-delivered
+            // should the job fail before phase-2
             return null;
         }
         if (transactions == null) {
@@ -107,7 +110,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         TXN activeTransaction = transactions.get(activeTransactionIndex);
         if (externalGuarantee() == EXACTLY_ONCE && !transactionBegun) {
             try {
-                activeTransaction.beginTransaction();
+                activeTransaction.begin();
                 transactionBegun = true;
             } catch (Exception e) {
                 throw sneakyThrow(e);
@@ -136,8 +139,10 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
 
     @Override
     public boolean saveToSnapshot() {
-        assert externalGuarantee() != NONE : "externalGuarantee==NONE";
-        assert !snapshotInProgress : "snapshot in progress";
+        if (externalGuarantee() == NONE) {
+            return true;
+        }
+        assert !isSnapshotInProgress() : "snapshot in progress";
         // TODO [viliam] avoid doing work if transaction wasn't begun
         TXN activeTransaction = activeTransaction();
         assert activeTransaction != null : "null activeTransaction";
@@ -153,28 +158,30 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
             if (!getOutbox().offerToSnapshot(broadcastKey(activeTransaction.id()), false)) {
                 return false;
             }
-            snapshotInProgress = true;
             transactionBegun = false;
             try {
-                activeTransaction.prepare();
+                activeTransaction.endAndPrepare();
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
         }
+        setSnapshotInProgress(true);
         return true;
     }
 
     @Override
     public boolean onSnapshotCompleted(boolean commitTransactions) {
-        assert externalGuarantee() != NONE : "externalGuarantee==NONE";
-        snapshotInProgress = false;
-        if (externalGuarantee() == EXACTLY_ONCE && commitTransactions) {
+        if (externalGuarantee() == NONE) {
+            return true;
+        }
+        setSnapshotInProgress(false);
+        if (commitTransactions) {
             try {
                 procContext().logger().finest("commit");
-                TXN oldTransaction = transactions.get(activeTransactionIndex);
-                oldTransaction.commit();
-                procContext().logger().finest("beginTransaction");
-                activeTransactionIndex ^= 1;
+                transactions.get(activeTransactionIndex).commit();
+                if (externalGuarantee() == EXACTLY_ONCE) {
+                    activeTransactionIndex ^= 1;
+                }
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
@@ -190,7 +197,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         // if the processor completes and a snapshot is in progress, the onSnapshotComplete
         // will be called anyway - we'll not release in that case
         processorCompleted = true;
-        if (!snapshotInProgress) {
+        if (!isSnapshotInProgress()) {
             doRelease();
         }
     }

@@ -34,7 +34,6 @@ import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
-import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
@@ -61,13 +60,18 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.LongStream;
 
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
@@ -344,17 +348,36 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    @Repeat(50)
-    public void xaStressTest_forceful() throws Exception {
-        xaStressTest(false);
+    public void stressTest_exactlyOnce_xa_forceful() throws Exception {
+        stressTest(false, true, EXACTLY_ONCE);
     }
 
     @Test
-    public void xaStressTest_graceful() throws Exception {
-        xaStressTest(true);
+    public void stressTest_exactlyOnce_xa_graceful() throws Exception {
+        stressTest(true, true, EXACTLY_ONCE);
     }
 
-    private void xaStressTest(boolean graceful) throws Exception {
+    @Test
+    public void stressTest_atLeastOnce_xa_forceful() throws Exception {
+        stressTest(false, true, AT_LEAST_ONCE);
+    }
+
+    @Test
+    public void stressTest_atLeastOnce_nonXa_forceful() throws Exception {
+        stressTest(false, false, AT_LEAST_ONCE);
+    }
+
+    @Test
+    public void stressTest_noGuarantee_xa_forceful() throws Exception {
+        stressTest(false, true, NONE);
+    }
+
+    @Test
+    public void stressTest_noGuarantee_nonXa_forceful() throws Exception {
+        stressTest(false, false, NONE);
+    }
+
+    private void stressTest(boolean graceful, boolean xa, ProcessingGuarantee maxGuarantee) throws Exception {
         lastListInStressTest = null;
         JetInstance instance1 = createJetMember();
         createJetMember();
@@ -363,7 +386,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         Pipeline p = Pipeline.create();
         IList<List<Long>> sinkList = instance1.getList("sinkList");
         String queueName = "queue-" + counter++;
-        p.readFrom(Sources.jmsQueueBuilder(() -> getConnectionFactory(true))
+        p.readFrom(Sources.jmsQueueBuilder(() -> getConnectionFactory(xa))
+                          .maxGuarantee(maxGuarantee)
                           .destinationName(queueName)
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
@@ -371,11 +395,10 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
          .mapStateful(() -> new CopyOnWriteArrayList<Long>(),
                  (list, item) -> {
                      lastListInStressTest = list;
-                     assert list.size() < MESSAGE_COUNT : "list size exceeded. List=" + list + ", item=" + item;
                      list.add(item);
-                     return list.size() == MESSAGE_COUNT ? list : null;
+                     return null;
                  })
-         .writeTo(Sinks.list(sinkList));
+         .writeTo(Sinks.logger());
 
         Job job = instance1.newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
@@ -399,23 +422,34 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
             }
         });
 
-        int i = 0;
+        int iteration = 0;
         while (!producerFuture.isDone()) {
             // use longer delay before the first restart, to workaround https://issues.apache.org/jira/browse/ARTEMIS-2546
-            Thread.sleep(i++ == 0 ? 2000 : ThreadLocalRandom.current().nextInt(200));
+            Thread.sleep(iteration++ == 0 ? 2000 : ThreadLocalRandom.current().nextInt(200));
             ((JobProxy) job).restart(graceful);
             assertJobStatusEventually(job, RUNNING);
         }
         producerFuture.get(); // call for the side-effect of throwing if the producer failed
 
-        assertTrueEventually(() ->
-                assertFalse("the sink is empty, probably didn't receive enough items. Items: " + lastListInStressTest,
-                        sinkList.isEmpty()), 30);
-        // the list can contain the result multiple times, the sink isn't idempotent, we take the 1st
-        List<Long> result = sinkList.get(0);
-        assertEquals(
-                LongStream.range(0, MESSAGE_COUNT).mapToObj(Long::toString).collect(Collectors.joining("\n")),
-                result.stream().sorted().map(Object::toString).collect(Collectors.joining("\n")));
+        assertTrueEventually(() -> {
+            Map<Long, Long> counts = lastListInStressTest.stream()
+                    .collect(Collectors.groupingBy(Function.identity(), TreeMap::new, Collectors.counting()));
+            for (long i = 0; i < MESSAGE_COUNT; i++) {
+                counts.putIfAbsent(i, 0L);
+            }
+            String countsStr = "counts: " + counts;
+            if (maxGuarantee == NONE) {
+                // we don't assert anything and only wait little more and check that the job didn't fail
+                sleepSeconds(1);
+            } else {
+                // in EXACTLY_ONCE the list must have each item exactly once
+                // in AT_LEAST_ONCE the list must have each item at least once
+                assertTrue(countsStr,
+                        counts.values().stream().allMatch(cnt -> maxGuarantee == EXACTLY_ONCE ? cnt == 1 : cnt > 0));
+            }
+            logger.info(countsStr);
+        }, 4); // TODO [viliam] use longer timeout
+        assertEquals(job.getStatus(), RUNNING);
     }
 
     @Test
@@ -441,11 +475,11 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         };
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.jmsQueueBuilder(mockSupplier)
+        p.readFrom(Sources.jmsQueueBuilder(mockSupplier)
                           .destinationName(destinationName)
                           .build())
          .withoutTimestamps()
-         .drainTo(Sinks.logger());
+         .writeTo(Sinks.logger());
 
         Job job = instance().newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
@@ -459,9 +493,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         assertEquals(RUNNING, job.getStatus());
     }
 
-    // TODO [viliam] test at-least-once mode with XA transaction - should commit in phase 2
-    // TODO [viliam] test at-least-once mode with transaction - should commit in phase 2
     // TODO [viliam] test marking the processor as idle
+    // TODO [viliam] test unsuccessful snapshot
 
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
         ConnectionFactory connectionFactory = getConnectionFactory(false);

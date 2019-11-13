@@ -251,7 +251,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
 
         @Override
-        public void beginTransaction() {
+        public void begin() {
             if (!txnInitialized) {
                 LoggingUtil.logFinest(logger, "initTransactions %s", transactionId);
                 txnInitialized = true;
@@ -263,7 +263,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
 
         @Override
-        public void prepare() {
+        public void endAndPrepare() {
             LoggingUtil.logFinest(logger, "prepare %s", transactionId);
             producer.flush();
         }

@@ -51,8 +51,8 @@ import javax.transaction.xa.Xid;
 import java.nio.charset.StandardCharsets;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
@@ -116,38 +116,35 @@ public class StreamJmsP<T> extends AbstractProcessor {
     protected void init(@Nonnull Context context) throws Exception {
         Connection connection = newConnectionFn.get();
         connection.start();
+
         ProcessingGuarantee guarantee = Util.min(maxGuarantee, context.processingGuarantee());
-        if (guarantee == EXACTLY_ONCE && !(connection instanceof XAConnection)) {
-            throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
-        }
-        if (connection instanceof XAConnection && guarantee != NONE) {
+        if (guarantee == EXACTLY_ONCE) {
+            if (!(connection instanceof XAConnection)) {
+                throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
+            }
             session = ((XAConnection) connection).createXASession();
         } else {
-            session = connection.createSession(false,
-                    guarantee == NONE ? Session.AUTO_ACKNOWLEDGE : Session.SESSION_TRANSACTED);
+            session = connection.createSession(guarantee == AT_LEAST_ONCE, Session.DUPS_OK_ACKNOWLEDGE);
         }
+
         snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, guarantee,
                 (processorIndex, txnIndex) -> new JmsTransactionId(context, processorIndex, txnIndex),
                 txnId -> {
-                    if (txnId != null) {
-                        if (session instanceof XASession) {
-                            // rollback the transaction first before trying to use it. If it was used before and is
-                            // unfinished (such as before the 1st snapshot), we could fail to start it again with
-                            // XAER_DUPID.
-                            try {
-                                LoggingUtil.logFine(getLogger(), "Preemptively rolling back %s", txnId);
-                                ((XASession) session).getXAResource().rollback(txnId);
-                            } catch (XAException e) {
-                                if (e.errorCode != XAException.XAER_NOTA) {
-                                    throw handleXAException(e, txnId);
-                                }
+                    if (session instanceof XASession) {
+                        // rollback the transaction first before trying to use it. If it was used before and is
+                        // unfinished (such as before the 1st snapshot), we could fail to start it again with
+                        // XAER_DUPID.
+                        try {
+                            LoggingUtil.logFine(getLogger(), "Preemptively rolling back %s", txnId);
+                            ((XASession) session).getXAResource().rollback(txnId);
+                        } catch (XAException e) {
+                            if (e.errorCode != XAException.XAER_NOTA) {
+                                throw handleXAException(e, txnId);
                             }
-                            return new JmsXATransaction((XASession) session, txnId);
-                        } else {
-                            return new JmsTransaction(session, txnId);
                         }
+                        return new JmsXATransaction((XASession) session, txnId);
                     } else {
-                        return new JmsNoTransaction();
+                        return new JmsTransaction(session, txnId);
                     }
                 },
                 txnId -> {
@@ -231,6 +228,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
+        if (snapshotUtility.isSnapshotInProgress()) {
+            return false;
+        }
         boolean hasMoreMsgs = snapshotUtility.activeTransaction() != null;
         while (emitFromTraverser(pendingTraverser) && hasMoreMsgs) {
             try {
@@ -340,12 +340,12 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     private final class JmsXATransaction implements TransactionalResource<JmsTransactionId> {
 
-        private final XASession session;
+        private final XAResource xaResource;
         private final JmsTransactionId txnId;
         private boolean readOnlyInPrepare;
 
         JmsXATransaction(XASession session, JmsTransactionId txnId) {
-            this.session = session;
+            this.xaResource = session.getXAResource();
             this.txnId = txnId;
         }
 
@@ -355,10 +355,10 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public void beginTransaction() throws Exception {
+        public void begin() throws Exception {
             LoggingUtil.logFine(getLogger(), "start, %s", txnId);
             try {
-                session.getXAResource().start(txnId, XAResource.TMNOFLAGS);
+                xaResource.start(txnId, XAResource.TMNOFLAGS);
             } catch (XAException e) {
                 throw handleXAException(e, txnId);
             }
@@ -370,11 +370,11 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public void prepare() throws Exception {
+        public void endAndPrepare() throws Exception {
             LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId);
             try {
-                session.getXAResource().end(txnId, XAResource.TMSUCCESS);
-                int res = session.getXAResource().prepare(txnId);
+                xaResource.end(txnId, XAResource.TMSUCCESS);
+                int res = xaResource.prepare(txnId);
                 if (res == XAResource.XA_RDONLY) {
                     // According to X/Open Distributed Transaction Specification, if prepare
                     // returns XA_RDONLY, the transactions is non-existent afterwards. There's
@@ -395,7 +395,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                             txnId);
                 } else {
                     LoggingUtil.logFine(getLogger(), "commit, %s",  txnId);
-                    session.getXAResource().commit(txnId, false);
+                    xaResource.commit(txnId, false);
                 }
             } catch (XAException e) {
                 throw handleXAException(e, txnId);
@@ -423,7 +423,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public void beginTransaction() {
+        public void begin() {
         }
 
         @Override
@@ -432,7 +432,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public void prepare() {
+        public void endAndPrepare() {
         }
 
         @Override
@@ -443,16 +443,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void release() {
-        }
-    }
-
-    private static final class JmsNoTransaction implements TransactionalResource<JmsTransactionId> {
-
-        private JmsNoTransaction() { }
-
-        @Override
-        public JmsTransactionId id() {
-            return null;
         }
     }
 
