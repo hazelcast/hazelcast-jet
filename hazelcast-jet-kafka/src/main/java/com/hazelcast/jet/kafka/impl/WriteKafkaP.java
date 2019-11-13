@@ -263,12 +263,6 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
 
         @Override
-        public void endAndPrepare() {
-            LoggingUtil.logFinest(logger, "prepare %s", transactionId);
-            producer.flush();
-        }
-
-        @Override
         public boolean flush() {
             LoggingUtil.logFinest(logger, "flush %s", transactionId);
             producer.flush();
@@ -277,8 +271,10 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
         @Override
         public void commit() {
-            LoggingUtil.logFinest(logger, "commitTransaction %s", transactionId);
-            producer.commitTransaction();
+            if (transactionId != null) {
+                LoggingUtil.logFinest(logger, "commitTransaction %s", transactionId);
+                producer.commitTransaction();
+            }
         }
 
         @Override
