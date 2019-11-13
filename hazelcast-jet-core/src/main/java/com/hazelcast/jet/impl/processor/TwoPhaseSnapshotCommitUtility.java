@@ -43,6 +43,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     private final Consumer<TXN_ID> recoverAndCommitFn;
     private final ConsumerEx<Integer> recoverAndAbortFn;
 
+    private boolean snapshotInProgress;
+
     /**
      *
      * @param outbox
@@ -109,6 +111,18 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      */
     @Nullable
     public abstract TXN activeTransaction();
+
+    /**
+     * Returns if there was a phase-1 of a snapshot and we're waiting for
+     * phase-2.
+     */
+    public boolean isSnapshotInProgress() {
+        return snapshotInProgress;
+    }
+
+    public void setSnapshotInProgress(boolean snapshotInProgress) {
+        this.snapshotInProgress = snapshotInProgress;
+    }
 
     /**
      * For sinks and inner vertices, call from {@link Processor#complete()}.
@@ -250,7 +264,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
 
         /**
          * Prepares for a commit. To achieve correctness, the transaction must
-         * be able to eventually commit after this call.
+         * be able to eventually commit after this call, writes must be durably
+         * stored in the external system.
          * <p>
          * After this call, the transaction will never again be returned from
          * {@link #activeTransaction()} until it's committed.
