@@ -303,8 +303,8 @@ public final class WriteFileP<T> implements Processor {
         }
 
         @Override
-        public void prepare() throws IOException {
-            context.logger().info("aaa prepare " + id().fileName);
+        public void endAndPrepare() throws IOException {
+            context.logger().info("aaa endAndPrepare " + id().fileName);
             release();
         }
 
@@ -347,7 +347,7 @@ public final class WriteFileP<T> implements Processor {
         }
 
         @Override
-        public void beginTransaction() {
+        public void begin() {
             writer = createWriter(tempFile);
         }
 

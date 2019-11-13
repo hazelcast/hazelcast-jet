@@ -102,7 +102,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
             activeTransaction = createTxnFn().apply(createTxnIdFn.get());
             if (externalGuarantee() == EXACTLY_ONCE) {
                 try {
-                    activeTransaction.beginTransaction();
+                    activeTransaction.begin();
                 } catch (Exception e) {
                     throw sneakyThrow(e);
                 }
@@ -115,7 +115,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
         try {
             if (externalGuarantee() == EXACTLY_ONCE) {
                 pendingTransactions.put(activeTransaction.id(), activeTransaction);
-                activeTransaction.prepare();
+                activeTransaction.endAndPrepare();
             } else if (activeTransaction != null) {
                 activeTransaction.release();
             }
@@ -177,7 +177,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
                     if (activeTransaction != null) {
                         pendingTransactions.put(activeTransaction.id(), activeTransaction);
                         try {
-                            activeTransaction.prepare();
+                            activeTransaction.endAndPrepare();
                         } catch (Exception e) {
                             throw sneakyThrow(e);
                         }
