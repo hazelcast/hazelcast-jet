@@ -16,10 +16,17 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.client.map.helpers.AMapStore;
 import com.hazelcast.collection.IList;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapStoreConfig;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -31,6 +38,7 @@ import org.junit.Test;
 
 import javax.jms.ConnectionFactory;
 import javax.jms.TextMessage;
+import java.io.Serializable;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -41,6 +49,8 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
     @ClassRule
     public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
 
+    private static volatile boolean storeFailed;
+
     @Test
     public void test() throws Exception {
         JetInstance instance1 = createJetMember();
@@ -48,15 +58,15 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
         // use higher number of messages so that each of the parallel processors gets some
         int messageCount = 10_000;
-        JmsTestUtil.sendMessages(getConnectionFactory(false), "queue", true, messageCount);
+        JmsTestUtil.sendMessages(getConnectionFactorySupplier(false).get(), "queue", true, messageCount);
 
         Pipeline p = Pipeline.create();
         IList<String> sinkList = instance1.getList("sinkList");
-        p.drawFrom(Sources.jmsQueueBuilder(() -> getConnectionFactory(true))
+        p.readFrom(Sources.jmsQueueBuilder(getConnectionFactorySupplier(true))
                           .destinationName("queue")
                           .build(msg -> ((TextMessage) msg).getText()))
          .withoutTimestamps()
-         .drainTo(Sinks.list(sinkList));
+         .writeTo(Sinks.list(sinkList));
 
         instance1.newJob(p, new JobConfig()
                 .setProcessingGuarantee(EXACTLY_ONCE)
@@ -72,9 +82,47 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
         assertTrueEventually(() -> assertEquals("items should be emitted twice", messageCount * 2, sinkList.size()), 20);
     }
 
-    private static ConnectionFactory getConnectionFactory(boolean xa) {
-        return xa
+    // TODO [viliam] snapshot failure should be ignored if guarantee != ex-once
+
+    @Test
+    public void when_snapshotFails_then_jobFails() {
+        storeFailed = false;
+        // force snapshots to fail by adding a failing map store configuration for snapshot data maps
+        JetConfig config = new JetConfig();
+        MapConfig mapConfig = new MapConfig(JobRepository.SNAPSHOT_DATA_MAP_PREFIX + '*');
+        MapStoreConfig mapStoreConfig = mapConfig.getMapStoreConfig();
+        mapStoreConfig.setEnabled(true);
+        mapStoreConfig.setImplementation(new FailingMapStore());
+        config.getHazelcastConfig().addMapConfig(mapConfig);
+
+        JetInstance instance = createJetMember(config);
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(true), "queue"))
+         .withoutTimestamps()
+         .writeTo(Sinks.noop());
+
+        Job job = instance.newJob(p, new JobConfig()
+                .setProcessingGuarantee(EXACTLY_ONCE)
+                .setSnapshotIntervalMillis(100));
+
+        try {
+            job.join();
+        } catch (Exception e) {
+            assertContains(e.getMessage(), "snapshot failed, can't continue to use the transaction");
+        }
+    }
+
+    private static SupplierEx<ConnectionFactory> getConnectionFactorySupplier(boolean xa) {
+        return () -> xa
                 ? new ActiveMQXAConnectionFactory(resource.getVmURL())
                 : new ActiveMQConnectionFactory(resource.getVmURL());
+    }
+
+    private static class FailingMapStore extends AMapStore implements Serializable {
+        @Override
+        public void store(Object o, Object o2) {
+            storeFailed = true;
+            throw new UnsupportedOperationException("failing map store");
+        }
     }
 }

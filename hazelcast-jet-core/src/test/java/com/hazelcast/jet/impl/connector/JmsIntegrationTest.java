@@ -525,11 +525,9 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
             assertTrue("sink not empty before the idle timeout elapsed: " + new ArrayList<>(sinkList), empty);
         }
 
-        assertTrueEventually(() -> assertFalse(sinkList.isEmpty()));
+        assertTrueEventually(() -> assertFalse("wm not received in the sink", sinkList.isEmpty()));
         assertStartsWith("wm(", (String) sinkList.get(0));
     }
-
-    // TODO [viliam] test unsuccessful snapshot
 
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
         Connection connection = getConnectionFactorySupplier(false).get().createConnection();

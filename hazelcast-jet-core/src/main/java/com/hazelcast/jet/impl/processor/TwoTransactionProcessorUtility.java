@@ -25,6 +25,7 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
+import com.hazelcast.spi.exception.RetryableHazelcastException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,6 +51,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         extends TwoPhaseSnapshotCommitUtility<TXN_ID, TXN> {
 
     private static final int TXN_PROBING_FACTOR = 5;
+    private final boolean canBeginAfterPrepare;
 
     private List<TXN> transactions;
     private final List<TXN_ID> transactionIds;
@@ -59,13 +61,15 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     private boolean transactionsReleased;
 
     /**
+     * @param canBeginAfterPrepare if true, in ex-once mode transaction can go
+     *      begin-flush-endAndPrepare-begin, without a commit
      * @param createTxnIdFn input is {processorIndex, transactionIndex}
      */
     public TwoTransactionProcessorUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
             @Nonnull ProcessingGuarantee externalGuarantee,
-            @Nonnull BiFunctionEx<Integer, Integer, TXN_ID> createTxnIdFn,
+            boolean canBeginAfterPrepare, @Nonnull BiFunctionEx<Integer, Integer, TXN_ID> createTxnIdFn,
             @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndAbortFn
@@ -75,6 +79,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
                     recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, 0));
                     recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, 1));
                 });
+        this.canBeginAfterPrepare = canBeginAfterPrepare;
 
         if (externalGuarantee() == EXACTLY_ONCE) {
             transactionIds = Arrays.asList(
@@ -184,6 +189,10 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
                 }
             } catch (Exception e) {
                 throw sneakyThrow(e);
+            }
+        } else {
+            if (!canBeginAfterPrepare) {
+                throw new RetryableHazelcastException("snapshot failed, can't continue to use the transaction");
             }
         }
         if (processorCompleted) {

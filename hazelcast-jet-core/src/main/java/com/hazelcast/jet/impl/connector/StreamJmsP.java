@@ -128,6 +128,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         snapshotUtility = new TwoTransactionProcessorUtility<>(getOutbox(), context, guarantee,
+                false,
                 (processorIndex, txnIndex) -> new JmsTransactionId(context, processorIndex, txnIndex),
                 txnId -> {
                     if (session instanceof XASession) {

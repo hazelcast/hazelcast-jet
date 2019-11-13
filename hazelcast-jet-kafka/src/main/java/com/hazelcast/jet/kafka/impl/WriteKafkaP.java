@@ -88,6 +88,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
                 context.processingGuarantee() == EXACTLY_ONCE && !exactlyOnce
                         ? AT_LEAST_ONCE
                         : context.processingGuarantee(),
+                true,
                 (processorIndex, txnIndex) -> new KafkaTransactionId(
                         context.jobId(), context.jobConfig().getName(), context.vertexName(), processorIndex, txnIndex),
                 txnId -> {
