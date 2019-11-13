@@ -416,7 +416,7 @@ public final class TestProcessors {
      * edges to all output edges, including the watermarks. It can't be done
      * using {@link Processors#mapP} because it doesn't handle watermarks.
      */
-    public static class MapWatermarksToString extends AbstractProcessor {
+    public static final class MapWatermarksToString extends AbstractProcessor {
 
         private final FlatMapper<Watermark, Object> flatMapper;
 
