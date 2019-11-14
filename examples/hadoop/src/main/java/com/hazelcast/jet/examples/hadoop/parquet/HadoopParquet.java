@@ -18,7 +18,7 @@ package com.hazelcast.jet.examples.hadoop.parquet;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.examples.hadoop.dto.User;
+import com.hazelcast.jet.examples.hadoop.generated.User;
 import com.hazelcast.jet.hadoop.HadoopSinks;
 import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
@@ -84,9 +84,9 @@ public class HadoopParquet {
         job.setInputFormatClass(AvroParquetInputFormat.class);
         job.setOutputFormatClass(AvroParquetOutputFormat.class);
         AvroParquetOutputFormat.setOutputPath(job, outputPath);
-        AvroParquetOutputFormat.setSchema(job, User.SCHEMA);
+        AvroParquetOutputFormat.setSchema(job, User.SCHEMA$);
         AvroParquetInputFormat.addInputPath(job, inputPath);
-        AvroParquetInputFormat.setAvroReadSchema(job, User.SCHEMA);
+        AvroParquetInputFormat.setAvroReadSchema(job, User.SCHEMA$);
         return job.getConfiguration();
     }
 
@@ -100,7 +100,7 @@ public class HadoopParquet {
                 <User>builder(filePath)
                 .withRowGroupSize(ParquetWriter.DEFAULT_BLOCK_SIZE)
                 .withPageSize(ParquetWriter.DEFAULT_PAGE_SIZE)
-                .withSchema(User.SCHEMA)
+                .withSchema(User.SCHEMA$)
                 .withConf(new Configuration())
                 .withCompressionCodec(CompressionCodecName.SNAPPY)
                 .withValidation(false)

@@ -29,7 +29,6 @@ import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -128,11 +127,9 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
                     // we clone the key/value if configured so because some of the
                     // record-readers return the same object for `reader.getCurrentKey()`
                     // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`
-                    K key = copyIfConfigured(reader.getCurrentKey());
-                    V value = copyIfConfigured(reader.getCurrentValue());
-                    R projectedRecord = projectionFn.apply(key, value);
+                    R projectedRecord = projectionFn.apply(reader.getCurrentKey(), reader.getCurrentValue());
                     if (projectedRecord != null) {
-                        return projectedRecord;
+                        return copyIfConfigured(projectedRecord);
                     }
                 }
                 reader.close();
@@ -143,17 +140,8 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         };
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> T copyIfConfigured(T o) throws IOException, IllegalAccessException, InstantiationException {
+    private <T> T copyIfConfigured(T o) {
         if (!configuration.getBoolean(COPY_ON_READ, true)) {
-            return o;
-        }
-        if (o instanceof Writable) {
-            ((Writable) o).write(cloneBufferDataOutput);
-            Writable newO = (Writable) o.getClass().newInstance();
-            newO.readFields(cloneBuffer.getDataInputStream());
-            o = (T) newO;
-            cloneBuffer.reset();
             return o;
         }
         return serializationService.toObject(serializationService.toData(o));
