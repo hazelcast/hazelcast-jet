@@ -401,7 +401,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     @SuppressWarnings("unchecked")
-    public SinkStage drainTo(@Nonnull Sink<? super T> sink) {
+    public SinkStage writeTo(@Nonnull Sink<? super T> sink) {
         SinkImpl sinkImpl = (SinkImpl) sink;
         SinkTransform<T> sinkTransform = new SinkTransform(sinkImpl, transform);
         SinkStageImpl output = new SinkStageImpl(sinkTransform, pipelineImpl);

@@ -51,7 +51,7 @@ public class PipelineImpl implements Pipeline {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> BatchStage<T> drawFrom(@Nonnull BatchSource<? extends T> source) {
+    public <T> BatchStage<T> readFrom(@Nonnull BatchSource<? extends T> source) {
         BatchSourceTransform<? extends T> xform = (BatchSourceTransform<? extends T>) source;
         xform.onAssignToStage();
         return new BatchStageImpl<>(xform, this);
@@ -59,7 +59,7 @@ public class PipelineImpl implements Pipeline {
 
     @Nonnull @Override
     @SuppressWarnings("unchecked")
-    public <T> StreamSourceStage<T> drawFrom(@Nonnull StreamSource<? extends T> source) {
+    public <T> StreamSourceStage<T> readFrom(@Nonnull StreamSource<? extends T> source) {
         StreamSourceTransform<T> xform = (StreamSourceTransform<T>) source;
         xform.onAssignToStage();
         return new StreamSourceStageImpl<>(xform, this);
@@ -67,7 +67,7 @@ public class PipelineImpl implements Pipeline {
 
     @Nonnull
     @Override
-    public <T> SinkStage drainTo(
+    public <T> SinkStage writeTo(
             @Nonnull Sink<? super T> sink,
             @Nonnull GeneralStage<? extends T> stage0,
             @Nonnull GeneralStage<? extends T> stage1,

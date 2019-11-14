@@ -75,7 +75,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     StreamStage<T> filter(@Nonnull PredicateEx<T> filterFn);
 
     @Nonnull @Override
-    <R> StreamStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn);
+    <R> StreamStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn);
 
     @Nonnull @Override
     <S, R> StreamStage<R> mapStateful(
@@ -237,7 +237,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      * For example, say you have this code:
      *
      * <pre>{@code
-     * StreamStage<String> input = pipeline.drawFrom(textSource);
+     * StreamStage<String> input = pipeline.readFrom(textSource);
      * StreamStage<String> cleanedUp = input
      *         .map(String::toLowerCase)
      *         .filter(s -> s.startsWith("success"));
@@ -258,7 +258,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      *
      * <pre>{@code
      * StreamStage<String> tokens = pipeline
-     *     .drawFrom(textSource)
+     *     .readFrom(textSource)
      *     .apply(this::cleanUp)
      *     .flatMap(line -> traverseArray(line.split("\\W+")));
      * }</pre>
