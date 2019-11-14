@@ -38,12 +38,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -70,6 +74,10 @@ import static java.util.stream.Collectors.toList;
 public class TaskletExecutionService {
 
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
+    private final ExecutorService taskletInitExecutor = new ThreadPoolExecutor(
+            0, Runtime.getRuntime().availableProcessors(),
+            3, TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(Runtime.getRuntime().availableProcessors()), new CallerRunsPolicy());
     private final CooperativeWorker[] cooperativeWorkers;
     private final Thread[] cooperativeThreadPool;
     private final String hzInstanceName;
@@ -170,8 +178,18 @@ public class TaskletExecutionService {
         @SuppressWarnings("unchecked")
         final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
         Arrays.setAll(trackersByThread, i -> new ArrayList());
-        Util.doWithClassLoader(jobClassLoader, () ->
-                tasklets.forEach(Tasklet::init));
+        List<? extends Future<?>> futures = tasklets
+                .stream()
+                .map(tasklet -> taskletInitExecutor.submit(() ->
+                        Util.doWithClassLoader(jobClassLoader, tasklet::init)))
+                .collect(toList());
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new JetException("Tasklet initialization failed", e);
+            }
+        }
 
         // We synchronize so that no two jobs submit their tasklets in
         // parallel. If two jobs submit in parallel, the tasklets of one of
