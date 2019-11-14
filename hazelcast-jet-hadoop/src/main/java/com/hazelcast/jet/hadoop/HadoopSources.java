@@ -63,7 +63,7 @@ public final class HadoopSources {
      * <pre>{@code
      *     Configuration conf = new Configuration();
      *     conf.set(HdfsSources.COPY_ON_READ, "false");
-     *     BatchSource<Entry<K, V>> source = HdfsSources.hdfs(conf);
+     *     BatchSource<Entry<K, V>> source = HadoopSources.inputFormat(conf);
      * }</pre>
      */
     public static final String COPY_ON_READ = "jet.source.copyonread";
