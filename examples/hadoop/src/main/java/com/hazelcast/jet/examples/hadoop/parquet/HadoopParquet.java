@@ -19,8 +19,8 @@ package com.hazelcast.jet.examples.hadoop.parquet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.examples.hadoop.dto.User;
-import com.hazelcast.jet.hadoop.HdfsSinks;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.hadoop.HadoopSinks;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import org.apache.hadoop.conf.Configuration;
@@ -38,8 +38,8 @@ import java.nio.file.Paths;
 import java.util.stream.IntStream;
 
 /**
- * A sample which reads records from Apache Parquet file from HDFS
- * using Apache Avro schema, filters and writes back to HDFS
+ * A sample which reads records from Apache Parquet file from Hadoop
+ * using Apache Avro schema, filters and writes back to Hadoop
  * using Apache Parquet output format with the same schema.
  */
 public class HadoopParquet {
@@ -50,10 +50,10 @@ public class HadoopParquet {
 
     private static Pipeline buildPipeline(Configuration configuration) {
         Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.<String, User, User>hdfs(configuration, (s, user) -> user))
+        p.readFrom(HadoopSources.<String, User, User>inputFormat(configuration, (s, user) -> user))
          .filter(user -> user.get(3).equals(Boolean.TRUE))
          .peek()
-         .drainTo(HdfsSinks.hdfs(configuration, o -> null, o -> o));
+         .writeTo(HadoopSinks.outputFormat(configuration, o -> null, o -> o));
         return p;
     }
 

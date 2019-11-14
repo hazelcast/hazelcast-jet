@@ -24,7 +24,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.mapred.InputFormat;
@@ -47,14 +47,14 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.mapred.Reporter.NULL;
 
 /**
- * See {@link HdfsSources#hdfs}.
+ * See {@link HadoopSources#inputFormat}.
  */
-public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
+public final class ReadHadoopOldApiP<K, V, R> extends AbstractProcessor {
 
     private final Traverser<R> trav;
     private final BiFunctionEx<K, V, R> projectionFn;
 
-    private ReadHdfsOldApiP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
+    private ReadHadoopOldApiP(@Nonnull List<RecordReader> recordReaders, @Nonnull BiFunctionEx<K, V, R> projectionFn) {
         this.trav = traverseIterable(recordReaders).flatMap(this::traverseRecordReader);
         this.projectionFn = projectionFn;
     }
@@ -156,11 +156,11 @@ public final class ReadHdfsOldApiP<K, V, R> extends AbstractProcessor {
                     .values().stream()
                     .map(splits -> splits.isEmpty()
                             ? noopProcessor
-                            : new ReadHdfsOldApiP<>(splits.stream()
-                                                          .map(IndexedInputSplit::getOldSplit)
-                                                          .map(split -> uncheckCall(() ->
+                            : new ReadHadoopOldApiP<>(splits.stream()
+                                                            .map(IndexedInputSplit::getOldSplit)
+                                                            .map(split -> uncheckCall(() ->
                                                                   inputFormat.getRecordReader(split, jobConf, NULL)))
-                                                          .collect(toList()), projectionFn)
+                                                            .collect(toList()), projectionFn)
                     ).collect(toList());
         }
     }

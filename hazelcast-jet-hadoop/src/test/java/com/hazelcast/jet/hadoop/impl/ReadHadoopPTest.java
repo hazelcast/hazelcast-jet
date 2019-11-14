@@ -20,7 +20,7 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.Util;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -61,7 +61,7 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class ReadHdfsPTest extends HdfsTestSupport {
+public class ReadHadoopPTest extends HadoopTestSupport {
 
     private static final String[] ENTRIES = {
             "key-0 value-0\n",
@@ -129,9 +129,9 @@ public class ReadHdfsPTest extends HdfsTestSupport {
     public void testReadHdfs() {
         IList<Object> sinkList = instance().getList(randomName());
         Pipeline p = Pipeline.create();
-        p.drawFrom(HdfsSources.hdfs(jobConf, projectionType.mapper))
+        p.readFrom(HadoopSources.inputFormat(jobConf, projectionType.mapper))
          .setLocalParallelism(4)
-         .drainTo(Sinks.list(sinkList))
+         .writeTo(Sinks.list(sinkList))
          .setLocalParallelism(1);
 
         instance().newJob(p).join();

@@ -32,14 +32,14 @@ import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.hadoop.HdfsProcessors.readHdfsP;
+import static com.hazelcast.jet.hadoop.HadoopProcessors.readHadoopP;
 
 /**
- * Contains factory methods for Apache Hadoop HDFS sources.
+ * Contains factory methods for Apache Hadoop sources.
  *
  * @since 3.0
  */
-public final class HdfsSources {
+public final class HadoopSources {
 
     /**
      * With the new HDFS API, some of the {@link RecordReader}s return the same
@@ -68,7 +68,7 @@ public final class HdfsSources {
      */
     public static final String COPY_ON_READ = "jet.source.copyonread";
 
-    private HdfsSources() {
+    private HadoopSources() {
     }
 
     /**
@@ -104,20 +104,20 @@ public final class HdfsSources {
      *                      will be filtered out
      */
     @Nonnull
-    public static <K, V, E> BatchSource<E> hdfs(
+    public static <K, V, E> BatchSource<E> inputFormat(
             @Nonnull Configuration configuration,
             @Nonnull BiFunctionEx<K, V, E> projectionFn
     ) {
-        return Sources.batchFromProcessor("readHdfs",
-                readHdfsP(SerializableConfiguration.asSerializable(configuration), projectionFn));
+        return Sources.batchFromProcessor("readHadoop",
+                readHadoopP(SerializableConfiguration.asSerializable(configuration), projectionFn));
     }
 
     /**
-     * Convenience for {@link #hdfs(Configuration, BiFunctionEx)}
+     * Convenience for {@link #inputFormat(Configuration, BiFunctionEx)}
      * with {@link java.util.Map.Entry} as its output type.
      */
     @Nonnull
-    public static <K, V> BatchSource<Entry<K, V>> hdfs(@Nonnull Configuration jobConf) {
-        return hdfs(jobConf, (BiFunctionEx<K, V, Entry<K, V>>) Util::entry);
+    public static <K, V> BatchSource<Entry<K, V>> inputFormat(@Nonnull Configuration jobConf) {
+        return inputFormat(jobConf, (BiFunctionEx<K, V, Entry<K, V>>) Util::entry);
     }
 }

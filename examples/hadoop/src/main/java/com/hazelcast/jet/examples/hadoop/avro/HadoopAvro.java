@@ -19,8 +19,8 @@ package com.hazelcast.jet.examples.hadoop.avro;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.examples.hadoop.dto.User;
-import com.hazelcast.jet.hadoop.HdfsSinks;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.hadoop.HadoopSinks;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import org.apache.avro.file.DataFileWriter;
@@ -40,21 +40,21 @@ import java.nio.file.Paths;
 import java.util.stream.IntStream;
 
 /**
- * A sample which reads records from HDFS using Apache Avro input format,
- * filters and writes back to HDFS using Apache Avro output format
+ * A sample which reads records from Hadoop using Apache Avro input format,
+ * filters and writes back to Hadoop using Apache Avro output format
  */
 public class HadoopAvro {
 
     private static final String MODULE_DIRECTORY = moduleDirectory();
-    private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-input";
-    private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-output";
+    private static final String INPUT_PATH = MODULE_DIRECTORY + "/hadoop-avro-input";
+    private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hadoop-avro-output";
 
     private static Pipeline buildPipeline(JobConf jobConfig) {
         Pipeline p = Pipeline.create();
-        p.readFrom(HdfsSources.<AvroWrapper<User>, NullWritable>hdfs(jobConfig))
+        p.readFrom(HadoopSources.<AvroWrapper<User>, NullWritable>inputFormat(jobConfig))
          .filter(entry -> entry.getKey().datum().get(3).equals(Boolean.TRUE))
          .peek(entry -> entry.getKey().datum().toString())
-         .writeTo(HdfsSinks.hdfs(jobConfig));
+         .writeTo(HadoopSinks.outputFormat(jobConfig));
         return p;
     }
 

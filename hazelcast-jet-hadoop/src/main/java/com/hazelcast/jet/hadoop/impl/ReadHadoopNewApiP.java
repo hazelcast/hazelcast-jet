@@ -25,7 +25,7 @@ import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
@@ -53,16 +53,16 @@ import java.util.Map;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.hadoop.HdfsSources.COPY_ON_READ;
+import static com.hazelcast.jet.hadoop.HadoopSources.COPY_ON_READ;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
 /**
- * See {@link HdfsSources#hdfs}.
+ * See {@link HadoopSources#inputFormat}.
  */
-public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
+public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
 
     private static final Class<?>[] EMPTY_ARRAY = new Class[0];
 
@@ -76,7 +76,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
     private InternalSerializationService serializationService;
     private RecordReader<K, V> reader;
 
-    private ReadHdfsNewApiP(
+    private ReadHadoopNewApiP(
             @Nonnull Configuration configuration,
             @Nonnull InputFormat inputFormat,
             @Nonnull List<InputSplit> splits,
@@ -244,7 +244,7 @@ public final class ReadHdfsNewApiP<K, V, R> extends AbstractProcessor {
                                         .stream()
                                         .map(IndexedInputSplit::getNewSplit)
                                         .collect(toList());
-                                return new ReadHdfsNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
+                                return new ReadHadoopNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
                             }
                     ).collect(toList());
         }

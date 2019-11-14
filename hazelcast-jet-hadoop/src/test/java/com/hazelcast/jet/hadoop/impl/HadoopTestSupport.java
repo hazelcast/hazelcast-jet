@@ -19,12 +19,12 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import org.junit.Before;
 
-public abstract class HdfsTestSupport extends SimpleTestInClusterSupport {
+public abstract class HadoopTestSupport extends SimpleTestInClusterSupport {
 
     @Before
-    public void hdfsSupportBefore() {
+    public void hadoopSupportBefore() {
         // Tests fail on windows. If you want to run them, comment out this line and
         // follow this instructions: https://stackoverflow.com/a/35652866/952135
-//        assumeThatNoWindowsOS(); // TODO [viliam] uncomment
+        assumeThatNoWindowsOS();
     }
 }

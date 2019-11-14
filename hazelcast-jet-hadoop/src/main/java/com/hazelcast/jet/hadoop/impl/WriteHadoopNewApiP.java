@@ -23,7 +23,7 @@ import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.hadoop.HdfsSinks;
+import com.hazelcast.jet.hadoop.HadoopSinks;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
@@ -47,9 +47,9 @@ import static java.util.stream.IntStream.range;
 import static org.apache.hadoop.mapreduce.TaskType.JOB_SETUP;
 
 /**
- * See {@link HdfsSinks#hdfs}.
+ * See {@link HadoopSinks#outputFormat}.
  */
-public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
+public final class WriteHadoopNewApiP<T, K, V> extends AbstractProcessor {
 
     private final RecordWriter<K, V> recordWriter;
     private final TaskAttemptContextImpl taskAttemptContext;
@@ -57,11 +57,11 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
     private final FunctionEx<? super T, K> extractKeyFn;
     private final FunctionEx<? super T, V> extractValueFn;
 
-    private WriteHdfsNewApiP(RecordWriter<K, V> recordWriter,
-                             TaskAttemptContextImpl taskAttemptContext,
-                             OutputCommitter outputCommitter,
-                             FunctionEx<? super T, K> extractKeyFn,
-                             FunctionEx<? super T, V> extractValueFn
+    private WriteHadoopNewApiP(RecordWriter<K, V> recordWriter,
+                               TaskAttemptContextImpl taskAttemptContext,
+                               OutputCommitter outputCommitter,
+                               FunctionEx<? super T, K> extractKeyFn,
+                               FunctionEx<? super T, V> extractValueFn
     ) {
         this.recordWriter = recordWriter;
         this.taskAttemptContext = taskAttemptContext;
@@ -186,7 +186,7 @@ public final class WriteHdfsNewApiP<T, K, V> extends AbstractProcessor {
                     @SuppressWarnings("unchecked")
                     OutputFormat<K, V> outFormat = getOutputFormat(copiedConfig);
                     RecordWriter<K, V> recordWriter = outFormat.getRecordWriter(taskAttemptContext);
-                    return new WriteHdfsNewApiP<>(recordWriter, taskAttemptContext, outputCommitter, extractKeyFn,
+                    return new WriteHadoopNewApiP<>(recordWriter, taskAttemptContext, outputCommitter, extractKeyFn,
                             extractValueFn);
                 } catch (Exception e) {
                     throw new JetException(e);

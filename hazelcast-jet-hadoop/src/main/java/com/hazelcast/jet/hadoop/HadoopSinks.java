@@ -28,13 +28,13 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
 /**
- * Factories of Apache Hadoop HDFS sinks.
+ * Factories of Apache Hadoop sinks.
  *
  * @since 3.0
  */
-public final class HdfsSinks {
+public final class HadoopSinks {
 
-    private HdfsSinks() {
+    private HadoopSinks() {
     }
 
     /**
@@ -74,21 +74,21 @@ public final class HdfsSinks {
      * @param <V>           type of value to write to HDFS
      */
     @Nonnull
-    public static <E, K, V> Sink<E> hdfs(
+    public static <E, K, V> Sink<E> outputFormat(
             @Nonnull Configuration configuration,
             @Nonnull FunctionEx<? super E, K> extractKeyF,
             @Nonnull FunctionEx<? super E, V> extractValueF
     ) {
-        return Sinks.fromProcessor("writeHdfs", HdfsProcessors.writeHdfsP(configuration, extractKeyF, extractValueF));
+        return Sinks.fromProcessor("writeHdfs", HadoopProcessors.writeHadoopP(configuration, extractKeyF, extractValueF));
     }
 
     /**
-     * Convenience for {@link #hdfs(Configuration, FunctionEx,
+     * Convenience for {@link #outputFormat(Configuration, FunctionEx,
      * FunctionEx)} which expects {@code Map.Entry<K, V>} as
      * input and extracts its key and value parts to be written to HDFS.
      */
     @Nonnull
-    public static <K, V> Sink<Entry<K, V>> hdfs(@Nonnull Configuration configuration) {
-        return hdfs(configuration, Entry::getKey, Entry::getValue);
+    public static <K, V> Sink<Entry<K, V>> outputFormat(@Nonnull Configuration configuration) {
+        return outputFormat(configuration, Entry::getKey, Entry::getValue);
     }
 }

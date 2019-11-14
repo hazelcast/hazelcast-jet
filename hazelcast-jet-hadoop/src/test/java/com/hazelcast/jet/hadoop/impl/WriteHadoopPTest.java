@@ -18,8 +18,8 @@ package com.hazelcast.jet.hadoop.impl;
 
 import com.hazelcast.collection.IList;
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.jet.hadoop.HdfsSinks;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.hadoop.HadoopSinks;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -56,7 +56,7 @@ import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 @Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
-public class WriteHdfsPTest extends HdfsTestSupport {
+public class WriteHadoopPTest extends HadoopTestSupport {
 
     @Parameterized.Parameter
     public Class outputFormatClass;
@@ -111,7 +111,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(IntStream.range(0, messageCount).boxed().toArray(Integer[]::new)))
          .map(num -> entry(new IntWritable(num), new IntWritable(num)))
-         .writeTo(HdfsSinks.hdfs(conf))
+         .writeTo(HadoopSinks.outputFormat(conf))
          // we use higher value to increase the race chance for LazyOutputFormat
          .setLocalParallelism(8);
 
@@ -120,7 +120,7 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         p = Pipeline.create();
         IList<Entry> resultList = instance().getList(randomName());
-        p.readFrom(HdfsSources.hdfs(readJobConf))
+        p.readFrom(HadoopSources.inputFormat(readJobConf))
          .writeTo(Sinks.list(resultList));
 
         instance().newJob(p).join();
