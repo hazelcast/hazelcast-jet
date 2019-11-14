@@ -16,13 +16,16 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
+import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.jet.impl.metrics.MetricsContext;
 import com.hazelcast.jet.impl.util.ProgressState;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public interface Tasklet {
+public interface Tasklet extends DynamicMetricsProvider {
 
     default void init() {
     }
@@ -37,7 +40,12 @@ public interface Tasklet {
     default void close() {
     }
 
-    default void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
+    @Nullable
+    default MetricsContext getMetricsContext() {
+        return null;
+    }
+
+    default void provideDynamicMetrics(MetricDescriptor tagger, MetricsCollectionContext context) {
     }
 
 }

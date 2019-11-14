@@ -57,11 +57,11 @@ public class RemoteMapJournalSource {
             clientConfig.setClusterName(hzConfig.getClusterName());
 
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.<Integer, Integer>remoteMapJournal(
+            p.readFrom(Sources.<Integer, Integer>remoteMapJournal(
                     MAP_NAME, clientConfig, START_FROM_OLDEST)
             ).withoutTimestamps()
              .map(Entry::getValue)
-             .drainTo(Sinks.list(SINK_NAME));
+             .writeTo(Sinks.list(SINK_NAME));
 
             localJet.newJob(p);
 
@@ -98,12 +98,12 @@ public class RemoteMapJournalSource {
 
     private static Config getConfig() {
         Config config = new Config();
-        // Add an event journal config for map which has custom capacity of 1000 (default 10_000)
+        // Add an event journal config for map which has custom capacity of 10_000
         // and time to live seconds as 10 seconds (default 0 which means infinite)
         config.getMapConfig(MAP_NAME)
               .getEventJournalConfig()
               .setEnabled(true)
-              .setCapacity(1000)
+              .setCapacity(10_000)
               .setTimeToLiveSeconds(10);
         return config;
     }

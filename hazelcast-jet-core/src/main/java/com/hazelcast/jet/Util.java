@@ -17,14 +17,14 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.cache.CacheEventType;
+import com.hazelcast.cache.EventJournalCacheEvent;
 import com.hazelcast.cache.impl.journal.CacheEventJournalFunctions;
-import com.hazelcast.cache.impl.journal.EventJournalCacheEvent;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.map.impl.journal.MapEventJournalFunctions;
-import com.hazelcast.map.journal.EventJournalMapEvent;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;

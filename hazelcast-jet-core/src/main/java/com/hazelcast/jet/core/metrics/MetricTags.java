@@ -101,12 +101,6 @@ public final class MetricTags {
     public static final String ORDINAL = "ordinal";
 
     /**
-     * The name of the metric. This is the tag that conceptually identifies
-     * a metric. Mandatory tag.
-     */
-    public static final String METRIC = "metric";
-
-    /**
      * Unit of metric value, for details see {@link ProbeUnit}.
      */
     public static final String UNIT = "unit";
@@ -120,6 +114,12 @@ public final class MetricTags {
      * Source member address for items received from a distributed edge.
      */
     public static final String SOURCE_ADDRESS = "sourceAddress";
+
+    /**
+     * Boolean flag which is true if the metric is user-defined (as opposed to
+     * built-in).
+     */
+    public static final String USER = "user";
 
     private MetricTags() {
     }

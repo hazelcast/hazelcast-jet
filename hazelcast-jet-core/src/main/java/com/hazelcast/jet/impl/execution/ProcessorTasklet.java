@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.metrics.ProbeLevel;
@@ -31,6 +31,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.metrics.MetricNames;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.execution.init.VertexDef;
+import com.hazelcast.jet.impl.metrics.MetricsContext;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 import com.hazelcast.jet.impl.util.ArrayDequeInbox;
 import com.hazelcast.jet.impl.util.CircularListCursor;
@@ -126,6 +127,7 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLong queuesCapacity = new AtomicLong();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
+    private final MetricsContext metricsContext = new MetricsContext();
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
     public ProcessorTasklet(@Nonnull Context context,
@@ -216,10 +218,15 @@ public class ProcessorTasklet implements Tasklet {
         assert !processorClosed : "processor already closed";
         try {
             processor.close();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.severe(jobNameAndExecutionId(context.jobConfig().getName(), context.executionId())
                     + " encountered an exception in Processor.close(), ignoring it", e);
         }
+    }
+
+    @Override
+    public MetricsContext getMetricsContext() {
+        return metricsContext;
     }
 
     @SuppressWarnings("checkstyle:returncount")
@@ -248,14 +255,13 @@ public class ProcessorTasklet implements Tasklet {
             case PROCESS_INBOX:
                 progTracker.notDone();
                 if (inbox.isEmpty()) {
-                    if (isSnapshotInbox() || processor.tryProcess()) {
-                        assert !outbox.hasUnfinishedItem() : isSnapshotInbox()
-                                ? "Unfinished item before fillInbox call"
-                                : "Processor.tryProcess() returned true, but there's unfinished item in the outbox";
-                        fillInbox();
-                    } else {
-                        return;
+                    if (!isSnapshotInbox()) {
+                        if (!processor.tryProcess()) {
+                            return;
+                        }
+                        outbox.reset();
                     }
+                    fillInbox();
                 }
                 if (!inbox.isEmpty()) {
                     if (isSnapshotInbox()) {
@@ -289,8 +295,8 @@ public class ProcessorTasklet implements Tasklet {
                 progTracker.notDone();
                 if (isSnapshotInbox()
                         ? processor.finishSnapshotRestore() : processor.completeEdge(currInstream.ordinal())) {
-                    assert !outbox.hasUnfinishedItem() :
-                            "outbox has unfinished item after successful completeEdge() or finishSnapshotRestore()";
+                    assert !outbox.hasUnfinishedItem() || !isSnapshotInbox() :
+                            "outbox has an unfinished item after successful finishSnapshotRestore()";
                     progTracker.madeProgress();
                     state = initialProcessingState();
                 }
@@ -493,36 +499,38 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     @Override
-    public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
-        tagger = tagger.withTag(MetricTags.VERTEX, this.context.vertexName())
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+        descriptor = descriptor.withTag(MetricTags.VERTEX, this.context.vertexName())
                        .withTag(MetricTags.PROCESSOR_TYPE, this.processor.getClass().getSimpleName())
                        .withTag(MetricTags.PROCESSOR, Integer.toString(this.context.globalProcessorIndex()));
 
         if (instreams.size() == 0 && !VertexDef.isSnapshotVertex(this.context.vertexName())) {
-            tagger = tagger.withTag(MetricTags.SOURCE, "true");
+            descriptor = descriptor.withTag(MetricTags.SOURCE, "true");
         }
         if (outstreams.length == 0) {
-            tagger = tagger.withTag(MetricTags.SINK, "true");
+            descriptor = descriptor.withTag(MetricTags.SINK, "true");
         }
 
         for (int i = 0; i < instreams.size(); i++) {
-            MetricTagger taggerWithOrdinal = tagger.withTag(MetricTags.ORDINAL, String.valueOf(i));
-            context.collect(taggerWithOrdinal, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, receivedCounts.get(i));
-            context.collect(taggerWithOrdinal, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT, receivedBatches.get(i));
+            MetricDescriptor descWithOrdinal = descriptor.copy().withTag(MetricTags.ORDINAL, String.valueOf(i));
+            context.collect(descWithOrdinal, RECEIVED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, receivedCounts.get(i));
+            context.collect(descWithOrdinal, RECEIVED_BATCHES, ProbeLevel.INFO, ProbeUnit.COUNT, receivedBatches.get(i));
         }
 
         for (int i = 0; i < emittedCounts.length() - (this.context.snapshottingEnabled() ? 0 : 1); i++) {
             String ordinal = i == emittedCounts.length() - 1 ? "snapshot" : String.valueOf(i);
-            MetricTagger taggerWithOrdinal = tagger.withTag(MetricTags.ORDINAL, ordinal);
-            context.collect(taggerWithOrdinal, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, emittedCounts.get(i));
+            MetricDescriptor descriptorWithOrdinal = descriptor.copy().withTag(MetricTags.ORDINAL, ordinal);
+            context.collect(descriptorWithOrdinal, EMITTED_COUNT, ProbeLevel.INFO, ProbeUnit.COUNT, emittedCounts.get(i));
         }
 
-        context.collect(tagger, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.topObservedWm());
-        context.collect(tagger, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.coalescedWm());
-        context.collect(tagger, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS, outbox.lastForwardedWm());
-        context.collect(tagger, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS, lastForwardedWmLatency());
+        context.collect(descriptor, TOP_OBSERVED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.topObservedWm());
+        context.collect(descriptor, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.coalescedWm());
+        context.collect(descriptor, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS, outbox.lastForwardedWm());
+        context.collect(descriptor, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS, lastForwardedWmLatency());
 
-        context.collect(tagger, this);
-        context.collect(tagger, this.processor);
+        context.collect(descriptor, this);
+        context.collect(descriptor, this.processor);
+
+        metricsContext.provideDynamicMetrics(descriptor, context);
     }
 }

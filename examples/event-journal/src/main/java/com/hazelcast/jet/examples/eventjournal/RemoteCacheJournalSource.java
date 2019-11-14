@@ -58,11 +58,11 @@ public class RemoteCacheJournalSource {
             clientConfig.setClusterName(hzConfig.getClusterName());
 
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.<Integer, Integer>remoteCacheJournal(
+            p.readFrom(Sources.<Integer, Integer>remoteCacheJournal(
                     CACHE_NAME, clientConfig, START_FROM_OLDEST)
             ).withoutTimestamps()
              .map(Entry::getValue)
-             .drainTo(Sinks.list(SINK_NAME));
+             .writeTo(Sinks.list(SINK_NAME));
 
             localJet.newJob(p);
 
@@ -100,12 +100,12 @@ public class RemoteCacheJournalSource {
     private static Config getConfig() {
         Config config = new Config();
         config.addCacheConfig(new CacheSimpleConfig().setName(CACHE_NAME));
-        // Add an event journal config for cache which has custom capacity of 1000 (default 10_000)
+        // Add an event journal config for cache which has custom capacity of 10_000
         // and time to live seconds as 10 seconds (default 0 which means infinite)
         config.getCacheConfig(CACHE_NAME)
               .getEventJournalConfig()
               .setEnabled(true)
-              .setCapacity(1000)
+              .setCapacity(10_000)
               .setTimeToLiveSeconds(10);
         return config;
     }

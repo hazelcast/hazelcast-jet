@@ -109,9 +109,9 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         int messageCount = 320;
         Pipeline p = Pipeline.create();
-        p.drawFrom(TestSources.items(IntStream.range(0, messageCount).boxed().toArray(Integer[]::new)))
+        p.readFrom(TestSources.items(IntStream.range(0, messageCount).boxed().toArray(Integer[]::new)))
          .map(num -> entry(new IntWritable(num), new IntWritable(num)))
-         .drainTo(HdfsSinks.hdfs(conf))
+         .writeTo(HdfsSinks.hdfs(conf))
          // we use higher value to increase the race chance for LazyOutputFormat
          .setLocalParallelism(8);
 
@@ -120,8 +120,8 @@ public class WriteHdfsPTest extends HdfsTestSupport {
 
         p = Pipeline.create();
         IList<Entry> resultList = instance().getList(randomName());
-        p.drawFrom(HdfsSources.hdfs(readJobConf))
-         .drainTo(Sinks.list(resultList));
+        p.readFrom(HdfsSources.hdfs(readJobConf))
+         .writeTo(Sinks.list(resultList));
 
         instance().newJob(p).join();
         assertEquals(messageCount, resultList.size());

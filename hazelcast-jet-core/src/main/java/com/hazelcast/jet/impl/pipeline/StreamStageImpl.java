@@ -74,7 +74,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
 
     @Nonnull @Override
     public <R> StreamStage<R> flatMap(
-            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn
     ) {
         return attachFlatMap(flatMapFn);
     }
@@ -134,7 +134,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     ) {
         return attachFlatMapUsingServiceAsync("filter", serviceFactory,
-                (s, t) -> filterAsyncFn.apply(s, t).thenApply(passed -> passed ? singleton(t) : null));
+                (s, t) -> filterAsyncFn.apply(s, t).thenApply(passed -> passed ? singleton(t) : Traversers.empty()));
     }
 
     @Nonnull @Override
