@@ -286,7 +286,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
         long executionStartTime = startTime.get();
         if (executionStartTime > 0) {
             context.collect(descriptor, "execution_start_time", ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
-            context.collect(descriptor, "execution_duration", ProbeLevel.INFO, ProbeUnit.MS, System.currentTimeMillis() - executionStartTime);
+            context.collect(descriptor, "execution_duration", ProbeLevel.INFO, ProbeUnit.MS,
+                    System.currentTimeMillis() - executionStartTime);
         }
         for (Tasklet tasklet : tasklets) {
             tasklet.provideDynamicMetrics(descriptor.copy(), context);

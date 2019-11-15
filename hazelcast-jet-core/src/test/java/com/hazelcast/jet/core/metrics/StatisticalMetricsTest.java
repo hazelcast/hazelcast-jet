@@ -167,16 +167,16 @@ public class StatisticalMetricsTest {
 
     private Pipeline batchPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(TestSources.items(1, 2, 3))
-                .drainTo(Sinks.logger());
+        p.readFrom(TestSources.items(1, 2, 3))
+                .writeTo(Sinks.logger());
         return p;
     }
 
     private Pipeline streamingPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(TestSources.itemStream(3))
+        p.readFrom(TestSources.itemStream(3))
                 .withoutTimestamps()
-                .drainTo(Sinks.logger());
+                .writeTo(Sinks.logger());
         return p;
     }
 

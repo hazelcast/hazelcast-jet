@@ -104,6 +104,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         jobRepository = new JobRepository(jetInstance);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
+        nodeEngine.getMetricsRegistry().registerDynamicMetricsProvider(jobCoordinationService);
 
         MetricsService metricsService = nodeEngine.getService(MetricsService.SERVICE_NAME);
         metricsService.registerPublisher(nodeEngine -> new JobMetricsPublisher(jobExecutionService,
