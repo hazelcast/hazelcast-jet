@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.examples.slidingwindow;
 
+import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.function.ComparatorEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 
@@ -72,7 +72,7 @@ public class TopNStocks {
                 topN(5, comparingValue.reversed()),
                 TopNResult::new);
 
-        p.drawFrom(TradeGenerator.tradeSource(500, 6_000))
+        p.readFrom(TradeGenerator.tradeSource(500, 6_000))
          .withNativeTimestamps(1_000)
          .groupingKey(Trade::getTicker)
          .window(sliding(10_000, 1_000))
@@ -81,7 +81,7 @@ public class TopNStocks {
          .window(tumbling(1_000))
          // 2nd aggregation: choose top-N trends from previous aggregation
          .aggregate(aggrOpTopN)
-         .drainTo(Sinks.logger(wr -> String.format("%nAt %s...%n%s", toLocalTime(wr.end()), wr.result())));
+         .writeTo(Sinks.logger(wr -> String.format("%nAt %s...%n%s", toLocalTime(wr.end()), wr.result())));
 
         return p;
     }

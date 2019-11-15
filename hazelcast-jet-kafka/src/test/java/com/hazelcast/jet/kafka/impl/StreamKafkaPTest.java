@@ -16,7 +16,9 @@
 
 package com.hazelcast.jet.kafka.impl;
 
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
@@ -29,8 +31,6 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.impl.JobExecutionRecord;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.kafka.KafkaProcessors;
@@ -109,9 +109,9 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         Arrays.setAll(instances, i -> createJetMember());
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.<Integer, String, String>kafka(properties, rec -> rec.value() + "-x", topic1Name))
+        p.readFrom(KafkaSources.<Integer, String, String>kafka(properties, rec -> rec.value() + "-x", topic1Name))
          .withoutTimestamps()
-         .drainTo(Sinks.list("sink"));
+         .writeTo(Sinks.list("sink"));
 
         instances[0].newJob(p);
         sleepAtLeastSeconds(3);
@@ -144,9 +144,9 @@ public class StreamKafkaPTest extends KafkaTestSupport {
         Arrays.setAll(instances, i -> createJetMember());
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.kafka(properties, topic1Name, topic2Name))
+        p.readFrom(KafkaSources.kafka(properties, topic1Name, topic2Name))
          .withoutTimestamps()
-         .drainTo(Sinks.list("sink"));
+         .writeTo(Sinks.list("sink"));
 
         JobConfig config = new JobConfig();
         config.setProcessingGuarantee(guarantee);

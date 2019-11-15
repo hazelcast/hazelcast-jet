@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.util.Preconditions;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -46,7 +46,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
      *
      */
     StreamStage<Integer> streamStageFromList(List<Integer> input) {
-        return p.drawFrom(TestSources.items(input)).addTimestamps(ts -> ts, 0);
+        return p.readFrom(TestSources.items(input)).addTimestamps(ts -> ts, 0);
     }
 
     /**
@@ -71,7 +71,7 @@ public abstract class PipelineStreamTestSupport extends PipelineTestSupport {
                     deadline_emittedCount.add2(1);
                 })
                 .build();
-        return p.drawFrom(source).withNativeTimestamps(2 * itemCount);
+        return p.readFrom(source).withNativeTimestamps(2 * itemCount);
     }
 
     @SuppressWarnings("unchecked")

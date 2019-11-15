@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
-import com.hazelcast.test.annotation.ParallelTest;
+import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
+import com.hazelcast.test.annotation.ParallelJVMTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -51,8 +51,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Category(ParallelTest.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParametersRunnerFactory.class)
+@Category(ParallelJVMTest.class)
+@Parameterized.UseParametersRunnerFactory(HazelcastParallelParametersRunnerFactory.class)
 public class InsertWatermarksPTest {
 
     private static final long LAG = 3;

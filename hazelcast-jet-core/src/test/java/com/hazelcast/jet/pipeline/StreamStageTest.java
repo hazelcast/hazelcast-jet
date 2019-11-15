@@ -16,8 +16,9 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.accumulator.LongAccumulator;
@@ -29,11 +30,10 @@ import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -49,13 +49,13 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
@@ -110,7 +110,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> mapped = streamStageFromList(input).map(mapFn);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().map(mapFn), identity()),
@@ -129,7 +129,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .map(i -> filterFn.test(i) ? i : null);
 
         // Then
-        filtered.drainTo(sink);
+        filtered.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().filter(filterFn), formatFn),
@@ -147,7 +147,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> filtered = streamStageFromList(input).filter(filterFn);
 
         // Then
-        filtered.drainTo(sink);
+        filtered.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().filter(filterFn), formatFn),
@@ -166,7 +166,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .flatMap(o -> traverseStream(flatMapFn.apply(o)));
 
         // Then
-        flatMapped.drainTo(sink);
+        flatMapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
@@ -282,7 +282,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         GeneralStage<String> mappedStage = addToPipelineFn.apply(sourceStage);
 
         // Then
-        mappedStage.drainTo(sink);
+        mappedStage.writeTo(sink);
         assertVertexCount(p.toDag(), 4);
         assertContainsFused(true);
         execute();
@@ -307,7 +307,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> mapped1 = mappedSource.map(item -> item + "-branch1");
         StreamStage<String> mapped2 = mappedSource.map(item -> item + "-branch2");
-        p.drainTo(sink, mapped1, mapped2);
+        p.writeTo(sink, mapped1, mapped2);
 
         // Then
         assertContainsFused(false);
@@ -329,7 +329,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .setLocalParallelism(1)
                 .map(item -> item + "b")
                 .setLocalParallelism(2)
-                .drainTo(sink);
+                .writeTo(sink);
 
         // Then
         assertContainsFused(false);
@@ -346,19 +346,19 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void mapUsingContext() {
+    public void mapUsingService() {
         // Given
         List<Integer> input = sequence(itemCount);
         BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
         String suffix = "-context";
 
         // When
-        StreamStage<String> mapped = streamStageFromList(input).mapUsingContext(
-                ContextFactory.withCreateFn(x -> suffix),
+        StreamStage<String> mapped = streamStageFromList(input).mapUsingService(
+                ServiceFactory.withCreateFn(x -> suffix),
                 formatFn);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
@@ -366,7 +366,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void mapUsingContext_keyed() {
+    public void mapUsingService_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
@@ -375,10 +375,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
-                .mapUsingContext(ContextFactory.withCreateFn(i -> suffix), (suff, k, i) -> formatFn.apply(suff, i));
+                .mapUsingService(ServiceFactory.withCreateFn(i -> suffix), (suff, k, i) -> formatFn.apply(suff, i));
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
@@ -386,7 +386,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void filterUsingContext() {
+    public void filterUsingService() {
         // Given
         List<Integer> input = sequence(itemCount);
         int acceptedRemainder = 1;
@@ -394,10 +394,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
-                .filterUsingContext(ContextFactory.withCreateFn(i -> acceptedRemainder), (rem, i) -> i % 2 == rem);
+                .filterUsingService(ServiceFactory.withCreateFn(i -> acceptedRemainder), (rem, i) -> i % 2 == rem);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().filter(i -> i % 2 == acceptedRemainder), formatFn),
@@ -405,7 +405,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void filterUsingContext_keyed() {
+    public void filterUsingService_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
@@ -414,12 +414,12 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
-                .filterUsingContext(
-                        ContextFactory.withCreateFn(i -> acceptedRemainder),
+                .filterUsingService(
+                        ServiceFactory.withCreateFn(i -> acceptedRemainder),
                         (rem, k, i) -> i % 2 == rem);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().filter(r -> r % 2 == acceptedRemainder), formatFn),
@@ -427,7 +427,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void flatMapUsingContext() {
+    public void flatMapUsingService() {
         // Given
         List<Integer> input = sequence(itemCount);
         FunctionEx<Integer, Stream<String>> flatMapFn =
@@ -435,13 +435,13 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
-                .flatMapUsingContext(
-                        ContextFactory.withCreateFn(x -> flatMapFn),
+                .flatMapUsingService(
+                        ServiceFactory.withCreateFn(x -> flatMapFn),
                         (fn, i) -> traverseStream(fn.apply(i))
                 );
 
         // Then
-        flatMapped.drainTo(sink);
+        flatMapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
@@ -449,7 +449,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
-    public void flatMapUsingContext_keyed() {
+    public void flatMapUsingService_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
         FunctionEx<Integer, Stream<String>> flatMapFn =
@@ -458,13 +458,13 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
-                .flatMapUsingContext(
-                        ContextFactory.withCreateFn(x -> flatMapFn),
+                .flatMapUsingService(
+                        ServiceFactory.withCreateFn(x -> flatMapFn),
                         (fn, k, i) -> traverseStream(fn.apply(i))
                 );
 
         // Then
-        flatMapped.drainTo(sink);
+        flatMapped.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(flatMapFn), identity()),
@@ -487,7 +487,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .mapUsingReplicatedMap(map, FunctionEx.identity(), Util::entry);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
         assertEquals(
@@ -515,7 +515,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .mapUsingIMap(map, FunctionEx.identity(), Util::entry);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
         assertEquals(
@@ -544,7 +544,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .mapUsingIMap(map, Util::entry);
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         // sinkList: entry(0, "value-0000"), entry(1, "value-0001"), ...
         assertEquals(
@@ -569,7 +569,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 });
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Long, String> formatFn = i -> String.format("%04d", i);
         assertEquals(
@@ -590,7 +590,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 return (acc.get() == input.size()) ? acc.get() : null;
             });
         // Then
-        stage.drainTo(assertOrdered(Collections.singletonList((long) itemCount)));
+        stage.writeTo(assertOrdered(Collections.singletonList((long) itemCount)));
         execute();
     }
 
@@ -608,7 +608,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 });
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Entry<Integer, Long>, String> formatFn = e -> String.format("%d %04d", e.getKey(), e.getValue());
         assertEquals(
@@ -638,7 +638,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                         (acc, k, wm) -> entry(k, evictedSignal));
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Entry<Integer, String>, String> formatFn = e -> String.format("%d %s", e.getKey(), e.getValue());
         assertEquals(
@@ -665,7 +665,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // Then
         long expectedCount = itemCount / 2;
-        stage.drainTo(assertAnyOrder(Arrays.asList(entry(0, expectedCount), entry(1, expectedCount))));
+        stage.writeTo(assertAnyOrder(Arrays.asList(entry(0, expectedCount), entry(1, expectedCount))));
         execute();
     }
 
@@ -687,7 +687,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 );
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Entry<Integer, String>, String> formatFn = e -> String.format("%d %s", e.getKey(), e.getValue());
         assertEquals(
@@ -709,7 +709,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 });
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
         assertEquals(
@@ -738,7 +738,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 });
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Integer, String> formatFn = i -> String.format("%d %04d", i % 2, i);
         assertEquals(
@@ -770,7 +770,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 });
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Long, String> formatFn = i -> String.format("%04d", i);
         assertEquals(
@@ -799,7 +799,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 });
 
         // Then
-        stage.drainTo(sink);
+        stage.writeTo(sink);
         execute();
         Function<Entry<Integer, Long>, String> formatFn = e -> String.format("%d %04d", e.getKey(), e.getValue());
         assertEquals(
@@ -823,7 +823,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .rollingAggregate(counting());
 
         // Then
-        rolled.drainTo(sink);
+        rolled.writeTo(sink);
         execute();
         Function<Object, String> formatFn = i -> String.format("%04d", (Long) i);
         assertEquals(
@@ -842,7 +842,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .rollingAggregate(counting());
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         Function<Entry<Integer, Long>, String> formatFn = e -> String.format("(%d, %04d)", e.getKey(), e.getValue());
         assertEquals(
@@ -867,7 +867,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // Then
         rolling.window(tumbling(1))
                .aggregate(identity)
-               .drainTo(sink);
+               .writeTo(sink);
         execute();
         assertEquals(
                 LongStream.range(0, itemCount)
@@ -891,7 +891,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> merged = srcStage0.merge(srcStage1);
 
         // Then
-        merged.drainTo(sink);
+        merged.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().flatMap(i -> Stream.of(i, i)), formatFn),
@@ -917,7 +917,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         );
 
         // Then
-        hashJoined.drainTo(sink);
+        hashJoined.writeTo(sink);
         execute();
         BiFunction<Integer, String, String> formatFn = (i, value) -> String.format("(%04d, %s)", i, value);
         // sinkList: tuple2(0, "A-0000"), tuple2(1, "A-0001"), ...
@@ -953,7 +953,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         );
 
         // Then
-        hashJoined.drainTo(sink);
+        hashJoined.writeTo(sink);
         execute();
 
         TriFunction<Integer, String, String, String> formatFn =
@@ -991,7 +991,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Tuple2<Integer, ItemsByTag>> joined = builder.build((a, b) -> tuple2(a, b));
 
         // Then
-        joined.drainTo(sink);
+        joined.writeTo(sink);
         execute();
 
         TriFunction<Integer, String, String, String> formatFn =
@@ -1009,7 +1009,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     private BatchStage<Entry<Integer, String>> enrichingStage(List<Integer> input, String prefix) {
-        return p.drawFrom(SourceBuilder.batch("data", x -> null)
+        return p.readFrom(SourceBuilder.batch("data", x -> null)
                 .<Entry<Integer, String>>fillBufferFn((x, buf) -> {
                     input.forEach(i -> buf.add(entry(i, ENRICHING_FORMAT_FN.apply(prefix, i))));
                     buf.close();
@@ -1027,7 +1027,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                              .map(String::valueOf));
 
         // Then
-        mapped.drainTo(sink);
+        mapped.writeTo(sink);
         execute();
         assertEquals(streamToString(input.stream(), i -> String.valueOf(i + 1)),
                 streamToString(sinkStreamOf(String.class), identity()));
@@ -1048,7 +1048,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 }));
 
         // Then
-        custom.drainTo(sink);
+        custom.writeTo(sink);
         execute();
         assertEquals(
                 streamToString(input.stream().map(mapFn), identity()),
@@ -1064,15 +1064,15 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Object> custom = streamStageFromList(input)
                 .groupingKey(extractKeyFn)
-                .customTransform("map", Processors.mapUsingContextP(
-                        ContextFactory.withCreateFn(jet -> new HashSet<>()),
+                .customTransform("map", Processors.mapUsingServiceP(
+                        ServiceFactory.withCreateFn(jet -> new HashSet<>()),
                         (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
                             return seen.add(key) ? jetEvent(jetEvent.timestamp(), key) : null;
                         }));
 
         // Then
-        custom.drainTo(sink);
+        custom.writeTo(sink);
         execute();
 
         // Each processor emitted distinct keys it observed. If groupingKey isn't
@@ -1089,7 +1089,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> peeked = streamStageFromList(input).peek();
 
         // Then
-        peeked.drainTo(sink);
+        peeked.writeTo(sink);
         execute();
         Function<Integer, String> formatFn = i -> String.format("%04d", i);
         assertEquals(
@@ -1108,7 +1108,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         streamStageFromList(input)
          .filter(filterFn)
          .peek(Object::toString)
-         .drainTo(sink);
+         .writeTo(sink);
 
         // Then
         execute();

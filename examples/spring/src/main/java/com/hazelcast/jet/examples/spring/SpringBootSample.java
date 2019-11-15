@@ -18,10 +18,10 @@ package com.hazelcast.jet.examples.spring;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.examples.spring.config.AppConfig;
 import com.hazelcast.jet.examples.spring.source.CustomSourceP;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,8 +49,8 @@ public class SpringBootSample {
     @RequestMapping("/submitJob")
     public void submitJob() {
         Pipeline pipeline = Pipeline.create();
-        pipeline.drawFrom(CustomSourceP.customSource())
-                .drainTo(Sinks.logger());
+        pipeline.readFrom(CustomSourceP.customSource())
+                .writeTo(Sinks.logger());
 
         JobConfig jobConfig = new JobConfig()
                 .addClass(SpringBootSample.class)

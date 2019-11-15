@@ -16,89 +16,84 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.core.Member;
-import com.hazelcast.internal.metrics.MetricsUtil;
-import com.hazelcast.jet.Util;
+import com.hazelcast.cluster.Member;
+import com.hazelcast.internal.metrics.MetricConsumer;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.impl.MetricsCompressor;
+import com.hazelcast.internal.util.MapUtil;
 import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.core.metrics.Measurement;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.impl.metrics.Metric;
-import com.hazelcast.jet.impl.metrics.MetricsCompressor;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.function.UnaryOperator;
+
+import static com.hazelcast.jet.Util.idFromString;
 
 public final class JobMetricsUtil {
-
-    private static final Pattern METRIC_KEY_EXEC_ID_PATTERN =
-            Pattern.compile("\\[module=jet,job=[^,]+,exec=([^,]+),.*");
 
     private JobMetricsUtil() {
     }
 
-    public static Long getExecutionIdFromMetricDescriptor(@Nonnull String descriptor) {
-        Objects.requireNonNull(descriptor, "descriptor");
-
-        Matcher m = METRIC_KEY_EXEC_ID_PATTERN.matcher(descriptor);
-        if (!m.matches()) {
-            // not a job-related metric, ignore it
-            return null;
+    public static Long getExecutionIdFromMetricsDescriptor(MetricDescriptor descriptor) {
+        for (int i = 0; i < descriptor.tagCount(); i++) {
+            if (MetricTags.EXECUTION.equals(descriptor.tag(i))) {
+                return idFromString(descriptor.tagValue(i));
+            }
         }
-        return Util.idFromString(m.group(1));
+        return null;
     }
 
-    public static String addPrefixToDescriptor(@Nonnull String descriptor, @Nonnull String prefix) {
-        assert !prefix.isEmpty() : "Prefix is empty";
-        assert prefix.endsWith(",") : "Prefix should end in a comma";
-
-        assert descriptor.length() >= 3 : "Descriptor too short";
-        assert descriptor.startsWith("[") : "Descriptor of non-standard format";
-        assert descriptor.endsWith("]") : "Descriptor of non-standard format";
-
-        return "[" + prefix + descriptor.substring(1);
-    }
-
-    public static String getMemberPrefix(@Nonnull Member member) {
-        Objects.requireNonNull(member, "member");
-
-        String uuid = member.getUuid();
-        String address = member.getAddress().toString();
-        return MetricTags.MEMBER + "=" + MetricsUtil.escapeMetricNamePart(uuid) + "," +
-                MetricTags.ADDRESS + "=" + MetricsUtil.escapeMetricNamePart(address) + ",";
+    public static UnaryOperator<MetricDescriptor> addMemberPrefixFn(@Nonnull Member member) {
+        String uuid = member.getUuid().toString();
+        String addr = member.getAddress().toString();
+        return d -> d.copy().withTag(MetricTags.MEMBER, uuid).withTag(MetricTags.ADDRESS, addr);
     }
 
     static JobMetrics toJobMetrics(List<RawJobMetrics> rawJobMetrics) {
-        return JobMetrics.of(
-                rawJobMetrics.stream()
-                         .filter(r -> r.getBlob() != null)
-                         .flatMap(r -> metricStream(r).map(metric -> toMeasurement(r.getTimestamp(), metric)))
-        );
+        JobMetricsConsumer consumer = new JobMetricsConsumer();
+        for (RawJobMetrics metrics : rawJobMetrics) {
+            if (metrics.getBlob() == null) {
+                continue;
+            }
+            consumer.timestamp = metrics.getTimestamp();
+            MetricsCompressor.extractMetrics(metrics.getBlob(), consumer);
+        }
+        return JobMetrics.of(consumer.metrics);
+
     }
 
-    private static Stream<Metric> metricStream(RawJobMetrics r) {
-        return StreamSupport.stream(
-                Spliterators.spliteratorUnknownSize(
-                        MetricsCompressor.decompressingIterator(r.getBlob()),
-                        Spliterator.NONNULL
-                ), false
-        );
+    private static class JobMetricsConsumer implements MetricConsumer {
+
+        final Map<String, List<Measurement>> metrics = new HashMap<>();
+        long timestamp;
+
+        @Override
+        public void consumeLong(MetricDescriptor descriptor, long value) {
+            metrics.computeIfAbsent(descriptor.metric(), k -> new ArrayList<>())
+                   .add(measurement(descriptor, value));
+        }
+
+        @Override
+        public void consumeDouble(MetricDescriptor descriptor, double value) {
+            consumeLong(descriptor, (long) value);
+        }
+
+        private Measurement measurement(MetricDescriptor descriptor, long value) {
+            Map<String, String> tags = MapUtil.createHashMap(descriptor.tagCount());
+            for (int i = 0; i < descriptor.tagCount(); i++) {
+                tags.put(descriptor.tag(i), descriptor.tagValue(i));
+            }
+            tags.put(descriptor.discriminator(), descriptor.discriminatorValue());
+            return Measurement.of(descriptor.metric(), value, timestamp, tags);
+        }
+
     }
 
-    private static Measurement toMeasurement(long timestamp, Metric metric) {
-        String descriptor = metric.key();
-        Map<String, String> tags = MetricsUtil.parseMetricName(descriptor).stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        return Measurement.of(metric.value(), timestamp, tags);
-    }
 
 }

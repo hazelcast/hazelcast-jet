@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.processor;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.processor.DiagnosticProcessors;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.logging.ILogger;
 

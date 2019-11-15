@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.examples.kafka;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.map.IMap;
 import kafka.admin.RackAwareMode;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
@@ -66,7 +66,7 @@ public class KafkaSource {
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.kafka(props(
+        p.readFrom(KafkaSources.kafka(props(
                 "bootstrap.servers", BOOTSTRAP_SERVERS,
                 "key.deserializer", StringDeserializer.class.getCanonicalName(),
                 "value.deserializer", IntegerDeserializer.class.getCanonicalName(),
@@ -74,7 +74,7 @@ public class KafkaSource {
                 "auto.offset.reset", AUTO_OFFSET_RESET)
                 , "t1", "t2"))
          .withoutTimestamps()
-         .drainTo(Sinks.map(SINK_NAME));
+         .writeTo(Sinks.map(SINK_NAME));
         return p;
     }
 
@@ -88,7 +88,7 @@ public class KafkaSource {
             fillTopics();
 
             JetInstance instance = Jet.newJetInstance();
-            IMapJet<String, Integer> sinkMap = instance.getMap(SINK_NAME);
+            IMap<String, Integer> sinkMap = instance.getMap(SINK_NAME);
 
             Pipeline p = buildPipeline();
 

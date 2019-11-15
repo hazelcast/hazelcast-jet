@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.core.AbstractProcessor;
+import com.hazelcast.jet.examples.enrichment.datamodel.PageVisit;
+import com.hazelcast.jet.examples.enrichment.datamodel.Payment;
+import com.hazelcast.jet.examples.enrichment.datamodel.StockInfo;
+import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
@@ -31,14 +34,12 @@ import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.examples.enrichment.datamodel.PageVisit;
-import com.hazelcast.jet.examples.enrichment.datamodel.Payment;
-import com.hazelcast.jet.examples.enrichment.datamodel.StockInfo;
-import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
+import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 
+import static com.hazelcast.function.ComparatorEx.comparing;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.mapEventNewValue;
@@ -46,7 +47,6 @@ import static com.hazelcast.jet.Util.mapPutEvents;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.aggregate.AggregateOperations.maxBy;
 import static com.hazelcast.jet.aggregate.AggregateOperations.toList;
-import static com.hazelcast.jet.function.ComparatorEx.comparing;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
@@ -59,21 +59,21 @@ public class CheatSheet {
 
     static void s1() {
         //tag::s1[]
-        BatchStage<String> lines = p.drawFrom(list("lines"));
+        BatchStage<String> lines = p.readFrom(list("lines"));
         BatchStage<String> lowercased = lines.map(line -> line.toLowerCase());
         //end::s1[]
     }
 
     static void s2() {
         //tag::s2[]
-        BatchStage<String> lines = p.drawFrom(list("lines"));
+        BatchStage<String> lines = p.readFrom(list("lines"));
         BatchStage<String> nonEmpty = lines.filter(line -> !line.isEmpty());
         //end::s2[]
     }
 
     static void s3() {
         //tag::s3[]
-        BatchStage<String> lines = p.drawFrom(list("lines"));
+        BatchStage<String> lines = p.readFrom(list("lines"));
         BatchStage<String> words = lines.flatMap(
                 line -> traverseArray(line.split("\\W+")));
         //end::s3[]
@@ -81,9 +81,9 @@ public class CheatSheet {
 
     static void s4() {
         //tag::s4[]
-        BatchStage<Trade> trades = p.drawFrom(list("trades"));
+        BatchStage<Trade> trades = p.readFrom(list("trades"));
         BatchStage<Entry<String, StockInfo>> stockInfo =
-                p.drawFrom(list("stockInfo"));
+                p.readFrom(list("stockInfo"));
         BatchStage<Trade> joined = trades.hashJoin(stockInfo,
                 joinMapEntries(Trade::ticker), Trade::setStockInfo);
         //end::s4[]
@@ -95,24 +95,24 @@ public class CheatSheet {
         IMap<String, StockInfo> stockMap = jet.getMap("stock-info");
         StreamSource<Trade> tradesSource = tradesSource();
 
-        p.drawFrom(tradesSource)
+        p.readFrom(tradesSource)
          .withoutTimestamps()
          .groupingKey(Trade::ticker)
          .mapUsingIMap(stockMap, Trade::setStockInfo)
-         .drainTo(Sinks.list("result"));
+         .writeTo(Sinks.list("result"));
         //end::s4a[]
     }
 
     static void s5() {
         //tag::s5[]
-        BatchStage<String> lines = p.drawFrom(list("lines"));
+        BatchStage<String> lines = p.readFrom(list("lines"));
         BatchStage<Long> count = lines.aggregate(counting());
         //end::s5[]
     }
 
     static void s6() {
         //tag::s6[]
-        BatchStage<String> words = p.drawFrom(list("words"));
+        BatchStage<String> words = p.readFrom(list("words"));
         BatchStage<Entry<String, Long>> wordsAndCounts =
             words.groupingKey(word -> word)
                  .aggregate(counting());
@@ -132,14 +132,14 @@ public class CheatSheet {
     }
 
     private static StreamStage<Tweet> tweetStream() {
-        return p.drawFrom(TestSources.itemStream(10, (x, y) -> new Tweet()))
+        return p.readFrom(TestSources.itemStream(10, (x, y) -> new Tweet()))
                 .withoutTimestamps();
     }
 
     static void s8() {
         //tag::s8[]
-        BatchStage<PageVisit> pageVisits = p.drawFrom(Sources.list("pageVisit"));
-        BatchStage<Payment> payments = p.drawFrom(Sources.list("payment"));
+        BatchStage<PageVisit> pageVisits = p.readFrom(Sources.list("pageVisit"));
+        BatchStage<Payment> payments = p.readFrom(Sources.list("payment"));
 
         BatchStageWithKey<PageVisit, Integer> pageVisitsByUserId =
                 pageVisits.groupingKey(pageVisit -> pageVisit.userId());
@@ -174,14 +174,14 @@ public class CheatSheet {
     }
 
     private static StreamStage<Payment> paymentsStream() {
-        return p.<Payment>drawFrom(Sources.mapJournal("payments",
-            mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST))
+        return p.<Payment>readFrom(Sources.mapJournal("payments",
+                START_FROM_OLDEST, mapEventNewValue(), mapPutEvents()))
             .withTimestamps(Payment::timestamp, 1000);
     }
 
     private static StreamStage<PageVisit> pageVisitsStream() {
-        return p.<PageVisit>drawFrom(
-            Sources.mapJournal("pageVisits", mapPutEvents(), mapEventNewValue(), START_FROM_OLDEST)
+        return p.<PageVisit>readFrom(
+            Sources.mapJournal("pageVisits", START_FROM_OLDEST, mapEventNewValue(), mapPutEvents())
         ).withTimestamps(PageVisit::timestamp, 1000);
     }
 
@@ -189,7 +189,7 @@ public class CheatSheet {
         //tag::s10[]
         StreamSource<Trade> tradesSource = tradesSource();
         StreamStage<Trade> currLargestTrade =
-            p.drawFrom(tradesSource)
+            p.readFrom(tradesSource)
              .withoutTimestamps()
              .rollingAggregate(maxBy(comparing(Trade::worth)));
         //end::s10[]
@@ -197,7 +197,7 @@ public class CheatSheet {
 
     private static StreamSource<Trade> tradesSource() {
         return Sources.mapJournal("tradeStream",
-            mapPutEvents(), mapEventNewValue(), START_FROM_CURRENT);
+                START_FROM_CURRENT, mapEventNewValue(), mapPutEvents());
     }
 
     static void s11() {
@@ -252,7 +252,7 @@ public class CheatSheet {
         Pipeline p = Pipeline.create();
         BatchSource<String> source = null;
         //tag::apply1[]
-        p.drawFrom(source)
+        p.readFrom(source)
          .map(String::toLowerCase)
          .filter(s -> s.startsWith("success"))
          .aggregate(counting())
@@ -260,7 +260,7 @@ public class CheatSheet {
         ;
 
         //tag::apply3[]
-        p.drawFrom(source)
+        p.readFrom(source)
          .apply(PipelineTransforms::cleanUp)
          .aggregate(counting())
         //end::apply3[]
@@ -296,7 +296,7 @@ public class CheatSheet {
         Pipeline p = Pipeline.create();
         BatchSource<String> source = null;
         //tag::custom-transform-2[]
-        p.drawFrom(source)
+        p.readFrom(source)
          .customTransform("name", IdentityMapP::new)
         //end::custom-transform-2[]
         ;

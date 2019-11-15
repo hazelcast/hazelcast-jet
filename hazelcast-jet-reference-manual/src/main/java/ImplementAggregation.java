@@ -19,12 +19,12 @@ import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
-import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.examples.enrichment.datamodel.AddToCart;
 import com.hazelcast.jet.examples.enrichment.datamodel.PageVisit;
 import com.hazelcast.jet.examples.enrichment.datamodel.Payment;
+import com.hazelcast.jet.pipeline.BatchStage;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sources;
 
 import java.util.Map.Entry;
 
@@ -52,9 +52,9 @@ public class ImplementAggregation {
     static void s2() {
         //tag::s2[]
         Pipeline p = Pipeline.create();
-        BatchStage<PageVisit> pageVisit = p.drawFrom(Sources.list("pageVisit"));
-        BatchStage<AddToCart> addToCart = p.drawFrom(Sources.list("addToCart"));
-        BatchStage<Payment> payment = p.drawFrom(Sources.list("payment"));
+        BatchStage<PageVisit> pageVisit = p.readFrom(Sources.list("pageVisit"));
+        BatchStage<AddToCart> addToCart = p.readFrom(Sources.list("addToCart"));
+        BatchStage<Payment> payment = p.readFrom(Sources.list("payment"));
 
         AggregateOperation3<PageVisit, AddToCart, Payment, LongAccumulator[], long[]>
             aggrOp = AggregateOperation

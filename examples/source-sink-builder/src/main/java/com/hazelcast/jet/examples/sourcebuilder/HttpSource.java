@@ -18,6 +18,9 @@ package com.hazelcast.jet.examples.sourcebuilder;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.examples.sourcebuilder.support.MemoryUsageMetric;
+import com.hazelcast.jet.examples.sourcebuilder.support.SystemMonitorGui;
+import com.hazelcast.jet.examples.sourcebuilder.support.SystemMonitorHttpService;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
@@ -27,9 +30,6 @@ import io.undertow.Undertow;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import com.hazelcast.jet.examples.sourcebuilder.support.MemoryUsageMetric;
-import com.hazelcast.jet.examples.sourcebuilder.support.SystemMonitorGui;
-import com.hazelcast.jet.examples.sourcebuilder.support.SystemMonitorHttpService;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -70,13 +70,13 @@ public class HttpSource {
                 .destroyFn(PollHttp::close)
                 .build();
         Pipeline p = Pipeline.create();
-        p.drawFrom(usedMemorySource)
+        p.readFrom(usedMemorySource)
          // we use zero allowed lag because we know the data from remote service is always ordered
          .withNativeTimestamps(0)
          .window(sliding(100, 20))
          .aggregate(linearTrend(MemoryUsageMetric::timestamp, MemoryUsageMetric::memoryUsage))
          .map(wr -> entry(wr.end(), wr.result()))
-         .drainTo(Sinks.map(MAP_NAME));
+         .writeTo(Sinks.map(MAP_NAME));
         return p;
     }
 

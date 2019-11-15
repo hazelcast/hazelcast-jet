@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.examples.files;
 
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -23,7 +24,6 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.WindowDefinition;
-import com.hazelcast.nio.IOUtil;
 
 import java.io.BufferedWriter;
 import java.io.Serializable;
@@ -63,7 +63,7 @@ public class AccessLogStreamAnalyzer {
 
     private static Pipeline buildPipeline(Path tempDir) {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.fileWatcher(tempDir.toString()))
+        p.readFrom(Sources.fileWatcher(tempDir.toString()))
          .withoutTimestamps()
          .map(LogLine::parse)
          .filter(line -> line.getResponseCode() >= 200 && line.getResponseCode() < 400)
@@ -71,7 +71,7 @@ public class AccessLogStreamAnalyzer {
          .window(WindowDefinition.sliding(10_000, 1_000))
          .groupingKey(LogLine::getEndpoint)
          .aggregate(AggregateOperations.counting())
-         .drainTo(Sinks.logger());
+         .writeTo(Sinks.logger());
         return p;
     }
 

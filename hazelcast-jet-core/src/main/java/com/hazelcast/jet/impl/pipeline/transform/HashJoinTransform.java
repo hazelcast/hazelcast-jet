@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;

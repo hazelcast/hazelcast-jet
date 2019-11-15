@@ -16,8 +16,11 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
@@ -28,20 +31,17 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 
 /**
  * A stage in a distributed computation {@link Pipeline pipeline} that will
@@ -67,7 +67,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> filter(@Nonnull PredicateEx<T> filterFn);
 
     @Nonnull @Override
-    <R> BatchStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn);
+    <R> BatchStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn);
 
     @Nonnull @Override
     <S, R> BatchStage<R> mapStateful(
@@ -91,39 +91,39 @@ public interface BatchStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
-    <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
+    <S, R> BatchStage<R> mapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     );
 
     @Nonnull @Override
-    <C, R> BatchStage<R> mapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+    <S, R> BatchStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     @Nonnull @Override
-    <C> BatchStage<T> filterUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiPredicateEx<? super C, ? super T> filterFn
+    <S> BatchStage<T> filterUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     );
 
     @Nonnull @Override
-    <C> BatchStage<T> filterUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
+    <S> BatchStage<T> filterUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     @Nonnull @Override
-    <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<R>> flatMapFn
+    <S, R> BatchStage<R> flatMapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     @Nonnull @Override
-    <C, R> BatchStage<R> flatMapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>>
+    <S, R> BatchStage<R> flatMapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     );
 
@@ -385,9 +385,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * This example counts the items in stage-0, sums those in stage-1 and takes
      * the average of those in stage-2:
      * <pre>{@code
-     * BatchStage<Long> stage0 = p.drawFrom(source0);
-     * BatchStage<Long> stage1 = p.drawFrom(source1);
-     * BatchStage<Long> stage2 = p.drawFrom(source2);
+     * BatchStage<Long> stage0 = p.readFrom(source0);
+     * BatchStage<Long> stage1 = p.readFrom(source1);
+     * BatchStage<Long> stage2 = p.readFrom(source2);
      *
      * AggregateBuilder<Long> b = stage0.aggregateBuilder(
      *         AggregateOperations.counting());
@@ -437,9 +437,9 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * strings across all of them:
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * BatchStage<String> stage0 = p.drawFrom(source0);
-     * BatchStage<String> stage1 = p.drawFrom(source1);
-     * BatchStage<String> stage2 = p.drawFrom(source2);
+     * BatchStage<String> stage0 = p.readFrom(source0);
+     * BatchStage<String> stage1 = p.readFrom(source1);
+     * BatchStage<String> stage2 = p.readFrom(source2);
      * AggregateBuilder1<String> b = stage0.aggregateBuilder();
      * Tag<String> tag0 = b.tag0();
      * Tag<String> tag1 = b.add(stage1);
@@ -497,7 +497,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      * For example, say you have this code:
      *
      * <pre>{@code
-     * BatchStage<String> input = pipeline.drawFrom(textSource);
+     * BatchStage<String> input = pipeline.readFrom(textSource);
      * BatchStage<String> cleanedUp = input
      *         .map(String::toLowerCase)
      *         .filter(s -> s.startsWith("success"));
@@ -518,7 +518,7 @@ public interface BatchStage<T> extends GeneralStage<T> {
      *
      * <pre>{@code
      * BatchStage<String> tokens = pipeline
-     *     .drawFrom(textSource)
+     *     .readFrom(textSource)
      *     .apply(this::cleanUp)
      *     .flatMap(line -> traverseArray(line.split("\\W+")));
      * }</pre>

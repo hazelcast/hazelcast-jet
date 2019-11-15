@@ -18,10 +18,10 @@ package com.hazelcast.jet.examples.spring;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.examples.spring.config.AppConfig;
 import com.hazelcast.jet.examples.spring.source.CustomSourceP;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -40,8 +40,8 @@ public class AnnotationBasedConfigurationSample {
         JetInstance jet = context.getBean(JetInstance.class);
 
         Pipeline pipeline = Pipeline.create();
-        pipeline.drawFrom(CustomSourceP.customSource())
-                .drainTo(Sinks.logger());
+        pipeline.readFrom(CustomSourceP.customSource())
+                .writeTo(Sinks.logger());
 
         JobConfig jobConfig = new JobConfig()
                 .addClass(AnnotationBasedConfigurationSample.class)

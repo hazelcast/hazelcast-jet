@@ -16,19 +16,19 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.jet.function.FunctionEx;
 
 import javax.annotation.Nonnull;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation2;
 import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation3;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 
 /**
  * Represents an intermediate step in the construction of a pipeline stage
@@ -306,9 +306,9 @@ public interface StageWithWindow<T> {
      * stage-2:
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * StreamStage<Long> stage0 = p.drawFrom(source0).withNativeTimestamps(0L);;
-     * StreamStage<Long> stage1 = p.drawFrom(source1).withNativeTimestamps(0L);;
-     * StreamStage<Long> stage2 = p.drawFrom(source2).withNativeTimestamps(0L);;
+     * StreamStage<Long> stage0 = p.readFrom(source0).withNativeTimestamps(0L);;
+     * StreamStage<Long> stage1 = p.readFrom(source1).withNativeTimestamps(0L);;
+     * StreamStage<Long> stage2 = p.readFrom(source2).withNativeTimestamps(0L);;
      * WindowAggregateBuilder<Long> b = stage0
      *         .window(sliding(1000, 10))
      *         .aggregateBuilder(AggregateOperations.counting());
@@ -359,9 +359,9 @@ public interface StageWithWindow<T> {
      * sliding window and counts the distinct strings across all streams:
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * StreamStage<String> stage0 = p.drawFrom(source0).withNativeTimestamps(0L);;
-     * StreamStage<String> stage1 = p.drawFrom(source1).withNativeTimestamps(0L);;
-     * StreamStage<String> stage2 = p.drawFrom(source2).withNativeTimestamps(0L);;
+     * StreamStage<String> stage0 = p.readFrom(source0).withNativeTimestamps(0L);;
+     * StreamStage<String> stage1 = p.readFrom(source1).withNativeTimestamps(0L);;
+     * StreamStage<String> stage2 = p.readFrom(source2).withNativeTimestamps(0L);;
      * WindowAggregateBuilder1<String> b = stage0
      *         .window(sliding(1000, 10))
      *         .aggregateBuilder();

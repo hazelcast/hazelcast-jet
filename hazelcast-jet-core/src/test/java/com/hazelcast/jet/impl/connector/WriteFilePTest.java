@@ -16,18 +16,18 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.jet.IListJet;
+import com.hazelcast.collection.IList;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.nio.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -60,7 +60,7 @@ public class WriteFilePTest extends JetTestSupport {
     private JetInstance instance;
     private Path directory;
     private Path file;
-    private IListJet<String> list;
+    private IList<String> list;
 
     @Before
     public void setup() throws IOException {
@@ -79,8 +79,8 @@ public class WriteFilePTest extends JetTestSupport {
     public void when_localParallelismMoreThan1_then_multipleFiles() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String>list(list.getName()))
-         .drainTo(Sinks.files(directory.toString()))
+        p.readFrom(Sources.<String>list(list.getName()))
+         .writeTo(Sinks.files(directory.toString()))
          .setLocalParallelism(2);
         addItemsToList(0, 10);
 
@@ -243,8 +243,8 @@ public class WriteFilePTest extends JetTestSupport {
     public void when_toStringF_then_used() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String>list(list.getName()))
-         .drainTo(Sinks.<String>filesBuilder(directory.toString())
+        p.readFrom(Sources.<String>list(list.getName()))
+         .writeTo(Sinks.<String>filesBuilder(directory.toString())
                        .toStringFn(val -> Integer.toString(Integer.parseInt(val) - 1))
                        .build());
 
@@ -309,8 +309,8 @@ public class WriteFilePTest extends JetTestSupport {
             charset = StandardCharsets.UTF_8;
         }
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String>list(list.getName()))
-         .drainTo(Sinks.<String>filesBuilder(directory.toString())
+        p.readFrom(Sources.<String>list(list.getName()))
+         .writeTo(Sinks.<String>filesBuilder(directory.toString())
                  .toStringFn(toStringFn)
                  .charset(charset)
                  .append(append)

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.config.EventJournalConfig;
+import com.hazelcast.config.MapConfig;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -51,7 +51,9 @@ public class JobSummaryTest extends JetTestSupport {
     @Before
     public void setup() {
         JetConfig config = new JetConfig();
-        config.getHazelcastConfig().addEventJournalConfig(new EventJournalConfig().setMapName(SOURCE_NAME));
+        MapConfig mapConfig = new MapConfig(SOURCE_NAME);
+        mapConfig.getEventJournalConfig().setEnabled(true);
+        config.getHazelcastConfig().addMapConfig(mapConfig);
         instance = createJetMembers(config, 2)[0];
         client = (JetClientInstanceImpl) createJetClient();
     }
@@ -159,9 +161,9 @@ public class JobSummaryTest extends JetTestSupport {
     @Test
     public void when_job_failed() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal("invalid", JournalInitialPosition.START_FROM_OLDEST))
+        p.readFrom(Sources.mapJournal("invalid", JournalInitialPosition.START_FROM_OLDEST))
                 .withoutTimestamps()
-                .drainTo(Sinks.noop());
+                .writeTo(Sinks.noop());
         Job job = instance.newJob(p, new JobConfig().setName("jobA"));
         String msg = "";
         try {
@@ -179,16 +181,16 @@ public class JobSummaryTest extends JetTestSupport {
 
     public Pipeline newStreamPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.mapJournal(SOURCE_NAME, JournalInitialPosition.START_FROM_OLDEST))
+        p.readFrom(Sources.mapJournal(SOURCE_NAME, JournalInitialPosition.START_FROM_OLDEST))
                 .withoutTimestamps()
-                .drainTo(Sinks.noop());
+                .writeTo(Sinks.noop());
         return p;
     }
 
     public Pipeline newBatchPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map(SOURCE_NAME))
-                .drainTo(Sinks.noop());
+        p.readFrom(Sources.map(SOURCE_NAME))
+                .writeTo(Sinks.noop());
         return p;
     }
 }

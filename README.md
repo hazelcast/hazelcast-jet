@@ -39,7 +39,7 @@ dependency:
 <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet</artifactId>
-    <version>3.1</version>
+    <version>3.2</version>
 </dependency>
 ```
 
@@ -58,12 +58,12 @@ JetInstance jet = Jet.newJetInstance();
 
 Pipeline p = Pipeline.create();
 
-p.drawFrom(Sources.files(path))
+p.readFrom(Sources.files(path))
         .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
         .filter(word -> !word.isEmpty())
         .groupingKey(word -> word)
         .aggregate(AggregateOperations.counting())
-        .drainTo(Sinks.logger());
+        .writeTo(Sinks.logger());
 
 jet.newJob(p).join();
 ```
@@ -90,7 +90,7 @@ JetInstance jet = Jet.newJetInstance();
 
 Pipeline p = Pipeline.create();
 
-p.drawFrom(Sources.fileWatcher(path))
+p.readFrom(Sources.fileWatcher(path))
         .withIngestionTimestamps()
         .setLocalParallelism(1)
         .flatMap(line -> Traversers.traverseArray(line.toLowerCase().split("\\W+")))
@@ -98,7 +98,7 @@ p.drawFrom(Sources.fileWatcher(path))
         .groupingKey(word -> word)
         .window(WindowDefinition.tumbling(1000))
         .aggregate(AggregateOperations.counting())
-        .drainTo(Sinks.logger());
+        .writeTo(Sinks.logger());
 
 jet.newJob(p).join();
 ```
@@ -170,7 +170,7 @@ Maven snippet:
     <dependency>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet</artifactId>
-        <version>3.2-SNAPSHOT</version>
+        <version>4.0-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```

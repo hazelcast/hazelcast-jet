@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.kafka;
 
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.kafka.clients.producer.ProducerRecord;

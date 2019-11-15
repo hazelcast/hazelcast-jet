@@ -35,7 +35,7 @@ public class Metrics {
     static void s1() {
         //tag::s1[]
         JetConfig jetConfig = new JetConfig();
-        jetConfig.getMetricsConfig()
+        jetConfig.getHazelcastConfig().getMetricsConfig()
                  .setEnabled(true)
                  .setJmxEnabled(true)
                 .setRetentionSeconds(5)
@@ -59,7 +59,7 @@ public class Metrics {
                 .filter(vertexOfInterest.and(notSnapshotEdge))
                 .get(MetricNames.EMITTED_COUNT);
 
-        long totalCount = measurements.stream().mapToLong(Measurement::getValue).sum();
+        long totalCount = measurements.stream().mapToLong(Measurement::value).sum();
         //end::s2[]
     }
 }

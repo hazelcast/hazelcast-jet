@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.datamodel.WindowResult;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.transform.WindowAggregateTransform;
 import com.hazelcast.jet.pipeline.StageWithKeyAndWindow;
 import com.hazelcast.jet.pipeline.StageWithWindow;

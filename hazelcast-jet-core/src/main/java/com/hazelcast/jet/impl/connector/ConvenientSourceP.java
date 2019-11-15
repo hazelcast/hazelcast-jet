@@ -16,14 +16,14 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.function.BiConsumerEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.BiConsumerEx;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.JetEvent;
 
 import javax.annotation.Nonnull;

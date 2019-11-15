@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.examples.jdbc;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 import org.h2.tools.DeleteDbFiles;
 
 import java.nio.file.Files;
@@ -47,9 +47,9 @@ public class JdbcSink {
     private static Pipeline buildPipeline(String connectionUrl) {
         Pipeline p = Pipeline.create();
 
-        p.drawFrom(Sources.<Integer, User>map(MAP_NAME))
+        p.readFrom(Sources.<Integer, User>map(MAP_NAME))
          .map(Map.Entry::getValue)
-         .drainTo(Sinks.jdbc("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)",
+         .writeTo(Sinks.jdbc("INSERT INTO " + TABLE_NAME + "(id, name) VALUES(?, ?)",
                  connectionUrl,
                  (stmt, user) -> {
                      // Bind the values from the stream item to a PreparedStatement created from
@@ -83,7 +83,7 @@ public class JdbcSink {
         jet = Jet.newJetInstance();
         Jet.newJetInstance();
 
-        IMapJet<Integer, User> map = jet.getMap(MAP_NAME);
+        IMap<Integer, User> map = jet.getMap(MAP_NAME);
         // populate the source IMap
         for (int i = 0; i < 100; i++) {
             map.put(i, new User(i, "name-" + i));

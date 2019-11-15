@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.examples.slidingwindow;
 
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.accumulator.LongLongAccumulator;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
-import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder.TimestampedSourceBuffer;
 import com.hazelcast.jet.pipeline.StreamSource;

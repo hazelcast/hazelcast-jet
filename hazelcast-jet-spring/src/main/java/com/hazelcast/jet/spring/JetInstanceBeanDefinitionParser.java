@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.spring;
 
+import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.config.MetricsConfig;
 import com.hazelcast.spring.AbstractHazelcastBeanDefinitionParser;
 import com.hazelcast.spring.HazelcastConfigBeanDefinitionParser;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
@@ -29,8 +29,8 @@ import org.springframework.beans.factory.xml.ParserContext;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import static com.hazelcast.config.DomConfigHelper.childElements;
-import static com.hazelcast.config.DomConfigHelper.cleanNodeName;
+import static com.hazelcast.internal.config.DomConfigHelper.childElements;
+import static com.hazelcast.internal.config.DomConfigHelper.cleanNodeName;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 
 /**

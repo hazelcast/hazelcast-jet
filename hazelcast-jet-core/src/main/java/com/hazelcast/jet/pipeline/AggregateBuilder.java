@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.aggregate.AggregateOperation;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.CoAggregateOperationBuilder;
 import com.hazelcast.jet.datamodel.ItemsByTag;
 import com.hazelcast.jet.datamodel.Tag;
-import com.hazelcast.jet.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.AggBuilder;
 import com.hazelcast.jet.impl.pipeline.AggBuilder.CreateOutStageFn;
 import com.hazelcast.jet.impl.pipeline.BatchStageImpl;

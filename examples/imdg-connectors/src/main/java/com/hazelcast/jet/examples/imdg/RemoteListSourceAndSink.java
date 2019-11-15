@@ -17,10 +17,10 @@
 package com.hazelcast.jet.examples.imdg;
 
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.collection.IList;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -56,13 +56,13 @@ public class RemoteListSourceAndSink {
 
             // pipeline that copies the remote list to a local with the same name
             Pipeline p1 = Pipeline.create();
-            p1.drawFrom(Sources.remoteList(LIST_1, clientConfig))
-              .drainTo(Sinks.list(LIST_1));
+            p1.readFrom(Sources.remoteList(LIST_1, clientConfig))
+              .writeTo(Sinks.list(LIST_1));
 
             // pipeline that copies the local list to a remote with a different name
             Pipeline p2 = Pipeline.create();
-            p2.drawFrom(Sources.list(LIST_1))
-              .drainTo(Sinks.remoteList(LIST_2, clientConfig));
+            p2.readFrom(Sources.list(LIST_1))
+              .writeTo(Sinks.remoteList(LIST_2, clientConfig));
 
             localJet.newJob(p1).join();
             System.out.println("Local list-1 contents: " + new ArrayList<>(localJet.getList(LIST_1)));
@@ -84,7 +84,7 @@ public class RemoteListSourceAndSink {
     private static ClientConfig clientConfigForExternalHazelcast() {
         ClientConfig cfg = new ClientConfig();
         cfg.getNetworkConfig().addAddress("localhost:6701");
-        cfg.getGroupConfig().setName("dev").setPassword("dev-pass");
+        cfg.setClusterName("dev");
         return cfg;
     }
 }

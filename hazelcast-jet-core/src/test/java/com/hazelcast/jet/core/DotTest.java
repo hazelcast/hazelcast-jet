@@ -29,10 +29,10 @@ import org.junit.runner.RunWith;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
+import static com.hazelcast.function.Functions.wholeItem;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -72,22 +72,22 @@ public class DotTest {
     @Test
     public void when_pipelineToDotString() {
         Pipeline p = Pipeline.create();
-        BatchStage<Entry> source = p.drawFrom(Sources.map("source1"));
+        BatchStage<Entry> source = p.readFrom(Sources.map("source1"));
 
         source
             .groupingKey(Entry::getKey)
             .aggregate(AggregateOperations.counting())
             .setName("aggregateToCount")
-            .drainTo(Sinks.logger());
+            .writeTo(Sinks.logger());
 
         source
             .groupingKey(Entry::getKey)
             .aggregate(AggregateOperations.toSet())
             .setName("aggregateToSet")
-            .drainTo(Sinks.logger());
+            .writeTo(Sinks.logger());
 
         source.filter(alwaysTrue())
-              .drainTo(Sinks.logger());
+              .writeTo(Sinks.logger());
 
         String actualPipeline = p.toDotString();
         assertEquals(actualPipeline, "digraph Pipeline {\n" +
@@ -132,11 +132,11 @@ public class DotTest {
     public void assertedTest() {
         Pipeline p = Pipeline.create();
         // " in vertex name should be escaped
-        p.drawFrom(Sources.map("source1\""))
+        p.readFrom(Sources.map("source1\""))
          .groupingKey(Entry::getKey)
          .aggregate(AggregateOperations.counting())
          .setName("aggregateToCount")
-         .drainTo(Sinks.logger());
+         .writeTo(Sinks.logger());
 
         assertEquals("digraph Pipeline {\n" +
                 "\t\"mapSource(source1\\\")\" -> \"aggregateToCount\";\n" +

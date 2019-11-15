@@ -16,19 +16,19 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
@@ -75,7 +75,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     StreamStage<T> filter(@Nonnull PredicateEx<T> filterFn);
 
     @Nonnull @Override
-    <R> StreamStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn);
+    <R> StreamStage<R> flatMap(@Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn);
 
     @Nonnull @Override
     <S, R> StreamStage<R> mapStateful(
@@ -101,39 +101,39 @@ public interface StreamStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
-    <C, R> StreamStage<R> mapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
+    <S, R> StreamStage<R> mapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     );
 
     @Nonnull @Override
-    <C, R> StreamStage<R> mapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+    <S, R> StreamStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     @Nonnull @Override
-    <C> StreamStage<T> filterUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiPredicateEx<? super C, ? super T> filterFn
+    <S> StreamStage<T> filterUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     );
 
     @Nonnull @Override
-    <C> StreamStage<T> filterUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
+    <S> StreamStage<T> filterUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     @Nonnull @Override
-    <C, R> StreamStage<R> flatMapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<R>> flatMapFn
+    <S, R> StreamStage<R> flatMapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     @Nonnull @Override
-    <C, R> StreamStage<R> flatMapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    <S, R> StreamStage<R> flatMapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     );
 
     @Nonnull @Override
@@ -231,7 +231,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      * For example, say you have this code:
      *
      * <pre>{@code
-     * StreamStage<String> input = pipeline.drawFrom(textSource);
+     * StreamStage<String> input = pipeline.readFrom(textSource);
      * StreamStage<String> cleanedUp = input
      *         .map(String::toLowerCase)
      *         .filter(s -> s.startsWith("success"));
@@ -252,7 +252,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
      *
      * <pre>{@code
      * StreamStage<String> tokens = pipeline
-     *     .drawFrom(textSource)
+     *     .readFrom(textSource)
      *     .apply(this::cleanUp)
      *     .flatMap(line -> traverseArray(line.split("\\W+")));
      * }</pre>

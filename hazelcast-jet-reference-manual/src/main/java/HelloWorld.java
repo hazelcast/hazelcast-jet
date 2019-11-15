@@ -23,21 +23,21 @@ import com.hazelcast.jet.pipeline.Sources;
 import java.util.List;
 import java.util.Map;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 
 public class HelloWorld {
     public static void main(String[] args) {
         // Create the specification of the computation pipeline. Note
         // it's a pure POJO: no instance of Jet needed to create it.
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<String>list("text"))
+        p.readFrom(Sources.<String>list("text"))
          .flatMap(line -> traverseArray(line.toLowerCase().split("\\W+")))
          .filter(word -> !word.isEmpty())
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(Sinks.map("counts"));
+         .writeTo(Sinks.map("counts"));
 
         // Start Jet, populate the input list
         JetInstance jet = Jet.newJetInstance();

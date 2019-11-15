@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.metrics;
 
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -25,7 +26,6 @@ import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class JobMetrics_StressTest extends JetTestSupport {
         IncrementingProcessor.completeCount.set(0);
 
         JetConfig config = new JetConfig();
-        config.getMetricsConfig().setCollectionIntervalSeconds(1);
+        config.getHazelcastConfig().getMetricsConfig().setCollectionIntervalSeconds(1);
         instance = createJetMember(config);
     }
 
@@ -202,7 +202,7 @@ public class JobMetrics_StressTest extends JetTestSupport {
                     if (initCountMeasurements.size() != TOTAL_PROCESSORS) {
                         continue;
                     }
-                    long initCountSum = initCountMeasurements.stream().mapToLong(Measurement::getValue).sum();
+                    long initCountSum = initCountMeasurements.stream().mapToLong(Measurement::value).sum();
                     assertTrue("Metrics value should be increasing, current: " + initCountSum
                             + ", previous: " + previousInitCountSum,
                             initCountSum >= previousInitCountSum);
@@ -212,7 +212,7 @@ public class JobMetrics_StressTest extends JetTestSupport {
                     if (completeCountMeasurements.size() != TOTAL_PROCESSORS) {
                         continue;
                     }
-                    long completeCountSum = completeCountMeasurements.stream().mapToLong(Measurement::getValue).sum();
+                    long completeCountSum = completeCountMeasurements.stream().mapToLong(Measurement::value).sum();
                     assertTrue("Metrics value should be increasing, current: " + completeCountSum
                             + ", previous: " + previousCompleteCountSum,
                             completeCountSum >= previousCompleteCountSum);
@@ -222,7 +222,7 @@ public class JobMetrics_StressTest extends JetTestSupport {
                     assertNotNull(job.getMetrics());
                     Collection<Measurement> initCountMeasurements = job.getMetrics().get("initCount");
                     assertEquals(TOTAL_PROCESSORS, initCountMeasurements.size());
-                    long sum = initCountMeasurements.stream().mapToLong(Measurement::getValue).sum();
+                    long sum = initCountMeasurements.stream().mapToLong(Measurement::value).sum();
                     assertEquals((RESTART_COUNT + 1) * TOTAL_PROCESSORS * TOTAL_PROCESSORS, sum);
                 }, 3);
             } catch (Throwable ex) {

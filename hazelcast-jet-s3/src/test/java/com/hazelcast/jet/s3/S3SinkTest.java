@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.s3;
 
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.test.annotation.NightlyTest;
 import org.junit.After;
 import org.junit.Before;
@@ -65,7 +65,7 @@ public class S3SinkTest extends S3TestBase {
     }
 
     @Test
-    public void when_drainToNotExistingBucket() {
+    public void when_writeToNotExistingBucket() {
         testSinkWithNotExistingBucket("jet-s3-connector-test-bucket-sink-THIS-BUCKET-DOES-NOT-EXIST");
     }
 

@@ -16,7 +16,8 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -27,7 +28,6 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.util.UuidUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -101,12 +101,12 @@ public class SourceBuilder_TopologyChangeTest extends JetTestSupport {
         IList<WindowResult<Long>> result = jet.getList("result-" + UuidUtil.newUnsecureUuidString());
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(source)
+        p.readFrom(source)
                 .withNativeTimestamps(0)
                 .window(tumbling(windowSize))
                 .aggregate(AggregateOperations.counting())
                 .peek()
-                .drainTo(Sinks.list(result));
+                .writeTo(Sinks.list(result));
 
         Job job = jet.newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(500));
         assertTrueEventually(() -> assertFalse("result list is still empty", result.isEmpty()));

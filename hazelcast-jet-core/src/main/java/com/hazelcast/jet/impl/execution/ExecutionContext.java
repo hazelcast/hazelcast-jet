@@ -16,10 +16,14 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.TerminationMode;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
@@ -29,10 +33,7 @@ import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
-import com.hazelcast.nio.BufferObjectDataInput;
-import com.hazelcast.spi.NodeEngine;
-import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -52,7 +53,7 @@ import static java.util.Collections.unmodifiableMap;
  * instance per job execution; if the job is restarted, another instance will
  * be used.
  */
-public class ExecutionContext {
+public class ExecutionContext implements DynamicMetricsProvider {
 
     private final long jobId;
     private final long executionId;
@@ -69,7 +70,6 @@ public class ExecutionContext {
     private Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap = emptyMap();
 
     private List<ProcessorSupplier> procSuppliers = emptyList();
-    private List<Processor> processors = emptyList();
 
     private List<Tasklet> tasklets = emptyList();
 
@@ -83,6 +83,8 @@ public class ExecutionContext {
     private final TaskletExecutionService taskletExecService;
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
+
+    private boolean metricsEnabled;
 
     private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
 
@@ -107,13 +109,11 @@ public class ExecutionContext {
         // Must be populated early, so all processor suppliers are
         // available to be completed in the case of init failure
         procSuppliers = unmodifiableList(plan.getProcessorSuppliers());
-        processors = plan.getProcessors();
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
-        boolean registerMetrics = jobConfig.isMetricsEnabled() &&
-                ((JetService) nodeEngine.getService(JetService.SERVICE_NAME)).getMetricsService().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, registerMetrics);
+        metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
         snapshotContext.initTaskletCount(plan.getStoreSnapshotTaskletCount(), plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
@@ -177,12 +177,9 @@ public class ExecutionContext {
                 s.close(error);
             } catch (Throwable e) {
                 logger.severe(jobNameAndExecutionId()
-                        + " encountered an exception in ProcessorSupplier.complete(), ignoring it", e);
+                        + " encountered an exception in ProcessorSupplier.close(), ignoring it", e);
             }
         }
-        MetricsRegistry metricsRegistry = ((NodeEngineImpl) nodeEngine).getMetricsRegistry();
-        processors.forEach(metricsRegistry::deregister);
-        tasklets.forEach(metricsRegistry::deregister);
     }
 
     /**
@@ -271,5 +268,17 @@ public class ExecutionContext {
 
     public void setJobMetrics(RawJobMetrics jobMetrics) {
         this.jobMetrics = jobMetrics;
+    }
+
+    @Override
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+        if (!metricsEnabled) {
+            return;
+        }
+        descriptor = descriptor.withTag(MetricTags.JOB, idToString(jobId))
+                               .withTag(MetricTags.EXECUTION, idToString(executionId));
+        for (Tasklet tasklet : tasklets) {
+            tasklet.provideDynamicMetrics(descriptor.copy(), context);
+        }
     }
 }

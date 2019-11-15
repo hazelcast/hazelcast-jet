@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet.examples.sockets;
 
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.function.ConsumerEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -54,9 +54,9 @@ public class StreamTextSocket {
 
         try {
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.socket(HOST, PORT, UTF_8))
+            p.readFrom(Sources.socket(HOST, PORT, UTF_8))
              .withoutTimestamps()
-             .drainTo(Sinks.list(SINK_NAME));
+             .writeTo(Sinks.list(SINK_NAME));
 
             jet.newJob(p).join();
 

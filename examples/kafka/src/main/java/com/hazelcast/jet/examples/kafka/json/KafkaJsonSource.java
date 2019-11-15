@@ -19,7 +19,6 @@ package com.hazelcast.jet.examples.kafka.json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.config.SerializerConfig;
-import com.hazelcast.core.IMap;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -28,6 +27,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.StreamSerializer;
@@ -79,7 +79,7 @@ public class KafkaJsonSource {
 
     private Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(KafkaSources.kafka(props(
+        p.readFrom(KafkaSources.kafka(props(
                 "bootstrap.servers", BROKER_HOST + ':' + brokerPort,
                 "group.id", "0",
                 "key.deserializer", IntegerDeserializer.class.getName(),
@@ -87,7 +87,7 @@ public class KafkaJsonSource {
                 "auto.offset.reset", AUTO_OFFSET_RESET), TOPIC))
          .withoutTimestamps()
          .peek()
-         .drainTo(Sinks.map(SINK_MAP_NAME));
+         .writeTo(Sinks.map(SINK_MAP_NAME));
         return p;
     }
 

@@ -16,11 +16,9 @@
 
 package com.hazelcast.jet.server;
 
-import com.hazelcast.core.Cluster;
+import com.hazelcast.cluster.Cluster;
+import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.ReplicatedMap;
-import com.hazelcast.jet.IListJet;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetException;
@@ -32,6 +30,8 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.util.ConcurrentMemoizingSupplier;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -65,7 +65,7 @@ import java.util.jar.JarFile;
  * Main-Class} in {@code MANIFEST.MF}.
  * </li><li>
  * Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
- * jet.sh submit jetjob.jar}. The script is found in the Jet distribution
+ * jet submit jetjob.jar}. The script is found in the Jet distribution
  * zipfile, in the {@code bin} directory. On Windows use {@code
  * jet.bat}.
  * </li><li>
@@ -90,7 +90,7 @@ import java.util.jar.JarFile;
  * <p>
  * After building the JAR, submit the job:
  * <pre>
- * $ jet.sh submit jetjob.jar
+ * $ jet submit jetjob.jar
  * </pre>
  *
  * @since 3.0
@@ -160,7 +160,7 @@ public final class JetBootstrap {
     public static JetInstance getInstance() {
         if (supplier == null) {
             throw new JetException(
-                    "JetBootstrap.getInstance() should be used in conjunction with the jet.sh submit command"
+                    "JetBootstrap.getInstance() should be used in conjunction with the jet submit command"
             );
         }
         return supplier.get();
@@ -234,7 +234,7 @@ public final class JetBootstrap {
         }
 
         @Nonnull @Override
-        public <K, V> IMapJet<K, V> getMap(@Nonnull String name) {
+        public <K, V> IMap<K, V> getMap(@Nonnull String name) {
             return instance.getMap(name);
         }
 
@@ -249,7 +249,7 @@ public final class JetBootstrap {
         }
 
         @Nonnull @Override
-        public <E> IListJet<E> getList(@Nonnull String name) {
+        public <E> IList<E> getList(@Nonnull String name) {
             return instance.getList(name);
         }
 

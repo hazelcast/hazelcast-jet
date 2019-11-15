@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
-import com.hazelcast.jet.function.FunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 

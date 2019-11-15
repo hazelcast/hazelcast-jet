@@ -16,29 +16,28 @@
 
 package com.hazelcast.jet.pipeline;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.PredicateEx;
+import com.hazelcast.function.SupplierEx;
+import com.hazelcast.function.ToLongFunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.PredicateEx;
-import com.hazelcast.jet.function.SupplierEx;
-import com.hazelcast.jet.function.ToLongFunctionEx;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.Util.toCompletableFuture;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -107,7 +106,7 @@ public interface GeneralStage<T> extends Stage {
      */
     @Nonnull
     <R> GeneralStage<R> flatMap(
-            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn
     );
 
     /**
@@ -256,8 +255,8 @@ public interface GeneralStage<T> extends Stage {
     /**
      * Attaches a mapping stage which applies the supplied function to each
      * input item independently and emits the function's result as the output
-     * item. The mapping function receives another parameter, the context
-     * object, which Jet will create using the supplied {@code contextFactory}.
+     * item. The mapping function receives another parameter, the service
+     * object, which Jet will create using the supplied {@code serviceFactory}.
      * <p>
      * If the mapping result is {@code null}, it emits nothing. Therefore this
      * stage can be used to implement filtering semantics as well.
@@ -265,8 +264,8 @@ public interface GeneralStage<T> extends Stage {
      * This sample takes a stream of stock items and sets the {@code detail}
      * field on them by looking up from a registry:
      * <pre>{@code
-     * stage.mapUsingContext(
-     *     ContextFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
+     * stage.mapUsingService(
+     *     ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
      *     (reg, item) -> item.setDetail(reg.fetchDetail(item))
      * )
      * }</pre>
@@ -274,26 +273,26 @@ public interface GeneralStage<T> extends Stage {
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      *
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the context object maintains doesn't participate in Jet's
+     * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
      * job restart; if it is saved to some durable storage, the state of that
      * storage won't be rewound to the last checkpoint, so you'll perform
      * duplicate updates.
      *
-     * @param contextFactory the context factory
+     * @param serviceFactory the service factory
      * @param mapFn a stateless mapping function
-     * @param <C> type of context object
+     * @param <S> type of service object
      * @param <R> the result type of the mapping function
      * @return the newly attached stage
      */
     @Nonnull
-    <C, R> GeneralStage<R> mapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends R> mapFn
+    <S, R> GeneralStage<R> mapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     );
 
     /**
-     * Asynchronous version of {@link #mapUsingContext}: the {@code mapAsyncFn}
+     * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
      * returns a {@code CompletableFuture<R>} instead of just {@code R}.
      * <p>
      * The function can return a null future or the future can return a null
@@ -305,8 +304,8 @@ public interface GeneralStage<T> extends Stage {
      * This sample takes a stream of stock items and sets the {@code detail}
      * field on them by looking up from a registry:
      * <pre>{@code
-     * stage.mapUsingContextAsync(
-     *     ContextFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
+     * stage.mapUsingServiceAsync(
+     *     ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
      *     (reg, item) -> reg.fetchDetailAsync(item)
      *                       .thenApply(detail -> item.setDetail(detail)
      * )
@@ -315,37 +314,37 @@ public interface GeneralStage<T> extends Stage {
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      *
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the context object maintains doesn't participate in Jet's
+     * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
      * job restart; if it is saved to some durable storage, the state of that
      * storage won't be rewound to the last checkpoint, so you'll perform
      * duplicate updates.
      *
-     * @param contextFactory the context factory
+     * @param serviceFactory the service factory
      * @param mapAsyncFn a stateless mapping function. Can map to null (return
      *      a null future)
-     * @param <C> type of context object
+     * @param <S> type of service object
      * @param <R> the future's result type of the mapping function
      * @return the newly attached stage
      */
     @Nonnull
-    <C, R> GeneralStage<R> mapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+    <S, R> GeneralStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     /**
      * Attaches a filtering stage which applies the provided predicate function
      * to each input item to decide whether to pass the item to the output or
      * to discard it. The predicate function receives another parameter, the
-     * context object, which Jet will create using the supplied {@code
-     * contextFactory}.
+     * service object, which Jet will create using the supplied {@code
+     * serviceFactory}.
      * <p>
      * This sample takes a stream of photos, uses an image classifier to reason
      * about their contents, and keeps only photos of cats:
      * <pre>{@code
-     * photos.filterUsingContext(
-     *     ContextFactory.withCreateFn(jet -> new ImageClassifier(jet)),
+     * photos.filterUsingService(
+     *     ServiceFactory.withCreateFn(jet -> new ImageClassifier(jet)),
      *     (classifier, photo) -> classifier.classify(photo).equals("cat")
      * )
      * }</pre>
@@ -353,25 +352,25 @@ public interface GeneralStage<T> extends Stage {
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      *
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the context object maintains doesn't participate in Jet's
+     * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
      * job restart; if it is saved to some durable storage, the state of that
      * storage won't be rewound to the last checkpoint, so you'll perform
      * duplicate updates.
      *
-     * @param contextFactory the context factory
+     * @param serviceFactory the service factory
      * @param filterFn a stateless filter predicate function
-     * @param <C> type of context object
+     * @param <S> type of service object
      * @return the newly attached stage
      */
     @Nonnull
-    <C> GeneralStage<T> filterUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiPredicateEx<? super C, ? super T> filterFn
+    <S> GeneralStage<T> filterUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     );
 
     /**
-     * Asynchronous version of {@link #filterUsingContext}: the {@code
+     * Asynchronous version of {@link #filterUsingService}: the {@code
      * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
      * just a {@code boolean}.
      * <p>
@@ -383,8 +382,8 @@ public interface GeneralStage<T> extends Stage {
      * This sample takes a stream of photos, uses an image classifier to reason
      * about their contents, and keeps only photos of cats:
      * <pre>{@code
-     * photos.filterUsingContextAsync(
-     *     ContextFactory.withCreateFn(jet -> new ImageClassifier(jet)),
+     * photos.filterUsingServiceAsync(
+     *     ServiceFactory.withCreateFn(jet -> new ImageClassifier(jet)),
      *     (classifier, photo) -> reg.classifyAsync(photo)
      *                               .thenApply(it -> it.equals("cat"))
      * )
@@ -393,21 +392,21 @@ public interface GeneralStage<T> extends Stage {
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      *
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the context object maintains doesn't participate in Jet's
+     * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
      * job restart; if it is saved to some durable storage, the state of that
      * storage won't be rewound to the last checkpoint, so you'll perform
      * duplicate updates.
      *
-     * @param contextFactory the context factory
+     * @param serviceFactory the service factory
      * @param filterAsyncFn a stateless filtering function
-     * @param <C> type of context object
+     * @param <S> type of service object
      * @return the newly attached stage
      */
     @Nonnull
-    <C> GeneralStage<T> filterUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
+    <S> GeneralStage<T> filterUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
     );
 
     /**
@@ -415,14 +414,14 @@ public interface GeneralStage<T> extends Stage {
      * each input item independently and emits all items from the {@link
      * Traverser} it returns as the output items. The traverser must be
      * <em>null-terminated</em>. The mapping function receives another
-     * parameter, the context object, which Jet will create using the supplied
-     * {@code contextFactory}.
+     * parameter, the service object, which Jet will create using the supplied
+     * {@code serviceFactory}.
      * <p>
      * This sample takes a stream of products and outputs an "exploded" stream
      * of all the parts that go into making them:
      * <pre>{@code
-     * StreamStage<Part> parts = products.flatMapUsingContext(
-     *     ContextFactory.withCreateFn(jet -> new PartRegistryCtx()),
+     * StreamStage<Part> parts = products.flatMapUsingService(
+     *     ServiceFactory.withCreateFn(jet -> new PartRegistryCtx()),
      *     (registry, product) -> Traversers.traverseIterable(
      *                                registry.fetchParts(product))
      * );
@@ -431,28 +430,28 @@ public interface GeneralStage<T> extends Stage {
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      *
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the context object maintains doesn't participate in Jet's
+     * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
      * job restart; if it is saved to some durable storage, the state of that
      * storage won't be rewound to the last checkpoint, so you'll perform
      * duplicate updates.
      *
-     * @param contextFactory the context factory
+     * @param serviceFactory the service factory
      * @param flatMapFn a stateless flatmapping function, whose result type is Jet's {@link
      *                  Traverser}. It must not return null traverser, but can return an
      *                  {@linkplain Traversers#empty() empty traverser}.
-     * @param <C> type of context object
+     * @param <S> type of service object
      * @param <R> the type of items in the result's traversers
      * @return the newly attached stage
      */
     @Nonnull
-    <C, R> GeneralStage<R> flatMapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends Traverser<R>> flatMapFn
+    <S, R> GeneralStage<R> flatMapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
     /**
-     * Asynchronous version of {@link #flatMapUsingContext}: the {@code
+     * Asynchronous version of {@link #flatMapUsingService}: the {@code
      * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
      * instead of just {@code Traverser<R>}.
      * <p>
@@ -465,8 +464,8 @@ public interface GeneralStage<T> extends Stage {
      * This sample takes a stream of products and outputs an "exploded" stream
      * of all the parts that go into making them:
      * <pre>{@code
-     * StreamStage<Part> parts = products.flatMapUsingContextAsync(
-     *     ContextFactory.withCreateFn(jet -> new PartRegistryCtx()),
+     * StreamStage<Part> parts = products.flatMapUsingServiceAsync(
+     *     ServiceFactory.withCreateFn(jet -> new PartRegistryCtx()),
      *     (registry, product) -> registry
      *          .fetchPartsAsync(product)
      *          .thenApply(parts -> Traversers.traverseIterable(parts))
@@ -476,25 +475,25 @@ public interface GeneralStage<T> extends Stage {
      * <h3>Interaction with fault-tolerant unbounded jobs</h3>
      *
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the context object maintains doesn't participate in Jet's
+     * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
      * job restart; if it is saved to some durable storage, the state of that
      * storage won't be rewound to the last checkpoint, so you'll perform
      * duplicate updates.
      *
-     * @param contextFactory the context factory
+     * @param serviceFactory the service factory
      * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
      *      (return a null future). The future must not return a null
      *      traverser, but can return an {@linkplain Traversers#empty() empty
      *      traverser}.
-     * @param <C> type of context object
+     * @param <S> type of service object
      * @param <R> the type of the returned stage
      * @return the newly attached stage
      */
     @Nonnull
-    <C, R> GeneralStage<R> flatMapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull BiFunctionEx<? super C, ? super T, ? extends CompletableFuture<Traverser<R>>>
+    <S, R> GeneralStage<R> flatMapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     );
 
@@ -539,7 +538,7 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        GeneralStage<R> res = mapUsingContext(ContextFactories.<K, V>replicatedMapContext(mapName),
+        GeneralStage<R> res = mapUsingService(ServiceFactories.<K, V>replicatedMapService(mapName),
                 (map, t) -> mapFn.apply(t, map.get(lookupKeyFn.apply(t))));
         return res.setName("mapUsingReplicatedMap");
     }
@@ -631,8 +630,8 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        GeneralStage<R> res = mapUsingContextAsync(ContextFactories.<K, V>iMapContext(mapName), (map, t) ->
-                toCompletableFuture(map.getAsync(lookupKeyFn.apply(t))).thenApply(e -> mapFn.apply(t, e)));
+        GeneralStage<R> res = mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), (map, t) ->
+                map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e)));
         return res.setName("mapUsingIMap");
     }
 
@@ -876,14 +875,14 @@ public interface GeneralStage<T> extends Stage {
      * supplied argument specifies what to do with the received data (typically
      * push it to some outside resource).
      * <p>
-     * You cannot reuse the sink in other {@code drainTo} calls. If you want to
-     * drain multiple stages to the same sink, use {@link Pipeline#drainTo}.
+     * You cannot reuse the sink in other {@code writeTo} calls. If you want to
+     * write multiple stages to the same sink, use {@link Pipeline#writeTo}.
      * This will be more efficient than creating a new sink each time.
      *
      * @return the newly attached sink stage
      */
     @Nonnull
-    SinkStage drainTo(@Nonnull Sink<? super T> sink);
+    SinkStage writeTo(@Nonnull Sink<? super T> sink);
 
     /**
      * Attaches a peeking stage which logs this stage's output and passes it

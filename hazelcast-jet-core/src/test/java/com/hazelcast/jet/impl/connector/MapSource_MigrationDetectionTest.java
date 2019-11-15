@@ -18,18 +18,17 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
-import com.hazelcast.config.GroupConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastSerialClassRunner;
-import com.hazelcast.util.UuidUtil;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -80,13 +79,12 @@ public class MapSource_MigrationDetectionTest extends JetTestSupport {
         Config remoteMemberConfig;
         if (remote) {
             remoteMemberConfig = new Config();
-            GroupConfig groupConfig = remoteMemberConfig.getGroupConfig();
-            groupConfig.setName(UuidUtil.newUnsecureUuidString());
+            remoteMemberConfig.setClusterName(UuidUtil.newUnsecureUuidString());
             mapInstance = Hazelcast.newHazelcastInstance(remoteMemberConfig);
             remoteInstances.add(mapInstance);
 
             clientConfig = new ClientConfig();
-            clientConfig.getGroupConfig().setName(groupConfig.getName());
+            clientConfig.setClusterName(remoteMemberConfig.getClusterName());
         } else {
             mapInstance = jobInstance.getHazelcastInstance();
             clientConfig = null;
@@ -105,7 +103,7 @@ public class MapSource_MigrationDetectionTest extends JetTestSupport {
         proceedLatch = new CountDownLatch(1);
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(remote ? remoteMap(m.getName(), clientConfig) : map(m))
+        p.readFrom(remote ? remoteMap(m.getName(), clientConfig) : map(m))
          .setLocalParallelism(1)
          .map(o -> {
              startLatch.countDown();
@@ -113,7 +111,7 @@ public class MapSource_MigrationDetectionTest extends JetTestSupport {
              return o;
          })
          .setLocalParallelism(1)
-         .drainTo(Sinks.logger());
+         .writeTo(Sinks.logger());
 
         // start the job. The map reader will be blocked thanks to the backpressure from the mapping stage
         Job job = jobInstance.newJob(p, new JobConfig().setAutoScaling(false).setProcessingGuarantee(NONE));

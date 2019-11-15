@@ -16,51 +16,50 @@
 
 package integration;
 
-import com.hazelcast.cache.journal.EventJournalCacheEvent;
+import com.hazelcast.cache.EventJournalCacheEvent;
 import com.hazelcast.client.config.ClientConfig;
-import com.hazelcast.core.IList;
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.examples.enrichment.datamodel.Person;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSourceStage;
-import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
-import com.hazelcast.map.journal.EventJournalMapEvent;
-import com.hazelcast.jet.examples.enrichment.datamodel.Person;
+import com.hazelcast.map.EventJournalMapEvent;
 
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
-import static com.hazelcast.jet.function.FunctionEx.identity;
-import static com.hazelcast.jet.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.function.FunctionEx.identity;
+import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
 public class ImdgConnectors {
     static void s1() {
         //tag::s1[]
         Pipeline p = Pipeline.create();
-        BatchStage<Entry<String, Long>> stage = p.drawFrom(Sources.map("myMap"));
-        stage.drainTo(Sinks.map("myMap"));
+        BatchStage<Entry<String, Long>> stage = p.readFrom(Sources.map("inMap"));
+        stage.writeTo(Sinks.map("outMap"));
         //end::s1[]
     }
 
     static void s2() {
         //tag::s2[]
         Pipeline p = Pipeline.create();
-        BatchStage<Entry<String, Long>> stage = p.drawFrom(Sources.cache("inCache"));
-        stage.drainTo(Sinks.cache("outCache"));
+        BatchStage<Entry<String, Long>> stage = p.readFrom(Sources.cache("inCache"));
+        stage.writeTo(Sinks.cache("outCache"));
         //end::s2[]
     }
 
     static void s3() {
         //tag::s3[]
         Pipeline pipeline = Pipeline.create();
-        pipeline.drawFrom(Sources.<String, Long>map("inMap"))
-                .drainTo(Sinks.mapWithMerging("outMap",
+        pipeline.readFrom(Sources.<String, Long>map("inMap"))
+                .writeTo(Sinks.mapWithMerging("outMap",
                         Entry::getKey,
                         Entry::getValue,
                         (oldValue, newValue) -> oldValue + newValue)
@@ -71,8 +70,8 @@ public class ImdgConnectors {
     static void s4() {
         //tag::s4[]
         Pipeline pipeline = Pipeline.create();
-        pipeline.drawFrom(Sources.<String, Long>map("inMap"))
-            .drainTo(Sinks.<Entry<String, Long>, String, Long>mapWithUpdating(
+        pipeline.readFrom(Sources.<String, Long>map("inMap"))
+            .writeTo(Sinks.<Entry<String, Long>, String, Long>mapWithUpdating(
                 "outMap", Entry::getKey,
                 (oldV, item) -> (oldV != null ? oldV : 0L) + item.getValue())
             );
@@ -82,8 +81,8 @@ public class ImdgConnectors {
     static void s5() {
     //tag::s5[]
     Pipeline pipeline = Pipeline.create();
-    pipeline.drawFrom(Sources.<String, Integer>map("mymap"))
-            .drainTo(Sinks.mapWithEntryProcessor("mymap",
+    pipeline.readFrom(Sources.<String, Integer>map("mymap"))
+            .writeTo(Sinks.mapWithEntryProcessor("mymap",
                     Entry::getKey,
                     entry -> new IncrementEntryProcessor(5)
             ));
@@ -93,7 +92,7 @@ public class ImdgConnectors {
 
     static
     //tag::s6[]
-    class IncrementEntryProcessor implements EntryProcessor<String, Integer> {
+    class IncrementEntryProcessor implements EntryProcessor<String, Integer, Integer> {
 
         private int incrementBy;
 
@@ -102,30 +101,26 @@ public class ImdgConnectors {
         }
 
         @Override
-        public Object process(Entry<String, Integer> entry) {
+        public Integer process(Entry<String, Integer> entry) {
             return entry.setValue(entry.getValue() + incrementBy);
         }
 
-        @Override
-        public EntryBackupProcessor<String, Integer> getBackupProcessor() {
-            return null;
-        }
     }
     //end::s6[]
 
     static void s7() {
         //tag::s7[]
         ClientConfig cfg = new ClientConfig();
-        cfg.getGroupConfig().setName("myGroup");
+        cfg.setClusterName("myGroup");
         cfg.getNetworkConfig().addAddress("node1.mydomain.com", "node2.mydomain.com");
 
         Pipeline p = Pipeline.create();
         BatchStage<Entry<String, Long>> fromMap =
-                p.drawFrom(Sources.remoteMap("inputMap", cfg));
+                p.readFrom(Sources.remoteMap("inputMap", cfg));
         BatchStage<Entry<String, Long>> fromCache =
-                p.drawFrom(Sources.remoteCache("inputCache", cfg));
-        fromMap.drainTo(Sinks.remoteCache("outputCache", cfg));
-        fromCache.drainTo(Sinks.remoteMap("outputMap", cfg));
+                p.readFrom(Sources.remoteCache("inputCache", cfg));
+        fromMap.writeTo(Sinks.remoteCache("outputCache", cfg));
+        fromCache.writeTo(Sinks.remoteMap("outputMap", cfg));
         //end::s7[]
     }
 
@@ -133,7 +128,7 @@ public class ImdgConnectors {
         ClientConfig clientConfig = new ClientConfig();
         //tag::s8[]
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Integer, String, Person>remoteMap(
+        p.readFrom(Sources.<Integer, String, Person>remoteMap(
                 "inputMap", clientConfig,
                 e -> e.getValue().getAge() > 21,
                 e -> e.getValue().getAge()));
@@ -144,7 +139,8 @@ public class ImdgConnectors {
         //tag::s9[]
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig()
-           .getMapEventJournalConfig("inputMap")
+           .getMapConfig("inputMap")
+           .getEventJournalConfig()
            .setEnabled(true)
            .setCapacity(1000)         // how many events to keep before evicting
            .setTimeToLiveSeconds(10); // evict events older than this
@@ -153,7 +149,8 @@ public class ImdgConnectors {
 
         //tag::s10[]
         cfg.getHazelcastConfig()
-           .getCacheEventJournalConfig("inputCache")
+           .getCacheConfig("inputCache")
+           .getEventJournalConfig()
            .setEnabled(true)
            .setCapacity(1000)
            .setTimeToLiveSeconds(10);
@@ -163,9 +160,9 @@ public class ImdgConnectors {
     static void s11() {
         //tag::s11[]
         Pipeline p = Pipeline.create();
-        StreamSourceStage<Entry<String, Long>> fromMap = p.drawFrom(
+        StreamSourceStage<Entry<String, Long>> fromMap = p.readFrom(
                 Sources.mapJournal("inputMap", START_FROM_CURRENT));
-        StreamSourceStage<Entry<String, Long>> fromCache = p.drawFrom(
+        StreamSourceStage<Entry<String, Long>> fromCache = p.readFrom(
                 Sources.cacheJournal("inputCache", START_FROM_CURRENT));
         //end::s11[]
     }
@@ -173,12 +170,12 @@ public class ImdgConnectors {
     static void s12() {
         //tag::s12[]
         Pipeline p = Pipeline.create();
-        StreamSourceStage<EventJournalMapEvent<String, Long>> allFromMap = p.drawFrom(
+        StreamSourceStage<EventJournalMapEvent<String, Long>> allFromMap = p.readFrom(
             Sources.mapJournal("inputMap",
-                    alwaysTrue(), identity(), START_FROM_CURRENT));
-        StreamSourceStage<EventJournalCacheEvent<String, Long>> allFromCache = p.drawFrom(
+                    START_FROM_CURRENT, identity(), alwaysTrue()));
+        StreamSourceStage<EventJournalCacheEvent<String, Long>> allFromCache = p.readFrom(
             Sources.cacheJournal("inputMap",
-                    alwaysTrue(), identity(), START_FROM_CURRENT));
+                    START_FROM_CURRENT, identity(), alwaysTrue()));
         //end::s12[]
     }
 
@@ -186,10 +183,10 @@ public class ImdgConnectors {
         ClientConfig someClientConfig = new ClientConfig();
         //tag::s13[]
         Pipeline p = Pipeline.create();
-        StreamSourceStage<Entry<String, Long>> fromRemoteMap = p.drawFrom(
+        StreamSourceStage<Entry<String, Long>> fromRemoteMap = p.readFrom(
             Sources.remoteMapJournal("inputMap",
                     someClientConfig, START_FROM_CURRENT));
-        StreamSourceStage<Entry<String, Long>> fromRemoteCache = p.drawFrom(
+        StreamSourceStage<Entry<String, Long>> fromRemoteCache = p.readFrom(
             Sources.remoteCacheJournal("inputCache",
                     someClientConfig, START_FROM_CURRENT));
         //end::s13[]
@@ -204,9 +201,9 @@ public class ImdgConnectors {
         }
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.<Integer>list("inputList"))
+        p.readFrom(Sources.<Integer>list("inputList"))
          .map(i -> "item" + i)
-         .drainTo(Sinks.list("resultList"));
+         .writeTo(Sinks.list("resultList"));
 
         jet.newJob(p).join();
 
@@ -218,14 +215,13 @@ public class ImdgConnectors {
     static void s15() {
         //tag::s15[]
         ClientConfig clientConfig = new ClientConfig();
-        clientConfig.getGroupConfig()
-                    .setName("myGroup");
+        clientConfig.setClusterName("myGroup");
         clientConfig.getNetworkConfig()
                     .addAddress("node1.mydomain.com", "node2.mydomain.com");
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.remoteList("inputlist", clientConfig))
-         .drainTo(Sinks.remoteList("outputList", clientConfig));
+        p.readFrom(Sources.remoteList("inputlist", clientConfig))
+         .writeTo(Sinks.remoteList("outputList", clientConfig));
         //end::s15[]
     }
 }

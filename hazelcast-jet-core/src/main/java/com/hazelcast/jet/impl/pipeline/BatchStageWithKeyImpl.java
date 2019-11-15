@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.BiPredicateEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.Util;
@@ -23,16 +26,13 @@ import com.hazelcast.jet.aggregate.AggregateOperation1;
 import com.hazelcast.jet.aggregate.AggregateOperation2;
 import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.function.BiPredicateEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.impl.pipeline.transform.DistinctTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.BatchStageWithKey;
-import com.hazelcast.jet.pipeline.ContextFactory;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -81,55 +81,55 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     }
 
     @Nonnull @Override
-    public <C, R> BatchStage<R> mapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull TriFunction<? super C, ? super K, ? super T, ? extends R> mapFn
+    public <S, R> BatchStage<R> mapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
     ) {
-        return attachMapUsingContext(contextFactory, mapFn);
+        return attachMapUsingService(serviceFactory, mapFn);
     }
 
     @Nonnull @Override
-    public <C, R> BatchStage<R> mapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull TriFunction<? super C, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    public <S, R> BatchStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachTransformUsingContextAsync("map", contextFactory,
-                (c, k, t) -> mapAsyncFn.apply(c, k, t).thenApply(Traversers::singleton));
+        return attachTransformUsingServiceAsync("map", serviceFactory,
+                (s, k, t) -> mapAsyncFn.apply(s, k, t).thenApply(Traversers::singleton));
     }
 
     @Nonnull @Override
-    public <C> BatchStage<T> filterUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull TriPredicate<? super C, ? super K, ? super T> filterFn
+    public <S> BatchStage<T> filterUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull TriPredicate<? super S, ? super K, ? super T> filterFn
     ) {
-        return attachFilterUsingContext(contextFactory, filterFn);
+        return attachFilterUsingService(serviceFactory, filterFn);
     }
 
     @Nonnull @Override
-    public <C> BatchStage<T> filterUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull TriFunction<? super C, ? super K, ? super T, CompletableFuture<Boolean>>
+    public <S> BatchStage<T> filterUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>>
                     filterAsyncFn
     ) {
-        return attachTransformUsingContextAsync("filter", contextFactory,
-                (c, k, t) -> filterAsyncFn.apply(c, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
+        return attachTransformUsingServiceAsync("filter", serviceFactory,
+                (s, k, t) -> filterAsyncFn.apply(s, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
     }
 
     @Nonnull @Override
-    public <C, R> BatchStage<R> flatMapUsingContext(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull TriFunction<? super C, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
+    public <S, R> BatchStage<R> flatMapUsingService(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
-        return attachFlatMapUsingContext(contextFactory, flatMapFn);
+        return attachFlatMapUsingService(serviceFactory, flatMapFn);
     }
 
     @Nonnull @Override
-    public <C, R> BatchStage<R> flatMapUsingContextAsync(
-            @Nonnull ContextFactory<C> contextFactory,
-            @Nonnull TriFunction<? super C, ? super K, ? super T, CompletableFuture<Traverser<R>>>
+    public <S, R> BatchStage<R> flatMapUsingServiceAsync(
+            @Nonnull ServiceFactory<S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     ) {
-        return attachTransformUsingContextAsync("flatMap", contextFactory, flatMapAsyncFn);
+        return attachTransformUsingServiceAsync("flatMap", serviceFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.s3;
 
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.s3.S3Sinks.S3SinkContext;
@@ -107,8 +107,8 @@ public class S3MockTest extends S3TestBase {
         String expected = sb.toString();
 
         Pipeline p = Pipeline.create();
-        p.drawFrom(TestSources.items(expected))
-         .drainTo(S3Sinks.s3(SINK_BUCKET, null, UTF_8, clientSupplier(), Object::toString));
+        p.readFrom(TestSources.items(expected))
+         .writeTo(S3Sinks.s3(SINK_BUCKET, null, UTF_8, clientSupplier(), Object::toString));
 
         jet.newJob(p).join();
 
@@ -196,7 +196,7 @@ public class S3MockTest extends S3TestBase {
     }
 
     @Test
-    public void when_drainToNotExistingBucket() {
+    public void when_writeToNotExistingBucket() {
         testSinkWithNotExistingBucket("jet-s3-connector-test-bucket-sink-THIS-BUCKET-DOES-NOT-EXIST");
     }
 

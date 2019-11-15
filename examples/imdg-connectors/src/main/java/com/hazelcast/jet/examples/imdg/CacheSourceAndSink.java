@@ -20,10 +20,10 @@ import com.hazelcast.cache.ICache;
 import com.hazelcast.config.CacheSimpleConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.config.JetConfig;
 
 /**
  * Demonstrates the usage of Hazelcast ICache as source and sink
@@ -54,8 +54,8 @@ public class CacheSourceAndSink {
             }
 
             Pipeline p = Pipeline.create();
-            p.drawFrom(Sources.cache(SOURCE_NAME))
-             .drainTo(Sinks.cache(SINK_NAME));
+            p.readFrom(Sources.cache(SOURCE_NAME))
+             .writeTo(Sinks.cache(SINK_NAME));
 
             jet.newJob(p).join();
 

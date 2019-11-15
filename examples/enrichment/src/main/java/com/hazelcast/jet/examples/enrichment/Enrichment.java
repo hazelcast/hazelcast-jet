@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.examples.enrichment;
 
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.ReplicatedMap;
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.datamodel.Tuple3;
+import com.hazelcast.jet.examples.enrichment.datamodel.Broker;
+import com.hazelcast.jet.examples.enrichment.datamodel.Product;
+import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.GeneralStage;
@@ -30,9 +30,8 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.jet.examples.enrichment.datamodel.Broker;
-import com.hazelcast.jet.examples.enrichment.datamodel.Product;
-import com.hazelcast.jet.examples.enrichment.datamodel.Trade;
+import com.hazelcast.map.IMap;
+import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -44,10 +43,10 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.stream.Stream;
 
+import static com.hazelcast.function.Functions.entryValue;
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
-import static com.hazelcast.jet.function.Functions.entryValue;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 
@@ -98,12 +97,12 @@ public final class Enrichment {
      * job is running and it will immediately see the changed data.
      */
     private Pipeline enrichUsingIMap() {
-        IMapJet<Integer, Product> productMap = jet.getMap(PRODUCTS);
+        IMap<Integer, Product> productMap = jet.getMap(PRODUCTS);
         readLines("products.txt").forEach(e -> productMap.put(e.getKey(), new Product(e.getKey(), e.getValue())));
         System.out.println("Loaded product map:");
         printMap(productMap);
 
-        IMapJet<Integer, Broker> brokerMap = jet.getMap(BROKERS);
+        IMap<Integer, Broker> brokerMap = jet.getMap(BROKERS);
         readLines("brokers.txt").forEach(e -> brokerMap.put(e.getKey(), new Broker(e.getKey(), e.getValue())));
         System.out.println("Loaded brokers map:");
         printMap(brokerMap);
@@ -112,7 +111,7 @@ public final class Enrichment {
 
         // The stream to be enriched: trades
         StreamStage<Trade> trades = p
-                .drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                .readFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                 .withoutTimestamps()
                 .map(entryValue());
 
@@ -130,7 +129,7 @@ public final class Enrichment {
                         (t, broker) -> tuple3(t.f0(), t.f1(), broker.name())
                 )
                 // (trade, productName, brokerName)
-                .drainTo(Sinks.logger());
+                .writeTo(Sinks.logger());
 
         return p;
     }
@@ -163,7 +162,7 @@ public final class Enrichment {
 
         // The stream to be enriched: trades
         StreamStage<Trade> trades = p
-                .drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+                .readFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                 .withoutTimestamps()
                 .map(entryValue());
 
@@ -181,7 +180,7 @@ public final class Enrichment {
                         (t, broker) -> tuple3(t.f0(), t.f1(), broker.name())
                 )
                 // (trade, productName, brokerName)
-                .drainTo(Sinks.logger());
+                .writeTo(Sinks.logger());
         return p;
     }
 
@@ -207,12 +206,12 @@ public final class Enrichment {
         Pipeline p = Pipeline.create();
 
         // The stream to be enriched: trades
-        StreamStage<Trade> trades = p.drawFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
+        StreamStage<Trade> trades = p.readFrom(Sources.<Object, Trade>mapJournal(TRADES, START_FROM_CURRENT))
                                      .withoutTimestamps()
                                      .map(entryValue());
 
         // The enriching streams: products and brokers
-        String resourcesPath = getClasspathDirectory(".").toString();
+        String resourcesPath = getClasspathDirectory("/").toString();
         BatchSource<Map.Entry<Integer, Product>> products = Sources
                 .filesBuilder(resourcesPath)
                 .sharedFileSystem(true)
@@ -231,15 +230,15 @@ public final class Enrichment {
                     return entry(split.getKey(), new Broker(split.getKey(), split.getValue()));
                 });
 
-        BatchStage<Map.Entry<Integer, Product>> prodEntries = p.drawFrom(products);
-        BatchStage<Map.Entry<Integer, Broker>> brokEntries = p.drawFrom(brokers);
+        BatchStage<Map.Entry<Integer, Product>> prodEntries = p.readFrom(products);
+        BatchStage<Map.Entry<Integer, Broker>> brokEntries = p.readFrom(brokers);
 
         // Join the trade stream with the product and broker streams
         trades.hashJoin2(
                 prodEntries, joinMapEntries(Trade::productId),
                 brokEntries, joinMapEntries(Trade::brokerId),
                 Tuple3::tuple3
-        ).drainTo(Sinks.logger());
+        ).writeTo(Sinks.logger());
 
         return p;
     }
@@ -258,7 +257,6 @@ public final class Enrichment {
             // comment out the code to try the appropriate enrichment method
             Pipeline p = enrichUsingIMap();
 //            Pipeline p = enrichUsingReplicatedMap();
-//            Pipeline p = enrichUsingAsyncService();
 //            Pipeline p = enrichUsingHashJoin();
             Job job = jet.newJob(p);
             eventGenerator.generateEventsForFiveSeconds();

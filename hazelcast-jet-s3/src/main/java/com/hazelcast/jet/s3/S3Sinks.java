@@ -16,13 +16,13 @@
 
 package com.hazelcast.jet.s3;
 
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
+import com.hazelcast.internal.util.ExceptionUtil;
+import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.memory.MemoryUnit;
-import com.hazelcast.util.ExceptionUtil;
-import com.hazelcast.util.StringUtil;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -79,8 +79,8 @@ public final class S3Sinks {
      *
      * <pre>{@code
      * Pipeline p = Pipeline.create();
-     * p.drawFrom(Sources.map("map"))
-     *  .drainTo(S3Sinks.s3("bucket", "my-map-", StandardCharsets.UTF_8,
+     * p.readFrom(Sources.map("map"))
+     *  .writeTo(S3Sinks.s3("bucket", "my-map-", StandardCharsets.UTF_8,
      *      () -> S3Client.create(),
      *      Object::toString
      * ));

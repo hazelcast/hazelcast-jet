@@ -16,11 +16,11 @@
 
 package com.hazelcast.jet.examples.files.s3;
 
+import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.function.BiFunctionEx;
-import com.hazelcast.jet.function.FunctionEx;
-import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.s3.S3Sinks;
 import com.hazelcast.jet.s3.S3Sources;
@@ -36,9 +36,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.function.Functions.wholeItem;
 import static java.lang.System.nanoTime;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -72,7 +72,7 @@ public class S3WordCount {
     private static Pipeline buildPipeline() {
         final Pattern regex = Pattern.compile("\\W+");
         Pipeline p = Pipeline.create();
-        p.drawFrom(S3Sources.s3(
+        p.readFrom(S3Sources.s3(
                 Collections.singletonList(INPUT_BUCKET),
                 PREFIX,
                 UTF_8,
@@ -81,7 +81,7 @@ public class S3WordCount {
         ).flatMap(line -> traverseArray(regex.split(line.toLowerCase())).filter(w -> !w.isEmpty()))
          .groupingKey(wholeItem())
          .aggregate(counting())
-         .drainTo(S3Sinks.s3(OUTPUT_BUCKET, PREFIX, UTF_8, S3WordCount::createClient, Object::toString));
+         .writeTo(S3Sinks.s3(OUTPUT_BUCKET, PREFIX, UTF_8, S3WordCount::createClient, Object::toString));
         return p;
     }
 

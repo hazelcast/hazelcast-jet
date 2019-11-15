@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.examples.kafka;
 
-import com.hazelcast.jet.IMapJet;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -25,6 +24,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.map.IMap;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.MockTime;
@@ -72,8 +72,8 @@ public class KafkaSink {
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.drawFrom(Sources.map(SOURCE_NAME))
-         .drainTo(KafkaSinks.kafka(props(
+        p.readFrom(Sources.map(SOURCE_NAME))
+         .writeTo(KafkaSinks.kafka(props(
                  "bootstrap.servers", BOOTSTRAP_SERVERS,
                  "key.serializer", StringSerializer.class.getCanonicalName(),
                  "value.serializer", IntegerSerializer.class.getCanonicalName()),
@@ -97,7 +97,7 @@ public class KafkaSink {
             JetInstance instance = Jet.newJetInstance(cfg);
             Jet.newJetInstance(cfg);
 
-            IMapJet<String, Integer> sourceMap = instance.getMap(SOURCE_NAME);
+            IMap<String, Integer> sourceMap = instance.getMap(SOURCE_NAME);
             fillIMap(sourceMap);
 
 
@@ -156,7 +156,7 @@ public class KafkaSink {
         kafkaServer = TestUtils.createServer(config, mock);
     }
 
-    private void fillIMap(IMapJet<String, Integer> sourceMap) {
+    private void fillIMap(IMap<String, Integer> sourceMap) {
         System.out.println("Filling IMap");
         for (int i = 1; i <= MESSAGE_COUNT; i++) {
             sourceMap.put("t1-" + i, i);

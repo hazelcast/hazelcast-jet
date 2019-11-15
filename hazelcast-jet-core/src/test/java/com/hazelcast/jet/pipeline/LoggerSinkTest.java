@@ -18,7 +18,6 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
-import java.util.List;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
@@ -29,6 +28,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+
+import java.util.List;
 
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.verify;
@@ -49,9 +50,9 @@ public class LoggerSinkTest extends JetTestSupport {
         Pipeline p = Pipeline.create();
 
         // When
-        p.drawFrom(Sources.<Integer>list(srcName))
+        p.readFrom(Sources.<Integer>list(srcName))
          .map(i -> i + "-shouldBeSeenOnTheSystemOutput")
-         .drainTo(Sinks.logger());
+         .writeTo(Sinks.logger());
         jet.newJob(p).join();
         verify(appender, atMost(1000)).doAppend(logCaptor.capture());
 

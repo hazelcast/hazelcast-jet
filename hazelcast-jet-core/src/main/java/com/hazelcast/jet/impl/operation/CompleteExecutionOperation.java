@@ -16,30 +16,32 @@
 
 package com.hazelcast.jet.impl.operation;
 
-import com.hazelcast.core.Member;
-import com.hazelcast.internal.metrics.renderers.ProbeRenderer;
+import com.hazelcast.cluster.Address;
+import com.hazelcast.cluster.Member;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.collectors.MetricsCollector;
+import com.hazelcast.internal.metrics.impl.MetricsCompressor;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.JobMetricsUtil;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.metrics.MetricsCompressor;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.Address;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
-import com.hazelcast.spi.ExceptionAction;
-import com.hazelcast.spi.Operation;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.impl.operationservice.ExceptionAction;
+import com.hazelcast.spi.impl.operationservice.Operation;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
-import static com.hazelcast.spi.ExceptionAction.THROW_EXCEPTION;
+import static com.hazelcast.spi.impl.operationservice.ExceptionAction.THROW_EXCEPTION;
 
 public class CompleteExecutionOperation extends Operation implements IdentifiedDataSerializable {
 
@@ -75,10 +77,10 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
 
         JobExecutionService jobExecutionService = service.getJobExecutionService();
         if (collectMetrics) {
-            JobMetricsRenderer metricsRenderer = new JobMetricsRenderer(executionId, nodeEngine.getLocalMember(), logger);
-            nodeEngine.getMetricsRegistry().render(metricsRenderer);
-            metricsRenderer.whenComplete();
-            response = metricsRenderer.getJobMetrics();
+            JobMetricsCollector metricsRenderer = new JobMetricsCollector(executionId, nodeEngine.getLocalMember(),
+                    logger);
+            nodeEngine.getMetricsRegistry().collect(metricsRenderer);
+            response = metricsRenderer.getMetrics();
         } else {
             response = RawJobMetrics.empty();
         }
@@ -102,7 +104,7 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
     }
 
     @Override
-    public int getId() {
+    public int getClassId() {
         return JetInitDataSerializerHook.COMPLETE_EXECUTION_OP;
     }
 
@@ -122,61 +124,55 @@ public class CompleteExecutionOperation extends Operation implements IdentifiedD
         error = in.readObject();
     }
 
-    private static class JobMetricsRenderer implements ProbeRenderer {
+    private static class JobMetricsCollector implements MetricsCollector {
 
         private final Long executionIdOfInterest;
-        private final String namePrefix;
         private final MetricsCompressor compressor;
         private final ILogger logger;
+        private final UnaryOperator<MetricDescriptor> addPrefixFn;
 
-        private RawJobMetrics jobMetrics = RawJobMetrics.empty();
-
-        JobMetricsRenderer(long executionId, @Nonnull Member member, @Nonnull ILogger logger) {
+        JobMetricsCollector(long executionId, @Nonnull Member member, @Nonnull ILogger logger) {
             Objects.requireNonNull(member, "member");
             this.logger = Objects.requireNonNull(logger, "logger");
 
             this.executionIdOfInterest = executionId;
-            this.namePrefix = JobMetricsUtil.getMemberPrefix(member);
+            this.addPrefixFn = JobMetricsUtil.addMemberPrefixFn(member);
             this.compressor = new MetricsCompressor();
         }
 
         @Override
-        public void renderLong(String name, long value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
+        public void collectLong(MetricDescriptor descriptor, long value) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricsDescriptor(descriptor);
             if (executionIdOfInterest.equals(executionId)) {
-                String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
-                compressor.addLong(prefixedName, value);
+                compressor.addLong(addPrefixFn.apply(descriptor), value);
             }
         }
 
         @Override
-        public void renderDouble(String name, double value) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
+        public void collectDouble(MetricDescriptor descriptor, double value) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricsDescriptor(descriptor);
             if (executionIdOfInterest.equals(executionId)) {
-                String prefixedName = JobMetricsUtil.addPrefixToDescriptor(name, namePrefix);
-                compressor.addDouble(prefixedName, value);
+                compressor.addDouble(addPrefixFn.apply(descriptor), value);
             }
         }
 
         @Override
-        public void renderException(String name, Exception e) {
-            Long executionId = JobMetricsUtil.getExecutionIdFromMetricDescriptor(name);
+        public void collectException(MetricDescriptor descriptor, Exception e) {
+            Long executionId = JobMetricsUtil.getExecutionIdFromMetricsDescriptor(descriptor);
             if (executionIdOfInterest.equals(executionId)) {
                 logger.warning("Exception when rendering job metrics: " + e, e);
             }
         }
 
         @Override
-        public void renderNoValue(String name) {
-        }
+        public void collectNoValue(MetricDescriptor descriptor) {
 
-        public void whenComplete() {
-            jobMetrics = RawJobMetrics.of(compressor.getBlobAndReset());
         }
 
         @Nonnull
-        RawJobMetrics getJobMetrics() {
-            return jobMetrics;
+        public RawJobMetrics getMetrics() {
+            return RawJobMetrics.of(compressor.getBlobAndReset());
         }
+
     }
 }

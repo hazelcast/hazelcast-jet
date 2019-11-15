@@ -16,12 +16,9 @@
 
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
-import com.hazelcast.jet.pipeline.ContextFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sinks;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
 public class Serialization {
@@ -45,7 +42,7 @@ public class Serialization {
         BatchSource<Person> personSource = null;
         //tag::split-and-mutate[]
         Pipeline p = Pipeline.create();
-        BatchStage<Person> sourceStage = p.drawFrom(personSource);
+        BatchStage<Person> sourceStage = p.readFrom(personSource);
         BatchStage<String> names = sourceStage
                 .map(person -> person.name()); // <1>
         // don't do this!
@@ -59,7 +56,7 @@ public class Serialization {
 
         //tag::modify-emitted[]
         Pipeline p = Pipeline.create();
-        p.drawFrom(source)
+        p.readFrom(source)
          .mapStateful(ArrayList::new, (list, item) -> {
              list.add(item); // <1>
              // Don't do this!
