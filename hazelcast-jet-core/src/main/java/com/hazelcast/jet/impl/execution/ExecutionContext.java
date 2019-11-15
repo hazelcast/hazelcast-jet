@@ -17,7 +17,8 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.metrics.MetricTagger;
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
+import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
@@ -55,7 +56,7 @@ import static java.util.Collections.unmodifiableMap;
  * instance per job execution; if the job is restarted, another instance will
  * be used.
  */
-public class ExecutionContext {
+public class ExecutionContext implements DynamicMetricsProvider {
 
     private final long jobId;
     private final long executionId;
@@ -274,21 +275,21 @@ public class ExecutionContext {
         this.jobMetrics = jobMetrics;
     }
 
-    public void collectMetrics(MetricTagger tagger, MetricsCollectionContext context) {
+    @Override
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
         if (!metricsEnabled) {
             return;
         }
-        tagger = tagger.withTag(MetricTags.JOB, idToString(jobId))
-                       .withTag(MetricTags.EXECUTION, idToString(executionId));
+        descriptor = descriptor.withTag(MetricTags.JOB, idToString(jobId))
+                               .withTag(MetricTags.EXECUTION, idToString(executionId));
 
         long executionStartTime = startTime.get();
         if (executionStartTime > 0) {
-            context.collect(tagger, "execution_start_time", ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
-            context.collect(tagger, "execution_duration", ProbeLevel.INFO, ProbeUnit.MS, System.currentTimeMillis() - executionStartTime);
+            context.collect(descriptor, "execution_start_time", ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
+            context.collect(descriptor, "execution_duration", ProbeLevel.INFO, ProbeUnit.MS, System.currentTimeMillis() - executionStartTime);
         }
-
         for (Tasklet tasklet : tasklets) {
-            tasklet.collectMetrics(tagger, context);
+            tasklet.provideDynamicMetrics(descriptor.copy(), context);
         }
     }
 }
