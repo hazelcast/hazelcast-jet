@@ -27,6 +27,10 @@ import com.hazelcast.jet.core.Edge;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.core.Vertex;
+import com.hazelcast.jet.core.metrics.JobMetrics;
+import com.hazelcast.jet.core.metrics.Measurement;
+import com.hazelcast.jet.core.metrics.MetricNames;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.impl.TerminationMode.ActionAfterTerminate;
 import com.hazelcast.jet.impl.exception.JobTerminateRequestedException;
@@ -694,9 +698,47 @@ public class MasterJobContext {
 
     private String formatExecutionSummary(String conclusion) {
         long executionEndTime = System.currentTimeMillis();
-        return String.format("Running %s %s", mc.jobIdString(), conclusion) +
-                "\n\t" + "Start time: " + Util.toLocalDateTime(executionStartTime) +
-                "\n\t" + "Duration: " + String.format("%,d ms", executionEndTime - executionStartTime);
+        StringBuilder sb = new StringBuilder(String.format("Running %s %s", mc.jobIdString(), conclusion));
+        sb.append("\n\t").append("Start time: ").append(Util.toLocalDateTime(executionStartTime));
+        sb.append("\n\t").append("Duration: ").append(String.format("%,d ms", executionEndTime - executionStartTime));
+        if (jobMetrics.stream().noneMatch(rjm -> rjm.getBlob() != null)) {
+            sb.append("\n\tFor further details enable JobConfig.storeMetricsAfterJobCompletion");
+        } else {
+            JobMetrics jobMetrics = JobMetricsUtil.toJobMetrics(this.jobMetrics);
+
+            Map<String, Long> receivedCounts = mergeByVertex(jobMetrics.get(MetricNames.RECEIVED_COUNT));
+            Map<String, Long> emittedCounts = mergeByVertex(jobMetrics.get(MetricNames.EMITTED_COUNT));
+            Map<String, Long> distributedBytesIn = mergeByVertex(jobMetrics.get(MetricNames.DISTRIBUTED_BYTES_IN));
+            Map<String, Long> distributedBytesOut = mergeByVertex(jobMetrics.get(MetricNames.DISTRIBUTED_BYTES_OUT));
+
+            sb.append("\n\tVertices:");
+            for (Vertex vertex : vertices) {
+                sb.append("\n\t\t").append(vertex.getName());
+                sb.append(getValueForVertex("\n\t\t\t", vertex, receivedCounts, MetricNames.RECEIVED_COUNT));
+                sb.append(getValueForVertex("\n\t\t\t", vertex, emittedCounts, MetricNames.EMITTED_COUNT));
+                sb.append(getValueForVertex("\n\t\t\t", vertex, distributedBytesIn, MetricNames.DISTRIBUTED_BYTES_IN));
+                sb.append(getValueForVertex("\n\t\t\t", vertex, distributedBytesOut, MetricNames.DISTRIBUTED_BYTES_OUT));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static Map<String, Long> mergeByVertex(List<Measurement> measurements) {
+        return measurements.stream().collect(Collectors.toMap(
+                m -> m.tag(MetricTags.VERTEX),
+                Measurement::value,
+                Long::sum
+        ));
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static String getValueForVertex(String padding, Vertex vertex, Map<String, Long> values, String metric) {
+        Long value = values.get(vertex.getName());
+        if (value != null) {
+            return padding + metric + ": " + value;
+        } else {
+            return "";
+        }
     }
 
     private void logIgnoredCompletion(@Nullable Throwable failure, JobStatus status) {
