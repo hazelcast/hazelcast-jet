@@ -33,51 +33,68 @@ import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
 
-public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId,
-        TXN extends TransactionalResource<TXN_ID>> {
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 
+/**
+ * A base class for transaction utilities implementing different transaction
+ * strategies.
+ *
+ * @param <TXN_ID> type fo the transaction ID
+ * @param <RES> type of the transactional resource
+ */
+public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId,
+        RES extends TransactionalResource<TXN_ID>> {
+
+    private final boolean isSource;
     private final Outbox outbox;
     private final Context procContext;
     private final ProcessingGuarantee externalGuarantee;
-    private final FunctionEx<TXN_ID, TXN> createTxnFn;
+    private final FunctionEx<TXN_ID, RES> createTxnFn;
     private final Consumer<TXN_ID> recoverAndCommitFn;
     private final ConsumerEx<Integer> recoverAndAbortFn;
 
-    private boolean snapshotInProgress;
-
     /**
-     *
-     * @param outbox
-     * @param procContext
-     * @param externalGuarantee
+     * @param outbox the outbox passed to the {@link Processor#init} method
+     * @param procContext the context passed to the {@link Processor#init} method
+     * @param isSource true, if the processor is a source (a reader), false for
+     *      a sink (a writer)
+     * @param externalGuarantee guarantee required for the source/sink. Must
+     *      not be higher than the job's guarantee
      * @param createTxnFn creates a {@link TransactionalResource} based on a
      *      transaction id. The implementation needs to ensure that in case
      *      when the transaction ID was used before, the work from the previous
-     *      use is rolled back.
-     * @param recoverAndCommitFn
-     * @param recoverAndAbortFn
+     *      use is rolled back
+     * @param recoverAndCommitFn a function to finish the commit of transaction
+     *      identified by the given ID
+     * @param recoverAndAbortFn a function rollback the work of the transaction
+     *      identified by the given ID
      */
     public TwoPhaseSnapshotCommitUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
+            boolean isSource,
             @Nonnull ProcessingGuarantee externalGuarantee,
-            @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
+            @Nonnull FunctionEx<TXN_ID, RES> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
             @Nonnull ConsumerEx<Integer> recoverAndAbortFn
     ) {
-        if (externalGuarantee != procContext.processingGuarantee()
-                && externalGuarantee != ProcessingGuarantee.AT_LEAST_ONCE
-                && procContext.processingGuarantee() != ProcessingGuarantee.EXACTLY_ONCE) {
+        if (externalGuarantee.ordinal() > procContext.processingGuarantee().ordinal()) {
             throw new IllegalArgumentException("unsupported combination, job guarantee cannot by lower than external "
                     + "guarantee. Job guarantee: " + procContext.processingGuarantee() + ", external guarantee: "
                     + externalGuarantee);
         }
+        this.isSource = isSource;
         this.outbox = outbox;
         this.procContext = procContext;
         this.externalGuarantee = externalGuarantee;
         this.createTxnFn = createTxnFn;
         this.recoverAndCommitFn = recoverAndCommitFn;
         this.recoverAndAbortFn = recoverAndAbortFn;
+    }
+
+    protected boolean isSource() {
+        return isSource;
     }
 
     public ProcessingGuarantee externalGuarantee() {
@@ -92,7 +109,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         return procContext;
     }
 
-    protected FunctionEx<TXN_ID, TXN> createTxnFn() {
+    protected FunctionEx<TXN_ID, RES> createTxnFn() {
         return createTxnFn;
     }
 
@@ -106,23 +123,11 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
 
     /**
      * Returns the active transaction that can be used to store an item or
-     * query the source. It's null in case when transaction is not available
+     * query the source. It's null in case when a transaction is not available
      * now. In that case the processor should back off and retry later.
      */
     @Nullable
-    public abstract TXN activeTransaction();
-
-    /**
-     * Returns if there was a phase-1 of a snapshot and we're waiting for
-     * phase-2.
-     */
-    public boolean isSnapshotInProgress() {
-        return snapshotInProgress;
-    }
-
-    public void setSnapshotInProgress(boolean snapshotInProgress) {
-        this.snapshotInProgress = snapshotInProgress;
-    }
+    public abstract RES activeTransaction();
 
     /**
      * For sinks and inner vertices, call from {@link Processor#complete()}.
@@ -184,12 +189,17 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      */
     public abstract void close() throws Exception;
 
+    protected boolean usesTransactionLifecycle() {
+        return externalGuarantee == EXACTLY_ONCE ||
+                externalGuarantee == AT_LEAST_ONCE && isSource;
+    }
+
     /**
      * A handle for a transactional resource.
      * <p>
      * The methods are called depending on the external guarantee:<ul>
      *
-     * <li>EXACTLY_ONCE
+     * <li>EXACTLY_ONCE source & sink, AT_LEAST_ONCE source
      *
      * <ol>
      *     <li>{@link #begin()} - called before the transaction is first
@@ -198,20 +208,21 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      *     <li>{@link #endAndPrepare()} - after this the transaction will no
      *         longer be returned from {@link #activeTransaction()}, i.e. no
      *         more data will be written to it. Called in the 1st snapshot
-     *         phase
+     *         phase. For AT_LEAST_ONCE source this call can be ignored, it's
+     *         not required to be able to finish the commit after restart
      *     <li>{@link #commit()} - called in the 2nd snapshot phase
-     *     <li>if the utility recycles transaction, the process can go to (1)
+     *     <li>if the utility recycles transactions, the process can go to (1)
      *     <li>{@link #release()}
      * </ol>
      *
-     * <li>AT_LEAST_ONCE
-
+     * <li>AT_LEAST_ONCE sink
+     *
+     * The transaction should be in auto-commit mode, {@link #commit()} and
+     * other transaction methods won't be called.
+     *
      * <ol>
      *     <li>{@link #flush()} - ensure all writes are stored in the external
      *         system. Called in the 1st snapshot phase
-     *     <li>{@link #commit()} - acknowledge the consumption of items
-     *         when they don't need to be delivered again. Called in the 2nd
-     *         snapshot phase
      *     <li>if the utility recycles transaction, the process can go to (1)
      *     <li>{@link #release()}
      * </ol>
@@ -239,6 +250,10 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * Begins the transaction. The method will be called before the
          * transaction is returned from {@link #activeTransaction()} for the
          * first time after creation or after {@link #commit()}.
+         * <p>
+         * This method is called in exactly-once mode; in at-least-once mode
+         * it's called only if the processor is a source. It's never called if
+         * there's no processing guarantee.
          * <p>
          * See also the {@linkplain TransactionalResource class javadoc}.
          *
@@ -270,6 +285,10 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * After this call, the transaction will never again be returned from
          * {@link #activeTransaction()} until it's committed.
          * <p>
+         * This method is called in exactly-once mode; in at-least-once mode
+         * it's called only if the processor is a source. It's never called if
+         * there's no processing guarantee.
+         * <p>
          * See also the {@linkplain TransactionalResource class javadoc}.
          */
         default void endAndPrepare() throws Exception {
@@ -277,6 +296,10 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
 
         /**
          * Makes the changes visible to others and acknowledges consumed items.
+         * <p>
+         * This method is called in exactly-once mode; in at-least-once mode
+         * it's called only if the processor is a source. It's never called if
+         * there's no processing guarantee.
          * <p>
          * See also the {@linkplain TransactionalResource class javadoc}.
          */
