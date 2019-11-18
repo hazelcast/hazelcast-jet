@@ -59,6 +59,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
     private long committedTxnIndex = -1;
     private boolean transactionBegun;
     private boolean snapshotInProgress;
+    private boolean flushed;
     private boolean processorCompleted;
     private boolean transactionsReleased;
 
@@ -169,10 +170,11 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         RES activeTransaction = activeTransaction();
         assert activeTransaction != null : "activeTransaction == null";
         try {
-            // TODO [viliam] do not call flush multiple times or document it
-            if (!activeTransaction.flush()) {
+            // `flushed` is used to avoid double flushing
+            if (!flushed && !activeTransaction.flush()) {
                 return false;
             }
+            flushed = true;
             if (usesTransactionLifecycle()) {
                 TXN_ID txnId = activeTransaction.id();
                 if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
@@ -186,6 +188,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             throw sneakyThrow(e);
         }
         snapshotInProgress = true;
+        flushed = false;
         return true;
     }
 
