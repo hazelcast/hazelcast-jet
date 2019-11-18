@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.function.Function;
 
-import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -110,6 +110,7 @@ public class StreamJmsPTest extends JetTestSupport {
         logger.info("using topic: " + topicName);
         sendMessage(topicName, false);
         initializeProcessor(topicName, false);
+        processor.complete(); // the consumer is created here
         sleepSeconds(1);
         String message2 = sendMessage(topicName, false);
 
@@ -144,13 +145,12 @@ public class StreamJmsPTest extends JetTestSupport {
 
     private void initializeProcessor(String destinationName, boolean isQueue) throws Exception {
         processorConnection = getConnectionFactory().createConnection();
-        processorConnection.start();
 
         FunctionEx<Session, MessageConsumer> consumerFn = s ->
                 s.createConsumer(isQueue ? s.createQueue(destinationName) : s.createTopic(destinationName));
         FunctionEx<Message, String> textMessageFn = m -> ((TextMessage) m).getText();
         processor = new StreamJmsP<>(
-                () -> processorConnection, consumerFn, textMessageFn, noEventTime(), EXACTLY_ONCE);
+                () -> processorConnection, consumerFn, textMessageFn, noEventTime(), NONE);
         outbox = new TestOutbox(1);
         Context ctx = new TestProcessorContext().setLogger(Logger.getLogger(StreamJmsP.class));
         processor.init(outbox, ctx);
