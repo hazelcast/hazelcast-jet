@@ -232,7 +232,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
 
         try {
             KafkaConsumer<String, String> consumer = kafkaTestSupport.createConsumer(topic);
-            long endTime = System.nanoTime() + SECONDS.toNanos(60);
+            long endTime = System.nanoTime() + SECONDS.toNanos(120);
             StringBuilder actualSinkContents = new StringBuilder();
 
             int actualCount = 0;
@@ -243,7 +243,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
                 try {
                     ConsumerRecords<String, String> records;
                     for (int countThisRound = 0;
-                         countThisRound < 50 && !(records = consumer.poll(Duration.ofSeconds(2))).isEmpty();
+                         countThisRound < 100 && !(records = consumer.poll(Duration.ofSeconds(2))).isEmpty();
                     ) {
                         for (ConsumerRecord<String, String> record : records) {
                             actualSinkContents.append(record.value()).append('\n');
