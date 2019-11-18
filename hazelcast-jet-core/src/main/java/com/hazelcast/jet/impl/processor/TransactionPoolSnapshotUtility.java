@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Outbox;
@@ -38,7 +39,6 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.Collections.singletonList;
 
 /**
@@ -51,7 +51,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         extends TwoPhaseSnapshotCommitUtility<TXN_ID, RES> {
 
     private static final int TXN_PROBING_FACTOR = 5;
-    private final TransactionalResource<TXN_ID> NOOP_TRANSACTION = new TransactionalResource<TXN_ID>() {
+    private final TransactionalResource<TXN_ID> noopTransaction = new TransactionalResource<TXN_ID>() {
         @Override
         public void begin() {
             throw new IllegalStateException("this implementation is not supposed to be begun");
@@ -95,7 +95,9 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         super(outbox, procContext, isSource, externalGuarantee, createTxnFn, recoverAndCommitFn,
                 processorIndex -> {
                     for (int i = 0; i < adjustPoolSize(externalGuarantee, isSource, poolSize); i++) {
-                        recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, i));
+                        TXN_ID txnId = createTxnIdFn.apply(processorIndex, i);
+                        LoggingUtil.logFine(procContext.logger(), "recover and abort %s", txnId);
+                        recoverAndAbortFn.accept(txnId);
                     }
                 });
 
@@ -143,9 +145,10 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         RES activeTransaction = transactions.get(activeTxnIndex);
         if (!transactionBegun && usesTransactionLifecycle()) {
             try {
+                LoggingUtil.logFine(procContext().logger(), "begin, txnId=%s", activeTransaction.id());
                 activeTransaction.begin();
             } catch (Exception e) {
-                throw sneakyThrow(e);
+                throw new JetException("Transaction begin failed: " + e + ", txnId=" + activeTransaction.id());
             }
         }
         transactionBegun = true;
@@ -179,12 +182,16 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         }
         assert !snapshotInProgress : "snapshot in progress";
         // use no-op transaction if the active one wasn't begun
-        transactionToCommit = transactionBegun ? activeTransaction() : NOOP_TRANSACTION;
+        transactionToCommit = transactionBegun ? activeTransaction() : noopTransaction;
         assert transactionToCommit != null : "transactionToCommit == null, transactionBegun=" + transactionBegun;
         try {
             // `flushed` is used to avoid double flushing
-            if (!flushed && !transactionToCommit.flush()) {
-                return false;
+            if (!flushed) {
+                LoggingUtil.logFine(procContext().logger(), "flush, txnId=%s", transactionToCommit.id());
+                if (!transactionToCommit.flush()) {
+                    procContext().logger().fine("flush returned false");
+                    return false;
+                }
             }
             flushed = true;
             if (usesTransactionLifecycle()) {
@@ -192,12 +199,13 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
                 if (txnId != null && !getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
                     return false;
                 }
+                LoggingUtil.logFine(procContext().logger(), "endAndPrepare, txnId=%s", transactionToCommit.id());
                 transactionToCommit.endAndPrepare();
                 transactionBegun = false;
             }
             incrementActiveTxnIndex();
         } catch (Exception e) {
-            throw sneakyThrow(e);
+            throw new JetException("Save to snapshot failed: " + e + ", txnId=" + transactionToCommit.id());
         }
         snapshotInProgress = true;
         flushed = false;
@@ -213,11 +221,10 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         snapshotInProgress = false;
         if (commitTransactions) {
             try {
-                // TODO [viliam] log only in util, not in processor
-                procContext().logger().finest("commit");
+                LoggingUtil.logFine(procContext().logger(), "commit, txnId=%s", transactionToCommit.id());
                 transactionToCommit.commit();
             } catch (Exception e) {
-                throw sneakyThrow(e);
+                throw new JetException("Transaction commit failed: " + e + ", txnId=" + transactionToCommit.id());
             }
         } else {
             // we can't ignore the snapshot failure
@@ -255,6 +262,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
                 // the job is upgraded and has a new jobId.
                 incrementActiveTxnIndex();
             }
+            LoggingUtil.logFine(procContext().logger(), "recover and commit %s", txnId);
             recoverAndCommitFn().accept(txnId);
         }
     }
@@ -279,9 +287,10 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         if (transactions != null) {
             for (RES txn : transactions) {
                 try {
+                    LoggingUtil.logFine(procContext().logger(), "release, txnId=%s", transactionToCommit.id());
                     txn.release();
                 } catch (Exception e) {
-                    throw sneakyThrow(e);
+                    throw new JetException("Releasing of transaction failed: " + e + ", txnId=" + txn.id(), e);
                 }
             }
         }

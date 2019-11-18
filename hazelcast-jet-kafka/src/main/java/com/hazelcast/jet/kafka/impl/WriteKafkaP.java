@@ -119,14 +119,12 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     public void process(int ordinal, @Nonnull Inbox inbox) {
         KafkaTransaction<K, V> txn = snapshotUtility.activeTransaction();
         if (txn == null) {
-            context.logger().finest("no transaction");
             return;
         }
         checkError();
         for (Object item; (item = inbox.peek()) != null; ) {
             try {
                 txn.producer.send(toRecordFn.apply((T) item), callback);
-                context.logger().finest("sent " + item); // TODO [viliam] remove
             } catch (TimeoutException ignored) {
                 // apply backpressure, the item will be retried
                 return;
@@ -178,12 +176,11 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     }
 
     private void recoverTransaction(KafkaTransactionId txnId, boolean commit) {
-        context.logger().fine("recoverTransaction " + txnId + ", commit=" + commit);
         HashMap<Object, Object> properties2 = new HashMap<>(properties);
         properties2.put("transactional.id", txnId.getKafkaId());
         try (KafkaProducer p  = new KafkaProducer(properties2)) {
             if (commit) {
-                ResumeTransactionUtil.resumeTransaction(context.logger(), p, txnId.producerId(), txnId.epoch(),
+                ResumeTransactionUtil.resumeTransaction(p, txnId.producerId(), txnId.epoch(),
                         txnId.getKafkaId());
                 try {
                     p.commitTransaction();
@@ -253,18 +250,16 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         @Override
         public void begin() {
             if (!txnInitialized) {
-                LoggingUtil.logFinest(logger, "initTransactions %s", transactionId);
+                LoggingUtil.logFine(logger, "initTransactions in begin %s", transactionId);
                 txnInitialized = true;
                 producer.initTransactions();
                 transactionId.updateProducerAndEpoch(producer);
             }
-            LoggingUtil.logFinest(logger, "beginTransaction %s", transactionId);
             producer.beginTransaction();
         }
 
         @Override
         public boolean flush() {
-            LoggingUtil.logFinest(logger, "flush %s", transactionId);
             producer.flush();
             return true;
         }
@@ -272,14 +267,12 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         @Override
         public void commit() {
             if (transactionId != null) {
-                LoggingUtil.logFinest(logger, "commitTransaction %s", transactionId);
                 producer.commitTransaction();
             }
         }
 
         @Override
         public void release() {
-            LoggingUtil.logFinest(logger, "release (close producer) %s", transactionId);
             producer.close();
         }
     }

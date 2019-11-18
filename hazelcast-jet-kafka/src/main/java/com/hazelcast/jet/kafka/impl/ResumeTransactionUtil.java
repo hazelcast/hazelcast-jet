@@ -17,7 +17,6 @@
 package com.hazelcast.jet.kafka.impl;
 
 import com.hazelcast.internal.util.Preconditions;
-import com.hazelcast.logging.ILogger;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
 import java.lang.reflect.Field;
@@ -39,11 +38,9 @@ final class ResumeTransactionUtil {
      * https://github.com/apache/kafka/commit/5d2422258cb975a137a42a4e08f03573c49a387e
      * #diff-f4ef1afd8792cd2a2e9069cd7ddea630
      */
-    static void resumeTransaction(ILogger logger, KafkaProducer producer, long producerId, short epoch, String txnId) {
+    static void resumeTransaction(KafkaProducer producer, long producerId, short epoch, String txnId) {
         Preconditions.checkState(producerId >= 0 && epoch >= 0,
                 "Incorrect values for producerId " + producerId + " and epoch " + epoch);
-        logger.info("Attempting to resume transaction " + txnId + " with producerId " + producerId + " and epoch "
-                + epoch);
 
         Object transactionManager = getValue(producer, "transactionManager");
         Object nextSequence = getValue(transactionManager, "nextSequence");

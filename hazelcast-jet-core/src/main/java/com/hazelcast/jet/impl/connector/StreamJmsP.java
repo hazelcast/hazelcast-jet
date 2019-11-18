@@ -166,7 +166,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
         for (;;) {
             try {
-                getLogger().info("aaa going to commit in recoverTransaction");
                 xaSession.getXAResource().commit(xid, false);
                 getLogger().info("Successfully committed restored transaction ID: " + xid);
             } catch (XAException e) {
@@ -211,7 +210,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
         try {
             xaSession.getXAResource().rollback(xid);
         } catch (XAException e) {
-            // we ignore rollback failures. XAER_NOTA is "transaction doesn't exist", this is the normal case
+            // we ignore rollback failures. XAER_NOTA is "transaction doesn't exist", this is the normal case,
+            // we don't even log it
             if (e.errorCode != XAException.XAER_NOTA) {
                 LoggingUtil.logFine(getLogger(), "Failed to rollback, transaction ID: %s. Error: %s",
                         xid, handleXAException(e, xid));
@@ -368,7 +368,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void begin() throws Exception {
-            LoggingUtil.logFine(getLogger(), "start, %s", txnId);
             try {
                 xaResource.start(txnId, XAResource.TMNOFLAGS);
             } catch (XAException e) {
@@ -383,7 +382,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public void endAndPrepare() throws Exception {
-            LoggingUtil.logFine(getLogger(), "end & prepare, %s", txnId);
             try {
                 xaResource.end(txnId, XAResource.TMSUCCESS);
                 int res = xaResource.prepare(txnId);
@@ -405,7 +403,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
                 LoggingUtil.logFine(getLogger(), "commit ignored, transaction returned XA_RDONLY in prepare, %s",
                         txnId);
             } else {
-                LoggingUtil.logFine(getLogger(), "commit, %s",  txnId);
                 for (;;) {
                     try {
                         xaResource.commit(txnId, false);
@@ -454,13 +451,11 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         @Override
         public boolean flush() {
-            getLogger().fine("flushing " + txnId);
             return emitFromTraverser(pendingTraverser);
         }
 
         @Override
         public void commit() throws Exception {
-            getLogger().fine("commit " + txnId);
             session.commit();
         }
 

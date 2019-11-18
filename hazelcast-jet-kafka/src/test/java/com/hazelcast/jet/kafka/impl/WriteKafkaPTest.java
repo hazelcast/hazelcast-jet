@@ -296,7 +296,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
 
         // recover and commit
         producer = new KafkaProducer<>(properties);
-        ResumeTransactionUtil.resumeTransaction(logger, producer, producerId, epoch,
+        ResumeTransactionUtil.resumeTransaction(producer, producerId, epoch,
                 properties.getProperty("transactional.id"));
         producer.commitTransaction();
 

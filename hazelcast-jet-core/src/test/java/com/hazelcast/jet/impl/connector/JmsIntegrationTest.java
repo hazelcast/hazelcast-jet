@@ -456,7 +456,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void when_emptyTransaction_then_notCommittedInPhase2() {
+    public void when_rdOnlyTransaction_then_notCommittedInPhase2() {
         SupplierEx<ConnectionFactory> mockSupplier = () -> {
             XAConnectionFactory mockConnectionFactory = mock(XAConnectionFactory.class,
                     withSettings().extraInterfaces(ConnectionFactory.class));
@@ -573,6 +573,47 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     private static SupplierEx<ConnectionFactory> getConnectionFactorySupplier(boolean xa) {
         return () -> xa
                 ? new ActiveMQXAConnectionFactory(resource.getVmURL())
-                : new ActiveMQConnectionFactory(resource.getVmURL());
+                // we need to wrap the ActiveMQConnectionFactory because it also implements
+                // XAConnectionFactory, but we specifically want a factory that doesn't to test the
+                // non-XA behavior
+                : new WrappingConnectionFactory(new ActiveMQConnectionFactory(resource.getVmURL()));
+    }
+
+    private static class WrappingConnectionFactory implements ConnectionFactory {
+        private final ConnectionFactory delegate;
+
+        WrappingConnectionFactory(ConnectionFactory delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Connection createConnection() throws JMSException {
+            return delegate.createConnection();
+        }
+
+        @Override
+        public Connection createConnection(String userName, String password) throws JMSException {
+            return delegate.createConnection(userName, password);
+        }
+
+        @Override
+        public JMSContext createContext() {
+            return delegate.createContext();
+        }
+
+        @Override
+        public JMSContext createContext(String userName, String password) {
+            return delegate.createContext(userName, password);
+        }
+
+        @Override
+        public JMSContext createContext(String userName, String password, int sessionMode) {
+            return delegate.createContext(userName, password, sessionMode);
+        }
+
+        @Override
+        public JMSContext createContext(int sessionMode) {
+            return delegate.createContext(sessionMode);
+        }
     }
 }
