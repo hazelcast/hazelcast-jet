@@ -446,15 +446,9 @@ public final class Util {
     }
 
     /**
-     * Returns the lower of given guarantees.
+     * Returns the lower of the given guarantees.
      */
     public static ProcessingGuarantee min(ProcessingGuarantee g1, ProcessingGuarantee g2) {
-        if (g1 == ProcessingGuarantee.NONE || g2 == ProcessingGuarantee.NONE) {
-            return ProcessingGuarantee.NONE;
-        }
-        if (g1 == ProcessingGuarantee.AT_LEAST_ONCE || g2 == ProcessingGuarantee.AT_LEAST_ONCE) {
-            return ProcessingGuarantee.AT_LEAST_ONCE;
-        }
-        return ProcessingGuarantee.EXACTLY_ONCE;
+        return g1.ordinal() < g2.ordinal() ? g1 : g2;
     }
 }

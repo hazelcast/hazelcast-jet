@@ -18,13 +18,14 @@ package com.hazelcast.jet.kafka.impl;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
-import com.hazelcast.jet.impl.processor.TwoTransactionProcessorUtility;
+import com.hazelcast.jet.impl.processor.TransactionPoolSnapshotUtility;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.kafka.KafkaProcessors;
 import com.hazelcast.logging.ILogger;
@@ -59,7 +60,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     private final boolean exactlyOnce;
 
     private Context context;
-    private TwoTransactionProcessorUtility<KafkaTransactionId, KafkaTransaction<K, V>> snapshotUtility;
+    private TransactionPoolSnapshotUtility<KafkaTransactionId, KafkaTransaction<K, V>> snapshotUtility;
     private final AtomicReference<Throwable> lastError = new AtomicReference<>();
 
     private final Callback callback = (metadata, exception) -> {
@@ -82,13 +83,11 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         this.context = context;
-        snapshotUtility = new TwoTransactionProcessorUtility<>(
-                outbox,
-                context,
-                context.processingGuarantee() == EXACTLY_ONCE && !exactlyOnce
-                        ? AT_LEAST_ONCE
-                        : context.processingGuarantee(),
-                true,
+        ProcessingGuarantee guarantee = context.processingGuarantee() == EXACTLY_ONCE && !exactlyOnce
+                ? AT_LEAST_ONCE
+                : context.processingGuarantee();
+
+        snapshotUtility = new TransactionPoolSnapshotUtility<>(outbox, context, false, guarantee, 2,
                 (processorIndex, txnIndex) -> new KafkaTransactionId(
                         context.jobId(), context.jobConfig().getName(), context.vertexName(), processorIndex, txnIndex),
                 txnId -> {

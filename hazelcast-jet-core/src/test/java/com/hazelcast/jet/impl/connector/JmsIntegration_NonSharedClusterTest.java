@@ -25,6 +25,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -39,10 +40,15 @@ import org.junit.Test;
 import javax.jms.ConnectionFactory;
 import javax.jms.TextMessage;
 import java.io.Serializable;
+import java.util.concurrent.TimeUnit;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
+import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
@@ -52,7 +58,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
     private static volatile boolean storeFailed;
 
     @Test
-    public void test() throws Exception {
+    public void when_memberTerminated_then_transactionsRolledBack() throws Exception {
         JetInstance instance1 = createJetMember();
         JetInstance instance2 = createJetMember();
 
@@ -74,18 +80,33 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
         assertTrueEventually(() -> assertEquals("expected items not in sink", messageCount, sinkList.size()));
 
-        // Now forcefully shut down one of the members. The job should restart and immediately
-        // re-emit all the messages. If the transaction from the other isn't rolled back, those
-        // messages will be stalled in the unfinished transaction until it is rolled back by Artemis
-        // after the default 5 minutes.
+        // Now forcefully shut down the second member. The terminated member
+        // will not roll back its transaction. We'll assert that the
+        // transactions with processorIndex beyond the current total
+        // parallelism are rolled back. We assert that each item is emitted
+        // twice, if this was wrong, the items in the non-rolled-back
+        // transaction will be stalled and only emitted once, they will be
+        // emitted after the default Artemis timeout of 5 minutes.
         instance2.getHazelcastInstance().getLifecycleService().terminate();
         assertTrueEventually(() -> assertEquals("items should be emitted twice", messageCount * 2, sinkList.size()), 20);
     }
 
-    // TODO [viliam] snapshot failure should be ignored if guarantee != ex-once
+    @Test
+    public void when_snapshotFails_exactlyOnce_then_jobFails() {
+        when_snapshotFails(EXACTLY_ONCE, true);
+    }
 
     @Test
-    public void when_snapshotFails_then_jobFails() {
+    public void when_snapshotFails_atLeastOnce_then_jobFails() {
+        when_snapshotFails(AT_LEAST_ONCE, true);
+    }
+
+    @Test
+    public void when_snapshotFails_noGuarantee_then_ignored() {
+        when_snapshotFails(NONE, false);
+    }
+
+    private void when_snapshotFails(ProcessingGuarantee guarantee, boolean expectFailure) {
         storeFailed = false;
         // force snapshots to fail by adding a failing map store configuration for snapshot data maps
         JetConfig config = new JetConfig();
@@ -102,13 +123,19 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
          .writeTo(Sinks.noop());
 
         Job job = instance.newJob(p, new JobConfig()
-                .setProcessingGuarantee(EXACTLY_ONCE)
+                .setProcessingGuarantee(guarantee)
                 .setSnapshotIntervalMillis(100));
 
-        try {
-            job.join();
-        } catch (Exception e) {
-            assertContains(e.getMessage(), "snapshot failed, can't continue to use the transaction");
+        if (expectFailure) {
+            try {
+                job.getFuture().get(20, TimeUnit.SECONDS);
+                fail("job did not fail");
+            } catch (Exception e) {
+                assertContains(e.getMessage(), "the snapshot failed");
+            }
+        } else {
+            assertJobStatusEventually(job, RUNNING);
+            assertTrueAllTheTime(() -> assertEquals(RUNNING, job.getStatus()), 3);
         }
     }
 

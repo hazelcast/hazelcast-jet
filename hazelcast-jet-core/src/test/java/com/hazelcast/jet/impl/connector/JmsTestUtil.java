@@ -24,7 +24,6 @@ import javax.jms.Session;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 final class JmsTestUtil {
@@ -36,11 +35,11 @@ final class JmsTestUtil {
                 Connection conn = cf.createConnection();
                 Session session = conn.createSession(false, AUTO_ACKNOWLEDGE);
                 MessageProducer producer = session.createProducer(
-                        isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName));
+                        isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName))
         ) {
             List<Object> res = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                String message = randomString();
+                String message = "msg-" + i;
                 producer.send(session.createTextMessage(message));
                 res.add(message);
             }

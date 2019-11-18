@@ -25,14 +25,16 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
@@ -40,80 +42,93 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.util.Collections.singletonList;
 
 /**
- * Utility to handle transactions where each local processor uses a pair of
- * transactional resources alternately. This is needed if each resource has a
- * single transaction ID that doesn't change when a new transaction is begun.
- * For this reason we don't process items while waiting for phase-2 - if the
- * onSnapshotCompleted will be called with {@code false}, we'll have 2 pending
- * transactions and would need 3rd one for the next snapshot.
+ * A utility to handle transactions where each local processor uses a pool of
+ * transactional resources alternately. This is needed if we can't reliably
+ * list transactions that were created by our processor and solves it by having
+ * a deterministic transaction IDs.
  */
-public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN extends TransactionalResource<TXN_ID>>
-        extends TwoPhaseSnapshotCommitUtility<TXN_ID, TXN> {
+public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES extends TransactionalResource<TXN_ID>>
+        extends TwoPhaseSnapshotCommitUtility<TXN_ID, RES> {
 
     private static final int TXN_PROBING_FACTOR = 5;
-    private final boolean canBeginAfterPrepare;
 
-    private List<TXN> transactions;
+    private final int poolSize;
     private final List<TXN_ID> transactionIds;
-    private int activeTransactionIndex;
+    private List<RES> transactions;
+    private long activeTxnIndex;
+    private long committedTxnIndex = -1;
     private boolean transactionBegun;
+    private boolean snapshotInProgress;
     private boolean processorCompleted;
     private boolean transactionsReleased;
 
     /**
-     * @param canBeginAfterPrepare if true, in ex-once mode transaction can go
-     *      begin-flush-endAndPrepare-begin, without a commit
      * @param createTxnIdFn input is {processorIndex, transactionIndex}
      */
-    public TwoTransactionProcessorUtility(
+    public TransactionPoolSnapshotUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
+            boolean isSource,
             @Nonnull ProcessingGuarantee externalGuarantee,
-            boolean canBeginAfterPrepare, @Nonnull BiFunctionEx<Integer, Integer, TXN_ID> createTxnIdFn,
-            @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
+            int poolSize,
+            @Nonnull BiFunctionEx<Integer, Integer, TXN_ID> createTxnIdFn,
+            @Nonnull FunctionEx<TXN_ID, RES> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndAbortFn
     ) {
-        super(outbox, procContext, externalGuarantee, createTxnFn, recoverAndCommitFn,
+        super(outbox, procContext, isSource, externalGuarantee, createTxnFn, recoverAndCommitFn,
                 processorIndex -> {
-                    recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, 0));
-                    recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, 1));
+                    for (int i = 0; i < adjustPoolSize(externalGuarantee, isSource, poolSize); i++) {
+                        recoverAndAbortFn.accept(createTxnIdFn.apply(processorIndex, i));
+                    }
                 });
-        this.canBeginAfterPrepare = canBeginAfterPrepare;
 
-        if (externalGuarantee() == EXACTLY_ONCE) {
-            transactionIds = Arrays.asList(
-                    createTxnIdFn.apply(procContext().globalProcessorIndex(), 0),
-                    createTxnIdFn.apply(procContext().globalProcessorIndex(), 1)
-            );
-            assert !transactionIds.get(0).equals(transactionIds.get(1)) : "two equal IDs generated";
+        this.poolSize = adjustPoolSize(externalGuarantee, isSource, poolSize);
+        LoggingUtil.logFine(procContext.logger(), "Actual pool size used: %d", this.poolSize);
+        if (this.poolSize > 1) {
+            transactionIds = new ArrayList<>(this.poolSize);
+            for (int i = 0; i < this.poolSize; i++) {
+                transactionIds.add(createTxnIdFn.apply(procContext().globalProcessorIndex(), i));
+                assert i == 0 || !transactionIds.get(i).equals(transactionIds.get(i - 1)) : "two equal IDs generated";
+            }
         } else {
-            transactionIds = null;
+            transactionIds = singletonList(null);
         }
     }
 
-    @Nullable @Override
-    public TXN activeTransaction() {
-        if (isSnapshotInProgress() && externalGuarantee() == EXACTLY_ONCE) {
-            // Between snapshot phases we don't allow more writes only in ex-once mode.
-            // In at-least-once mode it's more complicated: we can do more writes, but can't
-            // do acknowledgements - if we acknowledged, message won't be re-delivered
-            // should the job fail before phase-2
-            return null;
+    private static int adjustPoolSize(@Nonnull ProcessingGuarantee externalGuarantee, boolean isSource, int poolSize) {
+        // we need at least 1 transaction or 2 for ex-once. More than 3 is never needed.
+        if (externalGuarantee == EXACTLY_ONCE && poolSize < 2 || poolSize < 1 || poolSize > 3) {
+            throw new IllegalArgumentException("poolSize=" + poolSize);
         }
+        // for at-least-once source we don't need more than two transactions
+        if (externalGuarantee == AT_LEAST_ONCE && isSource) {
+            poolSize = Math.min(2, poolSize);
+        }
+        // for no guarantee and for an at-least-once sink we need just 1 txn
+        if (externalGuarantee == NONE || externalGuarantee == AT_LEAST_ONCE && !isSource) {
+            poolSize = 1;
+        }
+        return poolSize;
+    }
+
+    @Nullable @Override
+    public RES activeTransaction() {
         if (transactions == null) {
-            rollbackOtherTransactions();
             if (transactionsReleased) {
                 throw new IllegalStateException("transactions already released");
             }
-            if (externalGuarantee() == EXACTLY_ONCE) {
-                transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
-            } else {
-                transactions = singletonList(createTxnFn().apply(null));
-            }
+            rollbackOtherTransactions();
+            transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
         }
-        TXN activeTransaction = transactions.get(activeTransactionIndex);
-        if (externalGuarantee() == EXACTLY_ONCE && !transactionBegun) {
+        int diff = (int) (activeTxnIndex - committedTxnIndex);
+        // diff is 2 between phase-1 and phase-2 and 1 otherwise
+        assert diff == (snapshotInProgress ? 2 : 1) : "broken invariant, diff=" + diff;
+        if (usesTransactionLifecycle() && diff >= poolSize) {
+            return null;
+        }
+        RES activeTransaction = transactions.get((int) (activeTxnIndex % poolSize));
+        if (usesTransactionLifecycle() && !transactionBegun) {
             try {
                 activeTransaction.begin();
                 transactionBegun = true;
@@ -125,14 +140,16 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
     }
 
     private void rollbackOtherTransactions() {
-        if (externalGuarantee() == NONE) {
+        if (!usesTransactionLifecycle()) {
             return;
         }
-        // If a member is removed or the local parallelism is reduced, the transactions
-        // with higher processor index won't be used. We need to roll them back.
-        // We probe transaction IDs beyond those of the current execution, up to 5x
-        // (the TXN_PROBING_FACTOR) of the current total parallelism. We only roll
-        // back "our" transactions, that is those where index%parallelism = ourIndex
+        // If a member is removed or the local parallelism is reduced, the
+        // transactions with higher processor index won't be used. We need to
+        // roll these back too. We probe transaction IDs with processorIndex
+        // beyond those of the current execution, up to 5x (the
+        // TXN_PROBING_FACTOR) of the current total parallelism. We only roll
+        // back "our" transactions, that is those where index%parallelism =
+        // ourIndex
         for (
                 int index = procContext().totalParallelism() + procContext().globalProcessorIndex();
                 index < procContext().totalParallelism() * TXN_PROBING_FACTOR;
@@ -147,53 +164,50 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         if (externalGuarantee() == NONE) {
             return true;
         }
-        assert !isSnapshotInProgress() : "snapshot in progress";
+        assert !snapshotInProgress : "snapshot in progress";
         // TODO [viliam] avoid doing work if transaction wasn't begun
-        TXN activeTransaction = activeTransaction();
-        assert activeTransaction != null : "null activeTransaction";
+        RES activeTransaction = activeTransaction();
+        assert activeTransaction != null : "activeTransaction == null";
         try {
+            // TODO [viliam] do not call flush multiple times or document it
             if (!activeTransaction.flush()) {
                 return false;
             }
+            if (usesTransactionLifecycle()) {
+                TXN_ID txnId = activeTransaction.id();
+                if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
+                    return false;
+                }
+                activeTransaction.endAndPrepare();
+                transactionBegun = false;
+            }
+            activeTxnIndex++;
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
-
-        if (externalGuarantee() == EXACTLY_ONCE) {
-            if (!getOutbox().offerToSnapshot(broadcastKey(activeTransaction.id()), false)) {
-                return false;
-            }
-            transactionBegun = false;
-            try {
-                activeTransaction.endAndPrepare();
-            } catch (Exception e) {
-                throw sneakyThrow(e);
-            }
-        }
-        setSnapshotInProgress(true);
+        snapshotInProgress = true;
         return true;
     }
 
     @Override
     public boolean onSnapshotCompleted(boolean commitTransactions) {
-        if (externalGuarantee() == NONE) {
+        if (!usesTransactionLifecycle()) {
             return true;
         }
-        setSnapshotInProgress(false);
+        assert snapshotInProgress : "snapshot not in progress";
+        snapshotInProgress = false;
         if (commitTransactions) {
             try {
+                // TODO [viliam] log only in util, not in processor
                 procContext().logger().finest("commit");
-                transactions.get(activeTransactionIndex).commit();
-                if (externalGuarantee() == EXACTLY_ONCE) {
-                    activeTransactionIndex ^= 1;
-                }
+                committedTxnIndex++;
+                transactions.get((int) (committedTxnIndex % poolSize)).commit();
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
         } else {
-            if (!canBeginAfterPrepare) {
-                throw new RetryableHazelcastException("snapshot failed, can't continue to use the transaction");
-            }
+            // we can't ignore the snapshot failure
+            throw new RetryableHazelcastException("the snapshot failed");
         }
         if (processorCompleted) {
             doRelease();
@@ -206,7 +220,7 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         // if the processor completes and a snapshot is in progress, the onSnapshotComplete
         // will be called anyway - we'll not release in that case
         processorCompleted = true;
-        if (!isSnapshotInProgress()) {
+        if (!snapshotInProgress) {
             doRelease();
         }
     }
@@ -225,7 +239,8 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
                 // would commit the transaction that should be rolled back.
                 // Note that we can restore a TxnId that is neither of our current two IDs in case
                 // the job is upgraded and has a new jobId.
-                activeTransactionIndex = 1;
+                activeTxnIndex++;
+                committedTxnIndex++;
             }
             recoverAndCommitFn().accept(txnId);
         }
@@ -242,13 +257,11 @@ public class TwoTransactionProcessorUtility<TXN_ID extends TransactionId, TXN ex
         }
         transactionsReleased = true;
         if (transactions != null) {
-            for (TXN txn : transactions) {
-                if (txn != null) {
-                    try {
-                        txn.release();
-                    } catch (Exception e) {
-                        throw sneakyThrow(e);
-                    }
+            for (RES txn : transactions) {
+                try {
+                    txn.release();
+                } catch (Exception e) {
+                    throw sneakyThrow(e);
                 }
             }
         }
