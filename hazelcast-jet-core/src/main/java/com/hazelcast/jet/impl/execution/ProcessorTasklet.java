@@ -253,7 +253,6 @@ public class ProcessorTasklet implements Tasklet {
                         : processor.tryProcessWatermark(pendingWatermark)) {
                     state = NULLARY_TRY_PROCESS;
                     pendingWatermark = null;
-                    stateMachineStep(); // recursion
                 }
                 break;
 
