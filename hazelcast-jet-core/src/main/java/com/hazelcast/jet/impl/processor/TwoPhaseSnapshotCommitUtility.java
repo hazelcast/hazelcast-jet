@@ -67,8 +67,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      *      use is rolled back
      * @param recoverAndCommitFn a function to finish the commit of transaction
      *      identified by the given ID
-     * @param recoverAndAbortFn a function rollback the work of the transaction
-     *      identified by the given ID
+     * @param recoverAndAbortFn a function to rollback the work of the all the
+     *      transactions that were created by the given processor index
      */
     public TwoPhaseSnapshotCommitUtility(
             @Nonnull Outbox outbox,
