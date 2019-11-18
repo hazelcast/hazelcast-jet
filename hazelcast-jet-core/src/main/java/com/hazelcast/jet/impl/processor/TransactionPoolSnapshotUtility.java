@@ -51,14 +51,29 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         extends TwoPhaseSnapshotCommitUtility<TXN_ID, RES> {
 
     private static final int TXN_PROBING_FACTOR = 5;
+    private final TransactionalResource<TXN_ID> NOOP_TRANSACTION = new TransactionalResource<TXN_ID>() {
+        @Override
+        public void begin() {
+            throw new IllegalStateException("this implementation is not supposed to be begun");
+        }
+
+        @Override
+        public TXN_ID id() {
+            return null;
+        }
+
+        @Override
+        public void commit() {
+        }
+    };
 
     private final int poolSize;
     private final List<TXN_ID> transactionIds;
     private List<RES> transactions;
-    private long activeTxnIndex;
-    private long committedTxnIndex = -1;
+    private int activeTxnIndex;
     private boolean transactionBegun;
     private boolean snapshotInProgress;
+    private TransactionalResource<TXN_ID> transactionToCommit;
     private boolean flushed;
     private boolean processorCompleted;
     private boolean transactionsReleased;
@@ -122,21 +137,18 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             rollbackOtherTransactions();
             transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
         }
-        int diff = (int) (activeTxnIndex - committedTxnIndex);
-        // diff is 2 between phase-1 and phase-2 and 1 otherwise
-        assert diff == (snapshotInProgress ? 2 : 1) : "broken invariant, diff=" + diff;
-        if (usesTransactionLifecycle() && diff >= poolSize) {
+        if (usesTransactionLifecycle() && poolSize < (snapshotInProgress ? 3 : 2)) {
             return null;
         }
-        RES activeTransaction = transactions.get((int) (activeTxnIndex % poolSize));
-        if (usesTransactionLifecycle() && !transactionBegun) {
+        RES activeTransaction = transactions.get(activeTxnIndex);
+        if (!transactionBegun && usesTransactionLifecycle()) {
             try {
                 activeTransaction.begin();
-                transactionBegun = true;
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
         }
+        transactionBegun = true;
         return activeTransaction;
     }
 
@@ -166,24 +178,24 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             return true;
         }
         assert !snapshotInProgress : "snapshot in progress";
-        // TODO [viliam] avoid doing work if transaction wasn't begun
-        RES activeTransaction = activeTransaction();
-        assert activeTransaction != null : "activeTransaction == null";
+        // use no-op transaction if the active one wasn't begun
+        transactionToCommit = transactionBegun ? activeTransaction() : NOOP_TRANSACTION;
+        assert transactionToCommit != null : "transactionToCommit == null, transactionBegun=" + transactionBegun;
         try {
             // `flushed` is used to avoid double flushing
-            if (!flushed && !activeTransaction.flush()) {
+            if (!flushed && !transactionToCommit.flush()) {
                 return false;
             }
             flushed = true;
             if (usesTransactionLifecycle()) {
-                TXN_ID txnId = activeTransaction.id();
-                if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
+                TXN_ID txnId = transactionToCommit.id();
+                if (txnId != null && !getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
                     return false;
                 }
-                activeTransaction.endAndPrepare();
+                transactionToCommit.endAndPrepare();
                 transactionBegun = false;
             }
-            activeTxnIndex++;
+            incrementActiveTxnIndex();
         } catch (Exception e) {
             throw sneakyThrow(e);
         }
@@ -203,8 +215,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             try {
                 // TODO [viliam] log only in util, not in processor
                 procContext().logger().finest("commit");
-                committedTxnIndex++;
-                transactions.get((int) (committedTxnIndex % poolSize)).commit();
+                transactionToCommit.commit();
             } catch (Exception e) {
                 throw sneakyThrow(e);
             }
@@ -242,8 +253,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
                 // would commit the transaction that should be rolled back.
                 // Note that we can restore a TxnId that is neither of our current two IDs in case
                 // the job is upgraded and has a new jobId.
-                activeTxnIndex++;
-                committedTxnIndex++;
+                incrementActiveTxnIndex();
             }
             recoverAndCommitFn().accept(txnId);
         }
@@ -252,6 +262,13 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
     @Override
     public void close() {
         doRelease();
+    }
+
+    private void incrementActiveTxnIndex() {
+        activeTxnIndex++;
+        if (activeTxnIndex == poolSize) {
+            activeTxnIndex = 0;
+        }
     }
 
     private void doRelease() {
