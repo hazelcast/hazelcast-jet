@@ -154,6 +154,7 @@ public class TaskletExecutionService {
     public void shutdown() {
         isShutdown = true;
         blockingTaskletExecutor.shutdownNow();
+        taskletInitExecutor.shutdownNow();
     }
 
     private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader,
