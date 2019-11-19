@@ -287,7 +287,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         if (transactions != null) {
             for (RES txn : transactions) {
                 try {
-                    LoggingUtil.logFine(procContext().logger(), "release, txnId=%s", transactionToCommit.id());
+                    LoggingUtil.logFine(procContext().logger(), "release, txnId=%s", txn.id());
                     txn.release();
                 } catch (Exception e) {
                     throw new JetException("Releasing of transaction failed: " + e + ", txnId=" + txn.id(), e);
