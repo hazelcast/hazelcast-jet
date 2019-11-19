@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngineImpl;
+import com.hazelcast.spi.impl.executionservice.ExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.spi.properties.HazelcastProperty;
 
@@ -38,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -46,8 +46,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -56,6 +54,7 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
 import static com.hazelcast.internal.util.ExceptionUtil.peel;
+import static com.hazelcast.internal.util.executor.ExecutorType.CACHED;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MAX_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MIN_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS;
@@ -74,11 +73,10 @@ import static java.util.stream.Collectors.toList;
 
 public class TaskletExecutionService {
 
+    private static final String TASKLET_INIT_EXECUTOR_NAME = "jet:tasklet_init";
+
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
-    private final ExecutorService taskletInitExecutor = new ThreadPoolExecutor(
-            0, Runtime.getRuntime().availableProcessors(),
-            3, TimeUnit.SECONDS,
-            new ArrayBlockingQueue<>(Runtime.getRuntime().availableProcessors()), new CallerRunsPolicy());
+    private final ExecutionService hzExecutionService;
     private final CooperativeWorker[] cooperativeWorkers;
     private final Thread[] cooperativeThreadPool;
     private final String hzInstanceName;
@@ -92,6 +90,9 @@ public class TaskletExecutionService {
     private volatile IdleStrategy idlerNonCooperative;
 
     public TaskletExecutionService(NodeEngineImpl nodeEngine, int threadCount, HazelcastProperties properties) {
+        hzExecutionService = nodeEngine.getExecutionService();
+        hzExecutionService.register(TASKLET_INIT_EXECUTOR_NAME,
+                Runtime.getRuntime().availableProcessors(), Integer.MAX_VALUE, CACHED);
         this.hzInstanceName = nodeEngine.getHazelcastInstance().getName();
         this.cooperativeWorkers = new CooperativeWorker[threadCount];
         this.cooperativeThreadPool = new Thread[threadCount];
@@ -155,7 +156,7 @@ public class TaskletExecutionService {
     public void shutdown() {
         isShutdown = true;
         blockingTaskletExecutor.shutdownNow();
-        taskletInitExecutor.shutdownNow();
+        hzExecutionService.shutdownExecutor(TASKLET_INIT_EXECUTOR_NAME);
     }
 
     private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader,
@@ -182,7 +183,7 @@ public class TaskletExecutionService {
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         List<? extends Future<?>> futures = tasklets
                 .stream()
-                .map(tasklet -> taskletInitExecutor.submit(() ->
+                .map(tasklet -> hzExecutionService.submit(TASKLET_INIT_EXECUTOR_NAME, () ->
                         Util.doWithClassLoader(jobClassLoader, tasklet::init)))
                 .collect(toList());
         awaitAll(futures);
