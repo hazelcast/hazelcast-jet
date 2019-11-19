@@ -251,16 +251,25 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         assert !transactionBegun : "transaction already begun";
         @SuppressWarnings("unchecked")
         TXN_ID txnId = ((BroadcastKey<TXN_ID>) key).key();
-        if (externalGuarantee() == EXACTLY_ONCE
+        if (usesTransactionLifecycle()
                 && txnId.index() % procContext().totalParallelism() == procContext().globalProcessorIndex()) {
-            if (transactionIds.get(0).equals(txnId)) {
-                // If we restored txnId of the 0th transaction, make the other transaction active.
-                // We must avoid using the same transaction that we committed in the snapshot
-                // we're restoring from, because if the job fails without creating a snapshot, we
-                // would commit the transaction that should be rolled back.
-                // Note that we can restore a TxnId that is neither of our current two IDs in case
-                // the job is upgraded and has a new jobId.
-                incrementActiveTxnIndex();
+            for (int i = 0; i < poolSize; i++) {
+                if (txnId.equals(transactionIds.get(i))) {
+                    // If we restored a txnId of one of our transactions, make the next transaction
+                    // active. We must avoid using the same transaction that we committed in the
+                    // snapshot we're restoring from, because if the job fails without creating a
+                    // snapshot, we would commit the transaction that should be rolled back. If
+                    // poolSize=3, we also can't use the txn ID before the one we just restored
+                    // because if the job failed after preparing the next txn, but before the
+                    // snapshot was successful, it could write more items using the restored txn
+                    // which we would also incorrectly commit after the restart.
+                    //
+                    // Note that we can restore a TxnId that is neither of our current IDs in case
+                    // the job is upgraded and has a new jobId.
+                    activeTxnIndex = i;
+                    incrementActiveTxnIndex();
+                    break;
+                }
             }
             LoggingUtil.logFine(procContext().logger(), "recover and commit %s", txnId);
             recoverAndCommitFn().accept(txnId);

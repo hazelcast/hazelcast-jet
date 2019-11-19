@@ -174,7 +174,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
                         LoggingUtil.logFine(getLogger(), "Commit failed with XA_RETRY, will retry in %s ms. XID: %s",
                                 COMMIT_RETRY_DELAY_MS, xid);
                         Thread.sleep(COMMIT_RETRY_DELAY_MS);
-                        getLogger().info("aaa woke up");
+                        LoggingUtil.logFine(getLogger(), "Retrying commit %s", xid);
                         continue;
                     case XAException.XA_HEURCOM:
                         LoggingUtil.logFine(getLogger(), "Due to a heuristic decision, the work done on behalf of " +
