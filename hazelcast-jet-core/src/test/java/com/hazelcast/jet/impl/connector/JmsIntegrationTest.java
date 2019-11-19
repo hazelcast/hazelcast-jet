@@ -20,7 +20,6 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
@@ -75,6 +74,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestProcessors.MapWatermarksToString.mapWatermarksToString;
+import static com.hazelcast.jet.impl.connector.JmsTestUtil.createActiveMqResource;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
@@ -97,7 +97,7 @@ import static org.mockito.Mockito.withSettings;
 public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @ClassRule
-    public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
+    public static EmbeddedActiveMQResource resource = createActiveMqResource();
 
     private static final int MESSAGE_COUNT = 100;
     private static final FunctionEx<Message, String> TEXT_MESSAGE_FN = m -> ((TextMessage) m).getText();
@@ -382,12 +382,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     private void stressTest(boolean graceful, boolean xa, ProcessingGuarantee maxGuarantee) throws Exception {
         lastListInStressTest = null;
-        JetInstance instance1 = createJetMember();
-        createJetMember();
-
         final int MESSAGE_COUNT = 4_000;
         Pipeline p = Pipeline.create();
-        IList<List<Long>> sinkList = instance1.getList("sinkList");
         String queueName = "queue-" + counter++;
         p.readFrom(Sources.jmsQueueBuilder(getConnectionFactorySupplier(xa))
                           .maxGuarantee(maxGuarantee)
@@ -403,7 +399,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                  })
          .writeTo(Sinks.logger());
 
-        Job job = instance1.newJob(p, new JobConfig()
+        Job job = instance().newJob(p, new JobConfig()
                 .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(50));
         assertJobStatusEventually(job, RUNNING);
@@ -426,9 +422,15 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         });
 
         int iteration = 0;
+        JobRepository jr = new JobRepository(instance());
+        waitForFirstSnapshot(jr, job.getId(), 20, true);
         while (!producerFuture.isDone()) {
-            // use longer delay before the first restart, to workaround https://issues.apache.org/jira/browse/ARTEMIS-2546
-            Thread.sleep(iteration++ == 0 ? 2000 : ThreadLocalRandom.current().nextInt(200));
+            Thread.sleep(ThreadLocalRandom.current().nextInt(200));
+            // Ensure progress was made to avoid the pathological case when we never get to commit anything.
+            // We also do it before the first restart to workaround https://issues.apache.org/jira/browse/ARTEMIS-2546
+            if (iteration++ % 3 == 0) {
+                waitForNextSnapshot(jr, job.getId(), 20, true);
+            }
             ((JobProxy) job).restart(graceful);
             assertJobStatusEventually(job, RUNNING);
         }

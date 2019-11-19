@@ -16,6 +16,13 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import org.apache.activemq.artemis.api.core.SimpleString;
+import org.apache.activemq.artemis.api.core.TransportConfiguration;
+import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl;
+import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory;
+import org.apache.activemq.artemis.core.settings.impl.AddressSettings;
+import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
+
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
@@ -28,6 +35,19 @@ import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 final class JmsTestUtil {
     private JmsTestUtil() { }
+
+    static EmbeddedActiveMQResource createActiveMqResource() {
+        ConfigurationImpl config = new ConfigurationImpl()
+                .setName("embedded-server")
+                .setPersistenceEnabled(false)
+                .setSecurityEnabled(false)
+                .addAcceptorConfiguration(new TransportConfiguration(InVMAcceptorFactory.class.getName()))
+                .addAddressesSetting("#", new AddressSettings()
+                        .setDeadLetterAddress(SimpleString.toSimpleString("dla"))
+                        .setMaxDeliveryAttempts(1000)
+                        .setExpiryAddress(SimpleString.toSimpleString("expiry")));
+        return new EmbeddedActiveMQResource(config);
+    }
 
     static List<Object> sendMessages(ConnectionFactory cf, String destinationName, boolean isQueue, int count)
             throws JMSException {
