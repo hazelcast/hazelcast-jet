@@ -55,6 +55,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
+import static com.hazelcast.internal.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MAX_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MIN_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS;
@@ -184,13 +185,7 @@ public class TaskletExecutionService {
                 .map(tasklet -> taskletInitExecutor.submit(() ->
                         Util.doWithClassLoader(jobClassLoader, tasklet::init)))
                 .collect(toList());
-        for (Future<?> future : futures) {
-            try {
-                future.get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new JetException("Tasklet initialization failed", e);
-            }
-        }
+        awaitAll(futures);
 
         // We synchronize so that no two jobs submit their tasklets in
         // parallel. If two jobs submit in parallel, the tasklets of one of
@@ -206,6 +201,26 @@ public class TaskletExecutionService {
             cooperativeWorkers[i].trackers.addAll(trackersByThread[i]);
         }
         Arrays.stream(cooperativeThreadPool).forEach(LockSupport::unpark);
+    }
+
+    private void awaitAll(List<? extends Future<?>> futures) {
+        Exception firstFailure = null;
+        int failureCount = 0;
+        for (Future<?> future : futures) {
+            try {
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                logger.severe("Tasklet initialization failed", e);
+                firstFailure = firstFailure != null ? firstFailure : peel(e);
+                failureCount++;
+            }
+        }
+        if (firstFailure != null) {
+            throw new JetException(String.format(
+                    "%,d of %,d tasklets failed to initialize. One of the failures is attached as the cause.",
+                    failureCount, futures.size()
+            ), firstFailure);
+        }
     }
 
     /**
