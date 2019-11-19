@@ -218,8 +218,9 @@ public class TaskletExecutionService {
         }
         if (firstFailure != null) {
             throw new JetException(String.format(
-                    "%,d of %,d tasklets failed to initialize. One of the failures is attached as the cause.",
-                    failureCount, futures.size()
+                    "%,d of %,d tasklets failed to initialize. One of the failures is attached as the cause" +
+                            " and its summary is %s",
+                    failureCount, futures.size(), firstFailure
             ), firstFailure);
         }
     }
