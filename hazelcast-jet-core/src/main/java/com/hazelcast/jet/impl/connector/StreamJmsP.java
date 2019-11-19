@@ -340,25 +340,36 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
     }
 
-    private interface JmsResource extends TransactionalResource<JmsTransactionId> {
-        @Nonnull
-        MessageConsumer consumer();
-    }
+    private abstract class JmsResource implements TransactionalResource<JmsTransactionId> {
+        final JmsTransactionId txnId;
 
-    private final class JmsXATransaction implements JmsResource {
-
-        private final XAResource xaResource;
-        private final JmsTransactionId txnId;
-        private boolean readOnlyInPrepare;
-
-        JmsXATransaction(JmsTransactionId txnId) {
-            this.xaResource = xaSession.getXAResource();
+        JmsResource(JmsTransactionId txnId) {
             this.txnId = txnId;
         }
+
+        @Nonnull
+        abstract MessageConsumer consumer();
 
         @Override
         public JmsTransactionId id() {
             return txnId;
+        }
+
+        @Override
+        public boolean flush() {
+            return emitFromTraverser(pendingTraverser);
+        }
+    }
+
+    private final class JmsXATransaction extends JmsResource {
+
+        private final XAResource xaResource;
+
+        private boolean readOnlyInPrepare;
+
+        JmsXATransaction(JmsTransactionId txnId) {
+            super(txnId);
+            this.xaResource = xaSession.getXAResource();
         }
 
         @Nonnull @Override
@@ -373,11 +384,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
             } catch (XAException e) {
                 throw handleXAException(e, txnId);
             }
-        }
-
-        @Override
-        public boolean flush() {
-            return emitFromTraverser(pendingTraverser);
         }
 
         @Override
@@ -422,17 +428,16 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
     }
 
-    private final class JmsTransaction implements JmsResource {
+    private final class JmsTransaction extends JmsResource {
 
         private final Session session;
-        private final JmsTransactionId txnId;
         private final MessageConsumer consumer;
 
         JmsTransaction(JmsTransactionId txnId) throws JMSException {
+            super(txnId);
             boolean transacted = snapshotUtility.externalGuarantee() == AT_LEAST_ONCE;
             this.session = connection.createSession(transacted, DUPS_OK_ACKNOWLEDGE);
             this.consumer = consumerFn.apply(session);
-            this.txnId = txnId;
         }
 
         @Nonnull @Override
@@ -441,17 +446,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public JmsTransactionId id() {
-            return txnId;
-        }
-
-        @Override
         public void begin() {
-        }
-
-        @Override
-        public boolean flush() {
-            return emitFromTraverser(pendingTraverser);
         }
 
         @Override
@@ -460,7 +455,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
-        public void release() {
+        public void release() throws JMSException {
+            session.close();
         }
     }
 
