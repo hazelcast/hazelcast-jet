@@ -464,10 +464,10 @@ public class JobConfig implements IdentifiedDataSerializable {
      * <p>
      * The job will use the state even if {@linkplain
      * #setProcessingGuarantee(ProcessingGuarantee) processing guarantee} is
-     * set to {@link ProcessingGuarantee#NONE REGULAR_FILE}.
+     * set to {@link ProcessingGuarantee#NONE}.
      *
      * @param initialSnapshotName the snapshot name given to {@link
-     *                            Job#exportSnapshot(String)}
+     *       Job#exportSnapshot(String)}
      * @return {@code this} instance for fluent API
      * @since 3.0
      */
