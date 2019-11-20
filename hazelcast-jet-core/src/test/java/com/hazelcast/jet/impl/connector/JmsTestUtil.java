@@ -31,6 +31,7 @@ import javax.jms.Session;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.concurrent.TimeUnit.DAYS;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 final class JmsTestUtil {
@@ -41,6 +42,8 @@ final class JmsTestUtil {
                 .setName("embedded-server")
                 .setPersistenceEnabled(false)
                 .setSecurityEnabled(false)
+                // use long timeout - if we don't correctly roll back, it should show
+                .setTransactionTimeout(DAYS.toMillis(1))
                 .addAcceptorConfiguration(new TransportConfiguration(InVMAcceptorFactory.class.getName()))
                 .addAddressesSetting("#", new AddressSettings()
                         .setDeadLetterAddress(SimpleString.toSimpleString("dla"))

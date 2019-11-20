@@ -424,6 +424,16 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
 
         @Override
+        public void rollback() throws Exception {
+            try {
+                xaResource.end(txnId, XAResource.TMFAIL);
+                xaResource.rollback(txnId);
+            } catch (XAException e) {
+                throw handleXAException(e, txnId);
+            }
+        }
+
+        @Override
         public void release() {
         }
     }
@@ -452,6 +462,11 @@ public class StreamJmsP<T> extends AbstractProcessor {
         @Override
         public void commit() throws Exception {
             session.commit();
+        }
+
+        @Override
+        public void rollback() throws Exception {
+            session.rollback();
         }
 
         @Override

@@ -531,6 +531,43 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         assertStartsWith("wm(", (String) sinkList.get(0));
     }
 
+    @Test
+    public void when_jobCancelled_then_rollsBackNonPreparedTransactions_xa() throws Exception {
+        when_jobCancelled_then_rollsBackNonPreparedTransactions(true);
+    }
+
+    @Test
+    public void when_jobCancelled_then_rollsBackNonPreparedTransactions_nonXa() throws Exception {
+        when_jobCancelled_then_rollsBackNonPreparedTransactions(false);
+    }
+
+    private void when_jobCancelled_then_rollsBackNonPreparedTransactions(boolean xa) throws Exception {
+        sendMessages(true);
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(xa), destinationName))
+         .withoutTimestamps()
+         .peek()
+         .writeTo(Sinks.noop());
+
+        Job job = instance().newJob(p, new JobConfig()
+                .setProcessingGuarantee(AT_LEAST_ONCE)
+                .setSnapshotIntervalMillis(100_000_000));
+
+        assertJobStatusEventually(job, RUNNING);
+        sleepSeconds(1); // give the job some more time to consume the message
+
+        // When
+        ditchJob(job, instance());
+
+        // Then
+        // if the transaction was rolled back, we'll see the messages. If not, they will be blocked
+        // (we configured a long transaction timeout for Artemis)
+        List<Object> messages = consumeMessages(true);
+//        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertTrueEventually(() -> assertEquals(MESSAGE_COUNT, messages.size()), 5);
+    }
+
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
         Connection connection = getConnectionFactorySupplier(false).get().createConnection();
         connection.start();

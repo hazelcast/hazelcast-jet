@@ -72,7 +72,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
     private List<RES> transactions;
     private int activeTxnIndex;
     private boolean transactionBegun;
-    private boolean snapshotInProgress;
+    private TXN_ID preparedTxnId;
     private TransactionalResource<TXN_ID> transactionToCommit;
     private boolean flushed;
     private boolean processorCompleted;
@@ -139,7 +139,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             rollbackOtherTransactions();
             transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
         }
-        if (usesTransactionLifecycle() && poolSize < (snapshotInProgress ? 3 : 2)) {
+        if (usesTransactionLifecycle() && poolSize < (preparedTxnId != null ? 3 : 2)) {
             return null;
         }
         RES activeTransaction = transactions.get(activeTxnIndex);
@@ -180,7 +180,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         if (externalGuarantee() == NONE) {
             return true;
         }
-        assert !snapshotInProgress : "snapshot in progress";
+        assert preparedTxnId == null : "preparedTxnId != null";
         // use no-op transaction if the active one wasn't begun
         transactionToCommit = transactionBegun ? activeTransaction() : noopTransaction;
         assert transactionToCommit != null : "transactionToCommit == null, transactionBegun=" + transactionBegun;
@@ -195,8 +195,8 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             }
             flushed = true;
             if (usesTransactionLifecycle()) {
-                TXN_ID txnId = transactionToCommit.id();
-                if (txnId != null && !getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
+                preparedTxnId = transactionToCommit.id();
+                if (preparedTxnId != null && !getOutbox().offerToSnapshot(broadcastKey(preparedTxnId), false)) {
                     return false;
                 }
                 LoggingUtil.logFine(procContext().logger(), "endAndPrepare, txnId=%s", transactionToCommit.id());
@@ -207,18 +207,16 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         } catch (Exception e) {
             throw new JetException("Save to snapshot failed: " + e + ", txnId=" + transactionToCommit.id());
         }
-        snapshotInProgress = true;
         flushed = false;
         return true;
     }
 
     @Override
     public boolean onSnapshotCompleted(boolean commitTransactions) {
-        if (!usesTransactionLifecycle()) {
+        if (!usesTransactionLifecycle() || preparedTxnId == null) {
             return true;
         }
-        assert snapshotInProgress : "snapshot not in progress";
-        snapshotInProgress = false;
+        preparedTxnId = null;
         if (commitTransactions) {
             try {
                 LoggingUtil.logFine(procContext().logger(), "commit, txnId=%s", transactionToCommit.id());
@@ -241,7 +239,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         // if the processor completes and a snapshot is in progress, the onSnapshotComplete
         // will be called anyway - we'll not release in that case
         processorCompleted = true;
-        if (!snapshotInProgress) {
+        if (preparedTxnId == null) {
             doRelease();
         }
     }
@@ -294,12 +292,21 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         }
         transactionsReleased = true;
         if (transactions != null) {
+            if (usesTransactionLifecycle() && transactionBegun) {
+                try {
+                    RES activeTransaction = transactions.get(activeTxnIndex);
+                    LoggingUtil.logFine(procContext().logger(), "rollback, txnId=%s", activeTransaction.id());
+                    activeTransaction.rollback();
+                } catch (Exception e) {
+                    procContext().logger().info("Rollback failed: " + e, e);
+                }
+            }
             for (RES txn : transactions) {
                 try {
                     LoggingUtil.logFine(procContext().logger(), "release, txnId=%s", txn.id());
                     txn.release();
                 } catch (Exception e) {
-                    throw new JetException("Releasing of transaction failed: " + e + ", txnId=" + txn.id(), e);
+                    procContext().logger().info("Releasing of a transaction failed: " + e + ", txnId=" + txn.id(), e);
                 }
             }
         }
