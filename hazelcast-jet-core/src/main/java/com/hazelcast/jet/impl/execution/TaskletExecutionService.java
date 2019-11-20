@@ -53,12 +53,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 
-import static com.hazelcast.internal.util.ExceptionUtil.peel;
 import static com.hazelcast.internal.util.executor.ExecutorType.CACHED;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MAX_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_COOPERATIVE_MIN_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MAX_MICROSECONDS;
 import static com.hazelcast.jet.core.JetProperties.JET_IDLE_NONCOOPERATIVE_MIN_MICROSECONDS;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
@@ -73,7 +73,7 @@ import static java.util.stream.Collectors.toList;
 
 public class TaskletExecutionService {
 
-    private static final String TASKLET_INIT_EXECUTOR_NAME = "jet:tasklet_init";
+    static final String TASKLET_INIT_EXECUTOR_NAME = "jet:tasklet_init";
 
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
     private final ExecutionService hzExecutionService;
@@ -205,21 +205,22 @@ public class TaskletExecutionService {
     }
 
     private void awaitAll(List<? extends Future<?>> futures) {
-        Exception firstFailure = null;
+        Throwable firstFailure = null;
         int failureCount = 0;
         for (Future<?> future : futures) {
             try {
                 future.get();
             } catch (InterruptedException | ExecutionException e) {
-                logger.severe("Tasklet initialization failed", e);
-                firstFailure = firstFailure != null ? firstFailure : peel(e);
+                Throwable peeled = peel(e);
+                logger.severe("Tasklet initialization failed", peeled);
+                firstFailure = firstFailure != null ? firstFailure : peeled;
                 failureCount++;
             }
         }
         if (firstFailure != null) {
             throw new JetException(String.format(
-                    "%,d of %,d tasklets failed to initialize. One of the failures is attached as the cause" +
-                            " and its summary is %s",
+                    "%,d of %,d tasklets failed to initialize." +
+                            " One of the failures is attached as the cause and its summary is %s",
                     failureCount, futures.size(), firstFailure
             ), firstFailure);
         }
