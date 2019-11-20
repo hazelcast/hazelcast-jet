@@ -41,7 +41,8 @@ public class ResourceConfig implements Serializable {
      * @param resourceType  type of the resource
      */
     ResourceConfig(@Nonnull URL url, String id, ResourceType resourceType) {
-        checkTrue((resourceType != ResourceType.REGULAR_FILE) ^ id != null, "Either archive file or id != null, exclusively");
+        checkTrue((resourceType != ResourceType.REGULAR_FILE) ^ id != null,
+                "Either archive file or id != null, exclusively");
         this.url = url;
         this.id = id;
         this.resourceType = resourceType;
