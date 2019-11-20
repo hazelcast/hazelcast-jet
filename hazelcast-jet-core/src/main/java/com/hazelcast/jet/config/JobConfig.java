@@ -144,9 +144,9 @@ public class JobConfig implements IdentifiedDataSerializable {
      *
      * @return {@code this} instance for fluent API
      * @see InstanceConfig#setScaleUpDelayMillis
-     * Configuring the scale-up delay
+     *        Configuring the scale-up delay
      * @see #setProcessingGuarantee
-     * Enabling/disabling snapshots
+     *        Enabling/disabling snapshots
      */
     public JobConfig setAutoScaling(boolean enabled) {
         this.autoScaling = enabled;

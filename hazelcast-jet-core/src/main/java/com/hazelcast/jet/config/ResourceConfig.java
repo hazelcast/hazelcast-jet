@@ -31,7 +31,6 @@ import static com.hazelcast.internal.util.Preconditions.checkTrue;
 public class ResourceConfig implements Serializable {
     private final URL url;
     private final String id;
-    private final boolean isArchive;
     private final ResourceType resourceType;
 
     /**
@@ -42,8 +41,7 @@ public class ResourceConfig implements Serializable {
      * @param resourceType  type of the resource
      */
     ResourceConfig(@Nonnull URL url, String id, ResourceType resourceType) {
-        this.isArchive = resourceType != ResourceType.REGULAR_FILE;
-        checkTrue(isArchive ^ id != null, "Either isArchive == true, or id != null, exclusively");
+        checkTrue((resourceType != ResourceType.REGULAR_FILE) ^ id != null, "Either archive file or id != null, exclusively");
         this.url = url;
         this.id = id;
         this.resourceType = resourceType;
@@ -59,7 +57,6 @@ public class ResourceConfig implements Serializable {
         id = clazz.getName().replace('.', '/') + ".class";
         url = clazz.getClassLoader().getResource(id);
         checkNotNull(this.url, "Couldn't derive URL from class " + clazz);
-        isArchive = false;
         resourceType = ResourceType.REGULAR_FILE;
     }
 
@@ -71,17 +68,10 @@ public class ResourceConfig implements Serializable {
     }
 
     /**
-     * The ID of the resource, null for {@link #isArchive() archives}.
+     * The ID of the resource, null for archive files.
      */
     public String getId() {
         return id;
-    }
-
-    /**
-     * Whether this entry is an archive file or a single resource element.
-     */
-    public boolean isArchive() {
-        return isArchive;
     }
 
     /**
@@ -93,7 +83,7 @@ public class ResourceConfig implements Serializable {
 
     @Override
     public String toString() {
-        return "ResourceConfig{url=" + url + ", id='" + id + '\'' + ", isArchive=" + isArchive + '}';
+        return "ResourceConfig{url=" + url + ", id='" + id + '\'' + '}';
     }
 
     @Override
@@ -107,9 +97,6 @@ public class ResourceConfig implements Serializable {
 
         ResourceConfig that = (ResourceConfig) o;
 
-        if (isArchive != that.isArchive) {
-            return false;
-        }
         if (url != null ? !url.toString().equals(that.url.toString()) : that.url != null) {
             return false;
         }
@@ -123,7 +110,6 @@ public class ResourceConfig implements Serializable {
     public int hashCode() {
         int result = url != null ? url.toString().hashCode() : 0;
         result = 31 * result + (id != null ? id.hashCode() : 0);
-        result = 31 * result + (isArchive ? 1 : 0);
         result = 31 * result + (resourceType != null ? resourceType.hashCode() : 0);
         return result;
     }

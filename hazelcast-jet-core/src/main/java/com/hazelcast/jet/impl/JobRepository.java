@@ -126,8 +126,8 @@ public class JobRepository {
      * Prefix for internal IMaps which store snapshot data. Snapshot data for
      * one snapshot is stored in either of the following two maps:
      * <ul>
-     * <li>{@code _jet.snapshot.<jobId>.0}
-     * <li>{@code _jet.snapshot.<jobId>.1}
+     *      <li>{@code _jet.snapshot.<jobId>.0}
+     *      <li>{@code _jet.snapshot.<jobId>.1}
      * </ul>
      * Which one of these is determined in {@link JobExecutionRecord}.
      */
@@ -193,7 +193,7 @@ public class JobRepository {
                         is.close();
                         break;
                     case JARS_IN_ZIP:
-                        loadZip(tmpMap, rc.getUrl());
+                        loadJarsInZip(tmpMap, rc.getUrl());
                         break;
                     default:
                         throw new JetException("Unsupported resource type: " + rc.getResourceType());
@@ -223,7 +223,7 @@ public class JobRepository {
     /**
      * Unzips the ZIP archive and processes JAR files
      */
-    private void loadZip(Map<String, byte[]> map, URL url) throws IOException {
+    private void loadJarsInZip(Map<String, byte[]> map, URL url) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(url.openStream()))) {
             ZipEntry zipEntry;
             while ((zipEntry = zis.getNextEntry()) != null) {

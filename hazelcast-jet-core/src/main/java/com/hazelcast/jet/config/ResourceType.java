@@ -29,7 +29,7 @@ public enum ResourceType {
      */
     JAR,
     /**
-     * Represents a ZIP file contains JAR files.
+     * Represents a ZIP file that contains JAR files.
      */
     JARS_IN_ZIP
 }
