@@ -308,6 +308,16 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         }
 
         /**
+         * Roll back the transaction. Only called for non-prepared transactions
+         * when the job execution ends.
+         *
+         * <p>Will only be called for a transaction that was {@link #begin()
+         * begun}.
+         */
+        default void rollback() throws Exception {
+        }
+
+        /**
          * Release the resources associated with the transaction. Must not
          * commit or rollback it, the transaction can be later recovered from
          * the durable storage and continued.
