@@ -28,13 +28,11 @@ import com.hazelcast.jet.impl.util.Util.RunnableExc;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
@@ -43,178 +41,145 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  * number of open transactions and is able to enumerate those pertaining to a
  * job.
  *
- * @param <TXN> the transaction type
+ * @param <RES> the transaction type
  */
-public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId, TXN extends TransactionalResource<TXN_ID>>
-        extends TwoPhaseSnapshotCommitUtility<TXN_ID, TXN> {
+public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId, RES extends TransactionalResource<TXN_ID>>
+        extends TwoPhaseSnapshotCommitUtility<TXN_ID, RES> {
 
     private final Supplier<TXN_ID> createTxnIdFn;
-    private final RunnableExc abortUnfinishedTransactions;
+    private final RunnableExc abortUnfinishedTransactionsAction;
 
-    private TXN activeTransaction;
-    private final Map<TXN_ID, TXN> pendingTransactions = new LinkedHashMap<>();
+    private LoggingNonThrowingResource<TXN_ID, RES> activeTransaction;
+    private final List<LoggingNonThrowingResource<TXN_ID, RES>> pendingTransactions;
     private final Queue<TXN_ID> snapshotQueue = new ArrayDeque<>();
     private boolean initialized;
-    private boolean waitingForPhase2;
+    private boolean snapshotInProgress;
 
     /**
-     * This utility always calls `flush` at most once for each transaction. If
-     * transactions aren't used (with externalGuarantee != EXACTLY_ONCE), flush
-     * can occur multiple times for the same writer.
-     *
      * @param outbox
      * @param procContext
      * @param externalGuarantee
+     * @param createTxnIdFn
      * @param createTxnFn
      * @param recoverAndCommitFn
-     * @param abortUnfinishedTransactions when called, it should abort all
-     *      unfinished transactions found in the external system that pertain
-     *      to the processor
+     * @param abortUnfinishedTransactionsAction when called, it should abort
+     *      all unfinished transactions found in the external system that
+     *      pertain to the processor
      */
     public UnboundedTransactionsProcessorUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
             @Nonnull ProcessingGuarantee externalGuarantee,
             @Nonnull Supplier<TXN_ID> createTxnIdFn,
-            @Nonnull FunctionEx<TXN_ID, TXN> createTxnFn,
+            @Nonnull FunctionEx<TXN_ID, RES> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
-            @Nonnull RunnableExc abortUnfinishedTransactions
+            @Nonnull RunnableExc abortUnfinishedTransactionsAction
     ) {
         super(outbox, procContext, false, externalGuarantee, createTxnFn, recoverAndCommitFn,
                 txnId -> {
                     throw new UnsupportedOperationException();
                 });
         this.createTxnIdFn = createTxnIdFn;
-        this.abortUnfinishedTransactions = abortUnfinishedTransactions;
+        this.abortUnfinishedTransactionsAction = abortUnfinishedTransactionsAction;
+        pendingTransactions = usesTransactionLifecycle() ? new ArrayList<>() : null;
     }
 
     @Nonnull @Override
-    public TXN activeTransaction() {
+    public RES activeTransaction() {
         if (activeTransaction == null) {
-            if (!initialized && externalGuarantee() != NONE) {
-                initialized = true;
-                try {
-                    abortUnfinishedTransactions.run();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
-                }
-            }
-            activeTransaction = createTxnFn().apply(createTxnIdFn.get());
-            if (externalGuarantee() == EXACTLY_ONCE) {
-                try {
-                    activeTransaction.begin();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
-                }
-            }
-        }
-        return activeTransaction;
-    }
-
-    public TXN newActiveTransaction() {
-        try {
-            if (externalGuarantee() == EXACTLY_ONCE) {
-                pendingTransactions.put(activeTransaction.id(), activeTransaction);
-                activeTransaction.endAndPrepare();
-            } else if (activeTransaction != null) {
-                activeTransaction.release();
-            }
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
-        activeTransaction = null;
-        return activeTransaction();
-    }
-
-    @Override
-    public void afterCompleted() {
-        if (externalGuarantee() == EXACTLY_ONCE) {
-            procContext().logger().info("aaa afterCompleted");
-            if (activeTransaction != null) {
-                pendingTransactions.put(activeTransaction.id(), activeTransaction);
-            }
-            if (!waitingForPhase2) {
-                for (TXN txn : pendingTransactions.values()) {
+            if (!initialized) {
+                if (usesTransactionLifecycle()) {
                     try {
-                        txn.commit();
-                        txn.release();
+                        procContext().logger().fine("aborting unfinished transactions");
+                        abortUnfinishedTransactionsAction.run();
                     } catch (Exception e) {
                         throw sneakyThrow(e);
                     }
                 }
+                initialized = true;
+            }
+            activeTransaction = createTxnFn().apply(createTxnIdFn.get());
+            if (usesTransactionLifecycle()) {
+                activeTransaction.begin();
+            }
+        }
+        return activeTransaction.wrapped();
+    }
+
+    /**
+     * Force a new transaction outside of the snapshot cycle. The next call to
+     * {@link #activeTransaction()} will return a new transaction.
+     */
+    public void finishActiveTransaction() {
+        if (activeTransaction == null) {
+            return;
+        }
+        if (usesTransactionLifecycle()) {
+            pendingTransactions.add(activeTransaction);
+            activeTransaction.endAndPrepare();
+        } else {
+            activeTransaction.release();
+        }
+        activeTransaction = null;
+    }
+
+    @Override
+    public void afterCompleted() {
+        if (activeTransaction == null) {
+            return;
+        }
+        if (usesTransactionLifecycle()) {
+            pendingTransactions.add(activeTransaction);
+            if (!snapshotInProgress) {
+                commitPendingTransactions();
             }
         } else {
-            try {
-                if (activeTransaction != null) {
-                    activeTransaction.release();
-                }
-            } catch (Exception e) {
-                throw sneakyThrow(e);
-            }
-            assert pendingTransactions.isEmpty() : "pendingTransactions not empty";
+            activeTransaction.release();
         }
         activeTransaction = null;
     }
 
     @Override
     public boolean saveToSnapshot() {
-        procContext().logger().info("aaa saveToSnapshot");
-        switch (externalGuarantee()) {
-            case NONE:
-                return true;
-
-            case AT_LEAST_ONCE:
-                try {
-                    activeTransaction.flush();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
+        if (usesTransactionLifecycle()) {
+            if (snapshotQueue.isEmpty()) {
+                snapshotInProgress = true;
+                finishActiveTransaction();
+                for (LoggingNonThrowingResource<TXN_ID, RES> txn : pendingTransactions) {
+                    snapshotQueue.add(txn.id());
                 }
-                return true;
-
-            case EXACTLY_ONCE:
-                waitingForPhase2 = true;
-                if (snapshotQueue.isEmpty()) {
-                    if (activeTransaction != null) {
-                        pendingTransactions.put(activeTransaction.id(), activeTransaction);
-                        try {
-                            activeTransaction.endAndPrepare();
-                        } catch (Exception e) {
-                            throw sneakyThrow(e);
-                        }
-                        activeTransaction = null;
-                    }
-                    snapshotQueue.addAll(pendingTransactions.keySet());
-                }
-                for (TXN_ID txnId; (txnId = snapshotQueue.peek()) != null; ) {
-                    if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
-                        return false;
-                    }
-                    snapshotQueue.remove();
-                }
-                return true;
-
-            default:
-                throw new UnsupportedOperationException(externalGuarantee().toString());
+            }
+        } else {
+            if (activeTransaction != null) {
+                activeTransaction.flush();
+            }
         }
+        for (TXN_ID txnId; (txnId = snapshotQueue.peek()) != null; ) {
+            if (!getOutbox().offerToSnapshot(broadcastKey(txnId), false)) {
+                return false;
+            }
+            snapshotQueue.remove();
+        }
+
+        return true;
     }
 
     @Override
     public boolean onSnapshotCompleted(boolean commitTransactions) {
-        procContext().logger().info("aaa onSnapshotCompleted, commitTransactions=" + commitTransactions);
-        assert waitingForPhase2 : "not waiting for phase 2";
-        waitingForPhase2 = false;
+        assert snapshotInProgress : "no snapshot in progress";
+        snapshotInProgress = false;
         if (commitTransactions) {
-            for (TXN txn : pendingTransactions.values()) {
-                try {
-                    txn.commit();
-                    txn.release();
-                } catch (Exception e) {
-                    throw sneakyThrow(e);
-                }
-            }
-            pendingTransactions.clear();
+            commitPendingTransactions();
         }
         return true;
+    }
+
+    private void commitPendingTransactions() {
+        for (LoggingNonThrowingResource<TXN_ID, RES> txn : pendingTransactions) {
+            txn.commit();
+            txn.release();
+        }
+        pendingTransactions.clear();
     }
 
     @Override
@@ -227,15 +192,17 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     }
 
     @Override
-    public void close() throws Exception {
-        procContext().logger().info("aaa close");
+    public void close() {
         if (activeTransaction != null) {
+            activeTransaction.rollback();
             activeTransaction.release();
             activeTransaction = null;
         }
-        for (TXN txn : pendingTransactions.values()) {
-            txn.release();
+        if (pendingTransactions != null) {
+            for (LoggingNonThrowingResource<TXN_ID, RES> txn : pendingTransactions) {
+                txn.release();
+            }
+            pendingTransactions.clear();
         }
-        pendingTransactions.clear();
     }
 }

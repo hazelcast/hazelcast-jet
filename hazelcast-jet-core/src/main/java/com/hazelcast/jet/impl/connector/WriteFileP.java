@@ -26,6 +26,7 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.UnboundedTransactionsProcessorUtility;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -52,14 +53,15 @@ import java.util.stream.Stream;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 
 /**
- * A file-writing sink supporting rolling files. Rolling can occur on:
- * - at a snapshot boundary
- * - when a file size is reached
- * - when a date changes
+ * A file-writing sink supporting rolling files. Rolling can occur:
+ * <ul>
+ *      <li>at a snapshot boundary
+ *      <li>when a file size is reached
+ *      <li>when a date changes
+ * </ul>
  */
 public final class WriteFileP<T> implements Processor {
 
@@ -122,7 +124,7 @@ public final class WriteFileP<T> implements Processor {
         // roll file on date change
         if (dateFormatter != null && !dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong())).equals(lastFileDate)) {
             fileSequence = 0;
-            utility.newActiveTransaction();
+            utility.finishActiveTransaction();
         }
         FileResource transaction = utility.activeTransaction();
         Writer writer = transaction.writer();
@@ -133,12 +135,13 @@ public final class WriteFileP<T> implements Processor {
                 writer.write(toStringFn.apply(castedItem));
                 writer.write(System.lineSeparator());
                 if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
-                    writer = utility.newActiveTransaction().writer();
+                    utility.finishActiveTransaction();
+                    writer = utility.activeTransaction().writer();
                 }
             }
             writer.flush();
             if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
-                utility.newActiveTransaction();
+                utility.finishActiveTransaction();
             }
         } catch (IOException e) {
             throw new RestartableException(e);
@@ -213,20 +216,18 @@ public final class WriteFileP<T> implements Processor {
      * Returns a FileResource for a fileId.
      */
     private FileResource newFileResource(FileId fileId) {
-        logFine(context.logger(), "Creating %s", fileId.fileName); // TODO [viliam] logFinest
         return utility.externalGuarantee() == EXACTLY_ONCE
                 ? new FileWithTransaction(fileId)
                 : new FileWithoutTransaction(fileId);
     }
 
     private void recoverAndCommit(FileId fileId) throws IOException {
-        this.context.logger().info("aaa recoverAndCommit " + fileId);
         Path tempFile = directory.resolve(fileId.fileName + TEMP_FILE_SUFFIX);
         Path finalFile = directory.resolve(fileId.fileName);
         if (Files.exists(tempFile)) {
             Files.move(tempFile, finalFile, StandardCopyOption.ATOMIC_MOVE);
         } else if (!Files.exists(finalFile)) {
-            context.logger().warning("Neither temporary nor final file from previous execution exist, data loss " +
+            context.logger().warning("Neither temporary nor final file from the previous execution exists, data loss " +
                     "might occur: " + tempFile);
         }
     }
@@ -236,7 +237,7 @@ public final class WriteFileP<T> implements Processor {
             fileStream
                     .filter(file -> file.getFileName().toString().endsWith(TEMP_FILE_SUFFIX))
                     .forEach(file -> uncheckRun(() -> {
-                        context.logger().fine("Deleting " + file);
+                        LoggingUtil.logFine(context.logger(), "deleting %s",  file);
                         Files.delete(file);
                     }));
         } catch (IOException e) {
@@ -246,7 +247,7 @@ public final class WriteFileP<T> implements Processor {
 
     private Writer createWriter(Path file) {
         try {
-            context.logger().info("aaa creating " + file);
+            LoggingUtil.logFine(context.logger(), "creating %s", file);
             FileOutputStream fos = new FileOutputStream(file.toFile(), append);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
             sizeTrackingStream = new SizeTrackingStream(bos);
@@ -304,14 +305,17 @@ public final class WriteFileP<T> implements Processor {
 
         @Override
         public void endAndPrepare() throws IOException {
-            context.logger().info("aaa endAndPrepare " + id().fileName);
-            release();
+            closeFile();
         }
 
         @Override
         public void release() throws IOException {
+            closeFile();
+        }
+
+        private void closeFile() throws IOException {
             if (writer != null) {
-                context.logger().info("aaa release (maybe prepare?) " + id().fileName);
+                LoggingUtil.logFine(context.logger(), "closing %s", id().fileName);
                 writer.close();
                 writer = null;
             }
@@ -353,7 +357,6 @@ public final class WriteFileP<T> implements Processor {
 
         @Override
         public void commit() throws IOException {
-            context.logger().info("aaa committing " + tempFile);
             if (writer != null) {
                 writer.close();
                 writer = null;
@@ -363,7 +366,6 @@ public final class WriteFileP<T> implements Processor {
 
         @Override
         public void rollback() throws Exception {
-            context.logger().info("aaa rolling back " + tempFile);
             if (writer != null) {
                 writer.close();
                 writer = null;
