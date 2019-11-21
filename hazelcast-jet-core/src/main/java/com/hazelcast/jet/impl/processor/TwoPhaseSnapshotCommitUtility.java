@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -27,6 +26,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
+import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,6 +36,7 @@ import java.util.function.Consumer;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 /**
  * A base class for transaction utilities implementing different transaction
@@ -50,7 +52,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     private final Outbox outbox;
     private final Context procContext;
     private final ProcessingGuarantee externalGuarantee;
-    private final FunctionEx<TXN_ID, RES> createTxnFn;
+    private final FunctionEx<TXN_ID, LoggingNonThrowingResource<TXN_ID, RES>> createTxnFn;
     private final Consumer<TXN_ID> recoverAndCommitFn;
     private final ConsumerEx<Integer> recoverAndAbortFn;
 
@@ -70,7 +72,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      * @param recoverAndAbortFn a function to rollback the work of the all the
      *      transactions that were created by the given processor index
      */
-    public TwoPhaseSnapshotCommitUtility(
+    protected TwoPhaseSnapshotCommitUtility(
             @Nonnull Outbox outbox,
             @Nonnull Context procContext,
             boolean isSource,
@@ -88,13 +90,9 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         this.outbox = outbox;
         this.procContext = procContext;
         this.externalGuarantee = externalGuarantee;
-        this.createTxnFn = createTxnFn;
+        this.createTxnFn = txnId -> new LoggingNonThrowingResource<>(procContext.logger(), createTxnFn.apply(txnId));
         this.recoverAndCommitFn = recoverAndCommitFn;
         this.recoverAndAbortFn = recoverAndAbortFn;
-    }
-
-    protected boolean isSource() {
-        return isSource;
     }
 
     public ProcessingGuarantee externalGuarantee() {
@@ -109,7 +107,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         return procContext;
     }
 
-    protected FunctionEx<TXN_ID, RES> createTxnFn() {
+    protected FunctionEx<TXN_ID, LoggingNonThrowingResource<TXN_ID, RES>> createTxnFn() {
         return createTxnFn;
     }
 
@@ -172,8 +170,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     /**
      * Delegate handling of {@link
      * AbstractProcessor#restoreFromSnapshot(Object, Object)} to this method.
-     * <p>
-     * See also {@link #restoreFromSnapshot(Inbox)}.
+     *
+     * <p></p>See also {@link #restoreFromSnapshot(Inbox)}.
      *
      * @param key a key from the snapshot
      * @param value a value from the snapshot
@@ -183,7 +181,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     /**
      * Call from {@link Processor#close()}.
      *
-     * The implementation must not commit or rollback any pending transactions
+     * <p>The implementation must not commit or rollback any pending transactions
      * - the job might have failed between after snapshot phase 1 and 2. The
      * pending transactions might be recovered after the restart.
      */
@@ -196,8 +194,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
 
     /**
      * A handle for a transactional resource.
-     * <p>
-     * The methods are called depending on the external guarantee:<ul>
+     *
+     * <p>The methods are called depending on the external guarantee:<ul>
      *
      * <li>EXACTLY_ONCE source & sink, AT_LEAST_ONCE source
      *
@@ -250,12 +248,12 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * Begins the transaction. The method will be called before the
          * transaction is returned from {@link #activeTransaction()} for the
          * first time after creation or after {@link #commit()}.
-         * <p>
-         * This method is called in exactly-once mode; in at-least-once mode
+         *
+         * <p>This method is called in exactly-once mode; in at-least-once mode
          * it's called only if the processor is a source. It's never called if
          * there's no processing guarantee.
-         * <p>
-         * See also the {@linkplain TransactionalResource class javadoc}.
+         *
+         * <p>See also the {@linkplain TransactionalResource class javadoc}.
          *
          * @throws UnsupportedOperationException if the transaction was created
          * with {@code null} id passed to the {@link #createTxnFn()}
@@ -267,8 +265,8 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
         /**
          * Flushes all previous writes to the external system and ensures all
          * pending items are emitted to the downstream.
-         * <p>
-         * See also the {@linkplain TransactionalResource class javadoc}.
+         *
+         * <p>See also the {@linkplain TransactionalResource class javadoc}.
          *
          * @return if all was flushed and emitted. If the method returns false,
          *      it will be called again before any other method is called.
@@ -281,27 +279,27 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * Prepares for a commit. To achieve correctness, the transaction must
          * be able to eventually commit after this call, writes must be durably
          * stored in the external system.
-         * <p>
-         * After this call, the transaction will never again be returned from
-         * {@link #activeTransaction()} until it's committed.
-         * <p>
-         * This method is called in exactly-once mode; in at-least-once mode
+         *
+         * <p>After this call, the transaction will never again be returned
+         * from {@link #activeTransaction()} until it's committed.
+         *
+         * <p>This method is called in exactly-once mode; in at-least-once mode
          * it's called only if the processor is a source. It's never called if
          * there's no processing guarantee.
-         * <p>
-         * See also the {@linkplain TransactionalResource class javadoc}.
+         *
+         * <p>See also the {@linkplain TransactionalResource class javadoc}.
          */
         default void endAndPrepare() throws Exception {
         }
 
         /**
          * Makes the changes visible to others and acknowledges consumed items.
-         * <p>
-         * This method is called in exactly-once mode; in at-least-once mode
+         *
+         * <p>This method is called in exactly-once mode; in at-least-once mode
          * it's called only if the processor is a source. It's never called if
          * there's no processing guarantee.
-         * <p>
-         * See also the {@linkplain TransactionalResource class javadoc}.
+         *
+         * <p>See also the {@linkplain TransactionalResource class javadoc}.
          */
         default void commit() throws Exception {
             throw new UnsupportedOperationException();
@@ -311,18 +309,19 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * Roll back the transaction. Only called for non-prepared transactions
          * when the job execution ends.
          *
-         * <p>Will only be called for a transaction that was {@link #begin()
-         * begun}.
+         * <p>Will only be called for a transaction that was {@linkplain
+         * #begin() begun}.
          */
         default void rollback() throws Exception {
         }
 
         /**
-         * Release the resources associated with the transaction. Must not
-         * commit or rollback it, the transaction can be later recovered from
-         * the durable storage and continued.
-         * <p>
-         * See also the {@linkplain TransactionalResource class javadoc}.
+         * Finish the pending operations and release the associated resources.
+         * If a transaction was begun, must not commit or roll it back, the
+         * transaction can be later recovered from the durable storage and
+         * continued.
+         *
+         * <p>See also the {@linkplain TransactionalResource class javadoc}.
          */
         default void release() throws Exception {
         }
@@ -334,10 +333,95 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
          * Returns the index of the processor that will handle this transaction
          * ID. Used when restoring transaction IDs to determine which processor
          * owns which transactions.
-         * <p>
-         * After restoring the ID from the snapshot the index might be out of
-         * range (greater or equal to the current total parallelism).
+         *
+         * <p>After restoring the ID from the snapshot the index might be out
+         * of range (greater or equal to the current total parallelism).
          */
         int index();
+    }
+
+    /**
+     * A wrapper for {@link TransactionalResource} adding logging and not
+     * throwing checked exceptions. Aimed to simplify subclass implementation.
+     */
+    protected static final class LoggingNonThrowingResource<TXN_ID, RES extends TransactionalResource<TXN_ID>>
+            implements TransactionalResource<TXN_ID> {
+
+        private final ILogger logger;
+        private final RES wrapped;
+
+        private LoggingNonThrowingResource(ILogger logger, RES wrapped) {
+            this.logger = logger;
+            this.wrapped = wrapped;
+        }
+
+        public RES wrapped() {
+            return wrapped;
+        }
+
+        @Override
+        public TXN_ID id() {
+            return wrapped.id();
+        }
+
+        @Override
+        public void begin() {
+            LoggingUtil.logFine(logger, "begin %s", id());
+            try {
+                wrapped.begin();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
+
+        @Override
+        public boolean flush() {
+            LoggingUtil.logFine(logger, "flush %s", id());
+            try {
+                return wrapped.flush();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
+
+        @Override
+        public void endAndPrepare() {
+            LoggingUtil.logFine(logger, "endAndPrepare %s", id());
+            try {
+                wrapped.endAndPrepare();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
+
+        @Override
+        public void commit() {
+            LoggingUtil.logFine(logger, "commit %s", id());
+            try {
+                wrapped.commit();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
+
+        @Override
+        public void rollback() {
+            LoggingUtil.logFine(logger, "rollback %s", id());
+            try {
+                wrapped.rollback();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
+
+        @Override
+        public void release() {
+            LoggingUtil.logFine(logger, "release %s", id());
+            try {
+                wrapped.release();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        }
     }
 }
