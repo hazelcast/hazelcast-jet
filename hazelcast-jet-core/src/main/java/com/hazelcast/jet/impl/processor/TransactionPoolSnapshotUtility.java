@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Outbox;
@@ -51,29 +50,14 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         extends TwoPhaseSnapshotCommitUtility<TXN_ID, RES> {
 
     private static final int TXN_PROBING_FACTOR = 5;
-    private final TransactionalResource<TXN_ID> noopTransaction = new TransactionalResource<TXN_ID>() {
-        @Override
-        public void begin() {
-            throw new IllegalStateException("this implementation is not supposed to be begun");
-        }
-
-        @Override
-        public TXN_ID id() {
-            return null;
-        }
-
-        @Override
-        public void commit() {
-        }
-    };
 
     private final int poolSize;
     private final List<TXN_ID> transactionIds;
-    private List<RES> transactions;
+    private List<LoggingNonThrowingResource<TXN_ID, RES>> transactions;
     private int activeTxnIndex;
-    private boolean transactionBegun;
+    private boolean activeTransactionUsed;
     private TXN_ID preparedTxnId;
-    private TransactionalResource<TXN_ID> transactionToCommit;
+    private LoggingNonThrowingResource<TXN_ID, RES> transactionToCommit;
     private boolean flushed;
     private boolean processorCompleted;
     private boolean transactionsReleased;
@@ -132,27 +116,16 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
 
     @Nullable @Override
     public RES activeTransaction() {
-        if (transactions == null) {
-            if (transactionsReleased) {
-                throw new IllegalStateException("transactions already released");
-            }
-            rollbackOtherTransactions();
-            transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
-        }
+        ensureTransactions();
         if (usesTransactionLifecycle() && poolSize < (preparedTxnId != null ? 3 : 2)) {
             return null;
         }
-        RES activeTransaction = transactions.get(activeTxnIndex);
-        if (!transactionBegun && usesTransactionLifecycle()) {
-            try {
-                LoggingUtil.logFine(procContext().logger(), "begin, txnId=%s", activeTransaction.id());
-                activeTransaction.begin();
-            } catch (Exception e) {
-                throw new JetException("Transaction begin failed: " + e + ", txnId=" + activeTransaction.id());
-            }
+        LoggingNonThrowingResource<TXN_ID, RES> activeTransaction = transactions.get(activeTxnIndex);
+        if (!activeTransactionUsed && usesTransactionLifecycle()) {
+            activeTransaction.begin();
         }
-        transactionBegun = true;
-        return activeTransaction;
+        activeTransactionUsed = true;
+        return activeTransaction.wrapped();
     }
 
     private void rollbackOtherTransactions() {
@@ -180,32 +153,27 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         if (externalGuarantee() == NONE) {
             return true;
         }
+        ensureTransactions();
         assert preparedTxnId == null : "preparedTxnId != null";
-        // use no-op transaction if the active one wasn't begun
-        transactionToCommit = transactionBegun ? activeTransaction() : noopTransaction;
-        assert transactionToCommit != null : "transactionToCommit == null, transactionBegun=" + transactionBegun;
-        try {
-            // `flushed` is used to avoid double flushing
-            if (!flushed) {
-                LoggingUtil.logFine(procContext().logger(), "flush, txnId=%s", transactionToCommit.id());
-                if (!transactionToCommit.flush()) {
-                    procContext().logger().fine("flush returned false");
-                    return false;
-                }
+        transactionToCommit = transactions.get(activeTxnIndex);
+        incrementActiveTxnIndex();
+        if (!activeTransactionUsed) {
+            LoggingUtil.logFine(procContext().logger(),
+                    "transaction not used, ignoring snapshot, txnId=%s", transactionToCommit.id());
+            return true;
+        }
+        activeTransactionUsed = false;
+        // `flushed` is used to avoid double flushing when outbox.offerToSnapshot() fails
+        if (!flushed && !(flushed = transactionToCommit.flush())) {
+            procContext().logger().fine("flush returned false");
+            return false;
+        }
+        if (usesTransactionLifecycle()) {
+            preparedTxnId = transactionToCommit.id();
+            if (!getOutbox().offerToSnapshot(broadcastKey(preparedTxnId), false)) {
+                return false;
             }
-            flushed = true;
-            if (usesTransactionLifecycle()) {
-                preparedTxnId = transactionToCommit.id();
-                if (preparedTxnId != null && !getOutbox().offerToSnapshot(broadcastKey(preparedTxnId), false)) {
-                    return false;
-                }
-                LoggingUtil.logFine(procContext().logger(), "endAndPrepare, txnId=%s", transactionToCommit.id());
-                transactionToCommit.endAndPrepare();
-                transactionBegun = false;
-            }
-            incrementActiveTxnIndex();
-        } catch (Exception e) {
-            throw new JetException("Save to snapshot failed: " + e + ", txnId=" + transactionToCommit.id());
+            transactionToCommit.endAndPrepare();
         }
         flushed = false;
         return true;
@@ -217,17 +185,11 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
             return true;
         }
         preparedTxnId = null;
-        if (commitTransactions) {
-            try {
-                LoggingUtil.logFine(procContext().logger(), "commit, txnId=%s", transactionToCommit.id());
-                transactionToCommit.commit();
-            } catch (Exception e) {
-                throw new JetException("Transaction commit failed: " + e + ", txnId=" + transactionToCommit.id());
-            }
-        } else {
+        if (!commitTransactions) {
             // we can't ignore the snapshot failure
             throw new RetryableHazelcastException("the snapshot failed");
         }
+        transactionToCommit.commit();
         if (processorCompleted) {
             doRelease();
         }
@@ -246,7 +208,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
 
     @Override
     public void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
-        assert !transactionBegun : "transaction already begun";
+        assert !activeTransactionUsed : "transaction already begun";
         @SuppressWarnings("unchecked")
         TXN_ID txnId = ((BroadcastKey<TXN_ID>) key).key();
         if (usesTransactionLifecycle()
@@ -279,6 +241,16 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         doRelease();
     }
 
+    private void ensureTransactions() {
+        if (transactions == null) {
+            if (transactionsReleased) {
+                throw new IllegalStateException("transactions already released");
+            }
+            rollbackOtherTransactions();
+            transactions = transactionIds.stream().map(createTxnFn()).collect(Collectors.toList());
+        }
+    }
+
     private void incrementActiveTxnIndex() {
         activeTxnIndex++;
         if (activeTxnIndex == poolSize) {
@@ -292,22 +264,11 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         }
         transactionsReleased = true;
         if (transactions != null) {
-            if (usesTransactionLifecycle() && transactionBegun) {
-                try {
-                    RES activeTransaction = transactions.get(activeTxnIndex);
-                    LoggingUtil.logFine(procContext().logger(), "rollback, txnId=%s", activeTransaction.id());
-                    activeTransaction.rollback();
-                } catch (Exception e) {
-                    procContext().logger().info("Rollback failed: " + e, e);
-                }
+            if (usesTransactionLifecycle() && activeTransactionUsed) {
+                transactions.get(activeTxnIndex).rollback();
             }
-            for (RES txn : transactions) {
-                try {
-                    LoggingUtil.logFine(procContext().logger(), "release, txnId=%s", txn.id());
-                    txn.release();
-                } catch (Exception e) {
-                    procContext().logger().info("Releasing of a transaction failed: " + e + ", txnId=" + txn.id(), e);
-                }
+            for (LoggingNonThrowingResource<TXN_ID, RES> txn : transactions) {
+                txn.release();
             }
         }
     }
