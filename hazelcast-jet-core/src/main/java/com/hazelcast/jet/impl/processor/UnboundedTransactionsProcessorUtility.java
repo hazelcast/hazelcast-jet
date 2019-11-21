@@ -80,7 +80,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
             @Nonnull RunnableExc abortUnfinishedTransactions
     ) {
-        super(outbox, procContext, externalGuarantee, createTxnFn, recoverAndCommitFn,
+        super(outbox, procContext, false, externalGuarantee, createTxnFn, recoverAndCommitFn,
                 txnId -> {
                     throw new UnsupportedOperationException();
                 });

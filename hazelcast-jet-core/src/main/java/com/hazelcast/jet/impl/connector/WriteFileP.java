@@ -360,6 +360,16 @@ public final class WriteFileP<T> implements Processor {
             }
             Files.move(tempFile, targetFile, StandardCopyOption.ATOMIC_MOVE);
         }
+
+        @Override
+        public void rollback() throws Exception {
+            context.logger().info("aaa rolling back " + tempFile);
+            if (writer != null) {
+                writer.close();
+                writer = null;
+            }
+            Files.delete(tempFile);
+        }
     }
 
     private static final class SizeTrackingStream extends OutputStream {
