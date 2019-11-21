@@ -99,7 +99,7 @@ public class ResourceConfigTest {
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals(resourceName, resourceConfig.getId());
-        assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
+        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
         assertEquals(urlString, resourceConfig.getUrl().toString());
     }
 
