@@ -42,7 +42,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -68,9 +67,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
     private final Configuration configuration;
     private final InputFormat inputFormat;
     private final Traverser<R> trav;
-    private final BiFunctionEx<K, V, R> projectionFn;
-    private final BetterByteArrayOutputStream cloneBuffer = new BetterByteArrayOutputStream();
-    private final DataOutputStream cloneBufferDataOutput = new DataOutputStream(cloneBuffer);
+    private BiFunctionEx<K, V, R> projectionFn;
 
     private InternalSerializationService serializationService;
     private RecordReader<K, V> reader;
@@ -92,6 +89,16 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
     protected void init(@Nonnull Context context) {
         HazelcastInstanceImpl instance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
         serializationService = instance.getSerializationService();
+        // we clone the projection of key/value if configured so because some of the
+        // record-readers return the same object for `reader.getCurrentKey()`
+        // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.
+        if (configuration.getBoolean(COPY_ON_READ, true)) {
+            BiFunctionEx<K, V, R> actualProjectionFn = this.projectionFn;
+            this.projectionFn = (key, value) -> {
+                R result = actualProjectionFn.apply(key, value);
+                return result == null ? null : serializationService.toObject(serializationService.toData(result));
+            };
+        }
     }
 
     @Override
@@ -124,12 +131,9 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
         return () -> {
             try {
                 while (reader.nextKeyValue()) {
-                    // we clone the key/value if configured so because some of the
-                    // record-readers return the same object for `reader.getCurrentKey()`
-                    // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`
                     R projectedRecord = projectionFn.apply(reader.getCurrentKey(), reader.getCurrentValue());
                     if (projectedRecord != null) {
-                        return copyIfConfigured(projectedRecord);
+                        return projectedRecord;
                     }
                 }
                 reader.close();
@@ -138,13 +142,6 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
                 throw sneakyThrow(e);
             }
         };
-    }
-
-    private <T> T copyIfConfigured(T o) {
-        if (!configuration.getBoolean(COPY_ON_READ, true)) {
-            return o;
-        }
-        return serializationService.toObject(serializationService.toData(o));
     }
 
     private static InputFormat getInputFormat(Configuration configuration) throws Exception {

@@ -45,9 +45,9 @@ public final class HadoopSources {
      * With the new HDFS API, some of the {@link RecordReader}s return the same
      * key/value instances for each record, for example {@link LineRecordReader}.
      * If this property is set to {@code true}, the source makes a copy of each
-     * object before emitting it. For readers which create a new instance for
-     * each record, the source can be configured to not copy the objects for
-     * performance.
+     * object after applying the {@code projectionFn}. For readers which create
+     * a new instance for each record, the source can be configured to not copy
+     * the objects for performance.
      * <p>
      * Also if you are using a projection function which doesn't refer to any
      * mutable state from the key or value, then it makes sense to set this
