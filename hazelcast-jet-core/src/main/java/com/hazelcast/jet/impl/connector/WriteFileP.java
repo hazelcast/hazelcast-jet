@@ -23,7 +23,6 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.UnboundedTransactionsProcessorUtility;
@@ -260,9 +259,6 @@ public final class WriteFileP<T> implements Processor {
         }
     }
 
-    /**
-     * Use method in {@link SinkProcessors} instead. TODO [viliam]
-     */
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,

@@ -143,7 +143,6 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     public boolean saveToSnapshot() {
         if (usesTransactionLifecycle()) {
             if (snapshotQueue.isEmpty()) {
-                snapshotInProgress = true;
                 finishActiveTransaction();
                 for (LoggingNonThrowingResource<TXN_ID, RES> txn : pendingTransactions) {
                     snapshotQueue.add(txn.id());
@@ -161,6 +160,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
             snapshotQueue.remove();
         }
 
+        snapshotInProgress = true;
         return true;
     }
 
@@ -168,7 +168,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     public boolean onSnapshotCompleted(boolean commitTransactions) {
         assert snapshotInProgress : "no snapshot in progress";
         snapshotInProgress = false;
-        if (commitTransactions) {
+        if (usesTransactionLifecycle() && commitTransactions) {
             commitPendingTransactions();
         }
         return true;

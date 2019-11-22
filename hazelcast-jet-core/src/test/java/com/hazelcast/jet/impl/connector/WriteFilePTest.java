@@ -16,25 +16,21 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.collection.IList;
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,17 +38,23 @@ import org.junit.runner.RunWith;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
@@ -60,49 +62,39 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
-import static com.hazelcast.jet.core.processor.SourceProcessors.readListP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static com.hazelcast.jet.pipeline.Sinks.TEMP_FILE_SUFFIX;
+import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
-public class WriteFilePTest extends JetTestSupport {
-
-    private static final JetTestInstanceFactory factory = new JetTestInstanceFactory();
-    private static JetInstance instance;
+public class WriteFilePTest extends SimpleTestInClusterSupport {
 
     private static final Semaphore semaphore = new Semaphore(0);
     private static final AtomicLong clock = new AtomicLong();
 
     private Path directory;
     private Path onlyFile;
-    private IList<String> list;
 
     @BeforeClass
     public static void beforeClass() {
-        instance = factory.newMember();
+        initialize(1, null);
         semaphore.drainPermits();
     }
 
-    @AfterClass
-    public static void afterClass() {
-        factory.terminateAll();
-    }
-
     @Before
-    public void setup() throws IOException {
+    public void setup() throws Exception {
         directory = Files.createTempDirectory("write-file-p");
         onlyFile = directory.resolve("0");
-        list = instance.getList("sourceList-" + randomString());
     }
 
     @After
     public void after() {
-        cleanUpCluster(instance);
         IOUtil.delete(directory.toFile());
     }
 
@@ -110,13 +102,12 @@ public class WriteFilePTest extends JetTestSupport {
     public void when_localParallelismMoreThan1_then_multipleFiles() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.<String>list(list.getName()))
+        p.readFrom(TestSources.items(0, 1, 2))
          .writeTo(Sinks.files(directory.toString()))
          .setLocalParallelism(2);
-        addItemsToList(0, 10);
 
         // When
-        instance.newJob(p).join();
+        instance().newJob(p).join();
 
         // Then
         try (Stream<Path> stream = Files.list(directory)) {
@@ -127,44 +118,41 @@ public class WriteFilePTest extends JetTestSupport {
     @Test
     public void smokeTest_smallFile() throws Exception {
         // Given
-        Pipeline p = buildPipeline(null);
-        addItemsToList(0, 10);
+        Pipeline p = buildPipeline(null, rangeIterable(0, 10));
 
         // When
-        instance.newJob(p).join();
+        instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 10, false);
+        checkFileContents(0, 10, false, false);
     }
 
     @Test
     public void smokeTest_bigFile() throws Exception {
         // Given
-        Pipeline p = buildPipeline(null);
-        addItemsToList(0, 100_000);
+        Pipeline p = buildPipeline(null, rangeIterable(0, 100_000));
 
         // When
-        instance.newJob(p).join();
+        instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 100_000, false);
+        checkFileContents(0, 100_000, false, false);
     }
 
     @Test
     public void when_append_then_previousContentsOfFileIsKept() throws Exception {
         // Given
-        Pipeline p = buildPipeline(null);
-        addItemsToList(1, 10);
+        Pipeline p = buildPipeline(null, rangeIterable(1, 10));
         try (BufferedWriter writer = Files.newBufferedWriter(onlyFile)) {
             writer.write("0");
             writer.newLine();
         }
 
         // When
-        instance.newJob(p).join();
+        instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 10, false);
+        checkFileContents(0, 10, false, false);
     }
 
     @Test
@@ -180,13 +168,13 @@ public class WriteFilePTest extends JetTestSupport {
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
-        Job job = instance.newJob(dag);
+        Job job = instance().newJob(dag);
         for (int i = 0; i < numItems; i++) {
             // When
             semaphore.release();
             int finalI = i;
             // Then
-            assertTrueEventually(() -> checkFileContents(0, finalI + 1, false), 5);
+            assertTrueEventually(() -> checkFileContents(0, finalI + 1, false, false), 5);
         }
 
         // wait for the job to finish
@@ -194,15 +182,14 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void testCharset() throws IOException {
+    public void testCharset() throws Exception {
         // Given
         Charset charset = Charset.forName("iso-8859-2");
-        Pipeline p = buildPipeline(charset);
         String text = "ľščťž";
-        list.add(text);
+        Pipeline p = buildPipeline(charset, singletonList(text));
 
         // When
-        instance.newJob(p).join();
+        instance().newJob(p).join();
 
         // Then
         assertEquals(text + System.getProperty("line.separator"), new String(Files.readAllBytes(onlyFile), charset));
@@ -213,17 +200,12 @@ public class WriteFilePTest extends JetTestSupport {
         // Given
         Path myFile = directory.resolve("subdir1/subdir2/" + onlyFile.getFileName());
 
-        DAG dag = new DAG();
-        Vertex reader = dag.newVertex("reader", readListP(list.getName()))
-                           .localParallelism(1);
-        Vertex writer = dag.newVertex("writer",
-                writeFileP(myFile.toString(), Object::toString, StandardCharsets.UTF_8, null, null, true))
-                           .localParallelism(1);
-        dag.edge(between(reader, writer));
-        addItemsToList(0, 10);
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items(rangeIterable(0, 10)))
+         .writeTo(Sinks.files(myFile.toString()));
 
         // When
-        instance.newJob(dag).join();
+        instance().newJob(p).join();
 
         // Then
         assertTrue(Files.exists(directory.resolve("subdir1")));
@@ -234,18 +216,16 @@ public class WriteFilePTest extends JetTestSupport {
     public void when_toStringF_then_used() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.<String>list(list.getName()))
-         .writeTo(Sinks.<String>filesBuilder(directory.toString())
-                       .toStringFn(val -> Integer.toString(Integer.parseInt(val) - 1))
+        p.readFrom(TestSources.items(rangeIterable(1,11)))
+         .writeTo(Sinks.<Integer>filesBuilder(directory.toString())
+                       .toStringFn(val -> Integer.toString(val - 1))
                        .build());
 
-        addItemsToList(1, 11);
-
         // When
-        instance.newJob(p).join();
+        instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 10, false);
+        checkFileContents(0, 10, false, false);
     }
 
     @Test
@@ -259,7 +239,7 @@ public class WriteFilePTest extends JetTestSupport {
                 (LongSupplier & Serializable) () -> clock.get()));
         dag.edge(between(src, sink));
 
-        Job job = instance.newJob(dag);
+        Job job = instance().newJob(dag);
 
         for (int i = 0; i < numItems; i++) {
             // When
@@ -277,7 +257,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void test_rollByFileSize() throws IOException {
+    public void test_rollByFileSize() throws Exception {
         int numItems = 10;
         DAG dag = new DAG();
         Vertex src = dag.newVertex("src", () -> new SlowSourceP(semaphore, numItems)).localParallelism(1);
@@ -289,13 +269,13 @@ public class WriteFilePTest extends JetTestSupport {
         dag.edge(between(src, map));
         dag.edge(between(map, sink));
 
-        Job job = instance.newJob(dag);
+        Job job = instance().newJob(dag);
 
         // Then
         for (int i = 0; i < numItems; i++) {
             semaphore.release();
             int finalI = i;
-            assertTrueEventually(() -> checkFileContents(100, finalI + 101, false));
+            assertTrueEventually(() -> checkFileContents(100, finalI + 101, false, false));
         }
         for (int i = 0, j = 100; i < numItems / 2; i++) {
             Path file = directory.resolve("0-" + i);
@@ -307,26 +287,23 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void stressTest_noSnapshot() throws IOException {
+    public void stressTest_noSnapshot() throws Exception {
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.<String>list(list.getName()))
-         .writeTo(Sinks.<String>filesBuilder(directory.toString())
-                 .build());
-
-        addItemsToList(0, 10);
+        p.readFrom(TestSources.items(rangeIterable(0, 10)))
+         .writeTo(Sinks.files(directory.toString()));
 
         // When
         JobConfig config = new JobConfig()
                 .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(HOURS.toMillis(1));
-        instance.newJob(p, config).join();
+        instance().newJob(p, config).join();
 
         // Then
-        checkFileContents(0, 10, false);
+        checkFileContents(0, 10, false, false);
     }
 
     @Test
-    public void stressTest_snapshots_noRestarts() throws IOException {
+    public void stressTest_snapshots_noRestarts() throws Exception {
         DAG dag = new DAG();
         int numItems = 5;
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
@@ -339,10 +316,10 @@ public class WriteFilePTest extends JetTestSupport {
         JobConfig config = new JobConfig()
                 .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(500);
-        Job job = instance.newJob(dag, config);
+        Job job = instance().newJob(dag, config);
         assertJobStatusEventually(job, RUNNING);
 
-        JobRepository jr = new JobRepository(instance);
+        JobRepository jr = new JobRepository(instance());
         waitForFirstSnapshot(jr, job.getId(), 10, true);
         for (int i = 0; i < numItems; i++) {
             waitForNextSnapshot(jr, job.getId(), 10, true);
@@ -350,25 +327,25 @@ public class WriteFilePTest extends JetTestSupport {
         }
         job.join();
 
-        checkFileContents(0, numItems, false);
+        checkFileContents(0, numItems, false, false);
     }
 
     @Test
-    public void stressTest_exactlyOnce_graceful() throws IOException {
+    public void stressTest_exactlyOnce_graceful() throws Exception {
         stressTest(true, true);
     }
 
     @Test
-    public void stressTest_exactlyOnce_forceful() throws IOException {
+    public void stressTest_exactlyOnce_forceful() throws Exception {
         stressTest(false, true);
     }
 
     @Test
-    public void stressTest_atLeastOnce_forceful() throws IOException {
+    public void stressTest_atLeastOnce_forceful() throws Exception {
         stressTest(false, false);
     }
 
-    private void stressTest(boolean graceful, boolean exactlyOnce) throws IOException {
+    private void stressTest(boolean graceful, boolean exactlyOnce) throws Exception {
         int numItems = 500;
         Pipeline p = Pipeline.create();
         p.readFrom(SourceBuilder.stream("src", procCtx -> new int[1])
@@ -389,25 +366,25 @@ public class WriteFilePTest extends JetTestSupport {
         JobConfig config = new JobConfig()
                 .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(50);
-        JobProxy job = (JobProxy) instance.newJob(p, config);
+        JobProxy job = (JobProxy) instance().newJob(p, config);
 
-        long start = System.nanoTime();
+        long endTime = System.nanoTime() + SECONDS.toNanos(60);
         do {
             assertJobStatusEventually(job, RUNNING);
             sleepMillis(100);
             job.restart(graceful);
             try {
-                checkFileContents(0, numItems, true);
+                checkFileContents(0, numItems, exactlyOnce, true);
                 // if content matches, break the loop. Otherwise restart and try again
                 break;
             } catch (AssertionError ignored) {
             }
-        } while (NANOSECONDS.toSeconds(System.nanoTime() - start) < 60);
+        } while (System.nanoTime() < endTime);
 
-        waitForNextSnapshot(new JobRepository(instance), job.getId(), 10, true);
+        waitForNextSnapshot(new JobRepository(instance()), job.getId(), 10, true);
         ditchJob(job);
         // when the job is cancelled, there should be no temporary files
-        checkFileContents(0, numItems, false);
+        checkFileContents(0, numItems, exactlyOnce, false);
     }
 
     private static class SlowSourceP extends AbstractProcessor {
@@ -450,8 +427,8 @@ public class WriteFilePTest extends JetTestSupport {
         }
     }
 
-    private void checkFileContents(int numFrom, int numTo, boolean ignoreTempFiles) throws IOException {
-        String actual = Files.list(directory)
+    private void checkFileContents(int numFrom, int numTo, boolean exactlyOnce, boolean ignoreTempFiles) throws Exception {
+        List<Integer> actual = Files.list(directory)
                 .peek(f -> {
                     if (!ignoreTempFiles && f.getFileName().toString().endsWith(TEMP_FILE_SUFFIX)) {
                         throw new IllegalArgumentException("Temp file found: " + f);
@@ -459,34 +436,51 @@ public class WriteFilePTest extends JetTestSupport {
                 })
                 .filter(f -> !f.toString().endsWith(TEMP_FILE_SUFFIX))
                 .sorted(Comparator.comparing(f -> Integer.parseInt(f.getFileName().toString().substring(2))))
-                .map(file -> uncheckCall(() -> Files.readAllBytes(file)))
-                .map(bytes -> new String(bytes, StandardCharsets.UTF_8))
-                .collect(joining());
+                .flatMap(file -> uncheckCall(() -> Files.readAllLines(file).stream()))
+                .map(Integer::parseInt)
+                .collect(Collectors.toList());
 
-        StringBuilder expected = new StringBuilder();
-        for (int i = numFrom; i < numTo; i++) {
-            expected.append(i).append(System.getProperty("line.separator"));
+        if (exactlyOnce) {
+            String expectedStr = IntStream.range(numFrom, numTo).mapToObj(Integer::toString).collect(joining("\n"));
+            String actualStr = actual.stream().map(Object::toString).collect(joining("\n"));
+            assertEquals(expectedStr, actualStr);
+        } else {
+            Map<Integer, Long> actualMap = actual.stream().collect(groupingBy(Function.identity(), Collectors.counting()));
+            for (int i = numFrom; i < numTo; i++) {
+                actualMap.putIfAbsent(i, 0L);
+            }
+            assertTrue("some items are missing: " + actualMap, actualMap.values().stream().allMatch(v -> v > 0));
         }
-
-        assertEquals(expected.toString(), actual);
     }
 
-    private void addItemsToList(int from, int to) {
-        for (int i = from; i < to; i++) {
-            list.add(String.valueOf(i));
-        }
-    }
-
-    private Pipeline buildPipeline(Charset charset) {
+    private <T> Pipeline buildPipeline(Charset charset, Iterable<T> iterable) {
         if (charset == null) {
             charset = StandardCharsets.UTF_8;
         }
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.<String>list(list.getName()))
-         .writeTo(Sinks.<String>filesBuilder(directory.toString())
+        p.readFrom(TestSources.items(iterable))
+         .writeTo(Sinks.filesBuilder(directory.toString())
                  .toStringFn(Objects::toString)
                  .charset(charset)
                  .build());
         return p;
+    }
+
+    private static Iterable<Integer> rangeIterable(int itemsFrom, int itemsTo) {
+        return (Iterable<Integer> & Serializable) () -> new Iterator<Integer>() {
+            int val = itemsFrom;
+            @Override
+            public boolean hasNext() {
+                return val < itemsTo;
+            }
+
+            @Override
+            public Integer next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                return val++;
+            }
+        };
     }
 }
