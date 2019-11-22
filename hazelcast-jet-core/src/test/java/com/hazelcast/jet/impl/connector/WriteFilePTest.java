@@ -216,7 +216,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
     public void when_toStringF_then_used() throws Exception {
         // Given
         Pipeline p = Pipeline.create();
-        p.readFrom(TestSources.items(rangeIterable(1,11)))
+        p.readFrom(TestSources.items(rangeIterable(1, 11)))
          .writeTo(Sinks.<Integer>filesBuilder(directory.toString())
                        .toStringFn(val -> Integer.toString(val - 1))
                        .build());
