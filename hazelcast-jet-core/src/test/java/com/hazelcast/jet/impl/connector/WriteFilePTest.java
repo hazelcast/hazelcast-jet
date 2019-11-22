@@ -22,7 +22,6 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.JetTestInstanceFactory;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
@@ -56,12 +55,14 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.readListP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.pipeline.Sinks.TEMP_FILE_SUFFIX;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.joining;
@@ -126,7 +127,7 @@ public class WriteFilePTest extends JetTestSupport {
     @Test
     public void smokeTest_smallFile() throws Exception {
         // Given
-        Pipeline p = buildPipeline(null, false);
+        Pipeline p = buildPipeline(null);
         addItemsToList(0, 10);
 
         // When
@@ -139,7 +140,7 @@ public class WriteFilePTest extends JetTestSupport {
     @Test
     public void smokeTest_bigFile() throws Exception {
         // Given
-        Pipeline p = buildPipeline(null, false);
+        Pipeline p = buildPipeline(null);
         addItemsToList(0, 100_000);
 
         // When
@@ -152,27 +153,10 @@ public class WriteFilePTest extends JetTestSupport {
     @Test
     public void when_append_then_previousContentsOfFileIsKept() throws Exception {
         // Given
-        Pipeline p = buildPipeline(null, true);
+        Pipeline p = buildPipeline(null);
         addItemsToList(1, 10);
         try (BufferedWriter writer = Files.newBufferedWriter(onlyFile)) {
             writer.write("0");
-            writer.newLine();
-        }
-
-        // When
-        instance.newJob(p).join();
-
-        // Then
-        checkFileContents(0, 10, false);
-    }
-
-    @Test
-    public void when_overwrite_then_previousContentsOverwritten() throws Exception {
-        // Given
-        Pipeline p = buildPipeline(null, false);
-        addItemsToList(0, 10);
-        try (BufferedWriter writer = Files.newBufferedWriter(onlyFile)) {
-            writer.write("bla bla");
             writer.newLine();
         }
 
@@ -192,7 +176,7 @@ public class WriteFilePTest extends JetTestSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), Object::toString, StandardCharsets.UTF_8, false, null, null))
+                writeFileP(directory.toString(), Object::toString, StandardCharsets.UTF_8, null, null, true))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -213,7 +197,7 @@ public class WriteFilePTest extends JetTestSupport {
     public void testCharset() throws IOException {
         // Given
         Charset charset = Charset.forName("iso-8859-2");
-        Pipeline p = buildPipeline(charset, true);
+        Pipeline p = buildPipeline(charset);
         String text = "ľščťž";
         list.add(text);
 
@@ -233,7 +217,7 @@ public class WriteFilePTest extends JetTestSupport {
         Vertex reader = dag.newVertex("reader", readListP(list.getName()))
                            .localParallelism(1);
         Vertex writer = dag.newVertex("writer",
-                writeFileP(myFile.toString(), Object::toString, StandardCharsets.UTF_8, false, null, null))
+                writeFileP(myFile.toString(), Object::toString, StandardCharsets.UTF_8, null, null, true))
                            .localParallelism(1);
         dag.edge(between(reader, writer));
         addItemsToList(0, 10);
@@ -271,7 +255,7 @@ public class WriteFilePTest extends JetTestSupport {
         Vertex src = dag.newVertex("src", () -> new SlowSourceP(semaphore, numItems)).localParallelism(1);
         @SuppressWarnings("Convert2MethodRef")
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", true, "SSS", null,
+                directory.toString(), Objects::toString, "utf-8", "SSS", null, true,
                 (LongSupplier & Serializable) () -> clock.get()));
         dag.edge(between(src, sink));
 
@@ -301,7 +285,7 @@ public class WriteFilePTest extends JetTestSupport {
         // maxFileSize is always large enough for 1 item but never for 2, both with windows and linux newlines
         long maxFileSize = 6L;
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", true, null, maxFileSize));
+                directory.toString(), Objects::toString, "utf-8", null, maxFileSize, true));
         dag.edge(between(src, map));
         dag.edge(between(map, sink));
 
@@ -323,7 +307,7 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void test_transactional_noSnapshot() throws IOException {
+    public void stressTest_noSnapshot() throws IOException {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.<String>list(list.getName()))
          .writeTo(Sinks.<String>filesBuilder(directory.toString())
@@ -333,7 +317,7 @@ public class WriteFilePTest extends JetTestSupport {
 
         // When
         JobConfig config = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(HOURS.toMillis(1));
         instance.newJob(p, config).join();
 
@@ -342,18 +326,18 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void test_transactional_snapshots_noRestarts() throws IOException {
+    public void stressTest_snapshots_noRestarts() throws IOException {
         DAG dag = new DAG();
         int numItems = 5;
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), Object::toString, StandardCharsets.UTF_8, false, null, null))
+                writeFileP(directory.toString(), Object::toString, StandardCharsets.UTF_8, null, null, true))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
         JobConfig config = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(500);
         Job job = instance.newJob(dag, config);
         assertJobStatusEventually(job, RUNNING);
@@ -370,16 +354,21 @@ public class WriteFilePTest extends JetTestSupport {
     }
 
     @Test
-    public void test_transactional_withGracefulRestarts() throws IOException {
-        test_transactional_withRestarts(true);
+    public void stressTest_exactlyOnce_graceful() throws IOException {
+        stressTest(true, true);
     }
 
     @Test
-    public void test_transactional_withForcefulRestarts() throws IOException {
-        test_transactional_withRestarts(false);
+    public void stressTest_exactlyOnce_forceful() throws IOException {
+        stressTest(false, true);
     }
 
-    private void test_transactional_withRestarts(boolean graceful) throws IOException {
+    @Test
+    public void stressTest_atLeastOnce_forceful() throws IOException {
+        stressTest(false, false);
+    }
+
+    private void stressTest(boolean graceful, boolean exactlyOnce) throws IOException {
         int numItems = 500;
         Pipeline p = Pipeline.create();
         p.readFrom(SourceBuilder.stream("src", procCtx -> new int[1])
@@ -394,10 +383,11 @@ public class WriteFilePTest extends JetTestSupport {
                                 .build())
          .withoutTimestamps()
          .writeTo(Sinks.filesBuilder(directory.toString())
+                       .exactlyOnce(exactlyOnce)
                        .build());
 
         JobConfig config = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
+                .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(50);
         JobProxy job = (JobProxy) instance.newJob(p, config);
 
@@ -463,11 +453,11 @@ public class WriteFilePTest extends JetTestSupport {
     private void checkFileContents(int numFrom, int numTo, boolean ignoreTempFiles) throws IOException {
         String actual = Files.list(directory)
                 .peek(f -> {
-                    if (!ignoreTempFiles && f.getFileName().toString().endsWith(WriteFileP.TEMP_FILE_SUFFIX)) {
+                    if (!ignoreTempFiles && f.getFileName().toString().endsWith(TEMP_FILE_SUFFIX)) {
                         throw new IllegalArgumentException("Temp file found: " + f);
                     }
                 })
-                .filter(f -> !f.toString().endsWith(WriteFileP.TEMP_FILE_SUFFIX))
+                .filter(f -> !f.toString().endsWith(TEMP_FILE_SUFFIX))
                 .sorted(Comparator.comparing(f -> Integer.parseInt(f.getFileName().toString().substring(2))))
                 .map(file -> uncheckCall(() -> Files.readAllBytes(file)))
                 .map(bytes -> new String(bytes, StandardCharsets.UTF_8))
@@ -487,7 +477,7 @@ public class WriteFilePTest extends JetTestSupport {
         }
     }
 
-    private Pipeline buildPipeline(Charset charset, boolean append) {
+    private Pipeline buildPipeline(Charset charset) {
         if (charset == null) {
             charset = StandardCharsets.UTF_8;
         }
@@ -496,7 +486,6 @@ public class WriteFilePTest extends JetTestSupport {
          .writeTo(Sinks.<String>filesBuilder(directory.toString())
                  .toStringFn(Objects::toString)
                  .charset(charset)
-                 .append(append)
                  .build());
         return p;
     }

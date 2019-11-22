@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.RestartableException;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
@@ -27,6 +28,7 @@ import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.Transactio
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.UnboundedTransactionsProcessorUtility;
 import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.jet.impl.util.Util;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -45,15 +47,17 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Set;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.pipeline.Sinks.TEMP_FILE_SUFFIX;
 
 /**
  * A file-writing sink supporting rolling files. Rolling can occur:
@@ -65,15 +69,14 @@ import static com.hazelcast.jet.impl.util.Util.uncheckRun;
  */
 public final class WriteFileP<T> implements Processor {
 
-    static final String TEMP_FILE_SUFFIX = ".tmp";
     private static final LongSupplier SYSTEM_CLOCK = (LongSupplier & Serializable) System::currentTimeMillis;
 
     private final Path directory;
     private final FunctionEx<? super T, ? extends String> toStringFn;
     private final Charset charset;
-    private final boolean append;
     private final DateTimeFormatter dateFormatter;
     private final Long maxFileSize;
+    private final boolean exactlyOnce;
     private final LongSupplier clock;
 
     private UnboundedTransactionsProcessorUtility<FileId, FileResource> utility;
@@ -89,17 +92,17 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
-            boolean append,
             @Nullable String dateFormatter,
             @Nullable Long maxFileSize,
+            boolean exactlyOnce,
             @Nonnull LongSupplier clock
     ) {
         this.directory = Paths.get(directoryName);
         this.toStringFn = toStringFn;
         this.charset = Charset.forName(charset);
-        this.append = append;
         this.dateFormatter = dateFormatter != null ? DateTimeFormatter.ofPattern(dateFormatter) : null;
         this.maxFileSize = maxFileSize;
+        this.exactlyOnce = exactlyOnce;
         this.clock = clock;
     }
 
@@ -108,10 +111,13 @@ public final class WriteFileP<T> implements Processor {
         this.context = context;
         Files.createDirectories(directory);
 
+        ProcessingGuarantee guarantee = context.processingGuarantee() == EXACTLY_ONCE && !exactlyOnce
+                ? AT_LEAST_ONCE
+                : context.processingGuarantee();
         utility = new UnboundedTransactionsProcessorUtility<>(
                 outbox,
                 context,
-                context.processingGuarantee(),
+                guarantee,
                 this::newFileName,
                 this::newFileResource,
                 this::recoverAndCommit,
@@ -155,7 +161,7 @@ public final class WriteFileP<T> implements Processor {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         if (utility != null) {
             utility.close();
         }
@@ -187,27 +193,24 @@ public final class WriteFileP<T> implements Processor {
         String file = sb.toString();
         boolean usesSequence = utility.externalGuarantee() == EXACTLY_ONCE || maxFileSize != null;
         if (usesSequence) {
-            // TODO [viliam] always check existing files, if sequence is used. We might only
-            //  build the set only if the first sequence fails and only if fileSequence == 0, otherwise
-            //  we can just check the generated file
-            Set<String> existingFiles;
-            if (utility.externalGuarantee() == EXACTLY_ONCE) {
+            // check existing files if sequence is used
+            Supplier<Set<String>> existingFiles = Util.memoize(() -> {
+                Set<String> files;
                 try (Stream<Path> fileListStream = Files.list(directory)) {
-                    existingFiles = fileListStream
+                    files = fileListStream
                             .map(f -> f.getFileName().toString())
                             .collect(Collectors.toSet());
                 } catch (IOException e) {
                     throw sneakyThrow(e);
                 }
-            } else {
-                existingFiles = Collections.emptySet();
-            }
+                return files;
+            });
             int prefixLength = sb.length();
             do {
                 sb.append('-').append(fileSequence++);
                 file = sb.toString();
                 sb.setLength(prefixLength);
-            } while (existingFiles.contains(file) || existingFiles.contains(file + TEMP_FILE_SUFFIX));
+            } while (existingFiles.get().contains(file) || existingFiles.get().contains(file + TEMP_FILE_SUFFIX));
         }
         return new FileId(file, context.globalProcessorIndex());
     }
@@ -248,7 +251,7 @@ public final class WriteFileP<T> implements Processor {
     private Writer createWriter(Path file) {
         try {
             LoggingUtil.logFine(context.logger(), "creating %s", file);
-            FileOutputStream fos = new FileOutputStream(file.toFile(), append);
+            FileOutputStream fos = new FileOutputStream(file.toFile(), true);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
             sizeTrackingStream = new SizeTrackingStream(bos);
             return new OutputStreamWriter(sizeTrackingStream, charset);
@@ -264,11 +267,11 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
-            boolean append,
             @Nullable String datePattern,
-            @Nullable Long maxFileSize
+            @Nullable Long maxFileSize,
+            boolean exactlyOnce
     ) {
-        return metaSupplier(directoryName, toStringFn, charset, append, datePattern, maxFileSize, SYSTEM_CLOCK);
+        return metaSupplier(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce, SYSTEM_CLOCK);
     }
 
     // for tests
@@ -276,13 +279,13 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
-            boolean append,
             @Nullable String datePattern,
             @Nullable Long maxFileSize,
+            boolean exactlyOnce,
             @Nonnull LongSupplier clock
     ) {
         return ProcessorMetaSupplier.preferLocalParallelismOne(() -> new WriteFileP<>(directoryName, toStringFn,
-                charset, append, datePattern, maxFileSize, clock));
+                charset, datePattern, maxFileSize, exactlyOnce, clock));
     }
 
     private abstract class FileResource implements TransactionalResource<FileId> {
@@ -422,7 +425,7 @@ public final class WriteFileP<T> implements Processor {
 
         @Override
         public String toString() {
-            return "FileId{" + fileName + '}';
+            return "File{" + fileName + '}';
         }
     }
 }

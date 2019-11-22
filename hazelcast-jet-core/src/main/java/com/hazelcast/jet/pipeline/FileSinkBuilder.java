@@ -40,9 +40,9 @@ public final class FileSinkBuilder<T> {
 
     private FunctionEx<? super T, String> toStringFn = Object::toString;
     private Charset charset = StandardCharsets.UTF_8;
-    private boolean append;
     private String datePattern;
     private Long maxFileSize;
+    private boolean exactlyOnce = true;
 
     /**
      * Use {@link Sinks#filesBuilder}.
@@ -71,44 +71,17 @@ public final class FileSinkBuilder<T> {
     }
 
     /**
-     * Sets whether to append ({@code true}) or overwrite ({@code false})
-     * an existing file. Default value is {@code false}.
-     * <p>
-     * The value is ignored if:
-     * <ul>
-     *     <li>{@linkplain JobConfig#setProcessingGuarantee processing
-     *     guarantee} is {@linkplain ProcessingGuarantee#EXACTLY_ONCE
-     *     exactly-once}
-     *
-     *     <li>you use {@linkplain #rollByFileSize(Long) rolling by file size}
-     * </ul>
-     *
-     * In either of the above cases we don't overwrite any files as they are
-     * intended for streaming use cases; the file name contains a sequence
-     * number and a new file is always used.
-     */
-    public FileSinkBuilder<T> append(boolean append) {
-        this.append = append;
-        return this;
-    }
-
-    /**
      * Sets a date pattern that will be included in the file name. Each time
-     * the formatted current time changes a new file will be started, therefore
-     * the highest-resolution element included in the pattern determines the
-     * rolling interval. For example, if the {@code datePattern} is {@code
-     * yyyy-MM-dd}, the file will roll over every day.
-     * <p>
-     * Since this option is typically used in streaming use cases, the {@link
-     * #append} option automatically enabled so that the file is not
-     * overwritten in case of a job restart.
+     * the formatted current time changes a new file will be started. For
+     * example, if the {@code datePattern} is {@code yyyy-MM-dd}, a new file
+     * will be started every day.
      * <p>
      * The rolling is based on system time, not on event time. By default no
-     * rolling by date is done.
+     * rolling by date is done. If the system clock goes back, the outcome is
+     * unspecified and possibly corrupt.
      */
     public FileSinkBuilder<T> rollByDate(@Nullable String datePattern) {
         this.datePattern = datePattern;
-        this.append = true;
         return this;
     }
 
@@ -123,10 +96,34 @@ public final class FileSinkBuilder<T> {
     }
 
     /**
+     * Enables or disables the exactly-once behavior of the sink using
+     * two-phase commit of state snapshots. If enabled, the {@linkplain
+     * JobConfig#setProcessingGuarantee(ProcessingGuarantee) processing
+     * guarantee} of the job must be set to {@linkplain
+     * ProcessingGuarantee#EXACTLY_ONCE exactly-once}, otherwise the sink's
+     * guarantee will match that of the job. In other words, sink's
+     * guarantee cannot be higher than job's, but can be lower to avoid the
+     * additional overhead.
+     * <p>
+     * See {@link Sinks#filesBuilder(String)} for more information.
+     * <p>
+     * The default value is true.
+     *
+     * @param enable If true, sink's guarantee will match the job
+     *      guarantee. If false, sink's guarantee will be at-least-once
+     *      even if job's is exactly-once
+     * @return this instance for fluent API
+     */
+    public FileSinkBuilder<T> exactlyOnce(boolean enable) {
+        exactlyOnce = enable;
+        return this;
+    }
+
+    /**
      * Creates and returns the file {@link Sink} with the supplied components.
      */
     public Sink<T> build() {
         return Sinks.fromProcessor("filesSink(" + directoryName + ')',
-                writeFileP(directoryName, toStringFn, charset, append, datePattern, maxFileSize));
+                writeFileP(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce));
     }
 }

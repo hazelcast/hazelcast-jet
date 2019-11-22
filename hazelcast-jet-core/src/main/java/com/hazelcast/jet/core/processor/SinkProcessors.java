@@ -240,14 +240,14 @@ public final class SinkProcessors {
             @Nonnull String directoryName,
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull Charset charset,
-            boolean append,
             @Nullable String datePattern,
-            @Nullable Long maxFileSize
+            @Nullable Long maxFileSize,
+            boolean exactlyOnce
     ) {
         checkSerializable(toStringFn, "toStringFn");
 
-        return WriteFileP.metaSupplier(directoryName, toStringFn, charset.name(), append,
-                datePattern, maxFileSize);
+        return WriteFileP.metaSupplier(directoryName, toStringFn, charset.name(),
+                datePattern, maxFileSize, exactlyOnce);
     }
 
     /**
