@@ -72,7 +72,7 @@ import static java.util.stream.IntStream.range;
 
 public final class Util {
 
-    static final int BUFFER_SIZE = 1 << 15;
+    private static final int BUFFER_SIZE = 1 << 15;
 
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
