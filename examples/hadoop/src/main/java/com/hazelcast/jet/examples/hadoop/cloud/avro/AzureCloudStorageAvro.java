@@ -17,8 +17,8 @@
 package com.hazelcast.jet.examples.hadoop.cloud.avro;
 
 import com.hazelcast.jet.examples.hadoop.HadoopAvro;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 
 /**
  * A simple example adapted to read from and write to Azure Cloud Storage using
@@ -45,9 +45,8 @@ public class AzureCloudStorageAvro {
         Path inputPath = new Path("wasbs://" + CONTAINER_NAME + "@" + ACCOUNT_NAME + ".blob.core.windows.net/");
         Path outputPath = new Path("wasbs://" + CONTAINER_NAME + "@" + ACCOUNT_NAME + ".blob.core.windows.net/results");
 
-        JobConf jobConf = new JobConf();
-        jobConf.set("fs.azure.account.key." + ACCOUNT_NAME + ".blob.core.windows.net", ACCESS_KEY);
-
-        HadoopAvro.executeSample(jobConf, inputPath, outputPath);
+        Configuration configuration = HadoopAvro.createJobConfig(inputPath, outputPath);
+        configuration.set("fs.azure.account.key." + ACCOUNT_NAME + ".blob.core.windows.net", ACCESS_KEY);
+        HadoopAvro.executeSample(configuration);
     }
 }

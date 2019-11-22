@@ -17,8 +17,8 @@
 package com.hazelcast.jet.examples.hadoop.cloud.avro;
 
 import com.hazelcast.jet.examples.hadoop.HadoopAvro;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 
 /**
  * A simple example adapted to read from and write to Google Cloud Storage
@@ -37,7 +37,7 @@ import org.apache.hadoop.mapred.JobConf;
  * </ul>
  *
  * @see <a href="https://cloud.google.com/dataproc/docs/concepts/connectors/cloud-storage">
- *     Google Cloud Storage Connector</a> for more information
+ * Google Cloud Storage Connector</a> for more information
  */
 public class GoogleCloudStorageAvro {
 
@@ -49,11 +49,10 @@ public class GoogleCloudStorageAvro {
         Path inputPath = new Path("gs://" + BUCKET_NAME + "/");
         Path outputPath = new Path("gs://" + BUCKET_NAME + "/results");
 
-        JobConf jobConf = new JobConf();
-        jobConf.set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem");
-        jobConf.set("fs.gs.auth.service.account.enable", "true");
-        jobConf.set("fs.gs.auth.service.account.json.keyfile", JSON_KEY_FILE);
-
-        HadoopAvro.executeSample(jobConf, inputPath, outputPath);
+        Configuration configuration = HadoopAvro.createJobConfig(inputPath, outputPath);
+        configuration.set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem");
+        configuration.set("fs.gs.auth.service.account.enable", "true");
+        configuration.set("fs.gs.auth.service.account.json.keyfile", JSON_KEY_FILE);
+        HadoopAvro.executeSample(configuration);
     }
 }

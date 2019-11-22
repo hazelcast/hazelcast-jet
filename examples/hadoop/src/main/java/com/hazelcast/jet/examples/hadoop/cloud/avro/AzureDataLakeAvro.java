@@ -17,8 +17,8 @@
 package com.hazelcast.jet.examples.hadoop.cloud.avro;
 
 import com.hazelcast.jet.examples.hadoop.HadoopAvro;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 
 /**
  * A simple example adapted to read from and write to Azure Data Lake Storage
@@ -49,12 +49,11 @@ public class AzureDataLakeAvro {
         Path inputPath = new Path("adl://" + ACCOUNT_NAME + ".azuredatalakestore.net/" + FOLDER_NAME);
         Path outputPath = new Path("adl://" + ACCOUNT_NAME + ".azuredatalakestore.net/" + FOLDER_NAME + "/results");
 
-        JobConf jobConf = new JobConf();
-        jobConf.set("fs.adl.oauth2.access.token.provider.type", "ClientCredential");
-        jobConf.set("fs.adl.oauth2.refresh.url", "https://login.microsoftonline.com/" + TENANT_ID + "/oauth2/token");
-        jobConf.set("fs.adl.oauth2.client.id", CLIENT_ID);
-        jobConf.set("fs.adl.oauth2.credential", CLIENT_CREDENTIALS);
-
-        HadoopAvro.executeSample(jobConf, inputPath, outputPath);
+        Configuration configuration = HadoopAvro.createJobConfig(inputPath, outputPath);
+        configuration.set("fs.adl.oauth2.access.token.provider.type", "ClientCredential");
+        configuration.set("fs.adl.oauth2.refresh.url", "https://login.microsoftonline.com/" + TENANT_ID + "/oauth2/token");
+        configuration.set("fs.adl.oauth2.client.id", CLIENT_ID);
+        configuration.set("fs.adl.oauth2.credential", CLIENT_CREDENTIALS);
+        HadoopAvro.executeSample(configuration);
     }
 }

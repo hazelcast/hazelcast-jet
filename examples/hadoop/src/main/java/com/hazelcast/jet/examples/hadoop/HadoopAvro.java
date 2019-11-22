@@ -18,44 +18,36 @@ package com.hazelcast.jet.examples.hadoop;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.hadoop.HdfsSinks;
-import com.hazelcast.jet.hadoop.HdfsSources;
+import com.hazelcast.jet.examples.hadoop.generated.User;
+import com.hazelcast.jet.hadoop.HadoopSinks;
+import com.hazelcast.jet.hadoop.HadoopSources;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Pipeline;
 import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.mapred.AvroInputFormat;
-import org.apache.avro.mapred.AvroJob;
-import org.apache.avro.mapred.AvroOutputFormat;
-import org.apache.avro.mapred.AvroWrapper;
+import org.apache.avro.mapred.AvroKey;
+import org.apache.avro.mapreduce.AvroJob;
+import org.apache.avro.mapreduce.AvroKeyInputFormat;
+import org.apache.avro.mapreduce.AvroKeyOutputFormat;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.stream.IntStream;
 
 /**
- * A sample which reads records from HDFS using Apache Avro input format,
- * filters and writes back to HDFS using Apache Avro output format
+ * A sample which reads records from Hadoop using Apache Avro input format,
+ * filters and writes back to Hadoop using Apache Avro output format
  */
 public class HadoopAvro {
 
     private static final String MODULE_DIRECTORY = moduleDirectory();
-    private static final String INPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-input";
-    private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hdfs-avro-output";
-
-    private static Pipeline buildPipeline(JobConf jobConfig) {
-        Pipeline p = Pipeline.create();
-        p.readFrom(HdfsSources.<AvroWrapper<User>, NullWritable>hdfs(jobConfig))
-         .filter(entry -> entry.getKey().datum().get(3).equals(Boolean.TRUE))
-         .peek(entry -> entry.getKey().datum().toString())
-         .writeTo(HdfsSinks.hdfs(jobConfig));
-        return p;
-    }
+    private static final String INPUT_PATH = MODULE_DIRECTORY + "/hadoop-avro-input";
+    private static final String OUTPUT_PATH = MODULE_DIRECTORY + "/hadoop-avro-output";
 
     public static void main(String[] args) throws Exception {
         Path inputPath = new Path(INPUT_PATH);
@@ -65,22 +57,15 @@ public class HadoopAvro {
 
         createAvroFile();
 
-        executeSample(new JobConf(), inputPath, outputPath);
+        executeSample(createJobConfig(inputPath, outputPath));
     }
 
-    public static void executeSample(JobConf jobConf, Path inputPath, Path outputPath) {
+    public static void executeSample(Configuration configuration) {
         try {
             JetInstance jet = Jet.newJetInstance();
             Jet.newJetInstance();
 
-            jobConf.setInputFormat(AvroInputFormat.class);
-            jobConf.setOutputFormat(AvroOutputFormat.class);
-            AvroOutputFormat.setOutputPath(jobConf, outputPath);
-            AvroInputFormat.addInputPath(jobConf, inputPath);
-            jobConf.set(AvroJob.OUTPUT_SCHEMA, User.SCHEMA.toString());
-            jobConf.set(AvroJob.INPUT_SCHEMA, User.SCHEMA.toString());
-
-            jet.newJob(buildPipeline(jobConf)).join();
+            jet.newJob(buildPipeline(configuration)).join();
         } finally {
             Jet.shutdownAll();
         }
@@ -91,9 +76,8 @@ public class HadoopAvro {
         FileSystem fs = FileSystem.get(new Configuration());
         fs.delete(inputPath, true);
 
-        DataFileWriter<User> fileWriter = new DataFileWriter<>(new GenericDatumWriter<User>(User.SCHEMA));
-
-        fileWriter.create(User.SCHEMA, fs.create(new Path(inputPath, "file.avro")));
+        DataFileWriter<User> fileWriter = new DataFileWriter<>(new SpecificDatumWriter<>(User.class));
+        fileWriter.create(User.SCHEMA$, fs.create(new Path(inputPath, "file.avro")));
         IntStream.range(0, 100)
                  .mapToObj(i -> new User("name" + i, "pass" + i, i, i % 2 == 0))
                  .forEach(user -> Util.uncheckRun(() -> fileWriter.append(user)));
@@ -101,9 +85,31 @@ public class HadoopAvro {
         fs.close();
     }
 
+    private static Pipeline buildPipeline(Configuration configuration) {
+        Pipeline p = Pipeline.create();
+        p.readFrom(HadoopSources.<AvroKey<User>, NullWritable, User>inputFormat(configuration, (key, val) -> key.datum()))
+         .filter(user -> user.get(3).equals(Boolean.TRUE))
+         .peek()
+         .writeTo(HadoopSinks.outputFormat(configuration, AvroKey::new, user -> null));
+        return p;
+    }
+
     private static String moduleDirectory() {
         String resourcePath = HadoopAvro.class.getClassLoader().getResource("").getPath();
         return Paths.get(resourcePath).getParent().getParent().toString();
+    }
+
+    public static Configuration createJobConfig(Path inputPath, Path outputPath) throws IOException {
+        FileSystem.get(new Configuration()).delete(outputPath, true);
+
+        Job job = Job.getInstance();
+        job.setInputFormatClass(AvroKeyInputFormat.class);
+        job.setOutputFormatClass(AvroKeyOutputFormat.class);
+        AvroKeyInputFormat.addInputPath(job, inputPath);
+        AvroKeyOutputFormat.setOutputPath(job, outputPath);
+        AvroJob.setInputKeySchema(job, User.SCHEMA$);
+        AvroJob.setOutputKeySchema(job, User.SCHEMA$);
+        return job.getConfiguration();
     }
 
 }

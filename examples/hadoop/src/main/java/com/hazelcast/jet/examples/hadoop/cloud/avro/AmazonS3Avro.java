@@ -17,8 +17,8 @@
 package com.hazelcast.jet.examples.hadoop.cloud.avro;
 
 import com.hazelcast.jet.examples.hadoop.HadoopAvro;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 
 /**
  * A simple example adapted to read from and write to Amazon S3 object storage
@@ -50,11 +50,10 @@ public class AmazonS3Avro {
         Path inputPath = new Path("s3a://" + BUCKET_NAME + "/");
         Path outputPath = new Path("s3a://" + BUCKET_NAME + "/results/");
 
-        JobConf jobConf = new JobConf();
-        jobConf.set("fs.s3a.access.key", ACCESS_KEY);
-        jobConf.set("fs.s3a.secret.key", SECRET_KEY);
-
-        HadoopAvro.executeSample(jobConf, inputPath, outputPath);
+        Configuration configuration = HadoopAvro.createJobConfig(inputPath, outputPath);
+        configuration.set("fs.s3a.access.key", ACCESS_KEY);
+        configuration.set("fs.s3a.secret.key", SECRET_KEY);
+        HadoopAvro.executeSample(configuration);
     }
 
 }
