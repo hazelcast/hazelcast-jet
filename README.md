@@ -134,31 +134,20 @@ See the [Hazelcast Jet Reference Manual].
 
 See [examples folder](examples) for some examples.
 
-## Additional Connectors
+## Connectors
 
-- ### [InfluxDb Connector](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb)
-
-  A Hazelcast Jet Connector for InfluxDb which enables Hazelcast Jet pipelines to read/write data points from/to InfluxDb.
-
-- ### [Probabilistic Aggregations](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/probabilistic)
-
-  A collection of probabilistic aggregations such as HyperLogLog.
-
-- ### [Elasticsearch Connector](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch)
-
-  A Hazelcast Jet connector for Elasticsearch for querying/indexing objects from/to Elasticsearch.
-
-- ### [Redis Connectors](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis)
-
-  Hazelcast Jet connectors for various Redis data structures.
-
-- ### [MongoDB Connector](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/mongodb)
-
-  A Hazelcast Jet connector for MongoDB for querying/inserting objects from/to MongoDB.Architecture
+| Name                                                         | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [Apache Kafka](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-kafka/src/main/java/com/hazelcast/jet/kafka/) | A connector that allows consuming/producing events from/to Apache Kafka. |
+| [Amazon S3](https://github.com/hazelcast/hazelcast-jet/tree/master/hazelcast-jet-s3/src/main/java/com/hazelcast/jet/s3) | A connector that allows AWS S3 read/write support for Hazelcast Jet. |
+| [Apache Hadoop](https://github.com/hazelcast/hazelcast-jet/tree/master/hazelcast-jet-hadoop/src/main/java/com/hazelcast/jet/hadoop) | A connector that allows Apache Hadoop read/write support for Hazelcast Jet. |
+| [InfluxDb Connector](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb) | A Hazelcast Jet Connector for InfluxDb which enables pipelines to read/write data points from/to InfluxDb. |
+| [Probabilistic Aggregations](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/probabilistic) | A collection of probabilistic aggregations such as HyperLogLog. |
+| [Elasticsearch Connector](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch) | A Hazelcast Jet connector for Elasticsearch for querying/indexing objects from/to Elasticsearch. |
+| [Redis Connectors](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis) | Hazelcast Jet connectors for various Redis data structures.  |
+| [MongoDB Connector](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/mongodb) | A Hazelcast Jet connector for MongoDB for querying/inserting objects from/to MongoDB. |
 
 See [hazelcast-jet-contrib](https://github.com/hazelcast/hazelcast-jet-contrib) repository for more detailed information on community supported connectors and tools. 
-
-
 
 ## Architecture
 
