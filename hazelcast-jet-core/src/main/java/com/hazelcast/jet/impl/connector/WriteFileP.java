@@ -23,11 +23,15 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.UnboundedTransactionsProcessorUtility;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
@@ -404,10 +408,13 @@ public final class WriteFileP<T> implements Processor {
         }
     }
 
-    // TODO [viliam] better serialization
-    private static final class FileId implements TransactionId, Serializable {
-        private final String fileName;
-        private final int index;
+    public static final class FileId implements TransactionId, IdentifiedDataSerializable {
+        private String fileName;
+        private int index;
+
+        // for deserialization
+        public FileId() {
+        }
 
         private FileId(String fileName, int index) {
             this.fileName = fileName;
@@ -422,6 +429,28 @@ public final class WriteFileP<T> implements Processor {
         @Override
         public String toString() {
             return "File{" + fileName + '}';
+        }
+
+        @Override
+        public int getFactoryId() {
+            return JetInitDataSerializerHook.FACTORY_ID;
+        }
+
+        @Override
+        public int getClassId() {
+            return JetInitDataSerializerHook.WRITE_FILE_P_FILE_ID;
+        }
+
+        @Override
+        public void readData(ObjectDataInput in) throws IOException {
+            fileName = in.readUTF();
+            index = in.readInt();
+        }
+
+        @Override
+        public void writeData(ObjectDataOutput out) throws IOException {
+            out.writeUTF(fileName);
+            out.writeInt(index);
         }
     }
 }
