@@ -14,9 +14,22 @@
  * limitations under the License.
  */
 
+package com.hazelcast.jet.config;
+
 /**
- * Apache Hadoop read/write support for Hazelcast Jet.
- *
- * @since 3.0
+ * Represents the type of the resource to be uploaded.
  */
-package com.hazelcast.jet.hadoop;
+public enum ResourceType {
+    /**
+     * Represent a file of any type.
+     */
+    REGULAR_FILE,
+    /**
+     * Represents a JAR file.
+     */
+    JAR,
+    /**
+     * Represents a ZIP file that contains JAR files.
+     */
+    JARS_IN_ZIP
+}
