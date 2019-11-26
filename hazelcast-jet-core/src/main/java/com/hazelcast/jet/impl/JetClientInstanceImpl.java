@@ -18,11 +18,16 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.client.DistributedObjectInfo;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.client.impl.management.MCClusterMetadata;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
+import com.hazelcast.client.impl.protocol.codec.MCGetClusterMetadataCodec;
+import com.hazelcast.client.impl.protocol.codec.MCGetClusterMetadataCodec.ResponseParameters;
+import com.hazelcast.client.impl.protocol.codec.MCGetMemberConfigCodec;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Cluster;
+import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryXmlConfig;
 import com.hazelcast.internal.serialization.SerializationService;
@@ -31,12 +36,9 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.impl.client.protocol.codec.JetExistsDistributedObjectCodec;
-import com.hazelcast.jet.impl.client.protocol.codec.JetGetClusterMetadataCodec;
-import com.hazelcast.jet.impl.client.protocol.codec.JetGetClusterMetadataCodec.ResponseParameters;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobSummaryListCodec;
-import com.hazelcast.jet.impl.client.protocol.codec.JetGetMemberXmlConfigurationCodec;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 
@@ -98,15 +100,15 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
      * Returns summary of cluster details.
      */
     @Nonnull
-    public ClusterMetadata getClusterMetadata() {
-        return invokeRequestOnMasterAndDecodeResponse(JetGetClusterMetadataCodec.encodeRequest(),
+    public MCClusterMetadata getClusterMetadata() {
+        return invokeRequestOnMasterAndDecodeResponse(MCGetClusterMetadataCodec.encodeRequest(),
                 response -> {
-                    ResponseParameters parameters = JetGetClusterMetadataCodec.decodeResponse(response);
-                    ClusterMetadata metadata = new ClusterMetadata();
+                    ResponseParameters parameters = MCGetClusterMetadataCodec.decodeResponse(response);
+                    MCClusterMetadata metadata = new MCClusterMetadata();
+                    metadata.setCurrentState(ClusterState.getById(parameters.currentState));
                     metadata.setClusterTime(parameters.clusterTime);
-                    metadata.setName(parameters.name);
-                    metadata.setState(parameters.state);
-                    metadata.setVersion(parameters.version);
+                    metadata.setMemberVersion(parameters.memberVersion);
+                    metadata.setJetVersion(parameters.jetVersion);
                     return metadata;
                 });
     }
@@ -116,8 +118,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
      */
     @Nonnull
     public Config getHazelcastConfig() {
-        String configString = invokeRequestOnMasterAndDecodeResponse(JetGetMemberXmlConfigurationCodec.encodeRequest(),
-                response -> JetGetMemberXmlConfigurationCodec.decodeResponse(response).response);
+        String configString = invokeRequestOnMasterAndDecodeResponse(MCGetMemberConfigCodec.encodeRequest(),
+                response -> MCGetMemberConfigCodec.decodeResponse(response).configXml);
         return new InMemoryXmlConfig(configString);
     }
 

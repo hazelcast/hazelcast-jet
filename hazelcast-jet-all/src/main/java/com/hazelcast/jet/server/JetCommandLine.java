@@ -19,6 +19,7 @@ package com.hazelcast.jet.server;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
 import com.hazelcast.client.config.YamlClientConfigBuilder;
+import com.hazelcast.client.impl.management.MCClusterMetadata;
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.jet.Jet;
@@ -29,7 +30,6 @@ import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
-import com.hazelcast.jet.impl.ClusterMetadata;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.ConfigProvider;
@@ -395,11 +395,11 @@ public class JetCommandLine implements Runnable {
     ) throws IOException {
         runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
-            ClusterMetadata clusterMetadata = ((JetClientInstanceImpl) jet).getClusterMetadata();
+            MCClusterMetadata clusterMetadata = ((JetClientInstanceImpl) jet).getClusterMetadata();
             Cluster cluster = client.getCluster();
 
-            println("State: " + clusterMetadata.getState());
-            println("Version: " + clusterMetadata.getVersion());
+            println("State: " + clusterMetadata.getCurrentState());
+            println("Version: " + clusterMetadata.getJetVersion());
             println("Size: " + cluster.getMembers().size());
 
             println("");
