@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.hadoop;
+package com.hazelcast.jet.examples.hadoop.avro;
 
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
