@@ -42,7 +42,6 @@ import org.junit.Test;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
-import javax.jms.Destination;
 import javax.jms.JMSContext;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -74,7 +73,6 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestProcessors.MapWatermarksToString.mapWatermarksToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.Collections.synchronizedList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -152,7 +150,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         // the source starts consuming messages some time after the job is running. Send some
         // messages first until we see they're consumed
         assertTrueEventually(() -> {
-            sendMessages(false, 1);
+            sendMessages(false, 1, false);
             assertFalse("nothing in sink", sinkList.isEmpty());
         });
     }
@@ -164,7 +162,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.list(srcList.getName()))
          .writeTo(Sinks.jmsQueue(getConnectionFactorySupplier(false, false), destinationName));
 
-        List<Object> messages = consumeMessages(true);
+        List<Object> messages = consumeMessages(true, false);
 
         startJob(false);
 
@@ -179,7 +177,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.list(srcList.getName()))
          .writeTo(Sinks.jmsTopic(getConnectionFactorySupplier(false, false), destinationName));
 
-        List<Object> messages = consumeMessages(false);
+        List<Object> messages = consumeMessages(false, false);
         sleepSeconds(1);
 
         startJob(false);
@@ -240,6 +238,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
             // There's no way to see the JetEvent's timestamp by the user code. In order to check
             // the native timestamp, we aggregate the events into tumbling(1) windows and check
             // the timestamps of the windows: we assert that it is around the current time.
+            @SuppressWarnings("unchecked")
             long avgTime = (long) sinkList.stream().mapToLong(o -> ((WindowResult<Long>) o).end())
                                           .average().orElse(0);
             long oneMinute = MINUTES.toMillis(1);
@@ -275,7 +274,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.<String>list(srcList.getName()))
          .writeTo(sink);
 
-        List<Object> messages = consumeMessages(true);
+        List<Object> messages = consumeMessages(true, false);
 
         startJob(false);
 
@@ -299,7 +298,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.<String>list(srcList.getName()))
          .writeTo(sink);
 
-        List<Object> messages = consumeMessages(true);
+        List<Object> messages = consumeMessages(true, false);
 
         startJob(false);
 
@@ -318,7 +317,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.<String>list(srcList.getName()))
          .writeTo(sink);
 
-        List<Object> messages = consumeMessages(false);
+        List<Object> messages = consumeMessages(false, false);
         sleepSeconds(1);
 
         startJob(false);
@@ -340,7 +339,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.<String>list(srcList.getName()))
          .writeTo(sink);
 
-        List<Object> messages = consumeMessages(false);
+        List<Object> messages = consumeMessages(false, false);
         sleepSeconds(1);
 
         startJob(false);
@@ -391,7 +390,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
          .withoutTimestamps()
          .peek()
-         .mapStateful(() -> new CopyOnWriteArrayList<Long>(),
+         .mapStateful(CopyOnWriteArrayList<Long>::new,
                  (list, item) -> {
                      lastListInStressTest = list;
                      list.add(item);
@@ -504,7 +503,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         // We'll have 2 processors and only one message. One of the processors will receive
         // it. If the processor doesn't become idle, the watermark will never be emitted. We
         // assert that it is.
-        sendMessages(true, 1);
+        sendMessages(true, 1, false);
 
         int idleTimeout = 2000;
         Pipeline p = Pipeline.create();
@@ -542,10 +541,10 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     private void when_jobCancelled_then_rollsBackNonPreparedTransactions(boolean xa) throws Exception {
-        sendMessages(true);
+        sendMessages(true, MESSAGE_COUNT, xa);
 
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(xa, false), destinationName))
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(xa, xa), destinationName))
          .withoutTimestamps()
          .peek()
          .writeTo(Sinks.noop());
@@ -563,38 +562,39 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         // Then
         // if the transaction was rolled back, we'll see the messages. If not, they will be blocked
         // (we configured a long transaction timeout for Artemis)
-        List<Object> messages = consumeMessages(true);
-//        assertEqualsEventually(messages::size, MESSAGE_COUNT);
-        assertTrueEventually(() -> assertEquals(MESSAGE_COUNT, messages.size()), 5);
+        List<Object> messages = consumeMessages(true, xa);
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
     }
 
-    private List<Object> consumeMessages(boolean isQueue) throws JMSException {
-        Connection connection = getConnectionFactorySupplier(false, false).get().createConnection();
+    private List<Object> consumeMessages(boolean isQueue, boolean testBroker) throws JMSException {
+        Connection connection = getConnectionFactorySupplier(false, testBroker).get().createConnection();
         connection.start();
 
         List<Object> messages = synchronizedList(new ArrayList<>());
-        spawn(() -> uncheckRun(() -> {
-            Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
-            Destination dest = isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName);
-            MessageConsumer consumer = session.createConsumer(dest);
-            int count = 0;
-            while (count < MESSAGE_COUNT) {
-                messages.add(((TextMessage) consumer.receive()).getText());
-                count++;
+        spawn(() -> {
+            try (Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
+                 MessageConsumer consumer = session.createConsumer(
+                         isQueue ? session.createQueue(destinationName) : session.createTopic(destinationName))
+            ) {
+                int count = 0;
+                while (count < MESSAGE_COUNT) {
+                    messages.add(((TextMessage) consumer.receive()).getText());
+                    count++;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw sneakyThrow(e);
             }
-            consumer.close();
-            session.close();
-            connection.close();
-        }));
+        });
         return messages;
     }
 
     private List<Object> sendMessages(boolean isQueue) throws JMSException {
-        return sendMessages(isQueue, MESSAGE_COUNT);
+        return sendMessages(isQueue, MESSAGE_COUNT, false);
     }
 
-    private List<Object> sendMessages(boolean isQueue, int messageCount) throws JMSException {
-        ConnectionFactory cf = getConnectionFactorySupplier(false, false).get();
+    private List<Object> sendMessages(boolean isQueue, int messageCount, boolean testBroker) throws JMSException {
+        ConnectionFactory cf = getConnectionFactorySupplier(false, testBroker).get();
         return JmsTestUtil.sendMessages(cf, destinationName, isQueue, messageCount);
     }
 

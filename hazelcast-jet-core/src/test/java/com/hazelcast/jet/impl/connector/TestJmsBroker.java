@@ -42,9 +42,11 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.locks.LockSupport;
 
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static javax.transaction.xa.XAResource.TMFAIL;
 import static javax.transaction.xa.XAResource.TMNOFLAGS;
@@ -68,9 +70,10 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 /**
- * A mock JMS broker implementing the functionality needed for XA stress tests.
- * It implements only auto-acknowledged producer and xa-transacted consumer.
- * Doesn't implement topic.
+ * A mock JMS broker implementing just the functionality needed for XA stress
+ * tests. It implements auto-acknowledged producer&consumer, for XA
+ * transactions it implements only the consumer. Doesn't implement topic, only
+ * queue.
  */
 final class TestJmsBroker {
 
@@ -127,6 +130,11 @@ final class TestJmsBroker {
                     brokerState.queues.computeIfAbsent(queue.getQueueName(), k -> new ConcurrentLinkedQueue<>()));
         }).when(sess).createProducer(any());
 
+        doAnswer(invocation -> {
+            TestQueue queue = invocation.getArgument(0);
+            return mockConsumer(brokerState.queues.get(queue.getQueueName()));
+        }).when(sess).createConsumer(any());
+
         // createTextMessage
         doAnswer(invocation -> {
             TextMessage msg = mock(TextMessage.class);
@@ -144,6 +152,21 @@ final class TestJmsBroker {
         return sess;
     }
 
+    private static MessageConsumer mockConsumer(ConcurrentLinkedQueue<Message> queue) throws Exception {
+        MessageConsumer consumer = mock(MessageConsumer.class);
+        doAnswer(invocation -> queue.poll())
+                .when(consumer).receiveNoWait();
+        doAnswer(invocation -> {
+            Message res;
+            while ((res = queue.poll()) == null) {
+                LockSupport.parkNanos(MILLISECONDS.toNanos(100));
+            }
+            return res;
+        }).when(consumer).receive();
+        doNothing().when(consumer).close();
+        return consumer;
+    }
+
     private static XASession mockXASession(BrokerState brokerState) throws Exception {
         XASession sess = mock(XASession.class, UOE_ANSWER);
         XAResource xaRes = mock(XAResource.class, UOE_ANSWER);
@@ -158,7 +181,7 @@ final class TestJmsBroker {
         // createConsumer
         doAnswer(invocation -> {
             TestQueue queue = invocation.getArgument(0);
-            return mockConsumer(sessionState, queue.getQueueName());
+            return mockXAConsumer(sessionState, queue.getQueueName());
         }).when(sess).createConsumer(any());
 
         // start
@@ -247,7 +270,7 @@ final class TestJmsBroker {
         return sess;
     }
 
-    private static MessageConsumer mockConsumer(SessionState sessionState, String queueName) throws JMSException {
+    private static MessageConsumer mockXAConsumer(SessionState sessionState, String queueName) throws JMSException {
         MessageConsumer consumer = mock(MessageConsumer.class, UOE_ANSWER);
         doAnswer(invocation -> {
             assertNotNull("no txn started", sessionState.activeTxn);
