@@ -49,7 +49,7 @@ public interface Observer<T> {
     /**
      * Blah blah blah... //todo: write useful doc
      */
-    void onNext(T t);
+    void onNext(T t); //todo: specify in javadoc that values won't be ordered
 
     /**
      * Blah blah blah... //todo: write useful doc

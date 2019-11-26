@@ -23,29 +23,17 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Objects;
 
 public class ObservableBatch implements IdentifiedDataSerializable {
 
+    private static final ObservableBatch END_OF_DATA = new ObservableBatch(null, null, true);
     @Nullable
     private Object[] items;
-
     @Nullable
     private Throwable throwable;
-
     private boolean endOfData;
-
-    public ObservableBatch(@Nonnull Object[] items) {
-        this(Objects.requireNonNull(items, "items"), null, false);
-    }
-
-    public ObservableBatch(boolean endOfData) {
-        this(null, null, requireTrue(endOfData));
-    }
-
-    public ObservableBatch(@Nonnull Throwable throwable) {
-        this(null, Objects.requireNonNull(throwable, "throwable"), false);
-    }
 
     private ObservableBatch(@Nullable Object[] items, @Nullable Throwable throwable, boolean endOfData) {
         this.items = items;
@@ -56,24 +44,30 @@ public class ObservableBatch implements IdentifiedDataSerializable {
     ObservableBatch() { //needed for deserialization
     }
 
-    private static boolean requireTrue(boolean b) {
-        if (!b) {
-            throw new RuntimeException("Expected true");
-        }
-        return true;
+    static ObservableBatch items(@Nonnull ArrayList<Object> items) {
+        Objects.requireNonNull(items, "items");
+        return new ObservableBatch(items.toArray(), null, false);
+    }
+
+    static ObservableBatch endOfData() {
+        return END_OF_DATA;
+    }
+
+    static ObservableBatch error(Throwable throwable) {
+        return new ObservableBatch(null, Objects.requireNonNull(throwable, "throwable"), false);
     }
 
     @Nullable
-    public Object[] getItems() {
+    Object[] getItems() {
         return items;
     }
 
     @Nullable
-    public Throwable getThrowable() {
+    Throwable getThrowable() {
         return throwable;
     }
 
-    public boolean isEndOfData() {
+    boolean isEndOfData() {
         return endOfData;
     }
 

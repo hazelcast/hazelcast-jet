@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.cache.ICache;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.cluster.Address;
 import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
@@ -30,7 +31,9 @@ import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.map.EntryProcessor;
 
 import javax.annotation.Nonnull;
@@ -38,11 +41,13 @@ import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
@@ -153,7 +158,24 @@ public final class HazelcastWriters {
     }
 
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
-        return ProcessorMetaSupplier.of(WriteObservableP.supplier(name));
+        return new ProcessorMetaSupplier() {
+            @Nonnull
+            @Override
+            public Set<String> ownedObservables() {
+                return Collections.singleton(name);
+            }
+
+            @Nonnull @Override
+            public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
+                return (FunctionEx<? super Address, ? extends ProcessorSupplier>) (Address x) -> new WriterSupplier<>(
+                        null,
+                        ArrayList::new,
+                        ArrayList::add,
+                        instance -> ObservableImpl.observableItemsConsumer(instance, name),
+                        ConsumerEx.noop()
+                );
+            }
+        };
     }
 
     static RuntimeException handleInstanceNotActive(HazelcastInstanceNotActiveException e, boolean isLocal) {

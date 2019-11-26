@@ -31,6 +31,4 @@ public interface Observable<T> {
 
     //todo: unsubscribe?
 
-    //todo: when/who will be cleaning up Observables?
-
 }

@@ -35,6 +35,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
+import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
@@ -58,6 +59,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -69,6 +71,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
 import static com.hazelcast.cluster.ClusterState.PASSIVE;
@@ -154,7 +158,7 @@ public class JobCoordinationService {
                 0, jobScanPeriodInMillis, MILLISECONDS);
     }
 
-    public CompletableFuture<Void> submitJob(long jobId, Data dag, Data serializedConfig) {
+    public CompletableFuture<Void> submitJob(long jobId, Data serializedDag, Data serializedConfig) {
         CompletableFuture<Void> res = new CompletableFuture<>();
         submitToCoordinatorThread(() -> {
             MasterContext masterContext;
@@ -174,8 +178,9 @@ public class JobCoordinationService {
                 }
 
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-                String dagJson = dagToJson(jobId, config, dag);
-                JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config);
+                DAG dag = deserializeDag(jobId, config, serializedDag);
+                JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), serializedDag, dagToJson(dag),
+                        config, ownedObservables(dag));
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
 
@@ -685,6 +690,9 @@ public class JobCoordinationService {
             UUID coordinator = nodeEngine.getNode().getThisUuid();
             jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
+                Set<String> ownedObservables = masterContext.jobRecord().getOwnedObservables();
+                ObservableImpl.notifyObservablesOfCompletion(jetService.getJetInstance().getHazelcastInstance(),
+                        ownedObservables, error);
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
                 MasterContext existing = masterContexts.get(jobId);
@@ -818,11 +826,20 @@ public class JobCoordinationService {
                 && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
-    private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {
+    private DAG deserializeDag(long jobId, JobConfig jobConfig, Data dagData) {
         ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
-        DAG dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
+        return deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
+    }
+
+    private String dagToJson(DAG dag) {
         int coopThreadCount = getJetInstance(nodeEngine).getConfig().getInstanceConfig().getCooperativeThreadCount();
         return dag.toJson(coopThreadCount).toString();
+    }
+
+    private Set<String> ownedObservables(DAG dag) {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
+                .flatMap(vertex -> vertex.getMetaSupplier().ownedObservables().stream())
+                .collect(Collectors.toSet());
     }
 
     private CompletableFuture<Void> startJobIfNotStartedOrCompleted(

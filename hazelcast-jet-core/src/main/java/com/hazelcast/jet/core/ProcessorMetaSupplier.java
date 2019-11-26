@@ -28,7 +28,9 @@ import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 import static com.hazelcast.internal.util.UuidUtil.newUnsecureUuidString;
@@ -94,6 +96,14 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     @Nonnull
     Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses);
+
+    /**
+     * Blah blah blah... //todo: write useful doc
+     */
+    @Nonnull
+    default Set<String> ownedObservables() {
+        return Collections.emptySet();
+    }
 
     /**
      * Called on coordinator member after execution has finished on all
