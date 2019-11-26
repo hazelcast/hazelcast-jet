@@ -67,7 +67,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 /**
  * A mock JMS broker implementing just the functionality needed for XA stress
@@ -84,20 +83,23 @@ final class TestJmsBroker {
 
     private TestJmsBroker() { }
 
-    static XAConnectionFactory newTestJmsBroker() {
-        BrokerState brokerState = new BrokerState();
+    interface CloseableXAConnectionFactory extends XAConnectionFactory, ConnectionFactory, AutoCloseable { }
 
-        XAConnectionFactory cf = mock(XAConnectionFactory.class,
-                withSettings()
-                        .extraInterfaces(ConnectionFactory.class)
-                        .defaultAnswer(UOE_ANSWER));
+    static CloseableXAConnectionFactory newTestJmsBroker() {
+        BrokerState brokerState = new BrokerState();
+        CloseableXAConnectionFactory cf = mock(CloseableXAConnectionFactory.class, UOE_ANSWER);
 
         try {
             doAnswer(invocation -> mockXAConnection(brokerState)).when(cf).createXAConnection(any(), any());
-            doAnswer(invocation -> mockConnection(brokerState))
-                    .when((ConnectionFactory) cf).createConnection(any(), any());
-            doAnswer(invocation -> mockConnection(brokerState)).when((ConnectionFactory) cf).createConnection();
-        } catch (JMSException e) {
+            doAnswer(invocation -> mockConnection(brokerState)).when(cf).createConnection(any(), any());
+            doAnswer(invocation -> mockConnection(brokerState)).when(cf).createConnection();
+            doAnswer(invocation -> {
+                // make the object unusable
+                brokerState.queues = null;
+                brokerState.preparedTxns = null;
+                return null;
+            }).when(cf).close();
+        } catch (Exception e) {
             throw sneakyThrow(e);
         }
 

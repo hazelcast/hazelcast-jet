@@ -28,6 +28,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.connector.TestJmsBroker.CloseableXAConnectionFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -35,6 +36,7 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -42,7 +44,6 @@ import org.junit.Test;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
-import javax.jms.JMSContext;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -72,6 +73,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestProcessors.MapWatermarksToString.mapWatermarksToString;
+import static com.hazelcast.jet.impl.connector.JmsTestUtil.removeXa;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.Collections.synchronizedList;
@@ -94,7 +96,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @ClassRule
     public static EmbeddedActiveMQResource realBroker = new EmbeddedActiveMQResource();
-    private static XAConnectionFactory testBroker = TestJmsBroker.newTestJmsBroker();
+    private static CloseableXAConnectionFactory testBroker = TestJmsBroker.newTestJmsBroker();
 
     private static final int MESSAGE_COUNT = 100;
     private static final FunctionEx<Message, String> TEXT_MESSAGE_FN = m -> ((TextMessage) m).getText();
@@ -110,6 +112,11 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     @BeforeClass
     public static void beforeClass() {
         initialize(2, null);
+    }
+
+    @AfterClass
+    public static void afterClass() throws Exception {
+        testBroker.close();
     }
 
     @Before
@@ -615,51 +622,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
             ConnectionFactory cf = testBroker
                     ? (ConnectionFactory) JmsIntegrationTest.testBroker
                     : new ActiveMQConnectionFactory(realBroker.getVmURL());
-            if (!xa) {
-                // we need to wrap the ActiveMQConnectionFactory because it also implements
-                // XAConnectionFactory, but we specifically want a factory that doesn't to test the
-                // non-XA behavior
-                cf = new WrappingConnectionFactory(cf);
-            }
-            return cf;
+            return xa ? cf : removeXa(cf);
         };
-    }
-
-    private static class WrappingConnectionFactory implements ConnectionFactory {
-        private final ConnectionFactory delegate;
-
-        WrappingConnectionFactory(ConnectionFactory delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public Connection createConnection() throws JMSException {
-            return delegate.createConnection();
-        }
-
-        @Override
-        public Connection createConnection(String userName, String password) throws JMSException {
-            return delegate.createConnection(userName, password);
-        }
-
-        @Override
-        public JMSContext createContext() {
-            return delegate.createContext();
-        }
-
-        @Override
-        public JMSContext createContext(String userName, String password) {
-            return delegate.createContext(userName, password);
-        }
-
-        @Override
-        public JMSContext createContext(String userName, String password, int sessionMode) {
-            return delegate.createContext(userName, password, sessionMode);
-        }
-
-        @Override
-        public JMSContext createContext(int sessionMode) {
-            return delegate.createContext(sessionMode);
-        }
     }
 }

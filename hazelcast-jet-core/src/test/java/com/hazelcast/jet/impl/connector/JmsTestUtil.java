@@ -25,6 +25,7 @@ import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
+import javax.jms.JMSContext;
 import javax.jms.JMSException;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
@@ -67,6 +68,56 @@ final class JmsTestUtil {
                 res.add(message);
             }
             return res;
+        }
+    }
+
+    /**
+     * Typically the ConnectionFactory also implements XAConnectionFactory, but
+     * we can't "unimplement" the interface. This method will wrap the factory
+     * in a class that doesn't implement XAConnectionFactory.
+     *
+     * <p>This is a hack to test the code paths where the factory isn't an
+     * XAConnectionFactory.
+     */
+    static ConnectionFactory removeXa(ConnectionFactory cf) {
+        return new WrappingConnectionFactory(cf);
+    }
+
+    private static class WrappingConnectionFactory implements ConnectionFactory {
+        private final ConnectionFactory delegate;
+
+        WrappingConnectionFactory(ConnectionFactory delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Connection createConnection() throws JMSException {
+            return delegate.createConnection();
+        }
+
+        @Override
+        public Connection createConnection(String userName, String password) throws JMSException {
+            return delegate.createConnection(userName, password);
+        }
+
+        @Override
+        public JMSContext createContext() {
+            return delegate.createContext();
+        }
+
+        @Override
+        public JMSContext createContext(String userName, String password) {
+            return delegate.createContext(userName, password);
+        }
+
+        @Override
+        public JMSContext createContext(String userName, String password, int sessionMode) {
+            return delegate.createContext(userName, password, sessionMode);
+        }
+
+        @Override
+        public JMSContext createContext(int sessionMode) {
+            return delegate.createContext(sessionMode);
         }
     }
 }

@@ -28,12 +28,13 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.connector.TestJmsBroker.CloseableXAConnectionFactory;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
-import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
+import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -46,6 +47,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
+import static com.hazelcast.jet.impl.connector.JmsTestUtil.removeXa;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -54,9 +56,15 @@ import static org.junit.Assert.fail;
 public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
     @ClassRule
-    public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
+    public static EmbeddedActiveMQResource realBroker = new EmbeddedActiveMQResource();
+    private static CloseableXAConnectionFactory testBroker = TestJmsBroker.newTestJmsBroker();
 
     private static volatile boolean storeFailed;
+
+    @AfterClass
+    public static void afterClass() throws Exception {
+        testBroker.close();
+    }
 
     @Test
     public void when_memberTerminated_then_transactionsRolledBack() throws Exception {
@@ -65,11 +73,11 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
         // use higher number of messages so that each of the parallel processors gets some
         int messageCount = 10_000;
-        JmsTestUtil.sendMessages(getConnectionFactorySupplier(false).get(), "queue", true, messageCount);
+        JmsTestUtil.sendMessages(getConnectionFactorySupplier(false, true).get(), "queue", true, messageCount);
 
         Pipeline p = Pipeline.create();
         IList<String> sinkList = instance1.getList("sinkList");
-        p.readFrom(Sources.jmsQueueBuilder(getConnectionFactorySupplier(true))
+        p.readFrom(Sources.jmsQueueBuilder(getConnectionFactorySupplier(true, true))
                           .destinationName("queue")
                           .build(msg -> ((TextMessage) msg).getText()))
          .withoutTimestamps()
@@ -82,7 +90,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
         assertTrueEventually(() -> assertEquals("expected items not in sink", messageCount, sinkList.size()));
 
         // Now forcefully shut down the second member. The terminated member
-        // will not roll back its transaction. We'll assert that the
+        // will NOT roll back its transaction. We'll assert that the
         // transactions with processorIndex beyond the current total
         // parallelism are rolled back. We assert that each item is emitted
         // twice, if this was wrong, the items in the non-rolled-back
@@ -119,7 +127,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
         JetInstance instance = createJetMember(config);
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(true), "queue"))
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(true, false), "queue"))
          .withoutTimestamps()
          .writeTo(Sinks.noop());
 
@@ -141,10 +149,13 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
         }
     }
 
-    private static SupplierEx<ConnectionFactory> getConnectionFactorySupplier(boolean xa) {
-        return () -> xa
-                ? new ActiveMQXAConnectionFactory(resource.getVmURL())
-                : new ActiveMQConnectionFactory(resource.getVmURL());
+    private static SupplierEx<ConnectionFactory> getConnectionFactorySupplier(boolean xa, boolean testBroker) {
+        return () -> {
+            ConnectionFactory cf = testBroker
+                    ? (ConnectionFactory) JmsIntegration_NonSharedClusterTest.testBroker
+                    : new ActiveMQConnectionFactory(realBroker.getVmURL());
+            return xa ? cf : removeXa(cf);
+        };
     }
 
     private static class FailingMapStore extends AMapStore implements Serializable {
