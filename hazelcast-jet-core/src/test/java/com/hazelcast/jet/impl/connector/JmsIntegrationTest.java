@@ -34,7 +34,6 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamSource;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
-import org.apache.activemq.artemis.jms.client.ActiveMQXAConnectionFactory;
 import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -74,7 +73,6 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestProcessors.MapWatermarksToString.mapWatermarksToString;
-import static com.hazelcast.jet.impl.connector.JmsTestUtil.createActiveMqResource;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
@@ -97,13 +95,14 @@ import static org.mockito.Mockito.withSettings;
 public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @ClassRule
-    public static EmbeddedActiveMQResource resource = createActiveMqResource();
+    public static EmbeddedActiveMQResource realBroker = new EmbeddedActiveMQResource();
+    private static XAConnectionFactory testBroker = TestJmsBroker.newTestJmsBroker();
 
     private static final int MESSAGE_COUNT = 100;
     private static final FunctionEx<Message, String> TEXT_MESSAGE_FN = m -> ((TextMessage) m).getText();
     private static volatile List<Long> lastListInStressTest;
-
     private static int counter;
+
     private String destinationName = "dest" + counter++;
 
     private Pipeline p = Pipeline.create();
@@ -123,7 +122,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @Test
     public void sourceQueue() throws JMSException {
-        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(false), destinationName))
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(false, false), destinationName))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .writeTo(Sinks.list(sinkList));
@@ -137,7 +136,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @Test
     public void sourceTopic() throws JMSException {
-        p.readFrom(Sources.jmsTopic(getConnectionFactorySupplier(false), destinationName))
+        p.readFrom(Sources.jmsTopic(getConnectionFactorySupplier(false, false), destinationName))
          .withoutTimestamps()
          .map(TEXT_MESSAGE_FN)
          .writeTo(Sinks.list(sinkList));
@@ -163,7 +162,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         populateList();
 
         p.readFrom(Sources.list(srcList.getName()))
-         .writeTo(Sinks.jmsQueue(getConnectionFactorySupplier(false), destinationName));
+         .writeTo(Sinks.jmsQueue(getConnectionFactorySupplier(false, false), destinationName));
 
         List<Object> messages = consumeMessages(true);
 
@@ -178,7 +177,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         populateList();
 
         p.readFrom(Sources.list(srcList.getName()))
-         .writeTo(Sinks.jmsTopic(getConnectionFactorySupplier(false), destinationName));
+         .writeTo(Sinks.jmsTopic(getConnectionFactorySupplier(false, false), destinationName));
 
         List<Object> messages = consumeMessages(false);
         sleepSeconds(1);
@@ -191,7 +190,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @Test
     public void sourceQueue_whenBuilder() throws JMSException {
-        StreamSource<Message> source = Sources.jmsQueueBuilder(getConnectionFactorySupplier(false))
+        StreamSource<Message> source = Sources.jmsQueueBuilder(getConnectionFactorySupplier(false, false))
                                               .destinationName(destinationName)
                                               .build();
 
@@ -210,7 +209,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     @Test
     public void sourceQueue_whenBuilder_withFunctions() throws JMSException {
         String queueName = destinationName;
-        StreamSource<String> source = Sources.jmsQueueBuilder(getConnectionFactorySupplier(false))
+        StreamSource<String> source = Sources.jmsQueueBuilder(getConnectionFactorySupplier(false, false))
                 .connectionFn(ConnectionFactory::createConnection)
                 .consumerFn(session -> session.createConsumer(session.createQueue(queueName)))
                 .build(TEXT_MESSAGE_FN);
@@ -226,7 +225,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @Test
     public void sourceTopic_withNativeTimestamps() throws Exception {
-        p.readFrom(Sources.jmsTopic(getConnectionFactorySupplier(false), destinationName))
+        p.readFrom(Sources.jmsTopic(getConnectionFactorySupplier(false, false), destinationName))
          .withNativeTimestamps(0)
          .map(Message::getJMSTimestamp)
          .window(tumbling(1))
@@ -252,7 +251,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @Test
     public void sourceTopic_whenBuilder() throws JMSException {
-        StreamSource<String> source = Sources.jmsTopicBuilder(getConnectionFactorySupplier(false))
+        StreamSource<String> source = Sources.jmsTopicBuilder(getConnectionFactorySupplier(false, false))
                 .destinationName(destinationName)
                 .build(TEXT_MESSAGE_FN);
 
@@ -269,7 +268,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     public void sinkQueue_whenBuilder() throws JMSException {
         populateList();
 
-        Sink<String> sink = Sinks.<String>jmsQueueBuilder(getConnectionFactorySupplier(false))
+        Sink<String> sink = Sinks.<String>jmsQueueBuilder(getConnectionFactorySupplier(false, false))
                 .destinationName(destinationName)
                 .build();
 
@@ -288,7 +287,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     public void sinkQueue_whenBuilder_withFunctions() throws JMSException {
         populateList();
 
-        Sink<String> sink = Sinks.<String>jmsQueueBuilder(getConnectionFactorySupplier(false))
+        Sink<String> sink = Sinks.<String>jmsQueueBuilder(getConnectionFactorySupplier(false, false))
                 .connectionFn(ConnectionFactory::createConnection)
                 .sessionFn(connection -> connection.createSession(false, AUTO_ACKNOWLEDGE))
                 .messageFn(Session::createTextMessage)
@@ -312,7 +311,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     public void sinkTopic_whenBuilder() throws JMSException {
         populateList();
 
-        Sink<String> sink = Sinks.<String>jmsTopicBuilder(getConnectionFactorySupplier(false))
+        Sink<String> sink = Sinks.<String>jmsTopicBuilder(getConnectionFactorySupplier(false, false))
                 .destinationName(destinationName)
                 .build();
 
@@ -332,7 +331,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     public void sinkTopic_whenBuilder_withParameters() throws JMSException {
         populateList();
 
-        Sink<String> sink = Sinks.<String>jmsTopicBuilder(getConnectionFactorySupplier(false))
+        Sink<String> sink = Sinks.<String>jmsTopicBuilder(getConnectionFactorySupplier(false, false))
                 .connectionParams(null, null)
                 .sessionParams(false, AUTO_ACKNOWLEDGE)
                 .destinationName(destinationName)
@@ -352,40 +351,41 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
     @Test
     public void stressTest_exactlyOnce_xa_forceful() throws Exception {
-        stressTest(false, true, EXACTLY_ONCE);
+        stressTest(false, true, true, EXACTLY_ONCE);
     }
 
     @Test
     public void stressTest_exactlyOnce_xa_graceful() throws Exception {
-        stressTest(true, true, EXACTLY_ONCE);
+        stressTest(true, true, true, EXACTLY_ONCE);
     }
 
     @Test
     public void stressTest_atLeastOnce_xa_forceful() throws Exception {
-        stressTest(false, true, AT_LEAST_ONCE);
+        stressTest(false, true, true, AT_LEAST_ONCE);
     }
 
     @Test
     public void stressTest_atLeastOnce_nonXa_forceful() throws Exception {
-        stressTest(false, false, AT_LEAST_ONCE);
+        stressTest(false, false, false, AT_LEAST_ONCE);
     }
 
     @Test
     public void stressTest_noGuarantee_xa_forceful() throws Exception {
-        stressTest(false, true, NONE);
+        stressTest(false, true, false, NONE);
     }
 
     @Test
     public void stressTest_noGuarantee_nonXa_forceful() throws Exception {
-        stressTest(false, false, NONE);
+        stressTest(false, false, false, NONE);
     }
 
-    private void stressTest(boolean graceful, boolean xa, ProcessingGuarantee maxGuarantee) throws Exception {
+    private void stressTest(boolean graceful, boolean xa, boolean testBroker, ProcessingGuarantee maxGuarantee)
+            throws Exception {
         lastListInStressTest = null;
         final int MESSAGE_COUNT = 4_000;
         Pipeline p = Pipeline.create();
         String queueName = "queue-" + counter++;
-        p.readFrom(Sources.jmsQueueBuilder(getConnectionFactorySupplier(xa))
+        p.readFrom(Sources.jmsQueueBuilder(getConnectionFactorySupplier(xa, testBroker))
                           .maxGuarantee(maxGuarantee)
                           .destinationName(queueName)
                           .build(msg -> Long.parseLong(((TextMessage) msg).getText())))
@@ -407,8 +407,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         // start a producer that will produce MESSAGE_COUNT messages on the background to the queue, 1000 msgs/s
         Future producerFuture = spawn(() -> {
             try (
-                    Connection connection = getConnectionFactorySupplier(false).get().createConnection();
-                    Session session = connection.createSession(JMSContext.AUTO_ACKNOWLEDGE);
+                    Connection connection = getConnectionFactorySupplier(xa, testBroker).get().createConnection();
+                    Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
                     MessageProducer producer = session.createProducer(session.createQueue(queueName))
             ) {
                 long startTime = System.nanoTime();
@@ -508,7 +508,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
         int idleTimeout = 2000;
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(true), destinationName)
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(false, false), destinationName)
                           .setPartitionIdleTimeout(idleTimeout))
          .withNativeTimestamps(0)
          .setLocalParallelism(2)
@@ -545,7 +545,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         sendMessages(true);
 
         Pipeline p = Pipeline.create();
-        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(xa), destinationName))
+        p.readFrom(Sources.jmsQueue(getConnectionFactorySupplier(xa, false), destinationName))
          .withoutTimestamps()
          .peek()
          .writeTo(Sinks.noop());
@@ -569,7 +569,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     private List<Object> consumeMessages(boolean isQueue) throws JMSException {
-        Connection connection = getConnectionFactorySupplier(false).get().createConnection();
+        Connection connection = getConnectionFactorySupplier(false, false).get().createConnection();
         connection.start();
 
         List<Object> messages = synchronizedList(new ArrayList<>());
@@ -594,7 +594,8 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     private List<Object> sendMessages(boolean isQueue, int messageCount) throws JMSException {
-        return JmsTestUtil.sendMessages(getConnectionFactorySupplier(false).get(), destinationName, isQueue, messageCount);
+        ConnectionFactory cf = getConnectionFactorySupplier(false, false).get();
+        return JmsTestUtil.sendMessages(cf, destinationName, isQueue, messageCount);
     }
 
     private void populateList() {
@@ -609,13 +610,19 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         }
     }
 
-    private static SupplierEx<ConnectionFactory> getConnectionFactorySupplier(boolean xa) {
-        return () -> xa
-                ? new ActiveMQXAConnectionFactory(resource.getVmURL())
+    private static SupplierEx<ConnectionFactory> getConnectionFactorySupplier(boolean xa, boolean testBroker) {
+        return () -> {
+            ConnectionFactory cf = testBroker
+                    ? (ConnectionFactory) JmsIntegrationTest.testBroker
+                    : new ActiveMQConnectionFactory(realBroker.getVmURL());
+            if (!xa) {
                 // we need to wrap the ActiveMQConnectionFactory because it also implements
                 // XAConnectionFactory, but we specifically want a factory that doesn't to test the
                 // non-XA behavior
-                : new WrappingConnectionFactory(new ActiveMQConnectionFactory(resource.getVmURL()));
+                cf = new WrappingConnectionFactory(cf);
+            }
+            return cf;
+        };
     }
 
     private static class WrappingConnectionFactory implements ConnectionFactory {

@@ -48,6 +48,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
@@ -133,6 +134,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
             } catch (Exception e) {
                 assertContains(e.getMessage(), "the snapshot failed");
             }
+            assertTrue(storeFailed);
         } else {
             assertJobStatusEventually(job, RUNNING);
             assertTrueAllTheTime(() -> assertEquals(RUNNING, job.getStatus()), 3);
