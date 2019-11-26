@@ -284,7 +284,6 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         }
     }
 
-    // TODO [viliam] better serialization
     public static class KafkaTransactionId implements TwoPhaseSnapshotCommitUtility.TransactionId, Serializable {
         private final long jobId;
         private final String jobName;
