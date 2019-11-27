@@ -158,13 +158,13 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public StreamStage<T> repartitionGlobal() {
-        return attachRepartition(true);
+    public StreamStage<T> rebalanceGlobal() {
+        return attachRebalance(true);
     }
 
     @Nonnull @Override
-    public StreamStage<T> repartitionLocal() {
-        return attachRepartition(false);
+    public StreamStage<T> rebalanceLocal() {
+        return attachRebalance(false);
     }
 
     @Nonnull @Override

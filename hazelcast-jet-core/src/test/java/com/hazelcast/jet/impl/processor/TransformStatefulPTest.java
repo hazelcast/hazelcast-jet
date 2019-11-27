@@ -61,8 +61,9 @@ public class TransformStatefulPTest {
 
     private final Function<Entry<Object, Long>, Traverser<Entry<Object, Long>>> expandEntryFn =
             en -> traverseItems(en, entry(en.getKey(), -en.getValue()));
-    private final Function<JetEvent<Entry<Object, Long>, Object>, Traverser<JetEvent<Entry<Object, Long>, Object>>> expandJetEventFn =
-            je -> traverseItems(je, jetEvent(entry(je.key(), -je.payload().getValue()), je.key(), je.timestamp()));
+    private final Function<JetEvent<Entry<Object, Long>, Object>, Traverser<JetEvent<Entry<Object, Long>, Object>>>
+            expandJetEventFn =
+                    je -> traverseItems(je, jetEvent(entry(je.key(), -je.payload().getValue()), je.key(), je.timestamp()));
 
     @Parameter
     public boolean flatMap;

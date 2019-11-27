@@ -53,7 +53,7 @@ import static com.hazelcast.jet.aggregate.AggregateOperations.aggregateOperation
  */
 public interface BatchStage<T> extends GeneralStage<T> {
 
-    @Nonnull
+    @Nonnull @Override
     <K> BatchStageWithKey<T, K> groupingKey(@Nonnull FunctionEx<? super T, ? extends K> keyFn);
 
     @Nonnull @Override
@@ -183,10 +183,10 @@ public interface BatchStage<T> extends GeneralStage<T> {
     BatchStage<T> merge(@Nonnull BatchStage<? extends T> other);
 
     @Nonnull @Override
-    BatchStage<T> repartitionGlobal();
+    BatchStage<T> rebalanceGlobal();
 
     @Nonnull @Override
-    BatchStage<T> repartitionLocal();
+    BatchStage<T> rebalanceLocal();
 
     @Nonnull @Override
     <K, T1_IN, T1, R> BatchStage<R> hashJoin(

@@ -37,7 +37,7 @@ import com.hazelcast.jet.impl.pipeline.transform.MapStatefulTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MergeTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
-import com.hazelcast.jet.impl.pipeline.transform.RepartitionTransform;
+import com.hazelcast.jet.impl.pipeline.transform.RebalanceTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -98,8 +98,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @SuppressWarnings("unchecked")
-    <RET> RET attachRepartition(boolean global) {
-        return (RET) attach(new RepartitionTransform<>(this.transform, global));
+    <RET> RET attachRebalance(boolean global) {
+        return (RET) attach(new RebalanceTransform<>(this.transform, global));
     }
 
     @Nonnull

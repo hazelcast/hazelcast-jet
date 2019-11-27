@@ -173,10 +173,10 @@ public interface StreamStage<T> extends GeneralStage<T> {
     }
 
     @Nonnull @Override
-    StreamStage<T> repartitionGlobal();
+    StreamStage<T> rebalanceGlobal();
 
     @Nonnull @Override
-    StreamStage<T> repartitionLocal();
+    StreamStage<T> rebalanceLocal();
 
     @Nonnull @Override
     <K, T1_IN, T1, R> StreamStage<R> hashJoin(

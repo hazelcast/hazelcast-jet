@@ -156,13 +156,13 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public BatchStage<T> repartitionGlobal() {
-        return attachRepartition(true);
+    public BatchStage<T> rebalanceGlobal() {
+        return attachRebalance(true);
     }
 
     @Nonnull @Override
-    public BatchStage<T> repartitionLocal() {
-        return attachRepartition(false);
+    public BatchStage<T> rebalanceLocal() {
+        return attachRebalance(false);
     }
 
     @Nonnull @Override

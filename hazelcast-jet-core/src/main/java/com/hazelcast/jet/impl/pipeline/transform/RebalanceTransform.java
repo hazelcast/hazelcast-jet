@@ -16,35 +16,35 @@
 
 package com.hazelcast.jet.impl.pipeline.transform;
 
+import com.hazelcast.internal.util.MutableInteger;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
-import java.util.Random;
 
 import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceP;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 
-public class RepartitionTransform<T> extends AbstractTransform {
+public class RebalanceTransform<T> extends AbstractTransform {
 
     private final boolean global;
 
-    public RepartitionTransform(
+    public RebalanceTransform(
             @Nonnull Transform upstream,
             boolean global
     ) {
-        super("repartition" + (global ? "Global" : "Local"), upstream);
+        super("rebalance" + (global ? "Global" : "Local"), upstream);
         this.global = global;
     }
 
     @Override
     public void addToDag(Planner p) {
-        ServiceFactory<Random> serviceFactory = ServiceFactory.withCreateFn(jet -> new Random());
+        ServiceFactory<MutableInteger> serviceFactory = ServiceFactory.withCreateFn(jet -> new MutableInteger());
         PlannerVertex pv = p.addVertex(this, name(), localParallelism(),
-                mapUsingServiceP(serviceFactory, (Random random, JetEvent item) ->
-                        jetEvent(item.payload(), random.nextInt(), item.timestamp())));
+                mapUsingServiceP(serviceFactory, (MutableInteger state, JetEvent item) ->
+                        jetEvent(item.payload(), state.getAndInc(), item.timestamp())));
         p.addEdges(this, pv.v, e -> {
             if (global) {
                 e.distributed();

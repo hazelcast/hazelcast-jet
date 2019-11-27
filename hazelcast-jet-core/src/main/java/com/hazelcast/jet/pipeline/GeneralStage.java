@@ -870,11 +870,32 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     StreamStage<T> addTimestamps(@Nonnull ToLongFunctionEx<? super T> timestampFn, long allowedLag);
 
+    /**
+     * Partitions the items uniformly into partitions. Each processor in the
+     * downstream stage will receive equal number of items.
+     *
+     * <p>Use this stage if you have few or just one key and need more
+     * parallelism. Or if you have skewed data: many instances of one key and
+     * few instances of other keys.
+     *
+     * <p>The opera
+     *
+     * <p>Only local processors will be considered.
+     *
+     * TODO [viliam]
+     *
+     * @return the newly attached stage
+     */
     @Nonnull
-    GeneralStage<T> repartitionLocal();
+    GeneralStage<T> rebalanceLocal();
 
+    /**
+     * TODO [viliam]
+     *
+     * @return the newly attached stage
+     */
     @Nonnull
-    GeneralStage<T> repartitionGlobal();
+    GeneralStage<T> rebalanceGlobal();
 
     /**
      * Attaches a sink stage, one that accepts data but doesn't emit any. The
