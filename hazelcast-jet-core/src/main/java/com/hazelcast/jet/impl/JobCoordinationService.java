@@ -23,11 +23,9 @@ import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.ClusterService;
-import com.hazelcast.internal.metrics.DynamicMetricsProvider;
 import com.hazelcast.internal.metrics.MetricDescriptor;
-import com.hazelcast.internal.metrics.MetricsCollectionContext;
-import com.hazelcast.internal.metrics.ProbeLevel;
-import com.hazelcast.internal.metrics.ProbeUnit;
+import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.internal.util.Clock;
 import com.hazelcast.jet.JetException;
@@ -105,7 +103,7 @@ import static java.util.stream.Collectors.toList;
  * A service that handles MasterContexts on the coordinator member.
  * Job-control operations from client are handled here.
  */
-public class JobCoordinationService implements DynamicMetricsProvider  {
+public class JobCoordinationService  {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
 
@@ -147,6 +145,12 @@ public class JobCoordinationService implements DynamicMetricsProvider  {
 
         ExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
+
+        // register metrics
+        MetricsRegistry registry = nodeEngine.getMetricsRegistry();
+        MetricDescriptor descriptor = registry.newMetricDescriptor()
+                .withTag(MetricTags.MODULE, "jet");
+        registry.registerStaticMetrics(descriptor, stats);
     }
 
     public JobRepository jobRepository() {
@@ -1013,18 +1017,17 @@ public class JobCoordinationService implements DynamicMetricsProvider  {
         assert IS_JOB_COORDINATOR_THREAD.get() : "not on coordinator thread";
     }
 
-    @Override
-    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
-        descriptor = descriptor.withTag(MetricTags.MODULE, "jet");
-        stats.provideDynamicMetrics(descriptor.copy(), context);
-    }
+    private static class Stats {
 
-    private static class Stats implements DynamicMetricsProvider {
-
+        @Probe(name = "jobs.submitted")
         private final AtomicInteger jobSubmitted = new AtomicInteger();
+        @Probe(name = "jobs.completed_successfully")
         private final AtomicInteger jobCompletedSuccessfully = new AtomicInteger();
+        @Probe(name = "jobs.completed_with_failure")
         private final AtomicInteger jobCompletedWithFailure = new AtomicInteger();
+        @Probe(name = "jobs.execution_started")
         private final AtomicInteger executionStarted = new AtomicInteger();
+        @Probe(name = "jobs.execution_terminated")
         private final AtomicInteger executionTerminated = new AtomicInteger();
 
         void jobSubmitted() {
@@ -1047,18 +1050,5 @@ public class JobCoordinationService implements DynamicMetricsProvider  {
             executionTerminated.incrementAndGet();
         }
 
-        @Override
-        public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
-            context.collect(descriptor, "jobs.submitted", ProbeLevel.INFO, ProbeUnit.COUNT,
-                    jobSubmitted.get());
-            context.collect(descriptor, "jobs.completed_successfully", ProbeLevel.INFO, ProbeUnit.COUNT,
-                    jobCompletedSuccessfully.get());
-            context.collect(descriptor, "jobs.completed_with_failure", ProbeLevel.INFO, ProbeUnit.COUNT,
-                    jobCompletedWithFailure.get());
-            context.collect(descriptor, "jobs.execution_started", ProbeLevel.INFO, ProbeUnit.COUNT,
-                    executionStarted.get());
-            context.collect(descriptor, "jobs.execution_terminated", ProbeLevel.INFO, ProbeUnit.COUNT,
-                    executionTerminated.get());
-        }
     }
 }
