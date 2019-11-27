@@ -79,6 +79,7 @@ public class ObservableImpl<T> implements Observable<T>, MessageListener<Observa
         }
     }
 
-    //todo: topics of observables should be cleaned up just as JobResults are... how does that work?
+    //todo: topics of observables could be cleaned up just as JobResults are... but that would work only for completed
+    // or failed ones...
 
 }

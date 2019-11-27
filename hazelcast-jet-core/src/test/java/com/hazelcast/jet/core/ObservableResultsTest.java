@@ -25,14 +25,18 @@ import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -52,21 +56,21 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
         observableName = randomName();
         testObserver = new TestObserver();
-        jet().<Integer>getObservable(observableName).addObserver(testObserver);
+        jet().<Long>getObservable(observableName).addObserver(testObserver);
     }
 
     @Test
     public void batchJobCompletesSuccessfully() {
         Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(TestSources.items(0, 1, 2, 3, 4))
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .writeTo(Sinks.observable(observableName));
 
         Job job = jet().newJob(pipeline);
         job.join();
 
-        testObserver.assertSortedValues(Arrays.asList(0, 1, 2, 3, 4));
-        testObserver.assertNoErrors();
-        testObserver.assertCompletions(1);
+        assertEquals(Arrays.asList(0L, 1L, 2L, 3L, 4L), testObserver.getSortedValues());
+        assertNull(testObserver.getError());
+        assertEquals(1, testObserver.getNoOfCompletions());
     }
 
     @Test
@@ -86,18 +90,38 @@ public class ObservableResultsTest extends TestInClusterSupport {
         Job job = jet().newJob(pipeline);
         assertTrueEventually(() -> assertEquals(JobStatus.FAILED, job.getStatus()));
 
-        testObserver.assertSortedValues(Collections.emptyList());
-        testObserver.assertError("Ooops!");
-        testObserver.assertCompletions(0);
+        assertTrue(testObserver.getSortedValues().isEmpty());
+        assertTrue(Objects.requireNonNull(testObserver.getError()).getMessage().contains("Ooops!"));
+        assertEquals(0, testObserver.getNoOfCompletions());
+    }
+
+    @Test
+    public void streamJob() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName));
+
+        Job job = jet().newJob(pipeline);
+
+        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
+        assertNull(testObserver.getError());
+        assertEquals(0, testObserver.getNoOfCompletions());
+
+        job.cancel();
+        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
+        assertNull(testObserver.getError());
+        assertEquals(0, testObserver.getNoOfCompletions());
     }
 
     @Test
     public void multipleObservables() {
         Pipeline pipeline = Pipeline.create();
-        BatchStage<Integer> stage = pipeline.readFrom(TestSources.items(0, 1, 2, 3, 4));
+        BatchStage<Long> stage = pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L));
 
         TestObserver otherTestObserver = new TestObserver();
-        jet().<Integer>getObservable("otherObservable").addObserver(otherTestObserver);
+        jet().<Long>getObservable("otherObservable").addObserver(otherTestObserver);
 
         stage.filter(i -> i % 2 == 0).writeTo(Sinks.observable(observableName));
         stage.filter(i -> i % 2 != 0).writeTo(Sinks.observable("otherObservable"));
@@ -105,26 +129,24 @@ public class ObservableResultsTest extends TestInClusterSupport {
         Job job = jet().newJob(pipeline);
         job.join();
 
-        testObserver.assertSortedValues(Arrays.asList(0, 2, 4));
-        testObserver.assertNoErrors();
-        testObserver.assertCompletions(1);
+        assertEquals(Arrays.asList(0L, 2L, 4L), testObserver.getSortedValues());
+        assertNull(testObserver.getError());
+        assertEquals(1, testObserver.getNoOfCompletions());
 
-        otherTestObserver.assertSortedValues(Arrays.asList(1, 3));
-        otherTestObserver.assertNoErrors();
-        otherTestObserver.assertCompletions(1);
+        assertEquals(Arrays.asList(1L, 3L), otherTestObserver.getSortedValues());
+        assertNull(otherTestObserver.getError());
+        assertEquals(1, otherTestObserver.getNoOfCompletions());
     }
 
-    //todo: streaming job tests
+    private static final class TestObserver implements Observer<Long> {
 
-    private static final class TestObserver implements Observer<Integer> {
-
-        private final List<Integer> values = Collections.synchronizedList(new ArrayList<>());
+        private final List<Long> values = Collections.synchronizedList(new ArrayList<>());
         private final AtomicReference<Throwable> error = new AtomicReference<>();
         private final AtomicInteger completions = new AtomicInteger();
 
         @Override
-        public void onNext(Integer integer) {
-            values.add(integer);
+        public void onNext(Long value) {
+            values.add(value);
         }
 
         @Override
@@ -137,26 +159,23 @@ public class ObservableResultsTest extends TestInClusterSupport {
             completions.incrementAndGet();
         }
 
-        void assertSortedValues(List<Integer> expected) {
-            List<Integer> sortedActualValues;
+        @Nonnull
+        List<Long> getSortedValues() {
+            List<Long> sortedValues;
             synchronized (values) {
-                sortedActualValues = new ArrayList<>(values);
+                sortedValues = new ArrayList<>(values);
             }
-            sortedActualValues.sort(Integer::compare);
-
-            assertEquals(expected, sortedActualValues);
+            sortedValues.sort(Long::compare);
+            return sortedValues;
         }
 
-        void assertNoErrors() {
-            assertNull(error.get());
+        @Nullable
+        Throwable getError() {
+            return error.get();
         }
 
-        void assertError(String errorMessage) {
-            assertTrue(error.get().getMessage().contains(errorMessage));
-        }
-
-        void assertCompletions(int expectedNoOfCompletions) {
-            assertEquals(expectedNoOfCompletions, completions.get());
+        int getNoOfCompletions() {
+            return completions.get();
         }
     }
 
