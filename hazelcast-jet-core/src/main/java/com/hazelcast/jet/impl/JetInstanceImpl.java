@@ -19,12 +19,9 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.impl.observer.ObservableBatch;
-import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.jet.impl.operation.GetJobIdsByNameOperation;
 import com.hazelcast.jet.impl.operation.GetJobIdsOperation;
 import com.hazelcast.jet.impl.util.ImdgUtil;
@@ -32,7 +29,6 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
-import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -139,9 +135,4 @@ public class JetInstanceImpl extends AbstractJetInstance {
         return nodeEngine.getLogger(getClass());
     }
 
-    @Override
-    public <T> Observable<T> getObservable(@Nonnull String name) {
-        ITopic<ObservableBatch> topic = getTopic(name);
-        return new ObservableImpl<>(topic);
-    }
 }

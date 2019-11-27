@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.cluster.ClusterState;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.cluster.impl.MemberImpl;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.instance.impl.Node;
@@ -35,7 +36,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.observer.ObservableBatch;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
@@ -46,6 +47,7 @@ import com.hazelcast.spi.exception.TargetNotMemberException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.ExecutionService;
 import com.hazelcast.spi.properties.HazelcastProperties;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -691,8 +693,7 @@ public class JobCoordinationService {
             jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 Set<String> ownedObservables = masterContext.jobRecord().getOwnedObservables();
-                ObservableImpl.notifyObservablesOfCompletion(jetService.getJetInstance().getHazelcastInstance(),
-                        ownedObservables, error);
+                notifyObservablesOfCompletion(ownedObservables, error);
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
                 MasterContext existing = masterContexts.get(jobId);
@@ -704,6 +705,15 @@ public class JobCoordinationService {
                 }
             }
         });
+    }
+
+    private void notifyObservablesOfCompletion(Set<String> observables, Throwable error) {
+        HazelcastInstance instance = jetService.getJetInstance().getHazelcastInstance();
+        ObservableBatch batch = error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error);
+        for (String observable : observables) {
+            ITopic<ObservableBatch> topic = instance.getTopic(observable);
+            topic.publish(batch);
+        }
     }
 
     /**

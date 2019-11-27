@@ -44,16 +44,16 @@ public class ObservableBatch implements IdentifiedDataSerializable {
     ObservableBatch() { //needed for deserialization
     }
 
-    static ObservableBatch items(@Nonnull ArrayList<Object> items) {
+    public static ObservableBatch items(@Nonnull ArrayList<Object> items) {
         Objects.requireNonNull(items, "items");
         return new ObservableBatch(items.toArray(), null, false);
     }
 
-    static ObservableBatch endOfData() {
+    public static ObservableBatch endOfData() {
         return END_OF_DATA;
     }
 
-    static ObservableBatch error(Throwable throwable) {
+    public static ObservableBatch error(Throwable throwable) {
         return new ObservableBatch(null, Objects.requireNonNull(throwable, "throwable"), false);
     }
 

@@ -16,8 +16,6 @@
 
 package com.hazelcast.jet.impl.observer;
 
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Observer;
 import com.hazelcast.topic.ITopic;
@@ -25,8 +23,6 @@ import com.hazelcast.topic.Message;
 import com.hazelcast.topic.MessageListener;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ObservableImpl<T> implements Observable<T>, MessageListener<ObservableBatch> {
@@ -85,20 +81,4 @@ public class ObservableImpl<T> implements Observable<T>, MessageListener<Observa
 
     //todo: topics of observables should be cleaned up just as JobResults are... how does that work?
 
-    public static ConsumerEx<ArrayList<Object>> observableItemsConsumer(HazelcastInstance instance, String name) {
-        ITopic<ObservableBatch> topic = instance.getTopic(name);
-        return buffer -> {
-            topic.publish(ObservableBatch.items(buffer));
-            buffer.clear();
-        };
-    }
-
-    public static void notifyObservablesOfCompletion(HazelcastInstance instance, Set<String> observables,
-                                                     Throwable error) {
-        ObservableBatch batch = error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error);
-        for (String observable : observables) {
-            ITopic<ObservableBatch> topic = instance.getTopic(observable);
-            topic.publish(batch);
-        }
-    }
 }

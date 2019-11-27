@@ -33,8 +33,9 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.observer.ObservableBatch;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -171,7 +172,17 @@ public final class HazelcastWriters {
                         null,
                         ArrayList::new,
                         ArrayList::add,
-                        instance -> ObservableImpl.observableItemsConsumer(instance, name),
+                        instance -> {
+                            ITopic<ObservableBatch> topic = instance.getTopic(name);
+                            return buffer -> {
+                                try {
+                                    topic.publish(ObservableBatch.items(buffer));
+                                } catch (HazelcastInstanceNotActiveException e) {
+                                    throw handleInstanceNotActive(e, true);
+                                }
+                                buffer.clear();
+                            };
+                        },
                         ConsumerEx.noop()
                 );
             }

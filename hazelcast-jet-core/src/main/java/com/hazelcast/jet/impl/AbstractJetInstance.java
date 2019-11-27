@@ -23,10 +23,13 @@ import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.JobAlreadyExistsException;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.observer.ObservableBatch;
+import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -142,6 +145,12 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Nonnull @Override
     public JetCacheManager getCacheManager() {
         return cacheManager;
+    }
+
+    @Override
+    public <T> Observable<T> getObservable(@Nonnull String name) {
+        ITopic<ObservableBatch> topic = getTopic(name);
+        return new ObservableImpl<>(topic);
     }
 
     @Override

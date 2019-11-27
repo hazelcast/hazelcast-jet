@@ -17,19 +17,17 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.function.ConsumerEx;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.Observer;
+import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,22 +40,19 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(HazelcastSerialClassRunner.class)
-public class ObservableResultsTest extends JetTestSupport {
+public class ObservableResultsTest extends TestInClusterSupport {
 
     private String observableName;
-    private JetInstance instance;
     private TestObserver testObserver;
 
     @Before
     public void before() {
-        instance = createJetMember();
         createJetMember();
         createJetMember();
 
         observableName = randomName();
         testObserver = new TestObserver();
-        instance.<Integer>getObservable(observableName).addObserver(testObserver);
+        jet().<Integer>getObservable(observableName).addObserver(testObserver);
     }
 
     @Test
@@ -66,7 +61,7 @@ public class ObservableResultsTest extends JetTestSupport {
         pipeline.readFrom(TestSources.items(0, 1, 2, 3, 4))
                 .writeTo(Sinks.observable(observableName));
 
-        Job job = instance.newJob(pipeline);
+        Job job = jet().newJob(pipeline);
         job.join();
 
         testObserver.assertSortedValues(Arrays.asList(0, 1, 2, 3, 4));
@@ -88,7 +83,7 @@ public class ObservableResultsTest extends JetTestSupport {
         pipeline.readFrom(errorSource)
                 .writeTo(Sinks.observable(observableName));
 
-        Job job = instance.newJob(pipeline);
+        Job job = jet().newJob(pipeline);
         assertTrueEventually(() -> assertEquals(JobStatus.FAILED, job.getStatus()));
 
         testObserver.assertSortedValues(Collections.emptyList());
@@ -102,12 +97,12 @@ public class ObservableResultsTest extends JetTestSupport {
         BatchStage<Integer> stage = pipeline.readFrom(TestSources.items(0, 1, 2, 3, 4));
 
         TestObserver otherTestObserver = new TestObserver();
-        instance.<Integer>getObservable("otherObservable").addObserver(otherTestObserver);
+        jet().<Integer>getObservable("otherObservable").addObserver(otherTestObserver);
 
         stage.filter(i -> i % 2 == 0).writeTo(Sinks.observable(observableName));
         stage.filter(i -> i % 2 != 0).writeTo(Sinks.observable("otherObservable"));
 
-        Job job = instance.newJob(pipeline);
+        Job job = jet().newJob(pipeline);
         job.join();
 
         testObserver.assertSortedValues(Arrays.asList(0, 2, 4));
