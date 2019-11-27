@@ -18,18 +18,11 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.client.DistributedObjectInfo;
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
-import com.hazelcast.client.impl.management.MCClusterMetadata;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
-import com.hazelcast.client.impl.protocol.codec.MCGetClusterMetadataCodec;
-import com.hazelcast.client.impl.protocol.codec.MCGetClusterMetadataCodec.ResponseParameters;
-import com.hazelcast.client.impl.protocol.codec.MCGetMemberConfigCodec;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Cluster;
-import com.hazelcast.cluster.ClusterState;
-import com.hazelcast.config.Config;
-import com.hazelcast.config.InMemoryXmlConfig;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -94,33 +87,6 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     public List<JobSummary> getJobSummaryList() {
         return invokeRequestOnMasterAndDecodeResponse(JetGetJobSummaryListCodec.encodeRequest(),
                 response -> JetGetJobSummaryListCodec.decodeResponse(response).response);
-    }
-
-    /**
-     * Returns summary of cluster details.
-     */
-    @Nonnull
-    public MCClusterMetadata getClusterMetadata() {
-        return invokeRequestOnMasterAndDecodeResponse(MCGetClusterMetadataCodec.encodeRequest(),
-                response -> {
-                    ResponseParameters parameters = MCGetClusterMetadataCodec.decodeResponse(response);
-                    MCClusterMetadata metadata = new MCClusterMetadata();
-                    metadata.setCurrentState(ClusterState.getById(parameters.currentState));
-                    metadata.setClusterTime(parameters.clusterTime);
-                    metadata.setMemberVersion(parameters.memberVersion);
-                    metadata.setJetVersion(parameters.jetVersion);
-                    return metadata;
-                });
-    }
-
-    /**
-     * Returns the member configuration.
-     */
-    @Nonnull
-    public Config getHazelcastConfig() {
-        String configString = invokeRequestOnMasterAndDecodeResponse(MCGetMemberConfigCodec.encodeRequest(),
-                response -> MCGetMemberConfigCodec.decodeResponse(response).configXml);
-        return new InMemoryXmlConfig(configString);
     }
 
     @Nonnull

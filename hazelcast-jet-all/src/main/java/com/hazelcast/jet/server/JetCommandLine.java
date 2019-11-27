@@ -19,9 +19,13 @@ package com.hazelcast.jet.server;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.XmlClientConfigBuilder;
 import com.hazelcast.client.config.YamlClientConfigBuilder;
+import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.management.MCClusterMetadata;
+import com.hazelcast.client.impl.spi.ClientClusterService;
 import com.hazelcast.cluster.Cluster;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.instance.JetBuildInfo;
+import com.hazelcast.internal.util.FutureUtil;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
@@ -395,7 +399,11 @@ public class JetCommandLine implements Runnable {
     ) throws IOException {
         runWithJet(verbosity, jet -> {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
-            MCClusterMetadata clusterMetadata = ((JetClientInstanceImpl) jet).getClusterMetadata();
+            HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
+            ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
+            Member masterMember = clientClusterService.getMember(clientClusterService.getMasterAddress());
+            MCClusterMetadata clusterMetadata = FutureUtil.getValue(hazelcastClient.getManagementCenterService()
+                                                                                   .getClusterMetadata(masterMember));
             Cluster cluster = client.getCluster();
 
             println("State: " + clusterMetadata.getCurrentState());
