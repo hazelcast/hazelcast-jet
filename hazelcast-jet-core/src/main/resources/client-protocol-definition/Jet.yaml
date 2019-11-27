@@ -7,7 +7,7 @@ methods:
     doc: ''
     request:
       retryable: false
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -31,7 +31,7 @@ methods:
     doc: ''
     request:
       retryable: false
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -50,7 +50,7 @@ methods:
     doc: ''
     request:
       retryable: true
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -85,7 +85,7 @@ methods:
     doc: ''
     request:
       retryable: true
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -99,7 +99,7 @@ methods:
     doc: ''
     request:
       retryable: true
-      partitionIdentifier: name
+      partitionIdentifier: -1
       params:
         - name: name
           type: String
@@ -119,7 +119,7 @@ methods:
     doc: ''
     request:
       retryable: true
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -139,7 +139,7 @@ methods:
     doc: ''
     request:
       retryable: true
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -159,7 +159,7 @@ methods:
     doc: ''
     request:
       retryable: false
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -173,7 +173,7 @@ methods:
     doc: ''
     request:
       retryable: false
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
@@ -237,7 +237,7 @@ methods:
     doc: ''
     request:
       retryable: true
-      partitionIdentifier: jobId
+      partitionIdentifier: -1
       params:
         - name: jobId
           type: long
