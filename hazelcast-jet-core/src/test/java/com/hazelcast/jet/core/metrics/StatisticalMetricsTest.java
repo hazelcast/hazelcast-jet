@@ -73,7 +73,7 @@ public class StatisticalMetricsTest {
         reset(MEMBER_COUNT);
 
         JetConfig config = new JetConfig();
-        config.getHazelcastConfig().getMetricsConfig().setCollectionIntervalSeconds(1);
+        config.getHazelcastConfig().getMetricsConfig().setCollectionFrequencySeconds(1);
 
         jetInstance = Jet.newJetInstance(config);
 
