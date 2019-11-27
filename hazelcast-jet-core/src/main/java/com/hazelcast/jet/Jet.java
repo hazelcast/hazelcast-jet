@@ -21,6 +21,7 @@ import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientFailoverConfig;
 import com.hazelcast.client.impl.clientside.HazelcastClientProxy;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.ConfigAccessor;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.ServiceConfig;
 import com.hazelcast.config.matcher.MatchingPointConfigPatternMatcher;
@@ -213,7 +214,7 @@ public final class Jet {
             hzProperties.setProperty(prop, jetProps.getProperty(prop));
         }
 
-        hzConfig.getServicesConfig()
+        ConfigAccessor.getServicesConfig(hzConfig)
                 .addServiceConfig(new ServiceConfig()
                         // use the user service config for JetService only as a config object holder,
                         // the service will be created by JetNodeExtension
