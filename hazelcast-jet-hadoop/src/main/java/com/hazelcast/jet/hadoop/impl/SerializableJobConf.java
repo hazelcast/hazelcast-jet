@@ -26,7 +26,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 /**
- * This class is used to make {@link JobConf} object serializable
+ * This class is used to make {@link JobConf} object serializable.
  */
 public final class SerializableJobConf extends JobConf implements Serializable {
 
@@ -34,7 +34,7 @@ public final class SerializableJobConf extends JobConf implements Serializable {
         //For deserialization
     }
 
-    private SerializableJobConf(JobConf jobConf) {
+    SerializableJobConf(JobConf jobConf) {
         super(jobConf);
     }
 
@@ -44,9 +44,5 @@ public final class SerializableJobConf extends JobConf implements Serializable {
 
     private void readObject(ObjectInputStream in) throws IOException {
         super.readFields(new DataInputStream(in));
-    }
-
-    public static SerializableJobConf asSerializable(JobConf conf) {
-        return new SerializableJobConf(conf);
     }
 }
