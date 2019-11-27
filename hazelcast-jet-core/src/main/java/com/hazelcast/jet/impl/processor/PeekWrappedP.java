@@ -65,7 +65,7 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
     }
 
     @Override
-    protected Outbox wrapOutbox(Outbox outbox) {
+    protected Outbox wrapOutbox(Outbox outbox, Context context) {
         return new LoggingOutbox(outbox, peekOutput, peekSnapshot);
     }
 

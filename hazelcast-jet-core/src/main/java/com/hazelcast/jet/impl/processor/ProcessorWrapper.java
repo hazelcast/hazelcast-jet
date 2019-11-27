@@ -52,7 +52,7 @@ public abstract class ProcessorWrapper implements Processor {
 
     @Override
     public final void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
-        outbox = wrapOutbox(outbox);
+        outbox = wrapOutbox(outbox, context);
         // Pass a logger with real class name to processor
         // We do this only if context is ProcCtx (that is, not for tests where TestProcessorContext can be used
         // and also other objects could be mocked or null, such as jetInstance())
@@ -74,7 +74,7 @@ public abstract class ProcessorWrapper implements Processor {
         initWrapper(outbox, context);
     }
 
-    protected Outbox wrapOutbox(Outbox outbox) {
+    protected Outbox wrapOutbox(Outbox outbox, Context context) {
         return outbox;
     }
 

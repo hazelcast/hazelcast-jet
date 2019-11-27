@@ -300,8 +300,8 @@ public class JetEventFunctionAdapter {
         }
 
         @Override
-        public void initWrapper(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
-            super.init(new AdaptingOutbox(outbox, context.globalProcessorIndex()), context);
+        protected Outbox wrapOutbox(Outbox outbox, Context context) {
+            return new AdaptingOutbox(outbox, context.globalProcessorIndex());
         }
     }
 
