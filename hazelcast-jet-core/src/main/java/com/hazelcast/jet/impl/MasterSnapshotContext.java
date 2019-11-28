@@ -173,6 +173,13 @@ class MasterSnapshotContext {
         });
     }
 
+    /**
+     * @param responses collected responses from the members
+     * @param snapshotMapName the IMap name to which the snapshot is written
+     * @param wasExport true, if this snapshot is an export
+     * @param wasTerminal true, if the execution terminates after this snapshot
+     * @param future a future to be completed when the phase-2 is fully completed
+     */
     private void onSnapshotPhase1Complete(
             Collection<Map.Entry<MemberInfo, Object>> responses,
             long executionId,
@@ -232,7 +239,7 @@ class MasterSnapshotContext {
                 logger.fine(String.format("Snapshot %d phase 1 for %s completed with status %s in %dms, " +
                                 "%,d bytes, %,d keys in %,d chunks, stored in '%s', proceeding to phase 2",
                         snapshotId, mc.jobIdString(), isSuccess ? "SUCCESS" : "FAILURE",
-                        stats.durationMs(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
+                        stats.duration(), stats.numBytes(), stats.numKeys(), stats.numChunks(), snapshotMapName));
             }
             if (!isSuccess) {
                 logger.warning(mc.jobIdString() + " snapshot " + snapshotId + " failed on some member(s), " +
@@ -260,6 +267,14 @@ class MasterSnapshotContext {
         });
     }
 
+    /**
+     * @param phase1Error error from the phase-1. Null if phase-1 was successful.
+     * @param responses collected responses from the members
+     * @param wasExport true, if this snapshot is an export
+     * @param wasTerminal true, if the execution terminates after this snapshot
+     * @param future future to be completed when the phase-2 is fully completed
+     * @param startTime phase-1 start time
+     */
     private void onSnapshotPhase2Complete(
             String phase1Error,
             Collection<Entry<MemberInfo, Object>> responses,
