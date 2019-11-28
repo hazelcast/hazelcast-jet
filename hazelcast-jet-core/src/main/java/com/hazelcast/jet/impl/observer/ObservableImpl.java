@@ -87,7 +87,4 @@ public class ObservableImpl<T> implements Observable<T>, MessageListener<Observa
         }
     }
 
-    //TODO (PR-1729): topics of observables could be cleaned up just as JobResults are...
-    // but that would work only for completed or failed ones...
-
 }

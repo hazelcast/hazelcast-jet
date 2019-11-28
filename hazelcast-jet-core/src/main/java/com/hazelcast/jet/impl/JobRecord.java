@@ -24,7 +24,9 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.hazelcast.jet.Util.idToString;
@@ -49,13 +51,13 @@ public class JobRecord implements IdentifiedDataSerializable {
     }
 
     public JobRecord(long jobId, long creationTime, Data dag, String dagJson, JobConfig config,
-                     Set<String> ownedObservables) {
+                     @Nonnull Set<String> ownedObservables) {
         this.jobId = jobId;
         this.creationTime = creationTime;
         this.dag = dag;
         this.dagJson = dagJson;
         this.config = config;
-        this.ownedObservables = ownedObservables;
+        this.ownedObservables = Objects.requireNonNull(ownedObservables, "ownedObservables");
     }
 
     public long getJobId() {
@@ -83,6 +85,7 @@ public class JobRecord implements IdentifiedDataSerializable {
         return config;
     }
 
+    @Nonnull
     public Set<String> getOwnedObservables() {
         return ownedObservables;
     }

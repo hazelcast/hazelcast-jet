@@ -34,6 +34,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.metrics.JobMetricsPublisher;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -79,6 +80,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     private Networking networking;
     private TaskletExecutionService taskletExecutionService;
     private JobRepository jobRepository;
+    private ObservableRepository observableRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
 
@@ -103,6 +105,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
                 nodeEngine, config.getInstanceConfig().getCooperativeThreadCount(), nodeEngine.getProperties()
         );
         jobRepository = new JobRepository(jetInstance);
+        observableRepository = new ObservableRepository(jetInstance, config);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
 
@@ -179,7 +182,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     }
 
     JobCoordinationService createJobCoordinationService() {
-        return new JobCoordinationService(nodeEngine, this, config, jobRepository);
+        return new JobCoordinationService(nodeEngine, this, config, jobRepository, observableRepository);
     }
 
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
