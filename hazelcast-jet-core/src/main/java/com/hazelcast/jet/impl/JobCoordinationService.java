@@ -36,6 +36,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.core.metrics.MetricNames;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
@@ -1019,15 +1020,15 @@ public class JobCoordinationService  {
 
     private static class Stats {
 
-        @Probe(name = "jobs.submitted")
+        @Probe(name = MetricNames.JOBS_SUBMITTED)
         private final AtomicInteger jobSubmitted = new AtomicInteger();
-        @Probe(name = "jobs.completed_successfully")
+        @Probe(name = MetricNames.JOBS_COMPLETED_SUCCESSFULLY)
         private final AtomicInteger jobCompletedSuccessfully = new AtomicInteger();
-        @Probe(name = "jobs.completed_with_failure")
+        @Probe(name = MetricNames.JOBS_COMPLETED_WITH_FAILURE)
         private final AtomicInteger jobCompletedWithFailure = new AtomicInteger();
-        @Probe(name = "jobs.execution_started")
+        @Probe(name = MetricNames.JOB_EXECUTIONS_STARTED)
         private final AtomicInteger executionStarted = new AtomicInteger();
-        @Probe(name = "jobs.execution_terminated")
+        @Probe(name = MetricNames.JOB_EXECUTIONS_TERMINATED)
         private final AtomicInteger executionTerminated = new AtomicInteger();
 
         void jobSubmitted() {

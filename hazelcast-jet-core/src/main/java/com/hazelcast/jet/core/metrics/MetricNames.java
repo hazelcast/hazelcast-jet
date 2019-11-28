@@ -27,9 +27,6 @@ import com.hazelcast.jet.core.Vertex;
  * attributes which describe a specific instance of the metric and are not
  * directly part of the identity of the metric.
  * <p>
- * Metric names are also being duplicated by the metric tag
- * {@link MetricTags#METRIC}.
- * <p>
  * The constants described here represent the various names metrics can
  * take in Jet.
  */
@@ -150,6 +147,38 @@ public final class MetricNames {
      * {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR} tags of the metric.
      */
     public static final String DISTRIBUTED_BYTES_OUT = "distributedBytesOut";
+
+    /**
+     * Number of computational jobs submitted to a particular Jet cluster
+     * member.
+     */
+    public static final String JOBS_SUBMITTED = "jobs.submitted";
+
+    /**
+     * Number of computational jobs successfully completed by a particular
+     * Jet cluster member.
+     */
+    public static final String JOBS_COMPLETED_SUCCESSFULLY = "jobs.completedSuccessfully";
+
+    /**
+     * Number of computational jobs that have failed on a particular Jet
+     * cluster member.
+     */
+    public static final String JOBS_COMPLETED_WITH_FAILURE = "jobs.completedWithFailure";
+
+    /**
+     * Number of computational job executions started on a particular Jet
+     * cluster member. Each job can execute multiple times, for example when
+     * it's restarted or suspended and then resumed.
+     */
+    public static final String JOB_EXECUTIONS_STARTED = "jobs.executionStarted";
+
+    /**
+     * Number of computational job executions finished on a particular Jet
+     * cluster member. Each job can execute multiple times, for example when
+     * it's restarted or suspended and then resumed.
+     */
+    public static final String JOB_EXECUTIONS_TERMINATED = "jobs.executionTerminated";
 
     private MetricNames() {
     }
