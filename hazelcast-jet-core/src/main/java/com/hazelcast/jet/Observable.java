@@ -17,18 +17,39 @@
 package com.hazelcast.jet;
 
 import javax.annotation.Nonnull;
+import java.util.function.Consumer;
 
 /**
- * Blah blah blah... //todo: write useful doc
- * @param <T>
+ * Represents a flowing sequence of values. The sequence can be observed
+ * by registering {@link Observer}s on it. Observers are able to see
+ * all the values that show up in the sequence after they have been
+ * registered.
+ * <p>
+ * Besides new values appearing observers can also observe completions and
+ * failure event. Completion means that no further values will appear in
+ * the sequence. Failure means that something went wrong during the
+ * production of the sequence's values and the event attempts to provide
+ * useful information about the cause of the problem.
+ *
+ * @param <T> type of the values in the sequence
  */
 public interface Observable<T> {
 
     /**
-     * Blah blah blah... //todo: write useful doc
+     * Register an instance of {@link Observer} to be notified about any
+     * subsequent events (value updates, failures and completion).
      */
     void addObserver(@Nonnull Observer<T> observer);
 
-    //todo: unsubscribe?
+    /**
+     * Register explicit callbacks (fulfilling the purpose of an
+     * {@link Observer}) to be notified about any subsequent events
+     * (value updates, failures and completion).
+     */
+    void addObserver(@Nonnull Consumer<? super T> onNext,
+                     @Nonnull Consumer<? super Throwable> onError,
+                     @Nonnull Runnable onComplete);
+
+    //TODO (PR-1729): removeObserver?
 
 }

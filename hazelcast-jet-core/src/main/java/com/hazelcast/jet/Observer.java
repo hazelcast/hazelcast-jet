@@ -19,15 +19,20 @@ package com.hazelcast.jet;
 import java.util.function.Consumer;
 
 /**
- * Blah blah blah... //todo: write useful doc
- * @param <T>
+ * Watcher of the events produced by an {@link Observable}. Once subscribed
+ * will be notified of all subsequent events produced by the
+ * {@link Observable}.
+ *
+ * @param <T> type of data values in the sequence produced by the
+ * {@link Observable}
  */
 public interface Observer<T> {
 
     /**
-     * Blah blah blah... //todo: write useful doc
+     * Utility method for building an {@link Observer} from its basic
+     * components.
      */
-    static <T> Observer<T> of(Consumer<T> onNext, Consumer<Throwable> onError, Runnable onComplete) {
+    static <T> Observer<T> of(Consumer<? super T> onNext, Consumer<? super Throwable> onError, Runnable onComplete) {
         return new Observer<T>() {
             @Override
             public void onNext(T t) {
@@ -47,17 +52,40 @@ public interface Observer<T> {
     }
 
     /**
-     * Blah blah blah... //todo: write useful doc
+     * Method that will be called when the {@link Observable} (to which this
+     * {@link Observer} is subscribed to) produces new data values.
+     * <p>
+     * The data values being passed via this method don't have a clear,
+     * global ordering. Some {@link Observable}s for example produce values
+     * in parallel so the order in which they arrive at subscribed
+     * {@link Observer}s is unpredicable.
+     * <p>
+     * It is not possible to observe data values after an error or completion
+     * has been observed.
      */
-    void onNext(T t); //todo: specify in javadoc that values won't be ordered
+    void onNext(T t);
 
     /**
-     * Blah blah blah... //todo: write useful doc
+     * Method that will be called when the {@link Observable} (to which this
+     * {@link Observer} is subscribed to) encounters an error in its
+     * process of producing data values.
+     * <p>
+     * The passed {@link Throwable} instance attempts to reflect/explain the
+     * original error as closely as possible.
+     * <p>
+     * Once an error has been observed no further data values nor completion
+     * events will be received.
      */
     void onError(Throwable throwable);
 
     /**
-     * Blah blah blah... //todo: write useful doc
+     * Method that will be called when the {@link Observable} (to which this
+     * {@link Observer} is subscribed to) finishes producing its sequence
+     * of data values. Only batch-type of observables will ever produce
+     * this event.
+     * <p>
+     * Once completion has been observed no further data values nor errors
+     * will be received.
      */
     void onComplete();
 

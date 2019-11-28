@@ -98,7 +98,11 @@ public interface ProcessorMetaSupplier extends Serializable {
     Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses);
 
     /**
-     * Blah blah blah... //todo: write useful doc
+     * Called on coordinator member after execution has finished on all
+     * members, successfully or not. The purpose is to figure out which
+     * {@link com.hazelcast.jet.Observable}s are being populated by the
+     * processors supplied so that completion or error events can be
+     * generated for those {@link com.hazelcast.jet.Observable}s.
      */
     @Nonnull
     default Set<String> ownedObservables() {

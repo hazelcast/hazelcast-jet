@@ -24,6 +24,7 @@ import com.hazelcast.topic.MessageListener;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 public class ObservableImpl<T> implements Observable<T>, MessageListener<ObservableBatch> {
 
@@ -36,6 +37,13 @@ public class ObservableImpl<T> implements Observable<T>, MessageListener<Observa
     @Override
     public void addObserver(@Nonnull Observer<T> observer) {
         this.observers.add(observer);
+    }
+
+    @Override
+    public void addObserver(@Nonnull Consumer<? super T> onNext,
+                            @Nonnull Consumer<? super Throwable> onError,
+                            @Nonnull Runnable onComplete) {
+        this.observers.add(Observer.of(onNext, onError, onComplete));
     }
 
     @Override
@@ -79,7 +87,7 @@ public class ObservableImpl<T> implements Observable<T>, MessageListener<Observa
         }
     }
 
-    //todo: topics of observables could be cleaned up just as JobResults are... but that would work only for completed
-    // or failed ones...
+    //TODO (PR-1729): topics of observables could be cleaned up just as JobResults are...
+    // but that would work only for completed or failed ones...
 
 }
