@@ -185,11 +185,11 @@ public class StatisticalMetricsTest {
         assertMBeans(
                 PREFIX + ":type=Metrics,instance=" + jetInstance.getName(),
                 Arrays.asList(
-                        entry("jobs.submitted", submitted),
-                        entry("jobs.execution_started", executionsStarted),
-                        entry("jobs.execution_terminated", executionsTerminated),
-                        entry("jobs.completed_successfully", completedSuccessfully),
-                        entry("jobs.completed_with_failure", completedWithFailure))
+                        entry(MetricNames.JOBS_SUBMITTED, submitted),
+                        entry(MetricNames.JOB_EXECUTIONS_STARTED, executionsStarted),
+                        entry(MetricNames.JOB_EXECUTIONS_TERMINATED, executionsTerminated),
+                        entry(MetricNames.JOBS_COMPLETED_SUCCESSFULLY, completedSuccessfully),
+                        entry(MetricNames.JOBS_COMPLETED_WITH_FAILURE, completedWithFailure))
         );
     }
 
