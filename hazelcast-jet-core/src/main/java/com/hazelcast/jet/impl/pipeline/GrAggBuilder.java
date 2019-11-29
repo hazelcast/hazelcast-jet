@@ -104,11 +104,11 @@ public class GrAggBuilder<K> {
         // Avoided Stream API here due to static typing issues
         List<FunctionEx<?, ? extends K>> adaptedKeyFns = new ArrayList<>();
         for (FunctionEx keyFn : keyFns) {
-            adaptedKeyFns.add(JetEventFunctionAdapter.INSTANCE.adaptKeyFn(keyFn));
+            adaptedKeyFns.add(JetEventFunctionAdapter.FN_ADAPTER.adaptKeyFn(keyFn));
         }
 
         Transform transform = new WindowGroupTransform<K, R>(
-                upstreamTransforms, wDef, adaptedKeyFns, JetEventFunctionAdapter.INSTANCE.adaptAggregateOperation(aggrOp));
+                upstreamTransforms, wDef, adaptedKeyFns, JetEventFunctionAdapter.FN_ADAPTER.adaptAggregateOperation(aggrOp));
         pipelineImpl.connect(upstreamTransforms, transform);
         return new StreamStageImpl<>(transform, pipelineImpl);
     }

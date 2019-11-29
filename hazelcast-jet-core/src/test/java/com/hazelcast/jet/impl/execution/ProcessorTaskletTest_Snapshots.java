@@ -198,7 +198,8 @@ public class ProcessorTaskletTest_Snapshots {
         }
         snapshotContext = new SnapshotContext(mock(ILogger.class), "test job", -1, guarantee);
         snapshotContext.initTaskletCount(1, 0);
-        final ProcessorTasklet t = new ProcessorTasklet(context, serializationService, processor, instreams, outstreams,
+        final ProcessorTasklet t = new ProcessorTasklet(context, serializationService::toData,
+                data -> { throw new UnsupportedOperationException(); }, null, processor, instreams, outstreams,
                 snapshotContext, snapshotCollector);
         t.init();
         return t;

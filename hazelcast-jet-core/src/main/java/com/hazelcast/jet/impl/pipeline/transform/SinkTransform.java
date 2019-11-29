@@ -51,7 +51,7 @@ public class SinkTransform<T> extends AbstractTransform {
             if (sink.isTotalParallelismOne()) {
                 e.allToOne(sink.name()).distributed();
             } else if (sink.inputPartitionKeyFunction() != null) {
-                FunctionEx keyFn = JetEventFunctionAdapter.INSTANCE.adaptKeyFn(sink.inputPartitionKeyFunction());
+                FunctionEx keyFn = JetEventFunctionAdapter.FN_ADAPTER.adaptKeyFn(sink.inputPartitionKeyFunction());
                 e.partitioned(keyFn, Partitioner.defaultPartitioner());
             }
         });

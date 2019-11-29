@@ -291,7 +291,8 @@ public class ProcessorTaskletTest_Blocking {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);
         }
-        final ProcessorTasklet t = new ProcessorTasklet(context, new DefaultSerializationServiceBuilder().build(),
+        final ProcessorTasklet t = new ProcessorTasklet(context, new DefaultSerializationServiceBuilder().build()::toData,
+                data -> { throw new UnsupportedOperationException(); }, null,
                 processor, instreams, outstreams, mock(SnapshotContext.class), new MockOutboundCollector(10));
         t.init();
         return t;

@@ -248,7 +248,8 @@ public class Planner {
         for (Transform fromTransform : transform.upstream()) {
             PlannerVertex fromPv = xform2vertex.get(fromTransform);
             Edge edge = from(fromPv.v, fromPv.nextAvailableOrdinal()).to(toVertex, destOrdinal)
-                    .partitioned((JetEvent e) -> e.key());
+                    // TODO [viliam] use as partition ID, not as partition key
+                    .partitioned((JetEvent e) -> e.partitionId());
             dag.edge(edge);
             configureEdgeFn.accept(edge, destOrdinal);
             destOrdinal++;

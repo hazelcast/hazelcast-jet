@@ -83,7 +83,7 @@ public class SourceBufferImpl<T> implements SourceBufferConsumerSide<T> {
     }
 
     public static class Timestamped<T>
-            extends SourceBufferImpl<JetEvent<T, Integer>>
+            extends SourceBufferImpl<JetEvent<T>>
             implements TimestampedSourceBuffer<T> {
 
         public Timestamped() {

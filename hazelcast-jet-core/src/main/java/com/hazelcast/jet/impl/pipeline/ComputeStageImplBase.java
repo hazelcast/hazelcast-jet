@@ -55,6 +55,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.FN_ADAPTER;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.filterUsingServicePartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingServiceAsyncPartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingServicePartitionedTransform;
@@ -72,9 +73,6 @@ import static java.util.Collections.singletonList;
 
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
-    @Nonnull
-    private static final JetEventFunctionAdapter FN_ADAPTER = JetEventFunctionAdapter.INSTANCE;
-
     ComputeStageImplBase(
             @Nonnull Transform transform,
             @Nonnull PipelineImpl pipelineImpl,
@@ -86,8 +84,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     public StreamStage<T> addTimestamps(@Nonnull ToLongFunctionEx<? super T> timestampFn, long allowedLateness) {
         checkSerializable(timestampFn, "timestampFn");
-        TimestampTransform<JetEvent<T, ?>> tsTransform = new TimestampTransform<>(transform,
-                EventTimePolicy.<JetEvent<T, ?>>eventTimePolicy(
+        TimestampTransform<JetEvent<T>> tsTransform = new TimestampTransform<>(transform,
+                EventTimePolicy.<JetEvent<T>>eventTimePolicy(
                         FN_ADAPTER.adaptTimestampFn(timestampFn),
                         JetEvent::jetEvent,
                         limitingLag(allowedLateness),

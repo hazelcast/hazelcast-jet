@@ -68,9 +68,6 @@ public class WordCount {
         new WordCount().go();
     }
 
-    /**
-     * This code illustrates a few more things about Jet, new in 0.5. See comments.
-     */
     private void go() {
         try {
             setup();

@@ -197,7 +197,7 @@ public class WindowAggregateTransform<A, R> extends AbstractTransform {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<R, K>> jetEventOfWindowResultFn() {
+    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<R>> jetEventOfWindowResultFn() {
         return JET_EVENT_WINDOW_RESULT_FN;
     }
 }

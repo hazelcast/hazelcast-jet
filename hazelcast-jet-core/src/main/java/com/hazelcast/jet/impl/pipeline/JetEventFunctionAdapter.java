@@ -44,10 +44,10 @@ import java.util.concurrent.CompletableFuture;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 
 public class JetEventFunctionAdapter {
-    public static final JetEventFunctionAdapter INSTANCE = new JetEventFunctionAdapter();
+    public static final JetEventFunctionAdapter FN_ADAPTER = new JetEventFunctionAdapter();
 
     @Nonnull
-    <T> ToLongFunctionEx<? super JetEvent<T, ?>> adaptTimestampFn(ToLongFunctionEx<? super T> timestampFn) {
+    <T> ToLongFunctionEx<? super JetEvent<T>> adaptTimestampFn(ToLongFunctionEx<? super T> timestampFn) {
         return e -> {
             // TODO [viliam] could we detect this when building the pipeline, not at runtime?
             assert e.timestamp() == JetEvent.NO_TIMESTAMP : "addTimestamp used to override an already existing timestamp";
@@ -57,52 +57,52 @@ public class JetEventFunctionAdapter {
 
     @SuppressWarnings("unused")
     @Nonnull
-    public <T, K> FunctionEx<? super JetEvent<T, ?>, ? extends K> adaptKeyFn(
+    public <T, K> FunctionEx<? super JetEvent<T>, ? extends K> adaptKeyFn(
             @Nonnull FunctionEx<? super T, ? extends K> keyFn
     ) {
         return e -> keyFn.apply(e.payload());
     }
 
     @Nonnull
-    <T> ToLongFunctionEx<? super JetEvent<T, ?>> adaptTimestampFn() {
+    <T> ToLongFunctionEx<? super JetEvent<T>> adaptTimestampFn() {
         return JetEvent::timestamp;
     }
 
     @Nonnull
-    <T, R> FunctionEx<? super JetEvent<T, ?>, ?> adaptMapFn(
+    <T, R> FunctionEx<? super JetEvent<T>, ?> adaptMapFn(
             @Nonnull FunctionEx<? super T, ? extends R> mapFn
     ) {
-        return e -> jetEvent(mapFn.apply(e.payload()), e.key(), e.timestamp());
+        return e -> jetEvent(mapFn.apply(e.payload()), e.partitionId(), e.timestamp());
     }
 
     @Nonnull
-    <T> PredicateEx<? super JetEvent<T, ?>> adaptFilterFn(@Nonnull PredicateEx<? super T> filterFn) {
+    <T> PredicateEx<? super JetEvent<T>> adaptFilterFn(@Nonnull PredicateEx<? super T> filterFn) {
         return e -> filterFn.test(e.payload());
     }
 
     @Nonnull
-    <T, R> FunctionEx<? super JetEvent<T, ?>, ? extends Traverser<JetEvent<R, ?>>> adaptFlatMapFn(
+    <T, R> FunctionEx<? super JetEvent<T>, ? extends Traverser<JetEvent<R>>> adaptFlatMapFn(
             @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(r, e.key(), e.timestamp()));
+        return e -> flatMapFn.apply(e.payload()).map(r -> jetEvent(r, e.partitionId(), e.timestamp()));
     }
 
     @Nonnull
-    <S, K, T, R> TriFunction<? super S, ? super K, ? super JetEvent<T, K>, ? extends R> adaptStatefulMapFn(
+    <S, K, T, R> TriFunction<? super S, ? super K, ? super JetEvent<T>, ? extends R> adaptStatefulMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends R> mapFn
     ) {
         return (state, key, e) -> mapFn.apply(state, key, e.payload());
     }
 
     @Nonnull
-    <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends JetEvent<R, K>> adaptOnEvictFn(
+    <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends JetEvent<R>> adaptOnEvictFn(
             @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends R> onEvictFn
     ) {
         return (s, k, wm) -> jetEvent(onEvictFn.apply(s, k, wm), k, wm);
     }
 
     @Nonnull
-    <S, K, T, R> TriFunction<? super S, ? super K, ? super JetEvent<T, K>, ? extends Traverser<JetEvent<R, K>>>
+    <S, K, T, R> TriFunction<? super S, ? super K, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>>
     adaptStatefulFlatMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
@@ -110,32 +110,32 @@ public class JetEventFunctionAdapter {
     }
 
     @Nonnull
-    <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<JetEvent<R, K>>> adaptOnEvictFlatMapFn(
+    <S, K, R> TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<JetEvent<R>>> adaptOnEvictFlatMapFn(
             @Nonnull TriFunction<? super S, ? super K, ? super Long, ? extends Traverser<R>> onEvictFn
     ) {
         return (s, k, wm) -> onEvictFn.apply(s, k, wm).map(r -> jetEvent(r, k, wm));
     }
 
     @Nonnull
-    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T, ?>, ? extends JetEvent<R, ?>> adaptMapUsingServiceFn(
+    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T>, ? extends JetEvent<R>> adaptMapUsingServiceFn(
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     ) {
-        return (s, e) -> jetEvent(mapFn.apply(s, e.payload()), e.key(), e.timestamp());
+        return (s, e) -> jetEvent(mapFn.apply(s, e.payload()), e.partitionId(), e.timestamp());
     }
 
     @Nonnull
-    <S, T> BiPredicateEx<? super S, ? super JetEvent<T, ?>> adaptFilterUsingServiceFn(
+    <S, T> BiPredicateEx<? super S, ? super JetEvent<T>> adaptFilterUsingServiceFn(
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
         return (s, e) -> filterFn.test(s, e.payload());
     }
 
     @Nonnull
-    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T, ?>, ? extends Traverser<JetEvent<R, ?>>>
+    <S, T, R> BiFunctionEx<? super S, ? super JetEvent<T>, ? extends Traverser<JetEvent<R>>>
     adaptFlatMapUsingServiceFn(
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<? extends R>> flatMapFn
     ) {
-        return (s, e) -> flatMapFn.apply(s, e.payload()).map(r -> jetEvent(r, e.key(), e.timestamp()));
+        return (s, e) -> flatMapFn.apply(s, e.payload()).map(r -> jetEvent(r, e.partitionId(), e.timestamp()));
     }
 
     @Nonnull
@@ -143,39 +143,39 @@ public class JetEventFunctionAdapter {
     adaptFlatMapUsingServiceAsyncFn(
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return (S s, JetEvent<T, ?> e) ->
+        return (S s, JetEvent<T> e) ->
                 flatMapAsyncFn.apply(s, e.payload())
-                              .thenApply(trav -> trav.map(re -> jetEvent(re, e.key(), e.timestamp())));
+                              .thenApply(trav -> trav.map(re -> jetEvent(re, e.partitionId(), e.timestamp())));
     }
 
     @Nonnull
-    <T, STR extends CharSequence> FunctionEx<? super JetEvent<T, ?>, ? extends STR> adaptToStringFn(
+    <T, STR extends CharSequence> FunctionEx<? super JetEvent<T>, ? extends STR> adaptToStringFn(
             @Nonnull FunctionEx<? super T, ? extends STR> toStringFn
     ) {
         return e -> toStringFn.apply(e.payload());
     }
 
     @Nonnull
-    public <K, T0, T1, T1_OUT> JoinClause<? extends K, ? super JetEvent<T0, ?>, ? super T1, ? extends T1_OUT>
+    public <K, T0, T1, T1_OUT> JoinClause<? extends K, ? super JetEvent<T0>, ? super T1, ? extends T1_OUT>
     adaptJoinClause(
             @Nonnull JoinClause<? extends K, ? super T0, ? super T1, ? extends T1_OUT> joinClause
     ) {
-        return JoinClause.<K, JetEvent<T0, ?>, T1>onKeys(adaptKeyFn(joinClause.leftKeyFn()), joinClause.rightKeyFn())
+        return JoinClause.<K, JetEvent<T0>, T1>onKeys(adaptKeyFn(joinClause.leftKeyFn()), joinClause.rightKeyFn())
                 .projecting(joinClause.rightProjectFn());
     }
 
     @Nonnull
-    public <T, T1, R> BiFunctionEx<? super JetEvent<T, ?>, ? super T1, ?> adaptHashJoinOutputFn(
+    public <T, T1, R> BiFunctionEx<? super JetEvent<T>, ? super T1, ?> adaptHashJoinOutputFn(
             @Nonnull BiFunctionEx<? super T, ? super T1, ? extends R> mapToOutputFn
     ) {
-        return (e, t1) -> jetEvent(mapToOutputFn.apply(e.payload(), t1), e.key(), e.timestamp());
+        return (e, t1) -> jetEvent(mapToOutputFn.apply(e.payload(), t1), e.partitionId(), e.timestamp());
     }
 
     @Nonnull
-    <T, T1, T2, R> TriFunction<? super JetEvent<T, ?>, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
+    <T, T1, T2, R> TriFunction<? super JetEvent<T>, ? super T1, ? super T2, ?> adaptHashJoinOutputFn(
             @Nonnull TriFunction<? super T, ? super T1, ? super T2, ? extends R> mapToOutputFn
     ) {
-        return (e, t1, t2) -> jetEvent(mapToOutputFn.apply(e.payload(), t1, t2), e.key(), e.timestamp());
+        return (e, t1, t2) -> jetEvent(mapToOutputFn.apply(e.payload(), t1, t2), e.partitionId(), e.timestamp());
     }
 
     @Nonnull
@@ -197,32 +197,32 @@ public class JetEventFunctionAdapter {
     }
 
     @Nonnull
-    <T, A, R> AggregateOperation1<? super JetEvent<T, ?>, A, ? extends R> adaptAggregateOperation1(
+    <T, A, R> AggregateOperation1<? super JetEvent<T>, A, ? extends R> adaptAggregateOperation1(
             @Nonnull AggregateOperation1<? super T, A, ? extends R> aggrOp
     ) {
         return aggrOp.withAccumulateFn(adaptAccumulateFn(aggrOp.accumulateFn()));
     }
 
     @Nonnull
-    static <T0, T1, A, R> AggregateOperation2<? super JetEvent<T0, ?>, ? super JetEvent<T1, ?>, A, ? extends R>
+    static <T0, T1, A, R> AggregateOperation2<? super JetEvent<T0>, ? super JetEvent<T1>, A, ? extends R>
     adaptAggregateOperation2(@Nonnull AggregateOperation2<? super T0, ? super T1, A, ? extends R> aggrOp) {
         return aggrOp
-                .<JetEvent<T0, ?>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
+                .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
                 .withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()));
     }
 
     @Nonnull
     static <T0, T1, T2, A, R>
-    AggregateOperation3<? super JetEvent<T0, ?>, ? super JetEvent<T1, ?>, ? super JetEvent<T2, ?>, A, ? extends R>
+    AggregateOperation3<? super JetEvent<T0>, ? super JetEvent<T1>, ? super JetEvent<T2>, A, ? extends R>
     adaptAggregateOperation3(@Nonnull AggregateOperation3<? super T0, ? super T1, ? super T2, A, ? extends R> aggrOp) {
         return aggrOp
-                .<JetEvent<T0, ?>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
-                .<JetEvent<T1, ?>>withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()))
+                .<JetEvent<T0>>withAccumulateFn0(adaptAccumulateFn(aggrOp.accumulateFn0()))
+                .<JetEvent<T1>>withAccumulateFn1(adaptAccumulateFn(aggrOp.accumulateFn1()))
                 .withAccumulateFn2(adaptAccumulateFn(aggrOp.accumulateFn2()));
     }
 
     @Nonnull
-    private static <A, T> BiConsumerEx<? super A, ? super JetEvent<T, ?>> adaptAccumulateFn(
+    private static <A, T> BiConsumerEx<? super A, ? super JetEvent<T>> adaptAccumulateFn(
             @Nonnull BiConsumerEx<? super A, ? super T> accumulateFn
     ) {
         return (acc, t) -> accumulateFn.accept(acc, t.payload());

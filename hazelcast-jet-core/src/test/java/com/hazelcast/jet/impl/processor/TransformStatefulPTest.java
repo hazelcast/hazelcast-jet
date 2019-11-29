@@ -61,9 +61,9 @@ public class TransformStatefulPTest {
 
     private final Function<Entry<Object, Long>, Traverser<Entry<Object, Long>>> expandEntryFn =
             en -> traverseItems(en, entry(en.getKey(), -en.getValue()));
-    private final Function<JetEvent<Entry<Object, Long>, Object>, Traverser<JetEvent<Entry<Object, Long>, Object>>>
-            expandJetEventFn =
-                    je -> traverseItems(je, jetEvent(entry(je.key(), -je.payload().getValue()), je.key(), je.timestamp()));
+    private final Function<JetEvent<Entry<Object, Long>>, Traverser<JetEvent<Entry<Object, Long>>>>
+            expandJetEventFn = je ->
+                    traverseItems(je, jetEvent(entry(je.payload().getKey(), -je.payload().getValue()), je.timestamp()));
 
     @Parameter
     public boolean flatMap;
@@ -122,10 +122,10 @@ public class TransformStatefulPTest {
     public void mapStateful_withTtl() {
         SupplierEx<Processor> supplier = createSupplier(
                 2,
-                JetEvent::key,
+                je -> je.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
                     return jetEvent(entry(k, s[0]), k, e.timestamp());
                 },
@@ -135,20 +135,20 @@ public class TransformStatefulPTest {
 
         TestSupport.verifyProcessor(supplier)
                    .input(asList(
-                           jetEvent(entry("a", 1L), "a", 0),
-                           jetEvent(entry("b", 2L), "b", 1),
+                           jetEvent(entry("a", 1L), 0),
+                           jetEvent(entry("b", 2L), 1),
                            wm(3), // evict a
-                           jetEvent(entry("a", 3L), "a", 3),
+                           jetEvent(entry("a", 3L), 3),
                            wm(4), // evict b
-                           jetEvent(entry("b", 4L), "b", 4)
+                           jetEvent(entry("b", 4L), 4)
                    ))
                    .expectOutput(asExpandedList(expandJetEventFn,
-                           jetEvent(entry("a", 1L), "a", 0),
-                           jetEvent(entry("b", 2L), "b", 1),
+                           jetEvent(entry("a", 1L), 0),
+                           jetEvent(entry("b", 2L), 1),
                            wm(3),
-                           jetEvent(entry("a", 3L), "a", 3),
+                           jetEvent(entry("a", 3L), 3),
                            wm(4),
-                           jetEvent(entry("b", 4L), "b", 4)
+                           jetEvent(entry("b", 4L), 4)
                    ));
     }
 
@@ -156,12 +156,12 @@ public class TransformStatefulPTest {
     public void mapStateful_withTtl_surviveWm() {
         SupplierEx<Processor> supplier = createSupplier(
                 2,
-                JetEvent::key,
+                je -> je.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
-                    return jetEvent(entry(k, s[0]), e.key(), e.timestamp());
+                    return jetEvent(entry(k, s[0]), k, e.timestamp());
                 },
                 null,
                 expandJetEventFn
@@ -169,14 +169,14 @@ public class TransformStatefulPTest {
 
         TestSupport.verifyProcessor(supplier)
                 .input(asList(
-                        jetEvent(entry("b", 1L), "b", 1),
+                        jetEvent(entry("b", 1L), 1),
                         wm(2),
-                        jetEvent(entry("b", 2L), "b", 2)
+                        jetEvent(entry("b", 2L), 2)
                 ))
                 .expectOutput(asExpandedList(expandJetEventFn,
-                        jetEvent(entry("b", 1L), "b", 1),
+                        jetEvent(entry("b", 1L), 1),
                         wm(2),
-                        jetEvent(entry("b", 3L), "b", 2)
+                        jetEvent(entry("b", 3L), 2)
                 ));
     }
 
@@ -184,12 +184,12 @@ public class TransformStatefulPTest {
     public void mapStateful_withTtl_evictOnlyExpired() {
         SupplierEx<Processor> supplier = createSupplier(
                 2,
-                JetEvent::key,
+                je -> je.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
-                    return jetEvent(entry(k, s[0]), e.key(), e.timestamp());
+                    return jetEvent(entry(k, s[0]), k, e.timestamp());
                 },
                 null,
                 expandJetEventFn
@@ -197,18 +197,18 @@ public class TransformStatefulPTest {
 
         TestSupport.verifyProcessor(supplier)
                 .input(asList(
-                        jetEvent(entry("a", 1L), "a", 0),
-                        jetEvent(entry("b", 2L), "b", 1),
+                        jetEvent(entry("a", 1L), 0),
+                        jetEvent(entry("b", 2L), 1),
                         wm(3),
-                        jetEvent(entry("a", 3L), "a", 3),
-                        jetEvent(entry("b", 4L), "b", 3)
+                        jetEvent(entry("a", 3L), 3),
+                        jetEvent(entry("b", 4L), 3)
                 ))
                 .expectOutput(asExpandedList(expandJetEventFn,
-                        jetEvent(entry("a", 1L), "a", 0),
-                        jetEvent(entry("b", 2L), "b", 1),
+                        jetEvent(entry("a", 1L), 0),
+                        jetEvent(entry("b", 2L), 1),
                         wm(3),
-                        jetEvent(entry("a", 3L), "a", 3),
-                        jetEvent(entry("b", 6L), "b", 3)
+                        jetEvent(entry("a", 3L), 3),
+                        jetEvent(entry("b", 6L), 3)
                 ));
     }
 
@@ -217,10 +217,10 @@ public class TransformStatefulPTest {
         long evictSignal = 99L;
         SupplierEx<Processor> supplier = createSupplier(
                 2,
-                JetEvent::key,
+                je -> je.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
                     return jetEvent(entry(k, s[0]), k, e.timestamp());
                 },
@@ -230,22 +230,22 @@ public class TransformStatefulPTest {
 
         TestSupport.verifyProcessor(supplier)
                    .input(asList(
-                           jetEvent(entry("a", 1L), "a", 0),
-                           jetEvent(entry("b", 2L), "b", 1),
+                           jetEvent(entry("a", 1L), 0),
+                           jetEvent(entry("b", 2L), 1),
                            wm(3), // evict a
-                           jetEvent(entry("a", 3L), "a", 3),
+                           jetEvent(entry("a", 3L), 3),
                            wm(4), // evict b
-                           jetEvent(entry("b", 4L), "b", 4)
+                           jetEvent(entry("b", 4L), 4)
                    ))
                    .expectOutput(asExpandedList(expandJetEventFn,
-                           jetEvent(entry("a", 1L), "a", 0),
-                           jetEvent(entry("b", 2L), "b", 1),
-                           jetEvent(entry("a", evictSignal), "a", 3),
+                           jetEvent(entry("a", 1L), 0),
+                           jetEvent(entry("b", 2L), 1),
+                           jetEvent(entry("a", evictSignal), 3),
                            wm(3),
-                           jetEvent(entry("a", 3L), "a", 3),
-                           jetEvent(entry("b", evictSignal), "b", 4),
+                           jetEvent(entry("a", 3L), 3),
+                           jetEvent(entry("b", evictSignal), 4),
                            wm(4),
-                           jetEvent(entry("b", 4L), "b", 4)
+                           jetEvent(entry("b", 4L), 4)
                    ));
     }
 
@@ -253,10 +253,10 @@ public class TransformStatefulPTest {
     public void mapStateful_withTtl_manyKeys() {
         SupplierEx<Processor> supplier = createSupplier(
                 2,
-                JetEvent::key,
+                je -> je.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
                     return jetEvent(entry(k, s[0]), k, e.timestamp());
                 },
@@ -272,12 +272,12 @@ public class TransformStatefulPTest {
         // instead of continuing to use them.
         List<Object> input = new ArrayList<>();
         for (int i = 0; i < numKeys; i++) {
-            input.add(jetEvent(entry("k" + i, 1L), "k" + i, 0));
+            input.add(jetEvent(entry("k" + i, 1L), 0));
         }
         input.add(wm(3));
         for (int i = numKeys; i > 0; ) {
             i--;
-            input.add(jetEvent(entry("k" + i, 3L), "k" + i, 3));
+            input.add(jetEvent(entry("k" + i, 3L), 3));
         }
 
         TestSupport.verifyProcessor(supplier)
@@ -294,7 +294,7 @@ public class TransformStatefulPTest {
                 JetEvent::key,
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Long, Long> e) -> {
+                (long[] s, Object k, JetEvent<Long> e) -> {
                     s[0] += e.payload();
                     return jetEvent(s[0], e.key(), e.timestamp());
                 },
@@ -309,8 +309,8 @@ public class TransformStatefulPTest {
                            jetEvent(1L, 0L, 0)
                    ))
                    .expectOutput(asList(
-                           jetEvent(1L, 0L, 0),
-                           jetEvent(3L, 0L, 1),
+                           jetEvent(1L, 0),
+                           jetEvent(3L, 1),
                            wm(3)
         ));
     }
@@ -319,10 +319,10 @@ public class TransformStatefulPTest {
     public void mapStateful_negativeWmTime() {
         SupplierEx<Processor> supplier = createSupplier(
                 2,
-                JetEvent::key,
+                je -> je.payload().getKey(),
                 JetEvent::timestamp,
                 () -> new long[1],
-                (long[] s, Object k, JetEvent<Entry<String, Long>, String> e) -> {
+                (long[] s, Object k, JetEvent<Entry<String, Long>> e) -> {
                     s[0] += e.payload().getValue();
                     return jetEvent(entry(k, s[0]), k, e.timestamp());
                 },
@@ -332,22 +332,22 @@ public class TransformStatefulPTest {
 
         TestSupport.verifyProcessor(supplier)
                    .input(asList(
-                           jetEvent(entry("a", 1L), "a", -10),
-                           jetEvent(entry("b", 2L), "b", -9),
+                           jetEvent(entry("a", 1L), -10),
+                           jetEvent(entry("b", 2L), -9),
                            wm(-7), // evict a
-                           jetEvent(entry("a", 3L), "a", -7),
-                           jetEvent(entry("b", 3L), "b", -7),
+                           jetEvent(entry("a", 3L), -7),
+                           jetEvent(entry("b", 3L), -7),
                            wm(-4), // evict b
-                           jetEvent(entry("b", 4L), "b", -4)
+                           jetEvent(entry("b", 4L), -4)
                    ))
                    .expectOutput(asExpandedList(expandJetEventFn,
-                           jetEvent(entry("a", 1L), "a", -10),
-                           jetEvent(entry("b", 2L), "b", -9),
+                           jetEvent(entry("a", 1L), -10),
+                           jetEvent(entry("b", 2L), -9),
                            wm(-7),
-                           jetEvent(entry("a", 3L), "a", -7),
-                           jetEvent(entry("b", 5L), "b", -7),
+                           jetEvent(entry("a", 3L), -7),
+                           jetEvent(entry("b", 5L), -7),
                            wm(-4),
-                           jetEvent(entry("b", 4L), "b", -4)
+                           jetEvent(entry("b", 4L), -4)
                    ));
     }
 

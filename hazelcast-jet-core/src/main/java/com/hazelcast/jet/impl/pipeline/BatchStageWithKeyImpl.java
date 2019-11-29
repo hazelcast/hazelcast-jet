@@ -28,6 +28,7 @@ import com.hazelcast.jet.aggregate.AggregateOperation3;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.pipeline.transform.DistinctTransform;
 import com.hazelcast.jet.impl.pipeline.transform.GroupTransform;
 import com.hazelcast.jet.pipeline.BatchStage;
@@ -38,6 +39,8 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
+import static com.hazelcast.jet.impl.pipeline.JetEventFunctionAdapter.FN_ADAPTER;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -76,7 +79,8 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
 
     @Nonnull @Override
     public BatchStage<T> distinct() {
-        return computeStage.attach(new DistinctTransform<>(computeStage.transform, keyFn()));
+        return computeStage.attach(new DistinctTransform<JetEvent<T>, K>(computeStage.transform,
+                FN_ADAPTER.adaptKeyFn(keyFn())));
     }
 
     @Nonnull @Override
@@ -141,10 +145,10 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
         return computeStage.attach(new GroupTransform<>(
-                        singletonList(computeStage.transform),
-                        singletonList(keyFn()),
-                        aggrOp,
-                        Util::entry)
+                singletonList(computeStage.transform),
+                singletonList(FN_ADAPTER.adaptKeyFn(keyFn())),
+                FN_ADAPTER.adaptAggregateOperation1(aggrOp),
+                (K k, R v) -> jetEvent(Util.entry(k, v), k, JetEvent.NO_TIMESTAMP))
         );
     }
 
@@ -156,7 +160,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1)),
-                        asList(keyFn(), stage1.keyFn()),
+                        asList(FN_ADAPTER.adaptKeyFn(keyFn()), FN_ADAPTER.adaptKeyFn(stage1.keyFn())),
                         aggrOp,
                         Util::entry
                 ));
@@ -171,7 +175,7 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
         return computeStage.attach(
                 new GroupTransform<>(
                         asList(computeStage.transform, transformOf(stage1), transformOf(stage2)),
-                        asList(keyFn(), stage1.keyFn(), stage2.keyFn()),
+                        asList(FN_ADAPTER.adaptKeyFn(keyFn()), FN_ADAPTER.adaptKeyFn(stage1.keyFn()), FN_ADAPTER.adaptKeyFn(stage2.keyFn())),
                         aggrOp,
                         Util::entry)
         );

@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
-import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
@@ -39,9 +39,11 @@ import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.logging.Logger;
+import com.hazelcast.nio.serialization.Data;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -51,7 +53,9 @@ import java.util.Queue;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 
 import static com.hazelcast.jet.core.metrics.MetricNames.COALESCED_WM;
 import static com.hazelcast.jet.core.metrics.MetricNames.EMITTED_COUNT;
@@ -98,8 +102,10 @@ public class ProcessorTasklet implements Tasklet {
     private final Queue<ArrayList<InboundEdgeStream>> instreamGroupQueue;
     private final WatermarkCoalescer watermarkCoalescer;
     private final ILogger logger;
-    private final SerializationService serializationService;
+    private final Function<Object, Data> serializeFn;
+    private final ToIntFunction<Data> partitionIdFn;
     private final List<? extends InboundEdgeStream> instreams;
+    @Nullable private final ManagedContext managedContext;
 
     private int numActiveOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
@@ -130,8 +136,11 @@ public class ProcessorTasklet implements Tasklet {
     private final MetricsContext metricsContext = new MetricsContext();
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
-    public ProcessorTasklet(@Nonnull Context context,
-            @Nonnull SerializationService serializationService,
+    public ProcessorTasklet(
+            @Nonnull Context context,
+            @Nonnull Function<Object, Data> serializeFn,
+            @Nonnull ToIntFunction<Data> partitionIdFn,
+            @Nullable ManagedContext managedContext,
             @Nonnull Processor processor,
             @Nonnull List<? extends InboundEdgeStream> instreams,
             @Nonnull List<? extends OutboundEdgeStream> outstreams,
@@ -140,7 +149,9 @@ public class ProcessorTasklet implements Tasklet {
     ) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
-        this.serializationService = serializationService;
+        this.serializeFn = serializeFn;
+        this.partitionIdFn = partitionIdFn;
+        this.managedContext = managedContext;
         this.processor = processor;
         this.numActiveOrdinals = instreams.size();
         this.instreams = instreams;
@@ -181,16 +192,15 @@ public class ProcessorTasklet implements Tasklet {
             collectors[i] = outstreams[i].getCollector();
         }
         collectors[outstreams.length] = ssCollector;
-        return new OutboxImpl(collectors, true, progTracker,
-                serializationService, OUTBOX_BATCH_SIZE, emittedCounts);
+        return new OutboxImpl(collectors, true, progTracker, serializeFn, partitionIdFn, OUTBOX_BATCH_SIZE, emittedCounts);
     }
 
     @Override
     public void init() {
-        if (serializationService.getManagedContext() != null) {
+        if (managedContext != null) {
             Processor toInit = processor instanceof ProcessorWrapper
                     ? ((ProcessorWrapper) processor).getWrapped() : processor;
-            Object initialized = serializationService.getManagedContext().initialize(toInit);
+            Object initialized = managedContext.initialize(toInit);
             assert initialized == toInit : "different object returned";
         }
         try {

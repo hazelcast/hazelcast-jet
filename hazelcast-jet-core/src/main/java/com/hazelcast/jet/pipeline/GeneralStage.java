@@ -885,6 +885,7 @@ public interface GeneralStage<T> extends Stage {
      * TODO [viliam]
      *
      * @return the newly attached stage
+     * @since 4.0
      */
     @Nonnull
     GeneralStage<T> rebalanceLocal();
@@ -893,6 +894,7 @@ public interface GeneralStage<T> extends Stage {
      * TODO [viliam]
      *
      * @return the newly attached stage
+     * @since 4.0
      */
     @Nonnull
     GeneralStage<T> rebalanceGlobal();

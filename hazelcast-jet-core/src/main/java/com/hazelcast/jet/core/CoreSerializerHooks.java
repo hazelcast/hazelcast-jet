@@ -84,17 +84,16 @@ class CoreSerializerHooks {
                 @Override
                 public void write(ObjectDataOutput out, JetEvent object) throws IOException {
                     out.writeObject(object.payload());
-                    // TODO [viliam] key is typically part of payload, can we somehow avoid serializing it?
-                    out.writeObject(object.key());
+                    out.writeInt(object.partitionId());
                     out.writeLong(object.timestamp());
                 }
 
                 @Override
                 public JetEvent read(ObjectDataInput in) throws IOException {
                     Object payload = in.readObject();
-                    Object key = in.readObject();
+                    int partitionId = in.readInt();
                     long timestamp = in.readLong();
-                    return jetEvent(payload, key, timestamp);
+                    return jetEvent(payload, partitionId, timestamp);
                 }
 
                 @Override

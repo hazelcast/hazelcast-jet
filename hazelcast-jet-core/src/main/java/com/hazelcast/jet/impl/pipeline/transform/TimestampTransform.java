@@ -49,9 +49,7 @@ public class TimestampTransform<T> extends AbstractTransform {
     public void addToDag(Planner p) {
         PlannerVertex upstream = p.xform2vertex.get(this.upstream().get(0));
         int localParallelism = upstream.v.determineLocalParallelism(upstream.v.getLocalParallelism());
-        PlannerVertex pv = p.addVertex(
-                this, name(), localParallelism, insertWatermarksP(eventTimePolicy)
-        );
+        PlannerVertex pv = p.addVertex(this, name(), localParallelism, insertWatermarksP(eventTimePolicy));
         p.addEdges(this, pv.v, Edge::isolated);
     }
 

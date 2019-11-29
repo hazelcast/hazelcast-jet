@@ -176,7 +176,7 @@ public class WindowGroupTransform<K, R> extends AbstractTransform {
     }
 
     @SuppressWarnings("unchecked")
-    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<? extends KeyedWindowResult<K, ? extends R>, K>>
+    private static <K, R> KeyedWindowResultFunction<K, R, JetEvent<? extends KeyedWindowResult<K, ? extends R>>>
     jetEventOfKeyedWindowResultFn() {
         return JET_EVENT_KEYED_WINDOW_RESULT_FN;
     }

@@ -60,7 +60,7 @@ public class StageWithKeyAndWindowImpl<T, K>
     public <R> StreamStage<KeyedWindowResult<K, R>> aggregate(
             @Nonnull AggregateOperation1<? super T, ?, ? extends R> aggrOp
     ) {
-        JetEventFunctionAdapter fnAdapter = JetEventFunctionAdapter.INSTANCE;
+        JetEventFunctionAdapter fnAdapter = JetEventFunctionAdapter.FN_ADAPTER;
         return computeStage.attach(new WindowGroupTransform<K, R>(
                         singletonList(computeStage.transform),
                         wDef,
@@ -76,7 +76,7 @@ public class StageWithKeyAndWindowImpl<T, K>
             @Nonnull AggregateOperation2<? super T, ? super T1, ?, ? extends R> aggrOp
     ) {
         Transform upstream1 = ((StageWithGroupingBase) stage1).computeStage.transform;
-        JetEventFunctionAdapter fnAdapter = JetEventFunctionAdapter.INSTANCE;
+        JetEventFunctionAdapter fnAdapter = JetEventFunctionAdapter.FN_ADAPTER;
         return computeStage.attach(new WindowGroupTransform<K, R>(
                         asList(computeStage.transform, upstream1),
                         wDef,
@@ -95,7 +95,7 @@ public class StageWithKeyAndWindowImpl<T, K>
     ) {
         Transform transform1 = ((StageWithGroupingBase) stage1).computeStage.transform;
         Transform transform2 = ((StageWithGroupingBase) stage2).computeStage.transform;
-        JetEventFunctionAdapter fnAdapter = JetEventFunctionAdapter.INSTANCE;
+        JetEventFunctionAdapter fnAdapter = JetEventFunctionAdapter.FN_ADAPTER;
         return computeStage.attach(new WindowGroupTransform<K, R>(
                         asList(computeStage.transform, transform1, transform2),
                         wDef,

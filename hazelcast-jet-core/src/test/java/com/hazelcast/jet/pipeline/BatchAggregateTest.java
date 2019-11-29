@@ -51,7 +51,7 @@ import static org.junit.Assert.assertEquals;
 public class BatchAggregateTest extends PipelineTestSupport {
 
     private static final AggregateOperation1<Integer, LongAccumulator, Long> SUMMING =
-            AggregateOperations.summingLong(i -> i);
+            AggregateOperations.summingLong(i1 -> i1);
 
     private static final int FACTOR_1 = 1_000;
     private static final int FACTOR_2 = 1_000_000;
@@ -315,7 +315,7 @@ public class BatchAggregateTest extends PipelineTestSupport {
         // When
         BatchStage<Entry<Integer, Long>> aggregated = sourceStageFromInput()
                 .groupingKey(keyFn)
-                .aggregate(SUMMING);
+                .aggregate(AggregateOperations.summingLong(i1 -> i1));
 
         // Then
         aggregated.writeTo(sink);

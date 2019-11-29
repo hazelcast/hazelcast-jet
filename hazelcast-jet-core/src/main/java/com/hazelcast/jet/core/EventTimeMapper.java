@@ -31,6 +31,7 @@ import java.util.function.ToLongFunction;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static com.hazelcast.jet.core.SlidingWindowPolicy.tumblingWinPolicy;
+import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -230,13 +231,15 @@ public class EventTimeMapper<T> {
         handleEventInternal(now, partitionIndex, eventTime);
         Object key;
         if (event instanceof JetEvent) {
-            // if the input is JetEvent, reuse its key - this is the case of addTimestamps
-            key = ((JetEvent) event).key();
+            JetEvent je = (JetEvent) event;
+            // if the input is JetEvent, reuse it - this is the case of addTimestamps
+            assert je.key() == null : "non-null key";
+            return traverser.append(jetEvent(je.payload(), je.partitionId(), eventTime));
         } else {
             // use a combination of source's partition index and global processor index as the key
             key = globalProcessorIndexHighBits | partitionIndex;
+            return traverser.append(wrapFn.apply(event, key, eventTime));
         }
-        return traverser.append(wrapFn.apply(event, key, eventTime));
     }
 
     private void handleEventInternal(long now, int partitionIndex, long eventTime) {

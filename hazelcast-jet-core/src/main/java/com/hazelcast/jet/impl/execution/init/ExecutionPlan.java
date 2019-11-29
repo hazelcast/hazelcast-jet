@@ -195,7 +195,9 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
                 OutboundCollector snapshotCollector = new ConveyorCollector(ssConveyor, localProcessorIdx, null);
 
-                ProcessorTasklet processorTasklet = new ProcessorTasklet(context, nodeEngine.getSerializationService(),
+                ProcessorTasklet processorTasklet = new ProcessorTasklet(context, nodeEngine::toData,
+                        nodeEngine.getPartitionService()::getPartitionId,
+                        nodeEngine.getSerializationService().getManagedContext(),
                         processor, inboundStreams, outboundStreams, snapshotContext, snapshotCollector
                 );
                 tasklets.add(processorTasklet);

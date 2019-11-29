@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.impl.execution;
 
-import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.jet.impl.util.Util;
@@ -29,6 +29,8 @@ import java.util.BitSet;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.Preconditions.checkPositive;
@@ -39,7 +41,8 @@ public class OutboxImpl implements OutboxInternal {
 
     private final OutboundCollector[] outstreams;
     private final ProgressTracker progTracker;
-    private final SerializationService serializationService;
+    private final Function<Object, Data> serializeFn;
+    private final ToIntFunction<Data> partitionIdFn;
     private final int batchSize;
     private final AtomicLongArray counters;
 
@@ -68,10 +71,12 @@ public class OutboxImpl implements OutboxInternal {
      *                  {@link #reset()} is called.
      */
     public OutboxImpl(OutboundCollector[] outstreams, boolean hasSnapshot, ProgressTracker progTracker,
-                      SerializationService serializationService, int batchSize, AtomicLongArray counters) {
+                      Function<Object, Data> serializeFn, ToIntFunction<Data> partitionIdFn, int batchSize,
+                      AtomicLongArray counters) {
         this.outstreams = outstreams;
         this.progTracker = progTracker;
-        this.serializationService = serializationService;
+        this.serializeFn = serializeFn;
+        this.partitionIdFn = partitionIdFn;
         this.batchSize = batchSize;
         this.counters = counters;
         checkPositive(batchSize, "batchSize must be positive");
@@ -124,6 +129,12 @@ public class OutboxImpl implements OutboxInternal {
                 "or AbstractProcessor.tryEmit() returned false";
         if (item instanceof Watermark) {
             lastForwardedWm.lazySet(((Watermark) item).timestamp());
+        }
+        // calculate the partition ID if a JetEvent is added to the outbox
+        if (item instanceof JetEvent && ((JetEvent) item).key() != null) {
+            assert ((JetEvent) item).partitionId() == JetEvent.UNINITIALIZED_PARTITION_ID;
+            Data serializedKey = serializeFn.apply(((JetEvent) item).key());
+            ((JetEvent) item).setPartitionId(partitionIdFn.applyAsInt(serializedKey));
         }
         numRemainingInBatch--;
         boolean done = true;
@@ -193,8 +204,8 @@ public class OutboxImpl implements OutboxInternal {
         if (pendingSnapshotEntry == null) {
             // We serialize the key and value immediately to effectively clone them,
             // so the caller can modify them right after they are accepted by this method.
-            Data sKey = serializationService.toData(key);
-            Data sValue = serializationService.toData(value);
+            Data sKey = serializeFn.apply(key);
+            Data sValue = serializeFn.apply(value);
             pendingSnapshotEntry = entry(sKey, sValue);
         }
 

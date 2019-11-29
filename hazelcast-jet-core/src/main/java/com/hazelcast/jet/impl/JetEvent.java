@@ -25,18 +25,20 @@ import java.util.Objects;
  * Combines the event with timestamp and key.
  *
  * @param <T> type of the wrapped event
- * @param <K> type of the wrapped key
  */
-public final class JetEvent<T, K> {
+public final class JetEvent<T> {
     public static final long NO_TIMESTAMP = Long.MIN_VALUE;
+    public static final int UNINITIALIZED_PARTITION_ID = -1;
 
-    @Nonnull private final T payload;
-    @Nonnull private final K key;
+    private final T payload;
+    private int partitionId;
     private final long timestamp;
+    private transient Object key;
 
-    private JetEvent(@Nonnull T payload, @Nonnull K key, long timestamp) {
+    private JetEvent(@Nonnull T payload, @Nullable Object key, int partitionId, long timestamp) {
         this.payload = payload;
         this.key = key;
+        this.partitionId = partitionId;
         this.timestamp = timestamp;
     }
 
@@ -44,14 +46,38 @@ public final class JetEvent<T, K> {
      * Creates a new {@code JetEvent} with the given components.
      */
     @Nullable
-    public static <T, K> JetEvent<T, K> jetEvent(@Nullable T payload, @Nullable K key, long timestamp) {
+    public static <T> JetEvent<T> jetEvent(@Nullable T payload, int partitionId, long timestamp) {
         if (payload == null) {
             return null;
         }
-        if (key == null) {
-            throw new IllegalArgumentException("Key is required");
+        return new JetEvent<>(payload, null, partitionId, timestamp);
+    }
+
+    /**
+     * Creates a new {@code JetEvent} with the given components.
+     */
+    @Nullable
+    public static <T> JetEvent<T> jetEvent(@Nullable T payload, @Nonnull Object key, long timestamp) {
+        if (payload == null) {
+            return null;
         }
-        return new JetEvent<>(payload, key, timestamp);
+        assert key != null : "null key";
+        return new JetEvent<>(payload, key, UNINITIALIZED_PARTITION_ID, timestamp);
+    }
+
+    /**
+     * Creates a new {@code JetEvent} for tests where the key is null and
+     * partitionId is 0. We don't need the key as it's a part of the payload
+     * normally.
+     *
+     * TODO [viliam] rename to testJetEvent
+     */
+    @Nullable
+    public static <T> JetEvent<T> jetEvent(@Nullable T payload, long timestamp) {
+        if (payload == null) {
+            return null;
+        }
+        return new JetEvent<>(payload, null, 0, timestamp);
     }
 
     /**
@@ -69,14 +95,26 @@ public final class JetEvent<T, K> {
         return payload;
     }
 
-    @Nonnull
-    public K key() {
+    public Object key() {
         return key;
+    }
+
+    public int partitionId() {
+        assert partitionId != UNINITIALIZED_PARTITION_ID : "uninitialized partition id";
+        return partitionId;
+    }
+
+    public void setPartitionId(int partitionId) {
+        if (partitionId != UNINITIALIZED_PARTITION_ID) {
+            this.partitionId = partitionId;
+            this.key = null;
+        }
     }
 
     @Override
     public String toString() {
-        return "JetEvent{payload=" + payload + ", key=" + key + ", timestamp=" + timestamp + '}';
+        return "JetEvent{payload=" + payload + ", key=" + key + ", partitionId=" + partitionId + ", timestamp=" + timestamp
+                + '}';
     }
 
     @Override
@@ -87,14 +125,10 @@ public final class JetEvent<T, K> {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        JetEvent<?, ?> jetEvent = (JetEvent<?, ?>) o;
+        JetEvent<?> jetEvent = (JetEvent<?>) o;
         return timestamp == jetEvent.timestamp &&
+                partitionId == jetEvent.partitionId &&
                 payload.equals(jetEvent.payload) &&
-                key.equals(jetEvent.key);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(payload, key, timestamp);
+                Objects.equals(key, jetEvent.key);
     }
 }

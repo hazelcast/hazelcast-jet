@@ -62,7 +62,7 @@ public class AggBuilder {
             @Nonnull AggregateOperation<A, R> aggrOp,
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
-        AggregateOperation adaptedAggrOp = JetEventFunctionAdapter.INSTANCE.adaptAggregateOperation(aggrOp);
+        AggregateOperation adaptedAggrOp = JetEventFunctionAdapter.FN_ADAPTER.adaptAggregateOperation(aggrOp);
         List<Transform> upstreamTransforms = upstreamStages
                 .stream()
                 .map(s -> ((AbstractStage) s).transform)

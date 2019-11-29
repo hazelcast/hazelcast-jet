@@ -1043,7 +1043,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> custom = streamStageFromList(input).customTransform("map",
                 Processors.mapP(o -> {
                     @SuppressWarnings("unchecked")
-                    JetEvent<Integer, ?> jetEvent = (JetEvent<Integer, ?>) o;
+                    JetEvent<Integer> jetEvent = (JetEvent<Integer>) o;
                     return jetEvent(mapFn.apply(jetEvent.payload()), jetEvent.key(), jetEvent.timestamp());
                 }));
 
@@ -1066,7 +1066,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
                         ServiceFactory.withCreateFn(jet -> new HashSet<>()),
-                        (Set<Integer> seen, JetEvent<Integer, ?> jetEvent) -> {
+                        (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
                             return seen.add(key) ? jetEvent(key, jetEvent.key(), jetEvent.timestamp()) : null;
                         }));

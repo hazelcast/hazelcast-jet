@@ -85,8 +85,8 @@ public final class TestOutbox implements OutboxInternal {
                     : e -> addToQueue(snapshotQueue, snapshotCapacity, (Entry<Data, Data>) e));
 
         serializationService = new DefaultSerializationServiceBuilder().build();
-        outbox = new OutboxImpl(outstreams, snapshotCapacity > 0, new ProgressTracker(), serializationService,
-                Integer.MAX_VALUE, new AtomicLongArray(outstreams.length + (snapshotCapacity > 0 ? 1 : 0)));
+        outbox = new OutboxImpl(outstreams, snapshotCapacity > 0, new ProgressTracker(), serializationService::toData,
+                keyData -> 0, Integer.MAX_VALUE, new AtomicLongArray(outstreams.length + (snapshotCapacity > 0 ? 1 : 0)));
         outbox.reset();
     }
 

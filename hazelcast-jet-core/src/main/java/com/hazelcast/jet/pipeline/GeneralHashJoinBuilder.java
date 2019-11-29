@@ -99,14 +99,14 @@ public abstract class GeneralHashJoinBuilder<T0> {
         List<JoinClause<?, T0, ?, ?>> joinClauses = new ArrayList<>();
         List<Tag> tags = new ArrayList<>();
         for (Entry<Tag<?>, TransformAndClause> entry : orderedClauses) {
-            joinClauses.add(JetEventFunctionAdapter.INSTANCE.adaptJoinClause(entry.getValue().clause()));
+            joinClauses.add(JetEventFunctionAdapter.FN_ADAPTER.adaptJoinClause(entry.getValue().clause()));
             tags.add(entry.getKey());
         }
         HashJoinTransform<T0, R> hashJoinTransform = new HashJoinTransform(
                 upstream,
                 joinClauses,
                 tags,
-                JetEventFunctionAdapter.INSTANCE.adaptHashJoinOutputFn(mapToOutputFn));
+                JetEventFunctionAdapter.FN_ADAPTER.adaptHashJoinOutputFn(mapToOutputFn));
         pipelineImpl.connect(upstream, hashJoinTransform);
         return createOutStageFn.get(hashJoinTransform, pipelineImpl);
     }
