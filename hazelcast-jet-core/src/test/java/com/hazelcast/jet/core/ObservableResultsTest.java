@@ -68,9 +68,9 @@ public class ObservableResultsTest extends TestInClusterSupport {
         Job job = jet().newJob(pipeline);
         job.join();
 
-        assertEquals(Arrays.asList(0L, 1L, 2L, 3L, 4L), testObserver.getSortedValues());
-        assertNull(testObserver.getError());
-        assertEquals(1, testObserver.getNoOfCompletions());
+        assertSortedValues(testObserver, 0L, 1L, 2L, 3L, 4L);
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 1);
     }
 
     @Test
@@ -90,9 +90,9 @@ public class ObservableResultsTest extends TestInClusterSupport {
         Job job = jet().newJob(pipeline);
         assertTrueEventually(() -> assertEquals(JobStatus.FAILED, job.getStatus()));
 
-        assertTrue(testObserver.getSortedValues().isEmpty());
-        assertTrue(Objects.requireNonNull(testObserver.getError()).getMessage().contains("Ooops!"));
-        assertEquals(0, testObserver.getNoOfCompletions());
+        assertSortedValues(testObserver);
+        assertError(testObserver, "Ooops!");
+        assertCompletions(testObserver, 0);
     }
 
     @Test
@@ -106,13 +106,13 @@ public class ObservableResultsTest extends TestInClusterSupport {
         Job job = jet().newJob(pipeline);
 
         assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
-        assertNull(testObserver.getError());
-        assertEquals(0, testObserver.getNoOfCompletions());
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
 
         job.cancel();
         assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
-        assertNull(testObserver.getError());
-        assertEquals(0, testObserver.getNoOfCompletions());
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
     }
 
     @Test
@@ -129,13 +129,30 @@ public class ObservableResultsTest extends TestInClusterSupport {
         Job job = jet().newJob(pipeline);
         job.join();
 
-        assertEquals(Arrays.asList(0L, 2L, 4L), testObserver.getSortedValues());
-        assertNull(testObserver.getError());
-        assertEquals(1, testObserver.getNoOfCompletions());
+        assertSortedValues(testObserver, 0L, 2L, 4L);
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 1);
 
-        assertEquals(Arrays.asList(1L, 3L), otherTestObserver.getSortedValues());
-        assertNull(otherTestObserver.getError());
-        assertEquals(1, otherTestObserver.getNoOfCompletions());
+        assertSortedValues(otherTestObserver, 1L, 3L);
+        assertError(otherTestObserver, null);
+        assertCompletions(otherTestObserver, 1);
+    }
+
+    private static void assertSortedValues(TestObserver observer, Long... values) {
+        assertTrueEventually(() -> assertEquals(Arrays.asList(values), observer.getSortedValues()));
+    }
+
+    private static void assertError(TestObserver observer, String error) {
+        if (error == null) {
+            assertNull(observer.getError());
+        } else {
+            assertTrueEventually(() ->
+                    assertTrue(Objects.requireNonNull(observer.getError()).getMessage().contains(error)));
+        }
+    }
+
+    private static void assertCompletions(TestObserver observer, int completions) {
+        assertTrueEventually(() -> assertEquals(completions, observer.getNoOfCompletions()));
     }
 
     private static final class TestObserver implements Observer<Long> {
