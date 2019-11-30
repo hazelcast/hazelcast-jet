@@ -114,10 +114,10 @@ class MasterSnapshotContext {
         } finally {
             mc.unlock();
         }
-        tryBeginSnapshotPhase1();
+        tryBeginSnapshot();
     }
 
-    void tryBeginSnapshotPhase1() {
+    void tryBeginSnapshot() {
         mc.coordinationService().submitToCoordinatorThread(() -> {
         boolean isTerminal;
         String snapshotMapName;
@@ -333,7 +333,7 @@ class MasterSnapshotContext {
                         + (phase1Error == null ? "success" : "failure: " + phase1Error));
             }
 
-            tryBeginSnapshotPhase1();
+            tryBeginSnapshot();
         });
     }
 
