@@ -190,8 +190,7 @@ public final class Sources {
      * still give incorrect results without reporting a failure. Concurrent
      * mutation is not detected at all.
      * <p>
-     * The default local parallelism for this processor is 2 (or 1 if just 1
-     * CPU is available).
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static <K, V> BatchSource<Entry<K, V>> map(@Nonnull IMap<? extends K, ? extends V> map) {
@@ -230,8 +229,7 @@ public final class Sources {
      * still give incorrect results without reporting a failure. Concurrent
      * mutation is not detected at all.
      * <p>
-     * The default local parallelism for this processor is 2 (or 1 if just 1
-     * CPU is available).
+     * The default local parallelism for this processor is 1.
      *
      * <h4>Predicate/projection class requirements</h4>
      *
