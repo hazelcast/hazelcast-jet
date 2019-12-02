@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.observer;
 
 import com.hazelcast.collection.IList;
-import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetProperties;
@@ -25,54 +24,58 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.topic.ITopic;
 
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
-import static java.lang.Math.min;
 
 public class ObservableRepository {
 
     private static final String COMPLETED_OBSERVABLES_LIST_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
     private static final int MAX_CLEANUP_ATTEMPTS_AT_ONCE = 10;
 
-    private final HazelcastInstance instance;
+    private final JetInstance jet;
     private final IList<Tuple2<String, Long>> completedObservables;
     private final long expirationTime;
+    private final LongSupplier timeSource;
 
-    public ObservableRepository(JetInstance jetInstance, JetConfig jetConfig) {
-        this.instance = jetInstance.getHazelcastInstance();
-        this.completedObservables = instance.getList(COMPLETED_OBSERVABLES_LIST_NAME);
-        this.expirationTime = getExpirationTime(jetConfig);
+    public ObservableRepository(JetInstance jet, JetConfig config) {
+        this(jet, config, System::currentTimeMillis);
     }
 
-    public void completeObservables(Set<String> observables, Throwable error) {
-        ObservableBatch notification = error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error);
-        for (String observable : observables) {
-            completedObservables.add(Tuple2.tuple2(observable, System.currentTimeMillis()));
+    ObservableRepository(JetInstance jet, JetConfig config, LongSupplier timeSource) {
+        this.jet = jet;
+        this.completedObservables = jet.getList(COMPLETED_OBSERVABLES_LIST_NAME);
+        this.expirationTime = getExpirationTime(config);
+        this.timeSource = timeSource;
+    }
 
-            ITopic<ObservableBatch> topic = instance.getTopic(observable);
+    public void completeObservables(Collection<String> observables, Throwable error) {
+        ObservableBatch notification = error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error);
+        long currentTime = timeSource.getAsLong();
+        for (String observable : observables) {
+            completedObservables.add(Tuple2.tuple2(observable, currentTime));
+
+            ITopic<ObservableBatch> topic = jet.getTopic(observable);
             topic.publish(notification);
         }
     }
 
     public void cleanup() {
-        //attempt clean-up just on the last few items of the completion list
-        //we don't want to spend a lot of time on this in one go
-        int total = completedObservables.size();
-        int toClean = min(MAX_CLEANUP_ATTEMPTS_AT_ONCE, total);
-        List<Tuple2<String, Long>> cleanList = completedObservables.subList(total - toClean, total);
-
-        long currentTime = System.currentTimeMillis();
-        Iterator<Tuple2<String, Long>> tupleIterator = cleanList.iterator();
-        while (tupleIterator.hasNext()) {
-            Tuple2<String, Long> tuple2 = tupleIterator.next();
+        long currentTime = timeSource.getAsLong();
+        int cleaned = 0;
+        Iterator<Tuple2<String, Long>> iterator = completedObservables.iterator();
+        while (iterator.hasNext() && cleaned < MAX_CLEANUP_ATTEMPTS_AT_ONCE) {
+            Tuple2<String, Long> tuple2 = iterator.next();
             long completionTime = tuple2.getValue();
-            boolean expired = currentTime - completionTime > expirationTime;
+            boolean expired = currentTime - completionTime >= expirationTime;
             if (expired) {
-                instance.getTopic(tuple2.getKey()).destroy();
-                tupleIterator.remove();
+                jet.getTopic(tuple2.getKey()).destroy();
+                iterator.remove();
+                cleaned++;
+            } else {
+                return;
             }
         }
     }

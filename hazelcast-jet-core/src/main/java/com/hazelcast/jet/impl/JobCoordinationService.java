@@ -941,11 +941,12 @@ public class JobCoordinationService {
     // runs periodically to restart jobs on coordinator failure and perform GC
     private void scanJobs() {
         try {
-            observableRepository.cleanup();
-
             if (!shouldStartJobs()) {
                 return;
             }
+
+            observableRepository.cleanup();
+
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
             for (JobRecord jobRecord : jobs) {
                 JobExecutionRecord jobExecutionRecord = ensureExecutionRecord(jobRecord.getJobId(),

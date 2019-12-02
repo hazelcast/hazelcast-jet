@@ -51,9 +51,6 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
     @Before
     public void before() {
-        createJetMember();
-        createJetMember();
-
         observableName = randomName();
         testObserver = new TestObserver();
         jet().<Long>getObservable(observableName).addObserver(testObserver);
