@@ -70,7 +70,7 @@ public class SessionWindow {
 
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.<ProductEvent>streamFromProcessor("generator",
-                ProcessorMetaSupplier.of(GenerateEventsP::new, 1)))
+                ProcessorMetaSupplier.of(1, GenerateEventsP::new)))
          .withTimestamps(ProductEvent::getTimestamp, 0)
          .groupingKey(ProductEvent::getUserId)
          .window(WindowDefinition.session(SESSION_TIMEOUT))

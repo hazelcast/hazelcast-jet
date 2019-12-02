@@ -109,7 +109,7 @@ public abstract class StreamSourceStageTestBase extends JetTestSupport {
                 .aggregate(AggregateOperations.counting())
                 .peek()
                 .writeTo(Sinks.fromProcessor("wmCollector",
-                        ProcessorMetaSupplier.of(WatermarkCollector::new, 1))
+                        ProcessorMetaSupplier.of(1, WatermarkCollector::new))
                 );
         Job job = instance.newJob(p);
 

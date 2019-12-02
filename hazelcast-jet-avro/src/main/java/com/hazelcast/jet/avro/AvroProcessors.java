@@ -77,13 +77,13 @@ public final class AvroProcessors {
             @Nonnull SupplierEx<DatumWriter<D>> datumWriterSupplier
     ) {
         return ProcessorMetaSupplier.of(
-                WriteBufferedP.<DataFileWriter<D>, D>supplier(
+                1, WriteBufferedP.<DataFileWriter<D>, D>supplier(
                         context -> createWriter(Paths.get(directoryName), context.globalProcessorIndex(),
                                 schemaSupplier, datumWriterSupplier),
                         DataFileWriter::append,
                         DataFileWriter::flush,
                         DataFileWriter::close
-                ), 1);
+                ));
     }
 
     @SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE",
