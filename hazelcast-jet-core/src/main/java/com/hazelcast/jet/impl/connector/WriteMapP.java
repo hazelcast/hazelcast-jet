@@ -26,6 +26,10 @@ import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
+import java.util.Map.Entry;
+import java.util.function.Consumer;
+
+import static java.lang.Integer.max;
 
 public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
 
@@ -34,6 +38,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
     private final ArrayMap<K, V> buffer = new ArrayMap<>(EdgeConfig.DEFAULT_QUEUE_SIZE);
 
     private IMap<K, V> map;
+    private Consumer<Entry<K, V>> addToBuffer = buffer::add;
 
     private WriteMapP(HazelcastInstance instance, int maxParallelAsyncOps, String mapName) {
         super(instance, maxParallelAsyncOps);
@@ -48,7 +53,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
     @Override
     protected void processInternal(Inbox inbox) {
         if (buffer.size() < BUFFER_LIMIT) {
-            inbox.drain(buffer::add);
+            inbox.drain(addToBuffer);
         }
         submitPending();
     }
@@ -73,7 +78,12 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
     public static class Supplier<K, V> extends AbstractHazelcastConnectorSupplier {
         private static final long serialVersionUID = 1L;
 
+        // use a conservative max parallelism to prevent overloading
+        // the cluster with putAll operations
+        private static final int MAX_PARALLELISM = 16;
+
         private final String mapName;
+        private int maxParallelAsyncOps;
 
         public Supplier(String clientXml, String mapName) {
             super(clientXml);
@@ -81,8 +91,14 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         }
 
         @Override
+        public void init(@Nonnull Context context) {
+            super.init(context);
+            maxParallelAsyncOps = max(1, MAX_PARALLELISM / context.localParallelism());
+        }
+
+        @Override
         protected Processor createProcessor(HazelcastInstance instance) {
-            return new WriteMapP<>(instance, MAX_PARALLEL_ASYNC_OPS_DEFAULT, mapName);
+            return new WriteMapP<>(instance, maxParallelAsyncOps, mapName);
         }
     }
 }
