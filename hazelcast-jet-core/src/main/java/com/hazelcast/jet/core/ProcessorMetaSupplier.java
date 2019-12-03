@@ -213,7 +213,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * will always return it. The {@link #preferredLocalParallelism()} of
      * the meta-supplier will be one, i.e., no local parallelization.
      * <p>
-     * The parallelism will be overriden if the {@link Vertex#localParallelism(int)} is
+     * The parallelism will be overridden if the {@link Vertex#localParallelism(int)} is
      * set to a specific value.
      */
     @Nonnull
