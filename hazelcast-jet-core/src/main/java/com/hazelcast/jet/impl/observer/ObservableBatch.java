@@ -94,6 +94,4 @@ public class ObservableBatch implements IdentifiedDataSerializable {
         throwable = in.readObject();
         endOfData = in.readBoolean();
     }
-
-
 }

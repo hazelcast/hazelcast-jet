@@ -99,7 +99,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * Called on coordinator member after execution has finished on all
      * members, successfully or not. This method will be called after {@link
      * ProcessorSupplier#close(Throwable)} has been called on all
-     * <em>available</em> members.
+     * <em>available</em> members. The job can later be restarted.
      * <p>
      * If there is an exception during the creation of the execution plan, this
      * method will be called regardless of whether the {@link #init(Context)
