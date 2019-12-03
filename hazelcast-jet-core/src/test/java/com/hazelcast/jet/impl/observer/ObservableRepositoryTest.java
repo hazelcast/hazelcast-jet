@@ -26,8 +26,6 @@ import org.junit.Test;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +46,7 @@ public class ObservableRepositoryTest {
     private JetInstance jet;
     private TestTimeSource timeSource;
     private ObservableRepository repository;
+    private TestList testList;
 
     @Before
     public void before() {
@@ -55,6 +54,7 @@ public class ObservableRepositoryTest {
         Properties properties = config.getProperties();
         properties.setProperty(JOB_RESULTS_TTL_SECONDS.getName(), Integer.toString(10));
 
+        testList = new TestList();
         jet = mock(JetInstance.class);
         resetJetMock();
 
@@ -65,7 +65,7 @@ public class ObservableRepositoryTest {
     @Test
     public void cleanup() {
         //when
-        repository.completeObservables(Arrays.asList("o1", "o2"), null);
+        completeObservables("o1", "o2");
         timeSource.inc(TimeUnit.SECONDS, 1);
         resetJetMock();
         repository.cleanup();
@@ -73,7 +73,7 @@ public class ObservableRepositoryTest {
         verify(jet, never()).getTopic(any());
 
         //when
-        repository.completeObservables(Collections.singletonList("o3"), null);
+        completeObservables("o3");
         timeSource.inc(TimeUnit.SECONDS, 1);
         resetJetMock();
         repository.cleanup();
@@ -81,8 +81,8 @@ public class ObservableRepositoryTest {
         verify(jet, never()).getTopic(any());
 
         //when
-        repository.completeObservables(Arrays.asList("o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14",
-                "o15", "o16", "o17", "o18", "o19", "o20"), null);
+        completeObservables("o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17",
+                "o18", "o19", "o20");
         timeSource.inc(TimeUnit.SECONDS, 8);
         resetJetMock();
         repository.cleanup();
@@ -130,10 +130,16 @@ public class ObservableRepositoryTest {
         verifyNoMoreInteractions(jet);
     }
 
+    private void completeObservables(String... observables) {
+        for (String observable : observables) {
+            ObservableRepository.completeObservable(observable, null, jet, timeSource);
+        }
+    }
+
     private void resetJetMock() {
         reset(jet);
         when(jet.getTopic(any())).thenReturn(mock(ITopic.class));
-        when(jet.getList(any())).thenReturn(new TestList<>());
+        when(jet.getList(any())).thenReturn(testList);
     }
 
     private static class TestTimeSource implements LongSupplier {

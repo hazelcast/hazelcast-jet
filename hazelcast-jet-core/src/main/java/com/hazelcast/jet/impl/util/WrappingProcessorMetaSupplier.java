@@ -24,7 +24,6 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -56,12 +55,6 @@ public final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplie
     @Override
     public void init(@Nonnull Context context) throws Exception {
         wrapped.init(context);
-    }
-
-    @Nonnull
-    @Override
-    public Set<String> ownedObservables() {
-        return wrapped.ownedObservables();
     }
 
     @Override

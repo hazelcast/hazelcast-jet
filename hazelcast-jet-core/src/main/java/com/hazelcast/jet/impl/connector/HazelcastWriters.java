@@ -28,12 +28,14 @@ import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.observer.ObservableBatch;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.topic.ITopic;
 
@@ -42,7 +44,6 @@ import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -160,10 +161,18 @@ public final class HazelcastWriters {
 
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
         return new ProcessorMetaSupplier() {
-            @Nonnull
+
+            private JetInstance jet;
+
             @Override
-            public Set<String> ownedObservables() {
-                return Collections.singleton(name);
+            public void init(@Nonnull Context context) {
+                this.jet = context.jetInstance();
+            }
+
+            @Override
+            public void close(@Nullable Throwable error) {
+                ObservableRepository.completeObservable(name, error, jet, System::currentTimeMillis);
+                //todo: force single event?
             }
 
             @Nonnull @Override

@@ -39,7 +39,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Properties;
 
 import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_MAX_SIZE;
@@ -177,7 +176,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     private JobRecord createJobRecord(long jobId, Data dag) {
-        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig, Collections.emptySet());
+        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig);
     }
 
     private void sleepUntilJobExpires() {

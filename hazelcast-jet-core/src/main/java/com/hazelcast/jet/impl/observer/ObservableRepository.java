@@ -24,7 +24,6 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.topic.ITopic;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.LongSupplier;
 
@@ -32,9 +31,8 @@ import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 
 public class ObservableRepository {
 
-    private static final String COMPLETED_OBSERVABLES_LIST_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
+    public static final String COMPLETED_OBSERVABLES_LIST_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
     private static final int MAX_CLEANUP_ATTEMPTS_AT_ONCE = 10;
-
     private final JetInstance jet;
     private final IList<Tuple2<String, Long>> completedObservables;
     private final long expirationTime;
@@ -51,15 +49,19 @@ public class ObservableRepository {
         this.timeSource = timeSource;
     }
 
-    public void completeObservables(Collection<String> observables, Throwable error) {
-        ObservableBatch notification = error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error);
-        long currentTime = timeSource.getAsLong();
-        for (String observable : observables) {
-            completedObservables.add(Tuple2.tuple2(observable, currentTime));
+    public static void completeObservable(String observable, Throwable error, JetInstance jet, LongSupplier timeSource) {
+        ITopic<ObservableBatch> topic = jet.getTopic(observable);
+        topic.publish(error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error));
 
-            ITopic<ObservableBatch> topic = jet.getTopic(observable);
-            topic.publish(notification);
-        }
+        IList<Tuple2<String, Long>> completedObservables =
+                jet.getList(ObservableRepository.COMPLETED_OBSERVABLES_LIST_NAME);
+        completedObservables.add(Tuple2.tuple2(observable, timeSource.getAsLong()));
+    }
+
+    private static long getExpirationTime(JetConfig jetConfig) {
+        //we will keep observables for the same amount of time as job results
+        HazelcastProperties hazelcastProperties = new HazelcastProperties(jetConfig.getProperties());
+        return hazelcastProperties.getMillis(JetProperties.JOB_RESULTS_TTL_SECONDS);
     }
 
     public void cleanup() {
@@ -78,12 +80,6 @@ public class ObservableRepository {
                 return;
             }
         }
-    }
-
-    private static long getExpirationTime(JetConfig jetConfig) {
-        //we will keep observables for the same amount of time as job results
-        HazelcastProperties hazelcastProperties = new HazelcastProperties(jetConfig.getProperties());
-        return hazelcastProperties.getMillis(JetProperties.JOB_RESULTS_TTL_SECONDS);
     }
 
 }

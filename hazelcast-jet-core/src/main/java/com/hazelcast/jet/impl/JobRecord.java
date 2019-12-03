@@ -24,10 +24,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.Objects;
-import java.util.Set;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.Util.toLocalDateTime;
@@ -45,19 +42,16 @@ public class JobRecord implements IdentifiedDataSerializable {
     // JSON representation of DAG, used by management center
     private String dagJson;
     private JobConfig config;
-    private Set<String> ownedObservables;
 
     public JobRecord() {
     }
 
-    public JobRecord(long jobId, long creationTime, Data dag, String dagJson, JobConfig config,
-                     @Nonnull Set<String> ownedObservables) {
+    public JobRecord(long jobId, long creationTime, Data dag, String dagJson, JobConfig config) {
         this.jobId = jobId;
         this.creationTime = creationTime;
         this.dag = dag;
         this.dagJson = dagJson;
         this.config = config;
-        this.ownedObservables = Objects.requireNonNull(ownedObservables, "ownedObservables");
     }
 
     public long getJobId() {
@@ -85,11 +79,6 @@ public class JobRecord implements IdentifiedDataSerializable {
         return config;
     }
 
-    @Nonnull
-    public Set<String> getOwnedObservables() {
-        return ownedObservables;
-    }
-
     @Override
     public int getFactoryId() {
         return JetInitDataSerializerHook.FACTORY_ID;
@@ -107,7 +96,6 @@ public class JobRecord implements IdentifiedDataSerializable {
         IOUtil.writeData(out, dag);
         out.writeUTF(dagJson);
         out.writeObject(config);
-        out.writeObject(ownedObservables);
     }
 
     @Override
@@ -117,7 +105,6 @@ public class JobRecord implements IdentifiedDataSerializable {
         dag = IOUtil.readData(in);
         dagJson = in.readUTF();
         config = in.readObject();
-        ownedObservables = in.readObject();
     }
 
     @Override
@@ -128,7 +115,6 @@ public class JobRecord implements IdentifiedDataSerializable {
                 ", creationTime=" + toLocalDateTime(creationTime) +
                 ", dagJson=" + dagJson +
                 ", config=" + config +
-                ", ownedObservables=" + ownedObservables +
                 '}';
     }
 }
