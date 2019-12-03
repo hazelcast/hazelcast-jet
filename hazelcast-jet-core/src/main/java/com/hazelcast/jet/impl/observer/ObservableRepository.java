@@ -31,8 +31,9 @@ import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 
 public class ObservableRepository {
 
-    public static final String COMPLETED_OBSERVABLES_LIST_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
+    private static final String COMPLETED_OBSERVABLES_LIST_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
     private static final int MAX_CLEANUP_ATTEMPTS_AT_ONCE = 10;
+
     private final JetInstance jet;
     private final IList<Tuple2<String, Long>> completedObservables;
     private final long expirationTime;

@@ -20,10 +20,11 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 
+import javax.annotation.Nonnull;
 import java.util.function.Consumer;
 
 /**
- * Watcher of the events produced by an {@link Observable}. Once subscribed
+ * Watcher of the events produced by an {@link Observable}. Once subscribed, it
  * will be notified of all subsequent events produced by the
  * {@link Observable}.
  *
@@ -36,7 +37,11 @@ public interface Observer<T> {
      * Utility method for building an {@link Observer} from its basic
      * components.
      */
-    static <T> Observer<T> of(Consumer<? super T> onNext, Consumer<? super Throwable> onError, Runnable onComplete) {
+    static <T> Observer<T> of(
+            @Nonnull Consumer<? super T> onNext,
+            @Nonnull Consumer<? super Throwable> onError,
+            @Nonnull Runnable onComplete
+    ) {
         return new Observer<T>() {
             @Override
             public void onNext(T t) {
@@ -59,15 +64,15 @@ public interface Observer<T> {
      * Method that will be called when the {@link Observable} (to which this
      * {@link Observer} is subscribed to) produces new data values.
      * <p>
-     * The data values being passed via this method don't have a clear,
+     * The data values passed via this method don't have a clear,
      * global ordering. Some {@link Observable}s for example produce values
-     * in parallel so the order in which they arrive at subscribed
-     * {@link Observer}s is unpredicable.
+     * in parallel so the order in which they arrive at the
+     * {@link Observer}s is unpredictable.
      * <p>
      * It is not possible to observe data values after an error or completion
      * has been observed.
      */
-    void onNext(T t);
+    void onNext(@Nonnull T t);
 
     /**
      * Method that will be called when the {@link Observable} (to which this
@@ -77,7 +82,7 @@ public interface Observer<T> {
      * The passed {@link Throwable} instance attempts to reflect/explain the
      * original error as closely as possible.
      * <p>
-     * Once an error has been observed no further data values nor completion
+     * Once an error has been observed, no further data values nor completion
      * events will be received.
      * <p>
      * Note: it is possible to write Jet {@link Pipeline}s/{@link DAG}s which
@@ -88,7 +93,7 @@ public interface Observer<T> {
      * data will be seen from any {@link Sink}), but there will be as many
      * error events as {@link Sink}s.
      */
-    void onError(Throwable throwable);
+    void onError(@Nonnull Throwable throwable);
 
     /**
      * Method that will be called when the {@link Observable} (to which this
@@ -96,7 +101,7 @@ public interface Observer<T> {
      * of data values. Only batch-type of observables will ever produce
      * this event.
      * <p>
-     * Once completion has been observed no further data values nor errors
+     * Once completion has been observed, no further data values nor errors
      * will be received.
      * <p>
      * Note: it is possible to write Jet {@link Pipeline}s/{@link DAG}s which

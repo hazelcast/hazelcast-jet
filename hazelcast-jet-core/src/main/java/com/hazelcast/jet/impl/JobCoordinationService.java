@@ -235,7 +235,7 @@ public class JobCoordinationService {
         // therefore, we will retry until scanJob() task runs at least once.
         if (!jobsScanned) {
             throw new RetryableHazelcastException("Cannot submit job with name '" + jobName
-                    + "' before the master node initializes job coordination service state");
+                    + "' before the master node initializes job coordination service's state");
         }
 
         return masterContexts.values()
@@ -929,15 +929,13 @@ public class JobCoordinationService {
             if (!shouldStartJobs()) {
                 return;
             }
-
-            observableRepository.cleanup();
-
             Collection<JobRecord> jobs = jobRepository.getJobRecords();
             for (JobRecord jobRecord : jobs) {
                 JobExecutionRecord jobExecutionRecord = ensureExecutionRecord(jobRecord.getJobId(),
                         jobRepository.getJobExecutionRecord(jobRecord.getJobId()));
                 startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "discovered by scanning of JobRecords");
             }
+            observableRepository.cleanup();
             jobRepository.cleanup(nodeEngine);
             if (!jobsScanned) {
                 synchronized (lock) {
