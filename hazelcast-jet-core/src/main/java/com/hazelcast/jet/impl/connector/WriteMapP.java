@@ -26,7 +26,6 @@ import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
-import java.util.concurrent.CompletionStage;
 
 public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
 
@@ -66,8 +65,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
         if (!tryAcquirePermit()) {
             return false;
         }
-        CompletionStage<Void> future = ImdgUtil.mapPutAllAsync(map, buffer);
-        setCallback(future.toCompletableFuture());
+        setCallback(ImdgUtil.mapPutAllAsync(map, buffer));
         buffer.clear();
         return true;
     }
