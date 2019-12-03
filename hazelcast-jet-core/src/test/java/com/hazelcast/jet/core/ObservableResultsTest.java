@@ -135,6 +135,21 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertCompletions(otherTestObserver, 1);
     }
 
+    @Test
+    public void multipleIdenticalSinks() {
+        Pipeline pipeline = Pipeline.create();
+        BatchStage<Long> readStage = pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L));
+        readStage.writeTo(Sinks.observable(observableName));
+        readStage.writeTo(Sinks.observable(observableName));
+
+        Job job = jet().newJob(pipeline);
+        job.join();
+
+        assertSortedValues(testObserver, 0L, 0L, 1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L);
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 2);
+    }
+
     private static void assertSortedValues(TestObserver observer, Long... values) {
         assertTrueEventually(() -> assertEquals(Arrays.asList(values), observer.getSortedValues()));
     }
