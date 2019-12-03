@@ -80,7 +80,7 @@ public final class WriteMapP<K, V> extends AsyncHazelcastWriterP {
 
         // use a conservative max parallelism to prevent overloading
         // the cluster with putAll operations
-        private static final int MAX_PARALLELISM = 8;
+        private static final int MAX_PARALLELISM = 16;
 
         private final String mapName;
         private int maxParallelAsyncOps;
