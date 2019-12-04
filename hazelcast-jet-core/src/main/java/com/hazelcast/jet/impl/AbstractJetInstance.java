@@ -28,8 +28,8 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
-import com.hazelcast.jet.impl.observer.ObservableBatch;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -149,8 +149,9 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     @Override
     public <T> Observable<T> getObservable(@Nonnull String name) {
-        ITopic<ObservableBatch> topic = getReliableTopic(name);
-        return new ObservableImpl<>(name, topic, getLogger());
+        ObservableImpl<T> observable = new ObservableImpl<>(name, getLogger());
+        ObservableRepository.registerObservable(observable, this);
+        return observable;
     }
 
     @Override

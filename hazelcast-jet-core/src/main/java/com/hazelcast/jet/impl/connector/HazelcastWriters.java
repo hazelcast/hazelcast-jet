@@ -34,10 +34,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.impl.observer.ObservableBatch;
 import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.map.EntryProcessor;
-import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -171,8 +169,7 @@ public final class HazelcastWriters {
 
             @Override
             public void close(@Nullable Throwable error) {
-                ObservableRepository.completeObservable(name, error, jet, System::currentTimeMillis);
-                //todo: force single event?
+                ObservableRepository.completeObservable(name, error, jet);
             }
 
             @Nonnull @Override
@@ -181,17 +178,7 @@ public final class HazelcastWriters {
                         null,
                         ArrayList::new,
                         ArrayList::add,
-                        instance -> {
-                            ITopic<ObservableBatch> topic = instance.getReliableTopic(name);
-                            return buffer -> {
-                                try {
-                                    topic.publish(ObservableBatch.items(buffer));
-                                } catch (HazelcastInstanceNotActiveException e) {
-                                    throw handleInstanceNotActive(e, true);
-                                }
-                                buffer.clear();
-                            };
-                        },
+                        ObservableRepository.getPublishFn(name),
                         ConsumerEx.noop()
                 );
             }

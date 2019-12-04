@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.observer;
 
 import com.hazelcast.collection.IList;
 import com.hazelcast.collection.ItemListener;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.topic.ITopic;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.when;
 public class ObservableRepositoryTest {
 
     private JetInstance jet;
+    private HazelcastInstance hz;
     private TestTimeSource timeSource;
     private ObservableRepository repository;
     private TestList testList;
@@ -55,8 +57,13 @@ public class ObservableRepositoryTest {
         properties.setProperty(JOB_RESULTS_TTL_SECONDS.getName(), Integer.toString(10));
 
         testList = new TestList();
+        hz = mock(HazelcastInstance.class);
+
         jet = mock(JetInstance.class);
-        resetJetMock();
+        when(jet.getHazelcastInstance()).thenReturn(hz);
+        when(jet.getList(any())).thenReturn(testList);
+
+        resetHzMock();
 
         timeSource = new TestTimeSource();
         repository = new ObservableRepository(jet, config, timeSource);
@@ -67,67 +74,67 @@ public class ObservableRepositoryTest {
         //when
         completeObservables("o1", "o2");
         timeSource.inc(TimeUnit.SECONDS, 1);
-        resetJetMock();
+        resetHzMock();
         repository.cleanup();
         //then
-        verify(jet, never()).getReliableTopic(any());
+        verify(hz, never()).getReliableTopic(any());
 
         //when
         completeObservables("o3");
         timeSource.inc(TimeUnit.SECONDS, 1);
-        resetJetMock();
+        resetHzMock();
         repository.cleanup();
         //then
-        verify(jet, never()).getReliableTopic(any());
+        verify(hz, never()).getReliableTopic(any());
 
         //when
         completeObservables("o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17",
                 "o18", "o19", "o20");
         timeSource.inc(TimeUnit.SECONDS, 8);
-        resetJetMock();
+        resetHzMock();
         repository.cleanup();
         //then
-        verify(jet).getReliableTopic(eq("o1"));
-        verify(jet).getReliableTopic(eq("o2"));
-        verifyNoMoreInteractions(jet);
+        verify(hz).getReliableTopic(eq("__jet.observable.o1"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o2"));
+        verifyNoMoreInteractions(hz);
 
         //when
-        resetJetMock();
+        resetHzMock();
         timeSource.inc(TimeUnit.SECONDS, 1);
         repository.cleanup();
         //then
-        verify(jet).getReliableTopic(eq("o3"));
-        verifyNoMoreInteractions(jet);
+        verify(hz).getReliableTopic(eq("__jet.observable.o3"));
+        verifyNoMoreInteractions(hz);
 
         //when
-        resetJetMock();
+        resetHzMock();
         timeSource.inc(TimeUnit.SECONDS, 1);
         repository.cleanup();
         //then only a fixed number of topics get clean-ed up
-        verify(jet).getReliableTopic(eq("o4"));
-        verify(jet).getReliableTopic(eq("o5"));
-        verify(jet).getReliableTopic(eq("o6"));
-        verify(jet).getReliableTopic(eq("o7"));
-        verify(jet).getReliableTopic(eq("o8"));
-        verify(jet).getReliableTopic(eq("o9"));
-        verify(jet).getReliableTopic(eq("o10"));
-        verify(jet).getReliableTopic(eq("o11"));
-        verify(jet).getReliableTopic(eq("o12"));
-        verify(jet).getReliableTopic(eq("o13"));
-        verifyNoMoreInteractions(jet);
+        verify(hz).getReliableTopic(eq("__jet.observable.o4"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o5"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o6"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o7"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o8"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o9"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o10"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o11"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o12"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o13"));
+        verifyNoMoreInteractions(hz);
 
         //when
-        resetJetMock();
+        resetHzMock();
         repository.cleanup();
         //then more topics get cleaned up
-        verify(jet).getReliableTopic(eq("o14"));
-        verify(jet).getReliableTopic(eq("o15"));
-        verify(jet).getReliableTopic(eq("o16"));
-        verify(jet).getReliableTopic(eq("o17"));
-        verify(jet).getReliableTopic(eq("o18"));
-        verify(jet).getReliableTopic(eq("o19"));
-        verify(jet).getReliableTopic(eq("o20"));
-        verifyNoMoreInteractions(jet);
+        verify(hz).getReliableTopic(eq("__jet.observable.o14"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o15"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o16"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o17"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o18"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o19"));
+        verify(hz).getReliableTopic(eq("__jet.observable.o20"));
+        verifyNoMoreInteractions(hz);
     }
 
     private void completeObservables(String... observables) {
@@ -136,10 +143,9 @@ public class ObservableRepositoryTest {
         }
     }
 
-    private void resetJetMock() {
-        reset(jet);
-        when(jet.getReliableTopic(any())).thenReturn(mock(ITopic.class));
-        when(jet.getList(any())).thenReturn(testList);
+    private void resetHzMock() {
+        reset(hz);
+        when(hz.getReliableTopic(any())).thenReturn(mock(ITopic.class));
     }
 
     private static class TestTimeSource implements LongSupplier {

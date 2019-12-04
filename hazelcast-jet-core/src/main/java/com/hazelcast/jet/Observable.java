@@ -36,6 +36,12 @@ import java.util.function.Consumer;
 public interface Observable<T> {
 
     /**
+     * Returns the name identifying this particular observable.
+     * @return name of observable
+     */
+    String name();
+
+    /**
      * Register an instance of {@link Observer} to be notified about any
      * subsequent events (value updates, failures and completion).
      */

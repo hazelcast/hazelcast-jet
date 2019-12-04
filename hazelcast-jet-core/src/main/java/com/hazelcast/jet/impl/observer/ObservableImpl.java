@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.observer;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Observer;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.topic.ITopic;
 import com.hazelcast.topic.Message;
 import com.hazelcast.topic.ReliableMessageListener;
 
@@ -35,10 +34,14 @@ public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener
 
     private long lastSequence = -1;
 
-    public ObservableImpl(String name, ITopic<ObservableBatch> topic, ILogger logger) {
+    public ObservableImpl(String name, ILogger logger) {
         this.name = name;
         this.logger = logger;
-        topic.addMessageListener(this);
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override
