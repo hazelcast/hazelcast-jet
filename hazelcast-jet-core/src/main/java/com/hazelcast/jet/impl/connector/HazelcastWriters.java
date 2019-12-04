@@ -28,7 +28,6 @@ import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
@@ -42,6 +41,7 @@ import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -160,16 +160,15 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
         return new ProcessorMetaSupplier() {
 
-            private JetInstance jet;
+            private final Map<String, String> tags = Collections.singletonMap(
+                    ObservableRepository.OWNED_OBSERVABLE,
+                    name
+            );
 
+            @Nonnull
             @Override
-            public void init(@Nonnull Context context) {
-                this.jet = context.jetInstance();
-            }
-
-            @Override
-            public void close(@Nullable Throwable error) {
-                ObservableRepository.completeObservable(name, error, jet);
+            public Map<String, String> getTags() {
+                return tags;
             }
 
             @Nonnull @Override

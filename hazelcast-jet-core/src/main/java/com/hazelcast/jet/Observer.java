@@ -16,10 +16,6 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sink;
-
 import javax.annotation.Nonnull;
 import java.util.function.Consumer;
 
@@ -88,14 +84,6 @@ public interface Observer<T> {
      * <p>
      * Once an error has been observed, no further data values nor completion
      * events will be received.
-     * <p>
-     * Note: it is possible to write Jet {@link Pipeline}s/{@link DAG}s which
-     * have multiple {@link Sink}s writing to the same {@link Observer}. When
-     * that happens, then there will be multiple observable event streams
-     * from the multiple independent sources. Data and error events will
-     * still be globally ordered (once an error has been observed no more
-     * data will be seen from any {@link Sink}), but there will be as many
-     * error events as {@link Sink}s.
      */
     void onError(@Nonnull Throwable throwable);
 
@@ -107,14 +95,6 @@ public interface Observer<T> {
      * <p>
      * Once completion has been observed, no further data values nor errors
      * will be received.
-     * <p>
-     * Note: it is possible to write Jet {@link Pipeline}s/{@link DAG}s which
-     * have multiple {@link Sink}s writing to the same {@link Observer}. When
-     * that happens, then there will be multiple observable event streams
-     * from the multiple independent sources. Data and completion events will
-     * still be globally ordered (once a completion has been observed no more
-     * data will be seen from any {@link Sink}), but there will be as many
-     * completion events as {@link Sink}s.
      */
     void onComplete();
 

@@ -113,6 +113,26 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
+    public void streamJobRestart() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName));
+
+        Job job = jet().newJob(pipeline);
+
+        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
+
+        job.restart();
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
+    }
+
+    @Test
     public void multipleObservables() {
         Pipeline pipeline = Pipeline.create();
         BatchStage<Long> stage = pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L));
@@ -147,7 +167,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
         assertSortedValues(testObserver, 0L, 0L, 1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L);
         assertError(testObserver, null);
-        assertCompletions(testObserver, 2);
+        assertCompletions(testObserver, 1);
     }
 
     private static void assertSortedValues(TestObserver observer, Long... values) {

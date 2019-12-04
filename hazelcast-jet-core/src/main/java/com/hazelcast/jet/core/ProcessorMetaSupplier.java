@@ -28,7 +28,9 @@ import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static com.hazelcast.internal.util.UuidUtil.newUnsecureUuidString;
@@ -62,6 +64,17 @@ import static java.util.Collections.singletonList;
  */
 @FunctionalInterface
 public interface ProcessorMetaSupplier extends Serializable {
+
+    /**
+     * Returns optional meta-information about this supplier, can be used
+     * to describe capabilities, resources owned and so forth.
+     * <p>
+     * The meta-information takes the form of simple string key-value pairs.
+     */
+    @Nonnull
+    default Map<String, String> getTags() {
+        return Collections.emptyMap();
+    }
 
     /**
      * Returns the local parallelism the vertex should be configured with.

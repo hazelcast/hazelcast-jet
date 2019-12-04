@@ -24,6 +24,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetProperties;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.topic.ITopic;
@@ -31,12 +32,20 @@ import com.hazelcast.topic.ReliableMessageListener;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 
 public class ObservableRepository {
+
+    /**
+     * Constant ID to be used as a {@link ProcessorMetaSupplier#getTags()
+     * PMS tag key} for specifying when a PMS owns an {@link Observable} (ie.
+     * is the entity populating the {@link Observable} with data).
+     */
+    public static final String OWNED_OBSERVABLE = "owned_observable";
 
     /**
      * Prefix of all topic names used to back {@link Observable} implementations,
@@ -80,10 +89,6 @@ public class ObservableRepository {
         };
     }
 
-    public static void completeObservable(String observable, Throwable error, JetInstance jet) {
-        completeObservable(observable, error, jet, System::currentTimeMillis);
-    }
-
     static void completeObservable(String observable, Throwable error, JetInstance jet, LongSupplier timeSource) {
         ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observable);
         topic.publish(error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error));
@@ -103,6 +108,12 @@ public class ObservableRepository {
     private static ITopic<ObservableBatch> getTopic(HazelcastInstance intance, String observableName) {
         String topicName = JET_OBSERVABLE_NAME_PREFIX + observableName;
         return intance.getReliableTopic(topicName);
+    }
+
+    public void completeObservables(Collection<String> observables, Throwable error) {
+        for (String observable : observables) {
+            completeObservable(observable, error, jet, System::currentTimeMillis);
+        }
     }
 
     public void cleanup() {
