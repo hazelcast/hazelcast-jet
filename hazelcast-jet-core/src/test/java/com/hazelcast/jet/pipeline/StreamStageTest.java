@@ -926,7 +926,24 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         exception.expectMessage("both have or both not have timestamp definitions");
 
         // When
-        nonTimestamped.merge(timestamped);
+        timestamped.merge(nonTimestamped);
+    }
+
+    @Test
+    public void when_mergeToItself_then_doubleOutput() {
+        List<Integer> input = sequence(itemCount);
+        Function<Integer, String> formatFn = i -> String.format("%04d", i);
+        StreamStage<Integer> srcStage0 = streamStageFromList(input);
+
+        // When
+        StreamStage<Integer> merged = srcStage0.merge(srcStage0);
+
+        // Then
+        merged.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().flatMap(i -> Stream.of(i, i)), formatFn),
+                streamToString(sinkStreamOf(Integer.class), formatFn));
     }
 
     @Test
