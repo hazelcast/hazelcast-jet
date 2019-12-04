@@ -28,17 +28,15 @@ import java.util.Objects;
 
 public class ObservableBatch implements IdentifiedDataSerializable {
 
-    private static final ObservableBatch END_OF_DATA = new ObservableBatch(null, null, true);
+    private static final ObservableBatch END_OF_DATA = new ObservableBatch(null, null);
     @Nullable
     private Object[] items;
     @Nullable
     private Throwable throwable;
-    private boolean endOfData;
 
-    private ObservableBatch(@Nullable Object[] items, @Nullable Throwable throwable, boolean endOfData) {
+    private ObservableBatch(@Nullable Object[] items, @Nullable Throwable throwable) {
         this.items = items;
         this.throwable = throwable;
-        this.endOfData = endOfData;
     }
 
     ObservableBatch() { //needed for deserialization
@@ -46,15 +44,16 @@ public class ObservableBatch implements IdentifiedDataSerializable {
 
     public static ObservableBatch items(@Nonnull ArrayList<Object> items) {
         Objects.requireNonNull(items, "items");
-        return new ObservableBatch(items.toArray(), null, false);
+        return new ObservableBatch(items.toArray(), null);
     }
 
-    public static ObservableBatch endOfData() {
+    static ObservableBatch endOfData() {
         return END_OF_DATA;
     }
 
     public static ObservableBatch error(Throwable throwable) {
-        return new ObservableBatch(null, Objects.requireNonNull(throwable, "throwable"), false);
+        Objects.requireNonNull(throwable, "throwable");
+        return new ObservableBatch(null, throwable);
     }
 
     @Nullable
@@ -65,10 +64,6 @@ public class ObservableBatch implements IdentifiedDataSerializable {
     @Nullable
     Throwable getThrowable() {
         return throwable;
-    }
-
-    boolean isEndOfData() {
-        return endOfData;
     }
 
     @Override
@@ -85,13 +80,11 @@ public class ObservableBatch implements IdentifiedDataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeObject(items);
         out.writeObject(throwable);
-        out.writeBoolean(endOfData);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         items = in.readObject();
         throwable = in.readObject();
-        endOfData = in.readBoolean();
     }
 }

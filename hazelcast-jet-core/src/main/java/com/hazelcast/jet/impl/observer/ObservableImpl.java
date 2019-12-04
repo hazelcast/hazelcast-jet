@@ -65,12 +65,10 @@ public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener
             notifyObserversOfError(throwable);
         } else {
             Object[] items = batch.getItems();
-            if (items != null) {
-                notifyObserversOfData(items);
-            }
-
-            if (batch.isEndOfData()) {
+            if (items == null) {
                 notifyObserversOfEndOfData();
+            } else {
+                notifyObserversOfData(items);
             }
         }
     }
