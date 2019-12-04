@@ -18,11 +18,12 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sources;
-import org.h2.tools.DeleteDbFiles;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -33,14 +34,17 @@ import static org.junit.Assert.assertEquals;
 
 public class ReadJdbcPTest extends PipelineTestSupport {
 
-    private static final String DIR = "~";
-    private static final String DB = ReadJdbcPTest.class.getSimpleName();
-    private static final String DB_CONNECTION_URL = "jdbc:h2:" + DIR + "/" + DB;
     private static final int PERSON_COUNT = 100;
 
+    private static String DB_CONNECTION_URL;
+
     @BeforeClass
-    public static void setupClass() throws SQLException {
-        DeleteDbFiles.execute(DIR, DB, true);
+    public static void setupClass() throws SQLException, IOException {
+        String dbName = ReadJdbcPTest.class.getSimpleName();
+        String tempDirectory = Files.createTempDirectory(dbName).toString();
+
+        DB_CONNECTION_URL = "jdbc:h2:" + tempDirectory + "/" + dbName;
+
         createAndFillTable();
     }
 
