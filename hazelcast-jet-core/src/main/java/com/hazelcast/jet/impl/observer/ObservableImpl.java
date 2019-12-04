@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.observer;
 
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Observer;
+import com.hazelcast.logging.ILogger;
 import com.hazelcast.topic.ITopic;
 import com.hazelcast.topic.Message;
 import com.hazelcast.topic.ReliableMessageListener;
@@ -29,8 +30,14 @@ import java.util.function.Consumer;
 public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener<ObservableBatch> {
 
     private final CopyOnWriteArrayList<Observer<T>> observers = new CopyOnWriteArrayList<>();
+    private final String name;
+    private final ILogger logger;
 
-    public ObservableImpl(ITopic<ObservableBatch> topic) {
+    private long lastSequence = -1;
+
+    public ObservableImpl(String name, ITopic<ObservableBatch> topic, ILogger logger) {
+        this.name = name;
+        this.logger = logger;
         topic.addMessageListener(this);
     }
 
@@ -74,7 +81,10 @@ public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener
     @Override
     public void storeSequence(long sequence) {
         //We are not storing the sequence, but can detect loss based on it.
-        //todo: detect loss
+        if (lastSequence > 0 && sequence > lastSequence + 1) {
+            logger.warning(String.format("Observable '%s' lost %d internal messages", name, sequence - lastSequence + 1));
+        }
+        lastSequence = sequence;
     }
 
     @Override

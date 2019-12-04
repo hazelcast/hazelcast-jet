@@ -150,7 +150,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Override
     public <T> Observable<T> getObservable(@Nonnull String name) {
         ITopic<ObservableBatch> topic = getReliableTopic(name);
-        return new ObservableImpl<>(topic);
+        return new ObservableImpl<>(name, topic, getLogger());
     }
 
     @Override
