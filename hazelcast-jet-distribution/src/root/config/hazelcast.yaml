@@ -9,7 +9,12 @@ hazelcast:
       # starting from the given port.
       port: 5701
       auto-increment: true
-
+    # Which network interface the server should listen on. If enabled is set
+    # to false, it will listen on all available interfaces
+    interfaces:
+      enabled: false
+      interfaces:
+        - 127.0.0.1
     # The join section configures the strategies used by the server to
     # discover other Jet nodes. Jet will form a cluster automatically with
     # the other nodes using the same discovery mechanism. Only one join
