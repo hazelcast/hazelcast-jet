@@ -335,12 +335,12 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     <RET> RET attachMerge(@Nonnull GeneralStage<? extends T> other) {
-        ComputeStageImplBase castedOther = (ComputeStageImplBase) other;
-        if (fnAdapter != castedOther.fnAdapter) {
+        ComputeStageImplBase castOther = (ComputeStageImplBase) other;
+        if (fnAdapter != castOther.fnAdapter) {
             throw new IllegalArgumentException("The merged stages must both have or both not have " +
                     "timestamp definitions");
         }
-        return attach(new MergeTransform<>(transform, castedOther.transform), fnAdapter);
+        return attach(new MergeTransform<>(transform, castOther.transform), fnAdapter);
     }
 
     @Nonnull
