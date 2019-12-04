@@ -296,12 +296,12 @@ public interface JetInstance {
     <E> IList<E> getList(@Nonnull String name);
 
     /**
-     * Returns a distributed topic instance with the specified name.
+     * Returns a distributed reliable topic instance with the specified name.
      *
      * @param name name of the distributed topic
-     * @return distributed topic instance with specified name
+     * @return distributed reliable topic instance with specified name
      */
-    <E> ITopic<E> getTopic(@Nonnull String name);
+    <E> ITopic<E> getReliableTopic(@Nonnull String name);
 
     /**
      * Obtain the {@link JetCacheManager} that provides access to JSR-107 (JCache) caches

@@ -70,7 +70,7 @@ public class ObservableRepositoryTest {
         resetJetMock();
         repository.cleanup();
         //then
-        verify(jet, never()).getTopic(any());
+        verify(jet, never()).getReliableTopic(any());
 
         //when
         completeObservables("o3");
@@ -78,7 +78,7 @@ public class ObservableRepositoryTest {
         resetJetMock();
         repository.cleanup();
         //then
-        verify(jet, never()).getTopic(any());
+        verify(jet, never()).getReliableTopic(any());
 
         //when
         completeObservables("o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17",
@@ -87,8 +87,8 @@ public class ObservableRepositoryTest {
         resetJetMock();
         repository.cleanup();
         //then
-        verify(jet).getTopic(eq("o1"));
-        verify(jet).getTopic(eq("o2"));
+        verify(jet).getReliableTopic(eq("o1"));
+        verify(jet).getReliableTopic(eq("o2"));
         verifyNoMoreInteractions(jet);
 
         //when
@@ -96,7 +96,7 @@ public class ObservableRepositoryTest {
         timeSource.inc(TimeUnit.SECONDS, 1);
         repository.cleanup();
         //then
-        verify(jet).getTopic(eq("o3"));
+        verify(jet).getReliableTopic(eq("o3"));
         verifyNoMoreInteractions(jet);
 
         //when
@@ -104,29 +104,29 @@ public class ObservableRepositoryTest {
         timeSource.inc(TimeUnit.SECONDS, 1);
         repository.cleanup();
         //then only a fixed number of topics get clean-ed up
-        verify(jet).getTopic(eq("o4"));
-        verify(jet).getTopic(eq("o5"));
-        verify(jet).getTopic(eq("o6"));
-        verify(jet).getTopic(eq("o7"));
-        verify(jet).getTopic(eq("o8"));
-        verify(jet).getTopic(eq("o9"));
-        verify(jet).getTopic(eq("o10"));
-        verify(jet).getTopic(eq("o11"));
-        verify(jet).getTopic(eq("o12"));
-        verify(jet).getTopic(eq("o13"));
+        verify(jet).getReliableTopic(eq("o4"));
+        verify(jet).getReliableTopic(eq("o5"));
+        verify(jet).getReliableTopic(eq("o6"));
+        verify(jet).getReliableTopic(eq("o7"));
+        verify(jet).getReliableTopic(eq("o8"));
+        verify(jet).getReliableTopic(eq("o9"));
+        verify(jet).getReliableTopic(eq("o10"));
+        verify(jet).getReliableTopic(eq("o11"));
+        verify(jet).getReliableTopic(eq("o12"));
+        verify(jet).getReliableTopic(eq("o13"));
         verifyNoMoreInteractions(jet);
 
         //when
         resetJetMock();
         repository.cleanup();
         //then more topics get cleaned up
-        verify(jet).getTopic(eq("o14"));
-        verify(jet).getTopic(eq("o15"));
-        verify(jet).getTopic(eq("o16"));
-        verify(jet).getTopic(eq("o17"));
-        verify(jet).getTopic(eq("o18"));
-        verify(jet).getTopic(eq("o19"));
-        verify(jet).getTopic(eq("o20"));
+        verify(jet).getReliableTopic(eq("o14"));
+        verify(jet).getReliableTopic(eq("o15"));
+        verify(jet).getReliableTopic(eq("o16"));
+        verify(jet).getReliableTopic(eq("o17"));
+        verify(jet).getReliableTopic(eq("o18"));
+        verify(jet).getReliableTopic(eq("o19"));
+        verify(jet).getReliableTopic(eq("o20"));
         verifyNoMoreInteractions(jet);
     }
 
@@ -138,7 +138,7 @@ public class ObservableRepositoryTest {
 
     private void resetJetMock() {
         reset(jet);
-        when(jet.getTopic(any())).thenReturn(mock(ITopic.class));
+        when(jet.getReliableTopic(any())).thenReturn(mock(ITopic.class));
         when(jet.getList(any())).thenReturn(testList);
     }
 

@@ -182,7 +182,7 @@ public final class HazelcastWriters {
                         ArrayList::new,
                         ArrayList::add,
                         instance -> {
-                            ITopic<ObservableBatch> topic = instance.getTopic(name);
+                            ITopic<ObservableBatch> topic = instance.getReliableTopic(name);
                             return buffer -> {
                                 try {
                                     topic.publish(ObservableBatch.items(buffer));

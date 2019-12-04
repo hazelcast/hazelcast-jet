@@ -51,7 +51,7 @@ public class ObservableRepository {
     }
 
     public static void completeObservable(String observable, Throwable error, JetInstance jet, LongSupplier timeSource) {
-        ITopic<ObservableBatch> topic = jet.getTopic(observable);
+        ITopic<ObservableBatch> topic = jet.getReliableTopic(observable);
         topic.publish(error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error));
 
         IList<Tuple2<String, Long>> completedObservables =
@@ -74,7 +74,7 @@ public class ObservableRepository {
             long completionTime = tuple2.getValue();
             boolean expired = currentTime - completionTime >= expirationTime;
             if (expired) {
-                jet.getTopic(tuple2.getKey()).destroy();
+                jet.getReliableTopic(tuple2.getKey()).destroy();
                 iterator.remove();
                 cleaned++;
             } else {

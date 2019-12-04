@@ -138,8 +138,8 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     @Nonnull @Override
-    public <T> ITopic<T> getTopic(@Nonnull String name) {
-        return hazelcastInstance.getTopic(name);
+    public <T> ITopic<T> getReliableTopic(@Nonnull String name) {
+        return hazelcastInstance.getReliableTopic(name);
     }
 
     @Nonnull @Override
@@ -149,7 +149,7 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     @Override
     public <T> Observable<T> getObservable(@Nonnull String name) {
-        ITopic<ObservableBatch> topic = getTopic(name);
+        ITopic<ObservableBatch> topic = getReliableTopic(name);
         return new ObservableImpl<>(topic);
     }
 

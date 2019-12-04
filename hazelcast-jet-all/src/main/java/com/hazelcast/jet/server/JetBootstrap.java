@@ -256,8 +256,8 @@ public final class JetBootstrap {
         }
 
         @Nonnull @Override
-        public <T> ITopic<T> getTopic(@Nonnull String name) {
-            return instance.getTopic(name);
+        public <T> ITopic<T> getReliableTopic(@Nonnull String name) {
+            return instance.getReliableTopic(name);
         }
 
         @Override
