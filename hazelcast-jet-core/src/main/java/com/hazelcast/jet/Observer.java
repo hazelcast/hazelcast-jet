@@ -27,6 +27,10 @@ import java.util.function.Consumer;
  * Watcher of the events produced by an {@link Observable}. Once subscribed, it
  * will be notified of all subsequent events produced by the
  * {@link Observable}.
+ * <p>
+ * Notification will be done by an internal pool of threads and care should
+ * be taken to not block those threads, ie. finish processing of all events
+ * as soon as possible.
  *
  * @param <T> type of data values in the sequence produced by the
  * {@link Observable}
