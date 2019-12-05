@@ -20,6 +20,7 @@ import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -29,6 +30,7 @@ import org.junit.rules.TestName;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -44,6 +46,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
 
     private static final int PERSON_COUNT = 10;
 
+    private static Path tempDirectory;
     private static String dbConnectionUrl;
 
     @Rule
@@ -53,8 +56,13 @@ public class WriteJdbcPTest extends PipelineTestSupport {
     @BeforeClass
     public static void setupClass() throws IOException {
         String dbName = WriteJdbcPTest.class.getSimpleName();
-        String tempDirectory = Files.createTempDirectory(dbName).toString();
+        tempDirectory = Files.createTempDirectory(dbName);
         dbConnectionUrl = "jdbc:h2:" + tempDirectory + "/" + dbName;
+    }
+
+    @AfterClass
+    public static void deleteDbFiles() throws IOException {
+        Files.delete(tempDirectory);
     }
 
     @Before
