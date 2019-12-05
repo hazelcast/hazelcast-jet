@@ -18,6 +18,7 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sources;
+import org.h2.tools.DeleteDbFiles;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,6 +53,7 @@ public class ReadJdbcPTest extends PipelineTestSupport {
 
     @AfterClass
     public static void deleteDbFiles() throws IOException {
+        DeleteDbFiles.execute(tempDirectory.toString(), ReadJdbcPTest.class.getSimpleName(), true);
         Files.delete(tempDirectory);
     }
 

@@ -20,6 +20,7 @@ import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.Sinks;
+import org.h2.tools.DeleteDbFiles;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -62,6 +63,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
 
     @AfterClass
     public static void deleteDbFiles() throws IOException {
+        DeleteDbFiles.execute(tempDirectory.toString(), WriteJdbcPTest.class.getSimpleName(), true);
         Files.delete(tempDirectory);
     }
 
