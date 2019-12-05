@@ -109,8 +109,11 @@ public class ProcessorTasklet implements Tasklet {
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
     private ProcessorState state;
+
+    // pending snapshot IDs are the ID of the next expected snapshot ID
     private long pendingSnapshotId1;
     private long pendingSnapshotId2;
+
     private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
     private boolean processorClosed;

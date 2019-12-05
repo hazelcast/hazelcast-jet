@@ -42,6 +42,9 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  * A base class for transaction utilities implementing different transaction
  * strategies.
  *
+ * <p>The protected methods are intended for utility implementations. The
+ * public methods are intended for utility users, the processors.
+ *
  * @param <TXN_ID> type fo the transaction ID
  * @param <RES> type of the transactional resource
  */

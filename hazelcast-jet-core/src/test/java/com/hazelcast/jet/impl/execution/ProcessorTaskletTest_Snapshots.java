@@ -25,7 +25,7 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -233,7 +233,7 @@ public class ProcessorTaskletTest_Snapshots {
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
         processor.itemsToEmitInOnSnapshotComplete = 1;
 
-        CompletableFuture<SnapshotOperationResult> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", false);
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(asList("item", barrier0(false)), getSnapshotBufferValues());
         assertEquals(asList("item", barrier0(false)), outstream1.getBuffer());

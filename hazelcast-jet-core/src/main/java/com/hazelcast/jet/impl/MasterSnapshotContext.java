@@ -21,9 +21,9 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
-import com.hazelcast.jet.impl.operation.SnapshotCompleteOperation;
-import com.hazelcast.jet.impl.operation.SnapshotOperation;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.SnapshotPhase2Operation;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.spi.impl.operationservice.Operation;
@@ -159,7 +159,7 @@ class MasterSnapshotContext {
                 newSnapshotId, mc.jobIdString(), isTerminal ? "yes" : "no", snapshotMapName);
 
         Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotOperation(mc.jobId(), mc.executionId(), newSnapshotId, finalMapName, isTerminal);
+                plan -> new SnapshotPhase1Operation(mc.jobId(), mc.executionId(), newSnapshotId, finalMapName, isTerminal);
 
         // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
         // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
@@ -192,14 +192,14 @@ class MasterSnapshotContext {
             // Note: this method can be called after finalizeJob() is called or even after new execution started.
             // We only wait for snapshot completion if the job completed with a terminal snapshot and the job
             // was successful.
-            SnapshotOperationResult mergedResult = new SnapshotOperationResult();
+            SnapshotPhase1Result mergedResult = new SnapshotPhase1Result();
             for (Map.Entry<MemberInfo, Object> entry : responses) {
                 // the response is either SnapshotOperationResult or an exception, see #invokeOnParticipants() method
                 Object response = entry.getValue();
                 if (response instanceof Throwable) {
-                    response = new SnapshotOperationResult(0, 0, 0, (Throwable) response);
+                    response = new SnapshotPhase1Result(0, 0, 0, (Throwable) response);
                 }
-                mergedResult.merge((SnapshotOperationResult) response);
+                mergedResult.merge((SnapshotPhase1Result) response);
             }
 
             IMap<Object, Object> snapshotMap = mc.nodeEngine().getHazelcastInstance().getMap(snapshotMapName);
@@ -223,7 +223,7 @@ class MasterSnapshotContext {
                             + mc.jobIdString() + ": snapshot data might be corrupted");
                 }
             } catch (Exception e) {
-                mergedResult.merge(new SnapshotOperationResult(0, 0, 0, e));
+                mergedResult.merge(new SnapshotPhase1Result(0, 0, 0, e));
             }
 
             boolean isSuccess = mergedResult.getError() == null;
@@ -256,7 +256,7 @@ class MasterSnapshotContext {
 
             // start the phase 2
             boolean isExportWithoutCancellation = wasExport && !wasTerminal;
-            Function<ExecutionPlan, Operation> factory = plan -> new SnapshotCompleteOperation(
+            Function<ExecutionPlan, Operation> factory = plan -> new SnapshotPhase2Operation(
                     mc.jobId(), mc.executionId(), snapshotId, isSuccess && !isExportWithoutCancellation);
             mc.invokeOnParticipants(factory,
                     responses2 -> mc.coordinationService().submitToCoordinatorThread(() ->
@@ -287,7 +287,7 @@ class MasterSnapshotContext {
         mc.coordinationService().submitToCoordinatorThread(() -> {
             for (Entry<MemberInfo, Object> response : responses) {
                 if (response.getValue() instanceof Throwable) {
-                    logger.warning(SnapshotCompleteOperation.class.getSimpleName() + " for snapshot " + snapshotId + " in "
+                    logger.warning(SnapshotPhase2Operation.class.getSimpleName() + " for snapshot " + snapshotId + " in "
                             + mc.jobIdString() + " failed on member: " + response, (Throwable) response);
                 }
             }

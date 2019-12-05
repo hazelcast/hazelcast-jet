@@ -18,9 +18,9 @@ package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.impl.operation.SnapshotCompleteOperation;
-import com.hazelcast.jet.impl.operation.SnapshotOperation;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.SnapshotPhase2Operation;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.logging.ILogger;
 
 import java.util.concurrent.CancellationException;
@@ -117,7 +117,7 @@ public class SnapshotContext {
      * Future which will be created when phase 1 starts and completed and
      * nulled out when the phase 1 completes.
      */
-    private volatile CompletableFuture<SnapshotOperationResult> phase1Future;
+    private volatile CompletableFuture<SnapshotPhase1Result> phase1Future;
 
     /**
      * Future which will be created when phase 2 starts and completed and
@@ -198,9 +198,9 @@ public class SnapshotContext {
 
     /**
      * This method is called when the member received {@link
-     * SnapshotOperation}.
+     * SnapshotPhase1Operation}.
      */
-    synchronized CompletableFuture<SnapshotOperationResult> startNewSnapshotPhase1(
+    synchronized CompletableFuture<SnapshotPhase1Result> startNewSnapshotPhase1(
             long snapshotId, String mapName, boolean isTerminal) {
         if (snapshotId == currentSnapshotId) {
             // This is possible when a SnapshotOperation is retried. We will throw because we
@@ -241,7 +241,7 @@ public class SnapshotContext {
         }
         if (numSsTasklets == 0) {
             // member is already done with the job and master didn't know it yet - we are immediately successful
-            return completedFuture(new SnapshotOperationResult(0, 0, 0, null));
+            return completedFuture(new SnapshotPhase1Result(0, 0, 0, null));
         }
         phase1Future = new CompletableFuture<>();
         return phase1Future;
@@ -249,7 +249,7 @@ public class SnapshotContext {
 
     /**
      * This method is called when the member received {@link
-     * SnapshotCompleteOperation}.
+     * SnapshotPhase2Operation}.
      */
     synchronized CompletableFuture<Void> startNewSnapshotPhase2(long snapshotId, boolean success) {
         if (snapshotId == activeSnapshotIdPhase2) {
@@ -385,7 +385,7 @@ public class SnapshotContext {
             return;
         }
         phase1Future.complete(
-                new SnapshotOperationResult(totalBytes.get(), totalKeys.get(), totalChunks.get(), snapshotError.get()));
+                new SnapshotPhase1Result(totalBytes.get(), totalKeys.get(), totalChunks.get(), snapshotError.get()));
 
         phase1Future = null;
         snapshotError.set(null);

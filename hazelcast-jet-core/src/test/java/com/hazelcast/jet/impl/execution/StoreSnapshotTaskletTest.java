@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.execution;
 import com.hazelcast.internal.serialization.impl.HeapData;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.MockAsyncSnapshotWriter;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
@@ -184,7 +184,7 @@ public class StoreSnapshotTaskletTest extends JetTestSupport {
         init(singletonList(new SnapshotBarrier(2, false)));
         RuntimeException mockFailure = new RuntimeException("mock failure");
         mockSsWriter.failure = mockFailure;
-        CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(2, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(2, "map", false);
         assertEquals(MADE_PROGRESS, sst.call());
         assertFalse(future.isDone());
         assertEquals(MADE_PROGRESS, sst.call());

@@ -27,17 +27,17 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 
-public class SnapshotCompleteOperation extends AsyncJobOperation {
+public class SnapshotPhase2Operation extends AsyncJobOperation {
 
     private long executionId;
     private long snapshotId;
     private boolean success;
 
     // for deserialization
-    public SnapshotCompleteOperation() {
+    public SnapshotPhase2Operation() {
     }
 
-    public SnapshotCompleteOperation(long jobId, long executionId, long snapshotId, boolean success) {
+    public SnapshotPhase2Operation(long jobId, long executionId, long snapshotId, boolean success) {
         super(jobId);
         this.executionId = executionId;
         this.snapshotId = snapshotId;
@@ -66,7 +66,7 @@ public class SnapshotCompleteOperation extends AsyncJobOperation {
 
     @Override
     public int getClassId() {
-        return JetInitDataSerializerHook.SNAPSHOT_COMPLETE_OPERATION;
+        return JetInitDataSerializerHook.SNAPSHOT_PHASE2_OPERATION;
     }
 
     @Override

@@ -124,7 +124,7 @@ public class OperationLossTest extends SimpleTestInClusterSupport {
     @Test
     public void when_snapshotOperationLost_then_retried() {
         PacketFiltersUtil.dropOperationsFrom(instance().getHazelcastInstance(), JetInitDataSerializerHook.FACTORY_ID,
-                singletonList(JetInitDataSerializerHook.SNAPSHOT_OPERATION));
+                singletonList(JetInitDataSerializerHook.SNAPSHOT_PHASE1_OPERATION));
         DAG dag = new DAG();
         Vertex v1 = dag.newVertex("v1", () -> new DummyStatefulP()).localParallelism(1);
         Vertex v2 = dag.newVertex("v2", mapP(identity())).localParallelism(1);
@@ -198,7 +198,7 @@ public class OperationLossTest extends SimpleTestInClusterSupport {
     @Test
     public void when_terminalSnapshotOperationLost_then_jobRestarts() {
         PacketFiltersUtil.dropOperationsFrom(instance().getHazelcastInstance(), JetInitDataSerializerHook.FACTORY_ID,
-                singletonList(JetInitDataSerializerHook.SNAPSHOT_OPERATION));
+                singletonList(JetInitDataSerializerHook.SNAPSHOT_PHASE1_OPERATION));
         DAG dag = new DAG();
         Vertex v1 = dag.newVertex("v1", () -> new NoOutputSourceP()).localParallelism(1);
         Vertex v2 = dag.newVertex("v2", mapP(identity())).localParallelism(1);

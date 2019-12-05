@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import org.junit.Test;
@@ -79,7 +79,7 @@ public class SnapshotContextTest {
                 new SnapshotContext(mock(ILogger.class), "test job", 9, ProcessingGuarantee.EXACTLY_ONCE);
 
         ssContext.initTaskletCount(taskletCount, taskletCount, numHigherPriority);
-        CompletableFuture<SnapshotOperationResult> future = null;
+        CompletableFuture<SnapshotPhase1Result> future = null;
         if (snapshotStarted == SnapshotStarted.BEFORE) {
             future = ssContext.startNewSnapshotPhase1(10, "map", false);
             assertEquals("activeSnapshotId initially", numHigherPriority > 0 ? 9 : 10,

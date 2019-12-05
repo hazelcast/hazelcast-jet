@@ -23,7 +23,7 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TestProcessors.DummyStatefulP;
 import com.hazelcast.jet.core.TestProcessors.MockP;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.operation.SnapshotOperation;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import com.hazelcast.test.PacketFiltersUtil;
 import org.junit.After;
@@ -68,7 +68,7 @@ public class CancellationTest extends JetTestSupport {
     @After
     public void after() {
         // to not affect other tests in this VM
-        SnapshotOperation.postponeResponses = false;
+        SnapshotPhase1Operation.postponeResponses = false;
     }
 
     @Test
@@ -348,7 +348,7 @@ public class CancellationTest extends JetTestSupport {
     @Test
     public void when_cancelledDuringSnapshotPhase1_then_cancelled() {
         JetInstance jet = createJetMember();
-        SnapshotOperation.postponeResponses = true;
+        SnapshotPhase1Operation.postponeResponses = true;
         DAG dag = new DAG();
         dag.newVertex("blocking", DummyStatefulP::new).localParallelism(1);
         Job job = jet.newJob(dag, new JobConfig().setSnapshotIntervalMillis(100).setProcessingGuarantee(EXACTLY_ONCE));
@@ -361,7 +361,7 @@ public class CancellationTest extends JetTestSupport {
         JetInstance jet = createJetMember();
         createJetMember();
         PacketFiltersUtil.dropOperationsFrom(jet.getHazelcastInstance(), JetInitDataSerializerHook.FACTORY_ID,
-                singletonList(JetInitDataSerializerHook.SNAPSHOT_COMPLETE_OPERATION));
+                singletonList(JetInitDataSerializerHook.SNAPSHOT_PHASE2_OPERATION));
 
         DAG dag = new DAG();
         dag.newVertex("blocking", DummyStatefulP::new).localParallelism(1);

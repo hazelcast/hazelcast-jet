@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.execution;
 
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.operation.SnapshotOperation.SnapshotOperationResult;
+import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Rule;
@@ -56,7 +56,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledAfterPhase1_then_cannotStartPhase2() {
         ssContext.initTaskletCount(1, 1, 0);
-        CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
         /// When
         ssContext.phase1DoneForTasklet(1, 1, 1);
@@ -71,7 +71,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledMidPhase1_then_futureCompleted() {
         ssContext.initTaskletCount(3, 3, 0);
-        CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
         // When
         ssContext.phase1DoneForTasklet(1, 1, 1);
@@ -100,7 +100,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledMidPhase1_then_phase1DoneForTaskletSucceeds() {
         ssContext.initTaskletCount(2, 2, 0);
-        CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
 
         // When
         ssContext.phase1DoneForTasklet(1, 1, 1);
@@ -132,7 +132,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void test_taskletDoneWhilePostponed() {
         ssContext.initTaskletCount(2, 2, 2);
-        CompletableFuture<SnapshotOperationResult> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
         assertEquals(9, ssContext.activeSnapshotIdPhase1());
         ssContext.storeSnapshotTaskletDone(9, true);
         assertEquals(9, ssContext.activeSnapshotIdPhase1());

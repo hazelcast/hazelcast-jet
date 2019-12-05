@@ -543,13 +543,13 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return lastSnapshotId;
     }
 
-    public int getSsTaskletCount() {
+    public int getStoreSnapshotTaskletCount() {
         return (int) tasklets.stream()
                              .filter(t -> t instanceof StoreSnapshotTasklet)
                              .count();
     }
 
-    public int getPTaskletCount() {
+    public int getProcessorTaskletCount() {
         return (int) tasklets.stream()
                              .filter(t -> t instanceof ProcessorTasklet)
                              .count();
