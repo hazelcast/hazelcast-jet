@@ -106,6 +106,35 @@ Here is an example with a
 include::{javasource}/integration/Avro.java[tag=s2]
 ----
 
+[[connector-files-hadoop]]
+== Hadoop
+
+The File Source and Sink has limited production use due to text only
+file format support. For various file formats and file-systems
+<<hadoop, Hadoop>> module can be used. Some common file formats for
+Apache Hadoop:
+
+ - Plain text storage (eg, CSV, TSV files)
+ - Sequence Files
+ - Avro
+ - Parquet
+
+You can use Hazelcast Jet Hadoop module to read/write files from/to
+local file system or any file system Apache Hadoop supports. Various
+cloud storages can be configured as a file system for Apache Hadoop
+thus enables read/write files(objects). Cloud Storages Apache Hadoop
+supports:
+
+ - Amazon S3
+ - Google Cloud Storage
+ - Azure Cloud Storage
+ - Azure Data Lake
+
+For more information you can check our
+{jet-examples}/hadoop/src/main/java/com/hazelcast/jet/examples/hadoop[code samples]
+which includes `Avro` and `Parquet` file format examples and different cloud storage
+options.
+
 [[connector-socket]]
 = TCP/IP Socket
 
