@@ -1,9 +1,23 @@
 = Hadoop
 
-The Hadoop Distributed File System is a production-worthy choice for
-both a data source and a data sink in a batch computation job. It is a
-distributed, replicated storage system that handles these concerns
-automatically, exposing a simple unified view to the client.
+The Hadoop connector is a production-worthy choice for
+both a data source and a data sink in a batch computation job. 
+
+You can use Hadoop connector to read/write files from/to Hadoop 
+Distributed File System (HDFS), local file system, or any Hadoop Compatible 
+File System including various cloud storages. Jet was tested with:
+
+ - Amazon S3
+ - Google Cloud Storage
+ - Azure Cloud Storage
+ - Azure Data Lake
+ 
+For more information you can check the
+{jet-examples}/hadoop/src/main/java/com/hazelcast/jet/examples/hadoop[code samples]
+which includes `Avro` and `Parquet` file format examples and different cloud storage
+options.
+
+== Configuration
 
 The Hadoop source and sink require a configuration object of type
 https://hadoop.apache.org/docs/r2.8.3/api/org/apache/hadoop/conf/Configuration.html[Configuration]
