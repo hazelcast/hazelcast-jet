@@ -239,3 +239,40 @@ members must be present after the restart for Jet to be able to reload
 the data. Beyond that, there's no special action to take: as soon as the
 cluster re-forms, it will automatically reload the persisted snapshots
 and resume the jobs.
+
+= Configure Blue/Green Client (Enterprise Only)
+
+Blue/Green deployment refers to a software technique which can be used
+to reduces system downtime by deploying two mirrored production
+environments referred to as Blue and Green. One of the environments is
+running in production while the other one is active standby.
+
+The Jet client can be configured to switch to the other cluster in case
+of a connection failure on production environment.
+
+== Programmatic Configuration
+
+[source]
+----
+include::{javasource}/ConfigureFaultTolerance.java[tag=s7]
+----
+
+== Declarative Configuration
+
+[source]
+----
+<hazelcast-client-failover>
+    <try-count>10</try-count>
+    <clients>
+        <client>hazelcast-client-A.xml</client>
+        <client>hazelcast-client-B.xml</client>
+    </clients>
+</hazelcast-client-failover>
+----
+
+After switching to the cluster-B, any running job on cluster-A will be
+canceled and user needs to re-submit them to the new cluster.
+
+For more information on Blue/Green configuration options see Hazelcast
+IMDG documentation
+{hz-refman}#blue-green-deployment-and-disaster-recovery[Blue-Green Deployment]
