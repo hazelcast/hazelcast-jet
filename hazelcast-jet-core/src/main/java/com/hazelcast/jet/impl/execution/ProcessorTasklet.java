@@ -301,11 +301,14 @@ public class ProcessorTasklet implements Tasklet {
                 return;
 
             case ON_SNAPSHOT_COMPLETED:
+            case ON_SNAPSHOT_COMPLETED_BEFORE_END:
                 if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
                     pendingSnapshotId2++;
                     ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
-                    state = processingState();
+                    state = state == ON_SNAPSHOT_COMPLETED_BEFORE_END
+                            ? EMIT_DONE_ITEM
+                            : processingState();
                 }
                 return;
 
@@ -314,14 +317,6 @@ public class ProcessorTasklet implements Tasklet {
                 if (currSnapshotId2 >= pendingSnapshotId2) {
                     state = ON_SNAPSHOT_COMPLETED_BEFORE_END;
                     stateMachineStep(); // recursion
-                }
-                return;
-
-            case ON_SNAPSHOT_COMPLETED_BEFORE_END:
-                if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
-                    ssContext.phase2DoneForTasklet();
-                    progTracker.madeProgress();
-                    state = EMIT_DONE_ITEM;
                 }
                 return;
 
