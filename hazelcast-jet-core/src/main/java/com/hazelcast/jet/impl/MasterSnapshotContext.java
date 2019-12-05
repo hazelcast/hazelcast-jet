@@ -46,7 +46,6 @@ import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static com.hazelcast.jet.impl.JobRepository.snapshotDataMapName;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
  * Part of {@link MasterContext} that deals with snapshot creation.
@@ -329,7 +328,7 @@ class MasterSnapshotContext {
             }
             if (logger.isFineEnabled()) {
                 logger.fine("Snapshot " + snapshotId + " for " + mc.jobIdString() + " completed in "
-                        + NANOSECONDS.toMillis(System.nanoTime() - startTime) + "ms, status="
+                        + (System.currentTimeMillis() - startTime) + "ms, status="
                         + (phase1Error == null ? "success" : "failure: " + phase1Error));
             }
 
