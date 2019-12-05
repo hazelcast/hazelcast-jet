@@ -44,7 +44,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
 
     private static final int PERSON_COUNT = 10;
 
-    private static String DB_CONNECTION_URL;
+    private static String dbConnectionUrl;
 
     @Rule
     public TestName testName = new TestName();
@@ -54,7 +54,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
     public static void setupClass() throws IOException {
         String dbName = WriteJdbcPTest.class.getSimpleName();
         String tempDirectory = Files.createTempDirectory(dbName).toString();
-        DB_CONNECTION_URL = "jdbc:h2:" + tempDirectory + "/" + dbName;
+        dbConnectionUrl = "jdbc:h2:" + tempDirectory + "/" + dbName;
     }
 
     @Before
@@ -68,7 +68,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
         addToSrcList(sequence(PERSON_COUNT));
         p.readFrom(source)
          .map(item -> new Person((Integer) item, item.toString()))
-         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
+         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", dbConnectionUrl,
                  (stmt, item) -> {
                      stmt.setInt(1, item.id);
                      stmt.setString(2, item.name);
@@ -99,7 +99,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
         addToSrcList(sequence(PERSON_COUNT));
         p.readFrom(source)
          .map(item -> new Person((Integer) item, item.toString()))
-         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", DB_CONNECTION_URL,
+         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + "(id, name) VALUES(?, ?)", dbConnectionUrl,
                  (stmt, item) -> {
                      throw new SQLNonTransientException();
                  }
@@ -109,14 +109,14 @@ public class WriteJdbcPTest extends PipelineTestSupport {
     }
 
     private void createTable() throws SQLException {
-        try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+        try (Connection connection = DriverManager.getConnection(dbConnectionUrl);
              Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE " + tableName + "(id int primary key, name varchar(255))");
         }
     }
 
     private int rowCount() throws SQLException {
-        try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+        try (Connection connection = DriverManager.getConnection(dbConnectionUrl);
              Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery("SELECT COUNT(id) FROM " + tableName);
             resultSet.next();
@@ -134,7 +134,7 @@ public class WriteJdbcPTest extends PipelineTestSupport {
                     exceptionThrown = true;
                     throw new SQLException();
                 }
-                return DriverManager.getConnection(DB_CONNECTION_URL);
+                return DriverManager.getConnection(dbConnectionUrl);
             }
         };
     }

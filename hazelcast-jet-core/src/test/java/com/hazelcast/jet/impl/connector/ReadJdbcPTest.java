@@ -36,14 +36,14 @@ public class ReadJdbcPTest extends PipelineTestSupport {
 
     private static final int PERSON_COUNT = 100;
 
-    private static String DB_CONNECTION_URL;
+    private static String dbConnectionUrl;
 
     @BeforeClass
     public static void setupClass() throws SQLException, IOException {
         String dbName = ReadJdbcPTest.class.getSimpleName();
         String tempDirectory = Files.createTempDirectory(dbName).toString();
 
-        DB_CONNECTION_URL = "jdbc:h2:" + tempDirectory + "/" + dbName;
+        dbConnectionUrl = "jdbc:h2:" + tempDirectory + "/" + dbName;
 
         createAndFillTable();
     }
@@ -51,7 +51,7 @@ public class ReadJdbcPTest extends PipelineTestSupport {
     @Test
     public void test_whenPartitionedQuery() {
         p.readFrom(Sources.jdbc(
-                () -> DriverManager.getConnection(DB_CONNECTION_URL),
+                () -> DriverManager.getConnection(dbConnectionUrl),
                 (con, parallelism, index) -> {
                     PreparedStatement statement = con.prepareStatement("select * from PERSON where mod(id,?)=?");
                     statement.setInt(1, parallelism);
@@ -68,7 +68,7 @@ public class ReadJdbcPTest extends PipelineTestSupport {
 
     @Test
     public void test_whenTotalParallelismOne() {
-        p.readFrom(Sources.jdbc(DB_CONNECTION_URL, "select * from PERSON",
+        p.readFrom(Sources.jdbc(dbConnectionUrl, "select * from PERSON",
                 resultSet -> new Person(resultSet.getInt(1), resultSet.getString(2))))
          .writeTo(sink);
 
@@ -78,7 +78,7 @@ public class ReadJdbcPTest extends PipelineTestSupport {
     }
 
     private static void createAndFillTable() throws SQLException {
-        try (Connection connection = DriverManager.getConnection(DB_CONNECTION_URL);
+        try (Connection connection = DriverManager.getConnection(dbConnectionUrl);
              Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE PERSON(id int primary key, name varchar(255))");
             try (PreparedStatement stmt = connection.prepareStatement("INSERT INTO PERSON(id, name) VALUES(?, ?)")) {
