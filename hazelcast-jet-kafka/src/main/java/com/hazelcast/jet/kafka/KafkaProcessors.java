@@ -86,6 +86,6 @@ public final class KafkaProcessors {
             @Nonnull FunctionEx<? super T, ? extends ProducerRecord<K, V>> toRecordFn,
             boolean exactlyOnce
     ) {
-        return ProcessorMetaSupplier.of(WriteKafkaP.supplier(properties, toRecordFn, exactlyOnce), 1);
+        return ProcessorMetaSupplier.of(1, WriteKafkaP.supplier(properties, toRecordFn, exactlyOnce));
     }
 }
