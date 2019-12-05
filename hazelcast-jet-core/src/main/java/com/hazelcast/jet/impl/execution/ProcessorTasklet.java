@@ -66,8 +66,8 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_BARRIER;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.END;
-import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_TRY_PROCESS;
-import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED_BEFORE_END;
+import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_PROCESS;
+import static com.hazelcast.jet.impl.execution.ProcessorState.FINAL_ON_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_WATERMARK;
@@ -245,7 +245,7 @@ public class ProcessorTasklet implements Tasklet {
                 if (pendingWatermark == null) {
                     long wm = watermarkCoalescer.checkWmHistory();
                     if (wm == NO_NEW_WM) {
-                        state = NULLARY_TRY_PROCESS;
+                        state = NULLARY_PROCESS;
                         stateMachineStep(); // recursion
                         break;
                     }
@@ -254,12 +254,12 @@ public class ProcessorTasklet implements Tasklet {
                 if (pendingWatermark.equals(IDLE_MESSAGE)
                         ? outbox.offer(IDLE_MESSAGE)
                         : processor.tryProcessWatermark(pendingWatermark)) {
-                    state = NULLARY_TRY_PROCESS;
+                    state = NULLARY_PROCESS;
                     pendingWatermark = null;
                 }
                 break;
 
-            case NULLARY_TRY_PROCESS:
+            case NULLARY_PROCESS:
                 if (isSnapshotInbox() || processor.tryProcess()) {
                     state = PROCESS_INBOX;
                         outbox.reset();
@@ -304,21 +304,23 @@ public class ProcessorTasklet implements Tasklet {
                 return;
 
             case ON_SNAPSHOT_COMPLETED:
-            case ON_SNAPSHOT_COMPLETED_BEFORE_END:
+            case FINAL_ON_SNAPSHOT_COMPLETED:
                 if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
                     pendingSnapshotId2++;
                     ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
-                    state = state == ON_SNAPSHOT_COMPLETED_BEFORE_END
-                            ? EMIT_DONE_ITEM
-                            : processingState();
+                    if (state == FINAL_ON_SNAPSHOT_COMPLETED) {
+                        state = EMIT_DONE_ITEM;
+                    } else {
+                        state = processingState();
+                    }
                 }
                 return;
 
             case WAITING_FOR_SNAPSHOT_COMPLETED:
                 long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
                 if (currSnapshotId2 >= pendingSnapshotId2) {
-                    state = ON_SNAPSHOT_COMPLETED_BEFORE_END;
+                    state = FINAL_ON_SNAPSHOT_COMPLETED;
                     stateMachineStep(); // recursion
                 }
                 return;
@@ -342,8 +344,7 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     private void processInbox() {
-        long currSnapshotId2 = ssContext.activeSnapshotIdPhase2();
-        if (currSnapshotId2 == pendingSnapshotId2) {
+        if (ssContext.activeSnapshotIdPhase2() == pendingSnapshotId2) {
             if (outbox.hasUnfinishedItem()) {
                 outbox.block();
             } else {
@@ -520,8 +521,8 @@ public class ProcessorTasklet implements Tasklet {
     }
 
     /**
-     * Initial state of the processor. If there are no inbound ordinals left,
-     * we will go to COMPLETE state otherwise to PROCESS_WATERMARK.
+     * If there are no inbound ordinals left, we will go to COMPLETE state
+     * otherwise to PROCESS_WATERMARK.
      */
     private ProcessorState processingState() {
         return instreamCursor == null ? COMPLETE : PROCESS_WATERMARK;

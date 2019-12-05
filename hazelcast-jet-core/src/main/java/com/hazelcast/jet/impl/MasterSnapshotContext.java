@@ -118,58 +118,58 @@ class MasterSnapshotContext {
 
     void tryBeginSnapshot() {
         mc.coordinationService().submitToCoordinatorThread(() -> {
-        boolean isTerminal;
-        String snapshotMapName;
-        CompletableFuture<Void> future;
-        mc.lock();
-        long localExecutionId;
-        try {
-            if (mc.jobStatus() != RUNNING) {
-                logger.fine("Not beginning snapshot, " + mc.jobIdString() + " is not RUNNING, but " + mc.jobStatus());
-                return;
-            }
-            if (snapshotInProgress) {
-                logger.fine("Not beginning snapshot since one is already in progress " + mc.jobIdString());
-                return;
-            }
-            if (terminalSnapshotFuture.isDone()) {
-                logger.fine("Not beginning snapshot since terminal snapshot is already completed " + mc.jobIdString());
-                return;
+            boolean isTerminal;
+            String snapshotMapName;
+            CompletableFuture<Void> future;
+            mc.lock();
+            long localExecutionId;
+            try {
+                if (mc.jobStatus() != RUNNING) {
+                    logger.fine("Not beginning snapshot, " + mc.jobIdString() + " is not RUNNING, but " + mc.jobStatus());
+                    return;
+                }
+                if (snapshotInProgress) {
+                    logger.fine("Not beginning snapshot since one is already in progress " + mc.jobIdString());
+                    return;
+                }
+                if (terminalSnapshotFuture.isDone()) {
+                    logger.fine("Not beginning snapshot since terminal snapshot is already completed " + mc.jobIdString());
+                    return;
+                }
+
+                Tuple3<String, Boolean, CompletableFuture<Void>> requestedSnapshot = snapshotQueue.poll();
+                if (requestedSnapshot == null) {
+                    return;
+                }
+                snapshotInProgress = true;
+                snapshotMapName = requestedSnapshot.f0();
+                isTerminal = requestedSnapshot.f1();
+                future = requestedSnapshot.f2();
+                mc.jobExecutionRecord().startNewSnapshot(snapshotMapName);
+                localExecutionId = mc.executionId();
+            } finally {
+                mc.unlock();
             }
 
-            Tuple3<String, Boolean, CompletableFuture<Void>> requestedSnapshot = snapshotQueue.poll();
-            if (requestedSnapshot == null) {
-                return;
-            }
-            snapshotInProgress = true;
-            snapshotMapName = requestedSnapshot.f0();
-            isTerminal = requestedSnapshot.f1();
-            future = requestedSnapshot.f2();
-            mc.jobExecutionRecord().startNewSnapshot(snapshotMapName);
-            localExecutionId = mc.executionId();
-        } finally {
-            mc.unlock();
-        }
+            mc.writeJobExecutionRecord(false);
+            long newSnapshotId = mc.jobExecutionRecord().ongoingSnapshotId();
+            boolean isExport = snapshotMapName != null;
+            String finalMapName = isExport ? exportedSnapshotMapName(snapshotMapName)
+                    : snapshotDataMapName(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
+                mc.nodeEngine().getHazelcastInstance().getMap(finalMapName).clear();
+            logFine(logger, "Starting snapshot %d for %s, terminal: %s, writing to: %s",
+                    newSnapshotId, mc.jobIdString(), isTerminal ? "yes" : "no", snapshotMapName);
 
-        mc.writeJobExecutionRecord(false);
-        long newSnapshotId = mc.jobExecutionRecord().ongoingSnapshotId();
-        boolean isExport = snapshotMapName != null;
-        String finalMapName = isExport ? exportedSnapshotMapName(snapshotMapName)
-                : snapshotDataMapName(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
-            mc.nodeEngine().getHazelcastInstance().getMap(finalMapName).clear();
-        logFine(logger, "Starting snapshot %d for %s, terminal: %s, writing to: %s",
-                newSnapshotId, mc.jobIdString(), isTerminal ? "yes" : "no", snapshotMapName);
+            Function<ExecutionPlan, Operation> factory = plan ->
+                    new SnapshotPhase1Operation(mc.jobId(), localExecutionId, newSnapshotId, finalMapName, isTerminal);
 
-        Function<ExecutionPlan, Operation> factory =
-                plan -> new SnapshotPhase1Operation(mc.jobId(), localExecutionId, newSnapshotId, finalMapName, isTerminal);
-
-        // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
-        // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
-        mc.invokeOnParticipants(
-                factory,
-                responses -> onSnapshotPhase1Complete(responses, localExecutionId, newSnapshotId, finalMapName, isExport,
-                                isTerminal, future),
-                null, true);
+            // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
+            // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
+            mc.invokeOnParticipants(
+                    factory,
+                    responses -> onSnapshotPhase1Complete(responses, localExecutionId, newSnapshotId, finalMapName,
+                            isExport, isTerminal, future),
+                    null, true);
         });
     }
 

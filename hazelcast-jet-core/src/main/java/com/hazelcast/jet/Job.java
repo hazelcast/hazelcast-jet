@@ -259,7 +259,7 @@ public interface Job {
      * to delete it. If your state is large, make sure you have enough memory
      * to store it. The snapshot created using this method will also not be
      * used for automatic restart - should the job fail, the previous
-     * automatically started snapshot will be used.
+     * automatically saved snapshot will be used.
      * <p>
      * For transactional sources or sinks (that is those which use transactions
      * to confirm reads or to commit writes), Jet will not commit the

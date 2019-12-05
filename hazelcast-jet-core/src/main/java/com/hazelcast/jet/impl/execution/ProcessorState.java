@@ -31,9 +31,10 @@ enum ProcessorState {
     PROCESS_WATERMARK,
 
     /**
-     * Making calls to {@link Processor#tryProcess()} until it returns true.
+     * Making calls to the zero-argument {@link Processor#tryProcess()} method
+     * until it returns true.
      */
-    NULLARY_TRY_PROCESS,
+    NULLARY_PROCESS,
 
     /**
      * Making calls to {@link Processor#process(int, Inbox)} until the inbox is
@@ -78,11 +79,11 @@ enum ProcessorState {
     WAITING_FOR_SNAPSHOT_COMPLETED,
 
     /**
-     * Making calls to {@link Processor#onSnapshotCompleted(boolean)} until it
-     * returns {@code true}, after the processor completed, i.e. after {@link
-     * #WAITING_FOR_SNAPSHOT_COMPLETED}.
+     * Same as {@link #ON_SNAPSHOT_COMPLETED}, but after the processor
+     * completed. It follows after {@link #WAITING_FOR_SNAPSHOT_COMPLETED} and
+     * is followed by {@link #EMIT_DONE_ITEM}.
      */
-    ON_SNAPSHOT_COMPLETED_BEFORE_END,
+    FINAL_ON_SNAPSHOT_COMPLETED,
 
     /**
      * Waiting for the outbox to accept the {@code DONE_ITEM}.
