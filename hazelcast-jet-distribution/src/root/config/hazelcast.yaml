@@ -1,5 +1,5 @@
 hazelcast:
-  # The name of the cluster and must match what's provided by clients
+  # The name of the cluster and must match what is provided by clients
   # for connection and the other nodes in the cluster
   cluster-name: jet
   network:
