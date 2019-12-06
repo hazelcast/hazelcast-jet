@@ -152,8 +152,8 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     }
 
     @Override
-    public boolean saveToSnapshot() {
-        if (!snapshotUtility.saveToSnapshot()) {
+    public boolean snapshotPrepareCommit() {
+        if (!snapshotUtility.snapshotPrepareCommit()) {
             return false;
         }
         checkError();

@@ -366,11 +366,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void stressTest_atLeastOnce_xa_forceful() throws Exception {
-        stressTest(false, true, true, AT_LEAST_ONCE);
-    }
-
-    @Test
     public void stressTest_atLeastOnce_nonXa_forceful() throws Exception {
         stressTest(false, false, false, AT_LEAST_ONCE);
     }
@@ -557,7 +552,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
          .writeTo(Sinks.noop());
 
         Job job = instance().newJob(p, new JobConfig()
-                .setProcessingGuarantee(AT_LEAST_ONCE)
+                .setProcessingGuarantee(xa ? EXACTLY_ONCE : AT_LEAST_ONCE)
                 .setSnapshotIntervalMillis(100_000_000));
 
         assertJobStatusEventually(job, RUNNING);

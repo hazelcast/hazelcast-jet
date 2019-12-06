@@ -229,8 +229,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
     }
 
     @Override
-    public boolean saveToSnapshot() {
-        return snapshotUtility.saveToSnapshot();
+    public boolean snapshotPrepareCommit() {
+        return snapshotUtility.snapshotPrepareCommit();
     }
 
     @Override

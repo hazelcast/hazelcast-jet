@@ -149,7 +149,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
     }
 
     @Override
-    public boolean saveToSnapshot() {
+    public boolean snapshotPrepareCommit() {
         if (externalGuarantee() == NONE) {
             return true;
         }
