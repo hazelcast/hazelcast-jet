@@ -50,13 +50,13 @@ public class SnapshotContextSimpleTest {
 
         // Then
         exception.expect(CancellationException.class);
-        ssContext.startNewSnapshotPhase1(10, "map", false);
+        ssContext.startNewSnapshotPhase1(10, "map", 0);
     }
 
     @Test
     public void when_cancelledAfterPhase1_then_cannotStartPhase2() {
         ssContext.initTaskletCount(1, 1, 0);
-        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", 0);
 
         /// When
         ssContext.phase1DoneForTasklet(1, 1, 1);
@@ -71,7 +71,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledMidPhase1_then_futureCompleted() {
         ssContext.initTaskletCount(3, 3, 0);
-        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", 0);
 
         // When
         ssContext.phase1DoneForTasklet(1, 1, 1);
@@ -85,7 +85,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledMidPhase2_then_futureCompleted() {
         ssContext.initTaskletCount(1, 1, 0);
-        ssContext.startNewSnapshotPhase1(10, "map", false);
+        ssContext.startNewSnapshotPhase1(10, "map", 0);
         ssContext.phase1DoneForTasklet(1, 1, 1);
         CompletableFuture<Void> future = ssContext.startNewSnapshotPhase2(10, true);
 
@@ -100,7 +100,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledMidPhase1_then_phase1DoneForTaskletSucceeds() {
         ssContext.initTaskletCount(2, 2, 0);
-        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", 0);
 
         // When
         ssContext.phase1DoneForTasklet(1, 1, 1);
@@ -115,7 +115,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void when_cancelledMidPhase2_then_phase2DoneForTaskletSucceeds() {
         ssContext.initTaskletCount(2, 1, 0);
-        ssContext.startNewSnapshotPhase1(10, "map", false);
+        ssContext.startNewSnapshotPhase1(10, "map", 0);
         ssContext.phase1DoneForTasklet(1, 1, 1);
         CompletableFuture<Void> future = ssContext.startNewSnapshotPhase2(10, true);
 
@@ -132,7 +132,7 @@ public class SnapshotContextSimpleTest {
     @Test
     public void test_taskletDoneWhilePostponed() {
         ssContext.initTaskletCount(2, 2, 2);
-        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future = ssContext.startNewSnapshotPhase1(10, "map", 0);
         assertEquals(9, ssContext.activeSnapshotIdPhase1());
         ssContext.storeSnapshotTaskletDone(9, true);
         assertEquals(9, ssContext.activeSnapshotIdPhase1());

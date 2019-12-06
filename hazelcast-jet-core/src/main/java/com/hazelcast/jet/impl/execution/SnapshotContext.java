@@ -39,9 +39,9 @@ public class SnapshotContext {
     private final ProcessingGuarantee guarantee;
 
     /**
-     * If true, the job should terminate after the snapshot is processed.
+     * Flags of the last begun snapshot.
      */
-    private volatile boolean isTerminal;
+    private volatile int snapshotFlags;
 
     /**
      * Current number of {@link StoreSnapshotTasklet}s in the job. It's
@@ -170,7 +170,11 @@ public class SnapshotContext {
     }
 
     boolean isTerminalSnapshot() {
-        return isTerminal;
+        return SnapshotFlags.isTerminal(snapshotFlags);
+    }
+
+    public boolean isExportOnly() {
+        return SnapshotFlags.isExportOnly(snapshotFlags);
     }
 
     boolean isLastPhase1Successful() {
@@ -179,6 +183,10 @@ public class SnapshotContext {
 
     ProcessingGuarantee processingGuarantee() {
         return guarantee;
+    }
+
+    private synchronized boolean isCancelled() {
+        return isCancelled;
     }
 
     synchronized void initTaskletCount(int numPTasklets, int numSsTasklets, int numPrioritySsTasklets) {
@@ -201,7 +209,7 @@ public class SnapshotContext {
      * SnapshotPhase1Operation}.
      */
     synchronized CompletableFuture<SnapshotPhase1Result> startNewSnapshotPhase1(
-            long snapshotId, String mapName, boolean isTerminal) {
+            long snapshotId, String mapName, int flags) {
         if (snapshotId == currentSnapshotId) {
             // This is possible when a SnapshotOperation is retried. We will throw because we
             // don't know the result of the previous snapshot (it may have failed) and this is rare
@@ -221,7 +229,7 @@ public class SnapshotContext {
         if (isCancelled) {
             throw new CancellationException("execution cancelled");
         }
-        this.isTerminal = isTerminal;
+        this.snapshotFlags = flags;
 
         boolean success = numRemainingTasklets.compareAndSet(0, numSsTasklets);
         assert success : "numRemainingTasklets wasn't 0, but " + numRemainingTasklets.get();
@@ -340,6 +348,7 @@ public class SnapshotContext {
      * all async flush operations are done).
      */
     void phase1DoneForTasklet(long numBytes, long numKeys, long numChunks) {
+        assert phase1Future != null || isCancelled() : "phase 1 not in progress";
         totalBytes.addAndGet(numBytes);
         totalKeys.addAndGet(numKeys);
         totalChunks.addAndGet(numChunks);
@@ -356,6 +365,7 @@ public class SnapshotContext {
      * operations are done).
      */
     void phase2DoneForTasklet() {
+        assert phase2Future != null || isCancelled() : "phase 2 not in progress";
         int newRemainingTasklets = numRemainingTasklets.decrementAndGet();
         assert newRemainingTasklets >= 0 : "newRemainingTasklets=" + newRemainingTasklets;
         if (newRemainingTasklets == 0) {

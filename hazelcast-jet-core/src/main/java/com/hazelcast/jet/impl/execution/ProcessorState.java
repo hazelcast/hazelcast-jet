@@ -61,6 +61,12 @@ enum ProcessorState {
     SAVE_SNAPSHOT,
 
     /**
+     * Making calls to {@link Processor#snapshotPrepareCommit()} until it
+     * returns {@code true}.
+     */
+    SNAPSHOT_PREPARE_COMMIT,
+
+    /**
      * Waiting for the outbox to accept the {@link SnapshotBarrier}.
      */
     EMIT_BARRIER,

@@ -247,6 +247,16 @@ public interface Processor {
     }
 
     /**
+     * TODO [viliam] javadoc
+     *
+     * @return {@code true} if this step is done, {@code false} to call this
+     *      method again
+     */
+    default boolean snapshotPrepareCommit() {
+        return true;
+    }
+
+    /**
      * This is the second phase of a two-phase commit. Jet calls it after the
      * snapshot was successfully saved on all other processors in the job on
      * all cluster members.
@@ -290,12 +300,14 @@ public interface Processor {
      * <p>
      * The default implementation takes no action and returns {@code true}.
      *
+     * TODO [viliam] javadoc
+     *
      * @param commitTransactions true, if all members were successful in {@link
      *      #saveToSnapshot()} and we're not doing {@link Job#exportSnapshot}
      * @return {@code true} if this step is done, {@code false} to call this
      *      method again
      */
-    default boolean onSnapshotCompleted(@SuppressWarnings("unused") boolean commitTransactions) {
+    default boolean onSnapshotCompleted(boolean commitTransactions) {
         return true;
     }
 

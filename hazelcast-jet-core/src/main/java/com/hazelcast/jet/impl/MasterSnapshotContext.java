@@ -20,6 +20,7 @@ import com.hazelcast.internal.cluster.MemberInfo;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.impl.JobExecutionRecord.SnapshotStats;
+import com.hazelcast.jet.impl.execution.SnapshotFlags;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.operation.SnapshotPhase2Operation;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation;
@@ -154,21 +155,22 @@ class MasterSnapshotContext {
             mc.writeJobExecutionRecord(false);
             long newSnapshotId = mc.jobExecutionRecord().ongoingSnapshotId();
             boolean isExport = snapshotMapName != null;
+            int snapshotFlags = SnapshotFlags.create(isTerminal, isExport);
             String finalMapName = isExport ? exportedSnapshotMapName(snapshotMapName)
                     : snapshotDataMapName(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
                 mc.nodeEngine().getHazelcastInstance().getMap(finalMapName).clear();
-            logFine(logger, "Starting snapshot %d for %s, terminal: %s, writing to: %s",
-                    newSnapshotId, mc.jobIdString(), isTerminal ? "yes" : "no", snapshotMapName);
+            logFine(logger, "Starting snapshot %d for %s, flags: %s, writing to: %s",
+                    newSnapshotId, mc.jobIdString(), SnapshotFlags.toString(snapshotFlags), snapshotMapName);
 
             Function<ExecutionPlan, Operation> factory = plan ->
-                    new SnapshotPhase1Operation(mc.jobId(), localExecutionId, newSnapshotId, finalMapName, isTerminal);
+                    new SnapshotPhase1Operation(mc.jobId(), localExecutionId, newSnapshotId, finalMapName, snapshotFlags);
 
             // Need to take a copy of executionId: we don't cancel the scheduled task when the execution
             // finalizes. If a new execution is started in the meantime, we'll use the execution ID to detect it.
             mc.invokeOnParticipants(
                     factory,
                     responses -> onSnapshotPhase1Complete(responses, localExecutionId, newSnapshotId, finalMapName,
-                            isExport, isTerminal, future),
+                            snapshotFlags, future),
                     null, true);
         });
     }
@@ -176,8 +178,7 @@ class MasterSnapshotContext {
     /**
      * @param responses collected responses from the members
      * @param snapshotMapName the IMap name to which the snapshot is written
-     * @param wasExport true, if this snapshot is an export
-     * @param wasTerminal true, if the execution terminates after this snapshot
+     * @param snapshotFlags flags of the snapshot
      * @param future a future to be completed when the phase-2 is fully completed
      */
     private void onSnapshotPhase1Complete(
@@ -185,8 +186,7 @@ class MasterSnapshotContext {
             long executionId,
             long snapshotId,
             String snapshotMapName,
-            boolean wasExport,
-            boolean wasTerminal,
+            int snapshotFlags,
             @Nullable CompletableFuture<Void> future
     ) {
         mc.coordinationService().submitToCoordinatorThread(() -> {
@@ -251,18 +251,17 @@ class MasterSnapshotContext {
                             + "' after a failure", e);
                 }
             }
-            if (!wasExport) {
+            if (!SnapshotFlags.isExport(snapshotFlags)) {
                 mc.jobRepository().clearSnapshotData(mc.jobId(), mc.jobExecutionRecord().ongoingDataMapIndex());
             }
 
             // start the phase 2
-            boolean isExportWithoutCancellation = wasExport && !wasTerminal;
             Function<ExecutionPlan, Operation> factory = plan -> new SnapshotPhase2Operation(
-                    mc.jobId(), mc.executionId(), snapshotId, isSuccess && !isExportWithoutCancellation);
+                    mc.jobId(), mc.executionId(), snapshotId, isSuccess && !SnapshotFlags.isExportOnly(snapshotFlags));
             mc.invokeOnParticipants(factory,
                     responses2 -> mc.coordinationService().submitToCoordinatorThread(() ->
                             onSnapshotPhase2Complete(mergedResult.getError(), responses2, executionId, snapshotId,
-                                    wasExport, wasTerminal, future, stats.startTime())),
+                                    snapshotFlags, future, stats.startTime())),
                     null, true);
         });
     }
@@ -270,8 +269,7 @@ class MasterSnapshotContext {
     /**
      * @param phase1Error error from the phase-1. Null if phase-1 was successful.
      * @param responses collected responses from the members
-     * @param wasExport true, if this snapshot is an export
-     * @param wasTerminal true, if the execution terminates after this snapshot
+     * @param snapshotFlags flags of the snapshot
      * @param future future to be completed when the phase-2 is fully completed
      * @param startTime phase-1 start time
      */
@@ -280,8 +278,7 @@ class MasterSnapshotContext {
             Collection<Entry<MemberInfo, Object>> responses,
             long executionId,
             long snapshotId,
-            boolean wasExport,
-            boolean wasTerminal,
+            int snapshotFlags,
             @Nullable CompletableFuture<Void> future,
             long startTime
     ) {
@@ -310,7 +307,7 @@ class MasterSnapshotContext {
                 }
                 assert snapshotInProgress : "snapshot not in progress";
                 snapshotInProgress = false;
-                if (wasTerminal) {
+                if (SnapshotFlags.isTerminal(snapshotFlags)) {
                     // after a terminal snapshot, no more snapshots are scheduled in this execution
                     boolean completedNow = terminalSnapshotFuture.complete(null);
                     assert completedNow : "terminalSnapshotFuture was already completed";
@@ -320,7 +317,7 @@ class MasterSnapshotContext {
                         // execution down. Let's execute the CompleteExecutionOperation to terminate them.
                         mc.jobContext().cancelExecutionInvocations(mc.jobId(), mc.executionId(), null);
                     }
-                } else if (!wasExport) {
+                } else if (!SnapshotFlags.isExport(snapshotFlags)) {
                     // if this snapshot was an automatic snapshot, schedule the next one
                     mc.coordinationService().scheduleSnapshot(mc, executionId);
                 }

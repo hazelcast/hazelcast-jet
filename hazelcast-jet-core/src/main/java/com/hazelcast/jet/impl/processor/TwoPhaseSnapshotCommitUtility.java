@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.processor;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
@@ -138,11 +139,12 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     public abstract void afterCompleted();
 
     /**
-     * Delegate handling of {@link Processor#saveToSnapshot()} to this method.
+     * Delegate handling of {@link Processor#snapshotPrepareCommit()} to this
+     * method.
      *
-     * @return a value to return from {@code saveToSnapshot()}
+     * @return a value to return from {@code snapshotPrepareCommit()}
      */
-    public abstract boolean saveToSnapshot();
+    public abstract boolean snapshotPrepareCommit();
 
     /**
      * Delegate handling of {@link Processor#onSnapshotCompleted(boolean)} to
@@ -156,7 +158,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     /**
      * Delegate handling of {@link Processor#restoreFromSnapshot(Inbox)} to
      * this method. If you save custom items to snapshot besides those saved by
-     * {@link #saveToSnapshot()} of this utility, use {@link
+     * {@link #snapshotPrepareCommit()} of this utility, use {@link
      * #restoreFromSnapshot(Object, Object)} to pass only entries not handled
      * by your processor.
      *
@@ -174,7 +176,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      * Delegate handling of {@link
      * AbstractProcessor#restoreFromSnapshot(Object, Object)} to this method.
      *
-     * <p></p>See also {@link #restoreFromSnapshot(Inbox)}.
+     * <p>See also {@link #restoreFromSnapshot(Inbox)}.
      *
      * @param key a key from the snapshot
      * @param value a value from the snapshot

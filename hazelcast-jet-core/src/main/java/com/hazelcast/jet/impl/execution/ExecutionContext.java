@@ -211,8 +211,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     /**
      * Starts the phase 1 of a new snapshot.
      */
-    public CompletableFuture<SnapshotPhase1Result> beginSnapshotPhase1(long snapshotId, String mapName,
-                                                                       boolean isTerminal) {
+    public CompletableFuture<SnapshotPhase1Result> beginSnapshotPhase1(long snapshotId, String mapName, int flags) {
         synchronized (executionLock) {
             if (cancellationFuture.isDone()) {
                 throw new CancellationException();
@@ -220,7 +219,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                 // if execution is done, there are 0 processors to take snapshots. Therefore we're done now.
                 return CompletableFuture.completedFuture(new SnapshotPhase1Result(0, 0, 0, null));
             }
-            return snapshotContext.startNewSnapshotPhase1(snapshotId, mapName, isTerminal);
+            return snapshotContext.startNewSnapshotPhase1(snapshotId, mapName, flags);
         }
     }
 

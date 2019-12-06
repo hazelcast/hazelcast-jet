@@ -40,18 +40,18 @@ public class SnapshotPhase1Operation extends AsyncJobOperation {
     private long executionId;
     private long snapshotId;
     private String mapName;
-    private boolean isTerminal;
+    private int flags;
 
     // for deserialization
     public SnapshotPhase1Operation() {
     }
 
-    public SnapshotPhase1Operation(long jobId, long executionId, long snapshotId, String mapName, boolean isTerminal) {
+    public SnapshotPhase1Operation(long jobId, long executionId, long snapshotId, String mapName, int flags) {
         super(jobId);
         this.executionId = executionId;
         this.snapshotId = snapshotId;
         this.mapName = mapName;
-        this.isTerminal = isTerminal;
+        this.flags = flags;
     }
 
     @Override
@@ -60,9 +60,10 @@ public class SnapshotPhase1Operation extends AsyncJobOperation {
         ExecutionContext ctx = service.getJobExecutionService().assertExecutionContext(
                 getCallerAddress(), jobId(), executionId, getClass().getSimpleName()
         );
-        CompletableFuture<SnapshotPhase1Result> future = ctx.beginSnapshotPhase1(snapshotId, mapName, isTerminal)
-                                                            .exceptionally(exc -> new SnapshotPhase1Result(0, 0, 0, exc))
-                                                            .thenApply(result -> {
+        CompletableFuture<SnapshotPhase1Result> future =
+            ctx.beginSnapshotPhase1(snapshotId, mapName, flags)
+                .exceptionally(exc -> new SnapshotPhase1Result(0, 0, 0, exc))
+                .thenApply(result -> {
                     if (result.getError() == null) {
                         logFine(getLogger(),
                                 "Snapshot %s phase 1 for %s finished successfully on member",
@@ -106,7 +107,7 @@ public class SnapshotPhase1Operation extends AsyncJobOperation {
         out.writeLong(executionId);
         out.writeLong(snapshotId);
         out.writeUTF(mapName);
-        out.writeBoolean(isTerminal);
+        out.writeInt(flags);
     }
 
     @Override
@@ -115,7 +116,7 @@ public class SnapshotPhase1Operation extends AsyncJobOperation {
         executionId = in.readLong();
         snapshotId = in.readLong();
         mapName = in.readUTF();
-        isTerminal = in.readBoolean();
+        flags = in.readInt();
     }
 
     /**

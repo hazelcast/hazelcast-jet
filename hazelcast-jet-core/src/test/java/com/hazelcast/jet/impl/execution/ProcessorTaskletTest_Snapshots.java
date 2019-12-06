@@ -149,29 +149,55 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     @Test
-    public void when_snapshotTriggered_then_saveSnapshotAndEmitBarrier() {
+    public void when_snapshotTriggered_then_saveSnapshot_prepare_emitBarrier() {
         // Given
         MockOutboundStream outstream1 = new MockOutboundStream(0, 2);
         outstreams.add(outstream1);
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
         processor.itemsToEmitInComplete = 4;
+        processor.itemsToEmitInSnapshotPrepareCommit = 1;
 
-        // When
         callUntil(tasklet, NO_PROGRESS);
-
-        // Then
         assertEquals(asList(0, 1), outstream1.getBuffer());
         assertEquals(emptyList(), getSnapshotBufferValues());
 
         // When
-        snapshotContext.startNewSnapshotPhase1(0, "map", false);
+        snapshotContext.startNewSnapshotPhase1(0, "map", 0);
         outstream1.flush();
 
         callUntil(tasklet, NO_PROGRESS);
 
         // Then
-        assertEquals(asList(2, barrier0(false)), outstream1.getBuffer());
-        assertEquals(asList(0 , 1, 2, barrier0(false)), getSnapshotBufferValues());
+        assertEquals(asList(2, "spc-0"), outstream1.getBuffer());
+        assertEquals(asList(0, 1, 2, barrier0(false)), getSnapshotBufferValues());
+        outstream1.flush();
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(asList(barrier0(false), 3), outstream1.getBuffer());
+    }
+
+    @Test
+    public void when_exportOnly_then_commitMethodsNotCalled() {
+        // Given
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        outstreams.add(outstream1);
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        processor.itemsToEmitInSnapshotPrepareCommit = 1;
+        processor.itemsToEmitInOnSnapshotComplete = 1;
+        processor.isStreaming = true;
+
+        // When
+        snapshotContext.startNewSnapshotPhase1(0, "map", SnapshotFlags.create(false, true));
+        callUntil(tasklet, NO_PROGRESS);
+
+        // Then
+        assertEquals(singletonList(barrier0(false)), outstream1.getBuffer());
+        snapshotContext.phase1DoneForTasklet(0, 0, 0);
+        outstream1.flush();
+
+        // When
+        snapshotContext.startNewSnapshotPhase2(0, true);
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(emptyList(), outstream1.getBuffer());
     }
 
     @Test
@@ -214,11 +240,11 @@ public class ProcessorTaskletTest_Snapshots {
         outstream1.flush();
 
         // start phase 2
-        phase1StartAndDone();
+        phase1StartAndDone(false);
         CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, NO_PROGRESS);
 
-        assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
+        assertEquals(singletonList("osc-0"), outstream1.getBuffer());
         assertEquals(emptyList(), getSnapshotBufferValues());
         assertTrue("future not done", future.isDone());
     }
@@ -233,7 +259,7 @@ public class ProcessorTaskletTest_Snapshots {
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
         processor.itemsToEmitInOnSnapshotComplete = 1;
 
-        CompletableFuture<SnapshotPhase1Result> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", false);
+        CompletableFuture<SnapshotPhase1Result> future1 = snapshotContext.startNewSnapshotPhase1(0, "map", 0);
         callUntil(tasklet, NO_PROGRESS);
         assertEquals(asList("item", barrier0(false)), getSnapshotBufferValues());
         assertEquals(asList("item", barrier0(false)), outstream1.getBuffer());
@@ -252,7 +278,7 @@ public class ProcessorTaskletTest_Snapshots {
         CompletableFuture<Void> future2 = snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, DONE);
 
-        assertEquals(asList("osc-true-0", DONE_ITEM), outstream1.getBuffer());
+        assertEquals(asList("osc-0", DONE_ITEM), outstream1.getBuffer());
         assertEquals(singletonList(DONE_ITEM), getSnapshotBufferValues());
         assertTrue("future2 not done", future2.isDone());
     }
@@ -274,13 +300,13 @@ public class ProcessorTaskletTest_Snapshots {
         outstream1.flush();
 
         // start phase 2
-        phase1StartAndDone();
+        phase1StartAndDone(false);
         snapshotContext.startNewSnapshotPhase2(0, true);
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(singletonList("osc-true-0"), outstream1.getBuffer());
+        assertEquals(singletonList("osc-0"), outstream1.getBuffer());
         outstream1.flush();
         callUntil(tasklet, NO_PROGRESS);
-        assertEquals(singletonList("osc-true-1"), outstream1.getBuffer());
+        assertEquals(singletonList("osc-1"), outstream1.getBuffer());
     }
 
     @Test
@@ -294,7 +320,7 @@ public class ProcessorTaskletTest_Snapshots {
         processor.itemsToEmitInTryProcessWatermark = 1;
         callUntil(tasklet, NO_PROGRESS);
 
-        phase1StartAndDone();
+        phase1StartAndDone(false);
         CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
 
         callUntil(tasklet, NO_PROGRESS);
@@ -317,7 +343,7 @@ public class ProcessorTaskletTest_Snapshots {
         processor.itemsToEmitInTryProcess = 2;
         callUntil(tasklet, NO_PROGRESS);
 
-        phase1StartAndDone();
+        phase1StartAndDone(false);
         CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
 
         callUntil(tasklet, NO_PROGRESS);
@@ -329,7 +355,7 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     @Test
-    public void test_terminalSnapshot() {
+    public void test_terminalSnapshot_receivedInBarrier() {
         MockInboundStream instream1 = new MockInboundStream(0, singletonList(barrier0(true)), 1024);
         MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
         instreams.add(instream1);
@@ -338,7 +364,24 @@ public class ProcessorTaskletTest_Snapshots {
         ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
         callUntil(tasklet, NO_PROGRESS);
 
-        phase1StartAndDone();
+        phase1StartAndDone(false);
+        CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
+
+        callUntil(tasklet, DONE);
+        assertTrue("future should have been done", future.isDone());
+        assertEquals(outstream1.getBuffer(), asList(barrier0(true), DONE_ITEM));
+    }
+
+    @Test
+    public void test_terminalSnapshot_source() {
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        outstreams.add(outstream1);
+        processor.isStreaming = true;
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        phase1StartAndDone(true);
+        callUntil(tasklet, NO_PROGRESS);
+
         CompletableFuture<Void> future = snapshotContext.startNewSnapshotPhase2(0, true);
 
         callUntil(tasklet, DONE);
@@ -383,8 +426,8 @@ public class ProcessorTaskletTest_Snapshots {
         return new SnapshotBarrier(0, isTerminal);
     }
 
-    private void phase1StartAndDone() {
-        snapshotContext.startNewSnapshotPhase1(0, "map", false);
+    private void phase1StartAndDone(boolean isTerminal) {
+        snapshotContext.startNewSnapshotPhase1(0, "map", SnapshotFlags.create(isTerminal, false));
         snapshotContext.phase1DoneForTasklet(0, 0, 0);
     }
 
@@ -394,12 +437,15 @@ public class ProcessorTaskletTest_Snapshots {
         int itemsToEmitInTryProcessWatermark;
         int itemsToEmitInComplete;
         int itemsToEmitInCompleteEdge;
+        int itemsToEmitInSnapshotPrepareCommit;
         int itemsToEmitInOnSnapshotComplete;
         int tryProcessCount;
         int tryProcessWatermarkCount;
         int completedCount;
         int completedEdgeCount;
+        int snapshotPrepareCommitCount;
         int onSnapshotCompletedCount;
+        boolean isStreaming;
         private Outbox outbox;
 
         private Queue<Map.Entry> snapshotQueue = new ArrayDeque<>();
@@ -435,7 +481,7 @@ public class ProcessorTaskletTest_Snapshots {
                 snapshotQueue.add(entry(UuidUtil.newUnsecureUUID(), completedCount));
                 completedCount++;
             }
-            return completedCount == itemsToEmitInComplete;
+            return completedCount == itemsToEmitInComplete && !isStreaming;
         }
 
         @Override
@@ -467,9 +513,18 @@ public class ProcessorTaskletTest_Snapshots {
         }
 
         @Override
+        public boolean snapshotPrepareCommit() {
+            if (snapshotPrepareCommitCount < itemsToEmitInSnapshotPrepareCommit
+                    && outbox.offer("spc-" + snapshotPrepareCommitCount)) {
+                snapshotPrepareCommitCount++;
+            }
+            return snapshotPrepareCommitCount == itemsToEmitInSnapshotPrepareCommit;
+        }
+
+        @Override
         public boolean onSnapshotCompleted(boolean commitTransactions) {
-            if (completedCount < itemsToEmitInOnSnapshotComplete
-                    && outbox.offer("osc-" + commitTransactions + '-' + onSnapshotCompletedCount)) {
+            if (onSnapshotCompletedCount < itemsToEmitInOnSnapshotComplete
+                    && outbox.offer("osc-" + onSnapshotCompletedCount)) {
                 onSnapshotCompletedCount++;
             }
             return onSnapshotCompletedCount == itemsToEmitInOnSnapshotComplete;

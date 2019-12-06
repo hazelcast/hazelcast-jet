@@ -66,9 +66,10 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_BARRIER;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.END;
-import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_PROCESS;
 import static com.hazelcast.jet.impl.execution.ProcessorState.FINAL_ON_SNAPSHOT_COMPLETED;
+import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_PROCESS;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED;
+import static com.hazelcast.jet.impl.execution.ProcessorState.SNAPSHOT_PREPARE_COMMIT;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_WATERMARK;
 import static com.hazelcast.jet.impl.execution.ProcessorState.SAVE_SNAPSHOT;
@@ -284,7 +285,16 @@ public class ProcessorTasklet implements Tasklet {
             case SAVE_SNAPSHOT:
                 if (processor.saveToSnapshot()) {
                     progTracker.madeProgress();
+                    state = ssContext.isExportOnly() ? EMIT_BARRIER : SNAPSHOT_PREPARE_COMMIT;
+                    stateMachineStep(); // recursion
+                }
+                return;
+
+            case SNAPSHOT_PREPARE_COMMIT:
+                if (processor.snapshotPrepareCommit()) {
+                    progTracker.madeProgress();
                     state = EMIT_BARRIER;
+                    stateMachineStep(); // recursion
                 }
                 return;
 
@@ -305,7 +315,7 @@ public class ProcessorTasklet implements Tasklet {
 
             case ON_SNAPSHOT_COMPLETED:
             case FINAL_ON_SNAPSHOT_COMPLETED:
-                if (processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
+                if (ssContext.isExportOnly() || processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
                     pendingSnapshotId2++;
                     ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();
