@@ -28,12 +28,15 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.topic.ITopic;
+import com.hazelcast.topic.Message;
 import com.hazelcast.topic.ReliableMessageListener;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
@@ -76,10 +79,24 @@ public class ObservableRepository {
         this.timeSource = timeSource;
     }
 
-    @SuppressWarnings("unchecked")
-    public static void registerObservable(Observable observable, JetInstance jet) {
-        ITopic topic = getTopic(jet.getHazelcastInstance(), observable.name());
-        topic.addMessageListener((ReliableMessageListener) observable);
+    public static UUID initObservable(
+            String observable,
+            Consumer<ObservableBatch> onNewMessage,
+            Consumer<Long> onSequenceNo,
+            JetInstance jet
+    ) {
+        ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observable);
+        return topic.addMessageListener(new TopicListener(onNewMessage, onSequenceNo));
+    }
+
+    public static void destroyObservable(
+            String observable,
+            UUID registrationId,
+            JetInstance jet
+    ) {
+        ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observable);
+        topic.removeMessageListener(registrationId);
+        topic.destroy();
     }
 
     public static FunctionEx<HazelcastInstance, ConsumerEx<ArrayList<Object>>> getPublishFn(String name) {
@@ -165,6 +182,45 @@ public class ObservableRepository {
         String observableName = tuple2.getKey();
         ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observableName);
         topic.destroy();
+    }
+
+    private static final class TopicListener implements ReliableMessageListener<ObservableBatch> {
+
+        private final Consumer<ObservableBatch> msgConsumer;
+        private final Consumer<Long> seqNoConsumer;
+
+        TopicListener(Consumer<ObservableBatch> msgConsumer, Consumer<Long> seqNoConsumer) {
+            this.msgConsumer = msgConsumer;
+            this.seqNoConsumer = seqNoConsumer;
+        }
+
+        @Override
+        public long retrieveInitialSequence() {
+            //We want to start with the next published message.
+            return -1;
+        }
+
+        @Override
+        public void storeSequence(long sequence) {
+            seqNoConsumer.accept(sequence);
+        }
+
+        @Override
+        public boolean isLossTolerant() {
+            //We don't want to stop receiving events if there is loss.
+            return true;
+        }
+
+        @Override
+        public boolean isTerminal(Throwable failure) {
+            //Listening to the topic should be terminated if there is an exception thrown while processing a message.
+            return true;
+        }
+
+        @Override
+        public void onMessage(Message<ObservableBatch> message) {
+            msgConsumer.accept(message.getMessageObject());
+        }
     }
 
 }

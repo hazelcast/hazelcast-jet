@@ -18,6 +18,7 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Observer;
 import com.hazelcast.jet.TestInClusterSupport;
 import com.hazelcast.jet.pipeline.BatchSource;
@@ -27,6 +28,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -48,12 +50,19 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
     private String observableName;
     private TestObserver testObserver;
+    private Observable<Long> testObservable;
 
     @Before
     public void before() {
         observableName = randomName();
         testObserver = new TestObserver();
-        jet().<Long>getObservable(observableName).addObserver(testObserver);
+        testObservable = jet().getObservable(observableName);
+        testObservable.addObserver(testObserver);
+    }
+
+    @After
+    public void after() {
+        testObservable.destroy();
     }
 
     @Test

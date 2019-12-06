@@ -16,26 +16,30 @@
 
 package com.hazelcast.jet.impl.observer;
 
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Observer;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.topic.Message;
-import com.hazelcast.topic.ReliableMessageListener;
 
 import javax.annotation.Nonnull;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
-public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener<ObservableBatch> {
+public class ObservableImpl<T> implements Observable<T> {
 
     private final CopyOnWriteArrayList<Observer<T>> observers = new CopyOnWriteArrayList<>();
     private final String name;
+    private final JetInstance jet;
+    private final UUID registrationId;
     private final ILogger logger;
 
     private long lastSequence = -1;
 
-    public ObservableImpl(String name, ILogger logger) {
+    public ObservableImpl(String name, JetInstance jet, ILogger logger) {
         this.name = name;
+        this.jet = jet;
+        this.registrationId = ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet);
         this.logger = logger;
     }
 
@@ -57,9 +61,11 @@ public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener
     }
 
     @Override
-    public void onMessage(Message<ObservableBatch> message) {
-        ObservableBatch batch = message.getMessageObject();
+    public void destroy() {
+        ObservableRepository.destroyObservable(name, registrationId, jet);
+    }
 
+    public void onNewMessage(ObservableBatch batch) {
         Throwable throwable = batch.getThrowable();
         if (throwable != null) {
             notifyObserversOfError(throwable);
@@ -73,31 +79,11 @@ public class ObservableImpl<T> implements Observable<T>, ReliableMessageListener
         }
     }
 
-    @Override
-    public long retrieveInitialSequence() {
-        //We want to start with the next published message.
-        return -1;
-    }
-
-    @Override
-    public void storeSequence(long sequence) {
-        //We are not storing the sequence, but can detect loss based on it.
+    public void onSequenceNo(long sequence) {
         if (lastSequence > 0 && sequence > lastSequence + 1) {
             logger.warning(String.format("Observable '%s' lost %d internal messages", name, sequence - lastSequence + 1));
         }
         lastSequence = sequence;
-    }
-
-    @Override
-    public boolean isLossTolerant() {
-        //We don't want to stop receiving events if there is loss.
-        return true;
-    }
-
-    @Override
-    public boolean isTerminal(Throwable failure) {
-        //Listening to the topic should be terminated if there is an exception thrown while processing a message.
-        return true;
     }
 
     @SuppressWarnings("unchecked")

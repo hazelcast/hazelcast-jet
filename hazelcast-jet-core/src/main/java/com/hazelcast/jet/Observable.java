@@ -56,6 +56,15 @@ public interface Observable<T> {
                      @Nonnull Consumer<? super Throwable> onError,
                      @Nonnull Runnable onComplete);
 
-    //TODO (PR-1729): removeObserver?
+    /**
+     * Terminates this observable, including all remote objects used to
+     * provide it.
+     * <p>
+     * The effect is incomplete if the observable is still being published
+     * into (ie. the job populating it has not been completed). By incomplete
+     * we mean that the flow of events will stop, but not all backing
+     * remote objects will be cleaned up completely.
+     */
+    void destroy();
 
 }

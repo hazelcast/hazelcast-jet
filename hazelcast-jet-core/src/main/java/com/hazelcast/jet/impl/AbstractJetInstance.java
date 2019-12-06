@@ -29,7 +29,6 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -149,9 +148,7 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     @Override
     public <T> Observable<T> getObservable(@Nonnull String name) {
-        ObservableImpl<T> observable = new ObservableImpl<>(name, getLogger());
-        ObservableRepository.registerObservable(observable, this);
-        return observable;
+        return new ObservableImpl<>(name, this, getLogger());
     }
 
     @Override
