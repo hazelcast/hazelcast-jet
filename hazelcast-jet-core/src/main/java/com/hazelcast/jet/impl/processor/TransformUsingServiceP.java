@@ -74,7 +74,7 @@ public final class TransformUsingServiceP<S, T, R> extends AbstractProcessor {
     protected void init(@Nonnull Context context) {
         if (!serviceFactory.hasLocalSharing()) {
             assert service == null : "service is not null: " + service;
-            service = serviceFactory.createFn().apply(context.jetInstance());
+            service = serviceFactory.createFn().apply(context);
         }
     }
 

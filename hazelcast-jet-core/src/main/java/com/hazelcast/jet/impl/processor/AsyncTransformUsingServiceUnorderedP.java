@@ -125,7 +125,7 @@ public final class AsyncTransformUsingServiceUnorderedP<S, T, K, R> extends Abst
     protected void init(@Nonnull Context context) {
         if (!serviceFactory.hasLocalSharing()) {
             assert service == null : "service is not null: " + service;
-            service = serviceFactory.createFn().apply(context.jetInstance());
+            service = serviceFactory.createFn().apply(context);
         }
         maxAsyncOps = serviceFactory.maxPendingCallsPerProcessor();
         resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);

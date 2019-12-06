@@ -18,8 +18,8 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
+import com.hazelcast.jet.core.ProcessorSupplier.Context;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
@@ -72,7 +72,7 @@ public final class ServiceFactory<S> implements Serializable {
      */
     public static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
-    private final FunctionEx<JetInstance, ? extends S> createFn;
+    private final FunctionEx<Context, ? extends S> createFn;
     private final ConsumerEx<? super S> destroyFn;
     private final boolean isCooperative;
     private final boolean hasLocalSharing;
@@ -80,7 +80,7 @@ public final class ServiceFactory<S> implements Serializable {
     private final boolean orderedAsyncResponses;
 
     private ServiceFactory(
-            FunctionEx<JetInstance, ? extends S> createFn,
+            FunctionEx<Context, ? extends S> createFn,
             ConsumerEx<? super S> destroyFn,
             boolean isCooperative,
             boolean hasLocalSharing,
@@ -107,7 +107,7 @@ public final class ServiceFactory<S> implements Serializable {
      */
     @Nonnull
     public static <S> ServiceFactory<S> withCreateFn(
-            @Nonnull FunctionEx<JetInstance, ? extends S> createServiceFn
+            @Nonnull FunctionEx<Context, ? extends S> createServiceFn
     ) {
         checkSerializable(createServiceFn, "createServiceFn");
         return new ServiceFactory<>(
@@ -238,7 +238,7 @@ public final class ServiceFactory<S> implements Serializable {
      * Returns the create-function.
      */
     @Nonnull
-    public FunctionEx<JetInstance, ? extends S> createFn() {
+    public FunctionEx<Context, ? extends S> createFn() {
         return createFn;
     }
 

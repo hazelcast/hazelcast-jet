@@ -50,7 +50,7 @@ public final class ProcessorSupplierWithService<S> implements ProcessorSupplier 
     @Override
     public void init(@Nonnull Context context) {
         if (serviceFactory.hasLocalSharing()) {
-            service = serviceFactory.createFn().apply(context.jetInstance());
+            service = serviceFactory.createFn().apply(context);
         }
     }
 
