@@ -1,43 +1,51 @@
 hazelcast:
-  # The name of the cluster and must match what is provided by clients
-  # for connection and the other nodes in the cluster
+  # The name of the cluster. All members of a single cluster must have the
+  # same cluster name configured and a client connecting to this cluster
+  # must use it as well.
   cluster-name: jet
   network:
     port:
-      # The port number the server should start searching for ports. If
-      # the port is taken Jet will continue searching for additional ports
-      # starting from the given port.
+      # The preferred port number where the Jet instance will listen. The
+      # convention is to use 5701 and it is the default both here and in
+      # various tools connecting to Jet.
       port: 5701
+      # Whether to automatically try higher port numbers when the preferred
+      # one is taken. Most tools connecting to Jet will by default scan the
+      # range 5701-5799 to find a Jet instance.
       auto-increment: true
-    # Which network interface the server should listen on. If enabled is set
-    # to false, it will listen on all available interfaces
+    # Which network interface to listen on. With "enabled" set to false
+    # Jet will listen on all available interfaces.
     interfaces:
       enabled: false
       interfaces:
         - 127.0.0.1
-    # The join section configures the strategies used by the server to
-    # discover other Jet nodes. Jet will form a cluster automatically with
-    # the other nodes using the same discovery mechanism. Only one join
-    # config should be active at a time, and it should be shared by all
-    # the nodes
+    # Hazelcast Jet has several techniques that simplify the formation of the
+    # cluster by automatically discovering the other nodes. This config section
+    # lists some. Note that some discovery strategies live in optional plugin
+    # JARs. Jet will form a cluster only with nodes using the same discovery
+    # mechanism, so make sure to enable only one.
     join:
-      # The default way to discover nodes is using multicast, when multicast
-      # is not enabled for the network, it is recommended that you use tcp-ip
-      # discovery instead.
+      # The default way to discover nodes: using the IP multicast. This is the
+      # simplest technique, but in a cloud setting the network usually doesn't
+      # allow multicast.
       multicast:
         enabled: true
         multicast-group: 224.2.2.3
         multicast-port: 54328
-      # Enable this to explicitly specify the IPs for the other nodes in the cluster
+      # This technique doesn't attempt any auto-discovery, you directly list all
+      # the candidate IPs to check.
       tcp-ip:
         enabled: false
         member-list:
           - 10.0.0.1
           - 10.0.0.2
-      # You can use this strategy for dynamic discovery on AWS without
-      # having to configure the IPs explicitly. Instances matching the
-      # given tag key and value will be automatically joined to. For more
-      # details see https://github.com/hazelcast/hazelcast-aws
+      # Uses the AWS API to get a list of candidate IPs to check. access-key
+      # and secret-key are needed to access the API and the rest of the
+      # parameters work as filtering criteria that narrow down the list of
+      # IPs to check. You can get more information on the AWS plugin's GitHub
+      # page: https://github.com/hazelcast/hazelcast-aws
+      # This plugin is built into the main Hazelcast Jet JAR found in the
+      # distribution package.
       aws:
         enabled: false
         access-key: my-access-key
@@ -48,13 +56,18 @@ hazelcast:
         security-group-name: hazelcast-sg
         tag-key: type
         tag-value: hz-nodes
-      # For details on how to configure discovery on GCP please see
+      # Uses the GCP API to get a list of candidate IPs to check. For more
+      # details go to the plugin's GitHub page:
       # https://github.com/hazelcast/hazelcast-gcp
+      # This plugin is not included in the Hazelcast Jet distribution package.
       gcp:
         enabled: false
         label: application=hazelcast-jet
         zones: us-east1-b,us-east1-c
-    # Allows access to cluster via the REST API
+    # Selectively opens some of Hazelcast Jet's REST API endpoints.
+    # The "jet-cluster-admin" command-line tool uses REST and you may get an
+    # error message telling you which endpoint group you must enable for the
+    # operation to be allowed. Here's the place to add it.
     rest-api:
       enabled: true
       endpoint-groups:
@@ -62,7 +75,8 @@ hazelcast:
           enabled: true
         CLUSTER_WRITE:
           enabled: true
-  # Metrics collection configuration
+  # Configures Jet's background collection of performance and health
+  # monitoring metrics.
   metrics:
     enabled: true
     management-center:
@@ -71,8 +85,10 @@ hazelcast:
     jmx:
       enabled: true
     collection-frequency-seconds: 5
-  # Additional properties to configure, for a full list of properties see
+
+  # Some features of Hazelcast Jet are configured through the system properties.
+  # You can configure the same properties here. This configuration overrides the
+  # system properties. For a full list of recognized properties see
   # https://docs.hazelcast.org/docs/latest/manual/html-single/#system-properties
   properties:
-    property.name: value
-
+#    property.name: value

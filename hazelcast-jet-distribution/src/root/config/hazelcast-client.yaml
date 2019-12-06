@@ -1,8 +1,10 @@
 hazelcast-client:
-  # Name of the cluster to connect to. Must match what's configured on the nodes
+  # Name of the cluster to connect to. Must match the name configured on the
+  # cluster members.
   cluster-name: jet
   network:
-    # List of addresses for the client to try to connect to
+    # List of addresses for the client to try to connect to. All members of
+    # a Hazelcast Jet cluster accept client connections.
     cluster-members:
       - 127.0.0.1
     connection-timeout: 60000
