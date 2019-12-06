@@ -29,9 +29,9 @@ import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.processor.SourceProcessors;
+import com.hazelcast.jet.impl.processor.TransactionPoolSnapshotUtility;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
-import com.hazelcast.jet.impl.processor.TransactionPoolSnapshotUtility;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.Sources;
@@ -53,7 +53,6 @@ import java.nio.charset.StandardCharsets;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
-import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static javax.jms.Session.DUPS_OK_ACKNOWLEDGE;
@@ -103,14 +102,15 @@ public class StreamJmsP<T> extends AbstractProcessor {
         connection.start();
 
         ProcessingGuarantee guarantee = Util.min(maxGuarantee, context.processingGuarantee());
-        if (guarantee != NONE && connection instanceof XAConnection) {
+        if (guarantee == EXACTLY_ONCE) {
+            if (!(connection instanceof XAConnection)) {
+                throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
+            }
             xaSession = ((XAConnection) connection).createXASession();
             xaConsumer = consumerFn.apply(xaSession);
-        } else if (guarantee == EXACTLY_ONCE) {
-            throw new JetException("For exactly-once mode the connection must be a " + XAConnection.class.getName());
         }
 
-        snapshotUtility = new TransactionPoolSnapshotUtility<>(getOutbox(), context, true, guarantee, 3,
+        snapshotUtility = new TransactionPoolSnapshotUtility<>(getOutbox(), context, true, guarantee, 2,
                 (processorIndex, txnIndex) -> new JmsTransactionId(context, processorIndex, txnIndex),
                 txnId -> {
                     if (xaSession != null) {
