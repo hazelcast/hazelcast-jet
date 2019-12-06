@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
+import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_MAX_SIZE;
 import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -55,6 +56,7 @@ public class ObservableRepositoryTest {
         JetConfig config = new JetConfig();
         Properties properties = config.getProperties();
         properties.setProperty(JOB_RESULTS_TTL_SECONDS.getName(), Integer.toString(10));
+        properties.setProperty(JOB_RESULTS_MAX_SIZE.getName(), Integer.toString(20));
 
         testList = new TestList();
         hz = mock(HazelcastInstance.class);
@@ -70,7 +72,7 @@ public class ObservableRepositoryTest {
     }
 
     @Test
-    public void cleanup() {
+    public void cleanup_in_batches() {
         //when
         completeObservables("o1", "o2");
         timeSource.inc(TimeUnit.SECONDS, 1);
@@ -134,6 +136,29 @@ public class ObservableRepositoryTest {
         verify(hz).getReliableTopic(eq("__jet.observable.o18"));
         verify(hz).getReliableTopic(eq("__jet.observable.o19"));
         verify(hz).getReliableTopic(eq("__jet.observable.o20"));
+        verifyNoMoreInteractions(hz);
+    }
+
+    @Test
+    public void cleanup_to_max_size() {
+        //when
+        completeObservables("o1", "o2");
+
+        timeSource.inc(TimeUnit.SECONDS, 1);
+
+        completeObservables("o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14", "o15", "o16",
+                "o17", "o18", "o19", "o20", "o21", "o22", "o23", "o24", "o25");
+
+        timeSource.inc(TimeUnit.SECONDS, 9);
+        resetHzMock();
+        repository.cleanup(); //at this
+
+        //then (at this time only "o1" & "o2" is expired)
+        verify(hz).getReliableTopic(eq("__jet.observable.o1")); //expired
+        verify(hz).getReliableTopic(eq("__jet.observable.o2")); //expired
+        verify(hz).getReliableTopic(eq("__jet.observable.o3")); //size too big
+        verify(hz).getReliableTopic(eq("__jet.observable.o4")); //size too big
+        verify(hz).getReliableTopic(eq("__jet.observable.o5")); //size too big
         verifyNoMoreInteractions(hz);
     }
 

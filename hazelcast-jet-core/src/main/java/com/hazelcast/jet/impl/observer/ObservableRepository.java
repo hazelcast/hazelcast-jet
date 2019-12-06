@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
+import static java.lang.Math.min;
 
 public class ObservableRepository {
 
@@ -60,6 +61,7 @@ public class ObservableRepository {
     private final JetInstance jet;
     private final IList<Tuple2<String, Long>> completedObservables;
     private final long expirationTime;
+    private final int maxSize;
     private final LongSupplier timeSource;
 
     public ObservableRepository(JetInstance jet, JetConfig config) {
@@ -70,6 +72,7 @@ public class ObservableRepository {
         this.jet = jet;
         this.completedObservables = jet.getList(COMPLETED_OBSERVABLES_LIST_NAME);
         this.expirationTime = getExpirationTime(config);
+        this.maxSize = getMaxSize(config);
         this.timeSource = timeSource;
     }
 
@@ -104,6 +107,12 @@ public class ObservableRepository {
         return hazelcastProperties.getMillis(JetProperties.JOB_RESULTS_TTL_SECONDS);
     }
 
+    private static int getMaxSize(JetConfig jetConfig) {
+        //we will keep only as many observables as we do job results
+        HazelcastProperties hazelcastProperties = new HazelcastProperties(jetConfig.getProperties());
+        return hazelcastProperties.getInteger(JetProperties.JOB_RESULTS_MAX_SIZE);
+    }
+
     @Nonnull
     private static ITopic<ObservableBatch> getTopic(HazelcastInstance intance, String observableName) {
         String topicName = JET_OBSERVABLE_NAME_PREFIX + observableName;
@@ -117,6 +126,15 @@ public class ObservableRepository {
     }
 
     public void cleanup() {
+        int cleaned = cleanSomeExpired();
+        if (cleaned < MAX_CLEANUP_ATTEMPTS_AT_ONCE && completedObservables.size() > maxSize) { //TODO (PR-1729): unit test
+            int cleaningSlotsRemaining = MAX_CLEANUP_ATTEMPTS_AT_ONCE - cleaned;
+            int excessSize = completedObservables.size() - maxSize;
+            cleanRegardless(min(cleaningSlotsRemaining, excessSize));
+        }
+    }
+
+    private int cleanSomeExpired() {
         long currentTime = timeSource.getAsLong();
         int cleaned = 0;
         Iterator<Tuple2<String, Long>> iterator = completedObservables.iterator();
@@ -125,13 +143,28 @@ public class ObservableRepository {
             long completionTime = tuple2.getValue();
             boolean expired = currentTime - completionTime >= expirationTime;
             if (expired) {
-                getTopic(jet.getHazelcastInstance(), tuple2.getKey()).destroy();
+                destroyTopic(tuple2);
                 iterator.remove();
                 cleaned++;
             } else {
-                return;
+                return cleaned;
             }
         }
+        return cleaned;
+    }
+
+    private void cleanRegardless(int count) {
+        Iterator<Tuple2<String, Long>> iterator = completedObservables.iterator();
+        for (int i = 0; i < count; i++) {
+            destroyTopic(iterator.next());
+            iterator.remove();
+        }
+    }
+
+    private void destroyTopic(Tuple2<String, Long> tuple2) {
+        String observableName = tuple2.getKey();
+        ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observableName);
+        topic.destroy();
     }
 
 }
