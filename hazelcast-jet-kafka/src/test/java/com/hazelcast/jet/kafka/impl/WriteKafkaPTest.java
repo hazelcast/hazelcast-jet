@@ -53,6 +53,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
@@ -236,14 +238,18 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
             StringBuilder actualSinkContents = new StringBuilder();
 
             int actualCount = 0;
+            String expected = IntStream.range(0, numItems).mapToObj(Integer::toString).collect(Collectors.joining("\n"));
+            // We'll restart once, then restart again after a short sleep (possibly during initialization), then restart
+            // again and then assert some output so that the test isn't constantly restarting without any progress
             for (;;) {
+                job.restart(graceful);
                 assertJobStatusEventually(job, RUNNING);
-                sleepMillis(ThreadLocalRandom.current().nextInt(200));
+                sleepMillis(ThreadLocalRandom.current().nextInt(400));
                 job.restart(graceful);
                 try {
                     ConsumerRecords<String, String> records;
                     for (int countThisRound = 0;
-                         countThisRound < 100 && !(records = consumer.poll(Duration.ofSeconds(2))).isEmpty();
+                         countThisRound < 100 && !(records = consumer.poll(Duration.ofSeconds(5))).isEmpty();
                     ) {
                         for (ConsumerRecord<String, String> record : records) {
                             actualSinkContents.append(record.value()).append('\n');
@@ -252,12 +258,8 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
                         }
                     }
 
-                    StringBuilder expected = new StringBuilder();
-                    for (int i = 0; i < numItems; i++) {
-                        expected.append(i).append('\n');
-                    }
                     logger.info("number of committed items in the sink so far: " + actualCount);
-                    assertEquals(expected.toString(), actualSinkContents.toString());
+                    assertEquals(expected, actualSinkContents.toString());
                     // if content matches, break the loop. Otherwise restart and try again
                     break;
                 } catch (AssertionError e) {
