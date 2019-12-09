@@ -16,17 +16,12 @@
 
 package com.hazelcast.jet.impl.observer;
 
-import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
-import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.spi.properties.HazelcastProperties;
 import com.hazelcast.topic.ITopic;
 import com.hazelcast.topic.Message;
 import com.hazelcast.topic.ReliableMessageListener;
@@ -34,15 +29,11 @@ import com.hazelcast.topic.ReliableMessageListener;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
-import static java.lang.Math.min;
 
-public class ObservableRepository {
+public final class ObservableRepository {
 
     /**
      * Constant ID to be used as a {@link ProcessorMetaSupplier#getTags()
@@ -58,45 +49,29 @@ public class ObservableRepository {
      */
     private static final String JET_OBSERVABLE_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "observable.";
 
-    private static final String COMPLETED_OBSERVABLES_LIST_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
-    private static final int MAX_CLEANUP_ATTEMPTS_AT_ONCE = 10;
-
-    private final JetInstance jet;
-    private final IList<Tuple2<String, Long>> completedObservables;
-    private final long expirationTime;
-    private final int maxSize;
-    private final LongSupplier timeSource;
-
-    public ObservableRepository(JetInstance jet, JetConfig config) {
-        this(jet, config, System::currentTimeMillis);
+    private ObservableRepository() {
     }
 
-    ObservableRepository(JetInstance jet, JetConfig config, LongSupplier timeSource) {
-        this.jet = jet;
-        this.completedObservables = jet.getList(COMPLETED_OBSERVABLES_LIST_NAME);
-        this.expirationTime = getExpirationTime(config);
-        this.maxSize = getMaxSize(config);
-        this.timeSource = timeSource;
-    }
-
-    public static UUID initObservable(
+    public static void initObservable(
             String observable,
             Consumer<ObservableBatch> onNewMessage,
             Consumer<Long> onSequenceNo,
             JetInstance jet
     ) {
         ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observable);
-        return topic.addMessageListener(new TopicListener(onNewMessage, onSequenceNo));
+        topic.addMessageListener(new TopicListener(onNewMessage, onSequenceNo));
     }
 
-    public static void destroyObservable(
-            String observable,
-            UUID registrationId,
-            JetInstance jet
-    ) {
-        ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observable);
-        topic.removeMessageListener(registrationId);
+    public static void destroyObservable(String observable, HazelcastInstance hzInstance) {
+        ITopic<ObservableBatch> topic = getTopic(hzInstance, observable);
         topic.destroy();
+    }
+
+    public static void completeObservables(Collection<String> observables, Throwable error, HazelcastInstance hzInstance) {
+        for (String observable : observables) {
+            ITopic<ObservableBatch> topic = getTopic(hzInstance, observable);
+            topic.publish(error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error));
+        }
     }
 
     public static FunctionEx<HazelcastInstance, ConsumerEx<ArrayList<Object>>> getPublishFn(String name) {
@@ -109,79 +84,10 @@ public class ObservableRepository {
         };
     }
 
-    static void completeObservable(String observable, Throwable error, JetInstance jet, LongSupplier timeSource) {
-        ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observable);
-        topic.publish(error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error));
-
-        IList<Tuple2<String, Long>> completedObservables =
-                jet.getList(ObservableRepository.COMPLETED_OBSERVABLES_LIST_NAME);
-        completedObservables.add(Tuple2.tuple2(observable, timeSource.getAsLong()));
-    }
-
-    private static long getExpirationTime(JetConfig jetConfig) {
-        //we will keep observables for the same amount of time as job results
-        HazelcastProperties hazelcastProperties = new HazelcastProperties(jetConfig.getProperties());
-        return hazelcastProperties.getMillis(JetProperties.JOB_RESULTS_TTL_SECONDS);
-    }
-
-    private static int getMaxSize(JetConfig jetConfig) {
-        //we will keep only as many observables as we do job results
-        HazelcastProperties hazelcastProperties = new HazelcastProperties(jetConfig.getProperties());
-        return hazelcastProperties.getInteger(JetProperties.JOB_RESULTS_MAX_SIZE);
-    }
-
     @Nonnull
     private static ITopic<ObservableBatch> getTopic(HazelcastInstance intance, String observableName) {
         String topicName = JET_OBSERVABLE_NAME_PREFIX + observableName;
         return intance.getReliableTopic(topicName);
-    }
-
-    public void completeObservables(Collection<String> observables, Throwable error) {
-        for (String observable : observables) {
-            completeObservable(observable, error, jet, System::currentTimeMillis);
-        }
-    }
-
-    public void cleanup() {
-        int cleaned = cleanSomeExpired();
-        if (cleaned < MAX_CLEANUP_ATTEMPTS_AT_ONCE && completedObservables.size() > maxSize) { //TODO (PR-1729): unit test
-            int cleaningSlotsRemaining = MAX_CLEANUP_ATTEMPTS_AT_ONCE - cleaned;
-            int excessSize = completedObservables.size() - maxSize;
-            cleanRegardless(min(cleaningSlotsRemaining, excessSize));
-        }
-    }
-
-    private int cleanSomeExpired() {
-        long currentTime = timeSource.getAsLong();
-        int cleaned = 0;
-        Iterator<Tuple2<String, Long>> iterator = completedObservables.iterator();
-        while (iterator.hasNext() && cleaned < MAX_CLEANUP_ATTEMPTS_AT_ONCE) {
-            Tuple2<String, Long> tuple2 = iterator.next();
-            long completionTime = tuple2.getValue();
-            boolean expired = currentTime - completionTime >= expirationTime;
-            if (expired) {
-                destroyTopic(tuple2);
-                iterator.remove();
-                cleaned++;
-            } else {
-                return cleaned;
-            }
-        }
-        return cleaned;
-    }
-
-    private void cleanRegardless(int count) {
-        Iterator<Tuple2<String, Long>> iterator = completedObservables.iterator();
-        for (int i = 0; i < count; i++) {
-            destroyTopic(iterator.next());
-            iterator.remove();
-        }
-    }
-
-    private void destroyTopic(Tuple2<String, Long> tuple2) {
-        String observableName = tuple2.getKey();
-        ITopic<ObservableBatch> topic = getTopic(jet.getHazelcastInstance(), observableName);
-        topic.destroy();
     }
 
     private static final class TopicListener implements ReliableMessageListener<ObservableBatch> {

@@ -16,10 +16,12 @@
 
 package com.hazelcast.jet.impl;
 
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -27,6 +29,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
@@ -39,28 +42,28 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 public class JobResult implements IdentifiedDataSerializable {
 
-    private String coordinatorUUID;
     private long jobId;
     private JobConfig jobConfig;
     private long creationTime;
     private long completionTime;
     private String failureText;
+    private Set<String> ownedObservables;
 
     public JobResult() {
     }
 
     JobResult(long jobId,
               @Nonnull JobConfig jobConfig,
-              @Nonnull String coordinatorUUID,
               long creationTime, long completionTime,
-              @Nullable String failureText
+              @Nullable String failureText,
+              @Nonnull Set<String> ownedObservables
     ) {
         this.jobId = jobId;
         this.jobConfig = jobConfig;
-        this.coordinatorUUID = coordinatorUUID;
         this.creationTime = creationTime;
         this.completionTime = completionTime;
         this.failureText = failureText;
+        this.ownedObservables = ownedObservables;
     }
 
     public long getJobId() {
@@ -70,11 +73,6 @@ public class JobResult implements IdentifiedDataSerializable {
     @Nonnull
     public JobConfig getJobConfig() {
         return jobConfig;
-    }
-
-    @Nonnull
-    public String getCoordinatorUUID() {
-        return coordinatorUUID;
     }
 
     public long getCreationTime() {
@@ -133,12 +131,12 @@ public class JobResult implements IdentifiedDataSerializable {
     @Override
     public String toString() {
         return "JobResult{" +
-                "coordinatorUUID='" + coordinatorUUID + '\'' +
-                ", jobId=" + idToString(jobId) +
+                "jobId=" + idToString(jobId) +
                 ", name=" + jobConfig.getName() +
                 ", creationTime=" + toLocalDateTime(creationTime) +
                 ", completionTime=" + toLocalDateTime(completionTime) +
                 ", failureText=" + failureText +
+                ", ownedObservables=" + ownedObservables +
                 '}';
     }
 
@@ -156,19 +154,25 @@ public class JobResult implements IdentifiedDataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeLong(jobId);
         out.writeObject(jobConfig);
-        out.writeUTF(coordinatorUUID);
         out.writeLong(creationTime);
         out.writeLong(completionTime);
         out.writeObject(failureText);
+        out.writeObject(ownedObservables);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         jobId = in.readLong();
         jobConfig = in.readObject();
-        coordinatorUUID = in.readUTF();
         creationTime = in.readLong();
         completionTime = in.readLong();
         failureText = in.readObject();
+        ownedObservables = in.readObject();
+    }
+
+    public void destroy(HazelcastInstance hzInstance) {
+        for (String ownedObservable : ownedObservables) {
+            ObservableRepository.destroyObservable(ownedObservable, hzInstance);
+        }
     }
 }

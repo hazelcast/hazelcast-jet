@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.DistributedObject;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -32,14 +33,12 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Properties;
 
 import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_MAX_SIZE;
@@ -177,7 +176,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     private JobRecord createJobRecord(long jobId, Data dag) {
-        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig, Collections.emptySet());
+        return new JobRecord(jobId, System.currentTimeMillis(), dag, "", jobConfig);
     }
 
     private void sleepUntilJobExpires() {

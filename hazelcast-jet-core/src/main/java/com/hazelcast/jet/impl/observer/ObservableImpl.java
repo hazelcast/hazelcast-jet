@@ -22,7 +22,6 @@ import com.hazelcast.jet.Observer;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -31,7 +30,6 @@ public class ObservableImpl<T> implements Observable<T> {
     private final CopyOnWriteArrayList<Observer<T>> observers = new CopyOnWriteArrayList<>();
     private final String name;
     private final JetInstance jet;
-    private final UUID registrationId;
     private final ILogger logger;
 
     private long lastSequence = -1;
@@ -39,8 +37,9 @@ public class ObservableImpl<T> implements Observable<T> {
     public ObservableImpl(String name, JetInstance jet, ILogger logger) {
         this.name = name;
         this.jet = jet;
-        this.registrationId = ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet);
         this.logger = logger;
+
+        ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet);
     }
 
     @Override
@@ -62,7 +61,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void destroy() {
-        ObservableRepository.destroyObservable(name, registrationId, jet);
+        ObservableRepository.destroyObservable(name, jet.getHazelcastInstance());
     }
 
     public void onNewMessage(ObservableBatch batch) {

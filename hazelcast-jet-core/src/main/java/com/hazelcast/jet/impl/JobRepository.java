@@ -20,16 +20,19 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
 import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
+import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.metrics.JobMetrics;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -57,17 +60,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -288,7 +294,7 @@ public class JobRepository {
      * newQuorumSize}.
      */
     void updateJobQuorumSizeIfSmaller(long jobId, int newQuorumSize) {
-        jobExecutionRecords.executeOnKey(jobId, ImdgUtil.<Long, JobExecutionRecord>entryProcessor((key, value) -> {
+        jobExecutionRecords.executeOnKey(jobId, ImdgUtil.entryProcessor((key, value) -> {
             if (value == null) {
                 return null;
             }
@@ -311,21 +317,27 @@ public class JobRepository {
      * @throws IllegalStateException if the JobResult is already present
      */
     void completeJob(
-            long jobId,
+            @Nonnull MasterContext masterContext,
             @Nullable List<RawJobMetrics> terminalMetrics,
-            @Nonnull String coordinator,
             long completionTime,
             @Nullable Throwable error
     ) {
+        long jobId = masterContext.jobId();
+
         JobRecord jobRecord = getJobRecord(jobId);
         if (jobRecord == null) {
             throw new JobNotFoundException(jobId);
         }
 
+        DAG dag = deserializeDag(masterContext, jobRecord);
+        Set<String> ownedObservables = ownedObservables(dag);
+
+        ObservableRepository.completeObservables(ownedObservables, error, instance);
+
         JobConfig config = jobRecord.getConfig();
         long creationTime = jobRecord.getCreationTime();
-        JobResult jobResult = new JobResult(jobId, config, coordinator, creationTime, completionTime,
-                toErrorMsg(error));
+        JobResult jobResult = new JobResult(jobId, config, creationTime, completionTime,
+                toErrorMsg(error), ownedObservables);
 
         if (terminalMetrics != null) {
             List<RawJobMetrics> prevMetrics = jobMetrics.put(jobId, terminalMetrics);
@@ -405,7 +417,11 @@ public class JobRepository {
                       .collect(Collectors.toSet())
                       .forEach(id -> {
                           jobMetrics.delete(id);
-                          jobResults.delete(id);
+                          JobResult jobResult = jobResults.get(id);
+                          if (jobResult != null) {
+                              jobResult.destroy(instance);
+                              jobResults.delete(id);
+                          }
                       });
         }
         long elapsed = System.nanoTime() - start;
@@ -494,6 +510,20 @@ public class JobRepository {
         }
     }
 
+    void clearSnapshotData(long jobId, int dataMapIndex) {
+        String mapName = snapshotDataMapName(jobId, dataMapIndex);
+        try {
+            instance.getMap(mapName).clear();
+            logFine(logger, "Cleared snapshot data map %s", mapName);
+        } catch (Exception logged) {
+            logger.warning("Cannot delete old snapshot data  " + idToString(jobId), logged);
+        }
+    }
+
+    void cacheValidationRecord(@Nonnull String snapshotName, @Nonnull SnapshotValidationRecord validationRecord) {
+        exportedSnapshotDetailsCache.set(snapshotName, validationRecord);
+    }
+
     /**
      * Returns map name in the form {@code "_jet.snapshot.<jobId>.<dataMapIndex>"}.
      */
@@ -508,18 +538,19 @@ public class JobRepository {
         return JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name;
     }
 
-    void clearSnapshotData(long jobId, int dataMapIndex) {
-        String mapName = snapshotDataMapName(jobId, dataMapIndex);
-        try {
-            instance.getMap(mapName).clear();
-            logFine(logger, "Cleared snapshot data map %s", mapName);
-        } catch (Exception logged) {
-            logger.warning("Cannot delete old snapshot data  " + idToString(jobId), logged);
-        }
+    private static DAG deserializeDag(MasterContext masterContext, JobRecord jobRecord) {
+        JetService jetService = masterContext.getJetService();
+        ClassLoader classLoader = jetService.getJobExecutionService()
+                .getClassLoader(jobRecord.getConfig(), jobRecord.getJobId());
+
+        SerializationService serializationService = masterContext.nodeEngine().getSerializationService();
+        return deserializeWithCustomClassLoader(serializationService, classLoader, jobRecord.getDag());
     }
 
-    void cacheValidationRecord(@Nonnull String snapshotName, @Nonnull SnapshotValidationRecord validationRecord) {
-        exportedSnapshotDetailsCache.set(snapshotName, validationRecord);
+    private static Set<String> ownedObservables(DAG dag) {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
+                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
+                .collect(Collectors.toSet());
     }
 
     public static final class UpdateJobExecutionRecordEntryProcessor implements

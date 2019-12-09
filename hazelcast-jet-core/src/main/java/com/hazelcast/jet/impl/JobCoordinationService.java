@@ -24,6 +24,7 @@ import com.hazelcast.core.MemberLeftException;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.util.Clock;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobAlreadyExistsException;
@@ -35,12 +36,10 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.operation.GetClusterMetadataOperation;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.exception.TargetNotMemberException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -59,7 +58,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -71,8 +69,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
 import static com.hazelcast.cluster.ClusterState.PASSIVE;
@@ -119,7 +115,6 @@ public class JobCoordinationService {
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
-    private final ObservableRepository observableRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, CompletableFuture<Void>> membersShuttingDown = new ConcurrentHashMap<>();
     /**
@@ -136,13 +131,12 @@ public class JobCoordinationService {
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
-                           JobRepository jobRepository, ObservableRepository observableRepository) {
+                           JobRepository jobRepository) {
         this.nodeEngine = nodeEngine;
         this.jetService = jetService;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
-        this.observableRepository = observableRepository;
 
         ExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
@@ -182,7 +176,7 @@ public class JobCoordinationService {
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
                 DAG dag = deserializeDag(jobId, config, serializedDag);
                 JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), serializedDag, dagToJson(dag),
-                        config, ownedObservables(dag));
+                        config);
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
 
@@ -680,19 +674,15 @@ public class JobCoordinationService {
     CompletableFuture<Void> completeJob(MasterContext masterContext, long completionTime, Throwable error) {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
-            long jobId = masterContext.jobId();
             List<RawJobMetrics> jobMetrics =
                     masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
                             ? masterContext.jobContext().jobMetrics()
                             : null;
-            UUID coordinator = nodeEngine.getNode().getThisUuid();
-            jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), completionTime, error);
+            jobRepository.completeJob(masterContext, jobMetrics,  completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
-                Set<String> ownedObservables = masterContext.jobRecord().getOwnedObservables();
-                observableRepository.completeObservables(ownedObservables, error);
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
-                MasterContext existing = masterContexts.get(jobId);
+                MasterContext existing = masterContexts.get(masterContext.jobId());
                 if (existing != null) {
                     logger.severe("Different master context found to complete " + masterContext.jobIdString()
                             + ", master context execution " + idToString(existing.executionId()));
@@ -833,12 +823,6 @@ public class JobCoordinationService {
         return dag.toJson(coopThreadCount).toString();
     }
 
-    private Set<String> ownedObservables(DAG dag) {
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
-                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
-                .collect(Collectors.toSet());
-    }
-
     private CompletableFuture<Void> startJobIfNotStartedOrCompleted(
             @Nonnull JobRecord jobRecord,
             @Nonnull JobExecutionRecord jobExecutionRecord, String reason
@@ -946,7 +930,6 @@ public class JobCoordinationService {
                         jobRepository.getJobExecutionRecord(jobRecord.getJobId()));
                 startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "discovered by scanning of JobRecords");
             }
-            observableRepository.cleanup();
             jobRepository.cleanup(nodeEngine);
             if (!jobsScanned) {
                 synchronized (lock) {
