@@ -18,8 +18,9 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier.Context;
+import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
@@ -72,7 +73,9 @@ public final class ServiceFactory<S> implements Serializable {
      */
     public static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
-    private final FunctionEx<Context, ? extends S> createFn;
+    @Nonnull
+    private final FunctionEx<? super ServiceContext<S>, ? extends S> createFn;
+    @Nonnull
     private final ConsumerEx<? super S> destroyFn;
     private final boolean isCooperative;
     private final boolean hasLocalSharing;
@@ -80,8 +83,8 @@ public final class ServiceFactory<S> implements Serializable {
     private final boolean orderedAsyncResponses;
 
     private ServiceFactory(
-            FunctionEx<Context, ? extends S> createFn,
-            ConsumerEx<? super S> destroyFn,
+            @Nonnull FunctionEx<? super ServiceContext<S>, ? extends S> createFn,
+            @Nonnull ConsumerEx<? super S> destroyFn,
             boolean isCooperative,
             boolean hasLocalSharing,
             int maxPendingCallsPerProcessor,
@@ -107,7 +110,7 @@ public final class ServiceFactory<S> implements Serializable {
      */
     @Nonnull
     public static <S> ServiceFactory<S> withCreateFn(
-            @Nonnull FunctionEx<Context, ? extends S> createServiceFn
+            @Nonnull FunctionEx<? super ServiceContext<S>, ? extends S> createServiceFn
     ) {
         checkSerializable(createServiceFn, "createServiceFn");
         return new ServiceFactory<>(
@@ -238,7 +241,7 @@ public final class ServiceFactory<S> implements Serializable {
      * Returns the create-function.
      */
     @Nonnull
-    public FunctionEx<Context, ? extends S> createFn() {
+    public FunctionEx<? super ServiceContext<S>, ? extends S> createFn() {
         return createFn;
     }
 
@@ -278,5 +281,22 @@ public final class ServiceFactory<S> implements Serializable {
      */
     public boolean hasOrderedAsyncResponses() {
         return orderedAsyncResponses;
+    }
+
+    public interface ServiceContext<S> {
+        int localIndex();
+
+        int globalIndex();
+
+        int jetMemberIndex();
+
+        @Nonnull
+        ILogger logger();
+
+        @Nonnull
+        JetInstance jetInstance();
+
+        @Nonnull
+        ServiceFactory<S> serviceFactory();
     }
 }
