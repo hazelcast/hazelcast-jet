@@ -140,7 +140,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     }
 
     @Override
-    public boolean saveToSnapshot() {
+    public boolean snapshotCommitPrepare() {
         if (usesTransactionLifecycle()) {
             if (snapshotQueue.isEmpty()) {
                 finishActiveTransaction();
@@ -165,10 +165,10 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     }
 
     @Override
-    public boolean onSnapshotCompleted(boolean commitTransactions) {
+    public boolean snapshotCommitFinish(boolean success) {
         assert snapshotInProgress : "no snapshot in progress";
         snapshotInProgress = false;
-        if (usesTransactionLifecycle() && commitTransactions) {
+        if (usesTransactionLifecycle() && success) {
             commitPendingTransactions();
         }
         return true;

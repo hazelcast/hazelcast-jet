@@ -171,13 +171,13 @@ public final class WriteFileP<T> implements Processor {
     }
 
     @Override
-    public boolean saveToSnapshot() {
-        return utility.saveToSnapshot();
+    public boolean snapshotCommitPrepare() {
+        return utility.snapshotCommitPrepare();
     }
 
     @Override
-    public boolean onSnapshotCompleted(boolean commitTransactions) {
-        return utility.onSnapshotCompleted(commitTransactions);
+    public boolean snapshotCommitFinish(boolean success) {
+        return utility.snapshotCommitFinish(success);
     }
 
     @Override
