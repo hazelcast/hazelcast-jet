@@ -108,11 +108,11 @@ public final class GRPCEnrichment {
                 .map(entryValue());
 
         ServiceFactory<ProductServiceFutureStub> productService = ServiceFactory
-                .withCreateFn(x -> ProductServiceGrpc.newFutureStub(getLocalChannel()))
+                .<ProductServiceFutureStub>withCreateFn(x -> ProductServiceGrpc.newFutureStub(getLocalChannel()))
                 .withDestroyFn(stub -> shutdownClient(stub));
 
         ServiceFactory<BrokerServiceFutureStub> brokerService = ServiceFactory
-                .withCreateFn(x -> BrokerServiceGrpc.newFutureStub(getLocalChannel()))
+                .<BrokerServiceFutureStub>withCreateFn(x -> BrokerServiceGrpc.newFutureStub(getLocalChannel()))
                 .withDestroyFn(stub -> shutdownClient(stub));
 
         // Enrich the trade by querying the product and broker name from the gRPC services

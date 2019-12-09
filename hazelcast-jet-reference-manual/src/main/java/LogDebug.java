@@ -103,7 +103,7 @@ public class LogDebug {
         p.readFrom(TestSources.items(0, 1, 2, 3))
             //tag::s6[]
             .filterUsingServiceAsync(
-                ServiceFactory.withCreateFn(i -> 0L),
+                ServiceFactory.<Long>withCreateFn(i -> 0L),
                 (ctx, l) -> CompletableFuture.supplyAsync(
                     () -> {
                         boolean pass = l % 2L == ctx;

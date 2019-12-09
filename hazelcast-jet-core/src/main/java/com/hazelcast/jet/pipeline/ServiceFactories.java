@@ -18,6 +18,7 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.pipeline.ServiceFactory.ServiceContext;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
@@ -63,8 +64,7 @@ public final class ServiceFactories {
     @Nonnull
     public static <K, V> ServiceFactory<ReplicatedMap<K, V>> replicatedMapService(@Nonnull String mapName) {
         return ServiceFactory
-                .withCreateFn(ctx -> ctx.jetInstance().<K, V>getReplicatedMap(mapName))
-                .withLocalSharing();
+                .withCreateFn(ctx -> ctx.jetInstance().getHazelcastInstance().getReplicatedMap(mapName));
     }
 
     /**
@@ -91,7 +91,7 @@ public final class ServiceFactories {
     @Nonnull
     public static <K, V> ServiceFactory<IMap<K, V>> iMapService(@Nonnull String mapName) {
         return ServiceFactory
-                .withCreateFn(ctx -> ctx.jetInstance().<K, V>getMap(mapName))
+                .<IMap<K, V>>withCreateFn(ctx -> ctx.jetInstance().getMap(mapName))
                 .withLocalSharing();
     }
 }

@@ -24,6 +24,7 @@ import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestProcessorSupplierContext;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.jet.pipeline.ServiceFactory.ServiceContext;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,8 +48,9 @@ public class TransformUsingServicePTest {
     private void testSharing(boolean share) throws Exception {
         int[] createCounter = {0};
         int[] destroyCounter = {0};
-        ServiceFactory<String> serviceFactory = ServiceFactory.withCreateFn(jet -> "context-" + createCounter[0]++)
-                                                              .withDestroyFn(ctx -> destroyCounter[0]++);
+        ServiceFactory<String> serviceFactory = ServiceFactory
+                .<String>withCreateFn(ctx -> "context-" + createCounter[0]++)
+                .withDestroyFn(ctx -> destroyCounter[0]++);
         if (share) {
             serviceFactory = serviceFactory.withLocalSharing();
         }

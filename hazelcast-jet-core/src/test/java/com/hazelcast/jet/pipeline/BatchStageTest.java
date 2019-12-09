@@ -216,7 +216,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<String> mapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingService(
-                        ServiceFactory.withCreateFn(i -> suffix),
+                        ServiceFactory.<String>withCreateFn(ctx -> suffix),
                         (service, k, i) -> formatFn.apply(i, service)
                 );
 
@@ -235,7 +235,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Integer> mapped = batchStageFromList(input).filterUsingService(
-                ServiceFactory.withCreateFn(i -> 1),
+                ServiceFactory.<Integer>withCreateFn(i -> 1),
                 (ctx, i) -> i % 2 == ctx);
 
         // Then
@@ -256,7 +256,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Integer> mapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        ServiceFactory.withCreateFn(i -> 1),
+                        ServiceFactory.<Integer>withCreateFn(ctx -> 1),
                         (ctx, k, r) -> r % 2 == ctx);
 
         // Then
@@ -275,7 +275,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Entry<Integer, String>> flatMapped = batchStageFromList(input).flatMapUsingService(
-                ServiceFactory.withCreateFn(procCtx -> asList("A", "B")),
+                ServiceFactory.<List<String>>withCreateFn(ctx -> asList("A", "B")),
                 (ctx, i) -> traverseItems(entry(i, ctx.get(0)), entry(i, ctx.get(1))));
 
         // Then
@@ -296,8 +296,8 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> flatMapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        ServiceFactory.withCreateFn(procCtx -> asList("A", "B")),
-                        (ctx, k, i) -> traverseItems(entry(i, ctx.get(0)), entry(i, ctx.get(1))));
+                        ServiceFactory.<List<String>>withCreateFn(ctx -> asList("A", "B")),
+                        (list, k, i) -> traverseItems(entry(i, list.get(0)), entry(i, list.get(1))));
 
         // Then
         flatMapped.writeTo(sink);

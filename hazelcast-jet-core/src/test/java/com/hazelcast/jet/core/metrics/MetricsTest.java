@@ -187,7 +187,7 @@ public class MetricsTest extends JetTestSupport {
         pipeline.readFrom(TestSources.items(inputs))
                 .addTimestamps(i -> i, 0L)
                 .filterUsingServiceAsync(
-                        ServiceFactory.withCreateFn(i -> 0L),
+                        ServiceFactory.<Long>withCreateFn(ctx -> 0L),
                         (ctx, l) -> {
                             Metric dropped = Metrics.threadSafeMetric("dropped");
                             Metric total = Metrics.threadSafeMetric("total");

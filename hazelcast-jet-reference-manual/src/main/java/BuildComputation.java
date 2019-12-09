@@ -445,7 +445,7 @@ class BuildComputation {
     static void s16a() {
         //tag::s16a[]
         ServiceFactory<IMap<String, StockInfo>> ctxFac = ServiceFactory
-                .withCreateFn(x -> {
+                .<IMap<String, StockInfo>>withCreateFn(x -> {
                     ClientConfig cc = new ClientConfig();
                     cc.getNearCacheConfigMap().put("stock-info",
                             new NearCacheConfig());
