@@ -138,7 +138,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     @Nonnull
     static ProcessorMetaSupplier of(int preferredLocalParallelism, @Nonnull ProcessorSupplier procSupplier) {
-        return of((Address x) -> procSupplier, preferredLocalParallelism);
+        return of(preferredLocalParallelism, (Address x) -> procSupplier);
     }
 
     /**
@@ -157,13 +157,12 @@ public interface ProcessorMetaSupplier extends Serializable {
      * Specifically, returns a meta-supplier that will always return the
      * result of calling {@link ProcessorSupplier#of(SupplierEx)}.
      *
-     * @param procSupplier              the supplier of processors
      * @param preferredLocalParallelism the value to return from {@link #preferredLocalParallelism()}
+     * @param procSupplier              the supplier of processors
      */
     @Nonnull
     static ProcessorMetaSupplier of(
-            @Nonnull SupplierEx<? extends Processor> procSupplier,
-            int preferredLocalParallelism
+            int preferredLocalParallelism, @Nonnull SupplierEx<? extends Processor> procSupplier
     ) {
         return of(preferredLocalParallelism, ProcessorSupplier.of(procSupplier));
     }
@@ -178,7 +177,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      */
     @Nonnull
     static ProcessorMetaSupplier of(@Nonnull SupplierEx<? extends Processor> procSupplier) {
-        return of(procSupplier, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
+        return of(Vertex.LOCAL_PARALLELISM_USE_DEFAULT, procSupplier);
     }
 
     /**
@@ -186,13 +185,13 @@ public interface ProcessorMetaSupplier extends Serializable {
      * supplied function that maps a cluster member address to a {@link
      * ProcessorSupplier}.
      *
-     * @param addressToSupplier the mapping from address to ProcessorSupplier
      * @param preferredLocalParallelism the value to return from {@link #preferredLocalParallelism()}
+     * @param addressToSupplier the mapping from address to ProcessorSupplier
      */
     @Nonnull
     static ProcessorMetaSupplier of(
-            @Nonnull FunctionEx<? super Address, ? extends ProcessorSupplier> addressToSupplier,
-            int preferredLocalParallelism
+            int preferredLocalParallelism,
+            @Nonnull FunctionEx<? super Address, ? extends ProcessorSupplier> addressToSupplier
     ) {
         Vertex.checkLocalParallelism(preferredLocalParallelism);
         return new ProcessorMetaSupplier() {
@@ -218,7 +217,7 @@ public interface ProcessorMetaSupplier extends Serializable {
     static ProcessorMetaSupplier of(
             @Nonnull FunctionEx<? super Address, ? extends ProcessorSupplier> addressToSupplier
     ) {
-        return of(addressToSupplier, Vertex.LOCAL_PARALLELISM_USE_DEFAULT);
+        return of(Vertex.LOCAL_PARALLELISM_USE_DEFAULT, addressToSupplier);
     }
 
 
@@ -227,7 +226,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * will always return it. The {@link #preferredLocalParallelism()} of
      * the meta-supplier will be one, i.e., no local parallelization.
      * <p>
-     * The parallelism will be overriden if the {@link Vertex#localParallelism(int)} is
+     * The parallelism will be overridden if the {@link Vertex#localParallelism(int)} is
      * set to a specific value.
      */
     @Nonnull
