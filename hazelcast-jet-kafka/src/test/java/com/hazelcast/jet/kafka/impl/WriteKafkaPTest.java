@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -61,6 +60,7 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static java.util.Collections.singletonMap;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -238,10 +238,11 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
             StringBuilder actualSinkContents = new StringBuilder();
 
             int actualCount = 0;
-            String expected = IntStream.range(0, numItems).mapToObj(Integer::toString).collect(Collectors.joining("\n"));
+            String expected = IntStream.range(0, numItems).mapToObj(Integer::toString).collect(joining("\n")) + '\n';
             // We'll restart once, then restart again after a short sleep (possibly during initialization), then restart
             // again and then assert some output so that the test isn't constantly restarting without any progress
             for (;;) {
+                assertJobStatusEventually(job, RUNNING);
                 job.restart(graceful);
                 assertJobStatusEventually(job, RUNNING);
                 sleepMillis(ThreadLocalRandom.current().nextInt(400));
