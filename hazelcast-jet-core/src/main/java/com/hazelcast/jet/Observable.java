@@ -26,7 +26,7 @@ import java.util.function.Consumer;
  * registered.
  * <p>
  * Besides new values appearing observers can also observe completions and
- * failure event. Completion means that no further values will appear in
+ * failure events. Completion means that no further values will appear in
  * the sequence. Failure means that something went wrong during the
  * production of the sequence's values and the event attempts to provide
  * useful information about the cause of the problem.

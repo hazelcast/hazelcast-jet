@@ -50,14 +50,14 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void addObserver(@Nonnull Observer<T> observer) {
-        this.observers.add(observer);
+        observers.add(observer);
     }
 
     @Override
     public void addObserver(@Nonnull Consumer<? super T> onNext,
                             @Nonnull Consumer<? super Throwable> onError,
                             @Nonnull Runnable onComplete) {
-        this.observers.add(Observer.of(onNext, onError, onComplete));
+        observers.add(Observer.of(onNext, onError, onComplete));
     }
 
     @Override
