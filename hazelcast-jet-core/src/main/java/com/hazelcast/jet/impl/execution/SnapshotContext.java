@@ -185,10 +185,6 @@ public class SnapshotContext {
         return guarantee;
     }
 
-    private synchronized boolean isCancelled() {
-        return isCancelled;
-    }
-
     synchronized void initTaskletCount(int numPTasklets, int numSsTasklets, int numPrioritySsTasklets) {
         assert this.numSsTasklets == Integer.MIN_VALUE && this.numPTasklets == Integer.MIN_VALUE
                 : "Tasklet count already set";
@@ -348,7 +344,6 @@ public class SnapshotContext {
      * all async flush operations are done).
      */
     void phase1DoneForTasklet(long numBytes, long numKeys, long numChunks) {
-        assert phase1Future != null || isCancelled() : "phase 1 not in progress";
         totalBytes.addAndGet(numBytes);
         totalKeys.addAndGet(numKeys);
         totalChunks.addAndGet(numChunks);
@@ -365,7 +360,6 @@ public class SnapshotContext {
      * operations are done).
      */
     void phase2DoneForTasklet() {
-        assert phase2Future != null || isCancelled() : "phase 2 not in progress";
         int newRemainingTasklets = numRemainingTasklets.decrementAndGet();
         assert newRemainingTasklets >= 0 : "newRemainingTasklets=" + newRemainingTasklets;
         if (newRemainingTasklets == 0) {
