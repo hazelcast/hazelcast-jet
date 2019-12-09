@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
@@ -52,9 +53,11 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.updateRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeReliableTopicP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
+import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteReliableTopicP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -633,8 +636,8 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink that adds the items it receives to a Hazelcast {@code
-     * IList} with the specified name.
+     * Returns a sink that adds the items it receives to the specified
+     * Hazelcast {@code IList}.
      * <p>
      * <strong>NOTE:</strong> Jet only remembers the name of the list you
      * supply and acquires a list with that name on the local cluster. If you
@@ -666,6 +669,60 @@ public final class Sinks {
     @Nonnull
     public static <T> Sink<T> remoteList(@Nonnull String listName, @Nonnull ClientConfig clientConfig) {
         return fromProcessor("remoteListSink(" + listName + ')', writeRemoteListP(listName, clientConfig));
+    }
+
+    /**
+     * Returns a sink which publishes values into a distributed reliable topic
+     * with the specified name.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at-least-once</i>
+     * guarantee.
+     * <p>
+     * Local parallelism for this sink doesn't have to be one, it's set to
+     * the default.
+     */
+    @Nonnull
+    public static <T> Sink<T> reliableTopic(@Nonnull String reliableTopicName) {
+        return fromProcessor("reliableTopicSink(" + reliableTopicName + ')', writeReliableTopicP(reliableTopicName));
+    }
+
+    /**
+     * Returns a sink which publishes values into a distributed reliable topic.
+     * <p>
+     * <strong>NOTE:</strong> Jet only remembers the name of the reliable
+     * topic you supply and acquires a reliable topic with that name on the
+     * local cluster. If you supply a reliable topic instance from another
+     * cluster, no error will be thrown to indicate this.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at-least-once</i>
+     * guarantee.
+     * <p>
+     * Local parallelism for this sink doesn't have to be one, it's set to
+     * the default.
+     */
+    @Nonnull
+    public static <T> Sink<T> reliableTopic(@Nonnull ITopic<Object> reliableTopic) {
+        return reliableTopic(reliableTopic.getName());
+    }
+
+    /**
+     * Returns a sink which publishes values into a distributed reliable
+     * topic with specified name in a remote cluster identified by the
+     * supplied {@code ClientConfig}.
+     * <p>
+     * No state is saved to snapshot for this sink. After the job is restarted,
+     * the items will likely be duplicated, providing an <i>at-least-once</i>
+     * guarantee.
+     * <p>
+     * Local parallelism for this sink doesn't have to be one, it's set to
+     * the default.
+     */
+    @Nonnull
+    public static <T> Sink<T> remoteReliableTopic(@Nonnull String reliableTopicName, @Nonnull ClientConfig clientConfig) {
+        return fromProcessor("remoteReliableTopicSink(" + reliableTopicName + ')',
+                writeRemoteReliableTopicP(reliableTopicName, clientConfig));
     }
 
     /**

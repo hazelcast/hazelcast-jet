@@ -206,6 +206,23 @@ public final class SinkProcessors {
     }
 
     /**
+     * Returns a supplier of processors for {@link Sinks#reliableTopic(String)}
+     */
+    @Nonnull
+    public static ProcessorMetaSupplier writeReliableTopicP(@Nonnull String reliableTopicName) {
+        return HazelcastWriters.writeReliableTopicSupplier(reliableTopicName, null);
+    }
+
+    /**
+     * Returns a supplier of processors for {@link Sinks#remoteReliableTopic(String, ClientConfig)}
+     */
+    @Nonnull
+    public static ProcessorMetaSupplier writeRemoteReliableTopicP(@Nonnull String reliableTopicName,
+                                                                  @Nonnull ClientConfig clientConfig) {
+        return HazelcastWriters.writeReliableTopicSupplier(reliableTopicName, clientConfig);
+    }
+
+    /**
      * Returns a supplier of processors for
      * {@link Sinks#socket(String, int)}.
      */

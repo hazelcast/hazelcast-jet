@@ -35,6 +35,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -147,6 +148,31 @@ public final class HazelcastWriters {
                     return buffer -> {
                         try {
                             list.addAll(buffer);
+                        } catch (HazelcastInstanceNotActiveException e) {
+                            throw handleInstanceNotActive(e, isLocal);
+                        }
+                        buffer.clear();
+                    };
+                },
+                ConsumerEx.noop()
+        ));
+    }
+
+    @Nonnull
+    public static ProcessorMetaSupplier writeReliableTopicSupplier(@Nonnull String name,
+                                                                   @Nullable ClientConfig clientConfig) {
+        boolean isLocal = clientConfig == null;
+        return ProcessorMetaSupplier.of(new WriterSupplier<>(
+                asXmlString(clientConfig),
+                ArrayList::new,
+                ArrayList::add,
+                instance -> {
+                    ITopic<Object> topic = instance.getReliableTopic(name);
+                    return buffer -> {
+                        try {
+                            for (Object item : buffer) {
+                                topic.publish(item);
+                            }
                         } catch (HazelcastInstanceNotActiveException e) {
                             throw handleInstanceNotActive(e, isLocal);
                         }
