@@ -30,6 +30,37 @@ import java.util.function.Consumer;
  * the sequence. Failure means that something went wrong during the
  * production of the sequence's values and the event attempts to provide
  * useful information about the cause of the problem.
+ * <p>
+ * Observable implementations are backed typically by long lived,
+ * distributed data objects which get created when the {@link Observable}
+ * is {@link JetInstance#getObservable(String) requested from a JetInstance}.
+ * <p>
+ * Their events are produced by {@link Job}s running
+ * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
+ * type sinks} and stay alive while their owner jobs keep running. When
+ * these jobs are batched by nature and they complete (successfully
+ * or with a failure) the observables owned by them remain alive for a
+ * preconfigured timeout (see
+ * {@link com.hazelcast.jet.core.JetProperties#JOB_RESULTS_TTL_SECONDS
+ * JOB_RESULTS_TTL_SECONDS property}, defaults to 7 days) after which they
+ * get cleaned up automatically. For streaming jobs no such automatic
+ * clean-up is possible, since they never complete, unless they fail.
+ * <p>
+ * When using {@link Observable}s we encourage their manual cleanup, via
+ * their {@link Observable#destroy()} method, whenever they are no longer
+ * needed. Automatic clean-up shouldn't be relied upon. Even if a client
+ * that has requested the {@link Observable} happens to crash, before
+ * managing to do clean-up, it is still possible to manually destroy
+ * the backing distributed structures by obtaining a new, identically named
+ * {@link Observable} and calling {@link Observable#destroy()} on that.
+ * <p>
+ * It is possible to use the same {@link Observable} for multiple jobs, or
+ * even use the same {@link Observable} multiple times in the same job (by
+ * defining {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
+ * observable type sinks} with the same name). If done so one should be aware
+ * that there will be parallel streams of events which can be intermingled
+ * with eachother in all kinds of unexpected ways. It is not possible to
+ * tell which events originate from which sink.
  *
  * @param <T> type of the values in the sequence
  */
