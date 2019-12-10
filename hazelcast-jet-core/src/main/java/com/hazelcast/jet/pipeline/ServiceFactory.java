@@ -74,7 +74,7 @@ public final class ServiceFactory<S> implements Serializable {
     public static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
     @Nonnull
-    private final FunctionEx<? super ServiceContext<S>, ? extends S> createFn;
+    private final FunctionEx<? super ServiceContext, ? extends S> createFn;
     @Nonnull
     private final ConsumerEx<? super S> destroyFn;
     private final boolean isCooperative;
@@ -83,7 +83,7 @@ public final class ServiceFactory<S> implements Serializable {
     private final boolean orderedAsyncResponses;
 
     private ServiceFactory(
-            @Nonnull FunctionEx<? super ServiceContext<S>, ? extends S> createFn,
+            @Nonnull FunctionEx<? super ServiceContext, ? extends S> createFn,
             @Nonnull ConsumerEx<? super S> destroyFn,
             boolean isCooperative,
             boolean hasLocalSharing,
@@ -110,7 +110,7 @@ public final class ServiceFactory<S> implements Serializable {
      */
     @Nonnull
     public static <S> ServiceFactory<S> withCreateFn(
-            @Nonnull FunctionEx<? super ServiceContext<S>, ? extends S> createServiceFn
+            @Nonnull FunctionEx<? super ServiceContext, ? extends S> createServiceFn
     ) {
         checkSerializable(createServiceFn, "createServiceFn");
         return new ServiceFactory<>(
@@ -241,7 +241,7 @@ public final class ServiceFactory<S> implements Serializable {
      * Returns the create-function.
      */
     @Nonnull
-    public FunctionEx<? super ServiceContext<S>, ? extends S> createFn() {
+    public FunctionEx<? super ServiceContext, ? extends S> createFn() {
         return createFn;
     }
 
@@ -283,20 +283,25 @@ public final class ServiceFactory<S> implements Serializable {
         return orderedAsyncResponses;
     }
 
-    public interface ServiceContext<S> {
+    public interface ServiceContext {
         int localIndex();
 
         int globalIndex();
 
         int jetMemberIndex();
 
+        boolean isCooperative();
+
+        boolean hasLocalSharing();
+
+        boolean hasOrderedAsyncResponses();
+
+        int maxPendingCallsPerProcessor();
+
         @Nonnull
         ILogger logger();
 
         @Nonnull
         JetInstance jetInstance();
-
-        @Nonnull
-        ServiceFactory<S> serviceFactory();
     }
 }

@@ -9,53 +9,68 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 
-public class ServiceContextImpl<S> implements ServiceContext<S> {
+public class ServiceContextImpl implements ServiceContext {
     private final int localServiceIndex;
     private final int memberIndex;
     private final int memberCount;
+    private final boolean isCooperative;
+    private final boolean hasLocalSharing;
+    private final boolean hasOrderedAsyncResponses;
+    private final int maxPendingCallsPerProcessor;
     private final ILogger logger;
     private final JetInstance jetInstance;
-    private final ServiceFactory<S> serviceFactory;
 
     ServiceContextImpl(
             int localServiceIndex,
             int memberIndex,
             int memberCount,
+            boolean isCooperative,
+            boolean hasLocalSharing,
+            boolean hasOrderedAsyncResponses,
+            int maxPendingCallsPerProcessor,
             @Nonnull ILogger logger,
-            @Nonnull JetInstance jetInstance,
-            @Nonnull ServiceFactory<S> serviceFactory
+            @Nonnull JetInstance jetInstance
     ) {
         this.localServiceIndex = localServiceIndex;
         this.memberIndex = memberIndex;
         this.memberCount = memberCount;
+        this.isCooperative = isCooperative;
+        this.hasLocalSharing = hasLocalSharing;
+        this.hasOrderedAsyncResponses = hasOrderedAsyncResponses;
+        this.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
         this.logger = logger;
         this.jetInstance = jetInstance;
-        this.serviceFactory = serviceFactory;
     }
 
-    public static <S> ServiceContextImpl<S> locallySharedServiceContext(
-            ServiceFactory<S> serviceFactory, ProcessorSupplier.Context supplierContext
+    public static ServiceContextImpl locallySharedServiceContext(
+            ServiceFactory<?> serviceFactory, ProcessorSupplier.Context supplierContext
     ) {
-        return new ServiceContextImpl<>(
+        return new ServiceContextImpl(
                 0,
                 supplierContext.memberIndex(),
                 supplierContext.memberCount(),
+                serviceFactory.isCooperative(),
+                serviceFactory.hasLocalSharing(),
+                serviceFactory.hasOrderedAsyncResponses(),
+                serviceFactory.maxPendingCallsPerProcessor(),
                 supplierContext.logger(),
-                supplierContext.jetInstance(),
-                serviceFactory
+                supplierContext.jetInstance()
         );
     }
 
-    public static <S> ServiceContextImpl<S> serviceContext(
-            ServiceFactory<S> serviceFactory, Processor.Context processorContext
+    public static ServiceContextImpl serviceContext(
+            ServiceFactory<?> serviceFactory, Processor.Context processorContext
     ) {
-        return new ServiceContextImpl<>(
+        return new ServiceContextImpl(
                 processorContext.localProcessorIndex(),
                 processorContext.memberIndex(),
                 processorContext.memberCount(),
+                serviceFactory.isCooperative(),
+                serviceFactory.hasLocalSharing(),
+                serviceFactory.hasOrderedAsyncResponses(),
+                serviceFactory.maxPendingCallsPerProcessor(),
                 processorContext.logger(),
-                processorContext.jetInstance(),
-                serviceFactory
+                processorContext.jetInstance()
         );
     }
 
@@ -74,6 +89,26 @@ public class ServiceContextImpl<S> implements ServiceContext<S> {
         return memberCount;
     }
 
+    @Override
+    public boolean isCooperative() {
+        return isCooperative;
+    }
+
+    @Override
+    public boolean hasLocalSharing() {
+        return hasLocalSharing;
+    }
+
+    @Override
+    public boolean hasOrderedAsyncResponses() {
+        return hasOrderedAsyncResponses;
+    }
+
+    @Override
+    public int maxPendingCallsPerProcessor() {
+        return maxPendingCallsPerProcessor;
+    }
+
     @Nonnull @Override
     public ILogger logger() {
         return logger;
@@ -84,8 +119,4 @@ public class ServiceContextImpl<S> implements ServiceContext<S> {
         return jetInstance;
     }
 
-    @Nonnull @Override
-    public ServiceFactory<S> serviceFactory() {
-        return serviceFactory;
-    }
 }
