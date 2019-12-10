@@ -283,24 +283,58 @@ public final class ServiceFactory<S> implements Serializable {
         return orderedAsyncResponses;
     }
 
+    /**
+     * Provides contextual information to {@link ServiceFactory#createFn()}
+     * that helps it set up the service.
+     */
     public interface ServiceContext {
+        /**
+         * Returns the number of members in the Jet cluster.
+         */
+        int memberCount();
+
+        /**
+         * Returns the index of the Jet member where {@code createFn} is being invoked.
+         * Each member of the cluster has an index between 0 and {@link #memberCount()}.
+         * */
+        int memberIndex();
+
+        /**
+         * Returns the index of the service instance within the same Jet member.
+         * If the service {@linkplain #isSharedLocally()}, there's just one
+         * instance on each member so this returns 0.
+         */
         int localIndex();
 
-        int globalIndex();
+        /**
+         * Says whether the service will be shared locally, i.e., there will be
+         * just one instance of it on each Jet member.
+         */
+        boolean isSharedLocally();
 
-        int jetMemberIndex();
-
-        boolean isCooperative();
-
-        boolean hasLocalSharing();
-
+        /**
+         * Returns {@code true} if the service will be used to make async requests
+         * and the responses will respect the order of requests.
+         */
         boolean hasOrderedAsyncResponses();
 
+        /**
+         * Returns the limit on the number of async requests Jet will issue without
+         * awaiting their response. When this limit is reached, backpressure will
+         * kick in and the pipeline stage won't accept more data until some
+         * responses come in.
+         */
         int maxPendingCallsPerProcessor();
 
+        /**
+         * Returns a logger the service can use for diagnostic output.
+         */
         @Nonnull
         ILogger logger();
 
+        /**
+         * Returns the Jet instance which is creating the service.
+         */
         @Nonnull
         JetInstance jetInstance();
     }

@@ -10,10 +10,9 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 
 public class ServiceContextImpl implements ServiceContext {
-    private final int localServiceIndex;
-    private final int memberIndex;
     private final int memberCount;
-    private final boolean isCooperative;
+    private final int memberIndex;
+    private final int localIndex;
     private final boolean hasLocalSharing;
     private final boolean hasOrderedAsyncResponses;
     private final int maxPendingCallsPerProcessor;
@@ -21,20 +20,18 @@ public class ServiceContextImpl implements ServiceContext {
     private final JetInstance jetInstance;
 
     ServiceContextImpl(
-            int localServiceIndex,
-            int memberIndex,
             int memberCount,
-            boolean isCooperative,
+            int memberIndex,
+            int localIndex,
             boolean hasLocalSharing,
             boolean hasOrderedAsyncResponses,
             int maxPendingCallsPerProcessor,
             @Nonnull ILogger logger,
             @Nonnull JetInstance jetInstance
     ) {
-        this.localServiceIndex = localServiceIndex;
-        this.memberIndex = memberIndex;
         this.memberCount = memberCount;
-        this.isCooperative = isCooperative;
+        this.memberIndex = memberIndex;
+        this.localIndex = localIndex;
         this.hasLocalSharing = hasLocalSharing;
         this.hasOrderedAsyncResponses = hasOrderedAsyncResponses;
         this.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
@@ -46,10 +43,9 @@ public class ServiceContextImpl implements ServiceContext {
             ServiceFactory<?> serviceFactory, ProcessorSupplier.Context supplierContext
     ) {
         return new ServiceContextImpl(
-                0,
-                supplierContext.memberIndex(),
                 supplierContext.memberCount(),
-                serviceFactory.isCooperative(),
+                supplierContext.memberIndex(),
+                0,
                 serviceFactory.hasLocalSharing(),
                 serviceFactory.hasOrderedAsyncResponses(),
                 serviceFactory.maxPendingCallsPerProcessor(),
@@ -62,10 +58,9 @@ public class ServiceContextImpl implements ServiceContext {
             ServiceFactory<?> serviceFactory, Processor.Context processorContext
     ) {
         return new ServiceContextImpl(
-                processorContext.localProcessorIndex(),
-                processorContext.memberIndex(),
                 processorContext.memberCount(),
-                serviceFactory.isCooperative(),
+                processorContext.memberIndex(),
+                processorContext.localProcessorIndex(),
                 serviceFactory.hasLocalSharing(),
                 serviceFactory.hasOrderedAsyncResponses(),
                 serviceFactory.maxPendingCallsPerProcessor(),
@@ -75,27 +70,22 @@ public class ServiceContextImpl implements ServiceContext {
     }
 
     @Override
-    public int localIndex() {
-        return localServiceIndex;
-    }
-
-    @Override
-    public int globalIndex() {
-        return memberIndex;
-    }
-
-    @Override
-    public int jetMemberIndex() {
+    public int memberCount() {
         return memberCount;
     }
 
     @Override
-    public boolean isCooperative() {
-        return isCooperative;
+    public int memberIndex() {
+        return memberIndex;
     }
 
     @Override
-    public boolean hasLocalSharing() {
+    public int localIndex() {
+        return localIndex;
+    }
+
+    @Override
+    public boolean isSharedLocally() {
         return hasLocalSharing;
     }
 
