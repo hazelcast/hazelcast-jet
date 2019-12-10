@@ -61,7 +61,7 @@ enum ProcessorState {
     SAVE_SNAPSHOT,
 
     /**
-     * Making calls to {@link Processor#snapshotPrepareCommit()} until it
+     * Making calls to {@link Processor#snapshotCommitPrepare()} until it
      * returns {@code true}.
      */
     SNAPSHOT_PREPARE_COMMIT,
@@ -72,7 +72,7 @@ enum ProcessorState {
     EMIT_BARRIER,
 
     /**
-     * Making calls to {@link Processor#onSnapshotCompleted(boolean)} until it
+     * Making calls to {@link Processor#snapshotCommitFinish(boolean)} until it
      * returns {@code true}.
      */
     ON_SNAPSHOT_COMPLETED,

@@ -139,7 +139,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     public abstract void afterCompleted();
 
     /**
-     * Delegate handling of {@link Processor#snapshotPrepareCommit()} to this
+     * Delegate handling of {@link Processor#snapshotCommitPrepare()} to this
      * method.
      *
      * @return a value to return from {@code snapshotPrepareCommit()}
@@ -147,7 +147,7 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
     public abstract boolean snapshotPrepareCommit();
 
     /**
-     * Delegate handling of {@link Processor#onSnapshotCompleted(boolean)} to
+     * Delegate handling of {@link Processor#snapshotCommitFinish(boolean)} to
      * this method.
      *
      * @param commitTransactions value passed to {@code onSnapshotCompleted}

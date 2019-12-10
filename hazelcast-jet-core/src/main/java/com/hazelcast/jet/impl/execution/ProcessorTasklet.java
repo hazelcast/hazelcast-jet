@@ -291,7 +291,7 @@ public class ProcessorTasklet implements Tasklet {
                 return;
 
             case SNAPSHOT_PREPARE_COMMIT:
-                if (processor.snapshotPrepareCommit()) {
+                if (processor.snapshotCommitPrepare()) {
                     progTracker.madeProgress();
                     state = EMIT_BARRIER;
                     stateMachineStep(); // recursion
@@ -315,7 +315,7 @@ public class ProcessorTasklet implements Tasklet {
 
             case ON_SNAPSHOT_COMPLETED:
             case FINAL_ON_SNAPSHOT_COMPLETED:
-                if (ssContext.isExportOnly() || processor.onSnapshotCompleted(ssContext.isLastPhase1Successful())) {
+                if (ssContext.isExportOnly() || processor.snapshotCommitFinish(ssContext.isLastPhase1Successful())) {
                     pendingSnapshotId2++;
                     ssContext.phase2DoneForTasklet();
                     progTracker.madeProgress();

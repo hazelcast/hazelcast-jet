@@ -112,13 +112,13 @@ public abstract class ProcessorWrapper implements Processor {
     }
 
     @Override
-    public boolean snapshotPrepareCommit() {
-        return wrapped.snapshotPrepareCommit();
+    public boolean snapshotCommitPrepare() {
+        return wrapped.snapshotCommitPrepare();
     }
 
     @Override
-    public boolean onSnapshotCompleted(boolean commitTransactions) {
-        return wrapped.onSnapshotCompleted(commitTransactions);
+    public boolean snapshotCommitFinish(boolean success) {
+        return wrapped.snapshotCommitFinish(success);
     }
 
     @Override

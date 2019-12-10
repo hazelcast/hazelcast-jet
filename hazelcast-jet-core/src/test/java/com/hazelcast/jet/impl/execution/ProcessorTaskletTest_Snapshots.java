@@ -513,7 +513,7 @@ public class ProcessorTaskletTest_Snapshots {
         }
 
         @Override
-        public boolean snapshotPrepareCommit() {
+        public boolean snapshotCommitPrepare() {
             if (snapshotPrepareCommitCount < itemsToEmitInSnapshotPrepareCommit
                     && outbox.offer("spc-" + snapshotPrepareCommitCount)) {
                 snapshotPrepareCommitCount++;
@@ -522,7 +522,7 @@ public class ProcessorTaskletTest_Snapshots {
         }
 
         @Override
-        public boolean onSnapshotCompleted(boolean commitTransactions) {
+        public boolean snapshotCommitFinish(boolean success) {
             if (onSnapshotCompletedCount < itemsToEmitInOnSnapshotComplete
                     && outbox.offer("osc-" + onSnapshotCompletedCount)) {
                 onSnapshotCompletedCount++;

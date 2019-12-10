@@ -363,7 +363,7 @@ public final class TestProcessors {
         }
 
         @Override
-        public boolean onSnapshotCompleted(boolean commitTransactions) {
+        public boolean snapshotCommitFinish(boolean success) {
             onSnapshotCompletedCalled = true;
             if (onSnapshotCompleteError != null) {
                 throw sneakyThrow(onSnapshotCompleteError);

@@ -89,7 +89,7 @@ public class SnapshotContext {
 
     /**
      * Snapshot id of current active snapshot. All processors read it and when
-     * they see higher value, they call {@link Processor#onSnapshotCompleted}.
+     * they see higher value, they call {@link Processor#snapshotCommitFinish}.
      */
     private volatile long activeSnapshotIdPhase2;
 

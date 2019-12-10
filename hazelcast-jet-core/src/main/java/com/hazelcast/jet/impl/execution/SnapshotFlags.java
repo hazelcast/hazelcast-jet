@@ -43,8 +43,8 @@ public final class SnapshotFlags {
     }
 
     /**
-     * If set, the {@link Processor#snapshotPrepareCommit()} and {@link
-     * Processor#onSnapshotCompleted(boolean)} methods won't be called, only
+     * If set, the {@link Processor#snapshotCommitPrepare()} and {@link
+     * Processor#snapshotCommitFinish(boolean)} methods won't be called, only
      * {@link Processor#saveToSnapshot()}.
      *
      * <p>It's initiated with {@link Job#exportSnapshot}, but not with {@link
