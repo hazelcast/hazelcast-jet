@@ -32,7 +32,6 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.jet.pipeline.ServiceFactory.ServiceContext;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
@@ -112,9 +111,7 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
         sinkList = instance().getList(randomMapName("sinkList"));
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
-        serviceFactory = ServiceFactory
-                .<ExecutorService>withCreateFn(ctx -> Executors.newFixedThreadPool(8))
-                .withLocalSharing();
+        serviceFactory = ServiceFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).withLocalSharing();
         if (!ordered) {
             serviceFactory = serviceFactory.withUnorderedAsyncResponses();
         }

@@ -70,7 +70,7 @@ public class ProcessorsTest {
     public void mapUsingService() {
         TestSupport
                 .verifyProcessor(Processors.mapUsingServiceP(
-                        ServiceFactory.<int[]>withCreateFn(context -> new int[1])
+                        ServiceFactory.withCreateFn(context -> new int[1])
                                       .withDestroyFn(context -> assertEquals(6, context[0])),
                         (int[] context, Integer item) -> context[0] += item))
                 .disableSnapshots()
@@ -82,7 +82,7 @@ public class ProcessorsTest {
     public void mapUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
-                        ServiceFactory.<AtomicInteger>withCreateFn(context -> new AtomicInteger())
+                        ServiceFactory.withCreateFn(context -> new AtomicInteger())
                                       .withDestroyFn(context -> assertEquals(6, context.get())),
                         t -> "k",
                         (AtomicInteger context, Integer item) -> supplyAsync(() -> {
@@ -108,7 +108,7 @@ public class ProcessorsTest {
     public void filteringWithMapUsingService() {
         TestSupport
                 .verifyProcessor(Processors.mapUsingServiceP(
-                        ServiceFactory.<int[]>withCreateFn(context -> new int[1])
+                        ServiceFactory.withCreateFn(context -> new int[1])
                                       .withDestroyFn(context -> assertEquals(3, context[0])),
                         (int[] context, Integer item) -> {
                             try {
@@ -126,7 +126,7 @@ public class ProcessorsTest {
     public void filteringWithMapUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
-                        ServiceFactory.<int[]>withCreateFn(context -> new int[] {2})
+                        ServiceFactory.withCreateFn(context -> new int[] {2})
                                       .withDestroyFn(context -> assertEquals(2, context[0])),
                         t -> "k",
                         (int[] context, Integer item) ->
@@ -149,7 +149,7 @@ public class ProcessorsTest {
     public void filterUsingService() {
         TestSupport
                 .verifyProcessor(filterUsingServiceP(
-                        ServiceFactory.<int[]>withCreateFn(context -> new int[1])
+                        ServiceFactory.withCreateFn(context -> new int[1])
                                       .withDestroyFn(context -> assertEquals(2, context[0])),
                         (int[] context, Integer item) -> {
                             try {
@@ -168,7 +168,7 @@ public class ProcessorsTest {
     public void filterUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(filterUsingServiceAsyncP(
-                        ServiceFactory.<AtomicInteger>withCreateFn(context -> new AtomicInteger())
+                        ServiceFactory.withCreateFn(context -> new AtomicInteger())
                                       .withDestroyFn(context -> assertEquals(4, context.get())),
                         t -> "k",
                         (AtomicInteger context, Integer item) -> CompletableFuture.supplyAsync(() -> {
@@ -191,18 +191,18 @@ public class ProcessorsTest {
 
     @Test
     public void flatMapUsingService() {
-        int[] array = {0};
+        int[] context = {0};
 
         TestSupport
                 .verifyProcessor(flatMapUsingServiceP(
-                        ServiceFactory.<int[]>withCreateFn(serviceContext -> array)
+                        ServiceFactory.withCreateFn(procContext -> context)
                                       .withDestroyFn(c -> c[0] = 0),
-                        (int[] ary, Integer item) -> traverseItems(item, ary[0] += item)))
+                        (int[] c, Integer item) -> traverseItems(item, c[0] += item)))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
                 .expectOutput(asList(1, 1, 2, 3, 3, 6));
 
-        assertEquals(0, array[0]);
+        assertEquals(0, context[0]);
     }
 
     @Test

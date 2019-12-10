@@ -382,8 +382,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
-                .mapUsingService(ServiceFactory.<String>withCreateFn(i -> suffix),
-                        (suff, k, i) -> formatFn.apply(suff, i));
+                .mapUsingService(ServiceFactory.withCreateFn(i -> suffix), (suff, k, i) -> formatFn.apply(suff, i));
 
         // Then
         mapped.writeTo(sink);
@@ -402,8 +401,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
-                .filterUsingService(ServiceFactory.<Integer>withCreateFn(i -> acceptedRemainder),
-                        (rem, i) -> i % 2 == rem);
+                .filterUsingService(ServiceFactory.withCreateFn(i -> acceptedRemainder), (rem, i) -> i % 2 == rem);
 
         // Then
         mapped.writeTo(sink);
@@ -424,7 +422,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        ServiceFactory.<Integer>withCreateFn(i -> acceptedRemainder),
+                        ServiceFactory.withCreateFn(i -> acceptedRemainder),
                         (rem, k, i) -> i % 2 == rem);
 
         // Then
@@ -445,7 +443,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMapUsingService(
-                        ServiceFactory.<Function<Integer, Stream<String>>>withCreateFn(x -> flatMapFn),
+                        ServiceFactory.withCreateFn(x -> flatMapFn),
                         (fn, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -468,7 +466,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        ServiceFactory.<Function<Integer, Stream<String>>>withCreateFn(x -> flatMapFn),
+                        ServiceFactory.withCreateFn(x -> flatMapFn),
                         (fn, k, i) -> traverseStream(fn.apply(i))
                 );
 

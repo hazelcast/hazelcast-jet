@@ -50,7 +50,7 @@ public class DistinctTransform<T, K> extends AbstractTransform {
 
     @SuppressWarnings("unchecked")
     private static <T, K> ProcessorSupplier distinctP(FunctionEx<? super T, ? extends K> keyFn) {
-        return filterUsingServiceP(ServiceFactory.<HashSet<K>>withCreateFn(ctx -> new HashSet<>()),
+        return filterUsingServiceP(ServiceFactory.withCreateFn(jet -> new HashSet<>()),
                 (seenItems, item) -> seenItems.add(keyFn.apply((T) item)));
     }
 }
