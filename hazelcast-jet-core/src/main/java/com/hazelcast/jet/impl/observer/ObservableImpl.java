@@ -32,14 +32,14 @@ public class ObservableImpl<T> implements Observable<T> {
     private final JetInstance jet;
     private final ILogger logger;
 
+    private Object driver; //internal listener, hold reference to prevent collection
     private long lastSequence = -1;
 
     public ObservableImpl(String name, JetInstance jet, ILogger logger) {
         this.name = name;
         this.jet = jet;
         this.logger = logger;
-
-        ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet);
+        this.driver = ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet, logger);
     }
 
     @Override
@@ -59,8 +59,13 @@ public class ObservableImpl<T> implements Observable<T> {
         observers.add(Observer.of(onNext, onError, onComplete));
     }
 
+    public Object getDriver() {
+        return driver; //TODO (PR-1729): hack to get past style-check...
+    }
+
     @Override
     public void destroy() {
+        driver = null;
         ObservableRepository.destroyObservable(name, jet.getHazelcastInstance());
     }
 

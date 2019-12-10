@@ -28,6 +28,9 @@ import java.util.Objects;
 
 public class ObservableBatch implements IdentifiedDataSerializable {
 
+    //TODO (PR-1729): get rid of, use batching on ring-buffer instead
+    //TODO (PR-1729): use com.hazelcast.jet.impl.execution.DoneItem to send completion
+
     private static final ObservableBatch END_OF_DATA = new ObservableBatch(null, null);
     @Nullable
     private Object[] items;

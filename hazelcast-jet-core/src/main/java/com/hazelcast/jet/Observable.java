@@ -88,13 +88,12 @@ public interface Observable<T> {
                      @Nonnull Runnable onComplete);
 
     /**
-     * Terminates this observable, including all remote objects used to
-     * provide it.
+     * Attempts to terminate all remote objects backing this particular
+     * observable.
      * <p>
-     * The effect is incomplete if the observable is still being published
-     * into (ie. the job populating it has not been completed). By incomplete
-     * we mean that the flow of events will stop, but not all backing
-     * remote objects will be cleaned up completely.
+     * If the observable is still being published into (ie. the job
+     * populating it has not been completed), then the remote backing
+     * objects will be recreated.
      */
     void destroy();
 
