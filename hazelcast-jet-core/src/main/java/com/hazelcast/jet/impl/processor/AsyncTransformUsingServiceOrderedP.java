@@ -180,7 +180,7 @@ public final class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends Abstra
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return supplierWithService(serviceFactory,
-                (serviceFn, service) -> new AsyncTransformUsingServiceOrderedP<>(service, serviceFn, callAsyncFn)
+                (serviceFn, container) -> new AsyncTransformUsingServiceOrderedP<>(container, serviceFn, callAsyncFn)
         );
     }
 }

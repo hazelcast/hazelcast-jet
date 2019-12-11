@@ -79,7 +79,7 @@ public final class TransformUsingServiceP<C, S, T, R> extends AbstractTransformU
                     flatMapFn
     ) {
         return supplierWithService(serviceFactory,
-                (serviceFn, service) -> new TransformUsingServiceP<C, S, T, R>(serviceFn, service, flatMapFn)
+                (serviceFn, container) -> new TransformUsingServiceP<C, S, T, R>(serviceFn, container, flatMapFn)
         );
     }
 }

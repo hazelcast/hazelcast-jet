@@ -309,8 +309,8 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn
     ) {
         return supplierWithService(serviceFactory,
-                (serviceFn, service) -> new AsyncTransformUsingServiceUnorderedP<>(
-                        serviceFn, service, callAsyncFn, extractKeyFn
+                (serviceFn, container) -> new AsyncTransformUsingServiceUnorderedP<>(
+                        serviceFn, container, callAsyncFn, extractKeyFn
                 )
         );
     }
