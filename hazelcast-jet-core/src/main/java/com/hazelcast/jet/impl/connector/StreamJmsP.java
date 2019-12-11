@@ -229,13 +229,13 @@ public class StreamJmsP<T> extends AbstractProcessor {
     }
 
     @Override
-    public boolean snapshotPrepareCommit() {
-        return snapshotUtility.snapshotPrepareCommit();
+    public boolean snapshotCommitPrepare() {
+        return snapshotUtility.snapshotCommitPrepare();
     }
 
     @Override
-    public boolean onSnapshotCompleted(boolean commitTransactions) {
-        return snapshotUtility.onSnapshotCompleted(commitTransactions);
+    public boolean snapshotCommitFinish(boolean success) {
+        return snapshotUtility.snapshotCommitFinish(success);
     }
 
     @Override

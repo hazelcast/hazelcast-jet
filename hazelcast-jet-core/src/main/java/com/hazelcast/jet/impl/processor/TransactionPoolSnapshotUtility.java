@@ -149,7 +149,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
     }
 
     @Override
-    public boolean snapshotPrepareCommit() {
+    public boolean snapshotCommitPrepare() {
         if (externalGuarantee() == NONE) {
             return true;
         }
@@ -180,12 +180,12 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
     }
 
     @Override
-    public boolean onSnapshotCompleted(boolean commitTransactions) {
+    public boolean snapshotCommitFinish(boolean success) {
         if (!usesTransactionLifecycle() || preparedTxnId == null) {
             return true;
         }
         preparedTxnId = null;
-        if (!commitTransactions) {
+        if (!success) {
             // we can't ignore the snapshot failure
             throw new RetryableHazelcastException("the snapshot failed");
         }
