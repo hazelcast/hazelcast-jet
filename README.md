@@ -187,7 +187,7 @@ To build on Linux/MacOS X use:
 ```
 for Windows use:
 ```
-mvnw.cmd clean package -DskipTests
+mvnw clean package -DskipTests
 ```
 
 ### Contributions
