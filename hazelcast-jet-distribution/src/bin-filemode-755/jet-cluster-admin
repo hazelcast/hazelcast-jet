@@ -178,13 +178,13 @@ if [[ "$OPERATION" = "change-state" ]]; then
     NEWSTATE=$(echo "${RESPONSE}" | sed -e 's/^.*"state"[ ]*:[ ]*"//' -e 's/".*//');
     if [[ "$STATUS" = "fail" ]]; then
         if [[ "$NEWSTATE" != "null" ]]; then
-            echo "Cluster is already in ${DESIRED_STATE} state."
+            echo "Cluster is already in the '${DESIRED_STATE}' state."
         else
             echo "Got error response: $RESPONSE";
         fi
         exit 0
     fi
-    echo "The cluster is now in '${NEWSTATE}' state"
+    echo "The cluster is now in the '${NEWSTATE}' state"
     exit 0
 fi
 
