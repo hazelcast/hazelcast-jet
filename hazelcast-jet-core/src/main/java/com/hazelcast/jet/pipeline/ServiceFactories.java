@@ -96,11 +96,19 @@ public final class ServiceFactories {
     }
 
     /**
-     * TODO
-     * @param createServiceFn
-     * @param destroyServiceFn
-     * @param <S>
-     * @return
+     * Returns a {@link ServiceFactory} which will be shared across the member
+     * for all processor instances. This assumes that the created service is
+     * thread-safe, meaning it can be safely accessed concurrently from
+     * multiple threads.
+     *
+     * @param createServiceFn the function that creates the service. This method
+     *                        will be called once on each node.
+     * @param destroyServiceFn the function to destroy the service. This method will be
+     *                         called once on each node. It can be used to tear down
+     *                         any resources created by the service.
+     * @param <S> type of the service object to be used
+     *
+     * @see #processorLocalService(SupplierEx, ConsumerEx)
      */
     public static <S> ServiceFactory<?, S> memberLocalService(
             @Nonnull SupplierEx<S> createServiceFn,
@@ -112,11 +120,19 @@ public final class ServiceFactories {
     }
 
     /**
-     * TODO
-     * @param createServiceFn
-     * @param destroyServiceFn
-     * @param <S>
-     * @return
+     * Returns a {@link ServiceFactory} which creates a separate service instance
+     * for each processor. Use this when the service instance should not be
+     * shared across multiple threads.
+     *
+     * @param createServiceFn the function that creates the service. This method
+     *                        will be called once per processor instance.
+     * @param destroyServiceFn the function to destroy the service. This method will be
+     *                         called once per processor instance. It can be used to tear down
+     *                         any resources created by the service.
+     *
+     * @param <S> type of the service object to be used
+     *
+     * @see #memberLocalService(SupplierEx, ConsumerEx)
      */
     public static <S> ServiceFactory<?, S> processorLocalService(
             @Nonnull SupplierEx<? extends S> createServiceFn,

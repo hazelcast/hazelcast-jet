@@ -19,6 +19,7 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier.Context;
@@ -31,7 +32,33 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
 /**
  * A holder of functions needed to create and destroy a service object.
+ * If you don't need fine grained control over the lifecycle of the
+ * service, it is recommended to use the simpler
+ * {@link ServiceFactories#processorLocalService(SupplierEx, ConsumerEx) ServiceFactories.processorLocalService}
+ * or {@link ServiceFactories#memberLocalService(SupplierEx, ConsumerEx) ServiceFactories.memberLocalService}.
  * <p>
+ * The lifecycle of this factory object is as follows:
+ * <ol>
+ *     <li>The {@code ServiceFactory} is serialized and distributed to all the nodes</li>
+ *     <li>
+ *         {@link #createContextFn()} is called once per node. A single context
+ *         instance exits per transform and node. Any node-wide initialization
+ *         should be performed in this step. The context instance will be used
+ *         further on to create the actual service instances. For example, the context
+ *         instance can create a client for an external service and this client can be
+ *         used to create further sessions.
+ *     </li>
+ *     <li>
+ *         Depending on the {@link GeneralStage#setLocalParallelism(int) localParallelism}
+ *         of the transform, l{@link #createServiceFn()}} is called once per
+ *         processor taking the previously created context instance as input.
+ *      </li>
+ *      <li>
+ *          After the job completes, {@link #destroyServiceFn()} is called
+ *          on each service.
+ *      </li>
+ *      <li>Finally, {@link #destroyContextFn()} is called for instance-wide cleanup.</li>
+ * </ol>
  * You can use the service factory from these Pipeline API methods:
  * <ul>
  *     <li>{@link GeneralStage#mapUsingService}
@@ -48,10 +75,11 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *     <li>{@link GeneralStageWithKey#flatMapUsingServiceAsync}
  * </ul>
  *
- * @param <C> TODO
- * @param <S> the user-defined service object type
+ * @param <C> The service-context object,
+ *            which is used to create the per-processor services
+ * @param <S> The service instance used in mapping
  *
- * @since 3.0
+ * @since 4.0
  */
 public final class ServiceFactory<C, S> implements Serializable {
 
@@ -104,18 +132,18 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * Creates a new {@link ServiceFactory} with the given create-function.
-     * Make sure to also call {@link #withCreateServiceFn}, otherwise the
-     * actual service passed to your functions will be null. If you want to use
+     * Creates a new {@link ServiceFactory} with the given function.
+     * Make sure to also call {@link #withCreateServiceFn}, otherwise you will
+     * not be able to create the service instance. If you want to use
      * the context object as the service, use {@link
      * ServiceFactories#memberLocalService}.
      *
      * @param createContextFn the function to create new context object, given
-     *                        a {@link ProcessorSupplier.Context}
-     * @param <C> the user-defined service object type
-     * @return a new factory instance
+     *                        a {@link ProcessorSupplier.Context}. This function is
+     *                        called once per node.
+     * @param <C> type of the service context instance
      *
-     * @since 3.0
+     * @return a new factory instance
      */
     @Nonnull
     public static <C> ServiceFactory<C, Void> withCreateContextFn(
@@ -123,8 +151,14 @@ public final class ServiceFactory<C, S> implements Serializable {
     ) {
         checkSerializable(createContextFn, "createContextFn");
         return new ServiceFactory<>(
-                createContextFn, (ctx, Context) -> null, ConsumerEx.noop(), ConsumerEx.noop(),
-                COOPERATIVE_DEFAULT, MAX_PENDING_CALLS_DEFAULT, ORDERED_ASYNC_RESPONSES_DEFAULT);
+                createContextFn,
+                (ctx, svcContext) -> {
+                    throw new IllegalStateException("No createServiceFn was given in ServiceFactory");
+                },
+                ConsumerEx.noop(),
+                ConsumerEx.noop(),
+                COOPERATIVE_DEFAULT, MAX_PENDING_CALLS_DEFAULT, ORDERED_ASYNC_RESPONSES_DEFAULT
+        );
     }
 
     /**
@@ -134,7 +168,8 @@ public final class ServiceFactory<C, S> implements Serializable {
      * The destroy function is called at the end of the job to destroy all
      * created context objects.
      *
-     * @param destroyContextFn the function to destroy user-defined context
+     * @param destroyContextFn the function to destroy the service context.
+     *                         This function is called once per node
      * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull
@@ -145,10 +180,21 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * TODO
-     * @param createServiceFn
-     * @param <S_NEW>
-     * @return
+     * Returns a copy of this {@link ServiceFactory} with the
+     * given create-service function.
+     * <p>
+     * The create-service function is called once per processor to initialize
+     * the service from the previously created context.
+     * <p>
+     * If you update this method, make sure to update
+     * {@link #withDestroyServiceFn(ConsumerEx)} as well, since this
+     * method resets it.
+     *
+     * @param createServiceFn the function to create the service instance with the
+     *                        local {@link Processor.Context} and the previously
+     *                        created context object. This function is called once
+     *                        per processor
+     * @return a copy of this factory with the supplied create-service-function
      */
     @Nonnull
     public <S_NEW> ServiceFactory<C, S_NEW> withCreateServiceFn(
@@ -160,9 +206,15 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * TODO
-     * @param destroyServiceFn
-     * @return
+     * Returns a copy of this {@link ServiceFactory} with the
+     * service-destroy-function replaced with the given function.
+     * <p>
+     * The destroy function is called at the end of the job to destroy all
+     * created services objects.
+     *
+     * @param destroyServiceFn the function to destroy the service instance.
+     *                         This function is called once per processor instance
+     * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull
     public ServiceFactory<C, S> withDestroyServiceFn(@Nonnull ConsumerEx<? super S> destroyServiceFn) {
@@ -261,7 +313,9 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * Returns the create-function.
+     * Returns the instance-wide create context function.
+     *
+     * @see #withCreateContextFn(FunctionEx)
      */
     @Nonnull
     public FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContextFn() {
@@ -269,7 +323,9 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * Returns the Jet instance-wide initialization function.
+     * Returns the processor-local service creation function.
+     *
+     * @see #withCreateServiceFn(BiFunctionEx)
      */
     @Nonnull
     public BiFunctionEx<? super Processor.Context, ? super C, ? extends S> createServiceFn() {
@@ -277,7 +333,9 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * Returns the destroy-function.
+     * Returns the processor-local destroy service function.
+     *
+     * @see #withDestroyServiceFn(ConsumerEx)
      */
     @Nonnull
     public ConsumerEx<? super S> destroyServiceFn() {
@@ -285,7 +343,9 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * Returns the Jet instance-wide cleanup function.
+     * Returns the instance-wide destroy context wide.
+     *
+     * @see #withDestroyContextFn(ConsumerEx)
      */
     @Nonnull
     public ConsumerEx<? super C> destroyContextFn() {
