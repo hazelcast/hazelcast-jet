@@ -34,7 +34,7 @@ include::{javasource}/integration/S3.java[tag=s1]
 S3 sink writes items to the specified bucket by transforming each item
 to a line using given transform function. The sink creates an object
 in the bucket for each processor instance. Name of the file will
-include n user provided prefix (if defined) and followed by the
+include a user provided prefix (if defined) and followed by the
 processor's global index, for example the processor having the index
  `2` with prefix `my-object-` will create the object `my-object-2`.
 
@@ -48,7 +48,7 @@ include::{javasource}/integration/S3.java[tag=s2]
 S3 sink uses multi-part upload feature of S3 SDK. The sink buffers the
 items to parts and uploads them after buffer reaches to the threshold.
 The multi-part upload is completed when the job completes and makes the
-objects available on the S3. Since streaming jobs never completes, S3
+objects available on the S3. Since streaming jobs never complete, S3
 sink is not applicable for streaming jobs. 
 
 == Using HDFS as S3 connector
