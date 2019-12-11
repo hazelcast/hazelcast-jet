@@ -142,23 +142,23 @@ public abstract class TwoPhaseSnapshotCommitUtility<TXN_ID extends TransactionId
      * Delegate handling of {@link Processor#snapshotCommitPrepare()} to this
      * method.
      *
-     * @return a value to return from {@code snapshotPrepareCommit()}
+     * @return a value to return from {@code snapshotCommitPrepare()}
      */
-    public abstract boolean snapshotPrepareCommit();
+    public abstract boolean snapshotCommitPrepare();
 
     /**
      * Delegate handling of {@link Processor#snapshotCommitFinish(boolean)} to
      * this method.
      *
-     * @param commitTransactions value passed to {@code onSnapshotCompleted}
-     * @return value to return from {@code onSnapshotCompleted}
+     * @param success value passed to {@code snapshotCommitFinish}
+     * @return value to return from {@code snapshotCommitFinish}
      */
-    public abstract boolean onSnapshotCompleted(boolean commitTransactions);
+    public abstract boolean snapshotCommitFinish(boolean success);
 
     /**
      * Delegate handling of {@link Processor#restoreFromSnapshot(Inbox)} to
      * this method. If you save custom items to snapshot besides those saved by
-     * {@link #snapshotPrepareCommit()} of this utility, use {@link
+     * {@link #snapshotCommitPrepare()} of this utility, use {@link
      * #restoreFromSnapshot(Object, Object)} to pass only entries not handled
      * by your processor.
      *
