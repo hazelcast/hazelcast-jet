@@ -33,7 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
-import static com.hazelcast.jet.pipeline.ServiceFactory.withCreateContainerFn;
+import static com.hazelcast.jet.pipeline.ServiceFactory.withCreateContextFn;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.junit.Assert.assertEquals;
 
@@ -44,7 +44,7 @@ public class ProcessorTransformParallelismTest {
     private static final int DEFAULT_PARALLELISM = 8;
     private static final int LOCAL_PARALLELISM = 11;
 
-    private static final ServiceFactory<Void, Void> SERVICE_FACTORY = withCreateContainerFn(x -> null);
+    private static final ServiceFactory<Void, Void> SERVICE_FACTORY = withCreateContextFn(x -> null);
     private static final ServiceFactory<Void, Void> NC_SERVICE_FACTORY = SERVICE_FACTORY.toNonCooperative();
 
     @Parameter(value = 0)

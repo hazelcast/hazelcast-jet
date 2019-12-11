@@ -34,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.hazelcast.function.Functions.wholeItem;
 import static com.hazelcast.jet.Traversers.traverseArray;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.pipeline.ServiceFactories.perProcessorService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
 import static java.util.Arrays.asList;
 
 public class LogDebug {
@@ -104,7 +104,7 @@ public class LogDebug {
         p.readFrom(TestSources.items(0, 1, 2, 3))
             //tag::s6[]
             .filterUsingServiceAsync(
-                perProcessorService(() -> 0L, ConsumerEx.noop()),
+                processorLocalService(() -> 0L, ConsumerEx.noop()),
                 (ctx, l) -> CompletableFuture.supplyAsync(
                     () -> {
                         boolean pass = l % 2L == ctx;
@@ -124,7 +124,7 @@ public class LogDebug {
         p.readFrom(TestSources.items(0, 1, 2, 3))
             //tag::s7[]
             .filterUsingServiceAsync(
-                perProcessorService(() -> "foo", ConsumerEx.noop()),
+                processorLocalService(() -> "foo", ConsumerEx.noop()),
                 (ctx, item) -> {
                     // need to use thread-safe metric since it will be mutated for another thread
                     Metric dropped = Metrics.threadSafeMetric("dropped", Unit.COUNT);

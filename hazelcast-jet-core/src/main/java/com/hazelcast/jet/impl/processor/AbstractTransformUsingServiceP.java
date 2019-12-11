@@ -23,22 +23,22 @@ import javax.annotation.Nonnull;
 
 public class AbstractTransformUsingServiceP<C, S> extends AbstractProcessor {
 
-    protected final C container;
+    protected final C serviceContext;
     protected final ServiceFactory<C, S> serviceFactory;
 
     // package-visible for test
     S service;
 
     public AbstractTransformUsingServiceP(
-            @Nonnull ServiceFactory<C, S> serviceFactory, @Nonnull C container
+            @Nonnull ServiceFactory<C, S> serviceFactory, @Nonnull C serviceContext
     ) {
-        this.container = container;
+        this.serviceContext = serviceContext;
         this.serviceFactory = serviceFactory;
     }
 
     @Override
     protected void init(@Nonnull Context context) throws Exception {
-        service = serviceFactory.createServiceFn().apply(context, container);
+        service = serviceFactory.createServiceFn().apply(context, serviceContext);
     }
 
     @Override

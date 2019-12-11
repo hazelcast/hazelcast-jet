@@ -100,11 +100,11 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
      */
     private AsyncTransformUsingServiceUnorderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
-            @Nonnull C container,
+            @Nonnull C serviceContext,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull Function<? super T, ? extends K> extractKeyFn
     ) {
-        super(serviceFactory, container);
+        super(serviceFactory, serviceContext);
         this.callAsyncFn = callAsyncFn;
         this.extractKeyFn = extractKeyFn;
     }
@@ -309,8 +309,8 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn
     ) {
         return supplierWithService(serviceFactory,
-                (serviceFn, container) -> new AsyncTransformUsingServiceUnorderedP<>(
-                        serviceFn, container, callAsyncFn, extractKeyFn
+                (serviceFn, context) -> new AsyncTransformUsingServiceUnorderedP<>(
+                        serviceFn, context, callAsyncFn, extractKeyFn
                 )
         );
     }

@@ -60,8 +60,8 @@ import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
-import static com.hazelcast.jet.pipeline.ServiceFactories.perInstanceService;
-import static com.hazelcast.jet.pipeline.ServiceFactories.perProcessorService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.memberLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
 import static java.util.Arrays.asList;
@@ -196,7 +196,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> mapped = batchStageFromList(input).mapUsingService(
-                perInstanceService(() -> suffix, ConsumerEx.noop()),
+                memberLocalService(() -> suffix, ConsumerEx.noop()),
                 formatFn
         );
 
@@ -219,7 +219,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<String> mapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingService(
-                        perInstanceService(() -> suffix, ConsumerEx.noop()),
+                        memberLocalService(() -> suffix, ConsumerEx.noop()),
                         (service, k, i) -> formatFn.apply(i, service)
                 );
 
@@ -238,7 +238,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Integer> mapped = batchStageFromList(input).filterUsingService(
-                perInstanceService(() -> 1, ConsumerEx.noop()),
+                memberLocalService(() -> 1, ConsumerEx.noop()),
                 (svc, i) -> i % 2 == svc);
 
         // Then
@@ -259,7 +259,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Integer> mapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        perInstanceService(() -> 1, ConsumerEx.noop()),
+                        memberLocalService(() -> 1, ConsumerEx.noop()),
                         (svc, k, r) -> r % 2 == svc);
 
         // Then
@@ -278,7 +278,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Entry<Integer, String>> flatMapped = batchStageFromList(input).flatMapUsingService(
-                perInstanceService(() -> asList("A", "B"), ConsumerEx.noop()),
+                memberLocalService(() -> asList("A", "B"), ConsumerEx.noop()),
                 (ctx, i) -> traverseItems(entry(i, ctx.get(0)), entry(i, ctx.get(1))));
 
         // Then
@@ -299,7 +299,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> flatMapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        perInstanceService(() -> asList("A", "B"), ConsumerEx.noop()),
+                        memberLocalService(() -> asList("A", "B"), ConsumerEx.noop()),
                         (ctx, k, i) -> traverseItems(entry(i, ctx.get(0)), entry(i, ctx.get(1))));
 
         // Then
@@ -905,7 +905,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Object> custom = batchStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
-                        perProcessorService(HashSet::new, ConsumerEx.noop()),
+                        processorLocalService(HashSet::new, ConsumerEx.noop()),
                         (Set<Integer> ctx, Integer item) -> {
                             Integer key = extractKeyFn.apply(item);
                             return ctx.add(key) ? key : null;

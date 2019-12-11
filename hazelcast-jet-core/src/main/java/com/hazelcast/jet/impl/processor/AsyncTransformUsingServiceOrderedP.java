@@ -66,11 +66,11 @@ public final class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends Abstra
      * Constructs a processor with the given mapping function.
      */
     private AsyncTransformUsingServiceOrderedP(
-            @Nonnull C container,
+            @Nonnull C serviceContext,
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
-        super(serviceFactory, container);
+        super(serviceFactory, serviceContext);
         this.callAsyncFn = callAsyncFn;
     }
 
@@ -180,7 +180,7 @@ public final class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends Abstra
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return supplierWithService(serviceFactory,
-                (serviceFn, container) -> new AsyncTransformUsingServiceOrderedP<>(container, serviceFn, callAsyncFn)
+                (serviceFn, context) -> new AsyncTransformUsingServiceOrderedP<>(context, serviceFn, callAsyncFn)
         );
     }
 }

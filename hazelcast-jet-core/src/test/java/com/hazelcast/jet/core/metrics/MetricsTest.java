@@ -50,7 +50,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
-import static com.hazelcast.jet.pipeline.ServiceFactories.perProcessorService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -188,7 +188,7 @@ public class MetricsTest extends JetTestSupport {
         pipeline.readFrom(TestSources.items(inputs))
                 .addTimestamps(i -> i, 0L)
                 .filterUsingServiceAsync(
-                        perProcessorService(() -> 0L, ConsumerEx.noop()),
+                        processorLocalService(() -> 0L, ConsumerEx.noop()),
                         (ctx, l) -> {
                             Metric dropped = Metrics.threadSafeMetric("dropped");
                             Metric total = Metrics.threadSafeMetric("total");

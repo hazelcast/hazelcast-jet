@@ -77,27 +77,27 @@ public final class ServiceFactory<C, S> implements Serializable {
     private final boolean orderedAsyncResponses;
 
     @Nonnull
-    private final FunctionEx<? super Context, ? extends C> createContainerFn;
+    private final FunctionEx<? super Context, ? extends C> createContextFn;
     @Nonnull
     private final BiFunctionEx<? super Processor.Context, ? super C, ? extends S> createServiceFn;
     @Nonnull
     private final ConsumerEx<? super S> destroyServiceFn;
     @Nonnull
-    private final ConsumerEx<? super C> destroyContainerFn;
+    private final ConsumerEx<? super C> destroyContextFn;
 
     private ServiceFactory(
-            @Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContainerFn,
+            @Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContextFn,
             @Nonnull BiFunctionEx<? super Processor.Context, ? super C, ? extends S> createServiceFn,
             @Nonnull ConsumerEx<? super S> destroyServiceFn,
-            @Nonnull ConsumerEx<? super C> destroyContainerFn,
+            @Nonnull ConsumerEx<? super C> destroyContextFn,
             boolean isCooperative,
             int maxPendingCallsPerProcessor,
             boolean orderedAsyncResponses
     ) {
-        this.createContainerFn = createContainerFn;
+        this.createContextFn = createContextFn;
         this.createServiceFn = createServiceFn;
         this.destroyServiceFn = destroyServiceFn;
-        this.destroyContainerFn = destroyContainerFn;
+        this.destroyContextFn = destroyContextFn;
         this.isCooperative = isCooperative;
         this.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
         this.orderedAsyncResponses = orderedAsyncResponses;
@@ -106,7 +106,7 @@ public final class ServiceFactory<C, S> implements Serializable {
     /**
      * Creates a new {@link ServiceFactory} with the given create-function.
      *
-     * @param createContainerFn the function to create new service object, given
+     * @param createContextFn the function to create new service object, given
      *                        a JetInstance
      * @param <C> the user-defined service object type
      * @return a new factory instance
@@ -114,12 +114,12 @@ public final class ServiceFactory<C, S> implements Serializable {
      * @since 3.0
      */
     @Nonnull
-    public static <C> ServiceFactory<C, Void> withCreateContainerFn(
-            @Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContainerFn
+    public static <C> ServiceFactory<C, Void> withCreateContextFn(
+            @Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContextFn
     ) {
-        checkSerializable(createContainerFn, "createContainerFn");
+        checkSerializable(createContextFn, "createContextFn");
         return new ServiceFactory<>(
-                createContainerFn, (ctx, container) -> null, ConsumerEx.noop(), ConsumerEx.noop(),
+                createContextFn, (ctx, Context) -> null, ConsumerEx.noop(), ConsumerEx.noop(),
                 COOPERATIVE_DEFAULT, MAX_PENDING_CALLS_DEFAULT, ORDERED_ASYNC_RESPONSES_DEFAULT);
     }
 
@@ -130,13 +130,13 @@ public final class ServiceFactory<C, S> implements Serializable {
      * The destroy function is called at the end of the job to destroy all
      * created service objects.
      *
-     * @param destroyContainerFn the function to destroy user-defined service
+     * @param destroyContextFn the function to destroy user-defined service
      * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull
-    public ServiceFactory<C, S> withDestroyContainerFn(@Nonnull ConsumerEx<? super C> destroyContainerFn) {
-        checkSerializable(destroyContainerFn, "destroyContainerFn");
-        return new ServiceFactory<>(createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+    public ServiceFactory<C, S> withDestroyContextFn(@Nonnull ConsumerEx<? super C> destroyContextFn) {
+        checkSerializable(destroyContextFn, "destroyContextFn");
+        return new ServiceFactory<>(createContextFn, createServiceFn, destroyServiceFn, destroyContextFn,
                 isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
@@ -151,7 +151,7 @@ public final class ServiceFactory<C, S> implements Serializable {
             @Nonnull BiFunctionEx<? super Processor.Context, ? super C, ? extends S_NEW> createServiceFn
     ) {
         checkSerializable(createServiceFn, "initFn");
-        return new ServiceFactory<>(createContainerFn, createServiceFn, ConsumerEx.noop(), destroyContainerFn,
+        return new ServiceFactory<>(createContextFn, createServiceFn, ConsumerEx.noop(), destroyContextFn,
                 isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
@@ -163,7 +163,7 @@ public final class ServiceFactory<C, S> implements Serializable {
     @Nonnull
     public ServiceFactory<C, S> withDestroyServiceFn(@Nonnull ConsumerEx<? super S> destroyServiceFn) {
         checkSerializable(destroyServiceFn, "destroyServiceFn");
-        return new ServiceFactory<>(createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+        return new ServiceFactory<>(createContextFn, createServiceFn, destroyServiceFn, destroyContextFn,
                 isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
@@ -183,7 +183,7 @@ public final class ServiceFactory<C, S> implements Serializable {
     @Nonnull
     public ServiceFactory<C, S> toNonCooperative() {
         return new ServiceFactory<>(
-                createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                createContextFn, createServiceFn, destroyServiceFn, destroyContextFn,
                 false, maxPendingCallsPerProcessor, orderedAsyncResponses
         );
     }
@@ -209,7 +209,7 @@ public final class ServiceFactory<C, S> implements Serializable {
     public ServiceFactory<C, S> withMaxPendingCallsPerProcessor(int maxPendingCallsPerProcessor) {
         checkPositive(maxPendingCallsPerProcessor, "maxPendingCallsPerProcessor must be >= 1");
         return new ServiceFactory<>(
-                createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                createContextFn, createServiceFn, destroyServiceFn, destroyContextFn,
                 isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses
         );
     }
@@ -251,7 +251,7 @@ public final class ServiceFactory<C, S> implements Serializable {
     @Nonnull
     public ServiceFactory<C, S> withUnorderedAsyncResponses() {
         return new ServiceFactory<>(
-                createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                createContextFn, createServiceFn, destroyServiceFn, destroyContextFn,
                 isCooperative, maxPendingCallsPerProcessor, false
         );
     }
@@ -260,8 +260,8 @@ public final class ServiceFactory<C, S> implements Serializable {
      * Returns the create-function.
      */
     @Nonnull
-    public FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContainerFn() {
-        return createContainerFn;
+    public FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContextFn() {
+        return createContextFn;
     }
 
     /**
@@ -284,8 +284,8 @@ public final class ServiceFactory<C, S> implements Serializable {
      * Returns the Jet instance-wide cleanup function.
      */
     @Nonnull
-    public ConsumerEx<? super C> destroyContainerFn() {
-        return destroyContainerFn;
+    public ConsumerEx<? super C> destroyContextFn() {
+        return destroyContextFn;
     }
 
     /**

@@ -38,7 +38,7 @@ public final class ProcessorSupplierWithService<C, S> implements ProcessorSuppli
     private final ServiceFactory<C, S> serviceFactory;
     private final BiFunction<? super ServiceFactory<C, S>, ? super C, ? extends Processor> createProcessorFn;
 
-    private transient C container;
+    private transient C serviceContext;
 
     private ProcessorSupplierWithService(
             @Nonnull ServiceFactory<C, S> serviceFactory,
@@ -50,20 +50,20 @@ public final class ProcessorSupplierWithService<C, S> implements ProcessorSuppli
 
     @Override
     public void init(@Nonnull ProcessorSupplier.Context context) {
-        container = serviceFactory.createContainerFn().apply(context);
+        this.serviceContext = serviceFactory.createContextFn().apply(context);
     }
 
     @Nonnull @Override
     public Collection<? extends Processor> get(int count) {
-        return Stream.generate(() -> createProcessorFn.apply(serviceFactory, container))
+        return Stream.generate(() -> createProcessorFn.apply(serviceFactory, serviceContext))
                 .limit(count)
                 .collect(toList());
     }
 
     @Override
     public void close(Throwable error) {
-        if (container != null) {
-            serviceFactory.destroyContainerFn().accept(container);
+        if (serviceContext != null) {
+            serviceFactory.destroyContextFn().accept(serviceContext);
         }
     }
 

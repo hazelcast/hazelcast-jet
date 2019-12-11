@@ -64,7 +64,7 @@ public final class ServiceFactories {
      */
     @Nonnull
     public static <K, V> ServiceFactory<?, ReplicatedMap<K, V>> replicatedMapService(@Nonnull String mapName) {
-        return ServiceFactory.withCreateContainerFn(ctx -> ctx.jetInstance().<K, V>getReplicatedMap(mapName))
+        return ServiceFactory.withCreateContextFn(ctx -> ctx.jetInstance().<K, V>getReplicatedMap(mapName))
                              .withCreateServiceFn((ctx, map) -> map);
     }
 
@@ -91,7 +91,7 @@ public final class ServiceFactories {
      */
     @Nonnull
     public static <K, V> ServiceFactory<?, IMap<K, V>> iMapService(@Nonnull String mapName) {
-        return ServiceFactory.withCreateContainerFn(ctx -> ctx.jetInstance().<K, V>getMap(mapName))
+        return ServiceFactory.withCreateContextFn(ctx -> ctx.jetInstance().<K, V>getMap(mapName))
                              .withCreateServiceFn((ctx, map) -> map);
     }
 
@@ -102,13 +102,13 @@ public final class ServiceFactories {
      * @param <S>
      * @return
      */
-    public static <S> ServiceFactory<?, S> perInstanceService(
+    public static <S> ServiceFactory<?, S> memberLocalService(
             @Nonnull SupplierEx<S> createServiceFn,
             @Nonnull ConsumerEx<S> destroyServiceFn
     ) {
-        return ServiceFactory.withCreateContainerFn(c -> createServiceFn.get())
+        return ServiceFactory.withCreateContextFn(c -> createServiceFn.get())
                              .withCreateServiceFn((ctx, c) -> c)
-                             .withDestroyContainerFn(destroyServiceFn);
+                             .withDestroyContextFn(destroyServiceFn);
     }
 
     /**
@@ -118,13 +118,13 @@ public final class ServiceFactories {
      * @param <S>
      * @return
      */
-    public static <S> ServiceFactory<?, S> perProcessorService(
+    public static <S> ServiceFactory<?, S> processorLocalService(
             @Nonnull SupplierEx<? extends S> createServiceFn,
             @Nonnull ConsumerEx<? super S> destroyServiceFn
     ) {
-        return ServiceFactory.<Void>withCreateContainerFn(c -> null)
+        return ServiceFactory.<Void>withCreateContextFn(c -> null)
                 .<S>withCreateServiceFn((ctx, c) -> createServiceFn.get())
                 .withDestroyServiceFn(destroyServiceFn)
-                .withDestroyContainerFn(ConsumerEx.noop());
+                .withDestroyContextFn(ConsumerEx.noop());
     }
 }

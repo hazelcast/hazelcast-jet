@@ -64,8 +64,8 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
-import static com.hazelcast.jet.pipeline.ServiceFactories.perInstanceService;
-import static com.hazelcast.jet.pipeline.ServiceFactories.perProcessorService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.memberLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
@@ -364,7 +364,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> mapped = streamStageFromList(input).mapUsingService(
-                perInstanceService(() -> suffix, ConsumerEx.noop()),
+                memberLocalService(() -> suffix, ConsumerEx.noop()),
                 formatFn
         );
 
@@ -387,7 +387,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingService(
-                        perInstanceService(() -> suffix, ConsumerEx.noop()),
+                        memberLocalService(() -> suffix, ConsumerEx.noop()),
                         (suff, k, i) -> formatFn.apply(suff, i)
                 );
 
@@ -409,7 +409,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .filterUsingService(
-                        ServiceFactories.perInstanceService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        ServiceFactories.memberLocalService(() -> acceptedRemainder, ConsumerEx.noop()),
                         (rem, i) -> i % 2 == rem
                 );
 
@@ -432,7 +432,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        ServiceFactories.perInstanceService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        ServiceFactories.memberLocalService(() -> acceptedRemainder, ConsumerEx.noop()),
                         (rem, k, i) -> i % 2 == rem
                 );
 
@@ -454,7 +454,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMapUsingService(
-                        ServiceFactories.perInstanceService(() -> flatMapFn, ConsumerEx.noop()),
+                        ServiceFactories.memberLocalService(() -> flatMapFn, ConsumerEx.noop()),
                         (fn, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -477,7 +477,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        ServiceFactories.perInstanceService(() -> flatMapFn, ConsumerEx.noop()),
+                        ServiceFactories.memberLocalService(() -> flatMapFn, ConsumerEx.noop()),
                         (fn, k, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -1124,7 +1124,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Object> custom = streamStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
-                        perProcessorService(HashSet::new, ConsumerEx.noop()),
+                        processorLocalService(HashSet::new, ConsumerEx.noop()),
                         (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
                             return seen.add(key) ? jetEvent(jetEvent.timestamp(), key) : null;

@@ -47,11 +47,11 @@ public final class TransformUsingServiceP<C, S, T, R> extends AbstractTransformU
      */
     private TransformUsingServiceP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
-            @Nonnull C container,
+            @Nonnull C context,
             @Nonnull TriFunction<? super ResettableSingletonTraverser<R>, ? super S, ? super T, ? extends Traverser<R>>
                     flatMapFn
     ) {
-        super(serviceFactory, container);
+        super(serviceFactory, context);
         this.flatMapFn = flatMapFn;
     }
 
@@ -79,7 +79,7 @@ public final class TransformUsingServiceP<C, S, T, R> extends AbstractTransformU
                     flatMapFn
     ) {
         return supplierWithService(serviceFactory,
-                (serviceFn, container) -> new TransformUsingServiceP<C, S, T, R>(serviceFn, container, flatMapFn)
+                (serviceFn, context) -> new TransformUsingServiceP<C, S, T, R>(serviceFn, context, flatMapFn)
         );
     }
 }
