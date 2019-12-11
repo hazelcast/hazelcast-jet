@@ -327,6 +327,12 @@ public final class ServiceFactory<S> implements Serializable {
         int maxPendingCallsPerProcessor();
 
         /**
+         * @return
+         */
+        @Nonnull
+        String vertexName();
+
+        /**
          * Returns a logger the service can use for diagnostic output.
          */
         @Nonnull

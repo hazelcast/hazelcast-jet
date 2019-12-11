@@ -34,7 +34,6 @@ import java.util.ArrayDeque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.hazelcast.jet.core.processor.ServiceContextImpl.serviceContext;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithService.supplierWithService;
 
@@ -92,7 +91,7 @@ public final class AsyncTransformUsingServiceOrderedP<S, T, R> extends AbstractP
     protected void init(@Nonnull Context context) {
         if (!serviceFactory.hasLocalSharing()) {
             assert service == null : "service is not null: " + service;
-            service = serviceFactory.createFn().apply(serviceContext(serviceFactory, context));
+            service = serviceFactory.createFn().apply(new ServiceContextImpl(serviceFactory, context));
         }
         maxAsyncOps = serviceFactory.maxPendingCallsPerProcessor();
         queue = new ArrayDeque<>(maxAsyncOps);

@@ -27,7 +27,6 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import static com.hazelcast.jet.core.processor.ServiceContextImpl.serviceContext;
 import static com.hazelcast.jet.impl.processor.ProcessorSupplierWithService.supplierWithService;
 
 /**
@@ -76,7 +75,7 @@ public final class TransformUsingServiceP<S, T, R> extends AbstractProcessor {
     protected void init(@Nonnull Processor.Context context) {
         if (!serviceFactory.hasLocalSharing()) {
             assert service == null : "service is not null: " + service;
-            service = serviceFactory.createFn().apply(serviceContext(serviceFactory, context));
+            service = serviceFactory.createFn().apply(new ServiceContextImpl(serviceFactory, context));
         }
     }
 

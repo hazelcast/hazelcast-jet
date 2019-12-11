@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.core.processor.ServiceContextImpl.locallySharedServiceContext;
 import static java.util.stream.Collectors.toList;
 
 /**
@@ -37,7 +36,7 @@ public final class ProcessorSupplierWithService<S> implements ProcessorSupplier 
     static final long serialVersionUID = 1L;
 
     private final ServiceFactory<S> serviceFactory;
-    private BiFunction<? super ServiceFactory<S>, ? super S, ? extends Processor> createProcessorFn;
+    private final BiFunction<? super ServiceFactory<S>, ? super S, ? extends Processor> createProcessorFn;
     private transient S service;
 
     private ProcessorSupplierWithService(
@@ -51,7 +50,7 @@ public final class ProcessorSupplierWithService<S> implements ProcessorSupplier 
     @Override
     public void init(@Nonnull ProcessorSupplier.Context context) {
         if (serviceFactory.hasLocalSharing()) {
-            service = serviceFactory.createFn().apply(locallySharedServiceContext(serviceFactory, context));
+            service = serviceFactory.createFn().apply(new ServiceContextImpl(serviceFactory, context));
         }
     }
 
