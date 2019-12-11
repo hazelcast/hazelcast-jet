@@ -36,22 +36,22 @@ public class ServiceContextImpl implements ServiceContext {
     private final ILogger logger;
     private final JetInstance jetInstance;
 
-    public ServiceContextImpl(
+    ServiceContextImpl(
             @Nonnull ServiceFactory<?> serviceFactory,
             @Nonnull ProcessorSupplier.Context context
     ) {
-        this.memberCount = context.memberCount();
-        this.memberIndex = context.memberIndex();
-        this.localIndex = context instanceof Processor.Context
-                ? ((Processor.Context) context).localProcessorIndex()
-                : 0;
-        this.vertexName = context.vertexName();
-        this.logger = context.logger();
-        this.jetInstance = context.jetInstance();
-
         this.hasLocalSharing = serviceFactory.hasLocalSharing();
         this.hasOrderedAsyncResponses = serviceFactory.hasOrderedAsyncResponses();
         this.maxPendingCallsPerProcessor = serviceFactory.maxPendingCallsPerProcessor();
+
+        this.memberCount = context.memberCount();
+        this.memberIndex = context.memberIndex();
+        this.localIndex = hasLocalSharing
+                ? 0
+                : ((Processor.Context) context).localProcessorIndex();
+        this.vertexName = context.vertexName();
+        this.logger = context.logger();
+        this.jetInstance = context.jetInstance();
     }
 
     @Override
