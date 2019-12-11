@@ -17,7 +17,9 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
@@ -61,10 +63,9 @@ public final class ServiceFactories {
      * @since 3.0
      */
     @Nonnull
-    public static <K, V> ServiceFactory<ReplicatedMap<K, V>> replicatedMapService(@Nonnull String mapName) {
-        return ServiceFactory
-                .withCreateFn(ctx -> ctx.jetInstance().<K, V>getReplicatedMap(mapName))
-                .withLocalSharing();
+    public static <K, V> ServiceFactory<?, ReplicatedMap<K, V>> replicatedMapService(@Nonnull String mapName) {
+        return ServiceFactory.withCreateContainerFn(ctx -> ctx.jetInstance().<K, V>getReplicatedMap(mapName))
+                             .withCreateServiceFn((ctx, map) -> map);
     }
 
     /**
@@ -89,9 +90,41 @@ public final class ServiceFactories {
      * @since 3.0
      */
     @Nonnull
-    public static <K, V> ServiceFactory<IMap<K, V>> iMapService(@Nonnull String mapName) {
-        return ServiceFactory
-                .withCreateFn(ctx -> ctx.jetInstance().<K, V>getMap(mapName))
-                .withLocalSharing();
+    public static <K, V> ServiceFactory<?, IMap<K, V>> iMapService(@Nonnull String mapName) {
+        return ServiceFactory.withCreateContainerFn(ctx -> ctx.jetInstance().<K, V>getMap(mapName))
+                             .withCreateServiceFn((ctx, map) -> map);
+    }
+
+    /**
+     * TODO
+     * @param createServiceFn
+     * @param destroyServiceFn
+     * @param <S>
+     * @return
+     */
+    public static <S> ServiceFactory<?, S> perInstanceService(
+            @Nonnull SupplierEx<S> createServiceFn,
+            @Nonnull ConsumerEx<S> destroyServiceFn
+    ) {
+        return ServiceFactory.withCreateContainerFn(c -> createServiceFn.get())
+                             .withCreateServiceFn((ctx, c) -> c)
+                             .withDestroyContainerFn(destroyServiceFn);
+    }
+
+    /**
+     * TODO
+     * @param createServiceFn
+     * @param destroyServiceFn
+     * @param <S>
+     * @return
+     */
+    public static <S> ServiceFactory<?, S> perProcessorService(
+            @Nonnull SupplierEx<? extends S> createServiceFn,
+            @Nonnull ConsumerEx<? super S> destroyServiceFn
+    ) {
+        return ServiceFactory.<Void>withCreateContainerFn(c -> null)
+                .<S>withCreateServiceFn((ctx, c) -> createServiceFn.get())
+                .withDestroyServiceFn(destroyServiceFn)
+                .withDestroyContainerFn(ConsumerEx.noop());
     }
 }

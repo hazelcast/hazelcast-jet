@@ -16,11 +16,12 @@
 
 package com.hazelcast.jet.pipeline;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.logging.ILogger;
+import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier.Context;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
@@ -47,11 +48,12 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *     <li>{@link GeneralStageWithKey#flatMapUsingServiceAsync}
  * </ul>
  *
+ * @param <C> TODO
  * @param <S> the user-defined service object type
  *
  * @since 3.0
  */
-public final class ServiceFactory<S> implements Serializable {
+public final class ServiceFactory<C, S> implements Serializable {
 
     /**
      * Default value for {@link #maxPendingCallsPerProcessor}.
@@ -64,36 +66,39 @@ public final class ServiceFactory<S> implements Serializable {
     public static final boolean COOPERATIVE_DEFAULT = true;
 
     /**
-     * Default value for {@link #hasLocalSharing}.
-     */
-    public static final boolean SHARE_LOCALLY_DEFAULT = false;
-
-    /**
      * Default value for {@link #hasOrderedAsyncResponses}.
      */
     public static final boolean ORDERED_ASYNC_RESPONSES_DEFAULT = true;
 
-    @Nonnull
-    private final FunctionEx<? super ServiceContext, ? extends S> createFn;
-    @Nonnull
-    private final ConsumerEx<? super S> destroyFn;
     private final boolean isCooperative;
-    private final boolean hasLocalSharing;
+
+    // options for async
     private final int maxPendingCallsPerProcessor;
     private final boolean orderedAsyncResponses;
 
+    @Nonnull
+    private final FunctionEx<? super Context, ? extends C> createContainerFn;
+    @Nonnull
+    private final BiFunctionEx<? super Processor.Context, ? super C, ? extends S> createServiceFn;
+    @Nonnull
+    private final ConsumerEx<? super S> destroyServiceFn;
+    @Nonnull
+    private final ConsumerEx<? super C> destroyContainerFn;
+
     private ServiceFactory(
-            @Nonnull FunctionEx<? super ServiceContext, ? extends S> createFn,
-            @Nonnull ConsumerEx<? super S> destroyFn,
+            @Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContainerFn,
+            @Nonnull BiFunctionEx<? super Processor.Context, ? super C, ? extends S> createServiceFn,
+            @Nonnull ConsumerEx<? super S> destroyServiceFn,
+            @Nonnull ConsumerEx<? super C> destroyContainerFn,
             boolean isCooperative,
-            boolean hasLocalSharing,
             int maxPendingCallsPerProcessor,
             boolean orderedAsyncResponses
     ) {
-        this.createFn = createFn;
-        this.destroyFn = destroyFn;
+        this.createContainerFn = createContainerFn;
+        this.createServiceFn = createServiceFn;
+        this.destroyServiceFn = destroyServiceFn;
+        this.destroyContainerFn = destroyContainerFn;
         this.isCooperative = isCooperative;
-        this.hasLocalSharing = hasLocalSharing;
         this.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
         this.orderedAsyncResponses = orderedAsyncResponses;
     }
@@ -101,21 +106,21 @@ public final class ServiceFactory<S> implements Serializable {
     /**
      * Creates a new {@link ServiceFactory} with the given create-function.
      *
-     * @param createServiceFn the function to create new service object, given
+     * @param createContainerFn the function to create new service object, given
      *                        a JetInstance
-     * @param <S> the user-defined service object type
+     * @param <C> the user-defined service object type
      * @return a new factory instance
      *
      * @since 3.0
      */
     @Nonnull
-    public static <S> ServiceFactory<S> withCreateFn(
-            @Nonnull FunctionEx<? super ServiceContext, ? extends S> createServiceFn
+    public static <C> ServiceFactory<C, Void> withCreateContainerFn(
+            @Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContainerFn
     ) {
-        checkSerializable(createServiceFn, "createServiceFn");
+        checkSerializable(createContainerFn, "createContainerFn");
         return new ServiceFactory<>(
-                createServiceFn, ConsumerEx.noop(), COOPERATIVE_DEFAULT, SHARE_LOCALLY_DEFAULT,
-                MAX_PENDING_CALLS_DEFAULT, ORDERED_ASYNC_RESPONSES_DEFAULT);
+                createContainerFn, (ctx, container) -> null, ConsumerEx.noop(), ConsumerEx.noop(),
+                COOPERATIVE_DEFAULT, MAX_PENDING_CALLS_DEFAULT, ORDERED_ASYNC_RESPONSES_DEFAULT);
     }
 
     /**
@@ -125,14 +130,41 @@ public final class ServiceFactory<S> implements Serializable {
      * The destroy function is called at the end of the job to destroy all
      * created service objects.
      *
-     * @param destroyFn the function to destroy user-defined service
+     * @param destroyContainerFn the function to destroy user-defined service
      * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull
-    public ServiceFactory<S> withDestroyFn(@Nonnull ConsumerEx<? super S> destroyFn) {
-        checkSerializable(destroyFn, "destroyFn");
-        return new ServiceFactory<>(createFn, destroyFn, isCooperative, hasLocalSharing,
-                maxPendingCallsPerProcessor, orderedAsyncResponses);
+    public ServiceFactory<C, S> withDestroyContainerFn(@Nonnull ConsumerEx<? super C> destroyContainerFn) {
+        checkSerializable(destroyContainerFn, "destroyContainerFn");
+        return new ServiceFactory<>(createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses);
+    }
+
+    /**
+     * TODO
+     * @param createServiceFn
+     * @param <S_NEW>
+     * @return
+     */
+    @Nonnull
+    public <S_NEW> ServiceFactory<C, S_NEW> withCreateServiceFn(
+            @Nonnull BiFunctionEx<? super Processor.Context, ? super C, ? extends S_NEW> createServiceFn
+    ) {
+        checkSerializable(createServiceFn, "initFn");
+        return new ServiceFactory<>(createContainerFn, createServiceFn, ConsumerEx.noop(), destroyContainerFn,
+                isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses);
+    }
+
+    /**
+     * TODO
+     * @param destroyServiceFn
+     * @return
+     */
+    @Nonnull
+    public ServiceFactory<C, S> withDestroyServiceFn(@Nonnull ConsumerEx<? super S> destroyServiceFn) {
+        checkSerializable(destroyServiceFn, "destroyServiceFn");
+        return new ServiceFactory<>(createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses);
     }
 
     /**
@@ -149,28 +181,11 @@ public final class ServiceFactory<S> implements Serializable {
      * to {@code false}.
      */
     @Nonnull
-    public ServiceFactory<S> toNonCooperative() {
-        return new ServiceFactory<>(createFn, destroyFn, false, hasLocalSharing,
-                maxPendingCallsPerProcessor, orderedAsyncResponses);
-    }
-
-    /**
-     * Returns a copy of this {@link ServiceFactory} with the
-     * <em>localSharing</em> flag set. If the pipeline doesn't have grouping,
-     * there will be:
-     * <ul>
-     *     <li>one service object per local processor, if flag is disabled
-     *     <li>one service object per member, if flag is enabled. Make
-     *     sure the service object is <em>thread-safe</em> in this case.
-     * </ul>
-     *
-     * @return a copy of this factory with the {@code hasLocalSharing} flag
-     * set.
-     */
-    @Nonnull
-    public ServiceFactory<S> withLocalSharing() {
-        return new ServiceFactory<>(createFn, destroyFn, isCooperative, true,
-                maxPendingCallsPerProcessor, orderedAsyncResponses);
+    public ServiceFactory<C, S> toNonCooperative() {
+        return new ServiceFactory<>(
+                createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                false, maxPendingCallsPerProcessor, orderedAsyncResponses
+        );
     }
 
     /**
@@ -191,10 +206,12 @@ public final class ServiceFactory<S> implements Serializable {
      *      property set.
      */
     @Nonnull
-    public ServiceFactory<S> withMaxPendingCallsPerProcessor(int maxPendingCallsPerProcessor) {
+    public ServiceFactory<C, S> withMaxPendingCallsPerProcessor(int maxPendingCallsPerProcessor) {
         checkPositive(maxPendingCallsPerProcessor, "maxPendingCallsPerProcessor must be >= 1");
-        return new ServiceFactory<>(createFn, destroyFn, isCooperative, hasLocalSharing,
-                maxPendingCallsPerProcessor, orderedAsyncResponses);
+        return new ServiceFactory<>(
+                createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                isCooperative, maxPendingCallsPerProcessor, orderedAsyncResponses
+        );
     }
 
     /**
@@ -232,25 +249,43 @@ public final class ServiceFactory<S> implements Serializable {
      * @return a copy of this factory with the {@code unorderedAsyncResponses} flag set.
      */
     @Nonnull
-    public ServiceFactory<S> withUnorderedAsyncResponses() {
-        return new ServiceFactory<>(createFn, destroyFn, isCooperative, hasLocalSharing,
-                maxPendingCallsPerProcessor, false);
+    public ServiceFactory<C, S> withUnorderedAsyncResponses() {
+        return new ServiceFactory<>(
+                createContainerFn, createServiceFn, destroyServiceFn, destroyContainerFn,
+                isCooperative, maxPendingCallsPerProcessor, false
+        );
     }
 
     /**
      * Returns the create-function.
      */
     @Nonnull
-    public FunctionEx<? super ServiceContext, ? extends S> createFn() {
-        return createFn;
+    public FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContainerFn() {
+        return createContainerFn;
+    }
+
+    /**
+     * Returns the Jet instance-wide initialization function.
+     */
+    @Nonnull
+    public BiFunctionEx<? super Processor.Context, ? super C, ? extends S> createServiceFn() {
+        return createServiceFn;
     }
 
     /**
      * Returns the destroy-function.
      */
     @Nonnull
-    public ConsumerEx<? super S> destroyFn() {
-        return destroyFn;
+    public ConsumerEx<? super S> destroyServiceFn() {
+        return destroyServiceFn;
+    }
+
+    /**
+     * Returns the Jet instance-wide cleanup function.
+     */
+    @Nonnull
+    public ConsumerEx<? super C> destroyContainerFn() {
+        return destroyContainerFn;
     }
 
     /**
@@ -258,13 +293,6 @@ public final class ServiceFactory<S> implements Serializable {
      */
     public boolean isCooperative() {
         return isCooperative;
-    }
-
-    /**
-     * Returns the {@code hasLocalSharing} flag.
-     */
-    public boolean hasLocalSharing() {
-        return hasLocalSharing;
     }
 
     /**
@@ -283,65 +311,6 @@ public final class ServiceFactory<S> implements Serializable {
         return orderedAsyncResponses;
     }
 
-    /**
-     * Provides contextual information to {@link ServiceFactory#createFn()}
-     * that helps it set up the service.
-     */
-    public interface ServiceContext {
-        /**
-         * Returns the number of members in the Jet cluster.
-         */
-        int memberCount();
 
-        /**
-         * Returns the index of the Jet member where {@code createFn} is being invoked.
-         * Each member of the cluster has an index between 0 and {@link #memberCount()}.
-         * */
-        int memberIndex();
 
-        /**
-         * Returns the index of the service instance within the same Jet member.
-         * If the service {@linkplain #isSharedLocally()}, there's just one
-         * instance on each member so this returns 0.
-         */
-        int localIndex();
-
-        /**
-         * Says whether the service will be shared locally, i.e., there will be
-         * just one instance of it on each Jet member.
-         */
-        boolean isSharedLocally();
-
-        /**
-         * Returns {@code true} if the service will be used to make async requests
-         * and the responses will respect the order of requests.
-         */
-        boolean hasOrderedAsyncResponses();
-
-        /**
-         * Returns the limit on the number of async requests Jet will issue without
-         * awaiting their response. When this limit is reached, backpressure will
-         * kick in and the pipeline stage won't accept more data until some
-         * responses come in.
-         */
-        int maxPendingCallsPerProcessor();
-
-        /**
-         * Returns the name of the associated vertex.
-         */
-        @Nonnull
-        String vertexName();
-
-        /**
-         * Returns a logger the service can use for diagnostic output.
-         */
-        @Nonnull
-        ILogger logger();
-
-        /**
-         * Returns the Jet instance which is creating the service.
-         */
-        @Nonnull
-        JetInstance jetInstance();
-    }
 }
