@@ -327,7 +327,7 @@ public final class ServiceFactory<S> implements Serializable {
         int maxPendingCallsPerProcessor();
 
         /**
-         * @return
+         * Returns the name of the associated vertex.
          */
         @Nonnull
         String vertexName();
