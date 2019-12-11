@@ -105,9 +105,13 @@ public final class ServiceFactory<C, S> implements Serializable {
 
     /**
      * Creates a new {@link ServiceFactory} with the given create-function.
+     * Make sure to also call {@link #withCreateServiceFn}, otherwise the
+     * actual service passed to your functions will be null. If you want to use
+     * the context object as the service, use {@link
+     * ServiceFactories#memberLocalService}.
      *
-     * @param createContextFn the function to create new service object, given
-     *                        a JetInstance
+     * @param createContextFn the function to create new context object, given
+     *                        a {@link ProcessorSupplier.Context}
      * @param <C> the user-defined service object type
      * @return a new factory instance
      *
@@ -124,13 +128,13 @@ public final class ServiceFactory<C, S> implements Serializable {
     }
 
     /**
-     * Returns a copy of this {@link ServiceFactory} with the destroy-function
-     * replaced with the given function.
+     * Returns a copy of this {@link ServiceFactory} with the
+     * context-destroy-function replaced with the given function.
      * <p>
      * The destroy function is called at the end of the job to destroy all
-     * created service objects.
+     * created context objects.
      *
-     * @param destroyContextFn the function to destroy user-defined service
+     * @param destroyContextFn the function to destroy user-defined context
      * @return a copy of this factory with the supplied destroy-function
      */
     @Nonnull
@@ -310,7 +314,4 @@ public final class ServiceFactory<C, S> implements Serializable {
     public boolean hasOrderedAsyncResponses() {
         return orderedAsyncResponses;
     }
-
-
-
 }

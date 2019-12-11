@@ -193,11 +193,15 @@ public abstract class JetTestSupport extends HazelcastTestSupport {
         instanceFactory.terminate(instance);
     }
 
+    /**
+     * Runs the given Runnable in a new thread, if you're not interested in the
+     * execution failure, any errors are logged at WARN level.
+     */
     public Future spawnSafe(RunnableEx r) {
         return spawn(() -> {
             try {
                 r.runEx();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.warning("Spawned Runnable failed", e);
             }
         });
