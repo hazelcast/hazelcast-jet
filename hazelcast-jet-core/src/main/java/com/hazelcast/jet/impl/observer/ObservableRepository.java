@@ -16,27 +16,29 @@
 
 package com.hazelcast.jet.impl.observer;
 
+import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.StaleSequenceException;
 import com.hazelcast.spi.exception.DistributedObjectDestroyedException;
+import com.hazelcast.spi.impl.executionservice.ExecutionService;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
@@ -61,58 +63,68 @@ public final class ObservableRepository {
     private ObservableRepository() {
     }
 
-    public static Object initObservable(
+    public static void initObservable(
             String observable,
-            Consumer<ObservableBatch> onNewMessage,
+            Consumer<Object> onNewMessage,
             Consumer<Long> onSequenceNo,
             JetInstance jet,
             ILogger logger
     ) {
-        Ringbuffer<ObservableBatch> ringbuffer = getRingBuffer(jet.getHazelcastInstance(), observable);
-
-        RingbufferListener<ObservableBatch> ringbufferListener
-                = new RingbufferListener<>(ringbuffer, onNewMessage, onSequenceNo, logger);
-        ringbufferListener.next();
-        return ringbufferListener;
+        Ringbuffer<Object> ringbuffer = getRingBuffer(jet.getHazelcastInstance(), observable);
+        Executor executor = getExecutor(jet);
+        new RingbufferListener(ringbuffer, executor, onNewMessage, onSequenceNo, logger)
+                .next();
     }
 
     public static void destroyObservable(String observable, HazelcastInstance hzInstance) {
-        Ringbuffer<ObservableBatch> ringbuffer = getRingBuffer(hzInstance, observable);
+        Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, observable);
         ringbuffer.destroy();
     }
 
     public static void completeObservables(Collection<String> observables, Throwable error, HazelcastInstance hzInstance) {
         for (String observable : observables) {
-            Ringbuffer<ObservableBatch> ringbuffer = getRingBuffer(hzInstance, observable);
-            ObservableBatch completion = error == null ? ObservableBatch.endOfData() : ObservableBatch.error(error);
+            Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, observable);
+            Object completion = error == null ? DoneItem.DONE_ITEM : error;
             ringbuffer.addAsync(completion, OverflowPolicy.OVERWRITE);
         }
     }
 
     public static FunctionEx<HazelcastInstance, ConsumerEx<ArrayList<Object>>> getPublishFn(String name) {
         return hzInstance -> {
-            Ringbuffer<ObservableBatch> ringbuffer = getRingBuffer(hzInstance, name);
+            Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, name);
             return buffer -> {
-                ringbuffer.addAsync(ObservableBatch.items(buffer), OverflowPolicy.OVERWRITE);
+                ringbuffer.addAllAsync(buffer, OverflowPolicy.OVERWRITE);
                 buffer.clear();
             };
         };
     }
 
     @Nonnull
-    private static Ringbuffer<ObservableBatch> getRingBuffer(HazelcastInstance intance, String observableName) {
+    private static Ringbuffer<Object> getRingBuffer(HazelcastInstance intance, String observableName) {
         String topicName = JET_OBSERVABLE_NAME_PREFIX + observableName;
         String ringBufferName = TOPIC_RB_PREFIX + topicName;
         return intance.getRingbuffer(ringBufferName);
     }
 
+    private static Executor getExecutor(JetInstance jet) {
+        HazelcastInstance hzInstance = jet.getHazelcastInstance();
+        if (hzInstance instanceof HazelcastInstanceImpl) {
+            return ((HazelcastInstanceImpl) hzInstance).node.getNodeEngine().getExecutionService()
+                    .getExecutor(ExecutionService.ASYNC_EXECUTOR);
+        } else if (hzInstance instanceof HazelcastClientInstanceImpl) {
+            return ((HazelcastClientInstanceImpl) hzInstance).getClientExecutionService().getUserExecutor();
+        } else {
+            throw new RuntimeException(String.format("Unhandled %s type: %s", HazelcastInstance.class.getSimpleName(),
+                    hzInstance.getClass().getName()));
+        }
+    }
 
-    private static class RingbufferListener<E> implements BiConsumer<ReadResultSet<E>, Throwable> {
+    private static class RingbufferListener {
 
-        private static final int BATCH_SIZE = 128; //TODO (PR-1729): is it an acceptable value?
+        private static final int BATCH_SIZE = 64;
 
-        private final Ringbuffer<E> ringbuffer;
-        private final Consumer<E> onNewMessage;
+        private final Ringbuffer<Object> ringbuffer;
+        private final Consumer<Object> onNewMessage;
         private final Consumer<Long> onSequenceNo;
         private final ILogger logger;
         private final Executor executor;
@@ -121,8 +133,9 @@ public final class ObservableRepository {
         private volatile boolean cancelled;
 
         RingbufferListener(
-                Ringbuffer<E> ringbuffer,
-                Consumer<E> onNewMessage,
+                Ringbuffer<Object> ringbuffer,
+                Executor executor,
+                Consumer<Object> onNewMessage,
                 Consumer<Long> onSequenceNo,
                 ILogger logger
         ) {
@@ -130,9 +143,9 @@ public final class ObservableRepository {
             this.onNewMessage = onNewMessage;
             this.onSequenceNo = onSequenceNo;
             this.logger = logger;
+            this.executor = executor;
 
             this.sequence = ringbuffer.tailSequence() + 1;
-            this.executor = Executors.newSingleThreadExecutor(); //TODO (PR-1729): what executor service to use?
         }
 
         void next() {
@@ -140,26 +153,24 @@ public final class ObservableRepository {
                 return;
             }
             ringbuffer.readManyAsync(sequence, 1, BATCH_SIZE, null)
-                    .whenCompleteAsync(this, executor);
+                    .whenCompleteAsync(this::accept, executor);
         }
 
         private void cancel() {
             cancelled = true;
         }
 
-        @Override
-        public void accept(ReadResultSet<E> result, Throwable throwable) {
+        private void accept(ReadResultSet<Object> resultSet, Throwable throwable) {
+            if (cancelled) {
+                return;
+            }
             if (throwable == null) {
                 // we process all messages in batch. So we don't release the thread and reschedule ourselves;
                 // but we'll process whatever was received in 1 go.
-                for (E e : result) {
-                    if (cancelled) {
-                        return;
-                    }
-
+                for (Object result : resultSet) {
                     try {
                         onSequenceNo.accept(sequence);
-                        onNewMessage.accept(e);
+                        onNewMessage.accept(result);
                     } catch (Throwable t) {
                         logger.warning("Terminating message listener on ring-buffer " + ringbuffer.getName() +
                                 ". Reason: Unhandled exception, message: " + t.getMessage(), t);
@@ -171,10 +182,6 @@ public final class ObservableRepository {
                 }
                 next();
             } else {
-                if (cancelled) {
-                    return;
-                }
-
                 if (handleInternalException(throwable)) {
                     next();
                 } else {

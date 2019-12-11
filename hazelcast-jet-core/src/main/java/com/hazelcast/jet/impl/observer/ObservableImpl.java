@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.observer;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Observer;
+import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -32,14 +33,13 @@ public class ObservableImpl<T> implements Observable<T> {
     private final JetInstance jet;
     private final ILogger logger;
 
-    private Object driver; //internal listener, hold reference to prevent collection
     private long lastSequence = -1;
 
     public ObservableImpl(String name, JetInstance jet, ILogger logger) {
         this.name = name;
         this.jet = jet;
         this.logger = logger;
-        this.driver = ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet, logger);
+        ObservableRepository.initObservable(name, this::onNewMessage, this::onSequenceNo, jet, logger);
     }
 
     @Override
@@ -59,27 +59,18 @@ public class ObservableImpl<T> implements Observable<T> {
         observers.add(Observer.of(onNext, onError, onComplete));
     }
 
-    public Object getDriver() {
-        return driver; //TODO (PR-1729): hack to get past style-check...
-    }
-
     @Override
     public void destroy() {
-        driver = null;
         ObservableRepository.destroyObservable(name, jet.getHazelcastInstance());
     }
 
-    public void onNewMessage(ObservableBatch batch) {
-        Throwable throwable = batch.getThrowable();
-        if (throwable != null) {
-            notifyObserversOfError(throwable);
+    public void onNewMessage(Object message) {
+        if (message instanceof Throwable) {
+            notifyObserversOfError((Throwable) message);
+        } else if (message instanceof DoneItem) {
+            notifyObserversOfEndOfData();
         } else {
-            Object[] items = batch.getItems();
-            if (items == null) {
-                notifyObserversOfEndOfData();
-            } else {
-                notifyObserversOfData(items);
-            }
+            notifyObserversOfData(message);
         }
     }
 
@@ -91,12 +82,10 @@ public class ObservableImpl<T> implements Observable<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private void notifyObserversOfData(Object[] items) {
-        for (Object item : items) {
-            T t = (T) item;
-            for (Observer<T> observer : observers) {
-                observer.onNext(t);
-            }
+    private void notifyObserversOfData(Object data) {
+        T t = (T) data;
+        for (Observer<T> observer : observers) {
+            observer.onNext(t);
         }
     }
 
