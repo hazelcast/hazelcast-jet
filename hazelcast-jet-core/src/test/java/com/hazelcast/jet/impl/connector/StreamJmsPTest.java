@@ -16,28 +16,22 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.cluster.Address;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Processor.Context;
-import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.impl.pipeline.transform.StreamSourceTransform;
-import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.logging.Logger;
 import com.hazelcast.test.HazelcastParallelClassRunner;
-import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
-import org.apache.activemq.artemis.junit.EmbeddedActiveMQResource;
+import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
@@ -45,22 +39,17 @@ import javax.jms.MessageProducer;
 import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
-import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Queue;
-import java.util.function.Function;
 
-import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.EventTimePolicy.noEventTime;
-import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class StreamJmsPTest extends JetTestSupport {
 
     @ClassRule
-    public static EmbeddedActiveMQResource resource = new EmbeddedActiveMQResource();
+    public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
 
     private StreamJmsP processor;
     private TestOutbox outbox;
@@ -68,39 +57,34 @@ public class StreamJmsPTest extends JetTestSupport {
 
     @After
     public void stopProcessor() throws Exception {
-        if (processor != null) {
-            processor.close();
-        }
-        if (processorConnection != null) {
-            processorConnection.close();
-        }
+        processor.close();
+        processorConnection.close();
     }
 
     @Test
     public void when_queue() throws Exception {
         String queueName = randomString();
         logger.info("using queue: " + queueName);
+        initializeProcessor(queueName, true);
         String message1 = sendMessage(queueName, true);
         String message2 = sendMessage(queueName, true);
 
         assertTrueEventually(() -> assertEquals(2, queueSize(queueName)));
 
-        initializeProcessor(queueName, true);
         Queue<Object> queue = outbox.queue(0);
 
         // Even though both messages are in queue, the processor might not see them
-        // because it uses `consumer.receiveNoWait()`, so if they are not available immediately,
-        // it doesn't block and items should be available later.
+        // because it uses `consumer.receiveNoWait()`, so if it's not yet available, it doesn't
+        // block and it should be available later.
         // See https://github.com/hazelcast/hazelcast-jet/issues/1010
-        List<Object> actualOutput = new ArrayList<>();
         assertTrueEventually(() -> {
-            outbox.reset();
             processor.complete();
-            Object item = queue.poll();
-            if (item != null) {
-                actualOutput.add(item);
-            }
-            assertEquals(asList(message1, message2), actualOutput);
+            assertEquals(message1, queue.poll());
+        });
+        outbox.reset();
+        assertTrueEventually(() -> {
+            processor.complete();
+            assertEquals(message2, queue.poll());
         });
     }
 
@@ -110,7 +94,6 @@ public class StreamJmsPTest extends JetTestSupport {
         logger.info("using topic: " + topicName);
         sendMessage(topicName, false);
         initializeProcessor(topicName, false);
-        processor.complete(); // the consumer is created here
         sleepSeconds(1);
         String message2 = sendMessage(topicName, false);
 
@@ -122,35 +105,16 @@ public class StreamJmsPTest extends JetTestSupport {
         });
     }
 
-    @Test
-    public void when_sharedConsumer_then_twoProcessorsUsed() throws Exception {
-        String topicName = randomString();
-        logger.info("using topic: " + topicName);
-        StreamSource<Message> source = Sources.jmsTopicBuilder(StreamJmsPTest::getConnectionFactory)
-                // When
-                .destinationName("foo")
-                .sharedConsumer(true)
-                .build();
-        ProcessorMetaSupplier metaSupplier =
-                ((StreamSourceTransform<Message>) source).metaSupplierFn.apply(noEventTime());
-        Address address1 = new Address("127.0.0.1", 1);
-        Address address2 = new Address("127.0.0.1", 2);
-        Function<? super Address, ? extends ProcessorSupplier> function = metaSupplier.get(asList(address1, address2));
-
-        // Then
-        // assert that processors for both addresses are actually StreamJmsP, not a noopP
-        assertInstanceOf(StreamJmsP.class, function.apply(address1).get(1).iterator().next());
-        assertInstanceOf(StreamJmsP.class, function.apply(address2).get(1).iterator().next());
-    }
-
     private void initializeProcessor(String destinationName, boolean isQueue) throws Exception {
-        processorConnection = getConnectionFactory().createConnection();
+        processorConnection = broker.createConnectionFactory().createConnection();
+        processorConnection.start();
 
+        FunctionEx<Connection, Session> sessionFn = c -> c.createSession(false, Session.AUTO_ACKNOWLEDGE);
         FunctionEx<Session, MessageConsumer> consumerFn = s ->
                 s.createConsumer(isQueue ? s.createQueue(destinationName) : s.createTopic(destinationName));
         FunctionEx<Message, String> textMessageFn = m -> ((TextMessage) m).getText();
         processor = new StreamJmsP<>(
-                () -> processorConnection, consumerFn, textMessageFn, noEventTime(), NONE);
+                processorConnection, sessionFn, consumerFn, ConsumerEx.noop(), textMessageFn, noEventTime());
         outbox = new TestOutbox(1);
         Context ctx = new TestProcessorContext().setLogger(Logger.getLogger(StreamJmsP.class));
         processor.init(outbox, ctx);
@@ -159,7 +123,8 @@ public class StreamJmsPTest extends JetTestSupport {
     private String sendMessage(String destinationName, boolean isQueue) throws Exception {
         String message = randomString();
 
-        Connection connection = getConnectionFactory().createConnection();
+        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
+        Connection connection = connectionFactory.createConnection();
         connection.start();
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -174,7 +139,8 @@ public class StreamJmsPTest extends JetTestSupport {
     }
 
     private int queueSize(String queueName) throws Exception {
-        Connection connection = getConnectionFactory().createConnection();
+        ActiveMQConnectionFactory connectionFactory = broker.createConnectionFactory();
+        Connection connection = connectionFactory.createConnection();
         connection.start();
 
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -188,9 +154,5 @@ public class StreamJmsPTest extends JetTestSupport {
         session.close();
         connection.close();
         return size;
-    }
-
-    private static ConnectionFactory getConnectionFactory() {
-        return new ActiveMQConnectionFactory(resource.getVmURL());
     }
 }

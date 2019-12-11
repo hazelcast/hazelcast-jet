@@ -134,9 +134,8 @@
         </dependency>
         <dependency>
             <groupId>org.apache.activemq</groupId>
-            <artifactId>apache-artemis</artifactId>
-            <version>${activemq-artemis.version}</version>
-            <type>pom</type>
+            <artifactId>activemq-all</artifactId>
+            <version>${activemq.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
