@@ -446,7 +446,7 @@ class BuildComputation {
 
     static void s16a() {
         //tag::s16a[]
-        ServiceFactory<?, IMap<String, StockInfo>> ctxFac = ServiceFactories.memberLocalService(
+        ServiceFactory<?, IMap<String, StockInfo>> ctxFac = ServiceFactories.sharedService(
                 () -> {
                     ClientConfig cc = new ClientConfig();
                     cc.getNearCacheConfigMap().put("stock-info",

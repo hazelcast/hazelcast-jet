@@ -64,7 +64,7 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
-import static com.hazelcast.jet.pipeline.ServiceFactories.memberLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
 import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
@@ -364,7 +364,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> mapped = streamStageFromList(input).mapUsingService(
-                memberLocalService(() -> suffix, ConsumerEx.noop()),
+                sharedService(() -> suffix, ConsumerEx.noop()),
                 formatFn
         );
 
@@ -387,7 +387,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingService(
-                        memberLocalService(() -> suffix, ConsumerEx.noop()),
+                        sharedService(() -> suffix, ConsumerEx.noop()),
                         (suff, k, i) -> formatFn.apply(suff, i)
                 );
 
@@ -409,7 +409,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .filterUsingService(
-                        ServiceFactories.memberLocalService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(() -> acceptedRemainder, ConsumerEx.noop()),
                         (rem, i) -> i % 2 == rem
                 );
 
@@ -432,7 +432,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        ServiceFactories.memberLocalService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(() -> acceptedRemainder, ConsumerEx.noop()),
                         (rem, k, i) -> i % 2 == rem
                 );
 
@@ -454,7 +454,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMapUsingService(
-                        ServiceFactories.memberLocalService(() -> flatMapFn, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(() -> flatMapFn, ConsumerEx.noop()),
                         (fn, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -477,7 +477,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        ServiceFactories.memberLocalService(() -> flatMapFn, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(() -> flatMapFn, ConsumerEx.noop()),
                         (fn, k, i) -> traverseStream(fn.apply(i))
                 );
 

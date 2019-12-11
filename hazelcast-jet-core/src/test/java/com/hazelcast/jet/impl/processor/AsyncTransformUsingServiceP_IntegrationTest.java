@@ -66,7 +66,7 @@ import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
-import static com.hazelcast.jet.pipeline.ServiceFactories.memberLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
@@ -112,7 +112,7 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
         sinkList = instance().getList(randomMapName("sinkList"));
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
-        serviceFactory = memberLocalService(() -> Executors.newFixedThreadPool(8), ExecutorService::shutdown);
+        serviceFactory = sharedService(() -> Executors.newFixedThreadPool(8), ExecutorService::shutdown);
         if (!ordered) {
             serviceFactory = serviceFactory.withUnorderedAsyncResponses();
         }

@@ -52,7 +52,7 @@ import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
 import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
-import static com.hazelcast.jet.pipeline.ServiceFactories.memberLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toMap;
 
@@ -108,12 +108,12 @@ public final class GRPCEnrichment {
                 .withoutTimestamps()
                 .map(entryValue());
 
-        ServiceFactory<?, ProductServiceFutureStub> productService = memberLocalService(
+        ServiceFactory<?, ProductServiceFutureStub> productService = sharedService(
                 () -> ProductServiceGrpc.newFutureStub(getLocalChannel()),
                 stub -> shutdownClient(stub)
         );
 
-        ServiceFactory<?, BrokerServiceFutureStub> brokerService = memberLocalService(
+        ServiceFactory<?, BrokerServiceFutureStub> brokerService = sharedService(
                 () -> BrokerServiceGrpc.newFutureStub(getLocalChannel()),
                 stub -> shutdownClient(stub)
         );

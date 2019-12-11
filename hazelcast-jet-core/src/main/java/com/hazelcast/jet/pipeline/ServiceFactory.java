@@ -35,7 +35,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  * If you don't need fine grained control over the lifecycle of the
  * service, it is recommended to use the simpler
  * {@link ServiceFactories#processorLocalService(SupplierEx, ConsumerEx) ServiceFactories.processorLocalService}
- * or {@link ServiceFactories#memberLocalService(SupplierEx, ConsumerEx) ServiceFactories.memberLocalService}.
+ * or {@link ServiceFactories#sharedService(SupplierEx, ConsumerEx) ServiceFactories.memberLocalService}.
  * <p>
  * The lifecycle of this factory object is as follows:
  * <ol>
@@ -136,7 +136,7 @@ public final class ServiceFactory<C, S> implements Serializable {
      * Make sure to also call {@link #withCreateServiceFn}, otherwise you will
      * not be able to create the service instance. If you want to use
      * the context object as the service, use {@link
-     * ServiceFactories#memberLocalService}.
+     * ServiceFactories#sharedService}.
      *
      * @param createContextFn the function to create new context object, given
      *                        a {@link ProcessorSupplier.Context}. This function is

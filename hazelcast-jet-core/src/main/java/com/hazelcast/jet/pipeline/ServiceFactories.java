@@ -110,7 +110,7 @@ public final class ServiceFactories {
      *
      * @see #processorLocalService(SupplierEx, ConsumerEx)
      */
-    public static <S> ServiceFactory<?, S> memberLocalService(
+    public static <S> ServiceFactory<?, S> sharedService(
             @Nonnull SupplierEx<S> createServiceFn,
             @Nonnull ConsumerEx<S> destroyServiceFn
     ) {
@@ -132,7 +132,7 @@ public final class ServiceFactories {
      *
      * @param <S> type of the service object to be used
      *
-     * @see #memberLocalService(SupplierEx, ConsumerEx)
+     * @see #sharedService(SupplierEx, ConsumerEx)
      */
     public static <S> ServiceFactory<?, S> processorLocalService(
             @Nonnull SupplierEx<? extends S> createServiceFn,
