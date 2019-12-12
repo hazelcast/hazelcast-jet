@@ -96,17 +96,18 @@ public final class ServiceFactories {
     }
 
     /**
-     * Returns a {@link ServiceFactory} which will be shared across the member
-     * for all processor instances. This assumes that the created service is
-     * thread-safe, meaning it can be safely accessed concurrently from
-     * multiple threads.
+     * Returns a {@link ServiceFactory} which will provide a single shared
+     * service object per cluster member. All parallel processors serving the
+     * associated pipeline stage will use the same object. Since the service
+     * object will be accessed from many parallel threads, it must be
+     * thread-safe.
      *
-     * @param createServiceFn the function that creates the service. This method
-     *                        will be called once on each node.
-     * @param destroyServiceFn the function to destroy the service. This method will be
-     *                         called once on each node. It can be used to tear down
-     *                         any resources created by the service.
-     * @param <S> type of the service object to be used
+     * @param createServiceFn the function that creates the service. It will be called once on each
+     *                        Jet member.
+     * @param destroyServiceFn the function that destroys the service. It will be called once on each
+     *                         Jet member. It can be used to tear down any resources acquired by the
+     *                         service.
+     * @param <S> type of the service object
      *
      * @see #processorLocalService(SupplierEx, ConsumerEx)
      */
@@ -120,17 +121,19 @@ public final class ServiceFactories {
     }
 
     /**
-     * Returns a {@link ServiceFactory} which creates a separate service instance
-     * for each processor. Use this when the service instance should not be
-     * shared across multiple threads.
+     * Returns a {@link ServiceFactory} which creates a separate service
+     * instance for each parallel Jet processor. The number of processors on
+     * each cluster member is dictated by {@link GeneralStage#setLocalParallelism
+     * stage.localParallelism}. Use this when the service instance should not
+     * be shared across multiple threads.
      *
-     * @param createServiceFn the function that creates the service. This method
-     *                        will be called once per processor instance.
-     * @param destroyServiceFn the function to destroy the service. This method will be
-     *                         called once per processor instance. It can be used to tear down
-     *                         any resources created by the service.
+     * @param createServiceFn the function that creates the service. It will be called once per
+     *                        processor instance.
+     * @param destroyServiceFn the function that destroys the service. It will be called once per
+     *                         processor instance. It can be used to tear down any resources
+     *                         acquired by the service.
      *
-     * @param <S> type of the service object to be used
+     * @param <S> type of the service object
      *
      * @see #sharedService(SupplierEx, ConsumerEx)
      */
