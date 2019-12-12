@@ -34,7 +34,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 
 public class PerformanceConsiderations {
 
@@ -105,7 +105,7 @@ public class PerformanceConsiderations {
         //tag::s8[]
         Pipeline p = Pipeline.create();
         BatchStage<Long> src = p.readFrom(Sources.list("input"));
-        ServiceFactory<?, DateTimeFormatter> serviceFactory = processorLocalService( // <1>
+        ServiceFactory<?, DateTimeFormatter> serviceFactory = nonSharedService( // <1>
                 () -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
                                       .withZone(ZoneId.systemDefault()), ConsumerEx.noop());
         src.mapUsingService(serviceFactory, // <2>

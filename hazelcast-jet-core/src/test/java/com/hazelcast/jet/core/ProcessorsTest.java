@@ -46,7 +46,7 @@ import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
-import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 import static com.hazelcast.test.HazelcastTestSupport.sleepMillis;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -70,7 +70,7 @@ public class ProcessorsTest {
     public void mapUsingService() {
         TestSupport
                 .verifyProcessor(Processors.mapUsingServiceP(
-                        processorLocalService(() -> new int[1], arr -> assertEquals(6, arr[0])),
+                        nonSharedService(() -> new int[1], arr -> assertEquals(6, arr[0])),
                         (int[] context, Integer item) -> context[0] += item))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))
@@ -81,7 +81,7 @@ public class ProcessorsTest {
     public void mapUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
-                        processorLocalService(AtomicInteger::new, ctx -> assertEquals(6, ctx.get())),
+                        nonSharedService(AtomicInteger::new, ctx -> assertEquals(6, ctx.get())),
                         t -> "k",
                         (AtomicInteger context, Integer item) -> supplyAsync(() -> {
                             sleepMillis(100);
@@ -106,7 +106,7 @@ public class ProcessorsTest {
     public void filteringWithMapUsingService() {
         TestSupport
                 .verifyProcessor(Processors.mapUsingServiceP(
-                        processorLocalService(() -> new int[1], arr -> assertEquals(3, arr[0])),
+                        nonSharedService(() -> new int[1], arr -> assertEquals(3, arr[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 return context[0] % 2 == 0 ? item : null;
@@ -123,7 +123,7 @@ public class ProcessorsTest {
     public void filteringWithMapUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
-                        processorLocalService(() -> new int[] {2}, arr -> assertEquals(2, arr[0])),
+                        nonSharedService(() -> new int[] {2}, arr -> assertEquals(2, arr[0])),
                         t -> "k",
                         (int[] context, Integer item) ->
                                 supplyAsync(() -> item % context[0] != 0 ? item : null)))
@@ -145,7 +145,7 @@ public class ProcessorsTest {
     public void filterUsingService() {
         TestSupport
                 .verifyProcessor(filterUsingServiceP(
-                        processorLocalService(() -> new int[1], arr -> assertEquals(2, arr[0])),
+                        nonSharedService(() -> new int[1], arr -> assertEquals(2, arr[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 // will pass if greater than the previous item
@@ -163,7 +163,7 @@ public class ProcessorsTest {
     public void filterUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(filterUsingServiceAsyncP(
-                        processorLocalService(AtomicInteger::new, ctx -> assertEquals(4, ctx.get())),
+                        nonSharedService(AtomicInteger::new, ctx -> assertEquals(4, ctx.get())),
                         t -> "k",
                         (AtomicInteger context, Integer item) -> CompletableFuture.supplyAsync(() -> {
                             context.incrementAndGet();
@@ -189,7 +189,7 @@ public class ProcessorsTest {
 
         TestSupport
                 .verifyProcessor(flatMapUsingServiceP(
-                        processorLocalService(() -> context, c -> c[0] = 0),
+                        nonSharedService(() -> context, c -> c[0] = 0),
                         (int[] c, Integer item) -> traverseItems(item, c[0] += item)))
                 .disableSnapshots()
                 .input(asList(1, 2, 3))

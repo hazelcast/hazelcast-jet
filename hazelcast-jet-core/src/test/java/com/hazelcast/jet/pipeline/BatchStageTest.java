@@ -61,7 +61,7 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
 import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
-import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
 import static java.util.Arrays.asList;
@@ -905,7 +905,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Object> custom = batchStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
-                        processorLocalService(HashSet::new, ConsumerEx.noop()),
+                        nonSharedService(HashSet::new, ConsumerEx.noop()),
                         (Set<Integer> ctx, Integer item) -> {
                             Integer key = extractKeyFn.apply(item);
                             return ctx.add(key) ? key : null;

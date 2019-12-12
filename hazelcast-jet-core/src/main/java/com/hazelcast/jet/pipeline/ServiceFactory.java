@@ -58,7 +58,7 @@ import static com.hazelcast.jet.impl.util.Util.checkSerializable;
  *      Finally, Jet calls {@link #destroyContextFn()} with the context object.
  * </ol>
  * If you don't need the member-wide context object, you can call the simpler
- * methods {@link ServiceFactories#processorLocalService(SupplierEx, ConsumerEx)
+ * methods {@link ServiceFactories#nonSharedService(SupplierEx, ConsumerEx)
  * ServiceFactories.processorLocalService} or {@link
  * ServiceFactories#sharedService(SupplierEx, ConsumerEx)
  * ServiceFactories.memberLocalService}.
@@ -142,7 +142,7 @@ public final class ServiceFactory<C, S> implements Serializable {
      * {@code createServiceFn}. To achieve this more conveniently, use {@link
      * ServiceFactories#sharedService} instead of this method. If you don't need
      * a shared context at all, just independent service instances, you can use
-     * the convenience of {@link ServiceFactories#processorLocalService}.
+     * the convenience of {@link ServiceFactories#nonSharedService}.
      *
      * @param createContextFn the function to create new context object, given a {@link
      *                        ProcessorSupplier.Context}. Called once per Jet member.

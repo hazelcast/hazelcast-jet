@@ -86,7 +86,7 @@ public class TfIdfCoreApi {
 
         //tag::s5[]
         Vertex docLines = dag.newVertex("doc-lines", flatMapUsingServiceP(
-                ServiceFactories.processorLocalService(() -> null, ConsumerEx.noop()).toNonCooperative(),
+                ServiceFactories.nonSharedService(() -> null, ConsumerEx.noop()).toNonCooperative(),
                 (Object ctx, Entry<Long, String> e) ->
                 traverseStream(docLines("books/" + e.getValue())
                     .map(line -> entry(e.getKey(), line)))));

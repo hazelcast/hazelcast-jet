@@ -29,7 +29,7 @@ import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Partitioner.HASH_CODE;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
 import static com.hazelcast.jet.impl.pipeline.transform.AggregateTransform.FIRST_STAGE_VERTEX_NAME_SUFFIX;
-import static com.hazelcast.jet.pipeline.ServiceFactories.processorLocalService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 
 public class DistinctTransform<T, K> extends AbstractTransform {
     private final FunctionEx<? super T, ? extends K> keyFn;
@@ -51,7 +51,7 @@ public class DistinctTransform<T, K> extends AbstractTransform {
 
     @SuppressWarnings("unchecked")
     private static <T, K> ProcessorSupplier distinctP(FunctionEx<? super T, ? extends K> keyFn) {
-        return filterUsingServiceP(processorLocalService(HashSet::new, ConsumerEx.noop()),
+        return filterUsingServiceP(nonSharedService(HashSet::new, ConsumerEx.noop()),
                 (seenItems, item) -> seenItems.add(keyFn.apply((T) item)));
     }
 }

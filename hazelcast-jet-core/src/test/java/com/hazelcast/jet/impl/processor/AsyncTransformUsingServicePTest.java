@@ -65,7 +65,7 @@ public class AsyncTransformUsingServicePTest {
     private ProcessorSupplier getSupplier(BiFunctionEx<? super String, ? super String,
                             CompletableFuture<Traverser<String>>> mapFn
     ) {
-        ServiceFactory<?, String> serviceFactory = ServiceFactories.processorLocalService(() -> "foo", ConsumerEx.noop());
+        ServiceFactory<?, String> serviceFactory = ServiceFactories.nonSharedService(() -> "foo", ConsumerEx.noop());
         if (!ordered) {
             serviceFactory = serviceFactory.withUnorderedAsyncResponses();
         }
