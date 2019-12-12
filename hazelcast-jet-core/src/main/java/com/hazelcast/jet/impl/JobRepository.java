@@ -549,7 +549,7 @@ public class JobRepository {
 
     private static Set<String> ownedObservables(DAG dag) {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
-                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
+                .map(vertex -> (String) vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
                 .collect(Collectors.toSet());
     }
 

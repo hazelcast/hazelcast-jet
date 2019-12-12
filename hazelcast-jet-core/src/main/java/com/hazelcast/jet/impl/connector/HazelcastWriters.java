@@ -186,14 +186,14 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
         return new ProcessorMetaSupplier() {
 
-            private final Map<String, String> tags = Collections.singletonMap(
+            private final Map<Object, Object> tags = Collections.singletonMap(
                     ObservableRepository.OWNED_OBSERVABLE,
                     name
             );
 
             @Nonnull
             @Override
-            public Map<String, String> getTags() {
+            public Map<Object, Object> getTags() {
                 return tags;
             }
 

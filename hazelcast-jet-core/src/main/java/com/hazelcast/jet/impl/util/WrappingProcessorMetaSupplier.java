@@ -60,7 +60,7 @@ public final class WrappingProcessorMetaSupplier implements ProcessorMetaSupplie
 
     @Nonnull
     @Override
-    public Map<String, String> getTags() {
+    public Map<Object, Object> getTags() {
         return wrapped.getTags();
     }
 
