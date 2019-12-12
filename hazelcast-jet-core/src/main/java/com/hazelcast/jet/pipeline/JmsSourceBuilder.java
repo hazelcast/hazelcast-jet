@@ -204,8 +204,8 @@ public final class JmsSourceBuilder {
 
         Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFactory =
                 policy -> isTopic
-                        ? streamJmsTopicP(newConnectionFn, consumerFn, isSharedConsumer, projectionFn, policy, maxGuarantee)
-                        : streamJmsQueueP(newConnectionFn, consumerFn, projectionFn, policy, maxGuarantee);
+                    ? streamJmsTopicP(newConnectionFn, consumerFn, isSharedConsumer, projectionFn, policy, maxGuarantee)
+                    : streamJmsQueueP(newConnectionFn, consumerFn, projectionFn, policy, maxGuarantee);
         return Sources.streamFromProcessorWithWatermarks(sourceName(), true, metaSupplierFactory);
     }
 

@@ -420,7 +420,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
         assertTrueEventually(() -> {
             Map<Long, Long> counts = lastListInStressTest.stream()
-                                                         .collect(Collectors.groupingBy(Function.identity(), TreeMap::new, Collectors.counting()));
+                    .collect(Collectors.groupingBy(Function.identity(), TreeMap::new, Collectors.counting()));
             for (long i = 0; i < MESSAGE_COUNT; i++) {
                 counts.putIfAbsent(i, 0L);
             }
