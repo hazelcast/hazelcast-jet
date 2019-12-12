@@ -18,7 +18,10 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.RestartableException;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.AbstractProcessor;
 import com.hazelcast.jet.core.BroadcastKey;
@@ -55,7 +58,7 @@ import static javax.jms.Session.DUPS_OK_ACKNOWLEDGE;
  */
 public class StreamJmsP<T> extends AbstractProcessor {
 
-    public static final int PREFERRED_LOCAL_PARALLELISM = 4;
+    public static final int PREFERRED_LOCAL_PARALLELISM = 1;
     private static final BroadcastKey<String> SEEN_IDS_KEY = broadcastKey("seen");
 
     private final Connection connection;
@@ -69,7 +72,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     private Session session;
     private MessageConsumer consumer;
-    private Traverser<Object> traverser;
+    private Traverser<Object> pendingTraverser = Traversers.empty();
     private boolean snapshotInProgress;
 
     StreamJmsP(Connection connection,
@@ -98,18 +101,6 @@ public class StreamJmsP<T> extends AbstractProcessor {
     protected void init(@Nonnull Context context) throws JMSException {
         session = connection.createSession(guarantee != NONE, DUPS_OK_ACKNOWLEDGE);
         consumer = consumerFn.apply(session);
-        Traverser<Message> rootTraverser = () -> {
-            try {
-                return consumer.receiveNoWait();
-            } catch (JMSException e) {
-                throw sneakyThrow(e);
-            }
-        };
-        if (guarantee == EXACTLY_ONCE) {
-            rootTraverser = rootTraverser.filter(e -> seenIds.add(messageIdFn.apply(e)));
-        }
-        traverser = rootTraverser
-                .flatMap(t -> eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t)));
     }
 
     private static long handleJmsTimestamp(Message msg) {
@@ -124,29 +115,70 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @Override
     public boolean complete() {
         if (!snapshotInProgress) {
-            emitFromTraverser(traverser);
+            while (emitFromTraverser(pendingTraverser)) {
+                try {
+                    Message t = consumer.receiveNoWait();
+                    if (t == null) {
+                        pendingTraverser = eventTimeMapper.flatMapIdle();
+                        break;
+                    }
+                    if (guarantee == EXACTLY_ONCE) {
+                        Object msgId = messageIdFn.apply(t);
+                        if (msgId == null) {
+                            throw new JetException("Received a message without an ID. All messages must have an ID, " +
+                                    "you can specify one using TODO"); // TODO [viliam]
+                        }
+                        if (!seenIds.add(msgId)) {
+                            continue;
+                        }
+                    }
+                    pendingTraverser = eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t));
+                } catch (JMSException e) {
+                    throw sneakyThrow(e);
+                }
+            }
         }
         return false;
     }
 
     @Override
     public boolean snapshotCommitPrepare() {
-        snapshotInProgress = true;
-        return getOutbox().offerToSnapshot(SEEN_IDS_KEY, seenIds);
+        snapshotInProgress = guarantee != NONE;
+        return guarantee != EXACTLY_ONCE || getOutbox().offerToSnapshot(SEEN_IDS_KEY, seenIds);
     }
 
     @Override
     public boolean snapshotCommitFinish(boolean success) {
+        if (guarantee == NONE) {
+            return true;
+        }
         if (success) {
             try {
                 session.commit();
-                seenIds.clear();
             } catch (JMSException e) {
                 throw sneakyThrow(e);
             }
+            if (guarantee == EXACTLY_ONCE) {
+                seenIds.clear();
+            }
+        } else if (guarantee == EXACTLY_ONCE) {
+            // We could tolerate snapshot failures, but if we did, the memory usage will grow without a bound.
+            // The `seenIds` and also unacknowledged messages in the session will grow without a limit.
+            throw new RestartableException("the snapshot failed");
         }
         snapshotInProgress = false;
         return true;
+    }
+
+    @Override
+    protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
+        if (!SEEN_IDS_KEY.equals(key)) {
+            throw new RuntimeException("Unexpected key received from snapshot: " + key);
+        }
+        @SuppressWarnings("unchecked")
+        Set<Object> castValue = (Set<Object>) value;
+        // we could add the restored
+        seenIds.addAll(castValue);
     }
 
     @Override
