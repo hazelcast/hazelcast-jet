@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Processor;
@@ -29,6 +28,7 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import javax.annotation.Nonnull;
 import javax.jms.Connection;
 import javax.jms.Destination;
+import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.stream.Collectors.toList;
-import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 /**
  * Private API. Access via {@link SinkProcessors#writeJmsQueueP} or {@link
@@ -99,21 +98,16 @@ public final class WriteJmsP {
         @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
             FunctionEx<Processor.Context, JmsContext> createFn = jet -> {
-                Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
+                Session session = connection.createSession(true, 0);
                 Destination destination = isTopic ? session.createTopic(name) : session.createQueue(name);
                 MessageProducer producer = session.createProducer(destination);
                 return new JmsContext(session, producer);
             };
             BiConsumerEx<JmsContext, T> onReceiveFn = (jmsContext, item) -> {
                 Message message = messageFn.apply(jmsContext.session, item);
-                // TODO we use synchronous send here
                 jmsContext.producer.send(message);
             };
-            ConsumerEx<JmsContext> destroyFn = jmsContext -> {
-                jmsContext.producer.close();
-                jmsContext.session.close();
-            };
-            SupplierEx<Processor> supplier = writeBufferedP(createFn, onReceiveFn, ConsumerEx.noop(), destroyFn);
+            SupplierEx<Processor> supplier = writeBufferedP(createFn, onReceiveFn, JmsContext::commit, JmsContext::close);
 
             return Stream.generate(supplier).limit(count).collect(toList());
         }
@@ -132,6 +126,15 @@ public final class WriteJmsP {
             JmsContext(Session session, MessageProducer producer) {
                 this.session = session;
                 this.producer = producer;
+            }
+
+            public void commit() throws JMSException {
+                session.commit();
+            }
+
+            public void close() throws JMSException {
+                producer.close();
+                session.close();
             }
         }
     }
