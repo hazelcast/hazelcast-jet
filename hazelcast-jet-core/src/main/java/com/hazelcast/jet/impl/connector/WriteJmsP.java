@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeBufferedP;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.stream.Collectors.toList;
+import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 
 /**
  * Private API. Access via {@link SinkProcessors#writeJmsQueueP} or {@link
@@ -56,23 +57,15 @@ public final class WriteJmsP {
      */
     public static <T> ProcessorMetaSupplier supplier(
             SupplierEx<? extends Connection> newConnectionFn,
-            FunctionEx<? super Connection, ? extends Session> newSessionFn,
             BiFunctionEx<? super Session, T, ? extends Message> messageFn,
-            BiConsumerEx<? super MessageProducer, ? super Message> sendFn,
-            ConsumerEx<? super Session> flushFn,
             String name,
             boolean isTopic
     ) {
         checkSerializable(newConnectionFn, "newConnectionFn");
-        checkSerializable(newSessionFn, "newSessionFn");
         checkSerializable(messageFn, "messageFn");
-        checkSerializable(sendFn, "sendFn");
-        checkSerializable(flushFn, "flushFn");
 
-        return ProcessorMetaSupplier.of(
-            PREFERRED_LOCAL_PARALLELISM,
-            new Supplier<>(newConnectionFn, newSessionFn, messageFn, sendFn, flushFn, name, isTopic)
-        );
+        return ProcessorMetaSupplier.of(PREFERRED_LOCAL_PARALLELISM,
+                new Supplier<>(newConnectionFn, messageFn, name, isTopic));
     }
 
     private static final class Supplier<T> implements ProcessorSupplier {
@@ -80,28 +73,19 @@ public final class WriteJmsP {
         static final long serialVersionUID = 1L;
 
         private final SupplierEx<? extends Connection> newConnectionFn;
-        private final FunctionEx<? super Connection, ? extends Session> newSessionFn;
         private final String name;
         private final boolean isTopic;
         private final BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn;
-        private final BiConsumerEx<? super MessageProducer, ? super Message> sendFn;
-        private final ConsumerEx<? super Session> flushFn;
 
         private transient Connection connection;
 
         private Supplier(SupplierEx<? extends Connection> newConnectionFn,
-                         FunctionEx<? super Connection, ? extends Session> newSessionFn,
                          BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn,
-                         BiConsumerEx<? super MessageProducer, ? super Message> sendFn,
-                         ConsumerEx<? super Session> flushFn,
                          String name,
                          boolean isTopic
         ) {
             this.newConnectionFn = newConnectionFn;
-            this.newSessionFn = newSessionFn;
             this.messageFn = messageFn;
-            this.sendFn = sendFn;
-            this.flushFn = flushFn;
             this.name = name;
             this.isTopic = isTopic;
         }
@@ -112,25 +96,24 @@ public final class WriteJmsP {
             connection.start();
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
             FunctionEx<Processor.Context, JmsContext> createFn = jet -> {
-                Session session = newSessionFn.apply(connection);
+                Session session = connection.createSession(false, AUTO_ACKNOWLEDGE);
                 Destination destination = isTopic ? session.createTopic(name) : session.createQueue(name);
                 MessageProducer producer = session.createProducer(destination);
                 return new JmsContext(session, producer);
             };
             BiConsumerEx<JmsContext, T> onReceiveFn = (jmsContext, item) -> {
                 Message message = messageFn.apply(jmsContext.session, item);
-                sendFn.accept(jmsContext.producer, message);
+                // TODO we use synchronous send here
+                jmsContext.producer.send(message);
             };
-            ConsumerEx<JmsContext> flushF = jmsContext -> flushFn.accept(jmsContext.session);
             ConsumerEx<JmsContext> destroyFn = jmsContext -> {
                 jmsContext.producer.close();
                 jmsContext.session.close();
             };
-            SupplierEx<Processor> supplier = writeBufferedP(createFn, onReceiveFn, flushF, destroyFn);
+            SupplierEx<Processor> supplier = writeBufferedP(createFn, onReceiveFn, ConsumerEx.noop(), destroyFn);
 
             return Stream.generate(supplier).limit(count).collect(toList());
         }
@@ -142,7 +125,7 @@ public final class WriteJmsP {
             }
         }
 
-        class JmsContext {
+        static class JmsContext {
             private final Session session;
             private final MessageProducer producer;
 
