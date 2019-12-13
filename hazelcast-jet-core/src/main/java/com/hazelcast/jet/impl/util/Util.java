@@ -24,6 +24,7 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.function.RunnableEx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
@@ -96,12 +97,8 @@ public final class Util {
         }
     }
 
-    public static void uncheckRun(@Nonnull RunnableExc r) {
-        try {
-            r.run();
-        } catch (Exception e) {
-            throw sneakyThrow(e);
-        }
+    public static void uncheckRun(@Nonnull RunnableEx r) {
+        r.run();
     }
 
     /**
@@ -123,10 +120,6 @@ public final class Util {
             }
         } while (!value.compareAndSet(prev, next));
         return true;
-    }
-
-    public interface RunnableExc<T extends Exception> {
-        void run() throws T;
     }
 
     public static JetInstance getJetInstance(NodeEngine nodeEngine) {
@@ -434,7 +427,7 @@ public final class Util {
         return name.replace('.', '_');
     }
 
-    public static <T extends Exception> void doWithClassLoader(ClassLoader cl, RunnableExc<T> action) throws T {
+    public static void doWithClassLoader(ClassLoader cl, RunnableEx action) {
         Thread currentThread = Thread.currentThread();
         ClassLoader previousCl = currentThread.getContextClassLoader();
         currentThread.setContextClassLoader(cl);
