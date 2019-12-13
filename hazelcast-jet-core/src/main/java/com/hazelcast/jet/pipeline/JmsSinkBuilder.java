@@ -49,7 +49,6 @@ public final class JmsSinkBuilder<T> {
     private FunctionEx<Connection, Session> sessionFn;
     private BiFunctionEx<Session, T, Message> messageFn;
     private BiConsumerEx<MessageProducer, Message> sendFn;
-    // TODO [viliam] remove this if we ever want to provide configurable guarantee
     private ConsumerEx<Session> flushFn;
 
     private String username;
