@@ -753,7 +753,7 @@ public final class Sinks {
      * [<date>-]<global processor index>[-<sequence>][".tmp"]
      * }</pre>
      *
-     * Legend (parts in {@code []} are optional):
+     * Description (parts in {@code []} are optional):
      * <ul>
      *     <li>{@code <date>}: the current date and time, see {@link
      *          FileSinkBuilder#rollByDate(String)}. Not present if rolling by
