@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.Message;
@@ -48,6 +49,7 @@ public final class JmsSourceBuilder {
 
     private FunctionEx<? super ConnectionFactory, ? extends Connection> connectionFn;
     private FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
+    private FunctionEx<? super Message, ?> messageIdFn = Message::getJMSMessageID;
 
     private String username;
     private String password;
@@ -58,17 +60,20 @@ public final class JmsSourceBuilder {
     /**
      * Use {@link Sources#jmsQueueBuilder} of {@link Sources#jmsTopicBuilder}.
      */
-    JmsSourceBuilder(SupplierEx<? extends ConnectionFactory> factorySupplier, boolean isTopic) {
+    JmsSourceBuilder(@Nonnull SupplierEx<? extends ConnectionFactory> factorySupplier, boolean isTopic) {
         checkSerializable(factorySupplier, "factorySupplier");
-        this.factorySupplier = factorySupplier;
+        this.factorySupplier = checkNotNull(factorySupplier);
         this.isTopic = isTopic;
     }
 
     /**
      * Sets the connection parameters. If {@link #connectionFn(FunctionEx)} is
      * set, these parameters are ignored.
+     *
+     * @return this instance for fluent API
      */
-    public JmsSourceBuilder connectionParams(String username, String password) {
+    @Nonnull
+    public JmsSourceBuilder connectionParams(@Nullable String username, @Nullable String password) {
         this.username = username;
         this.password = password;
         return this;
@@ -86,9 +91,12 @@ public final class JmsSourceBuilder {
      * </pre>
      * That means it creates an XA connection if the factory is an XA factory.
      * The user name and password set with {@link #connectionParams} are used.
+     *
+     * @return this instance for fluent API
      */
+    @Nonnull
     public JmsSourceBuilder connectionFn(
-            @Nonnull FunctionEx<? super ConnectionFactory, ? extends Connection> connectionFn
+            @Nullable FunctionEx<? super ConnectionFactory, ? extends Connection> connectionFn
     ) {
         checkSerializable(connectionFn, "connectionFn");
         this.connectionFn = connectionFn;
@@ -96,25 +104,55 @@ public final class JmsSourceBuilder {
     }
 
     /**
-     * Sets the name of the destination (name of the topic or queue). If {@code
-     * consumerFn} is provided, this parameter is ignored.
+     * Sets the name of the destination (name of the topic or queue). If {@link
+     * #consumerFn(FunctionEx)} is provided, this parameter is ignored.
+     *
+     * @return this instance for fluent API
      */
-    public JmsSourceBuilder destinationName(String destinationName) {
+    @Nonnull
+    public JmsSourceBuilder destinationName(@Nullable String destinationName) {
         this.destinationName = destinationName;
         return this;
     }
 
     /**
      * Sets the function which creates the message consumer from session.
-     * <p>
-     * If not provided, {@code Session#createConsumer(destinationName)} is used
+     *
+     * <p>If not provided, {@code Session#createConsumer(destinationName)} is used
      * to create the consumer. See {@link #destinationName(String)}.
+     *
+     * <p>If you're consuming a topic and you create a shared consumer, make
+     * sure to also call {@link #sharedConsumer(boolean) sharedConsumer(true)}.
+     *
+     * @return this instance for fluent API
      */
+    @Nonnull
     public JmsSourceBuilder consumerFn(
-            @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn
+            @Nullable FunctionEx<? super Session, ? extends MessageConsumer> consumerFn
     ) {
         checkSerializable(consumerFn, "consumerFn");
         this.consumerFn = consumerFn;
+        return this;
+    }
+
+    /**
+     * Configures the function to extract IDs from the messages, if
+     * exactly-once guarantee is used. If lower guarantee is used, this
+     * function is not used.
+     *
+     * <p>Make sure the function returns non-null for every message, or the job
+     * will fail. The returned object should also implement {@code equals()}
+     * and {@code hashCode()} methods. If you don't have a unique message ID,
+     * {@linkplain #maxGuarantee(ProcessingGuarantee) reduce the guarantee} to
+     * at-least-once.
+     *
+     * <p>The default is to use {@code Message.getJMSMessageID()}.
+     *
+     * @return this instance for fluent API
+     */
+    @Nonnull
+    public JmsSourceBuilder messageIdFn(@Nonnull FunctionEx<? super Message, ?> messageIdFn) {
+        this.messageIdFn = checkNotNull(messageIdFn);
         return this;
     }
 
@@ -123,26 +161,34 @@ public final class JmsSourceBuilder {
      * decrease the guarantee of this source compared to the job's guarantee.
      * If you configure stronger guarantee than the job has, the job's
      * guarantee will be used. Use it if you want to avoid the overhead of
-     * acknowledging the messages in transactions if you don't need it.
-     * <p>
-     * XA transactions are required for exactly-once mode. If your job uses
-     * exactly-once guarantee and your JMS client doesn't support XA
-     * transactions, use {@code AT_LEAST_ONCE} guarantee to use normal
-     * transactions. In this mode the transaction will be committed in the 2nd
-     * phase of the snapshot so you're guaranteed that each message will be
-     * processed at least once if the job is forced to restart.
-     * <p>
-     * If you use {@link ProcessingGuarantee#NONE}, messages will be consumed
-     * in auto-acknowledge mode. In this mode some messages can be processed
-     * more than once and some not at all if the job is forced to restart.
-     * <p>
-     * The default is {@link ProcessingGuarantee#EXACTLY_ONCE}, which means
-     * that source's guarantee will match job's guarantee.
+     * acknowledging the messages in transactions if you can tolerate
+     * duplicated or missed messages.
+     *
+     * <p>If the processing guarantee is NONE, the processor will consume the
+     * messages in auto-acknowledge mode. If the processing guarantee is other
+     * than NONE, the processor will acknowledge messages in transactions in
+     * the 2nd phase of the snapshot, that is after all downstream stages fully
+     * processed the messages. Additionally, if the processing guarantee is
+     * EXACTLY_ONCE, the processor will store {@linkplain
+     * #messageIdFn(FunctionEx) message IDs} of the unacknowledged messages to
+     * the snapshot and should the job fail after the snapshot was successful,
+     * but before Jet managed to acknowledge the messages, the stored IDs will
+     * be used to deduplicate the re-delivered messages.
+     *
+     * <p>If you use a non-durable consumer with a topic, set the max-guarantee
+     * to NONE - the broker will not redeliver the unacknowledged messages
+     * anyway. If you didn't specify your own {@link #consumerFn(FunctionEx)},
+     * Jet will do it for you automatically because the consumer for the topic
+     * is non-durable by default.
+     *
+     * <p>The default is {@link ProcessingGuarantee#EXACTLY_ONCE}, which means
+     * that source's guarantee will match the job's guarantee.
      *
      * @return this instance for fluent API
      */
-    public JmsSourceBuilder maxGuarantee(ProcessingGuarantee guarantee) {
-        maxGuarantee = guarantee;
+    @Nonnull
+    public JmsSourceBuilder maxGuarantee(@Nonnull ProcessingGuarantee guarantee) {
+        maxGuarantee = checkNotNull(guarantee);
         return this;
     }
 
@@ -154,8 +200,8 @@ public final class JmsSourceBuilder {
      * <p>
      * If the consumer is not shared, only single processor on single member
      * will connect to the broker to receive the messages. If you set this
-     * parameter to {@code true} for a non-shared consumer, each message will
-     * be emitted duplicately on each member.
+     * parameter to {@code true} for a non-shared consumer, all messages will
+     * be emitted on every member, leading to duplicate processing.
      * <p>
      * The consumer for a queue is always assumed to be shared, regardless of
      * this setting.
@@ -164,6 +210,7 @@ public final class JmsSourceBuilder {
      *
      * @return this instance for fluent API
      */
+    @Nonnull
     public JmsSourceBuilder sharedConsumer(boolean isSharedConsumer) {
         this.isSharedConsumer = isSharedConsumer;
         return this;
@@ -177,10 +224,12 @@ public final class JmsSourceBuilder {
      *                    message
      * @param <T> the type of the items the source emits
      */
+    @Nonnull
     public <T> StreamSource<T> build(@Nonnull FunctionEx<? super Message, ? extends T> projectionFn) {
         String usernameLocal = username;
         String passwordLocal = password;
         String destinationLocal = destinationName;
+        ProcessingGuarantee maxGuaranteeLocal = maxGuarantee;
         @SuppressWarnings("UnnecessaryLocalVariable")
         boolean isTopicLocal = isTopic;
 
@@ -194,7 +243,14 @@ public final class JmsSourceBuilder {
             consumerFn = session -> session.createConsumer(isTopicLocal
                     ? session.createTopic(destinationLocal)
                     : session.createQueue(destinationLocal));
+            if (isTopic) {
+                // the user didn't specify a custom consumerFn and we know we're using a non-durable consumer
+                // for a topic - there's no point in using any guarantee, see `maxGuarantee`
+                maxGuaranteeLocal = ProcessingGuarantee.NONE;
+            }
         }
+
+        ProcessingGuarantee maxGuaranteeFinal = maxGuaranteeLocal;
 
         FunctionEx<? super ConnectionFactory, ? extends Connection> connectionFnLocal = connectionFn;
         @SuppressWarnings("UnnecessaryLocalVariable")
@@ -204,14 +260,17 @@ public final class JmsSourceBuilder {
 
         Function<EventTimePolicy<? super T>, ProcessorMetaSupplier> metaSupplierFactory =
                 policy -> isTopic
-                    ? streamJmsTopicP(newConnectionFn, consumerFn, isSharedConsumer, projectionFn, policy, maxGuarantee)
-                    : streamJmsQueueP(newConnectionFn, consumerFn, projectionFn, policy, maxGuarantee);
+                        ? streamJmsTopicP(newConnectionFn, consumerFn, isSharedConsumer, messageIdFn, projectionFn, policy,
+                                maxGuaranteeFinal)
+                        : streamJmsQueueP(newConnectionFn, consumerFn, messageIdFn, projectionFn, policy,
+                                maxGuaranteeFinal);
         return Sources.streamFromProcessorWithWatermarks(sourceName(), true, metaSupplierFactory);
     }
 
     /**
      * Convenience for {@link JmsSourceBuilder#build(FunctionEx)}.
      */
+    @Nonnull
     public StreamSource<Message> build() {
         return build(message -> message);
     }

@@ -342,12 +342,13 @@ public final class SourceProcessors {
     public static <T> ProcessorMetaSupplier streamJmsQueueP(
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
+            @Nonnull FunctionEx<? super Message, ?> messageIdFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy,
             ProcessingGuarantee maxGuarantee
     ) {
         ProcessorSupplier pSupplier = new StreamJmsP.Supplier<>(
-                newConnectionFn, consumerFn, projectionFn, eventTimePolicy, maxGuarantee);
+                newConnectionFn, consumerFn, messageIdFn, projectionFn, eventTimePolicy, maxGuarantee);
         return ProcessorMetaSupplier.of(StreamJmsP.PREFERRED_LOCAL_PARALLELISM, pSupplier);
     }
 
@@ -366,12 +367,13 @@ public final class SourceProcessors {
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
             boolean isSharedConsumer,
+            @Nonnull FunctionEx<? super Message, ?> messageIdFn,
             @Nonnull FunctionEx<? super Message, ? extends T> projectionFn,
             @Nonnull EventTimePolicy<? super T> eventTimePolicy,
             ProcessingGuarantee maxGuarantee
     ) {
         ProcessorSupplier pSupplier = new StreamJmsP.Supplier<>(
-                newConnectionFn, consumerFn, projectionFn, eventTimePolicy, maxGuarantee);
+                newConnectionFn, consumerFn, messageIdFn, projectionFn, eventTimePolicy, maxGuarantee);
         return isSharedConsumer
                 ? ProcessorMetaSupplier.of(StreamJmsP.PREFERRED_LOCAL_PARALLELISM, pSupplier)
                 : ProcessorMetaSupplier.forceTotalParallelismOne(pSupplier);

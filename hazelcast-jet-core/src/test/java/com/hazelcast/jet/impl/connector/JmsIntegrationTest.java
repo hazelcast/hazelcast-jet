@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.collection.IList;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JobConfig;
@@ -77,6 +78,13 @@ import static javax.jms.Session.AUTO_ACKNOWLEDGE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
@@ -197,6 +205,9 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         StreamSource<String> source = Sources.jmsQueueBuilder(JmsIntegrationTest::getConnectionFactory)
                                              .connectionFn(ConnectionFactory::createConnection)
                                              .consumerFn(session -> session.createConsumer(session.createQueue(queueName)))
+                                             .messageIdFn(m -> {
+                                                 throw new UnsupportedOperationException();
+                                             })
                                              .build(TEXT_MESSAGE_FN);
 
         p.readFrom(source).withoutTimestamps().writeTo(Sinks.list(sinkList));
@@ -206,6 +217,52 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
         List<Object> messages = sendMessages(true);
         assertEqualsEventually(sinkList::size, messages.size());
         assertContainsAll(sinkList, messages);
+    }
+
+    @Test
+    public void when_messageIdFn_then_used() throws JMSException {
+        StreamSource<String> source = Sources.jmsQueueBuilder(JmsIntegrationTest::getConnectionFactory)
+                                             .destinationName(destinationName)
+                                             .messageIdFn(m -> {
+                                                 throw new RuntimeException("mock exception");
+                                             })
+                                             .build(TEXT_MESSAGE_FN);
+        p.readFrom(source).withoutTimestamps().writeTo(Sinks.logger());
+
+        Job job = instance().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE));
+        List<Object> messages = sendMessages(true);
+        try {
+            job.join();
+            fail("job didn't fail");
+        } catch (Exception e) {
+            assertContains(e.toString(), "mock exception");
+        }
+    }
+
+    @Test
+    public void when_exactlyOnceTopicDefaultConsumer_then_noGuaranteeUsed() {
+        SupplierEx<ConnectionFactory> mockSupplier = () -> {
+            ConnectionFactory mockConnectionFactory = mock(ConnectionFactory.class);
+            Connection mockConn = mock(Connection.class);
+            Session mockSession = mock(Session.class);
+            MessageConsumer mockConsumer = mock(MessageConsumer.class);
+            when(mockConnectionFactory.createConnection(null, null)).thenReturn(mockConn);
+            when(mockConn.createSession(anyBoolean(), anyInt())).thenReturn(mockSession);
+            when(mockSession.createConsumer(any())).thenReturn(mockConsumer);
+            // throw, if commit is called
+            doThrow(new AssertionError("commit must not be called")).when(mockSession).commit();
+            return (ConnectionFactory) mockConnectionFactory;
+        };
+
+        p.readFrom(Sources.jmsTopic(mockSupplier, destinationName))
+         .withoutTimestamps()
+         .writeTo(Sinks.logger());
+
+        Job job = instance().newJob(p, new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(10));
+        assertJobStatusEventually(job, RUNNING);
+        JobRepository jr = new JobRepository(instance());
+        waitForFirstSnapshot(jr, job.getId(), 5, true);
+        assertTrueAllTheTime(() -> assertEquals(RUNNING, job.getStatus()), 1);
     }
 
     @Test

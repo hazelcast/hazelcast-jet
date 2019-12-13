@@ -31,6 +31,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.impl.util.Util;
+import com.hazelcast.jet.pipeline.JmsSourceBuilder;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -64,8 +65,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
     private final Connection connection;
     private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
     private final FunctionEx<? super Message, ? extends T> projectionFn;
-    // TODO [viliam] expose this fn to the user
-    private final FunctionEx<? super Message, ?> messageIdFn = Message::getJMSMessageID;
+    private final FunctionEx<? super Message, ?> messageIdFn;
     private final EventTimeMapper<? super T> eventTimeMapper;
     private final ProcessingGuarantee guarantee;
     private final Set<Object> seenIds;
@@ -77,12 +77,14 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     StreamJmsP(Connection connection,
                FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
+               FunctionEx<? super Message, ?> messageIdFn,
                FunctionEx<? super Message, ? extends T> projectionFn,
                EventTimePolicy<? super T> eventTimePolicy,
                ProcessingGuarantee guarantee
     ) {
         this.connection = connection;
         this.consumerFn = consumerFn;
+        this.messageIdFn = messageIdFn;
         this.projectionFn = projectionFn;
         this.guarantee = guarantee;
 
@@ -126,7 +128,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
                         Object msgId = messageIdFn.apply(t);
                         if (msgId == null) {
                             throw new JetException("Received a message without an ID. All messages must have an ID, " +
-                                    "you can specify one using TODO"); // TODO [viliam]
+                                    "you can specify an extracting function using "
+                                    + JmsSourceBuilder.class.getSimpleName() + ".messageIdFn()");
                         }
                         if (!seenIds.add(msgId)) {
                             continue;
@@ -197,6 +200,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         private final SupplierEx<? extends Connection> newConnectionFn;
         private final FunctionEx<? super Session, ? extends MessageConsumer> consumerFn;
+        private final FunctionEx<? super Message, ?> messageIdFn;
         private final FunctionEx<? super Message, ? extends T> projectionFn;
         private final EventTimePolicy<? super T> eventTimePolicy;
         private ProcessingGuarantee sourceGuarantee;
@@ -206,16 +210,19 @@ public class StreamJmsP<T> extends AbstractProcessor {
         public Supplier(
                 SupplierEx<? extends Connection> newConnectionFn,
                 FunctionEx<? super Session, ? extends MessageConsumer> consumerFn,
+                FunctionEx<? super Message, ?> messageIdFn,
                 FunctionEx<? super Message, ? extends T> projectionFn,
                 EventTimePolicy<? super T> eventTimePolicy,
                 ProcessingGuarantee sourceGuarantee
         ) {
             checkSerializable(newConnectionFn, "newConnectionFn");
             checkSerializable(consumerFn, "consumerFn");
+            checkSerializable(messageIdFn, "messageIdFn");
             checkSerializable(projectionFn, "projectionFn");
 
             this.newConnectionFn = newConnectionFn;
             this.consumerFn = consumerFn;
+            this.messageIdFn = messageIdFn;
             this.projectionFn = projectionFn;
             this.eventTimePolicy = eventTimePolicy;
             this.sourceGuarantee = sourceGuarantee;
@@ -238,8 +245,8 @@ public class StreamJmsP<T> extends AbstractProcessor {
         @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
             return range(0, count)
-                    .mapToObj(i ->
-                            new StreamJmsP<>(connection, consumerFn, projectionFn, eventTimePolicy, sourceGuarantee))
+                    .mapToObj(i -> new StreamJmsP<>(
+                            connection, consumerFn, messageIdFn, projectionFn, eventTimePolicy, sourceGuarantee))
                     .collect(Collectors.toList());
         }
     }
