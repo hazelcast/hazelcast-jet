@@ -176,9 +176,9 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     }
 
     private void recoverTransaction(KafkaTransactionId txnId, boolean commit) {
-        HashMap<Object, Object> properties2 = new HashMap<>(properties);
+        HashMap<String, Object> properties2 = new HashMap<>(properties);
         properties2.put("transactional.id", txnId.getKafkaId());
-        try (KafkaProducer p  = new KafkaProducer(properties2)) {
+        try (KafkaProducer<?, ?> p  = new KafkaProducer<>(properties2)) {
             if (commit) {
                 ResumeTransactionUtil.resumeTransaction(p, txnId.producerId(), txnId.epoch(),
                         txnId.getKafkaId());
@@ -213,7 +213,6 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     /**
      * Use {@link KafkaProcessors#writeKafkaP(Properties, FunctionEx, boolean)}
      */
-    @SuppressWarnings("unchecked")
     public static <T, K, V> SupplierEx<Processor> supplier(
             @Nonnull Properties properties,
             @Nonnull Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn,
@@ -222,7 +221,9 @@ public final class WriteKafkaP<T, K, V> implements Processor {
         if (properties.containsKey("transactional.id")) {
             throw new IllegalArgumentException("Property `transactional.id` must not be set, Jet sets it as needed");
         }
-        return () -> new WriteKafkaP<>(new HashMap<>((Map) properties), toRecordFn, exactlyOnce);
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        Map<String, Object> castProperties = (Map) properties;
+        return () -> new WriteKafkaP<>(new HashMap<>(castProperties), toRecordFn, exactlyOnce);
     }
 
     /**
@@ -285,21 +286,19 @@ public final class WriteKafkaP<T, K, V> implements Processor {
     }
 
     public static class KafkaTransactionId implements TwoPhaseSnapshotCommitUtility.TransactionId, Serializable {
-        private final long jobId;
-        private final String jobName;
-        private final String vertexId;
         private final int processorIndex;
-        private final int transactionIndex;
         private long producerId = -1;
         private short epoch = -1;
+        private final String kafkaId;
+        private final int hashCode;
 
         KafkaTransactionId(long jobId, String jobName, @Nonnull String vertexId, int processorIndex,
                            int transactionIndex) {
-            this.jobId = jobId;
-            this.jobName = jobName;
-            this.vertexId = vertexId;
             this.processorIndex = processorIndex;
-            this.transactionIndex = transactionIndex;
+
+            kafkaId = "jet.job-" + idToString(jobId) + '.' + sanitize(jobName) + '.' + sanitize(vertexId) + '.'
+                    + processorIndex + "-" + transactionIndex;
+            hashCode = Objects.hash(jobId, vertexId, processorIndex);
         }
 
         @Override
@@ -315,7 +314,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
             return epoch;
         }
 
-        void updateProducerAndEpoch(KafkaProducer producer) {
+        void updateProducerAndEpoch(KafkaProducer<?, ?> producer) {
             producerId = ResumeTransactionUtil.getProducerId(producer);
             epoch = ResumeTransactionUtil.getEpoch(producer);
         }
@@ -342,13 +341,12 @@ public final class WriteKafkaP<T, K, V> implements Processor {
 
         @Override
         public int hashCode() {
-            return Objects.hash(jobId, vertexId, processorIndex);
+            return hashCode;
         }
 
         @Nonnull
         String getKafkaId() {
-            return "jet.job-" + idToString(jobId) + '.' + sanitize(jobName) + '.' + sanitize(vertexId) + '.'
-                    + processorIndex + "-" + transactionIndex;
+            return kafkaId;
         }
 
         private static String sanitize(String s) {

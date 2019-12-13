@@ -95,7 +95,6 @@ public final class KafkaSinks {
             @Nonnull Properties properties,
             @Nonnull FunctionEx<? super E, ProducerRecord<K, V>> toRecordFn
     ) {
-        // TODO [viliam] what should be the default for exactlyOnce?
         return Sinks.fromProcessor("writeKafka", writeKafkaP(properties, toRecordFn, true));
     }
 
