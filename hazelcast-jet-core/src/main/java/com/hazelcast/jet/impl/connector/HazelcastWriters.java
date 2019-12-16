@@ -162,7 +162,7 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeReliableTopicSupplier(@Nonnull String name,
                                                                    @Nullable ClientConfig clientConfig) {
         boolean isLocal = clientConfig == null;
-        return ProcessorMetaSupplier.of(new WriterSupplier<>(
+        return preferLocalParallelismOne(new WriterSupplier<>(
                 asXmlString(clientConfig),
                 ArrayList::new,
                 ArrayList::add,
@@ -195,6 +195,11 @@ public final class HazelcastWriters {
             @Override
             public Map<Object, Object> getTags() {
                 return tags;
+            }
+
+            @Override
+            public int preferredLocalParallelism() {
+                return 1;
             }
 
             @Nonnull @Override

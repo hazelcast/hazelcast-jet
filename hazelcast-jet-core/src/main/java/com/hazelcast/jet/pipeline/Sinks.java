@@ -680,8 +680,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Local parallelism for this sink doesn't have to be one, it's set to
-     * the default.
+     * Local parallelism for this sink is 1.
      */
     @Nonnull
     public static <T> Sink<T> reliableTopic(@Nonnull String reliableTopicName) {
@@ -700,8 +699,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Local parallelism for this sink doesn't have to be one, it's set to
-     * the default.
+     * Local parallelism for this sink is 1.
      */
     @Nonnull
     public static <T> Sink<T> reliableTopic(@Nonnull ITopic<Object> reliableTopic) {
@@ -717,8 +715,7 @@ public final class Sinks {
      * the items will likely be duplicated, providing an <i>at-least-once</i>
      * guarantee.
      * <p>
-     * Local parallelism for this sink doesn't have to be one, it's set to
-     * the default.
+     * Local parallelism for this sink is 1.
      */
     @Nonnull
     public static <T> Sink<T> remoteReliableTopic(@Nonnull String reliableTopicName, @Nonnull ClientConfig clientConfig) {
@@ -1008,7 +1005,7 @@ public final class Sinks {
      * other jobs publishing into the same observable, the results might
      * be confusing.
      * <p>
-     * This sink is cooperative and uses default local parallelism.
+     * This sink is cooperative and uses local parallelism of 1.
      */
     @Nonnull
     public static <T> Sink<T> observable(String name) {
@@ -1034,7 +1031,7 @@ public final class Sinks {
      * other jobs publishing into the same observable, the results might
      * be confusing.
      * <p>
-     * This sink is cooperative and uses default local parallelism.
+     * This sink is cooperative and uses local parallelism of 1.
      */
     @Nonnull
     public static <T> Sink<T> observable(Observable<? super T> observable) {
