@@ -38,11 +38,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -71,9 +71,9 @@ public class ObservableResultsTest extends TestInClusterSupport {
         pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .writeTo(Sinks.observable(observableName));
 
-        Job job = jet().newJob(pipeline);
-        job.join();
-
+        //when
+        jet().newJob(pipeline).join();
+        //then
         assertSortedValues(testObserver, 0L, 1L, 2L, 3L, 4L);
         assertError(testObserver, null);
         assertCompletions(testObserver, 1);
@@ -93,9 +93,10 @@ public class ObservableResultsTest extends TestInClusterSupport {
         pipeline.readFrom(errorSource)
                 .writeTo(Sinks.observable(observableName));
 
+        //when
         Job job = jet().newJob(pipeline);
         assertTrueEventually(() -> assertEquals(JobStatus.FAILED, job.getStatus()));
-
+        //then
         assertSortedValues(testObserver);
         assertError(testObserver, "Ooops!");
         assertCompletions(testObserver, 0);
@@ -109,15 +110,17 @@ public class ObservableResultsTest extends TestInClusterSupport {
                 .map(SimpleEvent::sequence)
                 .writeTo(Sinks.observable(observableName));
 
+        //when
         Job job = jet().newJob(pipeline);
-
+        //then
         assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
         assertError(testObserver, null);
         assertCompletions(testObserver, 0);
 
+        //when
         job.cancel();
-        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
-        assertError(testObserver, null);
+        //then
+        assertError(testObserver, "CancellationException");
         assertCompletions(testObserver, 0);
     }
 
@@ -129,14 +132,19 @@ public class ObservableResultsTest extends TestInClusterSupport {
                 .map(SimpleEvent::sequence)
                 .writeTo(Sinks.observable(observableName));
 
+        //when
         Job job = jet().newJob(pipeline);
-
+        //then
         assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
         assertError(testObserver, null);
         assertCompletions(testObserver, 0);
 
+        //when
         job.restart();
+        //then
+        int resultsSoFar = testObserver.getSortedValues().size();
         assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
+        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > resultsSoFar));
         assertError(testObserver, null);
         assertCompletions(testObserver, 0);
     }
@@ -152,13 +160,14 @@ public class ObservableResultsTest extends TestInClusterSupport {
         stage.filter(i -> i % 2 == 0).writeTo(Sinks.observable(observableName));
         stage.filter(i -> i % 2 != 0).writeTo(Sinks.observable("otherObservable"));
 
+        //when
         Job job = jet().newJob(pipeline);
         job.join();
-
+        //then
         assertSortedValues(testObserver, 0L, 2L, 4L);
         assertError(testObserver, null);
         assertCompletions(testObserver, 1);
-
+        //also
         assertSortedValues(otherTestObserver, 1L, 3L);
         assertError(otherTestObserver, null);
         assertCompletions(otherTestObserver, 1);
@@ -171,9 +180,10 @@ public class ObservableResultsTest extends TestInClusterSupport {
         readStage.writeTo(Sinks.observable(observableName));
         readStage.writeTo(Sinks.observable(observableName));
 
+        //when
         Job job = jet().newJob(pipeline);
         job.join();
-
+        //then
         assertSortedValues(testObserver, 0L, 0L, 1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L);
         assertError(testObserver, null);
         assertCompletions(testObserver, 1);
@@ -187,8 +197,10 @@ public class ObservableResultsTest extends TestInClusterSupport {
         if (error == null) {
             assertNull(observer.getError());
         } else {
-            assertTrueEventually(() ->
-                    assertTrue(Objects.requireNonNull(observer.getError()).getMessage().contains(error)));
+            assertTrueEventually(() -> {
+                assertNotNull(observer.getError());
+                assertTrue(observer.getError().toString().contains(error));
+            });
         }
     }
 
