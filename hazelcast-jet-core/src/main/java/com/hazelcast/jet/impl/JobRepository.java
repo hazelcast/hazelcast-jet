@@ -59,6 +59,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.TimeUnit;
@@ -550,6 +551,7 @@ public class JobRepository {
     private static Set<String> ownedObservables(DAG dag) {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
                 .map(vertex -> (String) vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
 
