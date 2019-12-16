@@ -35,7 +35,6 @@ import com.hazelcast.spi.impl.executionservice.ExecutionService;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
@@ -86,15 +85,14 @@ public final class ObservableRepository {
         }
     }
 
-    public static CompletionStage<Long> publishIntoObservable(Collection data, String name, HazelcastInstance hzInstance) {
-        Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, name);
-        return ringbuffer.addAllAsync(data, OverflowPolicy.OVERWRITE);
+    @Nonnull
+    private static Ringbuffer<Object> getRingBuffer(HazelcastInstance instance, String observableName) {
+        return instance.getRingbuffer(getRingBufferName(observableName));
     }
 
     @Nonnull
-    private static Ringbuffer<Object> getRingBuffer(HazelcastInstance instance, String observableName) {
-        String ringBufferName = JET_OBSERVABLE_NAME_PREFIX + observableName;
-        return instance.getRingbuffer(ringBufferName);
+    public static String getRingBufferName(String observableName) {
+        return JET_OBSERVABLE_NAME_PREFIX + observableName;
     }
 
     private static Executor getExecutor(JetInstance jet) {

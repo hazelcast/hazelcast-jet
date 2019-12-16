@@ -23,56 +23,60 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.ringbuffer.OverflowPolicy;
+import com.hazelcast.ringbuffer.Ringbuffer;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
+import java.util.AbstractCollection;
 import java.util.Collection;
-import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
 public final class WriteObservableP<T> implements Processor {
 
-    private final String name;
-    private final HazelcastInstance instance;
-    private final ILogger logger;
+    private static final int ASYNC_OPS_LIMIT = 16;
 
-    private AtomicInteger pendingWrites = new AtomicInteger(0);
-    private List<T> buffer;
+    private final String ringbufferName;
 
-    private WriteObservableP(String name, HazelcastInstance instance, ILogger logger) {
-        this.name = name;
-        this.instance = instance;
-        this.logger = logger;
+    private Ringbuffer<Object> ringbuffer;
+    private ILogger logger;
+    private final AtomicInteger pendingWrites = new AtomicInteger(0);
+    private BiConsumer<Long, Throwable> callback = this::onAddAllComplete;
+
+    private InboxAsCollection inboxAsCollection = new InboxAsCollection();
+
+    private WriteObservableP(String ringbufferName) {
+        this.ringbufferName = ringbufferName;
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        buffer = new ArrayList<>();
+        HazelcastInstance instance = context.jetInstance().getHazelcastInstance();
+        this.logger = context.logger();
+        this.ringbuffer = instance.getRingbuffer(ObservableRepository.getRingBufferName(ringbufferName));
     }
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        inbox.drain(o -> buffer.add((T) o));
-
-        if (!buffer.isEmpty()) {
-            pendingWrites.incrementAndGet();
-            ObservableRepository
-                    .publishIntoObservable(buffer, name, instance)
-                    .whenComplete(
-                            (l, throwable) -> {
-                                if (throwable != null) {
-                                    logger.warning("Failed publishing into observable. Cause: " + throwable.getMessage()
-                                            , throwable);
-                                }
-                                pendingWrites.decrementAndGet();
-                            }
-                    );
-            buffer.clear();
+        if (!Util.tryIncrement(pendingWrites, 1, ASYNC_OPS_LIMIT)) {
+            return;
         }
+        inboxAsCollection.inbox = inbox;
+        ringbuffer.addAllAsync(inboxAsCollection, OverflowPolicy.OVERWRITE)
+                .whenComplete(callback);
+    }
+
+    private void onAddAllComplete(Long result, Throwable throwable) {
+        if (throwable != null) {
+            logger.warning("Failed publishing into observable: " + throwable, throwable);
+        }
+        pendingWrites.decrementAndGet();
     }
 
     @Override
@@ -96,26 +100,45 @@ public final class WriteObservableP<T> implements Processor {
 
         private final String name;
 
-        private transient HazelcastInstance instance;
-        private transient ILogger logger;
-
         Supplier(String name) {
             this.name = name;
         }
 
-        @Override
-        public void init(@Nonnull Context context) {
-            this.instance = context.jetInstance().getHazelcastInstance();
-            this.logger = context.logger();
-        }
-
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new WriteObservableP<T>(name, instance, logger))
+            return Stream.generate(() -> new WriteObservableP<T>(name))
                     .limit(count)
                     .collect(toList());
         }
     }
 
+    private static class InboxAsCollection extends AbstractCollection<Object> {
+        private Inbox inbox;
+
+        @Nonnull @Override
+        public Iterator<Object> iterator() {
+            // reset the inbox so that we can only iterate once. After iteration the inbox is empty.
+            Inbox localInbox = inbox;
+            if (localInbox == null) {
+                throw new IllegalStateException("2nd iteration");
+            }
+            inbox = null;
+            return new Iterator<Object>() {
+                @Override
+                public boolean hasNext() {
+                    return localInbox.peek() != null;
+                }
+
+                @Override
+                public Object next() {
+                    return localInbox.poll();
+                }
+            };
+        }
+
+        @Override
+        public int size() {
+            return inbox.size();
+        }
+    }
 }
