@@ -43,6 +43,7 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -50,6 +51,7 @@ import java.util.function.Supplier;
 public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     public static final int DEFAULT_CHUNK_SIZE = 128 * 1024;
+    private static final Executor DIRECT_EXECUTOR = Runnable::run;
 
     final int usableChunkCapacity; // this includes the serialization header for byte[], but not the terminator
     final byte[] serializedByteArrayHeader = new byte[3 * Bits.INT_SIZE_IN_BYTES];
@@ -255,7 +257,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                     new SnapshotDataKey(partitionKeys[partitionId], currentSnapshotId, vertexName, partitionSequence),
                     data);
             partitionSequence += memberCount;
-            future.andThen(callback);
+            future.andThen(callback, DIRECT_EXECUTOR);
             numActiveFlushes.incrementAndGet();
         } catch (HazelcastInstanceNotActiveException ignored) {
             return false;
