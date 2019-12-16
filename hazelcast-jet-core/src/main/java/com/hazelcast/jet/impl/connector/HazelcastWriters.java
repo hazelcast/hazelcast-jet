@@ -199,13 +199,7 @@ public final class HazelcastWriters {
 
             @Nonnull @Override
             public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-                return (FunctionEx<? super Address, ? extends ProcessorSupplier>) (Address x) -> new WriterSupplier<>(
-                        null,
-                        ArrayList::new,
-                        ArrayList::add,
-                        ObservableRepository.getPublishFn(name),
-                        ConsumerEx.noop()
-                );
+                return address -> WriteObservableP.supplier(name);
             }
         };
     }

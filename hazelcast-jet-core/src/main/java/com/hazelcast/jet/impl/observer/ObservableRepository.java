@@ -20,8 +20,6 @@ import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.OperationTimeoutException;
-import com.hazelcast.function.ConsumerEx;
-import com.hazelcast.function.FunctionEx;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
@@ -36,8 +34,8 @@ import com.hazelcast.spi.exception.DistributedObjectDestroyedException;
 import com.hazelcast.spi.impl.executionservice.ExecutionService;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
@@ -88,14 +86,9 @@ public final class ObservableRepository {
         }
     }
 
-    public static FunctionEx<HazelcastInstance, ConsumerEx<ArrayList<Object>>> getPublishFn(String name) {
-        return hzInstance -> {
-            Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, name);
-            return buffer -> {
-                ringbuffer.addAllAsync(buffer, OverflowPolicy.OVERWRITE); //TODO (PR-1729): check for failure & finish
-                buffer.clear();
-            };
-        };
+    public static CompletionStage<Long> publishIntoObservable(Collection data, String name, HazelcastInstance hzInstance) {
+        Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, name);
+        return ringbuffer.addAllAsync(data, OverflowPolicy.OVERWRITE);
     }
 
     @Nonnull
