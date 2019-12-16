@@ -126,7 +126,7 @@ public final class JmsSinkBuilder<T> {
         SupplierEx<ConnectionFactory> factorySupplierLocal = factorySupplier;
         SupplierEx<Connection> newConnectionFn = () -> connectionFnLocal.apply(factorySupplierLocal.get());
         return Sinks.fromProcessor(sinkName(),
-                WriteJmsP.supplier(newConnectionFn, messageFn, destinationName, isTopic));
+                WriteJmsP.supplier(destinationName, newConnectionFn, messageFn, isTopic));
     }
 
     private String sinkName() {

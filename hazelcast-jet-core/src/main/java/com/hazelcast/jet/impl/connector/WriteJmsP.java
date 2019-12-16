@@ -55,16 +55,16 @@ public final class WriteJmsP {
      * SinkProcessors#writeJmsTopicP} instead
      */
     public static <T> ProcessorMetaSupplier supplier(
+            String destinationName,
             SupplierEx<? extends Connection> newConnectionFn,
             BiFunctionEx<? super Session, T, ? extends Message> messageFn,
-            String name,
             boolean isTopic
     ) {
         checkSerializable(newConnectionFn, "newConnectionFn");
         checkSerializable(messageFn, "messageFn");
 
         return ProcessorMetaSupplier.of(PREFERRED_LOCAL_PARALLELISM,
-                new Supplier<>(newConnectionFn, messageFn, name, isTopic));
+                new Supplier<>(destinationName, newConnectionFn, messageFn, isTopic));
     }
 
     private static final class Supplier<T> implements ProcessorSupplier {
@@ -78,14 +78,15 @@ public final class WriteJmsP {
 
         private transient Connection connection;
 
-        private Supplier(SupplierEx<? extends Connection> newConnectionFn,
-                         BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn,
-                         String name,
-                         boolean isTopic
+        private Supplier(
+                String destinationName,
+                SupplierEx<? extends Connection> newConnectionFn,
+                BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn,
+                boolean isTopic
         ) {
             this.newConnectionFn = newConnectionFn;
             this.messageFn = messageFn;
-            this.name = name;
+            this.name = destinationName;
             this.isTopic = isTopic;
         }
 

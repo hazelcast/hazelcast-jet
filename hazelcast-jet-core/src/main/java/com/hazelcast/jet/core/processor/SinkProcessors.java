@@ -295,11 +295,11 @@ public final class SinkProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJmsQueueP(
+            @Nonnull String queueName,
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
-            @Nonnull BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn,
-            @Nonnull String name
+            @Nonnull BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn
     ) {
-        return WriteJmsP.supplier(newConnectionFn, messageFn, name, false);
+        return WriteJmsP.supplier(queueName, newConnectionFn, messageFn, false);
     }
 
     /**
@@ -307,11 +307,11 @@ public final class SinkProcessors {
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJmsTopicP(
+            @Nonnull String topicName,
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
-            @Nonnull BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn,
-            @Nonnull String name
+            @Nonnull BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn
     ) {
-        return WriteJmsP.supplier(newConnectionFn, messageFn, name, true);
+        return WriteJmsP.supplier(topicName, newConnectionFn, messageFn, true);
     }
 
     /**
