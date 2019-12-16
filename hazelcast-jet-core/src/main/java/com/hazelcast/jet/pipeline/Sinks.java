@@ -24,6 +24,7 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
@@ -997,16 +998,47 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into {@link com.hazelcast.jet.Observable}s.
+     * Returns a sink which publishes values into an
+     * {@link com.hazelcast.jet.Observable} with the specified name.
+     * <p>
+     * Using such sinks with the same observable name in multiple jobs is
+     * not recommended. There is an automatic clean-up mechanism
+     * for observables which will kick in after the job completes and a
+     * certain amount of time has elapsed and if at that time there are
+     * other jobs publishing into the same observable, the results might
+     * be confusing.
      * <p>
      * This sink is cooperative and uses default local parallelism.
-     *
-     * @param name name of observable we want this sink to write into
      */
     @Nonnull
     public static <T> Sink<T> observable(String name) {
         return Sinks.fromProcessor(String.format("observableSink(%s)", name),
                 SinkProcessors.writeObservableP(name));
+    }
+
+    /**
+     * Returns a sink which publishes values into a given
+     * {@link com.hazelcast.jet.Observable}.
+     * <p>
+     * <strong>NOTE:</strong> Jet only remembers the name of the
+     * {@link com.hazelcast.jet.Observable} you supply and acquires
+     * an {@link com.hazelcast.jet.Observable} with that name on the local
+     * cluster. If you supply an {@link com.hazelcast.jet.Observable}
+     * instance from another cluster, no error will be thrown to indicate
+     * this.
+     * <p>
+     * Using such sinks with the same observable name in multiple jobs is
+     * not recommended. There is an automatic clean-up mechanism
+     * for observables which will kick in after the job completes and a
+     * certain amount of time has elapsed and if at that time there are
+     * other jobs publishing into the same observable, the results might
+     * be confusing.
+     * <p>
+     * This sink is cooperative and uses default local parallelism.
+     */
+    @Nonnull
+    public static <T> Sink<T> observable(Observable<? super T> observable) {
+        return observable(observable.name());
     }
 
 }
