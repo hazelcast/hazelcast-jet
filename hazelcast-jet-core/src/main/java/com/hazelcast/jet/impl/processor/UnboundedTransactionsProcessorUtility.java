@@ -22,9 +22,9 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.BroadcastKey;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor.Context;
+import com.hazelcast.jet.function.RunnableEx;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
-import com.hazelcast.jet.impl.util.Util.RunnableExc;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -47,7 +47,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
         extends TwoPhaseSnapshotCommitUtility<TXN_ID, RES> {
 
     private final Supplier<TXN_ID> createTxnIdFn;
-    private final RunnableExc abortUnfinishedTransactionsAction;
+    private final RunnableEx abortUnfinishedTransactionsAction;
 
     private LoggingNonThrowingResource<TXN_ID, RES> activeTransaction;
     private final List<LoggingNonThrowingResource<TXN_ID, RES>> pendingTransactions;
@@ -56,12 +56,6 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
     private boolean snapshotInProgress;
 
     /**
-     * @param outbox
-     * @param procContext
-     * @param externalGuarantee
-     * @param createTxnIdFn
-     * @param createTxnFn
-     * @param recoverAndCommitFn
      * @param abortUnfinishedTransactionsAction when called, it should abort
      *      all unfinished transactions found in the external system that
      *      pertain to the processor
@@ -73,7 +67,7 @@ public class UnboundedTransactionsProcessorUtility<TXN_ID extends TransactionId,
             @Nonnull Supplier<TXN_ID> createTxnIdFn,
             @Nonnull FunctionEx<TXN_ID, RES> createTxnFn,
             @Nonnull ConsumerEx<TXN_ID> recoverAndCommitFn,
-            @Nonnull RunnableExc abortUnfinishedTransactionsAction
+            @Nonnull RunnableEx abortUnfinishedTransactionsAction
     ) {
         super(outbox, procContext, false, externalGuarantee, createTxnFn, recoverAndCommitFn,
                 txnId -> {
