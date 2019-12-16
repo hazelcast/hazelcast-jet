@@ -999,12 +999,7 @@ public final class Sinks {
     /**
      * Returns a sink which publishes values into {@link com.hazelcast.jet.Observable}s.
      * <p>
-     * How exactly such {@link com.hazelcast.jet.Observable}s are implemented,
-     * or who and where will be observing is intentionally unspecified, all
-     * that matters is that they are identified based on their name.
-     * <p>
-     * Local parallelism for this sink doesn't have to be one, it's set to
-     * the default.
+     * This sink is cooperative and uses default local parallelism.
      *
      * @param name name of observable we want this sink to write into
      */

@@ -42,7 +42,6 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
-import static com.hazelcast.ringbuffer.impl.RingbufferService.TOPIC_RB_PREFIX;
 
 public final class ObservableRepository {
 
@@ -93,17 +92,16 @@ public final class ObservableRepository {
         return hzInstance -> {
             Ringbuffer<Object> ringbuffer = getRingBuffer(hzInstance, name);
             return buffer -> {
-                ringbuffer.addAllAsync(buffer, OverflowPolicy.OVERWRITE);
+                ringbuffer.addAllAsync(buffer, OverflowPolicy.OVERWRITE); //TODO (PR-1729): check for failure & finish
                 buffer.clear();
             };
         };
     }
 
     @Nonnull
-    private static Ringbuffer<Object> getRingBuffer(HazelcastInstance intance, String observableName) {
-        String topicName = JET_OBSERVABLE_NAME_PREFIX + observableName;
-        String ringBufferName = TOPIC_RB_PREFIX + topicName;
-        return intance.getRingbuffer(ringBufferName);
+    private static Ringbuffer<Object> getRingBuffer(HazelcastInstance instance, String observableName) {
+        String ringBufferName = JET_OBSERVABLE_NAME_PREFIX + observableName;
+        return instance.getRingbuffer(ringBufferName);
     }
 
     private static Executor getExecutor(JetInstance jet) {

@@ -149,6 +149,8 @@ public abstract class AbstractJetInstance implements JetInstance {
     @Override
     public <T> Observable<T> getObservable(@Nonnull String name) {
         return new ObservableImpl<>(name, this, getLogger());
+        //TODO (PR-1729): one per Jet instance?
+        //TODO (PR-1729): should shutdown listener when instance stops?
     }
 
     @Override
