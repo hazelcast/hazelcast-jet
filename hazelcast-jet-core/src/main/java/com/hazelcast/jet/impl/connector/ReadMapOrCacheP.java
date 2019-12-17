@@ -56,7 +56,7 @@ import com.hazelcast.map.impl.query.Query;
 import com.hazelcast.map.impl.query.QueryResult;
 import com.hazelcast.map.impl.query.QueryResultRow;
 import com.hazelcast.map.impl.query.ResultSegment;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.partition.Partition;
 import com.hazelcast.projection.Projection;
@@ -248,6 +248,11 @@ public final class ReadMapOrCacheP<F extends CompletableFuture, B, R> extends Ab
         @Override @Nonnull
         public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
             return address -> new LocalProcessorSupplier<>(readerSupplier, addrToPartitions.get(address));
+        }
+
+        @Override
+        public int preferredLocalParallelism() {
+            return 1;
         }
     }
 

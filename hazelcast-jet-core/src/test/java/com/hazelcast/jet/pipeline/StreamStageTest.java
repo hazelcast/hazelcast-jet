@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.Traversers;
@@ -32,9 +33,13 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple3;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.impl.JetEvent;
+import com.hazelcast.jet.pipeline.test.SimpleEvent;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,6 +64,8 @@ import static com.hazelcast.jet.datamodel.Tuple3.tuple3;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.AbstractStage.transformOf;
 import static com.hazelcast.jet.pipeline.JoinClause.joinMapEntries;
+import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
+import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertOrdered;
@@ -72,6 +79,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
     private static BiFunction<String, Integer, String> ENRICHING_FORMAT_FN =
             (prefix, i) -> String.format("%s-%04d", prefix, i);
+
+    @Rule
+    public ExpectedException exception = ExpectedException.none();
 
     @Test
     public void setName() {
@@ -354,8 +364,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> mapped = streamStageFromList(input).mapUsingService(
-                ServiceFactory.withCreateFn(x -> suffix),
-                formatFn);
+                sharedService(() -> suffix, ConsumerEx.noop()),
+                formatFn
+        );
 
         // Then
         mapped.writeTo(sink);
@@ -375,7 +386,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
-                .mapUsingService(ServiceFactory.withCreateFn(i -> suffix), (suff, k, i) -> formatFn.apply(suff, i));
+                .mapUsingService(
+                        sharedService(() -> suffix, ConsumerEx.noop()),
+                        (suff, k, i) -> formatFn.apply(suff, i)
+                );
 
         // Then
         mapped.writeTo(sink);
@@ -394,7 +408,10 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
-                .filterUsingService(ServiceFactory.withCreateFn(i -> acceptedRemainder), (rem, i) -> i % 2 == rem);
+                .filterUsingService(
+                        ServiceFactories.sharedService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        (rem, i) -> i % 2 == rem
+                );
 
         // Then
         mapped.writeTo(sink);
@@ -415,8 +432,9 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        ServiceFactory.withCreateFn(i -> acceptedRemainder),
-                        (rem, k, i) -> i % 2 == rem);
+                        ServiceFactories.sharedService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        (rem, k, i) -> i % 2 == rem
+                );
 
         // Then
         mapped.writeTo(sink);
@@ -436,7 +454,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMapUsingService(
-                        ServiceFactory.withCreateFn(x -> flatMapFn),
+                        ServiceFactories.sharedService(() -> flatMapFn, ConsumerEx.noop()),
                         (fn, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -459,7 +477,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        ServiceFactory.withCreateFn(x -> flatMapFn),
+                        ServiceFactories.sharedService(() -> flatMapFn, ConsumerEx.noop()),
                         (fn, k, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -899,6 +917,47 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
+    public void when_mergeTimestampedToNonTimestamped_then_error() {
+        StreamStage<SimpleEvent> timestamped = p.readFrom(TestSources.itemStream(1)).withIngestionTimestamps();
+        StreamStage<SimpleEvent> nonTimestamped = p.readFrom(TestSources.itemStream(1)).withoutTimestamps();
+
+        // Then
+        exception.expectMessage("both have or both not have timestamp definitions");
+
+        // When
+        nonTimestamped.merge(timestamped);
+    }
+
+    @Test
+    public void when_mergeNonTimestampedToTimestamped_then_error() {
+        StreamStage<SimpleEvent> timestamped = p.readFrom(TestSources.itemStream(1)).withIngestionTimestamps();
+        StreamStage<SimpleEvent> nonTimestamped = p.readFrom(TestSources.itemStream(1)).withoutTimestamps();
+
+        // Then
+        exception.expectMessage("both have or both not have timestamp definitions");
+
+        // When
+        timestamped.merge(nonTimestamped);
+    }
+
+    @Test
+    public void when_mergeToItself_then_doubleOutput() {
+        List<Integer> input = sequence(itemCount);
+        Function<Integer, String> formatFn = i -> String.format("%04d", i);
+        StreamStage<Integer> srcStage0 = streamStageFromList(input);
+
+        // When
+        StreamStage<Integer> merged = srcStage0.merge(srcStage0);
+
+        // Then
+        merged.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().flatMap(i -> Stream.of(i, i)), formatFn),
+                streamToString(sinkStreamOf(Integer.class), formatFn));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     public void hashJoin() {
         // Given
@@ -1065,7 +1124,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Object> custom = streamStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
-                        ServiceFactory.withCreateFn(jet -> new HashSet<>()),
+                        nonSharedService(HashSet::new, ConsumerEx.noop()),
                         (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
                             return seen.add(key) ? jetEvent(jetEvent.timestamp(), key) : null;

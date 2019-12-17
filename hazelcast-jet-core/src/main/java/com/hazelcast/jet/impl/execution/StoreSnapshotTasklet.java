@@ -21,7 +21,7 @@ import com.hazelcast.jet.impl.util.AsyncSnapshotWriter;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.nio.serialization.Data;
+import com.hazelcast.internal.serialization.Data;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -64,7 +64,7 @@ public class StoreSnapshotTasklet implements Tasklet {
         this.isHigherPrioritySource = isHigherPrioritySource;
 
         this.ssWriter = ssWriter;
-        this.pendingSnapshotId = snapshotContext.activeSnapshotId() + 1;
+        this.pendingSnapshotId = snapshotContext.activeSnapshotIdPhase1() + 1;
         addToInboxFunction = this::addToInbox;
     }
 
@@ -89,7 +89,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 ProgressState result = inboundEdgeStream.drainTo(addToInboxFunction);
                 if (result.isDone()) {
                     assert ssWriter.isEmpty() : "input is done, but we had some entries and not the barrier";
-                    snapshotContext.taskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
+                    snapshotContext.storeSnapshotTaskletDone(pendingSnapshotId - 1, isHigherPrioritySource);
                     state = DONE;
                     progTracker.reset();
                 }
@@ -120,7 +120,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                     snapshotContext.reportError(error);
                 }
                 progTracker.madeProgress();
-                snapshotContext.snapshotDoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
+                snapshotContext.phase1DoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
                         ssWriter.getTotalChunks());
                 ssWriter.resetStats();
                 pendingSnapshotId++;

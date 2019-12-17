@@ -37,8 +37,9 @@ import static com.hazelcast.jet.Util.entry;
 
 /**
  * Demonstrates a simple job which calculates the top 10 numbers from a
- * stream of random numbers. This job is intended to be submitted to running
- * Jet cluster by `jet submit` script in Hazelcast Jet distribution.
+ * stream of random numbers. This code is included in Jet's distribution
+ * package as {@code examples/hello-world.jar}, ready to be submitted to
+ * a running Jet cluster with {@code bin/jet submit examples/hello-world.java}.
  */
 public class HelloWorld {
 
@@ -65,7 +66,7 @@ public class HelloWorld {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        /**
+        /*
          * JetBootstrap.getInstance() can be changed to Jet.newJetInstance()
          * to start an embedded Jet node instead and submit the job to it.
          */
