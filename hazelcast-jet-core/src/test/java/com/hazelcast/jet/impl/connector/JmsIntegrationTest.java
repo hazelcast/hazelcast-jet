@@ -332,10 +332,7 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
         Sink<String> sink = Sinks.<String>jmsQueueBuilder(JmsIntegrationTest::getConnectionFactory)
                 .connectionFn(ConnectionFactory::createConnection)
-                .sessionFn(connection -> connection.createSession(false, AUTO_ACKNOWLEDGE))
                 .messageFn(Session::createTextMessage)
-                .sendFn(MessageProducer::send)
-                .flushFn(ConsumerEx.noop())
                 .destinationName(destinationName)
                 .build();
 
@@ -376,7 +373,6 @@ public class JmsIntegrationTest extends SimpleTestInClusterSupport {
 
         Sink<String> sink = Sinks.<String>jmsTopicBuilder(JmsIntegrationTest::getConnectionFactory)
                 .connectionParams(null, null)
-                .sessionParams(false, AUTO_ACKNOWLEDGE)
                 .destinationName(destinationName)
                 .build();
 
