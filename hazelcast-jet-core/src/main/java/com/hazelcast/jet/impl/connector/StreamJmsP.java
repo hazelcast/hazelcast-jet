@@ -41,6 +41,7 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -90,7 +91,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
         eventTimeMapper = new EventTimeMapper<>(eventTimePolicy);
         eventTimeMapper.addPartitions(1);
-        seenIds = guarantee == EXACTLY_ONCE ? new HashSet<>() : null;
+        seenIds = guarantee == EXACTLY_ONCE ? new HashSet<>() : Collections.emptySet();
     }
 
     @Override
@@ -116,29 +117,30 @@ public class StreamJmsP<T> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
-        if (!snapshotInProgress) {
-            while (emitFromTraverser(pendingTraverser)) {
-                try {
-                    Message t = consumer.receiveNoWait();
-                    if (t == null) {
-                        pendingTraverser = eventTimeMapper.flatMapIdle();
-                        break;
-                    }
-                    if (guarantee == EXACTLY_ONCE) {
-                        Object msgId = messageIdFn.apply(t);
-                        if (msgId == null) {
-                            throw new JetException("Received a message without an ID. All messages must have an ID, " +
-                                    "you can specify an extracting function using "
-                                    + JmsSourceBuilder.class.getSimpleName() + ".messageIdFn()");
-                        }
-                        if (!seenIds.add(msgId)) {
-                            continue;
-                        }
-                    }
-                    pendingTraverser = eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t));
-                } catch (JMSException e) {
-                    throw sneakyThrow(e);
+        if (snapshotInProgress) {
+            return false;
+        }
+        while (emitFromTraverser(pendingTraverser)) {
+            try {
+                Message t = consumer.receiveNoWait();
+                if (t == null) {
+                    pendingTraverser = eventTimeMapper.flatMapIdle();
+                    break;
                 }
+                if (guarantee == EXACTLY_ONCE) {
+                    Object msgId = messageIdFn.apply(t);
+                    if (msgId == null) {
+                        throw new JetException("Received a message without an ID. All messages must have an ID, " +
+                                "you can specify an extracting function using "
+                                + JmsSourceBuilder.class.getSimpleName() + ".messageIdFn()");
+                    }
+                    if (!seenIds.add(msgId)) {
+                        continue;
+                    }
+                }
+                pendingTraverser = eventTimeMapper.flatMapEvent(projectionFn.apply(t), 0, handleJmsTimestamp(t));
+            } catch (JMSException e) {
+                throw sneakyThrow(e);
             }
         }
         return false;
@@ -161,9 +163,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
             } catch (JMSException e) {
                 throw sneakyThrow(e);
             }
-            if (guarantee == EXACTLY_ONCE) {
-                seenIds.clear();
-            }
+            seenIds.clear();
         } else if (guarantee == EXACTLY_ONCE) {
             // We could tolerate snapshot failures, but if we did, the memory usage will grow without a bound.
             // The `seenIds` and also unacknowledged messages in the session will grow without a limit.
@@ -181,7 +181,9 @@ public class StreamJmsP<T> extends AbstractProcessor {
         @SuppressWarnings("unchecked")
         Set<Object> castValue = (Set<Object>) value;
         // we could add the restored
-        seenIds.addAll(castValue);
+        if (guarantee == EXACTLY_ONCE) {
+            seenIds.addAll(castValue);
+        }
     }
 
     @Override

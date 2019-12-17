@@ -137,7 +137,7 @@ public final class JmsSourceBuilder {
 
     /**
      * Configures the function to extract IDs from the messages, if
-     * exactly-once guarantee is used. If lower guarantee is used, this
+     * exactly-once guarantee is used. If a lower guarantee is used, this
      * function is not used.
      *
      * <p>Make sure the function returns non-null for every message, or the job
@@ -158,11 +158,11 @@ public final class JmsSourceBuilder {
 
     /**
      * Sets the maximum processing guarantee for the source. You can use it to
-     * decrease the guarantee of this source compared to the job's guarantee.
-     * If you configure stronger guarantee than the job has, the job's
-     * guarantee will be used. Use it if you want to avoid the overhead of
-     * acknowledging the messages in transactions if you can tolerate
-     * duplicated or missed messages.
+     * reduce the guarantee of this source compared to the job's guarantee. If
+     * you configure a stronger guarantee than the job has, the job's guarantee
+     * will be used. Use it if you want to avoid the overhead of acknowledging
+     * the messages in transactions if you can tolerate duplicated or missed
+     * messages.
      *
      * <p>If the processing guarantee is NONE, the processor will consume the
      * messages in auto-acknowledge mode. If the processing guarantee is other
