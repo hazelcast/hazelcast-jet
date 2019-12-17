@@ -21,8 +21,11 @@ import java.util.function.Consumer;
 
 /**
  * Watcher of the events produced by an {@link Observable}. Once subscribed, it
- * will be notified of all subsequent events produced by the
- * {@link Observable}.
+ * will be notified of all past events produced by the {@link Observable}
+ * (to the extent to which these haven't yet been overwritten in the
+ * {@link Observable} implementation's finite history) and
+ * all future events that will be produced by the {@link Observable}, while
+ * the {@link Observer} remains added to it.
  * <p>
  * Notification will be done by an internal pool of threads and care should
  * be taken to not block those threads, ie. finish processing of all events
@@ -62,8 +65,8 @@ public interface Observer<T> {
     }
 
     /**
-     * Method that will be called when the {@link Observable} (to which this
-     * {@link Observer} is subscribed to) produces new data values.
+     * Method that will be called when data values from the {@link Observable}
+     * become available.
      * <p>
      * The data values passed via this method don't have a clear,
      * global ordering. Some {@link Observable}s for example produce values

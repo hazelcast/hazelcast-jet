@@ -620,11 +620,7 @@ class BuildComputation {
         JetInstance jet = Jet.newJetInstance();
 
         Observable<Long> observable = jet.getObservable("results");
-        observable.addObserver(
-                l -> System.out.println("Result: " + l),
-                t -> System.out.println("Failure: " + t.getMessage()),
-                () -> System.out.println("DONE!")
-        );
+        observable.addObserver(System.out::println);
 
         jet.newJob(pipeline).join();
 

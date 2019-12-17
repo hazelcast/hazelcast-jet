@@ -17,33 +17,39 @@
 package com.hazelcast.jet;
 
 import com.hazelcast.jet.impl.observer.BlockingIteratorObserver;
+import com.hazelcast.ringbuffer.Ringbuffer;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.UUID;
 
 /**
- * Represents a flowing sequence of values. The sequence can be observed
- * by registering {@link Observer}s on it. Observers are able to see
- * all the values that show up in the sequence after they have been
- * registered.
+ * Represents a flowing sequence of events produced by jobs containing
+ * {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
+ * observable type sinks}. The actual transport of the events is handled by
+ * a {@link Ringbuffer}, this is where the above mentioned sinks publish
+ * into. These {@link Ringbuffer}s get created when the {@link Observable}
+ * is {@link JetInstance#getObservable(String) requested from a JetInstance}.
  * <p>
- * Besides new values appearing observers can also observe completions and
+ * Observing the sequence on the client side can be accomplished by
+ * registering {@link Observer}s on the {@link Observable}. Observers are
+ * based on {@link Ringbuffer} listeners so they are able to see not just
+ * the events that have happened after their registration, but past events
+ * which happen to still reside in the {@link Ringbuffer} (ie. have not been
+ * overwritten yet).
+ * <p>
+ * Besides new values appearing observers can also observe completion and
  * failure events. Completion means that no further values will appear in
  * the sequence. Failure means that something went wrong during the
  * production of the sequence's values and the event attempts to provide
  * useful information about the cause of the problem.
  * <p>
- * Observable implementations are backed typically by long lived,
- * distributed data objects which get created when the {@link Observable}
- * is {@link JetInstance#getObservable(String) requested from a JetInstance}.
- * <p>
- * Their events are produced by {@link Job}s running
+ * As stated before events are being produced by jobs running
  * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
- * type sinks} and stay alive while their owner jobs keep running. When
- * these jobs are batched by nature and they complete (successfully
- * or with a failure) the observables owned by them remain alive for a
- * preconfigured timeout (see
+ * type sinks}. When these jobs are batched by nature and they complete
+ * (successfully or with a failure) the observables owned by them
+ * (and implicitly the {@link Ringbuffer}s backing those in turn) remain
+ * alive for a preconfigured time (see
  * {@link com.hazelcast.jet.core.JetProperties#JOB_RESULTS_TTL_SECONDS
  * JOB_RESULTS_TTL_SECONDS property}, defaults to 7 days) after which they
  * get cleaned up automatically. For streaming jobs no such automatic
@@ -52,9 +58,9 @@ import java.util.UUID;
  * When using {@link Observable}s we encourage their manual cleanup, via
  * their {@link Observable#destroy()} method, whenever they are no longer
  * needed. Automatic clean-up shouldn't be relied upon. Even if a client
- * that has requested the {@link Observable} happens to crash, before
+ * that has requested the {@link Observable} happens to crash before
  * managing to do clean-up, it is still possible to manually destroy
- * the backing distributed structures by obtaining a new, identically named
+ * the backing {@link Ringbuffer}s by obtaining a new, identically named
  * {@link Observable} and calling {@link Observable#destroy()} on that.
  * <p>
  * It is possible to use the same {@link Observable} for multiple jobs, or
@@ -63,7 +69,11 @@ import java.util.UUID;
  * observable type sinks} with the same name). If done so one should be aware
  * that there will be parallel streams of events which can be intermingled
  * with eachother in all kinds of unexpected ways. It is not possible to
- * tell which events originate from which sink.
+ * tell which events originate from which sink. Newly registered
+ * {@link Observer}s seeing all events still in the {@link Ringbuffer}
+ * further exacerbates this problem so we recommend that an
+ * {@link Observable} with a certain name be used in a single sink of a
+ * single job.
  *
  * @param <T> type of the values in the sequence
  */
@@ -77,7 +87,8 @@ public interface Observable<T> extends Iterable<T> {
 
     /**
      * Register an instance of {@link Observer} to be notified about any
-     * subsequent events (value updates, failures and completion).
+     * future and past events (to the extent that these haven't yet been
+     * overwritten in the backing {@link Ringbuffer}).
      *
      * @return registration ID associated with the added {@link Observer},
      * can be used to remove the {@link Observer} later
@@ -87,7 +98,7 @@ public interface Observable<T> extends Iterable<T> {
     /**
      * Removes previously added {@link Observer}s, identified by their
      * assigned registration IDs. Removed {@link Observer}s will
-     * not get notified about further observable events.
+     * not get notified about further events.
      */
     void removeObserver(UUID registrationId);
 
@@ -109,12 +120,11 @@ public interface Observable<T> extends Iterable<T> {
     }
 
     /**
-     * Removes all previously registered observers and attempts to terminate
-     * all remote objects backing this particular observable.
+     * Removes all previously registered observers and attempts to destroy
+     * the backing {@link Ringbuffer}.
      * <p>
-     * If the observable is still being published into (ie. the job
-     * populating it has not been completed), then the remote backing
-     * objects will be recreated.
+     * If the {@link Ringbuffer} is still being published into (ie. the job
+     * populating it has not been completed), then it will be recreated.
      */
     void destroy();
 

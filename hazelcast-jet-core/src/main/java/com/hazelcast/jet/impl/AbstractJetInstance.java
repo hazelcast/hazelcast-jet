@@ -156,7 +156,6 @@ public abstract class AbstractJetInstance implements JetInstance {
         return observables.computeIfAbsent(name, observableName ->
                 new ObservableImpl<T>(observableName, hazelcastInstance, this::onDestroy, getLogger()));
         //TODO (PR-1729): provide a way to configure Observable "capacity"
-        //TODO (PR-1729): document that observables are backed by ring-buffers
     }
 
     @Override
