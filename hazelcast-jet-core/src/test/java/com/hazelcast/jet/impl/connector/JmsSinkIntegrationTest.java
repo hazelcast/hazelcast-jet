@@ -54,6 +54,8 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
         initialize(2, null);
     }
 
+    // TODO [viliam] more tests
+
     @Test
     public void test_transactional_withRestarts_graceful() throws Exception {
         test_transactional_withRestarts(true);
@@ -65,6 +67,7 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     private void test_transactional_withRestarts(boolean graceful) throws Exception {
+        // TODO [viliam] make this test faster
         int numItems = 1000;
         Pipeline p = Pipeline.create();
         String destinationName = randomString();

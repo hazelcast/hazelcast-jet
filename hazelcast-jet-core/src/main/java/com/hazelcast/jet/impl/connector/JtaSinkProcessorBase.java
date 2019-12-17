@@ -34,7 +34,6 @@ import javax.annotation.Nonnull;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
 import static com.hazelcast.jet.Util.idToString;
@@ -190,9 +189,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
         return e;
     }
 
-    private final class JtaTransaction implements TransactionalResource<JtaTransactionId>, Serializable {
-        private static final long serialVersionUID = 1;
-
+    private final class JtaTransaction implements TransactionalResource<JtaTransactionId> {
         private final JtaTransactionId xid;
         private boolean ignoreCommit;
 

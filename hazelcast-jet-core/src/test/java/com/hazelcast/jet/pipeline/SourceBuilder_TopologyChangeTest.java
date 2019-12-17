@@ -28,6 +28,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.datamodel.WindowResult;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.test.HazelcastSerialClassRunner;
+import com.hazelcast.test.annotation.Repeat;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -49,6 +50,7 @@ public class SourceBuilder_TopologyChangeTest extends JetTestSupport {
     private static volatile boolean stateRestored;
 
     @Test
+    @Repeat(500)
     public void test_restartJob_nodeShutDown() {
         testTopologyChange(() -> createJetMember(), node -> node.shutdown(), true);
     }
