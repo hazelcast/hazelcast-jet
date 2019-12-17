@@ -31,11 +31,8 @@ import java.util.function.Consumer;
  * @param <T> type of data values in the sequence produced by the
  * {@link Observable}
  */
+@FunctionalInterface
 public interface Observer<T> {
-
-    //TODO (PR-1729): default onError
-    //TODO (PR-1729): default onComplete
-    //TODO (PR-1729): mark as functional interface
 
     /**
      * Utility method for building an {@link Observer} from its basic
@@ -89,7 +86,9 @@ public interface Observer<T> {
      * Once an error has been observed, no further data values nor completion
      * events will be received.
      */
-    void onError(@Nonnull Throwable throwable);
+    default void onError(@Nonnull Throwable throwable) {
+        throwable.printStackTrace();
+    }
 
     /**
      * Method that will be called when the {@link Observable} (to which this
@@ -100,6 +99,8 @@ public interface Observer<T> {
      * Once completion has been observed, no further data values nor errors
      * will be received.
      */
-    void onComplete();
+    default void onComplete() {
+        //do nothing
+    }
 
 }
