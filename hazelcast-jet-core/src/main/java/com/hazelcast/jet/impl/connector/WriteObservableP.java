@@ -27,13 +27,13 @@ import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.Ringbuffer;
+import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 
 import javax.annotation.Nonnull;
-import java.util.AbstractCollection;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -41,15 +41,15 @@ import static java.util.stream.Collectors.toList;
 public final class WriteObservableP<T> implements Processor {
 
     private static final int ASYNC_OPS_LIMIT = 16;
+    private static final int MAX_BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
     private final String ringbufferName;
+    private final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
 
     private Ringbuffer<Object> ringbuffer;
     private ILogger logger;
     private final AtomicInteger pendingWrites = new AtomicInteger(0);
-    private BiConsumer<Long, Throwable> callback = this::onAddAllComplete;
 
-    private InboxAsCollection inboxAsCollection = new InboxAsCollection();
 
     private WriteObservableP(String ringbufferName) {
         this.ringbufferName = ringbufferName;
@@ -64,16 +64,28 @@ public final class WriteObservableP<T> implements Processor {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (!Util.tryIncrement(pendingWrites, 1, ASYNC_OPS_LIMIT)) {
-            return;
+        if (batch.isEmpty()) {
+            drainInbox(inbox);
         }
-        inboxAsCollection.inbox = inbox;
-        //TODO (PR-1729): aparently collection has a max size
-        ringbuffer.addAllAsync(inboxAsCollection, OverflowPolicy.OVERWRITE)
-                .whenComplete(callback);
+        tryFlush();
     }
 
-    private void onAddAllComplete(Long result, Throwable throwable) {
+    private void drainInbox(@Nonnull Inbox inbox) {
+        int drained = 0;
+        for (Object item; (item = inbox.poll()) != null && drained < MAX_BATCH_SIZE; drained++) {
+            batch.add((T) item);
+        }
+    }
+
+    private void tryFlush() {
+        if (!batch.isEmpty() && Util.tryIncrement(pendingWrites, 1, ASYNC_OPS_LIMIT)) {
+            ringbuffer.addAllAsync(batch, OverflowPolicy.OVERWRITE)
+                    .whenComplete(this::onFlushComplete);
+            batch.clear();
+        }
+    }
+
+    private void onFlushComplete(Long result, Throwable throwable) {
         if (throwable != null) {
             logger.warning("Failed publishing into observable: " + throwable, throwable);
         }
@@ -110,36 +122,6 @@ public final class WriteObservableP<T> implements Processor {
             return Stream.generate(() -> new WriteObservableP<T>(name))
                     .limit(count)
                     .collect(toList());
-        }
-    }
-
-    private static class InboxAsCollection extends AbstractCollection<Object> {
-        private Inbox inbox;
-
-        @Nonnull @Override
-        public Iterator<Object> iterator() {
-            // reset the inbox so that we can only iterate once. After iteration the inbox is empty.
-            Inbox localInbox = inbox;
-            if (localInbox == null) {
-                throw new IllegalStateException("2nd iteration");
-            }
-            inbox = null;
-            return new Iterator<Object>() {
-                @Override
-                public boolean hasNext() {
-                    return localInbox.peek() != null;
-                }
-
-                @Override
-                public Object next() {
-                    return localInbox.poll();
-                }
-            };
-        }
-
-        @Override
-        public int size() {
-            return inbox.size();
         }
     }
 }

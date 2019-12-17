@@ -113,7 +113,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         //when
         Job job = jet().newJob(pipeline);
         //then
-        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 10));
         assertError(testObserver, null);
         assertCompletions(testObserver, 0);
 
@@ -135,7 +135,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         //when
         Job job = jet().newJob(pipeline);
         //then
-        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > 10));
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 10));
         assertError(testObserver, null);
         assertCompletions(testObserver, 0);
 
@@ -144,7 +144,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         //then
         int resultsSoFar = testObserver.getSortedValues().size();
         assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
-        assertTrueEventually(() -> assertTrue(testObserver.getSortedValues().size() > resultsSoFar));
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > resultsSoFar));
         assertError(testObserver, null);
         assertCompletions(testObserver, 0);
     }
@@ -214,6 +214,24 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertCompletions(otherTestObserver, 1);
     }
 
+    @Test
+    public void veryFastPublishRate() throws Throwable {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100_000))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        Job job = jet().newJob(pipeline);
+        //then
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 100_000));
+        assertError(testObserver, null);
+
+        job.cancel();
+    }
+
     //TODO (PR-1729): removed listener doesn't get further events
 
     private static void assertSortedValues(TestObserver observer, Long... values) {
@@ -254,6 +272,13 @@ public class ObservableResultsTest extends TestInClusterSupport {
         @Override
         public void onComplete() {
             completions.incrementAndGet();
+        }
+
+        @Nonnull
+        int getNoOfValues() {
+            synchronized (values) {
+                return values.size();
+            }
         }
 
         @Nonnull
