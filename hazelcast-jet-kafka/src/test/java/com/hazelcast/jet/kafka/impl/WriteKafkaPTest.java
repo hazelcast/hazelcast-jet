@@ -232,8 +232,7 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
                 .setSnapshotIntervalMillis(50);
         JobProxy job = (JobProxy) instance().newJob(p, config);
 
-        try {
-            KafkaConsumer<String, String> consumer = kafkaTestSupport.createConsumer(topic);
+        try (KafkaConsumer<String, String> consumer = kafkaTestSupport.createConsumer(topic)) {
             long endTime = System.nanoTime() + SECONDS.toNanos(120);
             StringBuilder actualSinkContents = new StringBuilder();
 

@@ -106,7 +106,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         populateList();
 
         p.readFrom(Sources.list(srcList.getName()))
-         .writeTo(Sinks.jmsQueue(() -> broker.createConnectionFactory(), destinationName));
+         .writeTo(Sinks.jmsQueue(destinationName, () -> broker.createConnectionFactory()));
 
         List<Object> messages = consumeMessages(true);
 
@@ -121,7 +121,7 @@ public class JmsIntegrationTest extends PipelineTestSupport {
         populateList();
 
         p.readFrom(Sources.list(srcList.getName()))
-         .writeTo(Sinks.jmsTopic(() -> broker.createConnectionFactory(), destinationName));
+         .writeTo(Sinks.jmsTopic(destinationName, () -> broker.createConnectionFactory()));
 
         List<Object> messages = consumeMessages(false);
         sleepSeconds(1);

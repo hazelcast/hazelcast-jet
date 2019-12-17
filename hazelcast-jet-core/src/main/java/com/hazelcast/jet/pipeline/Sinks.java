@@ -791,16 +791,16 @@ public final class Sinks {
      * not an instance of {@code javax.jms.Message}, the sink wraps {@code
      * item.toString()} into a {@link javax.jms.TextMessage}.
      *
+     * @param queueName the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory
-     * @param name            the name of the queue
      */
     @Nonnull
     public static <T> Sink<T> jmsQueue(
-            @Nonnull SupplierEx<ConnectionFactory> factorySupplier,
-            @Nonnull String name
+            @Nonnull String queueName,
+            @Nonnull SupplierEx<ConnectionFactory> factorySupplier
     ) {
         return Sinks.<T>jmsQueueBuilder(factorySupplier)
-                .destinationName(name)
+                .destinationName(queueName)
                 .build();
     }
 
@@ -836,16 +836,16 @@ public final class Sinks {
      * is not an instance of {@code javax.jms.Message}, the sink wraps {@code
      * item.toString()} into a {@link javax.jms.TextMessage}.
      *
+     * @param topicName the name of the queue
      * @param factorySupplier supplier to obtain JMS connection factory
-     * @param name            the name of the queue
      */
     @Nonnull
     public static <T> Sink<T> jmsTopic(
-            @Nonnull SupplierEx<ConnectionFactory> factorySupplier,
-            @Nonnull String name
+            @Nonnull String topicName,
+            @Nonnull SupplierEx<ConnectionFactory> factorySupplier
     ) {
         return Sinks.<T>jmsTopicBuilder(factorySupplier)
-                .destinationName(name)
+                .destinationName(topicName)
                 .build();
     }
 

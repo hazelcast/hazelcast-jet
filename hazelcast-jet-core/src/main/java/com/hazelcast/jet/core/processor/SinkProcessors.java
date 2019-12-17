@@ -296,10 +296,11 @@ public final class SinkProcessors {
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJmsQueueP(
             @Nonnull String queueName,
+            boolean exactlyOnce,
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn
     ) {
-        return WriteJmsP.supplier(queueName, newConnectionFn, messageFn, false);
+        return WriteJmsP.supplier(queueName, exactlyOnce, newConnectionFn, messageFn, false);
     }
 
     /**
@@ -308,10 +309,11 @@ public final class SinkProcessors {
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJmsTopicP(
             @Nonnull String topicName,
+            boolean exactlyOnce,
             @Nonnull SupplierEx<? extends Connection> newConnectionFn,
             @Nonnull BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn
     ) {
-        return WriteJmsP.supplier(topicName, newConnectionFn, messageFn, true);
+        return WriteJmsP.supplier(topicName, exactlyOnce, newConnectionFn, messageFn, true);
     }
 
     /**
