@@ -21,7 +21,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -172,7 +172,8 @@ public class JobResult implements IdentifiedDataSerializable {
 
     public void destroy(HazelcastInstance hzInstance) {
         for (String ownedObservable : ownedObservables) {
-            ObservableRepository.destroyObservable(ownedObservable, hzInstance);
+            String ringbufferName = ObservableUtil.getRingbufferName(ownedObservable);
+            hzInstance.getRingbuffer(ringbufferName).destroy();
         }
     }
 }

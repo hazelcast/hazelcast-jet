@@ -20,7 +20,7 @@ import com.hazelcast.jet.impl.observer.BlockingIteratorObserver;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
-import java.util.function.Consumer;
+import java.util.UUID;
 
 /**
  * Represents a flowing sequence of values. The sequence can be observed
@@ -78,17 +78,18 @@ public interface Observable<T> extends Iterable<T> {
     /**
      * Register an instance of {@link Observer} to be notified about any
      * subsequent events (value updates, failures and completion).
+     *
+     * @return registration ID associated with the added {@link Observer},
+     * can be used to remove the {@link Observer} later
      */
-    void addObserver(@Nonnull Observer<T> observer);
+    UUID addObserver(@Nonnull Observer<T> observer);
 
     /**
-     * Register explicit callbacks (fulfilling the purpose of an
-     * {@link Observer}) to be notified about any subsequent events
-     * (value updates, failures and completion).
+     * Removes previously added {@link Observer}s, identified by their
+     * assigned registration IDs. Removed {@link Observer}s will
+     * not get notified about further observable events.
      */
-    void addObserver(@Nonnull Consumer<? super T> onNext,
-                     @Nonnull Consumer<? super Throwable> onError,
-                     @Nonnull Runnable onComplete);
+    void removeObserver(UUID registrationId);
 
     /**
      * Non-thread safe iterable. The iterable returns an iterator
@@ -108,8 +109,8 @@ public interface Observable<T> extends Iterable<T> {
     }
 
     /**
-     * Attempts to terminate all remote objects backing this particular
-     * observable.
+     * Removes all previously registered observers and attempts to terminate
+     * all remote objects backing this particular observable.
      * <p>
      * If the observable is still being published into (ie. the job
      * populating it has not been completed), then the remote backing

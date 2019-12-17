@@ -155,7 +155,8 @@ public class ObservableResultsTest extends TestInClusterSupport {
         BatchStage<Long> stage = pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L));
 
         TestObserver otherTestObserver = new TestObserver();
-        jet().<Long>getObservable("otherObservable").addObserver(otherTestObserver);
+        Observable<Long> otherObservable = jet().getObservable("otherObservable");
+        otherObservable.addObserver(otherTestObserver);
 
         stage.filter(i -> i % 2 == 0).writeTo(Sinks.observable(observableName));
         stage.filter(i -> i % 2 != 0).writeTo(Sinks.observable("otherObservable"));
@@ -171,6 +172,8 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertSortedValues(otherTestObserver, 1L, 3L);
         assertError(otherTestObserver, null);
         assertCompletions(otherTestObserver, 1);
+
+        otherObservable.destroy();
     }
 
     @Test
@@ -188,6 +191,30 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertError(testObserver, null);
         assertCompletions(testObserver, 1);
     }
+
+    @Test
+    public void observersGetAllEventsStillInRingbuffer() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        jet().newJob(pipeline).join();
+        //then
+        assertSortedValues(testObserver, 0L, 1L, 2L, 3L, 4L);
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 1);
+
+        //when
+        TestObserver otherTestObserver = new TestObserver();
+        jet().<Long>getObservable(observableName).addObserver(otherTestObserver);
+        //then
+        assertSortedValues(otherTestObserver, 0L, 1L, 2L, 3L, 4L);
+        assertError(otherTestObserver, null);
+        assertCompletions(otherTestObserver, 1);
+    }
+
+    //TODO (PR-1729): removed listener doesn't get further events
 
     private static void assertSortedValues(TestObserver observer, Long... values) {
         assertTrueEventually(() -> assertEquals(Arrays.asList(values), observer.getSortedValues()));

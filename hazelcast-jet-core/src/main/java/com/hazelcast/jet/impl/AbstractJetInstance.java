@@ -29,6 +29,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -37,6 +38,8 @@ import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
@@ -48,6 +51,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     private final HazelcastInstance hazelcastInstance;
     private final JetCacheManagerImpl cacheManager;
     private final Supplier<JobRepository> jobRepository;
+    private final Map<String, Observable> observables = new ConcurrentHashMap<>();
 
     public AbstractJetInstance(HazelcastInstance hazelcastInstance) {
         this.hazelcastInstance = hazelcastInstance;
@@ -146,18 +150,25 @@ public abstract class AbstractJetInstance implements JetInstance {
         return cacheManager;
     }
 
-    @Override
+    @Nonnull @Override
     public <T> Observable<T> getObservable(@Nonnull String name) {
+        //noinspection unchecked
+        return observables.computeIfAbsent(name, observableName ->
+                new ObservableImpl<T>(observableName, hazelcastInstance, this::onDestroy, getLogger()));
         //TODO (PR-1729): provide a way to configure Observable "capacity"
         //TODO (PR-1729): document that observables are backed by ring-buffers
-        return new ObservableImpl<>(name, this, getLogger());
-        //TODO (PR-1729): one per Jet instance?
-        //TODO (PR-1729): should shutdown listener when instance stops?
     }
 
     @Override
     public void shutdown() {
+        observables.values().forEach(Observable::destroy);
         hazelcastInstance.shutdown();
+    }
+
+    private void onDestroy(Observable<?> observable) {
+        String ringbufferName = ObservableUtil.getRingbufferName(observable.name());
+        hazelcastInstance.getRingbuffer(ringbufferName).destroy();
+        observables.remove(observable.name());
     }
 
     public abstract boolean existsDistributedObject(@Nonnull String serviceName, @Nonnull String objectName);

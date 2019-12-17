@@ -317,6 +317,9 @@ public interface JetInstance {
 
     /**
      * Returns an {@link Observable} instance with the specified name.
+     * <p>
+     * For the same name the same {@link Observable} instance will be returned
+     * by each call.
      *
      * @param name name of the observable
      * @return observable with the specified name

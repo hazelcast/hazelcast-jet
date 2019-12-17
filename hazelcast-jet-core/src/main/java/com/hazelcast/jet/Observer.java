@@ -33,6 +33,10 @@ import java.util.function.Consumer;
  */
 public interface Observer<T> {
 
+    //TODO (PR-1729): default onError
+    //TODO (PR-1729): default onComplete
+    //TODO (PR-1729): mark as functional interface
+
     /**
      * Utility method for building an {@link Observer} from its basic
      * components.

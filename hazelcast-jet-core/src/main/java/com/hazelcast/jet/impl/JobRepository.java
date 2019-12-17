@@ -30,9 +30,10 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.metrics.JobMetrics;
+import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -43,6 +44,8 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.query.Predicate;
+import com.hazelcast.ringbuffer.OverflowPolicy;
+import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.spi.impl.NodeEngine;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -333,7 +336,7 @@ public class JobRepository {
         DAG dag = deserializeDag(masterContext, jobRecord);
         Set<String> ownedObservables = ownedObservables(dag);
 
-        ObservableRepository.completeObservables(ownedObservables, error, instance);
+        completeObservables(ownedObservables, error);
 
         JobConfig config = jobRecord.getConfig();
         long creationTime = jobRecord.getCreationTime();
@@ -354,6 +357,15 @@ public class JobRepository {
         }
 
         deleteJob(jobId);
+    }
+
+    private void completeObservables(Collection<String> observables, Throwable error) {
+        for (String observable : observables) {
+            String ringbufferName = ObservableUtil.getRingbufferName(observable);
+            Ringbuffer<Object> ringbuffer = instance.getRingbuffer(ringbufferName);
+            Object completion = error == null ? DoneItem.DONE_ITEM : error;
+            ringbuffer.addAsync(completion, OverflowPolicy.OVERWRITE);
+        }
     }
 
     /**
@@ -550,7 +562,7 @@ public class JobRepository {
 
     private static Set<String> ownedObservables(DAG dag) {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
-                .map(vertex -> (String) vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
+                .map(vertex -> (String) vertex.getMetaSupplier().getTags().get(ObservableUtil.OWNED_OBSERVABLE))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }

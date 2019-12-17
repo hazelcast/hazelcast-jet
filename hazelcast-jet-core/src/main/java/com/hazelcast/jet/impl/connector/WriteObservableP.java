@@ -22,7 +22,7 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.OverflowPolicy;
@@ -59,7 +59,7 @@ public final class WriteObservableP<T> implements Processor {
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         HazelcastInstance instance = context.jetInstance().getHazelcastInstance();
         this.logger = context.logger();
-        this.ringbuffer = instance.getRingbuffer(ObservableRepository.getRingBufferName(ringbufferName));
+        this.ringbuffer = instance.getRingbuffer(ObservableUtil.getRingbufferName(ringbufferName));
     }
 
     @Override
@@ -68,6 +68,7 @@ public final class WriteObservableP<T> implements Processor {
             return;
         }
         inboxAsCollection.inbox = inbox;
+        //TODO (PR-1729): aparently collection has a max size
         ringbuffer.addAllAsync(inboxAsCollection, OverflowPolicy.OVERWRITE)
                 .whenComplete(callback);
     }

@@ -33,7 +33,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.topic.ITopic;
 
@@ -187,7 +187,7 @@ public final class HazelcastWriters {
         return new ProcessorMetaSupplier() {
 
             private final Map<Object, Object> tags = Collections.singletonMap(
-                    ObservableRepository.OWNED_OBSERVABLE,
+                    ObservableUtil.OWNED_OBSERVABLE,
                     name
             );
 
