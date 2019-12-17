@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.collection.IList;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Job;
