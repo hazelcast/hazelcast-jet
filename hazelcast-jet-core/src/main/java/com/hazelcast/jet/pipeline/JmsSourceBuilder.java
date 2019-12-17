@@ -182,7 +182,7 @@ public final class JmsSourceBuilder {
      * is non-durable by default.
      *
      * <p>The default is {@link ProcessingGuarantee#EXACTLY_ONCE}, which means
-     * that source's guarantee will match the job's guarantee.
+     * that the source's guarantee will match the job's guarantee.
      *
      * @return this instance for fluent API
      */
@@ -194,16 +194,16 @@ public final class JmsSourceBuilder {
 
     /**
      * Specifies whether the MessageConsumer of the JMS topic is shared, that
-     * is when {@code createSharedConsumer()} or {@code
+     * is whether {@code createSharedConsumer()} or {@code
      * createSharedDurableConsumer()} was used to create it in the {@link
      * #consumerFn(FunctionEx)}.
      * <p>
-     * If the consumer is not shared, only single processor on single member
-     * will connect to the broker to receive the messages. If you set this
-     * parameter to {@code true} for a non-shared consumer, all messages will
-     * be emitted on every member, leading to duplicate processing.
+     * If the consumer is not shared, only a single processor on a single
+     * member will connect to the broker to receive the messages. If you set
+     * this parameter to {@code true} for a non-shared consumer, all messages
+     * will be emitted on every member, leading to duplicate processing.
      * <p>
-     * The consumer for a queue is always assumed to be shared, regardless of
+     * A consumer for a queue is always assumed to be shared, regardless of
      * this setting.
      * <p>
      * The default value is {@code false}.

@@ -1021,7 +1021,7 @@ public final class Sources {
      * append the lines. However, it might not work as expected because some
      * editors write to a temp file and then rename it or append extra newline
      * character at the end which gets overwritten if more text is added in the
-     * editor. Best way to append is to use {@code echo text >> yourFile}.
+     * editor. The best way to append is to use {@code echo text >> yourFile}.
      *
      * See {@link #filesBuilder(String)}.
      */
@@ -1076,7 +1076,7 @@ public final class Sources {
      * offer a configuration parameter to enable auto-reconnection, refer to
      * provider documentation for details.
      *
-     * <p>Default local parallelism for this processor is 1.
+     * <p>The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static JmsSourceBuilder jmsQueueBuilder(SupplierEx<? extends ConnectionFactory> factorySupplier) {
@@ -1135,7 +1135,7 @@ public final class Sources {
      * offer a configuration parameter to enable auto-reconnection, refer to
      * provider documentation for details.
      *
-     * <p>Default local parallelism for this processor is 1.
+     * <p>The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static JmsSourceBuilder jmsTopicBuilder(SupplierEx<? extends ConnectionFactory> factorySupplier) {
