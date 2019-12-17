@@ -19,6 +19,8 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.impl.connector.WriteJmsP;
 
 import javax.annotation.Nonnull;
@@ -112,12 +114,25 @@ public final class JmsSinkBuilder<T> {
     }
 
     /**
-     * TODO [viliam]
+     * Enables or disables the exactly-once behavior of the sink using
+     * two-phase commit of state snapshots. If enabled, the {@linkplain
+     * JobConfig#setProcessingGuarantee(ProcessingGuarantee) processing
+     * guarantee} of the job must be set to {@linkplain
+     * ProcessingGuarantee#EXACTLY_ONCE exactly-once}, otherwise the sink's
+     * guarantee will match that of the job. In other words, sink's
+     * guarantee cannot be higher than job's, but can be lower to avoid the
+     * additional overhead.
      *
+     * <p>The default value is true.
+     *
+     * @param enable If true, sink's guarantee will match the job
+     *      guarantee. If false, sink's guarantee will be at-least-once
+     *      even if job's is exactly-once
+     * @return this instance for fluent API
      */
     @Nonnull
-    public JmsSinkBuilder<T> exactlyOnce(boolean exactlyOnce) {
-        this.exactlyOnce = exactlyOnce;
+    public JmsSinkBuilder<T> exactlyOnce(boolean enable) {
+        this.exactlyOnce = enable;
         return this;
     }
 

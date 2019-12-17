@@ -49,7 +49,7 @@ import static java.util.stream.Collectors.toList;
  */
 public final class WriteJmsP<T> extends JtaSinkProcessorBase {
 
-    private static final int PREFERRED_LOCAL_PARALLELISM = 4;
+    private static final int PREFERRED_LOCAL_PARALLELISM = 1;
     private final Connection connection;
     private Session session;
     private final String destinationName;
