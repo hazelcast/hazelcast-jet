@@ -103,13 +103,21 @@ public interface Observable<T> extends Iterable<T> {
     void removeObserver(UUID registrationId);
 
     /**
-     * Non-thread safe iterable. The iterable returns an iterator
-     * which can block when no additional data has available, but
-     * the sequence is not completed yet.
-     *
-     * TODO: Proper contract specification
-     *
-     * @return
+     * Non-thread safe iterator that can block while waiting for additional
+     * events.
+     * <p>
+     * Is backed by a blocking list which stores all event until they
+     * wait to be iterated over. Completion and error event also get put
+     * into the list, thus they are serialized with data events.
+     * Iteration will continue until either a completion or error event
+     * is encountered.
+     * <p>
+     * When no further event are available, but neither completion nor
+     * error has been encountered, the {@link Iterator#hasNext() hasNext()}
+     * method will block.
+     * <p>
+     * When a failure event is encountered the {@link Iterator#hasNext()
+     * hasNext()} call throws it as an Exception.
      */
     @Override
     @Nonnull

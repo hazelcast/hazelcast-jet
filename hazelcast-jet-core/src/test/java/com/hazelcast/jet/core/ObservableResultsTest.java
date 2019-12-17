@@ -68,6 +68,23 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
+    public void iterable() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        jet().newJob(pipeline).join();
+        //then
+        List<Long> items = new ArrayList<>();
+        for (Long item : testObservable) {
+            items.add(item);
+        }
+        items.sort(Long::compareTo);
+        assertEquals(Arrays.asList(0L, 1L, 2L, 3L, 4L), items);
+    }
+
+    @Test
     public void batchJobCompletesSuccessfully() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
