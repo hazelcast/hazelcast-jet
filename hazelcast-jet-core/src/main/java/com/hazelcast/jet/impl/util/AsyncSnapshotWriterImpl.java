@@ -43,6 +43,7 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -50,8 +51,9 @@ import java.util.function.Supplier;
 public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
 
     public static final int DEFAULT_CHUNK_SIZE = 128 * 1024;
+    private static final Executor DIRECT_EXECUTOR = Runnable::run;
 
-    final int usableChunkSize; // this includes the serialization header for byte[], but not the terminator
+    final int usableChunkCapacity; // this includes the serialization header for byte[], but not the terminator
     final byte[] serializedByteArrayHeader = new byte[3 * Bits.INT_SIZE_IN_BYTES];
     final byte[] valueTerminator;
     final AtomicInteger numConcurrentAsyncOps;
@@ -67,7 +69,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     private final SnapshotContext snapshotContext;
     private final String vertexName;
     private final int memberCount;
-    private IMap currentMap;
+    private IMap<SnapshotDataKey, Object> currentMap;
     private long currentSnapshotId;
     private final AtomicReference<Throwable> firstError = new AtomicReference<>();
     private final AtomicInteger numActiveFlushes = new AtomicInteger();
@@ -80,7 +82,12 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     private final ExecutionCallback<Object> callback = new ExecutionCallback<Object>() {
         @Override
         public void onResponse(Object response) {
-            assert response == null : "put operation overwrote a previous value: " + response;
+            try {
+                assert response == null : "put operation overwrote a previous value: " + response;
+            } catch (AssertionError e) {
+                onFailure(e);
+                return;
+            }
             numActiveFlushes.decrementAndGet();
             numConcurrentAsyncOps.decrementAndGet();
         }
@@ -102,6 +109,9 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
     // for test
     AsyncSnapshotWriterImpl(int chunkSize, NodeEngine nodeEngine, SnapshotContext snapshotContext,
                             String vertexName, int memberIndex, int memberCount) {
+        if (Integer.bitCount(chunkSize) != 1) {
+            throw new IllegalArgumentException("chunkSize must be a power of two, but is " + chunkSize);
+        }
         this.nodeEngine = nodeEngine;
         this.partitionService = nodeEngine.getPartitionService();
         this.logger = nodeEngine.getLogger(getClass());
@@ -116,12 +126,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         Bits.writeInt(serializedByteArrayHeader, Bits.INT_SIZE_IN_BYTES, SerializationConstants.CONSTANT_TYPE_BYTE_ARRAY,
                 useBigEndian);
 
-        buffers = new CustomByteArrayOutputStream[partitionService.getPartitionCount()];
-        for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = new CustomByteArrayOutputStream(chunkSize);
-            buffers[i].write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
-        }
-
+        buffers = createAndInitBuffers(chunkSize, partitionService.getPartitionCount(), serializedByteArrayHeader);
         JetService jetService = nodeEngine.getService(JetService.SERVICE_NAME);
         this.partitionKeys = jetService.getSharedPartitionKeys();
         this.partitionSequence = memberIndex;
@@ -132,7 +137,23 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                 SnapshotDataValueTerminator.INSTANCE).toByteArray();
         valueTerminator = Arrays.copyOfRange(valueTerminatorWithHeader, HeapData.TYPE_OFFSET,
                 valueTerminatorWithHeader.length);
-        usableChunkSize = chunkSize - valueTerminator.length;
+        usableChunkCapacity = chunkSize - valueTerminator.length - serializedByteArrayHeader.length;
+        if (usableChunkCapacity <= 0) {
+            throw new IllegalArgumentException("too small chunk size: " + chunkSize);
+        }
+    }
+
+    private static CustomByteArrayOutputStream[] createAndInitBuffers(
+            int chunkSize,
+            int partitionCount,
+            byte[] serializedByteArrayHeader
+    ) {
+        CustomByteArrayOutputStream[] buffers = new CustomByteArrayOutputStream[partitionCount];
+        for (int i = 0; i < buffers.length; i++) {
+            buffers[i] = new CustomByteArrayOutputStream(chunkSize);
+            buffers[i].write(serializedByteArrayHeader, 0, serializedByteArrayHeader.length);
+        }
+        return buffers;
     }
 
     @Override
@@ -141,9 +162,9 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
         int partitionId = partitionService.getPartitionId(entry.getKey());
         int length = entry.getKey().totalSize() + entry.getValue().totalSize() - 2 * HeapData.TYPE_OFFSET;
 
-        // if single entry is larger than usableChunkSize, send it alone. We avoid adding it to the ByteArrayOutputStream,
-        // since it will grow beyond maximum capacity and never shrink again.
-        if (length > usableChunkSize) {
+        // if the entry is larger than usableChunkSize, send it in its own chunk. We avoid adding it to the
+        // ByteArrayOutputStream since it would expand it beyond its maximum capacity.
+        if (length > usableChunkCapacity) {
             return putAsyncToMap(partitionId, () -> {
                 byte[] data = new byte[serializedByteArrayHeader.length + length + valueTerminator.length];
                 totalKeys++;
@@ -166,14 +187,15 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
             });
         }
 
-        // if the buffer will exceed usableChunkSize after adding this entry, flush it first
-        if (buffers[partitionId].size() + length > usableChunkSize && !flushPartition(partitionId)) {
+        // if the buffer after adding this entry and terminator would exceed the capacity limit, flush it first
+        CustomByteArrayOutputStream buffer = buffers[partitionId];
+        if (buffer.size() + length + valueTerminator.length > buffer.capacityLimit && !flushPartition(partitionId)) {
             return false;
         }
 
         // append to buffer
-        writeWithoutHeader(entry.getKey(), buffers[partitionId]);
-        writeWithoutHeader(entry.getValue(), buffers[partitionId]);
+        writeWithoutHeader(entry.getKey(), buffer);
+        writeWithoutHeader(entry.getValue(), buffer);
         totalKeys++;
         return true;
     }
@@ -235,7 +257,7 @@ public class AsyncSnapshotWriterImpl implements AsyncSnapshotWriter {
                     new SnapshotDataKey(partitionKeys[partitionId], currentSnapshotId, vertexName, partitionSequence),
                     data);
             partitionSequence += memberCount;
-            future.andThen(callback);
+            future.andThen(callback, DIRECT_EXECUTOR);
             numActiveFlushes.incrementAndGet();
         } catch (HazelcastInstanceNotActiveException ignored) {
             return false;
