@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -51,13 +52,14 @@ public class ObservableResultsTest extends TestInClusterSupport {
     private String observableName;
     private TestObserver testObserver;
     private Observable<Long> testObservable;
+    private UUID registrationId;
 
     @Before
     public void before() {
         observableName = randomName();
         testObserver = new TestObserver();
         testObservable = jet().getObservable(observableName);
-        testObservable.addObserver(testObserver);
+        registrationId = testObservable.addObserver(testObserver);
     }
 
     @After
@@ -142,7 +144,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         //when
         job.restart();
         //then
-        int resultsSoFar = testObserver.getSortedValues().size();
+        int resultsSoFar = testObserver.getNoOfValues();
         assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
         assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > resultsSoFar));
         assertError(testObserver, null);
@@ -215,7 +217,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
-    public void veryFastPublishRate() throws Throwable {
+    public void veryFastPublishRate() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.itemStream(100_000))
                 .withoutTimestamps()
@@ -232,7 +234,29 @@ public class ObservableResultsTest extends TestInClusterSupport {
         job.cancel();
     }
 
-    //TODO (PR-1729): removed listener doesn't get further events
+    @Test
+    public void removedObserverDoesNotGetFurtherEvents() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        Job job = jet().newJob(pipeline);
+        //then
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 10));
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
+
+        //when
+        testObservable.removeObserver(registrationId);
+        //then
+        int resultsSoFar = testObserver.getNoOfValues();
+        assertTrueAllTheTime(() -> assertEquals(resultsSoFar, testObserver.getNoOfValues()), 1);
+
+        job.cancel();
+    }
 
     private static void assertSortedValues(TestObserver observer, Long... values) {
         assertTrueEventually(() -> assertEquals(Arrays.asList(values), observer.getSortedValues()));
