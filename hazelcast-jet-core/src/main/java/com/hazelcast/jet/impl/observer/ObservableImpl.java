@@ -29,6 +29,7 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.StaleSequenceException;
+import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 import com.hazelcast.spi.exception.DistributedObjectDestroyedException;
 import com.hazelcast.spi.impl.executionservice.ExecutionService;
 
@@ -89,7 +90,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
     private static class RingbufferListener<T> {
 
-        private static final int BATCH_SIZE = 64;
+        private static final int BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
         private final String observableName;
         private final Observer<T> observer;
