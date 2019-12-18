@@ -91,6 +91,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
         private static final int BATCH_SIZE = 64;
 
+        private final String observableName;
         private final Observer<T> observer;
 
         private final Ringbuffer<Object> ringbuffer;
@@ -106,6 +107,7 @@ public class ObservableImpl<T> implements Observable<T> {
                 HazelcastInstance hzInstance,
                 ILogger logger
         ) {
+            this.observableName = observableName;
             this.observer = observer;
             this.ringbuffer = hzInstance.getRingbuffer(ObservableUtil.getRingbufferName(observableName));
             this.logger = logger;
@@ -218,7 +220,7 @@ public class ObservableImpl<T> implements Observable<T> {
                                 "large sequence: %s. Jumping from old sequence %s to sequence %s.",
                         ringbuffer.getName(), t.getMessage(), sequence, currentHeadSequence));
             }
-            this.sequence = currentHeadSequence;
+            adjustSequence(currentHeadSequence);
             return true;
         }
 
@@ -237,8 +239,16 @@ public class ObservableImpl<T> implements Observable<T> {
                 logger.finest("Message listener on ring-buffer " + ringbuffer.getName() + " ran " +
                         "into a stale sequence. Jumping from oldSequence " + sequence + " to sequence " + headSeq + ".");
             }
-            sequence = headSeq;
+            adjustSequence(headSeq);
             return true;
+        }
+
+        private void adjustSequence(long newSequence) {
+            if (newSequence > sequence) {
+                logger.warning(String.format("Message loss of %d messages detected in one of observable %s's observers",
+                        newSequence - sequence, observableName));
+            }
+            this.sequence = newSequence;
         }
 
         private static Executor getExecutor(HazelcastInstance hzInstance) {
