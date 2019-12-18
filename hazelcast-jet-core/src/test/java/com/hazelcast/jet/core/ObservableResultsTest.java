@@ -28,6 +28,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,10 +38,14 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -53,18 +58,20 @@ public class ObservableResultsTest extends TestInClusterSupport {
     private TestObserver testObserver;
     private Observable<Long> testObservable;
     private UUID registrationId;
+    private Set<Observable> usedObservables;
 
     @Before
     public void before() {
+        usedObservables = new HashSet<>();
         observableName = randomName();
         testObserver = new TestObserver();
-        testObservable = jet().getObservable(observableName);
+        testObservable = getObservable(observableName);
         registrationId = testObservable.addObserver(testObserver);
     }
 
     @After
     public void after() {
-        testObservable.destroy();
+        usedObservables.forEach(Observable::destroy);
     }
 
     @Test
@@ -174,7 +181,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         BatchStage<Long> stage = pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L));
 
         TestObserver otherTestObserver = new TestObserver();
-        Observable<Long> otherObservable = jet().getObservable("otherObservable");
+        Observable<Long> otherObservable = getObservable("otherObservable");
         otherObservable.addObserver(otherTestObserver);
 
         stage.filter(i -> i % 2 == 0).writeTo(Sinks.observable(observableName));
@@ -191,8 +198,6 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertSortedValues(otherTestObserver, 1L, 3L);
         assertError(otherTestObserver, null);
         assertCompletions(otherTestObserver, 1);
-
-        otherObservable.destroy();
     }
 
     @Test
@@ -275,7 +280,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
         //when
         TestObserver otherTestObserver = new TestObserver();
-        jet().<Long>getObservable(observableName).addObserver(otherTestObserver);
+        this.<Long>getObservable(observableName).addObserver(otherTestObserver);
         //then
         assertSortedValues(otherTestObserver, 0L, 1L, 2L, 3L, 4L);
         assertError(otherTestObserver, null);
@@ -291,16 +296,12 @@ public class ObservableResultsTest extends TestInClusterSupport {
         //when
         jet().newJob(pipeline).join();
         TestObserver otherTestObserver = new TestObserver();
-        Observable<Long> lateObservable = jet().<Long>getObservable(observableName + "late");
-        try {
-            lateObservable.addObserver(otherTestObserver);
-            //then
-            assertSortedValues(otherTestObserver, 0L, 1L, 2L, 3L, 4L);
-            assertError(otherTestObserver, null);
-            assertCompletions(otherTestObserver, 1);
-        } finally {
-            lateObservable.destroy();
-        }
+        Observable<Long> lateObservable = getObservable(observableName + "late");
+        lateObservable.addObserver(otherTestObserver);
+        //then
+        assertSortedValues(otherTestObserver, 0L, 1L, 2L, 3L, 4L);
+        assertError(otherTestObserver, null);
+        assertCompletions(otherTestObserver, 1);
     }
 
     @Test
@@ -322,16 +323,12 @@ public class ObservableResultsTest extends TestInClusterSupport {
 
         //when
         TestObserver otherTestObserver = new TestObserver();
-        Observable<Long> lateObservable = jet().<Long>getObservable(observableName);
-        try {
-            lateObservable.addObserver(otherTestObserver);
-            //then
-            assertSortedValues(testObserver);
-            assertError(testObserver, "Ooops!");
-            assertCompletions(testObserver, 0);
-        } finally {
-            lateObservable.destroy();
-        }
+        Observable<Long> lateObservable = getObservable(observableName);
+        lateObservable.addObserver(otherTestObserver);
+        //then
+        assertSortedValues(testObserver);
+        assertError(testObserver, "Ooops!");
+        assertCompletions(testObserver, 0);
     }
 
     @Test
@@ -420,7 +417,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
                 .writeTo(Sinks.observable(observableName + "destroyed"));
 
         TestObserver otherTestObserver = new TestObserver();
-        Observable<Long> destroyedObservable = jet().<Long>getObservable(observableName + "destroyed");
+        Observable<Long> destroyedObservable = getObservable(observableName + "destroyed");
         destroyedObservable.addObserver(otherTestObserver);
         //when
         Job job = jet().newJob(pipeline);
@@ -437,6 +434,30 @@ public class ObservableResultsTest extends TestInClusterSupport {
         job.cancel();
         assertError(otherTestObserver, null);
         assertCompletions(otherTestObserver, 0);
+    }
+
+    @Test
+    public void moreResultsThanWriteBatchSize() {
+        List<Long> sourceItems = LongStream.range(0, RingbufferProxy.MAX_BATCH_SIZE * 5)
+                .boxed()
+                .collect(Collectors.toList());
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(sourceItems))
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        jet().newJob(pipeline).join();
+        //then
+        assertSortedValues(testObserver, sourceItems.toArray(new Long[0]));
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 1);
+    }
+
+    private <T> Observable<T> getObservable(String name) {
+        Observable<T> observable = jet().getObservable(name);
+        usedObservables.add(observable);
+        return observable;
     }
 
     private static void assertSortedValues(TestObserver observer, Long... values) {
