@@ -212,6 +212,55 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
+    public void multipleJobsWithTheSameSink() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .filter(t -> (t % 2 == 0))
+                .writeTo(Sinks.observable(observableName));
+        Pipeline pipeline2 = Pipeline.create();
+        pipeline2.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .filter(t -> (t % 2 != 0))
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        Job job = jet().newJob(pipeline);
+        Job job2 = jet().newJob(pipeline2);
+        //then
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job2.getStatus()));
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 10));
+        assertTrueEventually(() -> {
+            List<Long> sortedValues = testObserver.getSortedValues();
+            assertEquals(0, (long) sortedValues.get(0));
+            assertEquals(1, (long) sortedValues.get(1));
+        });
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
+
+        job.cancel();
+        job2.cancel();
+    }
+
+    @Test
+    public void multipleJobExecutions() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        jet().newJob(pipeline).join();
+        jet().newJob(pipeline).join();
+        //then
+        assertSortedValues(testObserver, 0L, 0L, 1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L);
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 2);
+    }
+
+    @Test
     public void observersGetAllEventsStillInRingbuffer() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
@@ -231,6 +280,93 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertSortedValues(otherTestObserver, 0L, 1L, 2L, 3L, 4L);
         assertError(otherTestObserver, null);
         assertCompletions(otherTestObserver, 1);
+    }
+
+    @Test
+    public void observableRegisteredAfterJobFinishedGetAllEventsStillInRingbuffer() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(observableName + "late"));
+
+        //when
+        jet().newJob(pipeline).join();
+        TestObserver otherTestObserver = new TestObserver();
+        Observable<Long> lateObservable = jet().<Long>getObservable(observableName + "late");
+        try {
+            lateObservable.addObserver(otherTestObserver);
+            //then
+            assertSortedValues(otherTestObserver, 0L, 1L, 2L, 3L, 4L);
+            assertError(otherTestObserver, null);
+            assertCompletions(otherTestObserver, 1);
+        } finally {
+            lateObservable.destroy();
+        }
+    }
+
+    @Test
+    public void observableRegisteredAfterJobFailedGetError() {
+        BatchSource<String> errorSource = SourceBuilder
+                .batch("error-source", x -> (Object) null)
+                .<String>fillBufferFn((in, Void) -> {
+                    throw new Exception("Ooops!");
+                })
+                .destroyFn(ConsumerEx.noop())
+                .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(errorSource)
+                .writeTo(Sinks.observable(observableName));
+
+        Job job = jet().newJob(pipeline);
+        assertTrueEventually(() -> assertEquals(JobStatus.FAILED, job.getStatus()));
+
+        //when
+        TestObserver otherTestObserver = new TestObserver();
+        Observable<Long> lateObservable = jet().<Long>getObservable(observableName);
+        try {
+            lateObservable.addObserver(otherTestObserver);
+            //then
+            assertSortedValues(testObserver);
+            assertError(testObserver, "Ooops!");
+            assertCompletions(testObserver, 0);
+        } finally {
+            lateObservable.destroy();
+        }
+    }
+
+    @Test
+    public void errorInOneJobIsNotTerminalForOthers() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName));
+        Pipeline pipeline2 = Pipeline.create();
+        pipeline2.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        Job job = jet().newJob(pipeline);
+        Job job2 = jet().newJob(pipeline2);
+        //then
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
+        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job2.getStatus()));
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 10));
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 0);
+
+        //when
+        job.cancel();
+        assertError(testObserver, "CancellationException");
+        assertCompletions(testObserver, 0);
+
+        //then - job2 is still running
+        int resultsSoFar = testObserver.getNoOfValues();
+        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > resultsSoFar));
+
+        job2.cancel();
     }
 
     @Test
@@ -270,9 +406,37 @@ public class ObservableResultsTest extends TestInClusterSupport {
         testObservable.removeObserver(registrationId);
         //then
         int resultsSoFar = testObserver.getNoOfValues();
-        assertTrueAllTheTime(() -> assertEquals(resultsSoFar, testObserver.getNoOfValues()), 1);
+        assertTrueAllTheTime(() -> assertEquals(resultsSoFar, testObserver.getNoOfValues()), 2);
 
         job.cancel();
+    }
+
+    @Test
+    public void destroyedObservableDoesNotGetFurtherEvents() {
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.itemStream(100))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence)
+                .writeTo(Sinks.observable(observableName + "destroyed"));
+
+        TestObserver otherTestObserver = new TestObserver();
+        Observable<Long> destroyedObservable = jet().<Long>getObservable(observableName + "destroyed");
+        destroyedObservable.addObserver(otherTestObserver);
+        //when
+        Job job = jet().newJob(pipeline);
+        //then
+        assertTrueEventually(() -> assertTrue(otherTestObserver.getNoOfValues() > 10));
+        assertError(otherTestObserver, null);
+        assertCompletions(otherTestObserver, 0);
+
+        //when
+        destroyedObservable.destroy();
+        //then
+        int resultsSoFar = otherTestObserver.getNoOfValues();
+        assertTrueAllTheTime(() -> assertEquals(resultsSoFar, otherTestObserver.getNoOfValues()), 2);
+        job.cancel();
+        assertError(otherTestObserver, null);
+        assertCompletions(otherTestObserver, 0);
     }
 
     private static void assertSortedValues(TestObserver observer, Long... values) {
