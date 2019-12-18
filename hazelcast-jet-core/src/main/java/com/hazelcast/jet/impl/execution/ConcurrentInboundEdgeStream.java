@@ -20,6 +20,7 @@ import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.Pipe;
 import com.hazelcast.internal.util.concurrent.QueuedPipe;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
@@ -142,7 +143,8 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             }
 
             if (itemDetector.item != null) {
-                // if we have received the current snapshot from all active queues, forward it
+                // If we have received the current snapshot from all active queues, forward it. It can be
+                // due to a received barrier or a received DONE_ITEM
                 if (receivedBarriers.cardinality() == numActiveQueues) {
                     assert currentBarrier != null : "currentBarrier == null";
                     boolean res = dest.test(currentBarrier);
@@ -206,6 +208,7 @@ public class ConcurrentInboundEdgeStream implements InboundEdgeStream {
             // the barrier before the barrier is processed.
             waitForAllBarriers = true;
         }
+        LoggingUtil.logFinest(logger, "Received barrier from queue %d, snapshot %d", queueIndex, barrier.snapshotId());
         receivedBarriers.set(queueIndex);
     }
 

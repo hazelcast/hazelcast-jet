@@ -389,6 +389,25 @@ public class ProcessorTaskletTest_Snapshots {
         assertEquals(outstream1.getBuffer(), asList(barrier0(true), DONE_ITEM));
     }
 
+    @Test
+    public void test_expectingToReceiveBarrier_and_turnedIntoSource() {
+        // A source processor in phase-1 checks the snapshotContext for new snapshot ID. A non-source
+        // processor expects to receive the barrier. A processor can turn into a source when its last input
+        // completes. This test checks that it detects the barrier.
+
+        MockInboundStream instream1 = new MockInboundStream(0, singletonList(DONE_ITEM), 1024);
+        MockOutboundStream outstream1 = new MockOutboundStream(0, 128);
+        instreams.add(instream1);
+        outstreams.add(outstream1);
+
+        ProcessorTasklet tasklet = createTasklet(EXACTLY_ONCE);
+        CompletableFuture<SnapshotPhase1Result> future =
+                snapshotContext.startNewSnapshotPhase1(0, null, SnapshotFlags.create(false, false));
+        callUntil(tasklet, NO_PROGRESS);
+        assertEquals(singletonList(barrier0(false)), snapshotCollector.getBuffer());
+        assertEquals(singletonList(barrier0(false)), outstream1.getBuffer());
+    }
+
     private ProcessorTasklet createTasklet(ProcessingGuarantee guarantee) {
         for (int i = 0; i < instreams.size(); i++) {
             instreams.get(i).setOrdinal(i);

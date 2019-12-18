@@ -263,7 +263,7 @@ public class ProcessorTasklet implements Tasklet {
             case NULLARY_PROCESS:
                 if (isSnapshotInbox() || processor.tryProcess()) {
                     state = PROCESS_INBOX;
-                        outbox.reset();
+                    outbox.reset();
                     stateMachineStep(); // recursion
                 }
                 break;

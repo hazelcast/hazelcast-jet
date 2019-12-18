@@ -338,7 +338,8 @@
                         ${argLine}
                     </argLine>
                     <includes>
-                        <include>/com/hazelcast/jet/**/**.java</include>
+                        <include>/com/hazelcast/jet/pipeline/SourceBuilder_TopologyChangeTest.java</include>
+<!--                        <include>/com/hazelcast/jet/**/**.java</include>-->
                     </includes>
                     <excludedGroups>
                         com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest
