@@ -144,6 +144,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
         JetInstance instance = getJetInstance(nodeEngine);
+        Set<Integer> higherPriorityVertices = VertexDef.getHigherPriorityVertices(vertices);
         for (VertexDef vertex : vertices) {
             Collection<? extends Processor> processors = createProcessors(vertex, vertex.localParallelism());
 
@@ -157,7 +158,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                     new AsyncSnapshotWriterImpl(nodeEngine, snapshotContext, vertex.name(), memberIndex, memberCount),
                     nodeEngine.getLogger(StoreSnapshotTasklet.class.getName() + "."
                             + sanitizeLoggerNamePart(vertex.name())),
-                    vertex.name(), vertex.isHigherPrioritySource());
+                    vertex.name(), higherPriorityVertices.contains(vertex.vertexId()));
             tasklets.add(ssTasklet);
 
             int localProcessorIdx = 0;
@@ -549,10 +550,14 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                              .count();
     }
 
-    public int getHigherPriorityVertexCount() {
-        return (int) vertices.stream()
-                             .filter(VertexDef::isHigherPrioritySource)
+    public int getProcessorTaskletCount() {
+        return (int) tasklets.stream()
+                             .filter(t -> t instanceof ProcessorTasklet)
                              .count();
+    }
+
+    public int getHigherPriorityVertexCount() {
+        return VertexDef.getHigherPriorityVertices(vertices).size();
     }
 
     // for test
