@@ -31,6 +31,8 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.broker.region.policy.PolicyEntry;
+import org.apache.activemq.broker.region.policy.PolicyMap;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -54,8 +56,20 @@ import static org.junit.Assert.assertTrue;
 
 public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
 
+    private static final int MESSAGE_COUNT = 10_000;
+
     @ClassRule
-    public static EmbeddedActiveMQBroker realBroker = new EmbeddedActiveMQBroker();
+    public static EmbeddedActiveMQBroker realBroker = new EmbeddedActiveMQBroker() {
+        @Override
+        protected void configure() {
+            // this is needed to work https://issues.apache.org/jira/browse/AMQ-7369 around
+            PolicyMap destinationPolicy = new PolicyMap();
+            PolicyEntry defaultEntry = new PolicyEntry();
+            defaultEntry.setMaxPageSize(MESSAGE_COUNT);
+            destinationPolicy.setDefaultEntry(defaultEntry);
+            getBrokerService().setDestinationPolicy(destinationPolicy);
+        }
+    };
 
     private static volatile boolean storeFailed;
 
@@ -65,8 +79,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
         JetInstance instance2 = createJetMember();
 
         // use higher number of messages so that each of the parallel processors gets some
-        int messageCount = 10_000;
-        JmsTestUtil.sendMessages(getConnectionFactory(), "queue", true, messageCount);
+        JmsTestUtil.sendMessages(getConnectionFactory(), "queue", true, MESSAGE_COUNT);
 
         Pipeline p = Pipeline.create();
         IList<String> sinkList = instance1.getList("sinkList");
@@ -80,7 +93,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
                 .setProcessingGuarantee(EXACTLY_ONCE)
                 .setSnapshotIntervalMillis(DAYS.toMillis(1)));
 
-        assertTrueEventually(() -> assertEquals("expected items not in sink", messageCount, sinkList.size()));
+        assertTrueEventually(() -> assertEquals("expected items not in sink", MESSAGE_COUNT, sinkList.size()), 5);
 
         // Now forcefully shut down the second member. The terminated member
         // will NOT roll back its transaction. We'll assert that the
@@ -90,7 +103,7 @@ public class JmsIntegration_NonSharedClusterTest extends JetTestSupport {
         // transaction will be stalled and only emitted once, they will be
         // emitted after the default Artemis timeout of 5 minutes.
         instance2.getHazelcastInstance().getLifecycleService().terminate();
-        assertTrueEventually(() -> assertEquals("items should be emitted twice", messageCount * 2, sinkList.size()), 20);
+        assertTrueEventually(() -> assertEquals("items should be emitted twice", MESSAGE_COUNT * 2, sinkList.size()), 20);
     }
 
     @Test
