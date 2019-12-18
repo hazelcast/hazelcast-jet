@@ -234,7 +234,7 @@ public class ObservableImpl<T> implements Observable<T> {
          * @return if the exception was handled and the listener may continue reading
          */
         private boolean handleStaleSequenceException(StaleSequenceException staleSequenceException) {
-            long headSeq = staleSequenceException.getHeadSeq();
+            long headSeq = ringbuffer.headSequence();
             if (logger.isFinestEnabled()) {
                 logger.finest("Message listener on ring-buffer " + ringbuffer.getName() + " ran " +
                         "into a stale sequence. Jumping from oldSequence " + sequence + " to sequence " + headSeq + ".");
