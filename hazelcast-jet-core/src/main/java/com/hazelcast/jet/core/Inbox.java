@@ -59,9 +59,27 @@ public interface Inbox {
      * @param target the collection to drain this object's items into
      * @return the number of elements actually drained
      */
+    @SuppressWarnings("unchecked")
     default <E> int drainTo(Collection<E> target) {
         int drained = 0;
         for (E o; (o = (E) poll()) != null; drained++) {
+            target.add(o);
+        }
+        return drained;
+    }
+
+    /**
+     * Drains all elements into the provided {@link Collection}, stopping
+     * when {@code limit} is reached.
+     *
+     * @param target the collection to drain this object's items into
+     * @param limit the maximum amount of items to drain
+     * @return the number of elements actually drained
+     */
+    @SuppressWarnings("unchecked")
+    default <E> int drainTo(Collection<E> target, int limit) {
+        int drained = 0;
+        for (E o; drained < limit && (o = (E) poll()) != null; drained++) {
             target.add(o);
         }
         return drained;
@@ -72,6 +90,7 @@ public interface Inbox {
      *
      * @return the number of elements drained
      */
+    @SuppressWarnings("unchecked")
     default <E> int drain(Consumer<E> consumer) {
         int consumed = 0;
         for (E o; (o = (E) poll()) != null; consumed++) {

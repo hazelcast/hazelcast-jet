@@ -65,19 +65,9 @@ public final class WriteObservableP<T> implements Processor {
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         if (batch.isEmpty()) {
-            drainInbox(inbox);
+            inbox.drainTo(batch, MAX_BATCH_SIZE);
         }
         tryFlush();
-    }
-
-    private void drainInbox(@Nonnull Inbox inbox) {
-        for (int drained = 0; drained < MAX_BATCH_SIZE; drained++) {
-            Object item = inbox.poll();
-            if (item == null) {
-                break;
-            }
-            batch.add((T) item);
-        }
     }
 
     private void tryFlush() {
@@ -90,7 +80,7 @@ public final class WriteObservableP<T> implements Processor {
 
     private void onFlushComplete(Long result, Throwable throwable) {
         if (throwable != null) {
-            logger.warning("Failed publishing into observable: " + throwable, throwable);
+            logger.warning("Failed publishing into observable '" + ringbufferName + "'", throwable);
         }
         pendingWrites.decrementAndGet();
     }
