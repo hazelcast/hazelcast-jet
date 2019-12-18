@@ -320,7 +320,8 @@ public final class KafkaSinks {
         @Nonnull
         public Sink<E> build() {
             if ((extractValueFn != null || extractKeyFn != null) && topic == null) {
-                throw new IllegalArgumentException("if `extractKeyFn` or `extractValueFn` are set, `topic` must be set too");
+                throw new IllegalArgumentException("if `extractKeyFn` or `extractValueFn` are set, `topic` must be set " +
+                        "too");
             }
             if (topic == null && toRecordFn == null) {
                 throw new IllegalArgumentException("either `topic` or `toRecordFn` must be set");
