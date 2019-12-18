@@ -55,6 +55,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
  */
 public final class WriteKafkaP<T, K, V> implements Processor {
 
+    public static final int TXN_POOL_SIZE = 2;
     private final Map<String, Object> properties;
     private final Function<? super T, ? extends ProducerRecord<K, V>> toRecordFn;
     private final boolean exactlyOnce;
@@ -87,7 +88,7 @@ public final class WriteKafkaP<T, K, V> implements Processor {
                 ? AT_LEAST_ONCE
                 : context.processingGuarantee();
 
-        snapshotUtility = new TransactionPoolSnapshotUtility<>(outbox, context, false, guarantee, 2,
+        snapshotUtility = new TransactionPoolSnapshotUtility<>(outbox, context, false, guarantee, TXN_POOL_SIZE,
                 (processorIndex, txnIndex) -> new KafkaTransactionId(
                         context.jobId(), context.jobConfig().getName(), context.vertexName(), processorIndex, txnIndex),
                 txnId -> {

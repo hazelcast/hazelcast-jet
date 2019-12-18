@@ -26,6 +26,7 @@ import com.hazelcast.jet.pipeline.Sinks;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Map.Entry;
 import java.util.Properties;
 
@@ -42,16 +43,16 @@ public final class KafkaSinks {
     }
 
     /**
-     * Returns a source that publishes messages to Apache Kafka topic(s). It
+     * Returns a sink that publishes messages to Apache Kafka topic(s). It
      * transforms each received item to a {@code ProducerRecord} using the
      * supplied mapping function.
      * <p>
-     * The source creates a single {@code KafkaProducer} per processor using
+     * The sink creates a single {@code KafkaProducer} per processor using
      * the supplied {@code properties}.
      * <p>
      * The behavior depends on the job's processing guarantee:
      * <ul>
-     *     <li><em>EXACTLY_ONCE:</em> the source will use Kafka transactions to
+     *     <li><em>EXACTLY_ONCE:</em> the sink will use Kafka transactions to
      *     commit the messages. This brings some overhead on the broker side,
      *     slight throughput reduction (we don't send messages between snapshot
      *     phases) and, most importantly, increases the latency of the messages
@@ -66,11 +67,12 @@ public final class KafkaSinks {
      *     to restart after a failure: a member can crash just before it's
      *     about to commit, and Jet will attempt to commit the transaction
      *     after the restart, but the transaction must be still waiting in the
-     *     broker.
+     *     broker. The default in Kafka 2.4 is 1 minute.
      *
-     *     <li><em>AT_LEAST_ONCE:</em> the source will flush the messages at
-     *     1st snapshot phase. This ensures that each message is written if the
-     *     job fails, but might be written again after the job restarts.
+     *     <li><em>AT_LEAST_ONCE:</em> messages are committed immediately, the
+     *     sink ensure that all async operations are done at 1st snapshot
+     *     phase. This ensures that each message is written if the job fails,
+     *     but might be written again after the job restarts.
      * </ul>
      *
      * If you want to avoid the overhead of transactions, you can reduce the
@@ -141,14 +143,14 @@ public final class KafkaSinks {
 
     /**
      * Returns a builder object that you can use to create an Apache Kafka
-     * pipeline source.
+     * pipeline sink.
      * <p>
-     * The source creates a single {@code KafkaProducer} per processor using
+     * The sink creates a single {@code KafkaProducer} per processor using
      * the supplied {@code properties}.
      * <p>
      * The behavior depends on the job's processing guarantee:
      * <ul>
-     *     <li><em>EXACTLY_ONCE:</em> the source will use Kafka transactions to
+     *     <li><em>EXACTLY_ONCE:</em> the sink will use Kafka transactions to
      *     commit the messages. This brings some overhead on the broker side,
      *     slight throughput reduction (we don't send messages between snapshot
      *     phases) and, most importantly, increases the latency of the messages
@@ -163,16 +165,17 @@ public final class KafkaSinks {
      *     to restart after a failure: a member can crash just before it's
      *     about to commit, and Jet will attempt to commit the transaction
      *     after the restart, but the transaction must be still waiting in the
-     *     broker.
+     *     broker. The default in Kafka 2.4 is 1 minute.
      *
-     *     <li><em>AT_LEAST_ONCE:</em> the source will flush the messages at
-     *     1st snapshot phase. This ensures that each message is written if the
-     *     job fails, but might be written again after the job restarts.
+     *     <li><em>AT_LEAST_ONCE:</em> messages are committed immediately, the
+     *     sink ensure that all async operations are done at 1st snapshot
+     *     phase. This ensures that each message is written if the job fails,
+     *     but might be written again after the job restarts.
      * </ul>
      *
      * If you want to avoid the overhead of transactions, you can reduce the
      * guarantee just for the sink by calling {@link
-     * Builder#exactlyOnce(boolean) exactlyOnce(false)}.
+     * Builder#exactlyOnce(boolean) exactlyOnce(false)} on the returned builder.
      * <p>
      * IO failures are generally handled by Kafka producer and do not cause the
      * processor to fail. Refer to Kafka documentation for details.
@@ -215,6 +218,7 @@ public final class KafkaSinks {
          * @param topic the topic name
          * @return this instance for fluent API
          */
+        @Nonnull
         public Builder<E> topic(String topic) {
             if (toRecordFn != null) {
                 throw new IllegalArgumentException("toRecordFn already set, you can't use topic if it's set");
@@ -233,6 +237,7 @@ public final class KafkaSinks {
          * @param extractKeyFn a function to extract the key from the stream item
          * @return this instance for fluent API
          */
+        @Nonnull
         public Builder<E> extractKeyFn(@Nonnull FunctionEx<? super E, ?> extractKeyFn) {
             if (toRecordFn != null) {
                 throw new IllegalArgumentException("toRecordFn already set, you can't use extractKeyFn if it's set");
@@ -251,6 +256,7 @@ public final class KafkaSinks {
          * @param extractValueFn a function to extract the value from the stream item
          * @return this instance for fluent API
          */
+        @Nonnull
         public Builder<E> extractValueFn(@Nonnull FunctionEx<? super E, ?> extractValueFn) {
             if (toRecordFn != null) {
                 throw new IllegalArgumentException("toRecordFn already set, you can't use extractValueFn if it's set");
@@ -272,7 +278,8 @@ public final class KafkaSinks {
          * @return this instance for fluent API
          */
         @SuppressWarnings("unchecked")
-        public Builder<E> toRecordFn(FunctionEx<? super E, ? extends ProducerRecord<?, ?>> toRecordFn) {
+        @Nonnull
+        public Builder<E> toRecordFn(@Nullable FunctionEx<? super E, ? extends ProducerRecord<?, ?>> toRecordFn) {
             if (topic != null || extractKeyFn != null || extractValueFn != null) {
                 throw new IllegalArgumentException("topic, extractKeyFn or extractValueFn are already set, you can't use" +
                         " toRecordFn along with them");
@@ -300,6 +307,7 @@ public final class KafkaSinks {
          *      even if job's is exactly-once
          * @return this instance for fluent API
          */
+        @Nonnull
         public Builder<E> exactlyOnce(boolean enable) {
             exactlyOnce = enable;
             return this;
@@ -307,18 +315,19 @@ public final class KafkaSinks {
 
         /**
          * Builds the Sink object that you pass to the {@link
-         * GeneralStage#drainTo(Sink)} method.
+         * GeneralStage#writeTo(Sink)} method.
          */
+        @Nonnull
         public Sink<E> build() {
             if ((extractValueFn != null || extractKeyFn != null) && topic == null) {
-                throw new IllegalArgumentException("if extractKeyFn or extractValueFn are set, topic must be set too");
+                throw new IllegalArgumentException("if `extractKeyFn` or `extractValueFn` are set, `topic` must be set too");
             }
             if (topic == null && toRecordFn == null) {
-                throw new IllegalArgumentException("either from topic or toRecordFn must be set");
+                throw new IllegalArgumentException("either `topic` or `toRecordFn` must be set");
             }
             if (topic != null) {
-                FunctionEx<? super E, ?> extractKeyFn1 = this.extractKeyFn != null ? this.extractKeyFn : t -> null;
-                FunctionEx<? super E, ?> extractValueFn1 = this.extractValueFn != null ? this.extractValueFn : t -> t;
+                FunctionEx<? super E, ?> extractKeyFn1 = extractKeyFn != null ? extractKeyFn : t -> null;
+                FunctionEx<? super E, ?> extractValueFn1 = extractValueFn != null ? extractValueFn : t -> t;
                 return Sinks.fromProcessor("writeKafka(" + topic + ")",
                         writeKafkaP(properties, topic, extractKeyFn1, extractValueFn1, exactlyOnce));
             } else {
