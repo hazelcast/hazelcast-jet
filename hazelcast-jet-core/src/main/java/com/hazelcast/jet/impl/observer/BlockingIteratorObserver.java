@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.observer;
 
-import com.hazelcast.jet.Observer;
+import com.hazelcast.jet.function.Observer;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;

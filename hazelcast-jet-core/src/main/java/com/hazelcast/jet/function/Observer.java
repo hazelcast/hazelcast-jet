@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.function;
+
+import com.hazelcast.jet.Observable;
 
 import javax.annotation.Nonnull;
 import java.util.function.Consumer;

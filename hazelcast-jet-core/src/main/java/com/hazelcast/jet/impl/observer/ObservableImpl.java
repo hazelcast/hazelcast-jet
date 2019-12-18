@@ -23,7 +23,7 @@ import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.Observable;
-import com.hazelcast.jet.Observer;
+import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.ReadResultSet;
