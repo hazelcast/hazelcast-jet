@@ -71,8 +71,11 @@ public final class WriteObservableP<T> implements Processor {
     }
 
     private void drainInbox(@Nonnull Inbox inbox) {
-        int drained = 0;
-        for (Object item; (item = inbox.poll()) != null && drained < MAX_BATCH_SIZE; drained++) {
+        for (int drained = 0; drained < MAX_BATCH_SIZE; drained++) {
+            Object item = inbox.poll();
+            if (item == null) {
+                break;
+            }
             batch.add((T) item);
         }
     }
