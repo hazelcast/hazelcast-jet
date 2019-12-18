@@ -246,7 +246,7 @@ public class ObservableImpl<T> implements Observable<T> {
                 return ((HazelcastInstanceImpl) hzInstance).node.getNodeEngine().getExecutionService()
                         .getExecutor(ExecutionService.ASYNC_EXECUTOR);
             } else if (hzInstance instanceof HazelcastClientInstanceImpl) {
-                return ((HazelcastClientInstanceImpl) hzInstance).getClientExecutionService().getUserExecutor();
+                return ((HazelcastClientInstanceImpl) hzInstance).getTaskScheduler();
             } else {
                 throw new RuntimeException(String.format("Unhandled %s type: %s", HazelcastInstance.class.getSimpleName(),
                         hzInstance.getClass().getName()));
