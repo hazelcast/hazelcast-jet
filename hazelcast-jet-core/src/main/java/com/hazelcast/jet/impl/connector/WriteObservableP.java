@@ -40,15 +40,15 @@ import static java.util.stream.Collectors.toList;
 
 public final class WriteObservableP<T> implements Processor {
 
-    private static final int ASYNC_OPS_LIMIT = 16;
+    private static final int ASYNC_OPS_LIMIT = 1;
     private static final int MAX_BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
     private final String ringbufferName;
     private final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
+    private final AtomicInteger pendingWrites = new AtomicInteger(0);
 
     private Ringbuffer<Object> ringbuffer;
     private ILogger logger;
-    private final AtomicInteger pendingWrites = new AtomicInteger(0);
 
 
     private WriteObservableP(String ringbufferName) {
@@ -78,7 +78,7 @@ public final class WriteObservableP<T> implements Processor {
         }
     }
 
-    private void onFlushComplete(Long result, Throwable throwable) {
+    private void onFlushComplete(Long lastSeq, Throwable throwable) {
         if (throwable != null) {
             logger.warning("Failed publishing into observable '" + ringbufferName + "'", throwable);
         }
