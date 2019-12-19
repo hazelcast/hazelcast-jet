@@ -113,11 +113,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
      * #snapshotUtility}{@code .usesTransactionLifecycle()} returns {@code
      * true}.
      */
-    public void initXaResource(XAResource xaResource) {
-        if (snapshotUtility.usesTransactionLifecycle() && xaResource == null) {
-            throw new JetException("xaResource required");
-        }
-        assert this.xaResource == null : "double init";
+    public void setXaResource(XAResource xaResource) {
         this.xaResource = xaResource;
     }
 

@@ -26,12 +26,14 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.impl.connector.DataSourceFromConnectionSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
+import javax.sql.CommonDataSource;
 import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -948,8 +950,7 @@ public final class Sinks {
             @Nonnull SupplierEx<Connection> newConnectionFn,
             @Nonnull BiConsumerEx<PreparedStatement, T> bindFn
     ) {
-        return Sinks.fromProcessor("jdbcSink",
-                SinkProcessors.writeJdbcP(updateQuery, newConnectionFn, bindFn));
+       return jdbc(updateQuery, bindFn, () -> new DataSourceFromConnectionSupplier(newConnectionFn));
     }
 
     /**
@@ -964,5 +965,22 @@ public final class Sinks {
             @Nonnull BiConsumerEx<PreparedStatement, T> bindFn
     ) {
         return Sinks.jdbc(updateQuery, () -> DriverManager.getConnection(connectionUrl), bindFn);
+    }
+
+    /**
+     * TODO [viliam]
+     *
+     * There's no need to use {@link javax.sql.ConnectionPoolDataSource}. One
+     * connection is given to each processor and returned when the execution
+     * finishes.
+     */
+    @Nonnull
+    public static <T> Sink<T> jdbc(
+            @Nonnull String updateQuery,
+            @Nonnull BiConsumerEx<PreparedStatement, T> bindFn,
+            @Nonnull SupplierEx<? extends CommonDataSource> dataSourceSupplier
+    ) {
+        return Sinks.fromProcessor("jdbcSink",
+                SinkProcessors.writeJdbcP(updateQuery, dataSourceSupplier, bindFn));
     }
 }

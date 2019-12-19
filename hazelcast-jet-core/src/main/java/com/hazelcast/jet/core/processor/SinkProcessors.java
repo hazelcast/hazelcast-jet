@@ -38,6 +38,7 @@ import javax.annotation.Nonnull;
 import javax.jms.Connection;
 import javax.jms.Message;
 import javax.jms.Session;
+import javax.sql.CommonDataSource;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
@@ -323,9 +324,9 @@ public final class SinkProcessors {
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJdbcP(
             @Nonnull String updateQuery,
-            @Nonnull SupplierEx<? extends java.sql.Connection> newConnectionFn,
+            @Nonnull SupplierEx<? extends CommonDataSource> dataSourceSupplier,
             @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn
     ) {
-        return WriteJdbcP.metaSupplier(updateQuery, newConnectionFn, bindFn);
+        return WriteJdbcP.metaSupplier(updateQuery, dataSourceSupplier, bindFn);
     }
 }

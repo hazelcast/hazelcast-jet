@@ -77,7 +77,7 @@ public final class WriteJmsP<T> extends JtaSinkProcessorBase {
 
         if (snapshotUtility.usesTransactionLifecycle()) {
             XASession xaSession = ((XAConnection) connection).createXASession();
-            initXaResource(xaSession.getXAResource());
+            setXaResource(xaSession.getXAResource());
             session = xaSession;
         } else {
             session = connection.createSession(true, 0);
