@@ -70,11 +70,22 @@ public final class WriteObservableP<T> implements Processor {
         tryFlush();
     }
 
-    private void tryFlush() {
-        if (!batch.isEmpty() && Util.tryIncrement(pendingWrites, 1, ASYNC_OPS_LIMIT)) {
+    @Override
+    public boolean tryProcess() {
+        return tryFlush();
+    }
+
+    private boolean tryFlush() {
+        if (batch.isEmpty()) {
+            return true;
+        }
+        if (Util.tryIncrement(pendingWrites, 1, ASYNC_OPS_LIMIT)) {
             ringbuffer.addAllAsync(batch, OverflowPolicy.OVERWRITE)
                     .whenComplete(this::onFlushComplete);
             batch.clear();
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -94,7 +105,7 @@ public final class WriteObservableP<T> implements Processor {
 
     @Override
     public boolean complete() {
-        return pendingWrites.get() <= 0;
+        return tryFlush() && pendingWrites.get() <= 0;
     }
 
     public static <T> ProcessorSupplier supplier(String name) {
