@@ -28,7 +28,6 @@ import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.Transactio
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
 import com.hazelcast.jet.impl.processor.UnboundedTransactionsProcessorUtility;
 import com.hazelcast.jet.impl.util.LoggingUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -50,10 +49,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.Set;
 import java.util.function.LongSupplier;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
@@ -131,7 +127,7 @@ public final class WriteFileP<T> implements Processor {
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
         // roll file on date change
-        if (dateFormatter != null && !dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong())).equals(lastFileDate)) {
+        if (dateFormatter != null && !currentTimeFormatted().equals(lastFileDate)) {
             fileSequence = 0;
             utility.finishActiveTransaction();
         }
@@ -188,7 +184,7 @@ public final class WriteFileP<T> implements Processor {
     private FileId newFileName() {
         StringBuilder sb = new StringBuilder();
         if (dateFormatter != null) {
-            lastFileDate = dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong()));
+            lastFileDate = currentTimeFormatted();
             sb.append(lastFileDate);
             sb.append('-');
         }
@@ -196,24 +192,14 @@ public final class WriteFileP<T> implements Processor {
         String file = sb.toString();
         boolean usesSequence = utility.externalGuarantee() == EXACTLY_ONCE || maxFileSize != null;
         if (usesSequence) {
-            // check existing files if sequence is used
-            Supplier<Set<String>> existingFiles = Util.memoize(() -> {
-                Set<String> files;
-                try (Stream<Path> fileListStream = Files.list(directory)) {
-                    files = fileListStream
-                            .map(f -> f.getFileName().toString())
-                            .collect(Collectors.toSet());
-                } catch (IOException e) {
-                    throw sneakyThrow(e);
-                }
-                return files;
-            });
+            // check existing files if the sequence number is used
             int prefixLength = sb.length();
             do {
                 sb.append('-').append(fileSequence++);
                 file = sb.toString();
                 sb.setLength(prefixLength);
-            } while (existingFiles.get().contains(file) || existingFiles.get().contains(file + TEMP_FILE_SUFFIX));
+            } while (Files.exists(directory.resolve(file))
+                    || Files.exists(directory.resolve(file + TEMP_FILE_SUFFIX)));
         }
         return new FileId(file, context.globalProcessorIndex());
     }
@@ -261,6 +247,10 @@ public final class WriteFileP<T> implements Processor {
         } catch (IOException e) {
             throw sneakyThrow(e);
         }
+    }
+
+    private String currentTimeFormatted() {
+        return dateFormatter.format(Instant.ofEpochMilli(clock.getAsLong()));
     }
 
     public static <T> ProcessorMetaSupplier metaSupplier(
