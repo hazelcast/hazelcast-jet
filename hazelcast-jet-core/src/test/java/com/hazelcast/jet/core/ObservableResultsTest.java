@@ -42,10 +42,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -367,24 +369,6 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
-    public void veryFastPublishRate() {
-        Pipeline pipeline = Pipeline.create();
-        pipeline.readFrom(TestSources.itemStream(100_000))
-                .withoutTimestamps()
-                .map(SimpleEvent::sequence)
-                .writeTo(Sinks.observable(observableName));
-
-        //when
-        Job job = jet().newJob(pipeline);
-        //then
-        assertTrueEventually(() -> assertEquals(JobStatus.RUNNING, job.getStatus()));
-        assertTrueEventually(() -> assertTrue(testObserver.getNoOfValues() > 100_000));
-        assertError(testObserver, null);
-
-        job.cancel();
-    }
-
-    @Test
     public void removedObserverDoesNotGetFurtherEvents() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.itemStream(100))
@@ -437,8 +421,17 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
-    public void moreResultsThanWriteBatchSize() {
-        List<Long> sourceItems = LongStream.range(0, RingbufferProxy.MAX_BATCH_SIZE * 5)
+    public void fastResultsDoNotGetLost_moreThanBatchSize() {
+        fastResultsDoNotGetLost(RingbufferProxy.MAX_BATCH_SIZE * 5);
+    }
+
+    @Test
+    public void fastResultsDoNotGetLost_moreThanRingbufferCapacity() {
+        fastResultsDoNotGetLost(250_000);
+    }
+
+    private void fastResultsDoNotGetLost(int noOfResults) {
+        List<Long> sourceItems = LongStream.range(0, noOfResults)
                 .boxed()
                 .collect(Collectors.toList());
 
@@ -450,6 +443,27 @@ public class ObservableResultsTest extends TestInClusterSupport {
         jet().newJob(pipeline).join();
         //then
         assertSortedValues(testObserver, sourceItems.toArray(new Long[0]));
+        assertError(testObserver, null);
+        assertCompletions(testObserver, 1);
+    }
+
+    @Test
+    public void fastResultsDoNotGetLost_WhenUsingIterator() throws Exception {
+        int noOfResults = 250_000;
+
+        List<Long> sourceItems = LongStream.range(0, noOfResults)
+                .boxed()
+                .collect(Collectors.toList());
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(sourceItems))
+                .writeTo(Sinks.observable(observableName));
+
+        //when
+        Future<Long> stream = testObservable.toFuture(Stream::count);
+        jet().newJob(pipeline);
+        //then
+        assertEquals(noOfResults, stream.get().longValue());
         assertError(testObserver, null);
         assertCompletions(testObserver, 1);
     }

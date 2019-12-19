@@ -114,6 +114,10 @@ public interface Observable<T> extends Iterable<T> {
      * Non-thread safe iterator that can block while waiting for additional
      * events.
      * <p>
+     * Should be used only for {@link Observable}s populated by batch jobs,
+     * because otherwise, without a completion event, iteration will never
+     * end.
+     * <p>
      * Is backed by a blocking list which stores all event until they
      * wait to be iterated over. Completion and error event also get put
      * into the list, thus they are serialized with data events.
@@ -136,16 +140,23 @@ public interface Observable<T> extends Iterable<T> {
     }
 
     /**
-     * //TODO (PR-1729): proper javadoc
-     * @param fn
-     * @param <R>
-     * @return
+     * Future view of the observable sequence, on that can also apply a
+     * transformation on the values. For example it could do counting,
+     * like this: {@code observable.toFuture(Stream::count)}, but it's
+     * also suited for mapping, filtering and so on.
+     * <p>
+     * Should be used only for {@link Observable}s populated by batch jobs,
+     * because otherwise, without a completion event, the stream will never
+     * end and the future will never be completed.
+     *
+     * @param fn transform function which takes the stream of observed values
+     *           and produces an altered value from it, which could also
+     *           be a stream
      */
-    default <R> Future<R> stream(Function<Stream<T>, R> fn) {
-        BlockingIteratorObserver<T> observer = new BlockingIteratorObserver<>();
-        addObserver(observer);
+    default <R> Future<R> toFuture(Function<Stream<T>, R> fn) {
+        Iterator<T> iterator = iterator();
         return CompletableFuture.supplyAsync(() -> {
-            Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(observer, 0);
+            Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator, 0);
             return fn.apply(StreamSupport.stream(spliterator, false));
         });
     }
