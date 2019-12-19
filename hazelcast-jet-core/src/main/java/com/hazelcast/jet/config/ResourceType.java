@@ -23,7 +23,15 @@ public enum ResourceType {
     /**
      * Represent a file of any type.
      */
-    REGULAR_FILE,
+    FILE,
+    /**
+     * Represent a class file.
+     */
+    CLASS,
+    /**
+     * Represent a directory of regular files.
+     */
+    DIRECTORY,
     /**
      * Represents a JAR file.
      */

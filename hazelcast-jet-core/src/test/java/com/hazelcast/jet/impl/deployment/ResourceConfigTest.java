@@ -39,7 +39,7 @@ public class ResourceConfigTest {
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals(this.getClass().getName().replace('.', '/') + ".class", resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.CLASS, resourceConfig.getResourceType());
     }
 
     @Test
@@ -82,11 +82,11 @@ public class ResourceConfigTest {
     public void testAddResource_with_Url() throws Exception {
         JobConfig config = new JobConfig();
         String urlString = "file://path/to/resourceFile";
-        config.addResource(new URL(urlString));
+        config.attachFile(new URL(urlString));
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals("resourceFile", resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(urlString, resourceConfig.getUrl().toString());
     }
 
@@ -95,11 +95,11 @@ public class ResourceConfigTest {
         JobConfig config = new JobConfig();
         String resourceName = "resourceFileName";
         String urlString = "file://path/to/resourceFile";
-        config.addResource(new URL(urlString), resourceName);
+        config.attachFile(new URL(urlString), resourceName);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals(resourceName, resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(urlString, resourceConfig.getUrl().toString());
     }
 
@@ -107,11 +107,11 @@ public class ResourceConfigTest {
     public void testAddResource_with_Path() throws Exception {
         JobConfig config = new JobConfig();
         String path = "/path/to/resource";
-        config.addResource(path);
+        config.attachFile(path);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals("resource", resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
     }
 
@@ -120,11 +120,11 @@ public class ResourceConfigTest {
         JobConfig config = new JobConfig();
         String resourceName = "resourceFileName";
         String path = "/path/to/jarfile";
-        config.addResource(path, resourceName);
+        config.attachFile(path, resourceName);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals(resourceName, resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
     }
 
@@ -132,11 +132,11 @@ public class ResourceConfigTest {
     public void testAddResource_with_File() throws Exception {
         JobConfig config = new JobConfig();
         File file = new File("/path/to/resource");
-        config.addResource(file);
+        config.attachFile(file);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals("resource", resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
     }
 
@@ -145,11 +145,11 @@ public class ResourceConfigTest {
         JobConfig config = new JobConfig();
         String resourceName = "resourceFileName";
         File file = new File("/path/to/resource");
-        config.addResource(file, resourceName);
+        config.attachFile(file, resourceName);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
         assertEquals(resourceName, resourceConfig.getId());
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
     }
 

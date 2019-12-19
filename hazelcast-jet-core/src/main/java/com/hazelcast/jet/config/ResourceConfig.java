@@ -21,7 +21,6 @@ import java.io.Serializable;
 import java.net.URL;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
-import static com.hazelcast.internal.util.Preconditions.checkTrue;
 
 /**
  * Describes a single resource to deploy to the Jet cluster.
@@ -41,8 +40,6 @@ public class ResourceConfig implements Serializable {
      * @param resourceType  type of the resource
      */
     ResourceConfig(@Nonnull URL url, String id, ResourceType resourceType) {
-        checkTrue((resourceType != ResourceType.REGULAR_FILE) ^ id != null,
-                "Either archive file or id != null, exclusively");
         this.url = url;
         this.id = id;
         this.resourceType = resourceType;
@@ -58,7 +55,7 @@ public class ResourceConfig implements Serializable {
         id = clazz.getName().replace('.', '/') + ".class";
         url = clazz.getClassLoader().getResource(id);
         checkNotNull(this.url, "Couldn't derive URL from class " + clazz);
-        resourceType = ResourceType.REGULAR_FILE;
+        resourceType = ResourceType.CLASS;
     }
 
     /**

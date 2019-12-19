@@ -123,7 +123,7 @@ public class JobRepositoryTest extends JetTestSupport {
 
     @Test
     public void when_jobResourceUploadFails_then_jobResourcesCleanedUp() {
-        jobConfig.addResource("invalid path");
+        jobConfig.attachFile("invalid path");
         try {
             jobRepository.uploadJobResources(jobConfig);
             fail();

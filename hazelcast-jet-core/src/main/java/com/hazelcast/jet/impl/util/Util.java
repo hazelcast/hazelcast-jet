@@ -40,14 +40,21 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,6 +64,9 @@ import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -66,6 +76,7 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.lang.Math.abs;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -73,7 +84,8 @@ import static java.util.stream.IntStream.range;
 
 public final class Util {
 
-    private static final int BUFFER_SIZE = 1 << 15;
+    private static final int READ_BUFFER_SIZE = 1 << 15;
+    private static final int COPY_BUFFER_SIZE = 1 << 12;
 
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
@@ -129,7 +141,7 @@ public final class Util {
     @Nonnull
     public static byte[] readFully(@Nonnull InputStream in) throws IOException {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] b = new byte[BUFFER_SIZE];
+            byte[] b = new byte[READ_BUFFER_SIZE];
             for (int len; (len = in.read(b)) != -1; ) {
                 out.write(b, 0, len);
             }
@@ -202,10 +214,10 @@ public final class Util {
      * round-robin fashion. If the object count is smaller than processor
      * count, an empty list is put for the rest of the processors.
      *
-     * @param count count of processors
+     * @param count   count of processors
      * @param objects list of objects to distribute
      * @return a map which has the processor index as the key and a list of objects as
-     *      the value
+     * the value
      */
     public static <T> Map<Integer, List<T>> distributeObjects(int count, List<T> objects) {
         Map<Integer, List<T>> processorToObjects = range(0, objects.size())
@@ -230,8 +242,8 @@ public final class Util {
      * It's used to assign partitions to processors.
      *
      * @param objectCount total number of objects to distribute
-     * @param count total number of subsets
-     * @param index index of the requested subset
+     * @param count       total number of subsets
+     * @param index       index of the requested subset
      * @return an array with assigned objects
      */
     public static int[] roundRobinPart(int objectCount, int count, int index) {
@@ -244,6 +256,83 @@ public final class Util {
             res[i] = j;
         }
         return res;
+    }
+
+    public static void copyStream(InputStream in, OutputStream out) throws IOException {
+        byte[] buf = new byte[COPY_BUFFER_SIZE];
+        for (int readCount; (readCount = in.read(buf)) > 0; ) {
+            out.write(buf, 0, readCount);
+        }
+    }
+
+    public static void unzip(InputStream is, Path targetPath) throws IOException {
+        try (ZipInputStream zipIn = new ZipInputStream(is)) {
+            for (ZipEntry ze; (ze = zipIn.getNextEntry()) != null; ) {
+                String entryName = ze.getName();
+                Path destPath = targetPath.resolve(entryName);
+                if (ze.isDirectory()) {
+                    Files.createDirectory(destPath);
+                } else {
+                    Path parent = destPath.getParent();
+                    if (parent != null) {
+                        Files.createDirectories(parent);
+                        try (OutputStream fileOut = Files.newOutputStream(destPath)) {
+                            copyStream(zipIn, fileOut);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static void zipDirectoryToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream) {
+        try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
+            Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
+            for (Path dirPath; (dirPath = dirQueue.poll()) != null; ) {
+                String filename = Objects.toString(dirPath.getFileName());
+                if (filename.startsWith("_") || filename.startsWith(".")) {
+                    continue;
+                }
+                try (DirectoryStream<Path> listing = Files.newDirectoryStream(dirPath)) {
+                    Iterator<Path> iter = listing.iterator();
+                    if (!iter.hasNext()) {
+                        // Write this empty directory as an explicit ZIP entry
+                        zipOut.putNextEntry(new ZipEntry(baseDir.relativize(dirPath).toString()));
+                        zipOut.closeEntry();
+                        continue;
+                    }
+                    // DirectoryStream.iterator() may not be called twice
+                    for (Path filePath : (Iterable<Path>) () -> iter) {
+                        if (Files.isDirectory(filePath)) {
+                            dirQueue.add(filePath);
+                            continue;
+                        }
+                        zipOut.putNextEntry(new ZipEntry(baseDir.relativize(filePath).toString()));
+                        try (InputStream in = Files.newInputStream(filePath)) {
+                            copyStream(in, zipOut);
+                        }
+                        zipOut.closeEntry();
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new JetException(e);
+        }
+    }
+
+    public static void zipFileToOutputStream(@Nonnull Path filePath, @Nonnull OutputStream outputStream) {
+        try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
+            Path fileName = filePath.getFileName();
+            if (fileName != null) {
+                zipOut.putNextEntry(new ZipEntry(fileName.toString()));
+                try (InputStream in = Files.newInputStream(filePath)) {
+                    copyStream(in, zipOut);
+                }
+                zipOut.closeEntry();
+            }
+        } catch (IOException e) {
+            throw new JetException(e);
+        }
     }
 
     private static class NullOutputStream extends OutputStream {

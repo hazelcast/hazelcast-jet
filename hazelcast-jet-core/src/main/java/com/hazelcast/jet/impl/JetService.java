@@ -169,6 +169,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         taskletExecutionService.shutdown();
         taskletExecutionService.awaitWorkerTermination();
         networking.shutdown();
+        jobRepository.shutdown();
     }
 
     @Override

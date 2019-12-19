@@ -101,7 +101,7 @@ public class JobConfigTest extends JetTestSupport {
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
         String expectedId = clazz.getName().replace('.', '/') + ".class";
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(expectedId, resourceConfig.getId());
         assertEquals(clazz.getClassLoader().getResource(expectedId), resourceConfig.getUrl());
     }
@@ -155,11 +155,11 @@ public class JobConfigTest extends JetTestSupport {
         // When
         JobConfig config = new JobConfig();
         String path = "/path/to/my.txt";
-        config.addResource(path);
+        config.attachFile(path);
 
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
         assertEquals("my.txt", resourceConfig.getId());
     }
@@ -169,11 +169,11 @@ public class JobConfigTest extends JetTestSupport {
         // When
         JobConfig config = new JobConfig();
         String path = "/path/to/my.txt";
-        config.addResource(path, "customId");
+        config.attachFile(path, "customId");
 
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
         assertEquals("customId", resourceConfig.getId());
     }
@@ -183,11 +183,11 @@ public class JobConfigTest extends JetTestSupport {
         // When
         JobConfig config = new JobConfig();
         File file = new File("/path/to/my.txt");
-        config.addResource(file);
+        config.attachFile(file);
 
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
         assertEquals("my.txt", resourceConfig.getId());
     }
@@ -197,11 +197,11 @@ public class JobConfigTest extends JetTestSupport {
         // When
         JobConfig config = new JobConfig();
         File file = new File("/path/to/my.txt");
-        config.addResource(file, "customId");
+        config.attachFile(file, "customId");
 
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
         assertEquals("customId", resourceConfig.getId());
     }
@@ -211,11 +211,11 @@ public class JobConfigTest extends JetTestSupport {
         // When
         JobConfig config = new JobConfig();
         URL url = new URL("http://path.to/my.txt");
-        config.addResource(url);
+        config.attachFile(url);
 
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
-        assertEquals(ResourceType.REGULAR_FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
         assertEquals(url, resourceConfig.getUrl());
         assertEquals("my.txt", resourceConfig.getId());
     }

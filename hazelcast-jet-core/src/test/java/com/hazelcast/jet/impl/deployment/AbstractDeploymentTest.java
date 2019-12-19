@@ -18,26 +18,38 @@ package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.config.JobClassLoaderFactory;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.deployment.LoadResource.LoadResourceMetaSupplier;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.io.Serializable;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.executeAndPeel;
+import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
 import static java.util.Collections.emptyEnumeration;
 import static java.util.Collections.enumeration;
 import static java.util.Collections.singleton;
+import static org.junit.Assert.assertEquals;
 
 public abstract class AbstractDeploymentTest extends JetTestSupport {
 
@@ -68,7 +80,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         JobConfig jobConfig = new JobConfig();
         URL classUrl = this.getClass().getResource("/cp1/");
-        URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, null);
+        URLClassLoader urlClassLoader = new URLClassLoader(new URL[] {classUrl}, null);
         Class<?> appearance = urlClassLoader.loadClass("com.sample.pojo.person.Person$Appereance");
         jobConfig.addClass(appearance);
 
@@ -85,7 +97,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         JobConfig jobConfig = new JobConfig();
         URL classUrl = this.getClass().getResource("/cp1/");
-        URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, null);
+        URLClassLoader urlClassLoader = new URLClassLoader(new URL[] {classUrl}, null);
         Class<?> appearanceClz = urlClassLoader.loadClass("com.sample.pojo.person.Person$Appereance");
         jobConfig.addClass(appearanceClz);
 
@@ -95,19 +107,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         if (LoadPersonIsolated.assertionErrorInClose != null) {
             throw LoadPersonIsolated.assertionErrorInClose;
         }
-    }
-
-    @Test
-    public void testDeployment_whenFileAddedAsResource_thenAvailableOnClassLoader() throws Throwable {
-        createCluster();
-
-        DAG dag = new DAG();
-        dag.newVertex("load resource", new LoadResourceMetaSupplier());
-
-        JobConfig jobConfig = new JobConfig();
-        jobConfig.addResource(this.getClass().getResource("/deployment/resource.txt"), "customId");
-
-        executeAndPeel(getJetInstance().newJob(dag, jobConfig));
     }
 
     @Test
@@ -135,6 +134,59 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         jobConfig.addJarsInZip(this.getClass().getResource("/zip-resources/person-jar.zip"));
 
         executeAndPeel(jetInstance.newJob(dag, jobConfig));
+    }
+
+
+    @Test
+    public void testDeployment_whenFileAddedAsResource_thenFilesAvailableOnMembers() throws Throwable {
+        createCluster();
+
+        Pipeline pipeline = Pipeline.create();
+
+        pipeline.readFrom(TestSources.items(1))
+                .mapUsingService(ServiceFactory.withCreateContextFn(context -> {
+                            File root = JobRepository.getJobFileStorageById(context, "test");
+                            return root.toPath().resolve("resource.txt").toFile();
+
+                        }).withCreateServiceFn((context, file) -> file),
+                        (file, integer) -> {
+                            if (!file.exists()) {
+                                throw new AssertionError("File does not exists");
+                            } else {
+                                return file;
+                            }
+                        })
+                .writeTo(Sinks.logger());
+
+        JetInstance jetInstance = getJetInstance();
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.attachFile(Paths.get(this.getClass().getResource("/deployment/resource.txt").toURI()).toString(),
+                "test");
+
+        executeAndPeel(jetInstance.newJob(pipeline, jobConfig));
+    }
+
+
+    @Test
+    public void testDeployment_whenDirectoryAddedAsResource_thenFilesAvailableOnMembers() throws Throwable {
+        createCluster();
+
+        Pipeline pipeline = Pipeline.create();
+
+        pipeline.readFrom(TestSources.items(1))
+                .flatMapUsingService(ServiceFactory.withCreateContextFn(context ->
+                                JobRepository.getJobFileStorageById(context, "deployment"))
+                                                   .withCreateServiceFn((context, file) -> file),
+                        (file, integer) -> Traversers.traverseStream(Files.list(file.toPath()).map(Path::toString)))
+                .apply(assertCollected(c -> assertEquals("list size must be 3", 3, c.size())))
+                .writeTo(Sinks.logger());
+
+        JetInstance jetInstance = getJetInstance();
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.attachDirectory(Paths.get(this.getClass().getResource("/deployment").toURI()).toString(),
+                "deployment");
+
+        executeAndPeel(jetInstance.newJob(pipeline, jobConfig));
     }
 
 

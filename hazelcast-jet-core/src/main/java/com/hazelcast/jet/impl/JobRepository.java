@@ -27,9 +27,13 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.metrics.JobMetrics;
+import com.hazelcast.jet.impl.deployment.IMapInputStream;
+import com.hazelcast.jet.impl.deployment.IMapOutputStream;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -47,9 +51,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,11 +77,15 @@ import java.util.zip.ZipInputStream;
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
+import static com.hazelcast.jet.impl.util.Util.unzip;
+import static com.hazelcast.jet.impl.util.Util.zipDirectoryToOutputStream;
+import static com.hazelcast.jet.impl.util.Util.zipFileToOutputStream;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
 
 public class JobRepository {
+
 
     /**
      * Prefix of all Hazelcast internal objects used by Jet (such as job
@@ -96,6 +108,11 @@ public class JobRepository {
      * Name of internal IMap which stores job resources.
      */
     public static final String RESOURCES_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "resources.";
+
+    /**
+     * Name of internal IMap which stores attached job files.
+     */
+    public static final String FILE_STORAGE_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "files.";
 
     /**
      * Name of internal flake ID generator which is used for unique id generation.
@@ -166,6 +183,34 @@ public class JobRepository {
         this.exportedSnapshotDetailsCache = instance.getMap(EXPORTED_SNAPSHOTS_DETAIL_CACHE);
     }
 
+    /**
+     * Returns a temporary directory which contains the attached files to the
+     * job with the given id.
+     *
+     * @param context processor supplier context, see {@link ProcessorSupplier.Context}
+     * @param id      identifier defined on the {@link ResourceConfig} to be
+     *                used retrieve files from storage.
+     * @return {@link File} handle to a temporary directory which contains the
+     * files attached to the job with provided identifier.
+     */
+    public static File getJobFileStorageById(ProcessorSupplier.Context context, String id) {
+        JetInstance instance = context.jetInstance();
+        String jobId = idToString(context.jobId());
+        IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
+        Path directory;
+        InputStream inputStream = null;
+        try {
+            directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id);
+            inputStream = new IMapInputStream(map, jobId, id);
+            unzip(inputStream, directory);
+            return directory.toFile();
+        } catch (IOException e) {
+            throw ExceptionUtil.rethrow(e);
+        } finally {
+            IOUtil.closeResource(inputStream);
+        }
+    }
+
     // for tests
     void setResourcesExpirationMillis(long resourcesExpirationMillis) {
         this.resourcesExpirationMillis = resourcesExpirationMillis;
@@ -182,15 +227,25 @@ public class JobRepository {
         try {
             for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
                 switch (rc.getResourceType()) {
-                    case REGULAR_FILE:
-                        InputStream in = rc.getUrl().openStream();
-                        readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
-                        in.close();
+                    case CLASS:
+                        try (InputStream in = rc.getUrl().openStream()) {
+                            readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);
+                        }
+                        break;
+                    case FILE:
+                        IMapOutputStream os = new IMapOutputStream(getJobFileStorage(jobId).get(),
+                                idToString(jobId) + rc.getId());
+                        zipFileToOutputStream(Paths.get(rc.getUrl().getFile()), os);
+                        break;
+                    case DIRECTORY:
+                        IMapOutputStream os2 = new IMapOutputStream(getJobFileStorage(jobId).get(),
+                                idToString(jobId) + rc.getId());
+                        zipDirectoryToOutputStream(Paths.get(rc.getUrl().getFile()), os2);
                         break;
                     case JAR:
-                        InputStream is = rc.getUrl().openStream();
-                        loadJarFromInputStream(tmpMap, is);
-                        is.close();
+                        try (InputStream in = rc.getUrl().openStream()) {
+                            loadJarFromInputStream(tmpMap, in);
+                        }
                         break;
                     case JARS_IN_ZIP:
                         loadJarsInZip(tmpMap, rc.getUrl());
@@ -199,7 +254,7 @@ public class JobRepository {
                         throw new JetException("Unsupported resource type: " + rc.getResourceType());
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new JetException("Job resource upload failed", e);
         }
         // avoid creating resources map if map is empty
@@ -351,6 +406,20 @@ public class JobRepository {
         // delete the job record and related records
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
+        final String jobIdString = idToString(jobId);
+        deleteTempFiles("jet-" + instance.getName() + "-" + jobIdString);
+    }
+
+    private void deleteTempFiles(String filter) {
+        try {
+            Files.list(Paths.get(System.getProperty("java.io.tmpdir")))
+                 .filter(Files::isDirectory)
+                 .map(Path::toFile)
+                 .filter(file -> file.getName().startsWith(filter))
+                 .forEach(IOUtil::delete);
+        } catch (IOException e) {
+            logger.warning("IOException while deleting job files: " + e.getMessage());
+        }
     }
 
     /**
@@ -373,27 +442,9 @@ public class JobRepository {
                     map.destroy();
                 }
             } else if (map.getName().startsWith(RESOURCES_MAP_NAME_PREFIX)) {
-                long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
-                if (activeJobs.contains(id)) {
-                    // job is still active, do nothing
-                    continue;
-                }
-                if (jobResults.containsKey(id)) {
-                    // if job is finished, we can safely delete the map
-                    logFine(logger, "Deleting job resource map '%s' because job is already finished", map.getName());
-                    map.destroy();
-                } else {
-                    // Job might be in the process of uploading resources, check how long the map has been there.
-                    // If we happen to recreate a just-deleted map, it will be destroyed again after
-                    // resourcesExpirationMillis.
-                    IMap resourceMap = (IMap) map;
-                    long creationTime = resourceMap.getLocalMapStats().getCreationTime();
-                    if (isResourceMapExpired(creationTime)) {
-                        logger.fine("Deleting job resource map " + map.getName() + " because the map " +
-                                "was created long ago and job record or result still doesn't exist");
-                        resourceMap.destroy();
-                    }
-                }
+                deleteMap(activeJobs, map, RESOURCES_MAP_NAME_PREFIX);
+            } else if (map.getName().startsWith(FILE_STORAGE_MAP_NAME_PREFIX)) {
+                deleteMap(activeJobs, map, FILE_STORAGE_MAP_NAME_PREFIX);
             }
         }
         int maxNoResults = Math.max(1, nodeEngine.getProperties().getInteger(JetProperties.JOB_RESULTS_MAX_SIZE));
@@ -410,6 +461,30 @@ public class JobRepository {
         }
         long elapsed = System.nanoTime() - start;
         logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
+    }
+
+    private void deleteMap(Set<Long> activeJobs, DistributedObject map, String mapNamePrefix) {
+        long id = jobIdFromMapName(map.getName(), mapNamePrefix);
+        if (activeJobs.contains(id)) {
+            // job is still active, do nothing
+            return;
+        }
+        if (jobResults.containsKey(id)) {
+            // if job is finished, we can safely delete the map
+            logFine(logger, "Deleting job resource map '%s' because job is already finished", map.getName());
+            map.destroy();
+        } else {
+            // Job might be in the process of uploading resources, check how long the map has been there.
+            // If we happen to recreate a just-deleted map, it will be destroyed again after
+            // resourcesExpirationMillis.
+            IMap resourceMap = (IMap) map;
+            long creationTime = resourceMap.getLocalMapStats().getCreationTime();
+            if (isResourceMapExpired(creationTime)) {
+                logger.fine("Deleting job resource map " + map.getName() + " because the map " +
+                        "was created long ago and job record or result still doesn't exist");
+                resourceMap.destroy();
+            }
+        }
     }
 
     private static String toErrorMsg(@Nullable Throwable error) {
@@ -456,6 +531,13 @@ public class JobRepository {
      */
     <T> Supplier<IMap<String, T>> getJobResources(long jobId) {
         return Util.memoizeConcurrent(() -> instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId)));
+    }
+
+    /**
+     * Gets the job files storage map, lazily evaluated to avoid creating the map if it won't be needed
+     */
+    Supplier<IMap<String, byte[]>> getJobFileStorage(long jobId) {
+        return Util.memoizeConcurrent(() -> instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + idToString(jobId)));
     }
 
     @Nullable
@@ -520,6 +602,10 @@ public class JobRepository {
 
     void cacheValidationRecord(@Nonnull String snapshotName, @Nonnull SnapshotValidationRecord validationRecord) {
         exportedSnapshotDetailsCache.set(snapshotName, validationRecord);
+    }
+
+    public void shutdown() {
+        deleteTempFiles("jet-" + instance.getName());
     }
 
     public static final class UpdateJobExecutionRecordEntryProcessor implements
