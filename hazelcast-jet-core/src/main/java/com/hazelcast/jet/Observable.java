@@ -22,7 +22,14 @@ import com.hazelcast.ringbuffer.Ringbuffer;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Represents a flowing sequence of events produced by jobs containing
@@ -126,6 +133,21 @@ public interface Observable<T> extends Iterable<T> {
         BlockingIteratorObserver<T> observer = new BlockingIteratorObserver<>();
         addObserver(observer);
         return observer;
+    }
+
+    /**
+     * //TODO (PR-1729): proper javadoc
+     * @param fn
+     * @param <R>
+     * @return
+     */
+    default <R> Future<R> stream(Function<Stream<T>, R> fn) {
+        BlockingIteratorObserver<T> observer = new BlockingIteratorObserver<>();
+        addObserver(observer);
+        return CompletableFuture.supplyAsync(() -> {
+            Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(observer, 0);
+            return fn.apply(StreamSupport.stream(spliterator, false));
+        });
     }
 
     /**

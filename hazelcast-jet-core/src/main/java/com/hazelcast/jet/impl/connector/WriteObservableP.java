@@ -81,6 +81,7 @@ public final class WriteObservableP<T> implements Processor {
     private void onFlushComplete(Long lastSeq, Throwable throwable) {
         if (throwable != null) {
             logger.warning("Failed publishing into observable '" + ringbufferName + "'", throwable);
+            //TODO (PR-1729): extract observable name from ringbuffer name
         }
         pendingWrites.decrementAndGet();
     }

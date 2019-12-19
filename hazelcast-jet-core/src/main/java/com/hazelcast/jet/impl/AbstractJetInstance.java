@@ -155,7 +155,8 @@ public abstract class AbstractJetInstance implements JetInstance {
         //noinspection unchecked
         return observables.computeIfAbsent(name, observableName ->
                 new ObservableImpl<T>(observableName, hazelcastInstance, this::onDestroy, getLogger()));
-        //TODO (PR-1729): provide a way to configure Observable "capacity"
+        //TODO (PR-1729): provide a way to configure RB capacity
+        //TODO (PR-1729): provide a way to set TTL for RB items and wait in the writer for them to expire
     }
 
     @Override

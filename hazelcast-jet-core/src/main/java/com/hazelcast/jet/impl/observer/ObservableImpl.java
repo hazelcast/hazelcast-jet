@@ -169,6 +169,9 @@ public class ObservableImpl<T> implements Observable<T> {
             }
         }
 
+        //TODO (PR-1729): put observable name in quotes in logging statements
+        //TODO (PR-1729): print observer name in quotes in logging statements
+
         /**
          * @param t throwable to check if it is terminal or can be handled so that listening can continue
          * @return true if the exception was handled and the listener may continue reading
