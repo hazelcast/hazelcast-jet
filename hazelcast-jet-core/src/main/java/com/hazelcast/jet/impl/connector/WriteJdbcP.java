@@ -40,9 +40,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -56,7 +54,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
 
     private static final IdleStrategy IDLER =
-            new BackoffIdleStrategy(0, 0, SECONDS.toNanos(1), SECONDS.toNanos(10));
+            new BackoffIdleStrategy(0, 0, SECONDS.toNanos(1), SECONDS.toNanos(3));
     private static final int BATCH_LIMIT = 50;
 
     private final CommonDataSource dataSource;
@@ -64,10 +62,8 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     private final String updateQuery;
 
     private ILogger logger;
-    private XAConnection xaConnection;
     private Connection connection;
     private PreparedStatement statement;
-    private List<T> itemList = new ArrayList<>();
     private int idleCount;
     private boolean supportsBatch;
     private int batchCount;
@@ -124,12 +120,11 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
         if (!reconnectIfNecessary()) {
             return;
         }
-        // TODO the itemList could be avoided if we could iterate the inbox without removing the items
-        itemList.clear();
-        inbox.drainTo(itemList);
         try {
-            for (T item : itemList) {
-                bindFn.accept(statement, (T) item);
+            for (Object item : inbox) {
+                @SuppressWarnings("unchecked")
+                T castItem = (T) item;
+                bindFn.accept(statement, castItem);
                 addBatchOrExecute();
             }
             executeBatch();
@@ -137,12 +132,13 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
                 connection.commit();
             }
             idleCount = 0;
+            inbox.clear();
         } catch (Exception e) {
             if (e instanceof SQLNonTransientException ||
                     e.getCause() instanceof SQLNonTransientException) {
                 throw ExceptionUtil.rethrow(e);
             } else {
-                logger.warning("Exception during update", e.getCause());
+                logger.warning("Exception during update", e);
                 idleCount++;
             }
         }
@@ -168,7 +164,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
                 }
                 connection = ((DataSource) dataSource).getConnection();
             } else if (dataSource instanceof XADataSource) {
-                xaConnection = ((XADataSource) dataSource).getXAConnection();
+                XAConnection xaConnection = ((XADataSource) dataSource).getXAConnection();
                 connection = xaConnection.getConnection();
                 if (snapshotUtility.usesTransactionLifecycle()) {
                     // we never ignore errors in ex-once mode

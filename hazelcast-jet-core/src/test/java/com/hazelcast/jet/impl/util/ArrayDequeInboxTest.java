@@ -32,6 +32,9 @@ import static org.junit.Assert.assertTrue;
 @RunWith(HazelcastParallelClassRunner.class)
 public class ArrayDequeInboxTest {
 
+    // TODO [viliam] add tests for inbox.clear and inbox.iterator
+    // TODO [viliam] also test the logging
+
     private static final Integer ITEM = 1;
 
     private ArrayDequeInbox inbox = new ArrayDequeInbox(new ProgressTracker());

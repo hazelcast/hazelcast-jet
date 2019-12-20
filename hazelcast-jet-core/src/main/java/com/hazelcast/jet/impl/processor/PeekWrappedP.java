@@ -161,7 +161,7 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
 
         @Override
         public void clear() {
-            while (poll() != null);
+            while (poll() != null) { }
         }
 
         @Override

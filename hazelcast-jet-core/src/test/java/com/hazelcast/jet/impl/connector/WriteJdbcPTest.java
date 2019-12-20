@@ -91,9 +91,9 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
     public void testReconnect() throws SQLException {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
-         .map(item -> entry((Integer) item, item.toString()))
+         .map(item -> entry(item, item.toString()))
          .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
-                 failTwiceConnectionSupplier(), failTwiceBindFn()
+                 failTwiceConnectionSupplier(), failOnceBindFn()
          ));
 
         instance().newJob(p).join();
@@ -104,7 +104,7 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
     public void testFailJob_withNonTransientException() throws SQLException {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
-         .map(item -> entry((Integer) item, item.toString()))
+         .map(item -> entry(item, item.toString()))
          .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)", dbConnectionUrl,
                  (stmt, item) -> {
                      throw new SQLNonTransientException();
@@ -133,21 +133,21 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
             @Override
             public Connection getEx() throws SQLException {
                 if (remainingFailures-- > 0) {
-                    throw new SQLException();
+                    throw new SQLException("connectionFailure");
                 }
                 return DriverManager.getConnection(dbConnectionUrl);
             }
         };
     }
 
-    private static BiConsumerEx<PreparedStatement, Entry<Integer, String>> failTwiceBindFn() {
+    private static BiConsumerEx<PreparedStatement, Entry<Integer, String>> failOnceBindFn() {
         return new BiConsumerEx<PreparedStatement, Entry<Integer, String>>() {
-            int remainingFailures = 2;
+            int remainingFailures = 1;
 
             @Override
             public void acceptEx(PreparedStatement stmt, Entry<Integer, String> item) throws SQLException {
                 if (remainingFailures-- > 0) {
-                    throw new SQLException();
+                    throw new SQLException("bindFn failure");
                 }
                 stmt.setInt(1, item.getKey());
                 stmt.setString(2, item.getValue());
