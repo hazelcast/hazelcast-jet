@@ -31,6 +31,7 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
@@ -112,7 +113,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         BatchSource<String> errorSource = SourceBuilder
                 .batch("error-source", x -> (Object) null)
                 .<String>fillBufferFn((in, Void) -> {
-                    throw new Exception("Ooops!");
+                    throw new Exception("Intentionally thrown!");
                 })
                 .destroyFn(ConsumerEx.noop())
                 .build();
@@ -126,7 +127,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertTrueEventually(() -> assertEquals(JobStatus.FAILED, job.getStatus()));
         //then
         assertSortedValues(testObserver);
-        assertError(testObserver, "Ooops!");
+        assertError(testObserver, "Intentionally thrown!");
         assertCompletions(testObserver, 0);
     }
 
@@ -311,7 +312,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         BatchSource<String> errorSource = SourceBuilder
                 .batch("error-source", x -> (Object) null)
                 .<String>fillBufferFn((in, Void) -> {
-                    throw new Exception("Ooops!");
+                    throw new Exception("Intentionally thrown!");
                 })
                 .destroyFn(ConsumerEx.noop())
                 .build();
@@ -329,7 +330,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
         lateObservable.addObserver(otherTestObserver);
         //then
         assertSortedValues(testObserver);
-        assertError(testObserver, "Ooops!");
+        assertError(testObserver, "Intentionally thrown!");
         assertCompletions(testObserver, 0);
     }
 
@@ -426,6 +427,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
+    @Ignore //TODO (PR-1729): should work after StaleSequenceException is removed from RB's readMany
     public void fastResultsDoNotGetLost_moreThanRingbufferCapacity() {
         fastResultsDoNotGetLost(250_000);
     }
@@ -448,7 +450,8 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
-    public void fastResultsDoNotGetLost_WhenUsingIterator() throws Exception {
+    @Ignore //TODO (PR-1729): should work after StaleSequenceException is removed from RB's readMany
+    public void fastResultsDoNotGetLost_whenUsingIterator() throws Exception {
         int noOfResults = 250_000;
 
         List<Long> sourceItems = LongStream.range(0, noOfResults)

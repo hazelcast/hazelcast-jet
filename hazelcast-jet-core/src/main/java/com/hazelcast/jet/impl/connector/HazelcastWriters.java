@@ -186,14 +186,14 @@ public final class HazelcastWriters {
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
         return new ProcessorMetaSupplier() {
 
-            private final Map<Object, Object> tags = Collections.singletonMap(
+            private final Map<String, String> tags = Collections.singletonMap(
                     ObservableUtil.OWNED_OBSERVABLE,
                     name
             );
 
             @Nonnull
             @Override
-            public Map<Object, Object> getTags() {
+            public Map<String, String> getTags() {
                 return tags;
             }
 
@@ -204,7 +204,7 @@ public final class HazelcastWriters {
 
             @Nonnull @Override
             public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-                return address -> WriteObservableP.supplier(name);
+                return address -> ProcessorSupplier.of(WriteObservableP.supplier(name));
             }
         };
     }

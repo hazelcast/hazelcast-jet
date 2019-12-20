@@ -17,10 +17,10 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.jet.impl.util.Util;
@@ -31,19 +31,15 @@ import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.toList;
 
 public final class WriteObservableP<T> implements Processor {
 
     private static final int ASYNC_OPS_LIMIT = 1;
     private static final int MAX_BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
-    private final String ringbufferName;
+    private final String observableName;
     private final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
     private final AtomicInteger pendingWrites = new AtomicInteger(0);
 
@@ -51,15 +47,15 @@ public final class WriteObservableP<T> implements Processor {
     private ILogger logger;
 
 
-    private WriteObservableP(String ringbufferName) {
-        this.ringbufferName = ringbufferName;
+    private WriteObservableP(String observableName) {
+        this.observableName = observableName;
     }
 
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         HazelcastInstance instance = context.jetInstance().getHazelcastInstance();
         this.logger = context.logger();
-        this.ringbuffer = instance.getRingbuffer(ObservableUtil.getRingbufferName(ringbufferName));
+        this.ringbuffer = instance.getRingbuffer(ObservableUtil.getRingbufferName(observableName));
     }
 
     @Override
@@ -72,6 +68,11 @@ public final class WriteObservableP<T> implements Processor {
 
     @Override
     public boolean tryProcess() {
+        return tryFlush();
+    }
+
+    @Override
+    public boolean saveToSnapshot() {
         return tryFlush();
     }
 
@@ -91,7 +92,7 @@ public final class WriteObservableP<T> implements Processor {
 
     private void onFlushComplete(Long lastSeq, Throwable throwable) {
         if (throwable != null) {
-            logger.warning("Failed publishing into observable '" + ringbufferName + "'", throwable);
+            logger.warning("Failed publishing into observable '" + observableName + "'", throwable);
             //TODO (PR-1729): extract observable name from ringbuffer name
         }
         pendingWrites.decrementAndGet();
@@ -108,25 +109,8 @@ public final class WriteObservableP<T> implements Processor {
         return tryFlush() && pendingWrites.get() <= 0;
     }
 
-    public static <T> ProcessorSupplier supplier(String name) {
-        return new Supplier<T>(name);
+    public static SupplierEx<Processor> supplier(String name) {
+        return () -> new WriteObservableP<>(name);
     }
 
-    private static final class Supplier<T> implements ProcessorSupplier {
-
-        private static final long serialVersionUID = -1;
-
-        private final String name;
-
-        Supplier(String name) {
-            this.name = name;
-        }
-
-        @Nonnull @Override
-        public Collection<? extends Processor> get(int count) {
-            return Stream.generate(() -> new WriteObservableP<T>(name))
-                    .limit(count)
-                    .collect(toList());
-        }
-    }
 }

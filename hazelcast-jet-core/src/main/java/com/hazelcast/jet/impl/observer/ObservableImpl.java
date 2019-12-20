@@ -140,7 +140,7 @@ public class ObservableImpl<T> implements Observable<T> {
                     try {
                         onNewMessage(result);
                     } catch (Throwable t) {
-                        logger.warning("Terminating message listener on ring-buffer " + ringbuffer.getName() +
+                        logger.warning("Terminating message listener on ringbuffer " + ringbuffer.getName() +
                                 ". Reason: Unhandled exception, message: " + t.getMessage(), t);
                         cancel();
                         return;
@@ -185,16 +185,16 @@ public class ObservableImpl<T> implements Observable<T> {
                 return handleStaleSequenceException((StaleSequenceException) t);
             } else if (t instanceof HazelcastInstanceNotActiveException) {
                 if (logger.isFinestEnabled()) {
-                    logger.finest("Terminating message listener on ring-buffer " + ringbuffer.getName() + ". "
+                    logger.finest("Terminating message listener on ringbuffer " + ringbuffer.getName() + ". "
                             + " Reason: HazelcastInstance is shutting down");
                 }
             } else if (t instanceof DistributedObjectDestroyedException) {
                 if (logger.isFinestEnabled()) {
-                    logger.finest("Terminating message listener on ring-buffer " + ringbuffer.getName() + ". "
+                    logger.finest("Terminating message listener on ringbuffer " + ringbuffer.getName() + ". "
                             + "Reason: Topic is destroyed");
                 }
             } else {
-                logger.warning("Terminating message listener on ring-buffer " + ringbuffer.getName() + ". "
+                logger.warning("Terminating message listener on ringbuffer " + ringbuffer.getName() + ". "
                         + "Reason: Unhandled exception, message: " + t.getMessage(), t);
             }
             return false;
@@ -202,7 +202,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
         private boolean handleOperationTimeoutException() {
             if (logger.isFinestEnabled()) {
-                logger.finest("Message listener on ring-buffer " + ringbuffer.getName() + " timed out. "
+                logger.finest("Message listener on ringbuffer " + ringbuffer.getName() + " timed out. "
                         + "Continuing from last known sequence: " + sequence);
             }
             return true;
@@ -211,7 +211,7 @@ public class ObservableImpl<T> implements Observable<T> {
         /**
          * Handles the {@link IllegalArgumentException} associated with requesting
          * a sequence larger than the {@code tailSequence + 1}.
-         * This may indicate that an entire partition or an entire ring-buffer was
+         * This may indicate that an entire partition or an entire ringbuffer was
          * lost.
          *
          * @param t the exception
@@ -220,7 +220,7 @@ public class ObservableImpl<T> implements Observable<T> {
         private boolean handleIllegalArgumentException(IllegalArgumentException t) {
             final long currentHeadSequence = ringbuffer.headSequence();
             if (logger.isFinestEnabled()) {
-                logger.finest(String.format("Message listener on ring-buffer %s requested a too " +
+                logger.finest(String.format("Message listener on ringbuffer %s requested a too " +
                                 "large sequence: %s. Jumping from old sequence %s to sequence %s.",
                         ringbuffer.getName(), t.getMessage(), sequence, currentHeadSequence));
             }
@@ -232,15 +232,16 @@ public class ObservableImpl<T> implements Observable<T> {
          * Handles a {@link StaleSequenceException} associated with requesting
          * a sequence older than the {@code headSequence}.
          * This may indicate that the reader was too slow and items in the
-         * ring-buffer were already overwritten.
+         * ringbuffer were already overwritten.
          *
          * @param staleSequenceException the exception
          * @return if the exception was handled and the listener may continue reading
          */
         private boolean handleStaleSequenceException(StaleSequenceException staleSequenceException) {
+            //TODO (PR-1729): update to IMDG changes
             long headSeq = ringbuffer.headSequence();
             if (logger.isFinestEnabled()) {
-                logger.finest("Message listener on ring-buffer " + ringbuffer.getName() + " ran " +
+                logger.finest("Message listener on ringbuffer " + ringbuffer.getName() + " ran " +
                         "into a stale sequence. Jumping from oldSequence " + sequence + " to sequence " + headSeq + ".");
             }
             adjustSequence(headSeq);

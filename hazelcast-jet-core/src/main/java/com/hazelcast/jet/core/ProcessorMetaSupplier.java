@@ -72,7 +72,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * The meta-information takes the form of simple string key-value pairs.
      */
     @Nonnull
-    default Map<Object, Object> getTags() {
+    default Map<String, String> getTags() {
         return Collections.emptyMap();
     }
 

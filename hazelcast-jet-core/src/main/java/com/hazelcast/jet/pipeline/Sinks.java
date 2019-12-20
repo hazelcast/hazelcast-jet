@@ -27,6 +27,7 @@ import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
@@ -999,6 +1000,13 @@ public final class Sinks {
      * Returns a sink which publishes values into an
      * {@link com.hazelcast.jet.Observable} with the specified name.
      * <p>
+     * These sinks can be used for any type of serializable objects with
+     * one exception. Don't put {@link Throwable} instances in them,
+     * because those will be interpreted as processing errors encountered
+     * by the {@link Sink} and will trigger the
+     * {@link Observer#onError(Throwable) onError method} of all
+     * {@link Observer Observers}.
+     * <p>
      * Using such sinks with the same observable name in multiple jobs is
      * not recommended. There is an automatic clean-up mechanism
      * for observables which will kick in after the job completes and a
@@ -1024,6 +1032,13 @@ public final class Sinks {
      * cluster. If you supply an {@link com.hazelcast.jet.Observable}
      * instance from another cluster, no error will be thrown to indicate
      * this.
+     * <p>
+     * These sinks can be used for any type of serializable objects with
+     * one exception. Don't put {@link Throwable} instances in them,
+     * because those will be interpreted as processing errors encountered
+     * by the {@link Sink} and will trigger the
+     * {@link Observer#onError(Throwable) onError method} of all
+     * {@link Observer Observers}.
      * <p>
      * Using such sinks with the same observable name in multiple jobs is
      * not recommended. There is an automatic clean-up mechanism

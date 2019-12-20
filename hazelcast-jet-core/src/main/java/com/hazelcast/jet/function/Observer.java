@@ -16,10 +16,10 @@
 
 package com.hazelcast.jet.function;
 
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Observable;
 
 import javax.annotation.Nonnull;
-import java.util.function.Consumer;
 
 /**
  * Watcher of the events produced by an {@link Observable}. Once subscribed, it
@@ -44,9 +44,9 @@ public interface Observer<T> {
      * components.
      */
     static <T> Observer<T> of(
-            @Nonnull Consumer<? super T> onNext,
-            @Nonnull Consumer<? super Throwable> onError,
-            @Nonnull Runnable onComplete
+            @Nonnull ConsumerEx<? super T> onNext,
+            @Nonnull ConsumerEx<? super Throwable> onError,
+            @Nonnull RunnableEx onComplete
     ) {
         return new Observer<T>() {
             @Override
