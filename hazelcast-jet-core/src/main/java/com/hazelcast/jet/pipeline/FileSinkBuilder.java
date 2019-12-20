@@ -124,6 +124,6 @@ public final class FileSinkBuilder<T> {
      */
     public Sink<T> build() {
         return Sinks.fromProcessor("filesSink(" + directoryName + ')',
-                writeFileP(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce));
+                writeFileP(directoryName, charset, datePattern, maxFileSize, exactlyOnce, toStringFn));
     }
 }

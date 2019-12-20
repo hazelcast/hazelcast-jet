@@ -164,7 +164,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), Object::toString, StandardCharsets.UTF_8, null, null, true))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -309,7 +309,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), Object::toString, StandardCharsets.UTF_8, null, null, true))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 

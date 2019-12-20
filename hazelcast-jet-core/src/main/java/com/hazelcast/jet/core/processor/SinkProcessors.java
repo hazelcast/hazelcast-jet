@@ -237,11 +237,11 @@ public final class SinkProcessors {
     @Nonnull
     public static <T> ProcessorMetaSupplier writeFileP(
             @Nonnull String directoryName,
-            @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull Charset charset,
             @Nullable String datePattern,
             @Nullable Long maxFileSize,
-            boolean exactlyOnce
+            boolean exactlyOnce,
+            @Nonnull FunctionEx<? super T, ? extends String> toStringFn
     ) {
         checkSerializable(toStringFn, "toStringFn");
 
