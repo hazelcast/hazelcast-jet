@@ -270,8 +270,8 @@ public interface GeneralStage<T> extends Stage {
      * )
      * }</pre>
      *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
+     * <p><b>Interaction with fault-tolerant unbounded jobs</b>
+     * <p>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
      * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
@@ -311,8 +311,8 @@ public interface GeneralStage<T> extends Stage {
      * )
      * }</pre>
      *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
+     * <p><b>Interaction with fault-tolerant unbounded jobs</b>
+     * <p>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
      * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
@@ -349,8 +349,8 @@ public interface GeneralStage<T> extends Stage {
      * )
      * }</pre>
      *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
+     * <p><b>Interaction with fault-tolerant unbounded jobs</b>
+     * <p>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
      * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
@@ -389,8 +389,8 @@ public interface GeneralStage<T> extends Stage {
      * )
      * }</pre>
      *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
+     * <p><b>Interaction with fault-tolerant unbounded jobs</b>
+     * <p>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
      * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
@@ -427,8 +427,8 @@ public interface GeneralStage<T> extends Stage {
      * );
      * }</pre>
      *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
+     * <p><b>Interaction with fault-tolerant unbounded jobs</b>
+     * <p>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
      * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a
@@ -472,8 +472,8 @@ public interface GeneralStage<T> extends Stage {
      * );
      * }</pre>
      *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
+     * <p><b>Interaction with fault-tolerant unbounded jobs</b>
+     * <p>
      * If you use this stage in a fault-tolerant unbounded job, keep in mind
      * that any state the service object maintains doesn't participate in Jet's
      * fault tolerance protocol. If the state is local, it will be lost after a

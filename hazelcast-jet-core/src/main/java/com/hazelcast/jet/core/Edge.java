@@ -196,8 +196,8 @@ public class Edge implements IdentifiedDataSerializable {
      * The data from the edge with priority 1 will be processed in full before
      * accepting any data from the edge with priority 2.
      *
-     * <h4>Possible deadlock</h4>
-     *
+     * <p><b>Possible deadlock</b>
+     * <p>
      * If you split the output of one source vertex and later join the streams
      * with different priorities, you're very likely to run into a deadlock. Consider this DAG:
      * <pre>
@@ -219,8 +219,8 @@ public class Edge implements IdentifiedDataSerializable {
      * as can fit into the queues (see {@linkplain EdgeConfig#setQueueSize
      * queue size configuration}.
      *
-     * <h4>Note</h4>
-
+     * <p><b>Note</b>
+     * <p>
      * Having different priority edges will cause postponing of
      * the first snapshot until after upstream vertices of higher priority
      * edges are completed.

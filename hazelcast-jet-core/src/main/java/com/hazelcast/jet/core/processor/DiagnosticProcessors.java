@@ -208,8 +208,8 @@ public final class DiagnosticProcessors {
      * #peekSnapshotP(FunctionEx, PredicateEx, ProcessorMetaSupplier)
      * peekSnapshot()}.
      *
-     * <h4>Logging of Watermarks</h4>
-     *
+     * <p><b>Logging of Watermarks</b>
+     * <p>
      * There are two kinds of watermarks:<ol>
      *     <li>Watermarks originated in the processor, prefixed in the logs
      *     with {@code "Output to N: "}

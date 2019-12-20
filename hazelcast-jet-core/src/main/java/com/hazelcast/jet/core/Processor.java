@@ -181,7 +181,8 @@ public interface Processor {
      * processor you must provide an implementation that at least forwards the
      * watermark. A sink processor may simply return {@code true}.
      *
-     * <h3>Caution for Jobs With the At-Least-Once Guarantee</h3>
+     * <p><b>Caution for Jobs With the At-Least-Once Guarantee</b>
+     * <p>
      * Jet propagates the value of the watermark by sending <em>watermark
      * items</em> interleaved with the regular stream items. If a job
      * configured with the <i>at-least-once</i> processing guarantee gets
@@ -344,8 +345,8 @@ public interface Processor {
      * true}. No other method on this processor will be called before it
      * returns {@code true}.
      *
-     * <h4>Error handling</h4>
-     *
+     * <p><b>Error handling</b>
+     * <p>
      * The two-phase commit protocol requires that the second phase must
      * eventually succeed. If you're not able to commit your transactions now,
      * you should either return {@code false} and try again later, or you can

@@ -230,8 +230,8 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor is 1.
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicate} and {@code projection} need
      * to be available on the cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -299,7 +299,7 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor 1.
      *
-     * <h4>Predicate/projection class requirements</h4>
+     * <p><b>Predicate/projection class requirements</b>
      * <p>
      * The classes implementing {@code predicate} and {@code projection} need
      * to be available on the cluster's classpath or loaded using
@@ -354,8 +354,8 @@ public final class Sources {
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicateFn} and {@code projectionFn}
      * need to be available on the cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -419,8 +419,8 @@ public final class Sources {
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicateFn} and {@code projectionFn}
      * need to be available on the cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -430,8 +430,8 @@ public final class Sources {
      * and add a subsequent {@link GeneralStage#map map} or
      * {@link GeneralStage#filter filter} stage.
      *
-     * <h4>Issue when "catching up"</h4>
-     *
+     * <p><b>Issue when "catching up"</b>
+     * <p>
      * This processor does not coalesce watermarks from partitions. It reads
      * partitions one by one: it emits events from one partition and then from
      * another one in batches. This adds time disorder to events: it might emit
@@ -561,8 +561,8 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor is 1.
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicate} and {@code projection} need
      * to be available on the remote cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -615,8 +615,8 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor is 1.
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicateFn} and {@code projectionFn}
      * need to be available on the remote cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -716,8 +716,8 @@ public final class Sources {
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicateFn} and {@code projectionFn}
      * need to be available on the cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -814,8 +814,8 @@ public final class Sources {
      * <p>
      * The default local parallelism for this processor is 1.
      *
-     * <h4>Predicate/projection class requirements</h4>
-     *
+     * <p><b>Predicate/projection class requirements</b>
+     * <p>
      * The classes implementing {@code predicateFn} and {@code projectionFn}
      * need to be available on the cluster's classpath or loaded using
      * <em>Hazelcast User Code Deployment</em>. It's not enough to add them to
@@ -1015,7 +1015,8 @@ public final class Sources {
      *      .buildWatcher()
      * }</pre>
      *
-     * <h3>Appending lines using an text editor</h3>
+     * <p><b>Appending lines using an text editor</b>
+     * <p>
      * If you're testing this source, you might think of using a text editor to
      * append the lines. However, it might not work as expected because some
      * editors write to a temp file and then rename it or append extra newline

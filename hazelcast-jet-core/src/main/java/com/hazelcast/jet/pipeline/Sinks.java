@@ -726,7 +726,8 @@ public final class Sinks {
      * can be a shared in a network - the global processor index is different
      * on each member and the members won't overwrite each other's files.
      *
-     * <h3>Fault tolerance</h3>
+     * <p><b>Fault tolerance</b>
+     * <p>
      * If the job is running in <i>exactly-once</i> mode, items will be written
      * to temporary files (ending with a {@value
      * FileSinkBuilder#TEMP_FILE_SUFFIX} suffix). When the snapshot is
@@ -742,7 +743,8 @@ public final class Sinks {
      * builder. This will give you <i>at-least-once</i> guarantee for the
      * source and unchanged guarantee for other processors.
      *
-     * <h3>File name structure</h3>
+     * <p><b>File name structure</b>
+     *
      * <pre>{@code
      * [<date>-]<global processor index>[-<sequence>][".tmp"]
      * }</pre>
@@ -768,7 +770,8 @@ public final class Sinks {
      *          used if the file is not yet committed
      * </ul>
      *
-     * <h3>Notes</h3>
+     * <p><b>Notes</b>
+     * <p>
      *
      * The target directory is not deleted before the job start. If file names
      * clash, they are appended to. This is needed to ensure at-least-once

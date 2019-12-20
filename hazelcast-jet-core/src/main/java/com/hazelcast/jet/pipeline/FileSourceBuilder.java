@@ -148,7 +148,8 @@ public final class FileSourceBuilder {
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
      *
-     * <h3>Limitation on Windows</h3>
+     * <p><b>Limitation on Windows</b>
+     * <p>
      * On Windows the {@code WatchService} is not notified of appended lines
      * until the file is closed. If the file-writing process keeps the file
      * open while appending, the processor may fail to observe the changes.
@@ -157,13 +158,15 @@ public final class FileSourceBuilder {
      * file system and might change in future. You are advised to do your own
      * testing on your target Windows platform.
      *
-     * <h3>Use the latest JRE</h3>
+     * <p><b>Use the latest JRE</b>
+     * <p>
      * The underlying JDK API ({@link java.nio.file.WatchService}) has a
      * history of unreliability and this source may experience infinite
      * blocking, missed, or duplicate events as a result. Such problems may be
      * resolved by upgrading the JRE to the latest version.
      *
-     * <h3>Appending lines using an text editor</h3>
+     * <p><b>Appending lines using an text editor</b>
+     * <p>
      * If you're testing this source, you might think of using a text editor to
      * append the lines. However, it might not work as expected because some
      * editors write to a temp file and then rename it or append extra newline
