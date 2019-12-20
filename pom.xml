@@ -61,7 +61,6 @@
             -Xms1G
             -XX:+AlwaysPreTouch
             -Dhazelcast.phone.home.enabled=false
-            -Dhazelcast.mancenter.enabled=false
             -Dhazelcast.logging.type=log4j
             -Dhazelcast.test.use.network=false
             -Djava.net.preferIPv4Stack=true
@@ -109,7 +108,7 @@
         <slf4j.api.version>1.7.28</slf4j.api.version>
         <reflections.version>0.9.10</reflections.version>
         <osgi.version>4.2.0</osgi.version>
-        <hadoop.version>2.8.3</hadoop.version>
+        <hadoop.version>2.10.0</hadoop.version>
         <spring.version>4.3.0.RELEASE</spring.version>
         <avro.version>1.8.2</avro.version>
         <scala.version>2.12</scala.version>
