@@ -70,13 +70,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public final class Sinks {
 
-    /**
-     * A suffix added to file names until they are committed. Files ending with
-     * this suffix should be ignored when processing. See {@link #filesBuilder}
-     * for more information.
-     */
-    public static final String TEMP_FILE_SUFFIX = ".tmp";
-
     private Sinks() {
     }
 
@@ -735,12 +728,13 @@ public final class Sinks {
      *
      * <h3>Fault tolerance</h3>
      * If the job is running in <i>exactly-once</i> mode, items will be written
-     * to temporary files (ending with a {@value #TEMP_FILE_SUFFIX} suffix).
-     * When the snapshot is committed, the file will be atomically renamed to
-     * remove this suffix. Thanks to the two-phase commit of the snapshot,
-     * exactly-once guarantee is provided for the sink. Because of this a new
-     * file will be started each time a state snapshotted, the sink will likely
-     * produce many more small files, depending on the snapshot interval.
+     * to temporary files (ending with a {@value
+     * FileSinkBuilder#TEMP_FILE_SUFFIX} suffix). When the snapshot is
+     * committed, the file will be atomically renamed to remove this suffix.
+     * Thanks to the two-phase commit of the snapshot, exactly-once guarantee
+     * is provided for the sink. Because of this a new file will be started
+     * each time a state snapshotted, the sink will likely produce many more
+     * small files, depending on the snapshot interval.
      * <p>
      * If you want to avoid the temporary files or the high number of files but
      * need to have exactly-once for other processors in the job, call {@link
@@ -770,8 +764,8 @@ public final class Sinks {
      *          </ul>
      *          The sequence is reset to 0 when the {@code <date>} changes.
      *
-     *     <li>{@code ".tmp"}: the {@link #TEMP_FILE_SUFFIX}, used if the file
-     *          is not yet committed
+     *     <li>{@code ".tmp"}: the {@link FileSinkBuilder#TEMP_FILE_SUFFIX},
+     *          used if the file is not yet committed
      * </ul>
      *
      * <h3>Notes</h3>

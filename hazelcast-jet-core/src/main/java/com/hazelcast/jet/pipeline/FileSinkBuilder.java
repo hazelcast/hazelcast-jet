@@ -36,6 +36,13 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
  */
 public final class FileSinkBuilder<T> {
 
+    /**
+     * A suffix added to file names until they are committed. Files ending with
+     * this suffix should be ignored when processing. See {@link
+     * Sinks#filesBuilder} for more information.
+     */
+    public static final String TEMP_FILE_SUFFIX = ".tmp";
+
     private final String directoryName;
 
     private FunctionEx<? super T, String> toStringFn = Object::toString;

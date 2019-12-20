@@ -56,7 +56,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
-import static com.hazelcast.jet.pipeline.Sinks.TEMP_FILE_SUFFIX;
+import static com.hazelcast.jet.pipeline.FileSinkBuilder.TEMP_FILE_SUFFIX;
 
 /**
  * A file-writing sink supporting rolling files. Rolling can occur:

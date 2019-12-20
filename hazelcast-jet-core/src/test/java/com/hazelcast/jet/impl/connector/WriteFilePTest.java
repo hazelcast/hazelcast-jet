@@ -63,7 +63,7 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
-import static com.hazelcast.jet.pipeline.Sinks.TEMP_FILE_SUFFIX;
+import static com.hazelcast.jet.pipeline.FileSinkBuilder.TEMP_FILE_SUFFIX;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
