@@ -22,13 +22,18 @@ import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.postgresql.ds.PGSimpleDataSource;
+import org.postgresql.ds.common.BaseDataSource;
+import org.postgresql.xa.PGXADataSource;
+import org.testcontainers.containers.PostgreSQLContainer;
 
+import javax.sql.CommonDataSource;
+import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -44,28 +49,24 @@ import static org.junit.Assert.assertEquals;
 
 public class WriteJdbcPTest extends SimpleTestInClusterSupport {
 
+    @SuppressWarnings("rawtypes")
+    @ClassRule
+    public static PostgreSQLContainer container = new PostgreSQLContainer<>()
+            .withCommand("postgres -c max_prepared_transactions=10");
+
     private static final int PERSON_COUNT = 10;
 
-    private static String dbConnectionUrl;
     private static AtomicInteger tableCounter = new AtomicInteger();
     private String tableName = "T" + tableCounter.incrementAndGet();
 
     @BeforeClass
     public static void setupClass() {
         initialize(2, null);
-        dbConnectionUrl = "jdbc:h2:mem:" + WriteJdbcPTest.class.getSimpleName() + ";DB_CLOSE_DELAY=-1";
-    }
-
-    @AfterClass
-    public static void deleteDbFiles() throws SQLException {
-        try (Connection conn = DriverManager.getConnection(dbConnectionUrl)) {
-            conn.createStatement().execute("shutdown");
-        }
     }
 
     @Before
     public void setup() throws SQLException {
-        try (Connection connection = DriverManager.getConnection(dbConnectionUrl)) {
+        try (Connection connection = ((DataSource) createDataSource(false)).getConnection()) {
             connection.createStatement()
                       .execute("CREATE TABLE " + tableName + "(id int primary key, name varchar(255))");
         }
@@ -76,11 +77,12 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
          .map(item -> entry(item, item.toString()))
-         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)", dbConnectionUrl,
+         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
                  (stmt, item) -> {
                      stmt.setInt(1, item.getKey());
                      stmt.setString(2, item.getValue());
-                 }
+                 },
+                 () -> createDataSource(false)
          ));
 
         instance().newJob(p).join();
@@ -105,10 +107,11 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         Pipeline p = Pipeline.create();
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
          .map(item -> entry(item, item.toString()))
-         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)", dbConnectionUrl,
+         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
                  (stmt, item) -> {
                      throw new SQLNonTransientException();
-                 }
+                 },
+                 () -> createDataSource(false)
          ));
 
         instance().newJob(p).join();
@@ -116,7 +119,7 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
     }
 
     private int rowCount() throws SQLException {
-        try (Connection connection = DriverManager.getConnection(dbConnectionUrl);
+        try (Connection connection = ((DataSource) createDataSource(false)).getConnection();
              Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM " + tableName);
             if (!resultSet.next()) {
@@ -124,6 +127,15 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
             }
             return resultSet.getInt(1);
         }
+    }
+
+    private static CommonDataSource createDataSource(boolean xa) {
+        BaseDataSource dataSource = xa ? new PGXADataSource() : new PGSimpleDataSource();
+        dataSource.setURL(container.getJdbcUrl());
+        dataSource.setUser(container.getUsername());
+        dataSource.setPassword(container.getPassword());
+        dataSource.setDatabaseName(container.getDatabaseName());
+        return dataSource;
     }
 
     private static SupplierEx<Connection> failTwiceConnectionSupplier() {
@@ -135,7 +147,7 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
                 if (remainingFailures-- > 0) {
                     throw new SQLException("connectionFailure");
                 }
-                return DriverManager.getConnection(dbConnectionUrl);
+                return ((DataSource) createDataSource(false)).getConnection();
             }
         };
     }
