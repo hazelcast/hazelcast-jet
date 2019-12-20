@@ -7,7 +7,6 @@ hazelcast-client:
     # a Hazelcast Jet cluster accept client connections.
     cluster-members:
       - 127.0.0.1:5701
-    connection-timeout: 60000
   connection-strategy:
     connection-retry:
       # how long the client should keep trying connecting to the server
