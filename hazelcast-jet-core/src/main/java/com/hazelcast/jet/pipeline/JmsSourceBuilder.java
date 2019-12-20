@@ -117,11 +117,11 @@ public final class JmsSourceBuilder {
 
     /**
      * Sets the function which creates the message consumer from session.
-     *
-     * <p>If not provided, {@code Session#createConsumer(destinationName)} is used
+     * <p>
+     * If not provided, {@code Session#createConsumer(destinationName)} is used
      * to create the consumer. See {@link #destinationName(String)}.
-     *
-     * <p>If you're consuming a topic and you create a shared consumer, make
+     * <p>
+     * If you're consuming a topic and you create a shared consumer, make
      * sure to also call {@link #sharedConsumer(boolean) sharedConsumer(true)}.
      *
      * @return this instance for fluent API
@@ -139,14 +139,14 @@ public final class JmsSourceBuilder {
      * Configures the function to extract IDs from the messages, if
      * exactly-once guarantee is used. If a lower guarantee is used, this
      * function is not used.
-     *
-     * <p>Make sure the function returns non-null for every message, or the job
+     * <p>
+     * Make sure the function returns non-null for every message, or the job
      * will fail. The returned object should also implement {@code equals()}
      * and {@code hashCode()} methods. If you don't have a unique message ID,
      * {@linkplain #maxGuarantee(ProcessingGuarantee) reduce the guarantee} to
      * at-least-once.
-     *
-     * <p>The default is to use {@code Message.getJMSMessageID()}.
+     * <p>
+     * The default is to use {@code Message.getJMSMessageID()}.
      *
      * @return this instance for fluent API
      */
@@ -163,8 +163,8 @@ public final class JmsSourceBuilder {
      * will be used. Use it if you want to avoid the overhead of acknowledging
      * the messages in transactions if you can tolerate duplicated or missed
      * messages.
-     *
-     * <p>If the processing guarantee is NONE, the processor will consume the
+     * <p>
+     * If the processing guarantee is NONE, the processor will consume the
      * messages in auto-acknowledge mode. If the processing guarantee is other
      * than NONE, the processor will acknowledge messages in transactions in
      * the 2nd phase of the snapshot, that is after all downstream stages fully
@@ -174,14 +174,14 @@ public final class JmsSourceBuilder {
      * the snapshot and should the job fail after the snapshot was successful,
      * but before Jet managed to acknowledge the messages, the stored IDs will
      * be used to deduplicate the re-delivered messages.
-     *
-     * <p>If you use a non-durable consumer with a topic, set the max-guarantee
+     * <p>
+     * If you use a non-durable consumer with a topic, set the max-guarantee
      * to NONE - the broker will not redeliver the unacknowledged messages
      * anyway. If you didn't specify your own {@link #consumerFn(FunctionEx)},
      * Jet will do it for you automatically because the consumer for the topic
      * is non-durable by default.
-     *
-     * <p>The default is {@link ProcessingGuarantee#EXACTLY_ONCE}, which means
+     * <p>
+     * The default is {@link ProcessingGuarantee#EXACTLY_ONCE}, which means
      * that the source's guarantee will match the job's guarantee.
      *
      * @return this instance for fluent API

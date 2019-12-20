@@ -1040,8 +1040,8 @@ public final class Sources {
      *
      * This version creates a connection without any authentication parameters.
      * JMS {@link javax.jms.Message} objects are emitted to downstream.
-     *
-     * <p><b>Note:</b> {@link javax.jms.Message} might not be serializable. In
+     * <p>
+     * <b>Note:</b> {@link javax.jms.Message} might not be serializable. In
      * that case you can use {@linkplain #jmsQueueBuilder(SupplierEx) the
      * builder} and add a projection.
      *
@@ -1062,21 +1062,21 @@ public final class Sources {
      * Returns a builder object that offers a step-by-step fluent API to build
      * a custom JMS {@link StreamSource} for the Pipeline API. See javadoc on
      * {@link JmsSourceBuilder} methods for more details.
-     *
-     * <p>This source uses the {@linkplain Message#getJMSTimestamp() JMS'
+     * <p>
+     * This source uses the {@linkplain Message#getJMSTimestamp() JMS'
      * message timestamp} as the native timestamp, if {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) enabled}.
-     *
-     * <p>This source supports exactly-once and at-least-once mode, see {@link
+     * <p>
+     * This source supports exactly-once and at-least-once mode, see {@link
      * JmsSourceBuilder#maxGuarantee(ProcessingGuarantee)} for more
      * information.
-     *
-     * <p>IO failures should be handled by the JMS provider. If any JMS
+     * <p>
+     * IO failures should be handled by the JMS provider. If any JMS
      * operation throws an exception, the job will fail. Most of the providers
      * offer a configuration parameter to enable auto-reconnection, refer to
      * provider documentation for details.
-     *
-     * <p>The default local parallelism for this processor is 1.
+     * <p>
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static JmsSourceBuilder jmsQueueBuilder(SupplierEx<? extends ConnectionFactory> factorySupplier) {
@@ -1095,8 +1095,8 @@ public final class Sources {
      * A non-durable, non-shared consumer is used, only one member will connect
      * to the broker. JMS {@link javax.jms.Message} objects are emitted to
      * downstream.
-     *
-     * <p><b>Note:</b> {@link javax.jms.Message} might not be serializable. In
+     * <p>
+     * <b>Note:</b> {@link javax.jms.Message} might not be serializable. In
      * that case you can use {@linkplain #jmsQueueBuilder(SupplierEx) the
      * builder} and add a projection.
      *
@@ -1117,25 +1117,25 @@ public final class Sources {
      * Returns a builder object that offers a step-by-step fluent API to build
      * a custom JMS {@link StreamSource} for the Pipeline API. See javadoc on
      * {@link JmsSourceBuilder} methods for more details.
-     *
-     * <p>By default, a non-shared consumer is used. This forces the source to
+     * <p>
+     * By default, a non-shared consumer is used. This forces the source to
      * run on only one member of the cluster. You can use {@link
      * JmsSourceBuilder#consumerFn(FunctionEx)} to create a shared consumer.
-     *
-     * <p>This source uses the {@linkplain Message#getJMSTimestamp() JMS'
+     * <p>
+     * This source uses the {@linkplain Message#getJMSTimestamp() JMS'
      * message timestamp} as the native timestamp, if {@linkplain
      * StreamSourceStage#withNativeTimestamps(long) enabled}.
-     *
-     * <p>This source supports exactly-once and at-least-once mode, see {@link
+     * <p>
+     * This source supports exactly-once and at-least-once mode, see {@link
      * JmsSourceBuilder#maxGuarantee(ProcessingGuarantee)} for more
      * information.
-     *
-     * <p>IO failures should be handled by the JMS provider. If any JMS
+     * <p>
+     * IO failures should be handled by the JMS provider. If any JMS
      * operation throws an exception, the job will fail. Most of the providers
      * offer a configuration parameter to enable auto-reconnection, refer to
      * provider documentation for details.
-     *
-     * <p>The default local parallelism for this processor is 1.
+     * <p>
+     * The default local parallelism for this processor is 1.
      */
     @Nonnull
     public static JmsSourceBuilder jmsTopicBuilder(SupplierEx<? extends ConnectionFactory> factorySupplier) {
