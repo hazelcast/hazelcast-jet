@@ -27,6 +27,7 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.util.BitSet;
+import java.util.Iterator;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -111,7 +112,6 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
 
         private Inbox wrappedInbox;
 
-        private boolean peekedItemLogged;
         private int ordinal;
 
         @Override
@@ -121,21 +121,32 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
 
         @Override
         public Object peek() {
-            T res = (T) wrappedInbox.peek();
-            if (!peekedItemLogged && res != null) {
-                log(res);
-                peekedItemLogged = true;
-            }
-            return res;
+            return wrappedInbox.peek();
+        }
+
+        @Nonnull @Override
+        public Iterator<Object> iterator() {
+            Iterator<Object> it = wrappedInbox.iterator();
+            return new Iterator<Object>() {
+                @Override
+                public boolean hasNext() {
+                    return it.hasNext();
+                }
+
+                @Override
+                public Object next() {
+                    return it.next();
+                }
+            };
         }
 
         @Override
         public Object poll() {
+            @SuppressWarnings("unchecked")
             T res = (T) wrappedInbox.poll();
-            if (!peekedItemLogged && res != null) {
+            if (res != null) {
                 log(res);
             }
-            peekedItemLogged = false;
             return res;
         }
 
@@ -145,8 +156,12 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
 
         @Override
         public void remove() {
-            peekedItemLogged = false;
-            wrappedInbox.remove();
+            poll();
+        }
+
+        @Override
+        public void clear() {
+            while (poll() != null);
         }
 
         @Override

@@ -113,7 +113,8 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     }
 
     @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
+        super.init(outbox, context);
         logger = context.logger();
         connectAndPrepareStatement();
     }

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
@@ -26,7 +27,7 @@ import java.util.function.Consumer;
  *
  * @since 3.0
  */
-public interface Inbox {
+public interface Inbox extends Iterable<Object> {
 
     /**
      * Returns {@code true} if this inbox contains no elements, {@code false} otherwise.
@@ -52,6 +53,21 @@ public interface Inbox {
      * @throws NoSuchElementException if this inbox is empty
      */
     void remove();
+
+    /**
+     * Returns an iterator over the items in the inbox in the order they would
+     * be returned by the {@link #poll()} method.
+     * <p>
+     * The returned iterator doesn't support the {@link Iterator#remove()}
+     * method.
+     */
+    @Override
+    Iterator<Object> iterator();
+
+    /**
+     * Removes all items from the inbox.
+     */
+    void clear();
 
     /**
      * Drains all elements into the provided {@link Collection}.

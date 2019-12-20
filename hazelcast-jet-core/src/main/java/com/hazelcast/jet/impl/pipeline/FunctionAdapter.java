@@ -39,6 +39,7 @@ import com.hazelcast.jet.pipeline.JoinClause;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
@@ -213,6 +214,11 @@ public class FunctionAdapter {
             return wrapped.isEmpty();
         }
 
+        @Nonnull @Override
+        public Iterator<Object> iterator() {
+            return wrapped.iterator();
+        }
+
         @Override
         public Object peek() {
             return unwrapPayload(wrapped.peek());
@@ -226,6 +232,11 @@ public class FunctionAdapter {
         @Override
         public void remove() {
             wrapped.remove();
+        }
+
+        @Override
+        public void clear() {
+            wrapped.clear();
         }
 
         @Override

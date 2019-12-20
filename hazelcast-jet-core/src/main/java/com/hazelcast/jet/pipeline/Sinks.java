@@ -30,6 +30,7 @@ import com.hazelcast.jet.impl.connector.DataSourceFromConnectionSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
+import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
@@ -790,6 +791,11 @@ public final class Sinks {
      */
     @Nonnull
     public static <T> FileSinkBuilder<T> filesBuilder(@Nonnull String directoryName) {
+        new SinkBuilder<ITopic<T>, T>("reliableTopic(" + name + "))",
+                        ctx -> ctx.jetInstance().getReliableTopic(name))
+                .receiveFn((ctx, item) -> ctx.publish(item))
+                .build();
+
         return new FileSinkBuilder<>(directoryName);
     }
 
