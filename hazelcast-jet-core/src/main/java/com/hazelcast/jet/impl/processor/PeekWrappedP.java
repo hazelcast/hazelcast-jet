@@ -28,6 +28,7 @@ import com.hazelcast.logging.ILogger;
 import javax.annotation.Nonnull;
 import java.util.BitSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
@@ -156,7 +157,9 @@ public final class PeekWrappedP<T> extends ProcessorWrapper {
 
         @Override
         public void remove() {
-            poll();
+            if (poll() == null) {
+                throw new NoSuchElementException();
+            }
         }
 
         @Override
