@@ -64,7 +64,7 @@ public final class WriteJmsP<T> extends JtaSinkProcessorBase {
             BiFunctionEx<? super Session, ? super T, ? extends Message> messageFn,
             boolean isTopic
     ) {
-        super(exactlyOnce ? EXACTLY_ONCE : AT_LEAST_ONCE);
+        super(exactlyOnce ? EXACTLY_ONCE : AT_LEAST_ONCE, 3);
         this.connection = connection;
         this.destinationName = destinationName;
         this.messageFn = messageFn;

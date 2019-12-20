@@ -50,12 +50,14 @@ public abstract class JtaSinkProcessorBase implements Processor {
     private static final int COMMIT_RETRY_DELAY_MS = 100;
 
     protected TransactionPoolSnapshotUtility<JtaTransactionId, JtaTransaction> snapshotUtility;
+    private final int poolSize;
     private ProcessingGuarantee externalGuarantee;
     private Context context;
     private XAResource xaResource;
 
-    protected JtaSinkProcessorBase(ProcessingGuarantee externalGuarantee) {
+    protected JtaSinkProcessorBase(ProcessingGuarantee externalGuarantee, int poolSize) {
         this.externalGuarantee = externalGuarantee;
+        this.poolSize = poolSize;
     }
 
     @Override
@@ -67,7 +69,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
                 context,
                 false,
                 externalGuarantee,
-                3,
+                poolSize,
                 (procIndex, txnIndex) -> new JtaTransactionId(context, procIndex, txnIndex),
                 JtaTransaction::new,
                 this::recoverTransaction,

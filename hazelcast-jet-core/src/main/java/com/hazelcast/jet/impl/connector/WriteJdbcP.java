@@ -73,7 +73,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             @Nonnull CommonDataSource dataSource,
             @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn
     ) {
-        super(EXACTLY_ONCE); // TODO [viliam] allow the user to choose
+        super(EXACTLY_ONCE, 2); // TODO [viliam] allow the user to choose
         this.updateQuery = updateQuery;
         this.dataSource = dataSource;
         this.bindFn = bindFn;

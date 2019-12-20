@@ -99,7 +99,6 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
             long endTime = System.nanoTime() + SECONDS.toNanos(120);
             Set<Integer> actualSinkContents = new HashSet<>();
 
-            int actualCount = 0;
             Set<Integer> expected = IntStream.range(0, numItems).boxed().collect(Collectors.toSet());
             // We'll restart once, then restart again after a short sleep (possibly during initialization), then restart
             // again and then assert some output so that the test isn't constantly restarting without any progress
@@ -111,13 +110,13 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
                 job.restart(graceful);
                 try {
                     Message msg;
-                    for (int countThisRound = 0; countThisRound < 100 && (msg = consumer.receive(5000)) != null; ) {
+                    for (int countThisRound = 0; countThisRound < 100 && (msg = consumer.receive(5000)) != null
+                            && actualSinkContents.size() < expected.size(); ) {
                         actualSinkContents.add(Integer.valueOf(((TextMessage) msg).getText()));
-                        actualCount++;
                         countThisRound++;
                     }
 
-                    logger.info("number of committed items in the sink so far: " + actualCount);
+                    logger.info("number of committed items in the sink so far: " + actualSinkContents.size());
                     assertEquals(expected, actualSinkContents);
                     // if content matches, break the loop. Otherwise restart and try again
                     break;
