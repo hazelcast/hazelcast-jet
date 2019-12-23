@@ -28,9 +28,11 @@ import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.Observer;
+import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
+import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
@@ -1004,8 +1006,33 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into an
-     * {@link com.hazelcast.jet.Observable} with the specified name.
+     * Returns a sink which publishes values into an {@link Observable}
+     * with the specified name.
+     * <p>
+     * Each instance of such a sink is backed by a {@link Ringbuffer}
+     * with a name derived from the sink's observable name. Hence
+     * multiple sink instances with the same name will be backed by and
+     * publish into the same {@link Ringbuffer}.
+     * <p>
+     * The {@link Ringbuffer} is created when the first sinks with the
+     * corresponding name is created. Alternatively the {@link Ringbuffer}
+     * can be created by the {@link Observable} too, if that gets requested
+     * from {@link JetService} before the job containing the sinks is
+     * submitted.
+     * <p>
+     * The {@link Ringbuffer} is destroyed either explicitly by the
+     * {@link Observable} via the {@link Observable#destroy() destroy method},
+     * or automatically after a certain timeout, when the job containing
+     * the sink completes.
+     * <p>
+     * It is possible to use such sinks with identical observable names in
+     * multiple jobs, or even use them multiple times in the same job, but
+     * this is not recommended. These sinks, if they have identical names,
+     * publish their data into the same {@link Observable} which will result
+     * in multiple parallel streams of events observed on that {@link Observable}.
+     * These events can and will intermingle with each-other in all kinds of
+     * unexpected ways. It is not possible to tell which events originate
+     * from which sink.
      * <p>
      * These sinks can be used for any type of serializable objects with
      * one exception. Don't put {@link Throwable} instances in them,
@@ -1013,13 +1040,6 @@ public final class Sinks {
      * by the {@link Sink} and will trigger the
      * {@link Observer#onError(Throwable) onError method} of all
      * {@link Observer Observers}.
-     * <p>
-     * Using such sinks with the same observable name in multiple jobs is
-     * not recommended. There is an automatic clean-up mechanism
-     * for observables which will kick in after the job completes and a
-     * certain amount of time has elapsed and if at that time there are
-     * other jobs publishing into the same observable, the results might
-     * be confusing.
      * <p>
      * This sink is cooperative and uses local parallelism of 1.
      */
@@ -1031,14 +1051,39 @@ public final class Sinks {
 
     /**
      * Returns a sink which publishes values into a given
-     * {@link com.hazelcast.jet.Observable}.
+     * {@link Observable}.
      * <p>
      * <strong>NOTE:</strong> Jet only remembers the name of the
-     * {@link com.hazelcast.jet.Observable} you supply and acquires
-     * an {@link com.hazelcast.jet.Observable} with that name on the local
-     * cluster. If you supply an {@link com.hazelcast.jet.Observable}
+     * {@link Observable} you supply and acquires
+     * an {@link Observable} with that name on the local
+     * cluster. If you supply an {@link Observable}
      * instance from another cluster, no error will be thrown to indicate
      * this.
+     * <p>
+     * Each instance of such a sink is backed by a {@link Ringbuffer}
+     * with a name derived from the sink's observable name. Hence
+     * multiple sink instances with the same name will be backed by and
+     * publish into the same {@link Ringbuffer}.
+     * <p>
+     * The {@link Ringbuffer} is created when the first sinks with the
+     * corresponding name is created. Alternatively the {@link Ringbuffer}
+     * can be created by the {@link Observable} too, if that gets requested
+     * from {@link JetService} before the job containing the sinks is
+     * submitted.
+     * <p>
+     * The {@link Ringbuffer} is destroyed either explicitly by the
+     * {@link Observable} via the {@link Observable#destroy() destroy method},
+     * or automatically after a certain timeout, when the job containing
+     * the sink completes.
+     * <p>
+     * It is possible to use such sinks with identical observable names in
+     * multiple jobs, or even use them multiple times in the same job, but
+     * this is not recommended. These sinks, if they have identical names,
+     * publish their data into the same {@link Observable} which will result
+     * in multiple parallel streams of events observed on that {@link Observable}.
+     * These events can and will intermingle with each-other in all kinds of
+     * unexpected ways. It is not possible to tell which events originate
+     * from which sink.
      * <p>
      * These sinks can be used for any type of serializable objects with
      * one exception. Don't put {@link Throwable} instances in them,
@@ -1046,13 +1091,6 @@ public final class Sinks {
      * by the {@link Sink} and will trigger the
      * {@link Observer#onError(Throwable) onError method} of all
      * {@link Observer Observers}.
-     * <p>
-     * Using such sinks with the same observable name in multiple jobs is
-     * not recommended. There is an automatic clean-up mechanism
-     * for observables which will kick in after the job completes and a
-     * certain amount of time has elapsed and if at that time there are
-     * other jobs publishing into the same observable, the results might
-     * be confusing.
      * <p>
      * This sink is cooperative and uses local parallelism of 1.
      */

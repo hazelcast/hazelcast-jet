@@ -24,6 +24,7 @@ import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
@@ -317,9 +318,15 @@ public interface JetInstance {
 
     /**
      * Returns an {@link Observable} instance with the specified name.
+     * Represents a flowing sequence of events produced by jobs containing
+     * {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
+     * observable type sinks}.
      * <p>
      * For the same name the same {@link Observable} instance will be returned
      * by each call.
+     * <p>
+     * Observing the sequence on the client side can be accomplished by
+     * registering {@link Observer}s on the {@link Observable}.
      *
      * @param name name of the observable
      * @return observable with the specified name

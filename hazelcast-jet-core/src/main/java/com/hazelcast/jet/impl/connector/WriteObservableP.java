@@ -23,8 +23,8 @@ import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.observer.ObservableUtil;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.Util;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.impl.RingbufferProxy;
@@ -44,7 +44,6 @@ public final class WriteObservableP<T> implements Processor {
     private final AtomicInteger pendingWrites = new AtomicInteger(0);
 
     private Ringbuffer<Object> ringbuffer;
-    private ILogger logger;
 
 
     private WriteObservableP(String observableName) {
@@ -54,7 +53,6 @@ public final class WriteObservableP<T> implements Processor {
     @Override
     public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
         HazelcastInstance instance = context.jetInstance().getHazelcastInstance();
-        this.logger = context.logger();
         this.ringbuffer = instance.getRingbuffer(ObservableUtil.getRingbufferName(observableName));
     }
 
@@ -91,11 +89,11 @@ public final class WriteObservableP<T> implements Processor {
     }
 
     private void onFlushComplete(Long lastSeq, Throwable throwable) {
-        if (throwable != null) {
-            logger.warning("Failed publishing into observable '" + observableName + "'", throwable);
-            //TODO (PR-1729): extract observable name from ringbuffer name
-        }
         pendingWrites.decrementAndGet();
+        if (throwable != null) {
+            throw ExceptionUtil.rethrow(
+                    new Exception("Failed publishing into observable '" + observableName + "'", throwable));
+        }
     }
 
     @Override
