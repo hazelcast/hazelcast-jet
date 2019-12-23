@@ -117,6 +117,9 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
 
     @Override
     public void process(int ordinal, @Nonnull Inbox inbox) {
+        if (snapshotUtility.activeTransaction() == null) {
+            return;
+        }
         if (!reconnectIfNecessary()) {
             return;
         }
