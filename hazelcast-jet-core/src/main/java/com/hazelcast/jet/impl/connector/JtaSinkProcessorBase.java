@@ -77,6 +77,11 @@ public abstract class JtaSinkProcessorBase implements Processor {
     }
 
     @Override
+    public boolean tryProcess() {
+        return snapshotUtility.tryProcess();
+    }
+
+    @Override
     public boolean complete() {
         snapshotUtility.afterCompleted();
         return true;
@@ -172,7 +177,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
             // we ignore rollback failures. XAER_NOTA is "transaction doesn't exist", this is the normal case,
             // we don't even log it
             if (e.errorCode != XAException.XAER_NOTA) {
-                LoggingUtil.logFine(context.logger(), "Failed to rollback, transaction ID: %s. Error: %s",
+                LoggingUtil.logFine(context.logger(), "Failed to roll back, transaction ID: %s. Error: %s",
                         xid, handleXAException(e, xid));
             }
         }

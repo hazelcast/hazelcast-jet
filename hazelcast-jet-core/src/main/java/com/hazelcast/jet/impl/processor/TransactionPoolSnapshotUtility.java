@@ -114,6 +114,12 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         return poolSize;
     }
 
+    @Override
+    public boolean tryProcess() {
+        ensureTransactions();
+        return true;
+    }
+
     @Nullable @Override
     public RES activeTransaction() {
         ensureTransactions();
