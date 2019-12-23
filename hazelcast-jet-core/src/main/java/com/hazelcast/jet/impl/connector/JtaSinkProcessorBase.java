@@ -122,6 +122,9 @@ public abstract class JtaSinkProcessorBase implements Processor {
      */
     public void setXaResource(XAResource xaResource) {
         this.xaResource = xaResource;
+        if (snapshotUtility.usesTransactionLifecycle() && xaResource == null) {
+            throw new JetException("null XA resource set where it was required");
+        }
     }
 
     private void recoverTransaction(Xid xid) throws InterruptedException {
@@ -174,8 +177,8 @@ public abstract class JtaSinkProcessorBase implements Processor {
         try {
             xaResource.rollback(xid);
         } catch (XAException e) {
-            // we ignore rollback failures. XAER_NOTA is "transaction doesn't exist", this is the normal case,
-            // we don't even log it
+            // We ignore rollback failures.
+            // If error is XAER_NOTA (transaction doesn't exist), we don't even log it, this is the normal case
             if (e.errorCode != XAException.XAER_NOTA) {
                 LoggingUtil.logFine(context.logger(), "Failed to roll back, transaction ID: %s. Error: %s",
                         xid, handleXAException(e, xid));

@@ -116,11 +116,17 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     }
 
     @Override
-    public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (snapshotUtility.activeTransaction() == null) {
-            return;
-        }
+    public boolean tryProcess() {
         if (!reconnectIfNecessary()) {
+            return false;
+        }
+        return super.tryProcess();
+    }
+
+    @Override
+    public void process(int ordinal, @Nonnull Inbox inbox) {
+        if (!reconnectIfNecessary()
+                || snapshotUtility.activeTransaction() == null) {
             return;
         }
         try {
@@ -160,20 +166,22 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
 
     private boolean connectAndPrepareStatement() {
         try {
-            if (dataSource instanceof DataSource) {
-                if (snapshotUtility.externalGuarantee() == EXACTLY_ONCE) {
+            if (snapshotUtility.usesTransactionLifecycle()) {
+                if (!(dataSource instanceof XADataSource)) {
                     throw new JetException("When using exactly-once, the dataSource must implement "
                             + XADataSource.class.getName());
                 }
-                connection = ((DataSource) dataSource).getConnection();
-            } else if (dataSource instanceof XADataSource) {
                 XAConnection xaConnection = ((XADataSource) dataSource).getXAConnection();
                 connection = xaConnection.getConnection();
-                if (snapshotUtility.usesTransactionLifecycle()) {
-                    // we never ignore errors in ex-once mode
-                    assert idleCount == 0 : "idleCount=" + idleCount;
-                    setXaResource(xaConnection.getXAResource());
-                }
+                // we never ignore errors in ex-once mode
+                assert idleCount == 0 : "idleCount=" + idleCount;
+                setXaResource(xaConnection.getXAResource());
+            } else if (dataSource instanceof DataSource) {
+                connection = ((DataSource) dataSource).getConnection();
+            } else if (dataSource instanceof XADataSource) {
+                logger.warning("Using " + XADataSource.class.getName() + " when no XA transactions are needed");
+                XAConnection xaConnection = ((XADataSource) dataSource).getXAConnection();
+                connection = xaConnection.getConnection();
             } else {
                 throw new JetException("The dataSource implements neither " + DataSource.class.getName() + " nor "
                         + XADataSource.class.getName());
@@ -181,7 +189,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             connection.setAutoCommit(false);
             supportsBatch = connection.getMetaData().supportsBatchUpdates();
             statement = connection.prepareStatement(updateQuery);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logger.warning("Exception during connecting and preparing the statement", e);
             idleCount++;
             return false;
@@ -196,8 +204,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
         }
         statement.addBatch();
         if (++batchCount == BATCH_LIMIT) {
-            statement.executeBatch();
-            batchCount = 0;
+            executeBatch();
         }
     }
 
@@ -226,7 +233,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
         try {
             closeable.close();
         } catch (Exception e) {
-            logger.warning("Exception during closing " + closeable, e);
+            logger.warning("Exception when closing " + closeable + ", ignoring it: " + e, e);
         }
     }
 }
