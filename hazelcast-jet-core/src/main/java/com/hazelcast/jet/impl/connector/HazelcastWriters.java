@@ -178,7 +178,7 @@ public final class HazelcastWriters {
 
             @Nonnull @Override
             public Function<? super Address, ? extends ProcessorSupplier> get(@Nonnull List<Address> addresses) {
-                return address -> ProcessorSupplier.of(WriteObservableP.supplier(name));
+                return address -> new WriteObservableP.Supplier(name);
             }
         };
     }

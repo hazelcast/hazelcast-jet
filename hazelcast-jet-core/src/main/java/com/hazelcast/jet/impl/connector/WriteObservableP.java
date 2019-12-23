@@ -17,60 +17,39 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.Inbox;
-import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.observer.ObservableUtil;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public final class WriteObservableP<T> implements Processor {
+public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
 
-    private static final int ASYNC_OPS_LIMIT = 1;
+    private static final int MAX_PARALLEL_ASYNC_OPS = 1;
     private static final int MAX_BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
-    private final String observableName;
+    private final Ringbuffer<Object> ringbuffer;
     private final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
-    private final AtomicInteger pendingWrites = new AtomicInteger(0);
 
-    private Ringbuffer<Object> ringbuffer;
-
-
-    private WriteObservableP(String observableName) {
-        this.observableName = observableName;
-    }
-
-    @Override
-    public void init(@Nonnull Outbox outbox, @Nonnull Context context) {
-        HazelcastInstance instance = context.jetInstance().getHazelcastInstance();
+    private WriteObservableP(String observableName, HazelcastInstance instance) {
+        super(instance, MAX_PARALLEL_ASYNC_OPS);
         this.ringbuffer = instance.getRingbuffer(ObservableUtil.getRingbufferName(observableName));
     }
 
     @Override
-    public void process(int ordinal, @Nonnull Inbox inbox) {
-        if (batch.isEmpty()) {
-            inbox.drainTo(batch, MAX_BATCH_SIZE);
+    protected void processInternal(Inbox inbox) {
+        if (batch.size() < MAX_BATCH_SIZE) {
+            inbox.drainTo(batch, MAX_BATCH_SIZE - batch.size());
         }
         tryFlush();
     }
 
     @Override
-    public boolean tryProcess() {
-        return tryFlush();
-    }
-
-    @Override
-    public boolean saveToSnapshot() {
+    protected boolean flushInternal() {
         return tryFlush();
     }
 
@@ -78,37 +57,27 @@ public final class WriteObservableP<T> implements Processor {
         if (batch.isEmpty()) {
             return true;
         }
-        if (Util.tryIncrement(pendingWrites, 1, ASYNC_OPS_LIMIT)) {
-            ringbuffer.addAllAsync(batch, OverflowPolicy.OVERWRITE)
-                    .whenComplete(this::onFlushComplete);
-            batch.clear();
-            return true;
-        } else {
+        if (!tryAcquirePermit()) {
             return false;
         }
-    }
-
-    private void onFlushComplete(Long lastSeq, Throwable throwable) {
-        pendingWrites.decrementAndGet();
-        if (throwable != null) {
-            throw ExceptionUtil.rethrow(
-                    new Exception("Failed publishing into observable '" + observableName + "'", throwable));
-        }
-    }
-
-    @Override
-    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-        // we're a sink, no need to forward the watermarks
+        setCallback(ringbuffer.addAllAsync(batch, OverflowPolicy.OVERWRITE));
+        batch.clear();
         return true;
     }
 
-    @Override
-    public boolean complete() {
-        return tryFlush() && pendingWrites.get() <= 0;
-    }
+    public static final class Supplier extends AbstractHazelcastConnectorSupplier {
 
-    public static SupplierEx<Processor> supplier(String name) {
-        return () -> new WriteObservableP<>(name);
+        private final String observableName;
+
+        public Supplier(String observableName) {
+            super(null);
+            this.observableName = observableName;
+        }
+
+        @Override
+        protected Processor createProcessor(HazelcastInstance instance) {
+            return new WriteObservableP<>(observableName, instance);
+        }
     }
 
 }
