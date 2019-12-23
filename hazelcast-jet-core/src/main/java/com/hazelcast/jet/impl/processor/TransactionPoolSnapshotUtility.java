@@ -138,6 +138,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         if (!usesTransactionLifecycle()) {
             return;
         }
+        // TODO [viliam] update
         // If a member is removed or the local parallelism is reduced, the
         // transactions with higher processor index won't be used. We need to
         // roll these back too. We probe transaction IDs with processorIndex
@@ -146,7 +147,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         // back "our" transactions, that is those where index%parallelism =
         // ourIndex
         for (
-                int index = procContext().totalParallelism() + procContext().globalProcessorIndex();
+                int index = procContext().globalProcessorIndex();
                 index < procContext().totalParallelism() * TXN_PROBING_FACTOR;
                 index += procContext().totalParallelism()
         ) {
