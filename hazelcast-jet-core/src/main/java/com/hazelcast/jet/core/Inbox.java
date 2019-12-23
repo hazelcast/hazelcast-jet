@@ -69,8 +69,8 @@ public interface Inbox {
     }
 
     /**
-     * Drains all elements into the provided {@link Collection}, stopping
-     * when {@code limit} is reached.
+     * Drains at most {@code limit} elements into the provided {@link
+     * Collection}.
      *
      * @param target the collection to drain this object's items into
      * @param limit the maximum amount of items to drain

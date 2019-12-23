@@ -300,7 +300,7 @@ public interface JetInstance {
      * Returns a distributed reliable topic instance with the specified name.
      *
      * @param name name of the distributed topic
-     * @return distributed reliable topic instance with specified name
+     * @return distributed reliable topic instance with the specified name
      */
     <E> ITopic<E> getReliableTopic(@Nonnull String name);
 
@@ -320,13 +320,13 @@ public interface JetInstance {
      * Returns an {@link Observable} instance with the specified name.
      * Represents a flowing sequence of events produced by jobs containing
      * {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
-     * observable type sinks}.
+     * observable sinks}.
      * <p>
-     * For the same name the same {@link Observable} instance will be returned
-     * by each call.
+     * You can acquire many instances of the same {@code Observable}. They will
+     * all produce the same data.
      * <p>
-     * Observing the sequence on the client side can be accomplished by
-     * registering {@link Observer}s on the {@link Observable}.
+     * In order to observe the events, register an {@link Observer}s on the
+     * {@code Observable}.
      *
      * @param name name of the observable
      * @return observable with the specified name

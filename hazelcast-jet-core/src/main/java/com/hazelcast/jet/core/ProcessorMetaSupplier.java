@@ -66,10 +66,9 @@ import static java.util.Collections.singletonList;
 public interface ProcessorMetaSupplier extends Serializable {
 
     /**
-     * Returns optional meta-information about this supplier, can be used
-     * to describe capabilities, resources owned and so forth.
-     * <p>
-     * The meta-information takes the form of simple string key-value pairs.
+     * Returns the metadata on this supplier, a string-to-string map. There is
+     * no predefined metadata; this facility exists to allow the DAG vertices
+     * to contribute some information to the execution planning phase.
      */
     @Nonnull
     default Map<String, String> getTags() {
@@ -112,7 +111,7 @@ public interface ProcessorMetaSupplier extends Serializable {
      * Called on coordinator member after execution has finished on all
      * members, successfully or not. This method will be called after {@link
      * ProcessorSupplier#close(Throwable)} has been called on all
-     * <em>available</em> members. The job can later be restarted.
+     * <em>available</em> members. The job can be restarted later.
      * <p>
      * If there is an exception during the creation of the execution plan, this
      * method will be called regardless of whether the {@link #init(Context)

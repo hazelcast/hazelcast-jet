@@ -32,56 +32,55 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * Represents a flowing sequence of events produced by jobs containing
- * {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
- * observable type sinks}. The actual transport of the events is handled by
- * a {@link Ringbuffer}, this is where the above mentioned sinks publish
- * into. These {@link Ringbuffer}s get created when the {@link Observable}
- * is {@link JetInstance#getObservable(String) requested from a JetInstance}.
+ * Represents a flowing sequence of events produced by one or more {@link
+ * com.hazelcast.jet.pipeline.Sinks#observable(String) observable sinks}.
+ * To observe the events, call {@link #addObserver
+ * jet.getObservable(name).addObserver(myObserver)}.
  * <p>
- * Observing the sequence on the client side can be accomplished by
- * registering {@link Observer}s on the {@link Observable}. Observers are
- * based on {@link Ringbuffer} listeners so they are able to see not just
- * the events that have happened after their registration, but past events
- * which happen to still reside in the {@link Ringbuffer} (ie. have not been
- * overwritten yet).
+ * The identity of an {@code Observable} is its name. You can get any
+ * number of {@code Observable} objects by the same name and they will
+ * all correspond to the same entity. All registered observers will get
+ * all the published events. Likewise, you can create any number of sinks
+ * using the same name and they will all push the events to the same
+ * {@code Observable}.
  * <p>
- * Besides new values appearing observers can also observe completion and
+ * Even though an observable sink is the only way to publish data to an
+ * {@code Observable}, their lifecycles are decoupled. You create an
+ * {@code Observable} when you acquire it by name, either by running a
+ * job with an observable sink or by calling {@link JetInstance#getObservable
+ * jet.getObservable()}, and after that it stays alive until you explicitly
+ * {@link #destroy} it, or until the {@linkplain
+ * com.hazelcast.jet.core.JetProperties#JOB_RESULTS_TTL_SECONDS
+ * auto-cleanup mechanism} kicks in and destroys it for you. In particular,
+ * keep in mind that a job may complete, but the {@code Observable}, along
+ * with the data it published to it, lives on. If you destroy an {@code
+ * Observable} that is still in active use by a sink, it will silently
+ * re-create it the next time it has data to push to it.
+ * <p>
+ * Internally, Jet stores the {@code Observable}'s data in a {@link
+ * Ringbuffer} and observers are backed by {@link Ringbuffer} listeners.
+ * This results in the following data retention semantics: an {@code
+ * Observable} holds on to all the published events until reaching the
+ * configured capacity and then starts overwriting the old events with new
+ * ones. A freshly registered observer will see all the data available in
+ * the {@code Ringbuffer}, including events that were published before
+ * registration.
+ * <p>
+ * In addition to data events, the observer can also observe completion and
  * failure events. Completion means that no further values will appear in
  * the sequence. Failure means that something went wrong during the
  * production of the sequence's values and the event attempts to provide
  * useful information about the cause of the problem.
  * <p>
- * As stated before events are being produced by jobs running
- * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
- * type sinks}. When these jobs are batched by nature and they complete
- * (successfully or with a failure) the observables owned by them
- * (and implicitly the {@link Ringbuffer}s backing those in turn) remain
- * alive for a preconfigured time (see
- * {@link com.hazelcast.jet.core.JetProperties#JOB_RESULTS_TTL_SECONDS
- * JOB_RESULTS_TTL_SECONDS property}, defaults to 7 days) after which they
- * get cleaned up automatically. For streaming jobs no such automatic
- * clean-up is possible, since they never complete, unless they fail.
+ * You should explicitly destroy the {@code Observable} after use. Even if
+ * the client that originally created the {@code Observable} crashes, any
+ * other client can obtain the same {@code Observable} and destroy it.
  * <p>
- * When using {@link Observable}s we encourage their manual cleanup, via
- * their {@link Observable#destroy()} method, whenever they are no longer
- * needed. Automatic clean-up shouldn't be relied upon. Even if a client
- * that has requested the {@link Observable} happens to crash before
- * managing to do clean-up, it is still possible to manually destroy
- * the backing {@link Ringbuffer}s by obtaining a new, identically named
- * {@link Observable} and calling {@link Observable#destroy()} on that.
- * <p>
- * It is possible to use the same {@link Observable} for multiple jobs, or
- * even use the same {@link Observable} multiple times in the same job (by
- * defining {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
- * observable type sinks} with the same name). If done so one should be aware
- * that there will be parallel streams of events which can be intermingled
- * with eachother in all kinds of unexpected ways. It is not possible to
- * tell which events originate from which sink. Newly registered
- * {@link Observer}s seeing all events still in the {@link Ringbuffer}
- * further exacerbates this problem so we recommend that an
- * {@link Observable} with a certain name be used in a single sink of a
- * single job.
+ * While it's technically possible to use the same {@code Observable} from
+ * multiple sinks or even jobs, it is not the intended kind of usage. The
+ * events hold no metadata on their origin so the client will observe
+ * events from all sinks arbitrarily interleaved with no way to tell which
+ * came from which sink or job.
  *
  * @param <T> type of the values in the sequence
  */
@@ -89,50 +88,47 @@ public interface Observable<T> extends Iterable<T> {
 
     /**
      * Returns the name identifying this particular observable.
+     *
      * @return name of observable
      */
     String name();
 
     /**
-     * Register an instance of {@link Observer} to be notified about any
-     * future and past events (to the extent that these haven't yet been
-     * overwritten in the backing {@link Ringbuffer}).
+     * Registers an {@link Observer} to this {@code Observable}. It will
+     * receive all events currently in the backing {@link Ringbuffer} and then
+     * continue receiving any future events.
      *
-     * @return registration ID associated with the added {@link Observer},
-     * can be used to remove the {@link Observer} later
+     * @return registration ID associated with the added {@code Observer}, can be used
+     *         to remove the {@code Observer} later
      */
     UUID addObserver(@Nonnull Observer<T> observer);
 
     /**
-     * Removes previously added {@link Observer}s, identified by their
-     * assigned registration IDs. Removed {@link Observer}s will
-     * not get notified about further events.
+     * Removes a previously added {@link Observer} identified by its
+     * assigned registration ID. A removed {@code Observer} will not get
+     * notified about further events.
      */
     void removeObserver(UUID registrationId);
 
     /**
-     * Non-thread safe iterator that can block while waiting for additional
-     * events.
+     * Returns an iterator over the sequence of events produced by this
+     * {@code Observable}. If there are currently no events to observe,
+     * the iterator's {@code Iterator#hasNext hasNext()} and {@code
+     * Iterator#next next()} methods will block. A completion event
+     * completes the iterator ({@code hasNext()} will return false) and
+     * a failure event makes the iterator's methods throw the underlying
+     * exception.
      * <p>
-     * Should be used only for {@link Observable}s populated by batch jobs,
-     * because otherwise, without a completion event, iteration will never
-     * end.
+     * If used against an {@code Observable} populated from a streaming job,
+     * the iterator will complete only in the case of an error or job
+     * cancellation.
      * <p>
-     * Is backed by a blocking list which stores all event until they
-     * wait to be iterated over. Completion and error event also get put
-     * into the list, thus they are serialized with data events.
-     * Iteration will continue until either a completion or error event
-     * is encountered.
+     * The iterator is not thread-safe.
      * <p>
-     * When no further event are available, but neither completion nor
-     * error has been encountered, the {@link Iterator#hasNext() hasNext()}
-     * method will block.
-     * <p>
-     * When a failure event is encountered the {@link Iterator#hasNext()
-     * hasNext()} call throws it as an Exception.
+     * The iterator is backed by a blocking concurrent queue which stores all
+     * events until consumed.
      */
-    @Override
-    @Nonnull
+    @Nonnull @Override
     default Iterator<T> iterator() {
         BlockingIteratorObserver<T> observer = new BlockingIteratorObserver<>();
         addObserver(observer);
@@ -140,14 +136,22 @@ public interface Observable<T> extends Iterable<T> {
     }
 
     /**
-     * Future view of the observable sequence, on that can also apply a
-     * transformation on the values. For example it could do counting,
-     * like this: {@code observable.toFuture(Stream::count)}, but it's
-     * also suited for mapping, filtering and so on.
+     * Allows you to post-process the results of a Jet job on the client side
+     * using the standard Java {@link java.util.stream Stream API}. You provide
+     * a function that will receive the job results as a {@code Stream<T>} and
+     * return a single result.
      * <p>
-     * Should be used only for {@link Observable}s populated by batch jobs,
-     * because otherwise, without a completion event, the stream will never
-     * end and the future will never be completed.
+     * Returns a {@link Future Future<R>} that will become completed once your
+     * function has received all the job results through its {@code Stream} and
+     * returned the final result.
+     * <p>
+     * A trivial example is counting, like this: {@code observable.toFuture(Stream::count)},
+     * however the Stream API is quite rich and you can perform arbitrary
+     * transformations and aggregations.
+     * <p>
+     * This feature is intended to be used only on the results of a batch job.
+     * On an unbounded streaming job the stream-collecting operation will never
+     * reach the final result.
      *
      * @param fn transform function which takes the stream of observed values
      *           and produces an altered value from it, which could also
@@ -162,11 +166,12 @@ public interface Observable<T> extends Iterable<T> {
     }
 
     /**
-     * Removes all previously registered observers and attempts to destroy
-     * the backing {@link Ringbuffer}.
+     * Removes all previously registered observers and destroys the backing
+     * {@link Ringbuffer}.
      * <p>
-     * If the {@link Ringbuffer} is still being published into (ie. the job
-     * populating it has not been completed), then it will be recreated.
+     * <strong>Note:</strong> if you call this while a job that publishes to this
+     * {@code Observable} is still active, it will silently create a new {@code
+     * Ringbuffer} and go on publishing to it.
      */
     void destroy();
 

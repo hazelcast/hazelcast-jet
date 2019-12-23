@@ -677,7 +677,7 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into a distributed reliable topic
+     * Returns a sink which publishes the items it receives to a distributed reliable topic
      * with the specified name.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
@@ -695,12 +695,12 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into a distributed reliable topic.
-     * <p>
-     * <strong>NOTE:</strong> Jet only remembers the name of the reliable
-     * topic you supply and acquires a reliable topic with that name on the
-     * local cluster. If you supply a reliable topic instance from another
-     * cluster, no error will be thrown to indicate this.
+     * Returns a sink which publishes the items it receives to the provided
+     * distributed reliable topic. More precisely, it takes the <em>name</em>
+     * of the given {@code ITopic} and then independently retrieves the {@code
+     * ITopic} with the same name from the cluster where the job is running. To
+     * prevent surprising behavior, make sure you have obtained the {@code
+     * ITopic} from the same cluster to which you will submit the pipeline.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at-least-once</i>
@@ -714,9 +714,9 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into a distributed reliable
-     * topic with specified name in a remote cluster identified by the
-     * supplied {@code ClientConfig}.
+     * Returns a sink which publishes the items it receives to a distributed
+     * reliable topic with the provided name in a remote cluster identified by
+     * the supplied {@code ClientConfig}.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at-least-once</i>
@@ -1006,42 +1006,33 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into an {@link Observable}
-     * with the specified name.
+     * Returns a sink that publishes to the {@link Observable} with the
+     * provided name.
      * <p>
-     * Each instance of such a sink is backed by a {@link Ringbuffer}
-     * with a name derived from the sink's observable name. Hence
-     * multiple sink instances with the same name will be backed by and
-     * publish into the same {@link Ringbuffer}.
+     * Each instance of this sink is backed by a {@link Ringbuffer} with the
+     * name derived from the {@code Observable}. If multiple sink instances
+     * use the same name, they will be backed by the same {@link Ringbuffer}
+     * and all their data will be interleaved in it.
      * <p>
-     * The {@link Ringbuffer} is created when the first sinks with the
-     * corresponding name is created. Alternatively the {@link Ringbuffer}
-     * can be created by the {@link Observable} too, if that gets requested
-     * from {@link JetService} before the job containing the sinks is
-     * submitted.
+     * Jet creates the {@code Ringbuffer} either while initializing a job that
+     * refers to it, or when you directly obtain it with {@link
+     * com.hazelcast.jet.JetInstance#getObservable jet.getObservable()}. Once
+     * created, it lives on until explicitly {@linkplain Observable#destroy()
+     * destroyed} or until destroyed by the auto-cleanup mechanism.
+     * Auto-cleanup kicks in only after there haven't been any producers or
+     * consumers for a set period (the default is one week).
      * <p>
-     * The {@link Ringbuffer} is destroyed either explicitly by the
-     * {@link Observable} via the {@link Observable#destroy() destroy method},
-     * or automatically after a certain timeout, when the job containing
-     * the sink completes.
+     * While Jet will allow you to publish data to the same {@code Observable}
+     * from many sinks, this is not the intended way of using them. The events
+     * coming from all sinks will be arbitrarily interleaved and won't have
+     * any metadata that distinguishes their origin.
      * <p>
-     * It is possible to use such sinks with identical observable names in
-     * multiple jobs, or even use them multiple times in the same job, but
-     * this is not recommended. These sinks, if they have identical names,
-     * publish their data into the same {@link Observable} which will result
-     * in multiple parallel streams of events observed on that {@link Observable}.
-     * These events can and will intermingle with each-other in all kinds of
-     * unexpected ways. It is not possible to tell which events originate
-     * from which sink.
+     * This sink is not designed to receive exceptions as data. It will
+     * interpret any {@link Throwable} as a processing error and cause the
+     * Jet job to fail. The {@code Observer} will receive it through its {@link
+     * Observer#onError} callback.
      * <p>
-     * These sinks can be used for any type of serializable objects with
-     * one exception. Don't put {@link Throwable} instances in them,
-     * because those will be interpreted as processing errors encountered
-     * by the {@link Sink} and will trigger the
-     * {@link Observer#onError(Throwable) onError method} of all
-     * {@link Observer Observers}.
-     * <p>
-     * This sink is cooperative and uses local parallelism of 1.
+     * This sink is cooperative and uses a local parallelism of 1.
      */
     @Nonnull
     public static <T> Sink<T> observable(String name) {
@@ -1050,49 +1041,14 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes values into a given
-     * {@link Observable}.
+     * Returns a sink that publishes to the provided {@link Observable}. More
+     * precisely, it takes the <em>name</em> of the given {@code Observable}
+     * and then independently retrieves an {@code Observable} with the same
+     * name from the cluster where the job is running. To prevent surprising
+     * behavior, make sure you have obtained the {@code Observable} from the
+     * same cluster to which you will submit the pipeline.
      * <p>
-     * <strong>NOTE:</strong> Jet only remembers the name of the
-     * {@link Observable} you supply and acquires
-     * an {@link Observable} with that name on the local
-     * cluster. If you supply an {@link Observable}
-     * instance from another cluster, no error will be thrown to indicate
-     * this.
-     * <p>
-     * Each instance of such a sink is backed by a {@link Ringbuffer}
-     * with a name derived from the sink's observable name. Hence
-     * multiple sink instances with the same name will be backed by and
-     * publish into the same {@link Ringbuffer}.
-     * <p>
-     * The {@link Ringbuffer} is created when the first sinks with the
-     * corresponding name is created. Alternatively the {@link Ringbuffer}
-     * can be created by the {@link Observable} too, if that gets requested
-     * from {@link JetService} before the job containing the sinks is
-     * submitted.
-     * <p>
-     * The {@link Ringbuffer} is destroyed either explicitly by the
-     * {@link Observable} via the {@link Observable#destroy() destroy method},
-     * or automatically after a certain timeout, when the job containing
-     * the sink completes.
-     * <p>
-     * It is possible to use such sinks with identical observable names in
-     * multiple jobs, or even use them multiple times in the same job, but
-     * this is not recommended. These sinks, if they have identical names,
-     * publish their data into the same {@link Observable} which will result
-     * in multiple parallel streams of events observed on that {@link Observable}.
-     * These events can and will intermingle with each-other in all kinds of
-     * unexpected ways. It is not possible to tell which events originate
-     * from which sink.
-     * <p>
-     * These sinks can be used for any type of serializable objects with
-     * one exception. Don't put {@link Throwable} instances in them,
-     * because those will be interpreted as processing errors encountered
-     * by the {@link Sink} and will trigger the
-     * {@link Observer#onError(Throwable) onError method} of all
-     * {@link Observer Observers}.
-     * <p>
-     * This sink is cooperative and uses local parallelism of 1.
+     * For more details refer to {@link #observable(String) observable(name)}.
      */
     @Nonnull
     public static <T> Sink<T> observable(Observable<? super T> observable) {

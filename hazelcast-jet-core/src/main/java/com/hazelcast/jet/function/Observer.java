@@ -18,23 +18,20 @@ package com.hazelcast.jet.function;
 
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Observable;
+import com.hazelcast.ringbuffer.Ringbuffer;
 
 import javax.annotation.Nonnull;
 
 /**
- * Watcher of the events produced by an {@link Observable}. Once subscribed, it
- * will be notified of all past events produced by the {@link Observable}
- * (to the extent to which these haven't yet been overwritten in the
- * {@link Observable} implementation's finite history) and
- * all future events that will be produced by the {@link Observable}, while
- * the {@link Observer} remains added to it.
+ * Observes the events produced by an {@link Observable}. Once registered,
+ * it will receive all events currently in the backing {@link Ringbuffer}
+ * and then continue receiving any future events.
  * <p>
- * Notification will be done by an internal pool of threads and care should
- * be taken to not block those threads, ie. finish processing of all events
- * as soon as possible.
+ * Jet calls this {@code Observer}'s callbacks on an internal thread pool
+ * of limited size, shared with many other Hazelcast Jet services. Therefore
+ * the callbacks should take care to finish as quickly as possible.
  *
- * @param <T> type of data values in the sequence produced by the
- * {@link Observable}
+ * @param <T> type of the observed event
  */
 @FunctionalInterface
 public interface Observer<T> {
@@ -67,45 +64,40 @@ public interface Observer<T> {
     }
 
     /**
-     * Method that will be called when data values from the {@link Observable}
-     * become available.
+     * Observes the next event from the {@link Observable} it is registered
+     * with.
      * <p>
-     * The data values passed via this method don't have a clear,
-     * global ordering. Some {@link Observable}s for example produce values
-     * in parallel so the order in which they arrive at the
-     * {@link Observer}s is unpredictable.
+     * Although the {@code Observable} respects the order of events published
+     * to it, the publication order itself is generally non-deterministic. A
+     * Jet pipeline must be written with the specific goal of order
+     * preservation in mind. For example, a map/filter stage that doesn't
+     * explicitly set its local parallelism to 1 will reorder the data.
      * <p>
-     * It is not possible to observe data values after an error or completion
-     * has been observed.
+     * After this observer has seen an error or completion event, it will
+     * see no further events.
      */
     void onNext(@Nonnull T t);
 
     /**
-     * Method that will be called when the {@link Observable} (to which this
-     * {@link Observer} is subscribed to) encounters an error in its
-     * process of producing data values.
+     * Observes an error event from the {@link Observable} it is registered
+     * with, in the form of an exception that reflects the underlying cause.
      * <p>
-     * The passed {@link Throwable} instance attempts to reflect/explain the
-     * original error as closely as possible.
-     * <p>
-     * Once an error has been observed, no further data values nor completion
-     * events will be received.
+     * After this observer has seen an error or completion event, it will
+     * see no further events.
      */
     default void onError(@Nonnull Throwable throwable) {
         throwable.printStackTrace();
     }
 
     /**
-     * Method that will be called when the {@link Observable} (to which this
-     * {@link Observer} is subscribed to) finishes producing its sequence
-     * of data values. Only batch-type of observables will ever produce
-     * this event.
+     * Observes the completion event from the {@link Observable} it is
+     * registered with. Only an observer attached to a batch job will ever see
+     * this event. Unbounded streaming jobs never complete without error.
      * <p>
-     * Once completion has been observed, no further data values nor errors
-     * will be received.
+     * After this observer has seen an error or completion event, it will
+     * see no further events.
      */
     default void onComplete() {
         //do nothing
     }
-
 }
