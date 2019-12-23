@@ -5,6 +5,14 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
+** Hazelcast Jet 3.2.1 **
+
+1. Fixes
+
+[core] Optimize DAG iteration during job initialization for very large DAGs (>200+ vertices) [#1809]
+[core] Fix error in snapshot chunking which could cause snapshot to fail intermittently [#1810]
+[core] Update IMDG version to 3.12.5 [#1812]
+
 ** Hazelcast Jet 3.2 **
 
 1. New Features
