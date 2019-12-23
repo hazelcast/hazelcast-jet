@@ -43,6 +43,7 @@ import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
 import java.util.Map.Entry;
 
+import static com.hazelcast.client.HazelcastClient.newHazelcastClient;
 import static com.hazelcast.function.Functions.entryKey;
 import static com.hazelcast.function.Functions.entryValue;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
@@ -55,12 +56,12 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.updateRemoteMapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeMapP;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeReliableTopicP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteCacheP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteListP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteMapP;
-import static com.hazelcast.jet.core.processor.SinkProcessors.writeRemoteReliableTopicP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeSocketP;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asClientConfig;
+import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -685,7 +686,10 @@ public final class Sinks {
      */
     @Nonnull
     public static <T> Sink<T> reliableTopic(@Nonnull String reliableTopicName) {
-        return fromProcessor("reliableTopicSink(" + reliableTopicName + ')', writeReliableTopicP(reliableTopicName));
+        return SinkBuilder.<ITopic<T>>sinkBuilder("reliableTopicSink(" + reliableTopicName + "))",
+                ctx -> ctx.jetInstance().getReliableTopic(reliableTopicName))
+                .<T>receiveFn(ITopic::publish)
+                .build();
     }
 
     /**
@@ -720,8 +724,11 @@ public final class Sinks {
      */
     @Nonnull
     public static <T> Sink<T> remoteReliableTopic(@Nonnull String reliableTopicName, @Nonnull ClientConfig clientConfig) {
-        return fromProcessor("remoteReliableTopicSink(" + reliableTopicName + ')',
-                writeRemoteReliableTopicP(reliableTopicName, clientConfig));
+        String clientXml = asXmlString(clientConfig); //conversion needed for serializibility
+        return SinkBuilder.<ITopic<T>>sinkBuilder("reliableTopicSink(" + reliableTopicName + "))",
+                ctx -> newHazelcastClient(asClientConfig(clientXml)).getReliableTopic(reliableTopicName))
+                .<T>receiveFn(ITopic::publish)
+                .build();
     }
 
     /**
