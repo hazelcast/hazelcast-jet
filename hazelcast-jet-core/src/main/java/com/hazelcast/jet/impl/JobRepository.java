@@ -406,8 +406,7 @@ public class JobRepository {
         // delete the job record and related records
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
-        final String jobIdString = idToString(jobId);
-        deleteTempFiles("jet-" + instance.getName() + "-" + jobIdString);
+        deleteTempFiles("jet-" + instance.getName() + "-" + idToString(jobId));
     }
 
     private void deleteTempFiles(String filter) {

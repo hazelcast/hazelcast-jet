@@ -145,9 +145,9 @@ public class JobConfig implements IdentifiedDataSerializable {
      *
      * @return {@code this} instance for fluent API
      * @see InstanceConfig#setScaleUpDelayMillis
-     * Configuring the scale-up delay
+     *        Configuring the scale-up delay
      * @see #setProcessingGuarantee
-     * Enabling/disabling snapshots
+     *        Enabling/disabling snapshots
      */
     public JobConfig setAutoScaling(boolean enabled) {
         this.autoScaling = enabled;
@@ -281,7 +281,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Adds the ZIP file identified by the supplied URL to the list of archives
      * that will be a part of the job's classpath while it's executing in the
      * Jet cluster.
-     * <p>
+     * 
      * Note: Only JAR files inside the ZIP file will be added to the
      * job classpath.
      *
@@ -295,7 +295,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     /**
      * Adds the supplied ZIP file to the list of archives that will be a part of
      * the job's classpath while it's executing in the Jet cluster.
-     * <p>
+     *
      * Note: Only JAR files inside the ZIP file will be added to the
      * job classpath.
      *
@@ -314,7 +314,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Adds the ZIP identified by the supplied pathname to the list of archives
      * that will be a part of the job's classpath while it's executing in the
      * Jet cluster.
-     * <p>
+     * 
      * Note: Only JAR files inside the ZIP file will be added to the
      * job classpath.
      *
@@ -562,7 +562,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * set to {@link ProcessingGuarantee#NONE}.
      *
      * @param initialSnapshotName the snapshot name given to {@link
-     *                            Job#exportSnapshot(String)}
+     *       Job#exportSnapshot(String)}
      * @return {@code this} instance for fluent API
      * @since 3.0
      */
