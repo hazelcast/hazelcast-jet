@@ -14,27 +14,30 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.server;
+package com.hazelcast.jet.impl;
 
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.collection.IList;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.JoinConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetCacheManager;
-import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.util.ConcurrentMemoizingSupplier;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.logging.Logger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -44,6 +47,9 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.jar.JarFile;
+import java.util.logging.LogManager;
+
+import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
 
 /**
  * A helper class that allows one to create a standalone runnable JAR which
@@ -103,17 +109,23 @@ public final class JetBootstrap {
     private static String jobName;
     private static ConcurrentMemoizingSupplier<JetInstance> supplier;
 
+    private static final ILogger LOGGER = Logger.getLogger(Jet.class.getName());
+
     private JetBootstrap() {
     }
 
-    static synchronized void executeJar(@Nonnull Supplier<JetInstance> supplier,
+    public static synchronized void executeJar(@Nonnull Supplier<JetInstance> supplier,
                            @Nonnull String jar, @Nullable String snapshotName,
                            @Nullable String jobName, @Nonnull List<String> args
     ) throws Exception {
+        if (JetBootstrap.supplier != null) {
+            throw new IllegalStateException("Supplier was already set. This method should not be called outside" +
+                    "the Jet command line.");
+        }
         JetBootstrap.jarName = jar;
         JetBootstrap.snapshotName = snapshotName;
         JetBootstrap.jobName = jobName;
-        JetBootstrap.supplier = new ConcurrentMemoizingSupplier<>(() -> new InstanceProxy(supplier.get()));
+        JetBootstrap.supplier = memoizeConcurrent(supplier);
 
         try (JarFile jarFile = new JarFile(jar)) {
             if (jarFile.getManifest() == null) {
@@ -157,13 +169,42 @@ public final class JetBootstrap {
      * Returns the bootstrapped {@code JetInstance}. The instance will be
      * automatically shut down once the {@code main()} method of the JAR returns.
      */
-    public static JetInstance getInstance() {
+    @Nonnull
+    public static synchronized JetInstance getInstance() {
         if (supplier == null) {
-            throw new JetException(
-                    "JetBootstrap.getInstance() should be used in conjunction with the jet submit command"
-            );
+            supplier = memoizeConcurrent(JetBootstrap::createStandaloneInstance);
         }
         return supplier.get();
+    }
+
+    private static JetInstance createStandaloneInstance() {
+        configureLogging();
+        LOGGER.info("Bootstrapped instance requested but application wasn't called from jet submit script. " +
+                "Creating a standalone Jet instance instead.");
+        JetConfig config = locateAndGetJetConfig();
+        Config hzconfig = config.getHazelcastConfig();
+
+        // turn off all discovery and assign a non-standart port
+        hzconfig.setProperty("hazelcast.wait.seconds.before.join", "0");
+        JoinConfig join = hzconfig.getNetworkConfig().getJoin();
+        join.getMulticastConfig().setEnabled(false);
+        join.getTcpIpConfig().setEnabled(false);
+        join.getAwsConfig().setEnabled(false);
+        join.getGcpConfig().setEnabled(false);
+        join.getAzureConfig().setEnabled(false);
+        join.getKubernetesConfig().setEnabled(false);
+        join.getEurekaConfig().setEnabled(false);
+
+        return Jet.newJetInstance(config);
+    }
+
+    private static ConcurrentMemoizingSupplier<JetInstance> memoizeConcurrent(@Nonnull Supplier<JetInstance> supplier) {
+        return new ConcurrentMemoizingSupplier<>(() -> new InstanceProxy(supplier.get()));
+    }
+
+    public static void configureLogging() {
+        InputStream input = JetBootstrap.class.getClassLoader().getResourceAsStream("logging.properties");
+        Util.uncheckRun(() -> LogManager.getLogManager().readConfiguration(input));
     }
 
     private static class InstanceProxy extends AbstractJetInstance {

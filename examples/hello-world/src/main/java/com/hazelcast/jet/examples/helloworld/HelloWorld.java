@@ -17,7 +17,7 @@
 package com.hazelcast.jet.examples.helloworld;
 
 import com.hazelcast.function.ComparatorEx;
-//import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -26,7 +26,6 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.server.JetBootstrap;
 import com.hazelcast.map.IMap;
 import org.apache.log4j.Logger;
 
@@ -34,6 +33,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Util.entry;
+
+//import com.hazelcast.jet.Jet;
 
 /**
  * Demonstrates a simple job which calculates the top 10 numbers from a
@@ -66,20 +67,13 @@ public class HelloWorld {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        /*
-         * JetBootstrap.getInstance() can be changed to Jet.newJetInstance()
-         * to start an embedded Jet node instead and submit the job to it.
-         */
-        JetInstance jet = JetBootstrap.getInstance();
-//        JetInstance jet = Jet.newJetInstance();
-
+        JetInstance jet = Jet.bootstrappedInstance();
         Pipeline p = buildPipeline();
 
         JobConfig config = new JobConfig();
         config.setName("hello-world");
         config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
         Job job = jet.newJobIfAbsent(p, config);
-
         LOGGER.info("Generating a stream of random numbers and calculating the top 10");
         LOGGER.info("The results will be written to a distributed map");
 

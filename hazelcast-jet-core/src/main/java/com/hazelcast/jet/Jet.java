@@ -35,6 +35,8 @@ import com.hazelcast.instance.impl.HazelcastInstanceProxy;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.config.JetClientConfig;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.JetBootstrap;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JetNodeContext;
 import com.hazelcast.jet.impl.JetService;
@@ -73,6 +75,65 @@ public final class Jet {
     }
 
     private Jet() {
+    }
+
+    /**
+     * Returns a Jet instance which is bootstrapped depending on
+     * the the current execution environment.
+     * <p>
+     * <b>1. Local or embedded mode</b>: When this method is called within
+     * a standard execution environment, it will simply create a new standalone
+     * Jet node. It is equivalent to calling {@link #newJetInstance()},
+     * with the difference that subsequent calls will return the previously
+     * created instance. The created node is standalone, and can't be
+     * joined to an existing cluster.
+     * <p>
+     * <b>2. Cluster Mode</b>: When this method is called through the
+     * {@code jet submit} command it will instead create a client to the
+     * specified cluster in the command line. This client also attaches
+     * the submitted JAR as part of the job submission.
+     * <p>
+     * To use the <b>cluster mode</b> use the following steps:
+     * <ol><li>
+     * Write your {@code main()} method and your Jet code the usual way, except
+     * for calling {@link #bootstrappedInstance()} to acquire a Jet client
+     * instance (instead of {@link #newJetClient()}).
+     * </li><li>
+     * Create a runnable JAR with your entry point declared as the {@code
+     * Main-Class} in {@code MANIFEST.MF}. The JAR should include all dependencies
+     * required to run it (minus the Jet dependencies - which are already
+     * available on the cluster classpath).
+     * </li><li>
+     * Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
+     * jet submit jetjob.jar}. The script is found in the Jet distribution
+     * zipfile, in the {@code bin} directory. On Windows use {@code
+     * jet.bat}. Jet will automatically add the supplied JAR file to the
+     * {@link JobConfig} during job submission.
+     * </li><li>
+     * The Jet client will be configured from {@code hazelcast-client.xml}
+     * found in the {@code config} directory in Jet's distribution directory
+     * structure. Adjust that file to suit your needs.
+     * </li></ol>
+     * <p>
+     * For example, write a class like this:
+     * <pre>
+     * public class CustomJetJob {
+     *   public static void main(String[] args) {
+     *     JetInstance jet = Jet.bootstrappedInstance();
+     *     jet.newJob(buildPipeline()).execute().get();
+     *   }
+     *
+     *   public static Pipeline createPipeline() {
+     *       // ...
+     *   }
+     * }
+     * </pre>
+     *
+     * @since 4.0
+     */
+    @Nonnull
+    public static JetInstance bootstrappedInstance() {
+        return JetBootstrap.getInstance();
     }
 
     /**
