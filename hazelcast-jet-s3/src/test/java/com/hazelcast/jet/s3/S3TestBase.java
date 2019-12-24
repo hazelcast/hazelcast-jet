@@ -81,8 +81,8 @@ abstract class S3TestBase extends JetTestSupport {
 
         jet.newJob(p).join();
 
-        assertTrueEventually(() -> {
-            try (S3Client client = clientSupplier().get()) {
+        try (S3Client client = clientSupplier().get()) {
+            assertTrueEventually(() -> {
                 long lineCount = client
                         .listObjects(req -> req.bucket(bucketName).prefix(prefix))
                         .contents()
@@ -92,8 +92,8 @@ abstract class S3TestBase extends JetTestSupport {
                         .peek(line -> assertEquals(payload, line))
                         .count();
                 assertEquals(itemCount, lineCount);
-            }
-        });
+            });
+        }
     }
 
     void testSource(String bucketName, String prefix, int objectCount, int lineCount) {
