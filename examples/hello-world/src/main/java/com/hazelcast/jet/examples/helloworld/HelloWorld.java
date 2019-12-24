@@ -72,6 +72,7 @@ public class HelloWorld {
         config.setName("hello-world");
         config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
         Job job = jet.newJobIfAbsent(p, config);
+
         LOGGER.info("Generating a stream of random numbers and calculating the top 10");
         LOGGER.info("The results will be written to a distributed map");
 

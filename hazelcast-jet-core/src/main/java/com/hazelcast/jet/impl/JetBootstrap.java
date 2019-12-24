@@ -71,11 +71,21 @@ public final class JetBootstrap {
     private static String jarName;
     private static String snapshotName;
     private static String jobName;
+
+    // supplier will be set only once
     private static ConcurrentMemoizingSupplier<JetInstance> supplier;
 
     private static final ILogger LOGGER = Logger.getLogger(Jet.class.getName());
 
     private JetBootstrap() {
+    }
+
+    // used by JetCommandLineTest
+    public static synchronized void reset() {
+        JetBootstrap.jarName = null;
+        JetBootstrap.snapshotName = null;
+        JetBootstrap.jobName = null;
+        JetBootstrap.supplier = null;
     }
 
     public static synchronized void executeJar(@Nonnull Supplier<JetInstance> supplier,

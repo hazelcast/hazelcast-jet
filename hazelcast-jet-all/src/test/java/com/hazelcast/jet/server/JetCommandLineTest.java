@@ -26,6 +26,7 @@ import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.JetBootstrap;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
@@ -96,6 +97,8 @@ public class JetCommandLineTest extends JetTestSupport {
 
     @Before
     public void before() {
+        JetBootstrap.reset();
+
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().getMapConfig(SOURCE_NAME).getEventJournalConfig().setEnabled(true);
         String clusterName = randomName();
