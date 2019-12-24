@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl;
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.collection.IList;
 import com.hazelcast.config.Config;
+import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.JoinConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.Jet;
@@ -144,11 +145,13 @@ public final class JetBootstrap {
         LOGGER.info("Bootstrapped instance requested but application wasn't called from jet submit script. " +
                 "Creating a standalone Jet instance instead.");
         JetConfig config = locateAndGetJetConfig();
-        Config hzconfig = config.getHazelcastConfig();
+        Config hzConfig = config.getHazelcastConfig();
 
         // turn off all discovery to make sure node doesn't join any existing cluster
-        hzconfig.setProperty("hazelcast.wait.seconds.before.join", "0");
-        JoinConfig join = hzconfig.getNetworkConfig().getJoin();
+        hzConfig.setProperty("hazelcast.wait.seconds.before.join", "0");
+        hzConfig.getAdvancedNetworkConfig().setEnabled(false);
+
+        JoinConfig join = hzConfig.getNetworkConfig().getJoin();
         join.getMulticastConfig().setEnabled(false);
         join.getTcpIpConfig().setEnabled(false);
         join.getAwsConfig().setEnabled(false);
@@ -156,7 +159,7 @@ public final class JetBootstrap {
         join.getAzureConfig().setEnabled(false);
         join.getKubernetesConfig().setEnabled(false);
         join.getEurekaConfig().setEnabled(false);
-
+        join.setDiscoveryConfig(new DiscoveryConfig());
         return Jet.newJetInstance(config);
     }
 
@@ -172,7 +175,7 @@ public final class JetBootstrap {
         private final String snapshotName;
         private final String jobName;
 
-        public InstanceProxy(JetInstance hazelcastInstance) {
+        InstanceProxy(JetInstance hazelcastInstance) {
             this(hazelcastInstance, null, null, null);
         }
 
