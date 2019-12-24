@@ -53,18 +53,18 @@ import java.util.stream.StreamSupport;
  * com.hazelcast.jet.core.JetProperties#JOB_RESULTS_TTL_SECONDS
  * auto-cleanup mechanism} kicks in and destroys it for you. In particular,
  * keep in mind that a job may complete, but the {@code Observable}, along
- * with the data it published to it, lives on. If you destroy an {@code
+ * with the data it published to it, lives on. <strong>Consuming the data
+ * does not remove it from the Observable</strong>. If you destroy an {@code
  * Observable} that is still in active use by a sink, it will silently
  * re-create it the next time it has data to push to it.
  * <p>
- * Internally, Jet stores the {@code Observable}'s data in a {@link
- * Ringbuffer} and observers are backed by {@link Ringbuffer} listeners.
- * This results in the following data retention semantics: an {@code
- * Observable} holds on to all the published events until reaching the
- * configured capacity and then starts overwriting the old events with new
- * ones. A freshly registered observer will see all the data available in
- * the {@code Ringbuffer}, including events that were published before
- * registration.
+ * Jet stores the {@code Observable}'s data in a {@link Ringbuffer} and
+ * observers are backed by {@link Ringbuffer} listeners. This results in
+ * the following data retention semantics: an {@code Observable} holds on
+ * to all the published events until reaching the configured capacity and
+ * then starts overwriting the old events with new ones. A freshly
+ * registered observer will see all the data available in the {@code
+ * Ringbuffer}, including events that were published before registration.
  * <p>
  * In addition to data events, the observer can also observe completion and
  * failure events. Completion means that no further values will appear in
