@@ -67,12 +67,7 @@ import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig
  **/
 public final class JetBootstrap {
 
-    // these params must be set before a job is submitted
-    private static String jarName;
-    private static String snapshotName;
-    private static String jobName;
-
-    // supplier will be set only once
+    // supplier should be set only once
     private static ConcurrentMemoizingSupplier<JetInstance> supplier;
 
     private static final ILogger LOGGER = Logger.getLogger(Jet.class.getName());
@@ -88,10 +83,10 @@ public final class JetBootstrap {
             throw new IllegalStateException("Supplier was already set. This method should not be called outside" +
                     "the Jet command line.");
         }
-        JetBootstrap.jarName = jar;
-        JetBootstrap.snapshotName = snapshotName;
-        JetBootstrap.jobName = jobName;
-        JetBootstrap.supplier = memoizeConcurrent(supplier);
+
+        JetBootstrap.supplier = new ConcurrentMemoizingSupplier<>(() ->
+                new InstanceProxy(supplier.get(), jar, snapshotName, jobName)
+        );
 
         try (JarFile jarFile = new JarFile(jar)) {
             if (jarFile.getManifest() == null) {
@@ -123,9 +118,6 @@ public final class JetBootstrap {
             if (remembered != null) {
                 remembered.shutdown();
             }
-            JetBootstrap.jarName = null;
-            JetBootstrap.snapshotName = null;
-            JetBootstrap.jobName = null;
             JetBootstrap.supplier = null;
         }
     }
@@ -142,7 +134,7 @@ public final class JetBootstrap {
     @Nonnull
     public static synchronized JetInstance getInstance() {
         if (supplier == null) {
-            supplier = memoizeConcurrent(JetBootstrap::createStandaloneInstance);
+            supplier = new ConcurrentMemoizingSupplier<>(() -> new InstanceProxy(createStandaloneInstance()));
         }
         return supplier.get();
     }
@@ -168,10 +160,6 @@ public final class JetBootstrap {
         return Jet.newJetInstance(config);
     }
 
-    private static ConcurrentMemoizingSupplier<JetInstance> memoizeConcurrent(@Nonnull Supplier<JetInstance> supplier) {
-        return new ConcurrentMemoizingSupplier<>(() -> new InstanceProxy(supplier.get()));
-    }
-
     public static void configureLogging() {
         InputStream input = JetBootstrap.class.getClassLoader().getResourceAsStream("logging.properties");
         Util.uncheckRun(() -> LogManager.getLogManager().readConfiguration(input));
@@ -180,10 +168,26 @@ public final class JetBootstrap {
     private static class InstanceProxy extends AbstractJetInstance {
 
         private final AbstractJetInstance instance;
+        private final String jar;
+        private final String snapshotName;
+        private final String jobName;
 
-        InstanceProxy(JetInstance instance) {
+        public InstanceProxy(JetInstance hazelcastInstance) {
+            this(hazelcastInstance, null, null, null);
+        }
+
+        InstanceProxy(
+                JetInstance instance,
+                @Nullable String jar,
+                @Nullable String snapshotName,
+                @Nullable String jobName
+        ) {
             super(instance.getHazelcastInstance());
+
             this.instance = (AbstractJetInstance) instance;
+            this.jar = jar;
+            this.snapshotName = snapshotName;
+            this.jobName = jobName;
         }
 
         @Nonnull @Override
@@ -217,8 +221,8 @@ public final class JetBootstrap {
         }
 
         private JobConfig updateJobConfig(@Nonnull JobConfig config) {
-            if (jarName != null) {
-                config.addJar(jarName);
+            if (jar != null) {
+                config.addJar(jar);
             }
             if (snapshotName != null) {
                 config.setInitialSnapshotName(snapshotName);
