@@ -24,11 +24,11 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.function.Observer;
-import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
@@ -677,8 +677,8 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink which publishes the items it receives to a distributed reliable topic
-     * with the specified name.
+     * Returns a sink which publishes the items it receives to a distributed
+     * reliable topic with the specified name.
      * <p>
      * No state is saved to snapshot for this sink. After the job is restarted,
      * the items will likely be duplicated, providing an <i>at-least-once</i>
@@ -1016,8 +1016,8 @@ public final class Sinks {
      * <p>
      * Jet creates the {@code Ringbuffer} either while initializing a job that
      * refers to it, or when you directly obtain it with {@link
-     * com.hazelcast.jet.JetInstance#getObservable jet.getObservable()}. Once
-     * created, it lives on until explicitly {@linkplain Observable#destroy()
+     * JetInstance#getObservable jet.getObservable()}. Once created, it
+     * lives on until explicitly {@linkplain Observable#destroy()
      * destroyed} or until destroyed by the auto-cleanup mechanism.
      * Auto-cleanup kicks in only after there haven't been any producers or
      * consumers for a set period (the default is one week).
