@@ -61,46 +61,10 @@ import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig
  * it.
  * <p>
  * This helper is a part of the solution to the above "bootstrapping"
- * issue. To use it, follow these steps:
- * <ol><li>
- * Write your {@code main()} method and your Jet code the usual way, except
- * for calling {@link JetBootstrap#getInstance()} to acquire a Jet client
- * instance (instead of {@link Jet#newJetClient()}).
- * </li><li>
- * Create a runnable JAR with your entry point declared as the {@code
- * Main-Class} in {@code MANIFEST.MF}.
- * </li><li>
- * Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
- * jet submit jetjob.jar}. The script is found in the Jet distribution
- * zipfile, in the {@code bin} directory. On Windows use {@code
- * jet.bat}.
- * </li><li>
- * The Jet client will be configured from {@code hazelcast-client.xml}
- * found in the {@code config} directory in Jet's distribution directory
- * structure. Adjust that file to suit your needs.
- * </li></ol>
+ * issue.
  * <p>
- * For example, write a class like this:
- * <pre>
- * public class CustomJetJob {
- *   public static void main(String[] args) {
- *     JetInstance jet = JetBootstrap.getInstance();
- *     jet.newJob(buildDag()).execute().get();
- *   }
- *
- *   public static DAG buildDag() {
- *       // ...
- *   }
- * }
- * </pre>
- * <p>
- * After building the JAR, submit the job:
- * <pre>
- * $ jet submit jetjob.jar
- * </pre>
- *
- * @since 3.0
- */
+ * For instructions on how to use this class, see {@link Jet#bootstrappedInstance()}.
+ **/
 public final class JetBootstrap {
 
     // these params must be set before a job is submitted
@@ -184,7 +148,7 @@ public final class JetBootstrap {
         JetConfig config = locateAndGetJetConfig();
         Config hzconfig = config.getHazelcastConfig();
 
-        // turn off all discovery and assign a non-standart port
+        // turn off all discovery to make sure node doesn't join any existing cluster
         hzconfig.setProperty("hazelcast.wait.seconds.before.join", "0");
         JoinConfig join = hzconfig.getNetworkConfig().getJoin();
         join.getMulticastConfig().setEnabled(false);
