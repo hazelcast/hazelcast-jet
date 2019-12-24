@@ -34,8 +34,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static com.hazelcast.jet.Util.entry;
 
-//import com.hazelcast.jet.Jet;
-
 /**
  * Demonstrates a simple job which calculates the top 10 numbers from a
  * stream of random numbers. This code is included in Jet's distribution
