@@ -80,14 +80,6 @@ public final class JetBootstrap {
     private JetBootstrap() {
     }
 
-    // used by JetCommandLineTest
-    public static synchronized void reset() {
-        JetBootstrap.jarName = null;
-        JetBootstrap.snapshotName = null;
-        JetBootstrap.jobName = null;
-        JetBootstrap.supplier = null;
-    }
-
     public static synchronized void executeJar(@Nonnull Supplier<JetInstance> supplier,
                            @Nonnull String jar, @Nullable String snapshotName,
                            @Nullable String jobName, @Nonnull List<String> args
@@ -131,6 +123,10 @@ public final class JetBootstrap {
             if (remembered != null) {
                 remembered.shutdown();
             }
+            JetBootstrap.jarName = null;
+            JetBootstrap.snapshotName = null;
+            JetBootstrap.jobName = null;
+            JetBootstrap.supplier = null;
         }
     }
 

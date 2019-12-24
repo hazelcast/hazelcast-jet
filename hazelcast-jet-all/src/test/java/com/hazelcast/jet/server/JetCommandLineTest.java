@@ -97,8 +97,6 @@ public class JetCommandLineTest extends JetTestSupport {
 
     @Before
     public void before() {
-        JetBootstrap.reset();
-
         JetConfig cfg = new JetConfig();
         cfg.getHazelcastConfig().getMapConfig(SOURCE_NAME).getEventJournalConfig().setEnabled(true);
         String clusterName = randomName();
