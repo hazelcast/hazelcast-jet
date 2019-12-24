@@ -59,6 +59,7 @@ import static com.hazelcast.jet.core.metrics.MetricNames.LAST_FORWARDED_WM;
 import static com.hazelcast.jet.core.metrics.MetricNames.LAST_FORWARDED_WM_LATENCY;
 import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_BATCHES;
 import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_COUNT;
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_SIZE;
 import static com.hazelcast.jet.core.metrics.MetricNames.TOP_OBSERVED_WM;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
@@ -69,10 +70,10 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.END;
 import static com.hazelcast.jet.impl.execution.ProcessorState.FINAL_ON_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_PROCESS;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED;
-import static com.hazelcast.jet.impl.execution.ProcessorState.SNAPSHOT_PREPARE_COMMIT;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_WATERMARK;
 import static com.hazelcast.jet.impl.execution.ProcessorState.SAVE_SNAPSHOT;
+import static com.hazelcast.jet.impl.execution.ProcessorState.SNAPSHOT_PREPARE_COMMIT;
 import static com.hazelcast.jet.impl.execution.ProcessorState.WAITING_FOR_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
@@ -598,6 +599,8 @@ public class ProcessorTasklet implements Tasklet {
         context.collect(descriptor, COALESCED_WM, ProbeLevel.INFO, ProbeUnit.MS, watermarkCoalescer.coalescedWm());
         context.collect(descriptor, LAST_FORWARDED_WM, ProbeLevel.INFO, ProbeUnit.MS, outbox.lastForwardedWm());
         context.collect(descriptor, LAST_FORWARDED_WM_LATENCY, ProbeLevel.INFO, ProbeUnit.MS, lastForwardedWmLatency());
+
+        context.collect(descriptor, SNAPSHOT_SIZE, ProbeLevel.INFO, ProbeUnit.BYTES, outbox.snapshotSize());
 
         context.collect(descriptor, this);
         context.collect(descriptor, this.processor);

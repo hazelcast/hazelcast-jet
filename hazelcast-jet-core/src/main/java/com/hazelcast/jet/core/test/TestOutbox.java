@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.test;
 
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.impl.execution.OutboundCollector;
@@ -23,7 +24,6 @@ import com.hazelcast.jet.impl.execution.OutboxImpl;
 import com.hazelcast.jet.impl.execution.OutboxInternal;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
-import com.hazelcast.internal.serialization.Data;
 
 import javax.annotation.Nonnull;
 import java.time.LocalTime;
@@ -220,6 +220,11 @@ public final class TestOutbox implements OutboxInternal {
     @Override
     public long lastForwardedWm() {
         return outbox.lastForwardedWm();
+    }
+
+    @Override
+    public long snapshotSize() {
+        return outbox.snapshotSize();
     }
 
     @Override

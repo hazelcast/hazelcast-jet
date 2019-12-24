@@ -92,25 +92,37 @@ public final class MetricNames {
     /**
      * Tracks the highest watermark observed on all the input queues
      * of a particular incoming {@link Edge} of a certain {@link Vertex}.
-     * The {@link Edge} and the {@link Vertex}, together with the concrete
-     * {@link Processor} running them can be identified based on the
-     * {@link MetricTags#ORDINAL}, {@link MetricTags#VERTEX} &
-     * {@link MetricTags#PROCESSOR} tags of the metric.
+     * The {@link Vertex} and the {@link Processor} can be identified
+     * based on the {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR}
+     * tags of the metric.
      */
     public static final String COALESCED_WM = "coalescedWm";
 
     /**
-     * Tracks the last watermark emitted by a particular {@link Processor},
-     * which can be identified based on the {@link MetricTags#PROCESSOR} tag.
+     * Tracks the last watermark emitted by a particular {@link Processor}
+     * of a particular {@link Vertex}. The {@link Vertex} and the
+     * {@link Processor} can be identified based on the {@link MetricTags#VERTEX}
+     * & {@link MetricTags#PROCESSOR} tags of the metric.
      */
     public static final String LAST_FORWARDED_WM = "lastForwardedWm";
 
     /**
      * Tracks the difference between the last emitted watermark and the
-     * system time of a particular {@link Processor}. The {@link Processor}
-     * can be identified based on the {@link MetricTags#PROCESSOR} tag.
+     * system time of a particular {@link Processor} of a particular
+     * {@link Vertex}. The {@link Vertex} and the {@link Processor} can be
+     * identified based on the {@link MetricTags#VERTEX} &
+     * {@link MetricTags#PROCESSOR} tags of the metric.
      */
     public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
+
+    /**
+     * Tracks the size (in bytes) of snapshot data written out by a
+     * particular {@link Processor} instance of a particular {@link Vertex}.
+     * The {@link Vertex} and the {@link Processor} can be identified
+     * based on the {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR}
+     * tags of the metric.
+     */
+    public static final String SNAPSHOT_SIZE = "snapshotSize";
 
     /**
      * Counts data items coming in over the network for DISTRIBUTED input
