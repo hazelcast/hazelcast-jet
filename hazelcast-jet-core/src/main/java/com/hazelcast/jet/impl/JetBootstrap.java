@@ -53,6 +53,9 @@ import java.util.logging.LogManager;
 import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig;
 
 /**
+ * This class shouldn't be directly used, instead see {@link Jet#bootstrappedInstance()}
+ * for the replacement and docs.
+ * <p>
  * A helper class that allows one to create a standalone runnable JAR which
  * contains all the code needed to submit a job to a running Jet cluster.
  * The main issue with achieving this is that the JAR must be attached as a
@@ -60,11 +63,6 @@ import static com.hazelcast.jet.impl.config.ConfigProvider.locateAndGetJetConfig
  * load and use its classes. However, from within a running {@code main()}
  * method it is not trivial to find out the filename of the JAR containing
  * it.
- * <p>
- * This helper is a part of the solution to the above "bootstrapping"
- * issue.
- * <p>
- * For instructions on how to use this class, see {@link Jet#bootstrappedInstance()}.
  **/
 public final class JetBootstrap {
 
