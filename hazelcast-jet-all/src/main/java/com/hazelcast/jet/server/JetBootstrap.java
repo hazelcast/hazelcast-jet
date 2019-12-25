@@ -119,11 +119,11 @@ public final class JetBootstrap {
         try (JarFile jarFile = new JarFile(jar)) {
             if (StringUtil.isNullOrEmpty(mainClass)) {
                 if (jarFile.getManifest() == null) {
-                    error("No manifest file in " + jar);
+                    error("No manifest file in " + jar + ". The -c option can be used to provide a main class.");
                 }
                 mainClass = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
                 if (mainClass == null) {
-                    error("No Main-Class found in manifest");
+                    error("No Main-Class found in manifest. The -c option can be used to provide a main class.");
                 }
             }
 
