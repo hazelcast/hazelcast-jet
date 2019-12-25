@@ -145,7 +145,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         pipeline.readFrom(TestSources.items(1))
                 .mapUsingService(ServiceFactory.withCreateContextFn(context -> {
-                            File root = JobRepository.getJobFileStorageById(context, "test");
+                            File root = context.getJobFileStorageById("test");
                             return root.toPath().resolve("resource.txt").toFile();
 
                         }).withCreateServiceFn((context, file) -> file),
@@ -175,7 +175,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         pipeline.readFrom(TestSources.items(1))
                 .flatMapUsingService(ServiceFactory.withCreateContextFn(context ->
-                                JobRepository.getJobFileStorageById(context, "deployment"))
+                                context.getJobFileStorageById("deployment"))
                                                    .withCreateServiceFn((context, file) -> file),
                         (file, integer) -> Traversers.traverseStream(Files.list(file.toPath()).map(Path::toString)))
                 .apply(assertCollected(c -> assertEquals("list size must be 3", 3, c.size())))

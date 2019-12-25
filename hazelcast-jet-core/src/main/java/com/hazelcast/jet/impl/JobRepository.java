@@ -27,13 +27,10 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
-import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.metrics.JobMetrics;
-import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.deployment.IMapOutputStream;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -51,7 +48,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -77,7 +73,6 @@ import java.util.zip.ZipInputStream;
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.Util.unzip;
 import static com.hazelcast.jet.impl.util.Util.zipDirectoryToOutputStream;
 import static com.hazelcast.jet.impl.util.Util.zipFileToOutputStream;
 import static java.util.Comparator.comparing;
@@ -181,34 +176,6 @@ public class JobRepository {
         this.jobResults = instance.getMap(JOB_RESULTS_MAP_NAME);
         this.jobMetrics = instance.getMap(JOB_METRICS_MAP_NAME);
         this.exportedSnapshotDetailsCache = instance.getMap(EXPORTED_SNAPSHOTS_DETAIL_CACHE);
-    }
-
-    /**
-     * Returns a temporary directory which contains the attached files to the
-     * job with the given id.
-     *
-     * @param context processor supplier context, see {@link ProcessorSupplier.Context}
-     * @param id      identifier defined on the {@link ResourceConfig} to be
-     *                used retrieve files from storage.
-     * @return {@link File} handle to a temporary directory which contains the
-     * files attached to the job with provided identifier.
-     */
-    public static File getJobFileStorageById(ProcessorSupplier.Context context, String id) {
-        JetInstance instance = context.jetInstance();
-        String jobId = idToString(context.jobId());
-        IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
-        Path directory;
-        InputStream inputStream = null;
-        try {
-            directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id);
-            inputStream = new IMapInputStream(map, jobId, id);
-            unzip(inputStream, directory);
-            return directory.toFile();
-        } catch (IOException e) {
-            throw ExceptionUtil.rethrow(e);
-        } finally {
-            IOUtil.closeResource(inputStream);
-        }
     }
 
     // for tests
