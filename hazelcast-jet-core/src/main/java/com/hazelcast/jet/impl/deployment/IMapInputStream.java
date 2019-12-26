@@ -44,7 +44,7 @@ public class IMapInputStream extends InputStream {
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         currentChunk = null;
         currentChunkIndex = -1;
     }

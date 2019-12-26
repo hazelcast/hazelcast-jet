@@ -49,6 +49,7 @@ import static java.util.Collections.emptyEnumeration;
 import static java.util.Collections.enumeration;
 import static java.util.Collections.singleton;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public abstract class AbstractDeploymentTest extends JetTestSupport {
 
@@ -143,15 +144,18 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         Pipeline pipeline = Pipeline.create();
 
         pipeline.readFrom(TestSources.items(1))
-                .mapUsingService(ServiceFactory.withCreateContextFn(context -> {
-                            File root = context.getJobFileStorageById("test");
-                            return root.toPath().resolve("resource.txt").toFile();
-
-                        }).withCreateServiceFn((context, file) -> file),
+                .mapUsingService(ServiceFactory.withCreateContextFn(context -> context.getAttachedFile("resource.txt"))
+                                               .withCreateServiceFn((context, file) -> file),
                         (file, integer) -> {
                             if (!file.exists()) {
                                 throw new AssertionError("File does not exists");
                             } else {
+                                boolean containsData = Files.readAllLines(file.toPath())
+                                                            .stream()
+                                                            .findFirst()
+                                                            .orElseThrow(() -> new AssertionError("File does not exists"))
+                                                            .startsWith("AAAP");
+                                assertTrue(containsData);
                                 return file;
                             }
                         })
@@ -159,8 +163,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         JetInstance jetInstance = getJetInstance();
         JobConfig jobConfig = new JobConfig();
-        jobConfig.attachFile(Paths.get(this.getClass().getResource("/deployment/resource.txt").toURI()).toString(),
-                "test");
+        jobConfig.attachFile(Paths.get(this.getClass().getResource("/deployment/resource.txt").toURI()).toString());
 
         executeAndPeel(jetInstance.newJob(pipeline, jobConfig));
     }
@@ -174,10 +177,13 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         pipeline.readFrom(TestSources.items(1))
                 .flatMapUsingService(ServiceFactory.withCreateContextFn(context ->
-                                context.getJobFileStorageById("deployment"))
+                                context.getAttachedDirectory("deployment"))
                                                    .withCreateServiceFn((context, file) -> file),
                         (file, integer) -> Traversers.traverseStream(Files.list(file.toPath()).map(Path::toString)))
-                .apply(assertCollected(c -> assertEquals("list size must be 3", 3, c.size())))
+                .apply(assertCollected(c -> {
+                    c.forEach(s -> assertTrue(new File(s).exists()));
+                    assertEquals("list size must be 3", 3, c.size());
+                }))
                 .writeTo(Sinks.logger());
 
         JetInstance jetInstance = getJetInstance();

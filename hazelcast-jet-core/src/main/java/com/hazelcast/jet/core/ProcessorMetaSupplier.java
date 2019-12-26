@@ -19,32 +19,21 @@ package com.hazelcast.jet.core;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.config.ResourceConfig;
-import com.hazelcast.jet.impl.deployment.IMapInputStream;
-import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.map.IMap;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Function;
 
 import static com.hazelcast.internal.util.UuidUtil.newUnsecureUuidString;
-import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.JobRepository.FILE_STORAGE_MAP_NAME_PREFIX;
-import static com.hazelcast.jet.impl.util.Util.unzip;
 import static java.util.Collections.nCopies;
 
 /**
@@ -410,32 +399,21 @@ public interface ProcessorMetaSupplier extends Serializable {
 
 
         /**
-         * Returns a temporary directory which contains the attached files to the
-         * job with the given id.
+         * Returns the attached directory to the job with the given id.
          *
          * @param id identifier defined on the {@link ResourceConfig} to be
          *           used retrieve files from storage.
-         * @return {@link File} handle to a temporary directory which contains the
-         * files attached to the job with provided identifier.
+         * @return {@link File} handle to the attached directory to the job with provided identifier.
          */
-        default File getJobFileStorageById(String id) {
-            JetInstance instance = jetInstance();
-            String jobId = idToString(jobId());
-            IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
-            Path directory;
-            InputStream inputStream = null;
-            try {
-                directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id);
-                inputStream = new IMapInputStream(map, jobId, id);
-                unzip(inputStream, directory);
-                return directory.toFile();
-            } catch (IOException e) {
-                throw ExceptionUtil.rethrow(e);
-            } finally {
-                IOUtil.closeResource(inputStream);
-            }
-        }
+        File getAttachedDirectory(@Nonnull String id);
 
-
+        /**
+         * Returns the attached file to the job with the given id.
+         *
+         * @param id identifier defined on the {@link ResourceConfig} to be
+         *           used retrieve files from storage.
+         * @return {@link File} handle to the attached file to the job with provided identifier.
+         */
+        File getAttachedFile(@Nonnull String id);
     }
 }

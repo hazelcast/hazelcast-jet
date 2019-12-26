@@ -25,6 +25,8 @@ import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 
+import java.io.File;
+
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 
 /**
@@ -171,6 +173,16 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     @Override
     public ProcessingGuarantee processingGuarantee() {
         return processingGuarantee;
+    }
+
+    @Override
+    public File getAttachedDirectory(@Nonnull String id) {
+        return null;
+    }
+
+    @Override
+    public File getAttachedFile(@Nonnull String id) {
+        return null;
     }
 
     /**

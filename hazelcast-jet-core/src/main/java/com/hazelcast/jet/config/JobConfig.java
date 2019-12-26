@@ -20,7 +20,6 @@ import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
-import com.hazelcast.jet.core.ProcessorSupplier.Context;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -415,7 +414,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory name will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.impl.JobRepository#getJobFileStorageById(Context, String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String, String)}
      * and {@link com.hazelcast.jet.pipeline.ServiceFactory}
      * for retrieving the directory when creating service objects.
      *
@@ -430,7 +429,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.impl.JobRepository#getJobFileStorageById(Context, String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String, String)}
      * and {@link com.hazelcast.jet.pipeline.ServiceFactory}
      * for retrieving the directory when creating service objects.
      *
@@ -445,7 +444,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * available to the job while it's executing in the Jet cluster.
      * The directory name will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.impl.JobRepository#getJobFileStorageById(Context, String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String, String)}
      * and {@link com.hazelcast.jet.pipeline.ServiceFactory}
      * for retrieving the directory when creating service objects.
      *
@@ -460,7 +459,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * available to the job while it's executing in the Jet cluster.
      * The directory will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.impl.JobRepository#getJobFileStorageById(Context, String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String, String)}
      * and {@link com.hazelcast.jet.pipeline.ServiceFactory}
      * for retrieving the directory when creating service objects.
      *
@@ -479,7 +478,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory name will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.impl.JobRepository#getJobFileStorageById(Context, String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String, String)}
      * and {@link com.hazelcast.jet.pipeline.ServiceFactory}
      * for retrieving the directory when creating service objects.
      *
@@ -494,7 +493,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.impl.JobRepository#getJobFileStorageById(Context, String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String, String)}
      * and {@link com.hazelcast.jet.pipeline.ServiceFactory}
      * for retrieving the directory when creating service objects.
      *
@@ -513,6 +512,12 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     private JobConfig add(URL url, String id, ResourceType resourceType) {
+        boolean duplicate = resourceConfigs.stream()
+                                           .map(ResourceConfig::getId)
+                                           .anyMatch(existingId -> existingId.equals(id));
+        if (duplicate) {
+            throw new IllegalArgumentException("Resource with id:" + id + " already exists!");
+        }
         resourceConfigs.add(new ResourceConfig(url, id, resourceType));
         return this;
     }

@@ -16,15 +16,28 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.deployment.IMapInputStream;
+import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.JobRepository.FILE_STORAGE_MAP_NAME_PREFIX;
+import static com.hazelcast.jet.impl.util.Util.unzip;
 
 public final class Contexts {
 
@@ -108,6 +121,41 @@ public final class Contexts {
         public ProcessingGuarantee processingGuarantee() {
             return processingGuarantee;
         }
+
+        @Override
+        public File getAttachedDirectory(@Nonnull String id) {
+            Preconditions.checkHasText(id, "id cannot be null or empty!");
+            findResourceConfigOrThrowException(id);
+            JetInstance instance = jetInstance();
+            String jobId = idToString(jobId());
+            IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
+            try (IMapInputStream inputStream = new IMapInputStream(map, jobId, id)) {
+                Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id);
+                unzip(inputStream, directory);
+                return directory.toFile();
+            } catch (IOException e) {
+                throw ExceptionUtil.rethrow(e);
+            }
+        }
+
+        @Override
+        public File getAttachedFile(@Nonnull String id) {
+            Preconditions.checkHasText(id, "id cannot be null or empty!");
+            ResourceConfig resourceConfig = findResourceConfigOrThrowException(id);
+            return getAttachedDirectory(id).toPath()
+                                           .resolve(resourceConfig.getUrl().getFile())
+                                           .toFile();
+        }
+
+        ResourceConfig findResourceConfigOrThrowException(String id) {
+            return jobConfig()
+                    .getResourceConfigs()
+                    .stream()
+                    .filter(config -> config.getId().equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Resource with id:" + id + "cannot be found!"));
+        }
+
     }
 
     static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context {

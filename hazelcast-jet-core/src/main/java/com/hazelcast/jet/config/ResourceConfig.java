@@ -17,10 +17,12 @@
 package com.hazelcast.jet.config;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.net.URL;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
+import static com.hazelcast.internal.util.Preconditions.checkTrue;
 
 /**
  * Describes a single resource to deploy to the Jet cluster.
@@ -39,7 +41,9 @@ public class ResourceConfig implements Serializable {
      * @param id            id of the resource
      * @param resourceType  type of the resource
      */
-    ResourceConfig(@Nonnull URL url, String id, ResourceType resourceType) {
+    ResourceConfig(@Nonnull URL url, @Nullable String id, @Nonnull ResourceType resourceType) {
+        checkTrue(resourceType.isArchive() ^ id != null,
+                "Either archive file or id != null, exclusively");
         this.url = url;
         this.id = id;
         this.resourceType = resourceType;

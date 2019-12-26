@@ -39,5 +39,13 @@ public enum ResourceType {
     /**
      * Represents a ZIP file that contains JAR files.
      */
-    JARS_IN_ZIP
+    JARS_IN_ZIP;
+
+    /**
+     * Returns whether this resource type represents an archive file.
+     */
+    public boolean isArchive() {
+        return this == ResourceType.JAR || this == ResourceType.JARS_IN_ZIP;
+    }
+
 }
