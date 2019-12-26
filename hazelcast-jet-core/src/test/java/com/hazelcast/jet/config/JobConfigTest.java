@@ -101,7 +101,7 @@ public class JobConfigTest extends JetTestSupport {
         // Then
         ResourceConfig resourceConfig = assertAndGet(config);
         String expectedId = clazz.getName().replace('.', '/') + ".class";
-        assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
+        assertEquals(ResourceType.CLASS, resourceConfig.getResourceType());
         assertEquals(expectedId, resourceConfig.getId());
         assertEquals(clazz.getClassLoader().getResource(expectedId), resourceConfig.getUrl());
     }

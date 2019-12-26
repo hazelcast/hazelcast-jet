@@ -404,7 +404,9 @@ public interface ProcessorMetaSupplier extends Serializable {
          * @param id identifier defined on the {@link ResourceConfig} to be
          *           used retrieve files from storage.
          * @return {@link File} handle to the attached directory to the job with provided identifier.
+         * @since 4.0
          */
+        @Nonnull
         File getAttachedDirectory(@Nonnull String id);
 
         /**
@@ -413,7 +415,9 @@ public interface ProcessorMetaSupplier extends Serializable {
          * @param id identifier defined on the {@link ResourceConfig} to be
          *           used retrieve files from storage.
          * @return {@link File} handle to the attached file to the job with provided identifier.
+         * @since 4.0
          */
+        @Nonnull
         File getAttachedFile(@Nonnull String id);
     }
 }

@@ -122,7 +122,7 @@ public final class Contexts {
             return processingGuarantee;
         }
 
-        @Override
+        @Nonnull @Override
         public File getAttachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty!");
             findResourceConfigOrThrowException(id);
@@ -138,7 +138,7 @@ public final class Contexts {
             }
         }
 
-        @Override
+        @Nonnull @Override
         public File getAttachedFile(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty!");
             ResourceConfig resourceConfig = findResourceConfigOrThrowException(id);
