@@ -295,7 +295,8 @@ public interface ProcessorMetaSupplier extends Serializable {
                                       .getPartition(key).getOwner().getAddress();
             }
 
-            @Nonnull @Override
+            @Nonnull
+            @Override
             public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
                 return addr -> addr.equals(ownerAddress) ?
                         supplier
@@ -407,13 +408,13 @@ public interface ProcessorMetaSupplier extends Serializable {
          */
         ProcessingGuarantee processingGuarantee();
 
-        
+
         /**
          * Returns a temporary directory which contains the attached files to the
          * job with the given id.
          *
-         * @param id      identifier defined on the {@link ResourceConfig} to be
-         *                used retrieve files from storage.
+         * @param id identifier defined on the {@link ResourceConfig} to be
+         *           used retrieve files from storage.
          * @return {@link File} handle to a temporary directory which contains the
          * files attached to the job with provided identifier.
          */

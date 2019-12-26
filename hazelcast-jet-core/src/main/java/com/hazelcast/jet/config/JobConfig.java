@@ -281,7 +281,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Adds the ZIP file identified by the supplied URL to the list of archives
      * that will be a part of the job's classpath while it's executing in the
      * Jet cluster.
-     * 
+     *
      * Note: Only JAR files inside the ZIP file will be added to the
      * job classpath.
      *
@@ -314,7 +314,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Adds the ZIP identified by the supplied pathname to the list of archives
      * that will be a part of the job's classpath while it's executing in the
      * Jet cluster.
-     * 
+     *
      * Note: Only JAR files inside the ZIP file will be added to the
      * job classpath.
      *
