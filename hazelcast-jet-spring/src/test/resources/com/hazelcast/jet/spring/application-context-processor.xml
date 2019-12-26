@@ -44,4 +44,7 @@
 
     <jet:map instance-ref="jet-instance" name="my-map" id="my-map-bean"/>
 
+    <bean id="hzInstance" factory-bean="jet-instance" factory-method="getHazelcastInstance"/>
+    <hz:queue instance-ref="hzInstance" name="my-queue" id="my-queue-bean"/>
+
 </beans>
