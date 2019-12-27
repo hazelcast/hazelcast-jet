@@ -144,7 +144,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         Pipeline pipeline = Pipeline.create();
 
         pipeline.readFrom(TestSources.items(1))
-                .mapUsingService(ServiceFactory.withCreateContextFn(context -> context.getAttachedFile("resource.txt"))
+                .mapUsingService(ServiceFactory.withCreateContextFn(context -> context.attachedFile("resource.txt"))
                                                .withCreateServiceFn((context, file) -> file),
                         (file, integer) -> {
                             if (!file.exists()) {
@@ -177,7 +177,7 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         pipeline.readFrom(TestSources.items(1))
                 .flatMapUsingService(ServiceFactory.withCreateContextFn(context ->
-                                context.getAttachedDirectory("deployment"))
+                                context.attachedDirectory("deployment"))
                                                    .withCreateServiceFn((context, file) -> file),
                         (file, integer) -> Traversers.traverseStream(Files.list(file.toPath()).map(Path::toString)))
                 .apply(assertCollected(c -> {

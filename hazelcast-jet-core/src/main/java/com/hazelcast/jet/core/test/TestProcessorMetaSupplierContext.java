@@ -178,7 +178,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     @Override
-    public File getAttachedDirectory(@Nonnull String id) {
+    public File attachedDirectory(@Nonnull String id) {
         return attachedDirectory;
     }
 
@@ -191,7 +191,7 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     }
 
     @Override
-    public File getAttachedFile(@Nonnull String id) {
+    public File attachedFile(@Nonnull String id) {
         return attachedFile;
     }
     /**

@@ -284,8 +284,7 @@ public interface ProcessorMetaSupplier extends Serializable {
                                       .getPartition(key).getOwner().getAddress();
             }
 
-            @Nonnull
-            @Override
+            @Nonnull @Override
             public Function<Address, ProcessorSupplier> get(@Nonnull List<Address> addresses) {
                 return addr -> addr.equals(ownerAddress) ?
                         supplier
@@ -407,7 +406,7 @@ public interface ProcessorMetaSupplier extends Serializable {
          * @since 4.0
          */
         @Nonnull
-        File getAttachedDirectory(@Nonnull String id);
+        File attachedDirectory(@Nonnull String id);
 
         /**
          * Returns the attached file to the job with the given id.
@@ -418,6 +417,6 @@ public interface ProcessorMetaSupplier extends Serializable {
          * @since 4.0
          */
         @Nonnull
-        File getAttachedFile(@Nonnull String id);
+        File attachedFile(@Nonnull String id);
     }
 }

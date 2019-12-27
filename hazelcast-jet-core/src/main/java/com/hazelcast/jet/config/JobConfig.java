@@ -338,7 +338,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * resources that will be available to the job while it's executing in
      * the Jet cluster. The resource's filename will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedFile(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the file when creating service objects.
      *
@@ -355,7 +355,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * resources that will be available to the job while it's executing in
      * the Jet cluster. The file will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedFile(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the file when creating service objects.
      *
@@ -372,7 +372,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * the job while it's executing in the Jet cluster. The filename will be
      * used as its ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedFile(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the file when creating service objects.
      *
@@ -393,7 +393,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * the job while it's executing in the Jet cluster.
      * The file will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedFile(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the file when creating service objects.
      *
@@ -414,7 +414,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The filename will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedFile(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the file when creating service objects.
      *
@@ -431,7 +431,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The file will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedFile(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedFile(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the file when creating service objects.
      *
@@ -448,7 +448,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory name will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedDirectory(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedDirectory(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the directory when creating service objects.
      *
@@ -465,7 +465,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedDirectory(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedDirectory(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the directory when creating service objects.
      *
@@ -482,7 +482,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * available to the job while it's executing in the Jet cluster.
      * The directory name will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedDirectory(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedDirectory(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the directory when creating service objects.
      *
@@ -499,7 +499,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * available to the job while it's executing in the Jet cluster.
      * The directory will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedDirectory(String)},
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedDirectory(String)},
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the directory when creating service objects.
      *
@@ -520,7 +520,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory name will be used as its ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedDirectory(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedDirectory(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the directory when creating service objects.
      *
@@ -537,7 +537,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * files that will be available to the job while it's executing in
      * the Jet cluster. The directory will be registered under the supplied ID.
      *
-     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#getAttachedDirectory(String)}
+     * See {@link com.hazelcast.jet.core.ProcessorMetaSupplier.Context#attachedDirectory(String)}
      * and {@link ServiceFactory#createContextFn()}
      * for retrieving the directory when creating service objects.
      *

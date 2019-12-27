@@ -25,6 +25,7 @@ import com.hazelcast.internal.cluster.impl.operations.TriggerMemberListPublishOp
 import com.hazelcast.internal.metrics.DynamicMetricsProvider;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.TopologyChangedException;
@@ -40,8 +41,11 @@ import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -73,6 +77,9 @@ public class JobExecutionService implements DynamicMetricsProvider {
 
     // key: executionId
     private final ConcurrentMap<Long, ExecutionContext> executionContexts = new ConcurrentHashMap<>();
+
+    // key: executionId
+    private final ConcurrentMap<Long, List<File>> localFiles = new ConcurrentHashMap<>();
 
     // The type of classLoaders field is CHM and not ConcurrentMap because we
     // rely on specific semantics of computeIfAbsent. ConcurrentMap.computeIfAbsent
@@ -325,6 +332,7 @@ public class JobExecutionService implements DynamicMetricsProvider {
                     executionContext.completeExecution(error));
             } finally {
                 removed.shutdown();
+                cleanupLocalFiles(executionId);
                 executionContextJobIds.remove(executionContext.jobId());
                 logger.fine("Completed execution of " + executionContext.jobNameAndExecutionId());
             }
@@ -359,6 +367,18 @@ public class JobExecutionService implements DynamicMetricsProvider {
 
     int numberOfExecutions() {
         return executionContexts.size();
+    }
+
+    public void registerLocalFile(long executionId, File file) {
+        List<File> list = localFiles.computeIfAbsent(executionId, k -> new LinkedList<>());
+        list.add(file);
+    }
+
+    private void cleanupLocalFiles(long executionId) {
+        List<File> files = localFiles.remove(executionId);
+        if (files != null) {
+            files.forEach(IOUtil::delete);
+        }
     }
 
     @Override

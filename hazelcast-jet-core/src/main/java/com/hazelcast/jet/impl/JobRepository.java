@@ -51,8 +51,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
@@ -373,19 +371,6 @@ public class JobRepository {
         // delete the job record and related records
         jobExecutionRecords.remove(jobId);
         jobRecords.remove(jobId);
-        deleteTempFiles("jet-" + instance.getName() + "-" + idToString(jobId));
-    }
-
-    private void deleteTempFiles(String filter) {
-        try {
-            Files.list(Paths.get(System.getProperty("java.io.tmpdir")))
-                 .filter(Files::isDirectory)
-                 .map(Path::toFile)
-                 .filter(file -> file.getName().startsWith(filter))
-                 .forEach(IOUtil::delete);
-        } catch (IOException e) {
-            logger.warning("IOException while deleting job files: " + e.getMessage());
-        }
     }
 
     /**
@@ -568,10 +553,6 @@ public class JobRepository {
 
     void cacheValidationRecord(@Nonnull String snapshotName, @Nonnull SnapshotValidationRecord validationRecord) {
         exportedSnapshotDetailsCache.set(snapshotName, validationRecord);
-    }
-
-    public void shutdown() {
-        deleteTempFiles("jet-" + instance.getName());
     }
 
     public static final class UpdateJobExecutionRecordEntryProcessor implements
