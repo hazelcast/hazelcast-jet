@@ -39,6 +39,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -469,6 +470,34 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertEquals(noOfResults, stream.get().longValue());
         assertError(testObserver, null);
         assertCompletions(testObserver, 1);
+    }
+
+    @Test
+    public void sinkConsumesThrowables() throws Exception {
+        Pipeline pipeline = Pipeline.create();
+        BatchSource<Throwable> input = TestSources.items(
+                new RuntimeException("runtime_exception"),
+                new Exception("exception"),
+                new Error("error"),
+                new Throwable("throwable")
+        );
+        pipeline.readFrom(input)
+                .writeTo(Sinks.observable("throwables"));
+
+        //when
+        jet().newJob(pipeline).join();
+        List<Object> results = getObservable("throwables")
+                .toFuture(s -> {
+                    Comparator<Object> comparator = Comparator.comparing(o -> ((Throwable) o).getMessage());
+                    return s.sorted(comparator).collect(Collectors.toList());
+                })
+                .get();
+        //then
+        assertEquals(4, results.size());
+        assertEquals("error", ((Throwable) results.get(0)).getMessage());
+        assertEquals("exception", ((Throwable) results.get(1)).getMessage());
+        assertEquals("runtime_exception", ((Throwable) results.get(2)).getMessage());
+        assertEquals("throwable", ((Throwable) results.get(3)).getMessage());
     }
 
     private <T> Observable<T> getObservable(String name) {

@@ -43,7 +43,7 @@ public final class BlockingIteratorObserver<T> implements Iterator<T>, Observer<
 
     @Override
     public void onError(@Nonnull Throwable throwable) {
-        itemQueue.add(throwable);
+        itemQueue.add(WrappedThrowable.of(throwable));
     }
 
     @Override
@@ -58,8 +58,8 @@ public final class BlockingIteratorObserver<T> implements Iterator<T>, Observer<
             next = waitForNext();
         }
 
-        if (next instanceof Throwable) {
-            throw rethrow((Throwable) next);
+        if (next instanceof WrappedThrowable) {
+            throw rethrow(((WrappedThrowable) next).get());
         } else {
             return next != COMPLETED;
         }

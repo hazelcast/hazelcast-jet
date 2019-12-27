@@ -107,7 +107,7 @@ public class ObservableRepository {
         for (String observable : observables) {
             String ringbufferName = getRingbufferName(observable);
             Ringbuffer<Object> ringbuffer = hzInstance.getRingbuffer(ringbufferName);
-            Object completion = error == null ? DoneItem.DONE_ITEM : error;
+            Object completion = error == null ? DoneItem.DONE_ITEM : WrappedThrowable.of(error);
             ringbuffer.addAsync(completion, OverflowPolicy.OVERWRITE);
 
             IList<Tuple2<String, Long>> completedObservables =

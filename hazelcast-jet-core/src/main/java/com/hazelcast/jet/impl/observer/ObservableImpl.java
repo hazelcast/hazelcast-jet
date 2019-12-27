@@ -172,8 +172,8 @@ public class ObservableImpl<T> implements Observable<T> {
         }
 
         private void onNewMessage(Object message) {
-            if (message instanceof Throwable) {
-                observer.onError((Throwable) message);
+            if (message instanceof WrappedThrowable) {
+                observer.onError(((WrappedThrowable) message).get());
             } else if (message instanceof DoneItem) {
                 observer.onComplete();
             } else {
