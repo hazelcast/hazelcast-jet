@@ -29,7 +29,7 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
-import com.hazelcast.jet.impl.observer.ObservableUtil;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -164,8 +164,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     private void onDestroy(Observable<?> observable) {
-        String ringbufferName = ObservableUtil.getRingbufferName(observable.name());
-        hazelcastInstance.getRingbuffer(ringbufferName).destroy();
+        ObservableRepository.destroyRingbuffer(observable.name(), hazelcastInstance);
         observables.remove(observable.name());
     }
 

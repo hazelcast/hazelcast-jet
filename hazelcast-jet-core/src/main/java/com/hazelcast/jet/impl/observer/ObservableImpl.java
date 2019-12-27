@@ -110,7 +110,7 @@ public class ObservableImpl<T> implements Observable<T> {
         ) {
             this.observableName = observableName;
             this.observer = observer;
-            this.ringbuffer = hzInstance.getRingbuffer(ObservableUtil.getRingbufferName(observableName));
+            this.ringbuffer = hzInstance.getRingbuffer(ObservableRepository.getRingbufferName(observableName));
             this.logger = logger;
             this.executor = getExecutor(hzInstance);
 

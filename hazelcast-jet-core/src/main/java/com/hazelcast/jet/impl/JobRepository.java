@@ -28,10 +28,8 @@ import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.metrics.JobMetrics;
-import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.jet.impl.util.ImdgUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -42,8 +40,6 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.query.Predicate;
-import com.hazelcast.ringbuffer.OverflowPolicy;
-import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.spi.impl.NodeEngine;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -327,13 +323,9 @@ public class JobRepository {
             throw new JobNotFoundException(jobId);
         }
 
-        Set<String> ownedObservables = jobRecord.getOwnedObservables();
-        completeObservables(ownedObservables, error);
-
         JobConfig config = jobRecord.getConfig();
         long creationTime = jobRecord.getCreationTime();
-        JobResult jobResult = new JobResult(jobId, config, creationTime, completionTime,
-                toErrorMsg(error), ownedObservables);
+        JobResult jobResult = new JobResult(jobId, config, creationTime, completionTime, toErrorMsg(error));
 
         if (terminalMetrics != null) {
             List<RawJobMetrics> prevMetrics = jobMetrics.put(jobId, terminalMetrics);
@@ -349,15 +341,6 @@ public class JobRepository {
         }
 
         deleteJob(jobId);
-    }
-
-    private void completeObservables(Collection<String> observables, Throwable error) {
-        for (String observable : observables) {
-            String ringbufferName = ObservableUtil.getRingbufferName(observable);
-            Ringbuffer<Object> ringbuffer = instance.getRingbuffer(ringbufferName);
-            Object completion = error == null ? DoneItem.DONE_ITEM : error;
-            ringbuffer.addAsync(completion, OverflowPolicy.OVERWRITE);
-        }
     }
 
     /**
@@ -422,22 +405,11 @@ public class JobRepository {
                       .collect(Collectors.toSet())
                       .forEach(id -> {
                           jobMetrics.delete(id);
-                          JobResult jobResult = jobResults.get(id);
-                          if (jobResult != null) {
-                              destroyObservables(jobResult.getOwnedObservables());
-                              jobResults.delete(id);
-                          }
+                          jobResults.delete(id);
                       });
         }
         long elapsed = System.nanoTime() - start;
         logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
-    }
-
-    public void destroyObservables(Set<String> ownedObservables) {
-        for (String ownedObservable : ownedObservables) {
-            String ringbufferName = ObservableUtil.getRingbufferName(ownedObservable);
-            instance.getRingbuffer(ringbufferName).destroy();
-        }
     }
 
     private static String toErrorMsg(@Nullable Throwable error) {

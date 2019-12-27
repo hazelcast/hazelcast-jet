@@ -27,7 +27,6 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
@@ -45,7 +44,6 @@ public class JobResult implements IdentifiedDataSerializable {
     private long creationTime;
     private long completionTime;
     private String failureText;
-    private Set<String> ownedObservables;
 
     public JobResult() {
     }
@@ -53,15 +51,13 @@ public class JobResult implements IdentifiedDataSerializable {
     JobResult(long jobId,
               @Nonnull JobConfig jobConfig,
               long creationTime, long completionTime,
-              @Nullable String failureText,
-              @Nonnull Set<String> ownedObservables
+              @Nullable String failureText
     ) {
         this.jobId = jobId;
         this.jobConfig = jobConfig;
         this.creationTime = creationTime;
         this.completionTime = completionTime;
         this.failureText = failureText;
-        this.ownedObservables = ownedObservables;
     }
 
     public long getJobId() {
@@ -83,11 +79,6 @@ public class JobResult implements IdentifiedDataSerializable {
 
     public boolean isSuccessful() {
         return failureText == null;
-    }
-
-    @Nonnull
-    public Set<String> getOwnedObservables() {
-        return ownedObservables;
     }
 
     @Nullable
@@ -139,7 +130,6 @@ public class JobResult implements IdentifiedDataSerializable {
                 ", creationTime=" + toLocalDateTime(creationTime) +
                 ", completionTime=" + toLocalDateTime(completionTime) +
                 ", failureText=" + failureText +
-                ", ownedObservables=" + ownedObservables +
                 '}';
     }
 
@@ -160,7 +150,6 @@ public class JobResult implements IdentifiedDataSerializable {
         out.writeLong(creationTime);
         out.writeLong(completionTime);
         out.writeObject(failureText);
-        out.writeObject(ownedObservables);
     }
 
     @Override
@@ -170,6 +159,5 @@ public class JobResult implements IdentifiedDataSerializable {
         creationTime = in.readLong();
         completionTime = in.readLong();
         failureText = in.readObject();
-        ownedObservables = in.readObject();
     }
 }

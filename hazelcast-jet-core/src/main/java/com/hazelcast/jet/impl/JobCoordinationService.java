@@ -33,7 +33,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.observer.ObservableUtil;
+import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
@@ -113,6 +113,7 @@ public class JobCoordinationService {
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
+    private final ObservableRepository observableRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, CompletableFuture<Void>> membersShuttingDown = new ConcurrentHashMap<>();
     /**
@@ -129,12 +130,13 @@ public class JobCoordinationService {
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
     JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
-                           JobRepository jobRepository) {
+                           JobRepository jobRepository, ObservableRepository observableRepository) {
         this.nodeEngine = nodeEngine;
         this.jetService = jetService;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
+        this.observableRepository = observableRepository;
 
         ExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
@@ -221,7 +223,7 @@ public class JobCoordinationService {
 
     private static Set<String> ownedObservables(DAG dag) {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
-                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableUtil.OWNED_OBSERVABLE))
+                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
@@ -637,6 +639,8 @@ public class JobCoordinationService {
                             : null;
             jobRepository.completeJob(masterContext, jobMetrics,  completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
+                Set<String> ownedObservables = masterContext.jobRecord().getOwnedObservables();
+                observableRepository.completeObservables(ownedObservables, error);
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
                 MasterContext existing = masterContexts.get(masterContext.jobId());
@@ -887,6 +891,7 @@ public class JobCoordinationService {
                         jobRepository.getJobExecutionRecord(jobRecord.getJobId()));
                 startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "discovered by scanning of JobRecords");
             }
+            observableRepository.cleanup();
             jobRepository.cleanup(nodeEngine);
             if (!jobsScanned) {
                 synchronized (lock) {
