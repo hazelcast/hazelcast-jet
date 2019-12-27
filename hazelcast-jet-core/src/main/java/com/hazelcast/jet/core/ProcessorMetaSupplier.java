@@ -69,6 +69,8 @@ public interface ProcessorMetaSupplier extends Serializable {
      * Returns the metadata on this supplier, a string-to-string map. There is
      * no predefined metadata; this facility exists to allow the DAG vertices
      * to contribute some information to the execution planning phase.
+     *
+     * @since 4.0
      */
     @Nonnull
     default Map<String, String> getTags() {

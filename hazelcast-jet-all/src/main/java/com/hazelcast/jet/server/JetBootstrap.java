@@ -260,7 +260,7 @@ public final class JetBootstrap {
             return instance.getReliableTopic(name);
         }
 
-        @Override
+        @Nonnull @Override
         public <T> Observable<T> getObservable(@Nonnull String name) {
             return instance.getObservable(name);
         }

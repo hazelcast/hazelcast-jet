@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.core;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
@@ -37,12 +39,14 @@ public interface Inbox {
      * Retrieves, but does not remove, the head of this inbox, or returns
      * {@code null} if it is empty.
      */
+    @Nullable
     Object peek();
 
     /**
      * Retrieves and removes the head of this inbox, or returns {@code null}
      * if it is empty.
      */
+    @Nullable
     Object poll();
 
     /**
@@ -60,7 +64,7 @@ public interface Inbox {
      * @return the number of elements actually drained
      */
     @SuppressWarnings("unchecked")
-    default <E> int drainTo(Collection<E> target) {
+    default <E> int drainTo(@Nonnull Collection<E> target) {
         int drained = 0;
         for (E o; (o = (E) poll()) != null; drained++) {
             target.add(o);
@@ -75,9 +79,11 @@ public interface Inbox {
      * @param target the collection to drain this object's items into
      * @param limit the maximum amount of items to drain
      * @return the number of elements actually drained
+     *
+     * @since 4.0
      */
     @SuppressWarnings("unchecked")
-    default <E> int drainTo(Collection<E> target, int limit) {
+    default <E> int drainTo(@Nonnull Collection<E> target, int limit) {
         int drained = 0;
         for (E o; drained < limit && (o = (E) poll()) != null; drained++) {
             target.add(o);
@@ -91,7 +97,7 @@ public interface Inbox {
      * @return the number of elements drained
      */
     @SuppressWarnings("unchecked")
-    default <E> int drain(Consumer<E> consumer) {
+    default <E> int drain(@Nonnull Consumer<E> consumer) {
         int consumed = 0;
         for (E o; (o = (E) poll()) != null; consumed++) {
             consumer.accept(o);

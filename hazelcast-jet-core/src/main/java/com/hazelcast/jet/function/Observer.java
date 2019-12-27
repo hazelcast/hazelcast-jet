@@ -32,6 +32,8 @@ import javax.annotation.Nonnull;
  * the callbacks should take care to finish as quickly as possible.
  *
  * @param <T> type of the observed event
+ *
+ * @since 4.0
  */
 @FunctionalInterface
 public interface Observer<T> {
@@ -40,6 +42,7 @@ public interface Observer<T> {
      * Utility method for building an {@link Observer} from its basic
      * components.
      */
+    @Nonnull
     static <T> Observer<T> of(
             @Nonnull ConsumerEx<? super T> onNext,
             @Nonnull ConsumerEx<? super Throwable> onError,

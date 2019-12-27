@@ -685,6 +685,8 @@ public final class Sinks {
      * guarantee.
      * <p>
      * Local parallelism for this sink is 1.
+     *
+     * @since 4.0
      */
     @Nonnull
     public static <T> Sink<T> reliableTopic(@Nonnull String reliableTopicName) {
@@ -707,6 +709,8 @@ public final class Sinks {
      * guarantee.
      * <p>
      * Local parallelism for this sink is 1.
+     *
+     * @since 4.0
      */
     @Nonnull
     public static <T> Sink<T> reliableTopic(@Nonnull ITopic<Object> reliableTopic) {
@@ -723,6 +727,8 @@ public final class Sinks {
      * guarantee.
      * <p>
      * Local parallelism for this sink is 1.
+     *
+     * @since 4.0
      */
     @Nonnull
     public static <T> Sink<T> remoteReliableTopic(@Nonnull String reliableTopicName, @Nonnull ClientConfig clientConfig) {
@@ -1033,6 +1039,8 @@ public final class Sinks {
      * Observer#onError} callback.
      * <p>
      * This sink is cooperative and uses a local parallelism of 1.
+     *
+     * @since 4.0
      */
     @Nonnull
     public static <T> Sink<T> observable(String name) {
@@ -1049,6 +1057,8 @@ public final class Sinks {
      * same cluster to which you will submit the pipeline.
      * <p>
      * For more details refer to {@link #observable(String) observable(name)}.
+     *
+     * @since 4.0
      */
     @Nonnull
     public static <T> Sink<T> observable(Observable<? super T> observable) {

@@ -301,7 +301,10 @@ public interface JetInstance {
      *
      * @param name name of the distributed topic
      * @return distributed reliable topic instance with the specified name
+     *
+     * @since 4.0
      */
+    @Nonnull
     <E> ITopic<E> getReliableTopic(@Nonnull String name);
 
     /**
@@ -330,7 +333,10 @@ public interface JetInstance {
      *
      * @param name name of the observable
      * @return observable with the specified name
+     *
+     * @since 4.0
      */
+    @Nonnull
     <T> Observable<T> getObservable(@Nonnull String name);
 
     /**

@@ -329,6 +329,8 @@ public final class SinkProcessors {
 
     /**
      * Returns a supplier of processors for {@link Sinks#observable}.
+     *
+     * @since 4.0
      */
     @Nonnull
     public static ProcessorMetaSupplier writeObservableP(@Nonnull String name) {

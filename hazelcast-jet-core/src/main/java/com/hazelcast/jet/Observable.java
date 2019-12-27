@@ -22,6 +22,7 @@ import com.hazelcast.ringbuffer.Ringbuffer;
 
 import javax.annotation.Nonnull;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.UUID;
@@ -83,6 +84,8 @@ import java.util.stream.StreamSupport;
  * came from which sink or job.
  *
  * @param <T> type of the values in the sequence
+ *
+ * @since 4.0
  */
 public interface Observable<T> extends Iterable<T> {
 
@@ -91,6 +94,7 @@ public interface Observable<T> extends Iterable<T> {
      *
      * @return name of observable
      */
+    @Nonnull
     String name();
 
     /**
@@ -101,6 +105,7 @@ public interface Observable<T> extends Iterable<T> {
      * @return registration ID associated with the added {@code Observer}, can be used
      *         to remove the {@code Observer} later
      */
+    @Nonnull
     UUID addObserver(@Nonnull Observer<T> observer);
 
     /**
@@ -108,7 +113,7 @@ public interface Observable<T> extends Iterable<T> {
      * assigned registration ID. A removed {@code Observer} will not get
      * notified about further events.
      */
-    void removeObserver(UUID registrationId);
+    void removeObserver(@Nonnull UUID registrationId);
 
     /**
      * Returns an iterator over the sequence of events produced by this
@@ -157,7 +162,10 @@ public interface Observable<T> extends Iterable<T> {
      *           and produces an altered value from it, which could also
      *           be a stream
      */
-    default <R> Future<R> toFuture(Function<Stream<T>, R> fn) {
+    @Nonnull
+    default <R> Future<R> toFuture(@Nonnull Function<Stream<T>, R> fn) {
+        Objects.requireNonNull(fn, "fn");
+
         Iterator<T> iterator = iterator();
         return CompletableFuture.supplyAsync(() -> {
             Spliterator<T> spliterator = Spliterators.spliteratorUnknownSize(iterator, 0);

@@ -37,7 +37,7 @@ public final class ObservableUtil {
      * necessary so that such topics can't clash with regular topics used
      * for other purposes.
      */
-    private static final String JET_OBSERVABLE_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "observable.";
+    private static final String JET_OBSERVABLE_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "observables.";
 
     private ObservableUtil() {
     }
