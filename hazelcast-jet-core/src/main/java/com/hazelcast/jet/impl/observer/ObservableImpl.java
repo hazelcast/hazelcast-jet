@@ -63,7 +63,7 @@ public class ObservableImpl<T> implements Observable<T> {
     @Override
     public UUID addObserver(@Nonnull Observer<T> observer) {
         UUID id = UuidUtil.newUnsecureUUID();
-        RingbufferListener<T> listener = new RingbufferListener<>(name, observer, hzInstance, logger);
+        RingbufferListener<T> listener = new RingbufferListener<>(name, id, observer, hzInstance, logger);
         listeners.put(id, listener);
         listener.next();
         return id;
@@ -92,9 +92,8 @@ public class ObservableImpl<T> implements Observable<T> {
 
         private static final int BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
-        private final String observableName;
+        private final String id;
         private final Observer<T> observer;
-
         private final Ringbuffer<Object> ringbuffer;
         private final ILogger logger;
         private final Executor executor;
@@ -103,18 +102,32 @@ public class ObservableImpl<T> implements Observable<T> {
         private volatile boolean cancelled;
 
         RingbufferListener(
-                String observableName,
+                String observable,
+                UUID uuid,
                 Observer<T> observer,
                 HazelcastInstance hzInstance,
                 ILogger logger
         ) {
-            this.observableName = observableName;
             this.observer = observer;
-            this.ringbuffer = hzInstance.getRingbuffer(ObservableRepository.getRingbufferName(observableName));
-            this.logger = logger;
+            this.ringbuffer = hzInstance.getRingbuffer(ObservableRepository.getRingbufferName(observable));
+            this.id = uuid.toString() + "/" + ringbuffer.getName();
             this.executor = getExecutor(hzInstance);
-
             this.sequence = ringbuffer.headSequence();
+            this.logger = logger;
+
+            this.logger.info("Starting message listener '" + id + "'");
+        }
+
+        private static Executor getExecutor(HazelcastInstance hzInstance) {
+            if (hzInstance instanceof HazelcastInstanceImpl) {
+                return ((HazelcastInstanceImpl) hzInstance).node.getNodeEngine().getExecutionService()
+                        .getExecutor(ExecutionService.ASYNC_EXECUTOR);
+            } else if (hzInstance instanceof HazelcastClientInstanceImpl) {
+                return ((HazelcastClientInstanceImpl) hzInstance).getTaskScheduler();
+            } else {
+                throw new RuntimeException(String.format("Unhandled %s type: %s", HazelcastInstance.class.getSimpleName(),
+                        hzInstance.getClass().getName()));
+            }
         }
 
         void next() {
@@ -140,8 +153,8 @@ public class ObservableImpl<T> implements Observable<T> {
                     try {
                         onNewMessage(result);
                     } catch (Throwable t) {
-                        logger.warning("Terminating message listener on ringbuffer " + ringbuffer.getName() +
-                                ". Reason: Unhandled exception, message: " + t.getMessage(), t);
+                        logger.warning("Terminating message listener '" + id + "'. " +
+                                "Reason: Unhandled exception, message: " + t.getMessage(), t);
                         cancel();
                         return;
                     }
@@ -169,9 +182,6 @@ public class ObservableImpl<T> implements Observable<T> {
             }
         }
 
-        //TODO (PR-1729): put observable name in quotes in logging statements
-        //TODO (PR-1729): print observer name in quotes in logging statements
-
         /**
          * @param t throwable to check if it is terminal or can be handled so that listening can continue
          * @return true if the exception was handled and the listener may continue reading
@@ -185,25 +195,22 @@ public class ObservableImpl<T> implements Observable<T> {
                 return handleStaleSequenceException((StaleSequenceException) t);
             } else if (t instanceof HazelcastInstanceNotActiveException) {
                 if (logger.isFinestEnabled()) {
-                    logger.finest("Terminating message listener on ringbuffer " + ringbuffer.getName() + ". "
-                            + " Reason: HazelcastInstance is shutting down");
+                    logger.finest("Terminating message listener '" + id + "'. Reason: HazelcastInstance is shutting down");
                 }
             } else if (t instanceof DistributedObjectDestroyedException) {
                 if (logger.isFinestEnabled()) {
-                    logger.finest("Terminating message listener on ringbuffer " + ringbuffer.getName() + ". "
-                            + "Reason: Topic is destroyed");
+                    logger.finest("Terminating message listener '" + id + "'. Reason: Topic is destroyed");
                 }
             } else {
-                logger.warning("Terminating message listener on ringbuffer " + ringbuffer.getName() + ". "
-                        + "Reason: Unhandled exception, message: " + t.getMessage(), t);
+                logger.warning("Terminating message listener '" + id + "'. " +
+                        "Reason: Unhandled exception, message: " + t.getMessage(), t);
             }
             return false;
         }
 
         private boolean handleOperationTimeoutException() {
             if (logger.isFinestEnabled()) {
-                logger.finest("Message listener on ringbuffer " + ringbuffer.getName() + " timed out. "
-                        + "Continuing from last known sequence: " + sequence);
+                logger.finest("Message listener '" + id + "' timed out. Continuing from last known sequence: " + sequence);
             }
             return true;
         }
@@ -220,9 +227,9 @@ public class ObservableImpl<T> implements Observable<T> {
         private boolean handleIllegalArgumentException(IllegalArgumentException t) {
             final long currentHeadSequence = ringbuffer.headSequence();
             if (logger.isFinestEnabled()) {
-                logger.finest(String.format("Message listener on ringbuffer %s requested a too " +
-                                "large sequence: %s. Jumping from old sequence %s to sequence %s.",
-                        ringbuffer.getName(), t.getMessage(), sequence, currentHeadSequence));
+                logger.finest(String.format("Message listener '%s' requested a too large sequence: %s. " +
+                                "Jumping from old sequence %d to sequence %d.",
+                        id, t.getMessage(), sequence, currentHeadSequence));
             }
             adjustSequence(currentHeadSequence);
             return true;
@@ -241,8 +248,8 @@ public class ObservableImpl<T> implements Observable<T> {
             //TODO (PR-1729): update to IMDG changes
             long headSeq = ringbuffer.headSequence();
             if (logger.isFinestEnabled()) {
-                logger.finest("Message listener on ringbuffer " + ringbuffer.getName() + " ran " +
-                        "into a stale sequence. Jumping from oldSequence " + sequence + " to sequence " + headSeq + ".");
+                logger.finest("Message listener '" + id + "' ran into a stale sequence. Jumping from oldSequence "
+                        + sequence + " to sequence " + headSeq + ".");
             }
             adjustSequence(headSeq);
             return true;
@@ -250,22 +257,10 @@ public class ObservableImpl<T> implements Observable<T> {
 
         private void adjustSequence(long newSequence) {
             if (newSequence > sequence) {
-                logger.warning(String.format("Message loss of %d messages detected in one of observable %s's observers",
-                        newSequence - sequence, observableName));
+                logger.warning(String.format("Message loss of %d messages detected in listener '%s'",
+                        newSequence - sequence, id));
             }
             this.sequence = newSequence;
-        }
-
-        private static Executor getExecutor(HazelcastInstance hzInstance) {
-            if (hzInstance instanceof HazelcastInstanceImpl) {
-                return ((HazelcastInstanceImpl) hzInstance).node.getNodeEngine().getExecutionService()
-                        .getExecutor(ExecutionService.ASYNC_EXECUTOR);
-            } else if (hzInstance instanceof HazelcastClientInstanceImpl) {
-                return ((HazelcastClientInstanceImpl) hzInstance).getTaskScheduler();
-            } else {
-                throw new RuntimeException(String.format("Unhandled %s type: %s", HazelcastInstance.class.getSimpleName(),
-                        hzInstance.getClass().getName()));
-            }
         }
     }
 
