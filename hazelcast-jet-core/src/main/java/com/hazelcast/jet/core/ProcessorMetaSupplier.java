@@ -393,6 +393,5 @@ public interface ProcessorMetaSupplier extends Serializable {
          * Returns the guarantee for current job.
          */
         ProcessingGuarantee processingGuarantee();
-
     }
 }
