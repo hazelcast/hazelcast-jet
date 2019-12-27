@@ -43,6 +43,9 @@ public class IMapOutputStream extends OutputStream {
 
     @Override
     public void close() throws IOException {
+        if (closed) {
+            return;
+        }
         flush();
         ByteBuffer buf = ByteBuffer.allocate(INT_BYTES_COUNT);
         buf.putInt(currentChunkIndex);
