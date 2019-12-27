@@ -23,7 +23,6 @@ import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.ClusterService;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.internal.serialization.Data;
-import com.hazelcast.internal.util.Clock;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.config.JetConfig;
@@ -34,6 +33,7 @@ import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
+import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
@@ -52,7 +52,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -63,6 +65,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
 import static com.hazelcast.cluster.ClusterState.PASSIVE;
@@ -169,8 +173,8 @@ public class JobCoordinationService {
 
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
                 DAG dag = deserializeDag(jobId, config, serializedDag);
-                JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), serializedDag, dagToJson(dag),
-                        config);
+                Set<String> ownedObservables = ownedObservables(dag);
+                JobRecord jobRecord = new JobRecord(jobId, serializedDag, dagToJson(dag), config, ownedObservables);
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
 
@@ -213,6 +217,13 @@ public class JobCoordinationService {
             tryStartJob(masterContext);
         });
         return res;
+    }
+
+    private static Set<String> ownedObservables(DAG dag) {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
+                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableUtil.OWNED_OBSERVABLE))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     @SuppressWarnings("WeakerAccess") // used by jet-enterprise

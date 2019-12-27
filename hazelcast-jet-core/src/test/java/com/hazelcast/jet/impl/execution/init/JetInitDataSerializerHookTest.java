@@ -35,6 +35,7 @@ import org.junit.runners.Parameterized.Parameters;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -69,8 +70,8 @@ public class JetInitDataSerializerHookTest {
         return asList(
                 new Object[]{
                         "JobRecord",
-                        new JobRecord(1, 2, new HeapData(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9}),
-                                "dagJson", new JobConfig()),
+                        new JobRecord(1, new HeapData(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9}),
+                                "dagJson", new JobConfig(), Collections.emptySet()),
                         singleton("config")},
 
                 new Object[]{

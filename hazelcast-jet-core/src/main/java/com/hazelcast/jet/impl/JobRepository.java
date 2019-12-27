@@ -20,13 +20,11 @@ import com.hazelcast.core.DistributedObject;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.flakeidgen.FlakeIdGenerator;
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
-import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.metrics.JobMetrics;
@@ -62,22 +60,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
-import java.util.Spliterators;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject.deserializeWithCustomClassLoader;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -333,9 +327,7 @@ public class JobRepository {
             throw new JobNotFoundException(jobId);
         }
 
-        DAG dag = deserializeDag(masterContext, jobRecord);
-        Set<String> ownedObservables = ownedObservables(dag);
-
+        Set<String> ownedObservables = jobRecord.getOwnedObservables();
         completeObservables(ownedObservables, error);
 
         JobConfig config = jobRecord.getConfig();
@@ -549,22 +541,6 @@ public class JobRepository {
      */
     public static String exportedSnapshotMapName(String name) {
         return JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name;
-    }
-
-    private static DAG deserializeDag(MasterContext masterContext, JobRecord jobRecord) {
-        JetService jetService = masterContext.getJetService();
-        ClassLoader classLoader = jetService.getJobExecutionService()
-                .getClassLoader(jobRecord.getConfig(), jobRecord.getJobId());
-
-        SerializationService serializationService = masterContext.nodeEngine().getSerializationService();
-        return deserializeWithCustomClassLoader(serializationService, classLoader, jobRecord.getDag());
-    }
-
-    private static Set<String> ownedObservables(DAG dag) {
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
-                .map(vertex -> (String) vertex.getMetaSupplier().getTags().get(ObservableUtil.OWNED_OBSERVABLE))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
     }
 
     public static final class UpdateJobExecutionRecordEntryProcessor implements
