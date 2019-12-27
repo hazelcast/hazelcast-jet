@@ -16,12 +16,10 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
-import com.hazelcast.jet.impl.observer.ObservableUtil;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
@@ -85,6 +83,11 @@ public class JobResult implements IdentifiedDataSerializable {
 
     public boolean isSuccessful() {
         return failureText == null;
+    }
+
+    @Nonnull
+    public Set<String> getOwnedObservables() {
+        return ownedObservables;
     }
 
     @Nullable
@@ -168,12 +171,5 @@ public class JobResult implements IdentifiedDataSerializable {
         completionTime = in.readLong();
         failureText = in.readObject();
         ownedObservables = in.readObject();
-    }
-
-    public void destroy(HazelcastInstance hzInstance) {
-        for (String ownedObservable : ownedObservables) {
-            String ringbufferName = ObservableUtil.getRingbufferName(ownedObservable);
-            hzInstance.getRingbuffer(ringbufferName).destroy();
-        }
     }
 }

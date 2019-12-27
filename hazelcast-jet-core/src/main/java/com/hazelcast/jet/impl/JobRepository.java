@@ -424,13 +424,20 @@ public class JobRepository {
                           jobMetrics.delete(id);
                           JobResult jobResult = jobResults.get(id);
                           if (jobResult != null) {
-                              jobResult.destroy(instance);
+                              destroyObservables(jobResult.getOwnedObservables());
                               jobResults.delete(id);
                           }
                       });
         }
         long elapsed = System.nanoTime() - start;
         logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
+    }
+
+    public void destroyObservables(Set<String> ownedObservables) {
+        for (String ownedObservable : ownedObservables) {
+            String ringbufferName = ObservableUtil.getRingbufferName(ownedObservable);
+            instance.getRingbuffer(ringbufferName).destroy();
+        }
     }
 
     private static String toErrorMsg(@Nullable Throwable error) {
