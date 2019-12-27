@@ -145,7 +145,10 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
         pipeline.readFrom(TestSources.items(1))
                 .mapUsingService(ServiceFactory.withCreateContextFn(context -> context.attachedFile("resource.txt"))
-                                               .withCreateServiceFn((context, file) -> file),
+                                               .withCreateServiceFn((context, file) -> {
+                                                   context.attachedFile("resource.txt");
+                                                   return file;
+                                               }),
                         (file, integer) -> {
                             if (!file.exists()) {
                                 throw new AssertionError("File does not exists");

@@ -17,10 +17,12 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.stream.Stream;
@@ -105,5 +107,27 @@ public interface ProcessorSupplier extends Serializable {
          * The value is in the range {@code [0...memberCount-1]}.
          */
         int memberIndex();
+
+        /**
+         * Returns the attached directory to the job with the given id.
+         *
+         * @param id identifier defined on the {@link ResourceConfig} to be
+         *           used retrieve files from storage.
+         * @return {@link File} handle to the attached directory to the job with provided identifier.
+         * @since 4.0
+         */
+        @Nonnull
+        File attachedDirectory(@Nonnull String id);
+
+        /**
+         * Returns the attached file to the job with the given id.
+         *
+         * @param id identifier defined on the {@link ResourceConfig} to be
+         *           used retrieve files from storage.
+         * @return {@link File} handle to the attached file to the job with provided identifier.
+         * @since 4.0
+         */
+        @Nonnull
+        File attachedFile(@Nonnull String id);
     }
 }

@@ -22,6 +22,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
+import java.io.File;
 
 /**
  * {@link ProcessorSupplier.Context} implementation suitable to be used in tests.
@@ -33,6 +34,8 @@ public class TestProcessorSupplierContext
         implements ProcessorSupplier.Context {
 
     private int memberIndex;
+    private File attachedFile;
+    private File attachedDirectory;
 
     @Nonnull @Override
     public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
@@ -71,6 +74,30 @@ public class TestProcessorSupplierContext
         return memberIndex;
     }
 
+    @Override
+    public File attachedDirectory(@Nonnull String id) {
+        return attachedDirectory;
+    }
+
+    /**
+     * Sets the attached directory
+     * @param attachedDirectory
+     */
+    public void setAttachedDirectory(File attachedDirectory) {
+        this.attachedDirectory = attachedDirectory;
+    }
+
+    @Override
+    public File attachedFile(@Nonnull String id) {
+        return attachedFile;
+    }
+    /**
+     * Sets the attached file
+     * @param attachedFile
+     */
+    public void setAttachedFile(File attachedFile) {
+        this.attachedFile = attachedFile;
+    }
     /**
      * Set the member index.
      */

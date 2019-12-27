@@ -53,6 +53,7 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -135,11 +136,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     }
 
     public void initialize(
-            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext
+            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext, List<File> localFiles
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
-        initProcSuppliers(jobId, executionId);
+        initProcSuppliers(jobId, executionId, localFiles);
         initDag();
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
@@ -182,7 +183,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         jobConfig.getProcessingGuarantee(),
                         vertex.localParallelism(),
                         memberIndex,
-                        memberCount
+                        memberCount,
+                        localFiles
                 );
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
@@ -288,7 +290,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     // End implementation of IdentifiedDataSerializable
 
-    private void initProcSuppliers(long jobId, long executionId) {
+    private void initProcSuppliers(long jobId, long executionId, List<File> localFiles) {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
 
         for (VertexDef vertex : vertices) {
@@ -307,7 +309,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         vertex.localParallelism() * memberCount,
                         memberIndex,
                         memberCount,
-                        jobConfig.getProcessingGuarantee()
+                        jobConfig.getProcessingGuarantee(),
+                        localFiles
                 ));
             } catch (Exception e) {
                 throw sneakyThrow(e);

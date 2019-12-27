@@ -66,7 +66,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Object executionLock = new Object();
     private final ILogger logger;
     private String jobName;
-    private List<File> localFiles;
+    private List<File> localFiles = new ArrayList<>();
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
     private Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = emptyMap();
@@ -118,7 +118,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, localFiles);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -251,14 +251,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                    .receiveStreamPacket(in);
     }
 
-    public void registerLocalFile(File file) {
-        if (localFiles == null) {
-            localFiles = new ArrayList<>();
-        }
-        localFiles.add(file);
-    }
-
-    public void cleanupLocalFiles() {
+    private void cleanupLocalFiles() {
         if (localFiles != null) {
             localFiles.forEach(IOUtil::delete);
         }

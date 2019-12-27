@@ -284,7 +284,8 @@ public final class Util {
         }
     }
 
-    public static void zipDirectoryToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream) {
+    public static void zipDirectoryToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream)
+            throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
             for (Path dirPath; (dirPath = dirQueue.poll()) != null; ) {
@@ -314,12 +315,11 @@ public final class Util {
                     }
                 }
             }
-        } catch (IOException e) {
-            throw new JetException(e);
         }
     }
 
-    public static void zipFileToOutputStream(@Nonnull Path filePath, @Nonnull OutputStream outputStream) {
+    public static void zipFileToOutputStream(@Nonnull Path filePath, @Nonnull OutputStream outputStream)
+            throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Path fileName = filePath.getFileName();
             if (fileName != null) {
@@ -329,8 +329,6 @@ public final class Util {
                 }
                 zipOut.closeEntry();
             }
-        } catch (IOException e) {
-            throw new JetException(e);
         }
     }
 

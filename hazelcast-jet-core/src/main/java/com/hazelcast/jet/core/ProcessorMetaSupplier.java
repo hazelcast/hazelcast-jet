@@ -22,13 +22,11 @@ import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.partition.strategy.StringPartitioningStrategy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.Serializable;
 import java.util.List;
 import java.util.function.Function;
@@ -396,27 +394,5 @@ public interface ProcessorMetaSupplier extends Serializable {
          */
         ProcessingGuarantee processingGuarantee();
 
-
-        /**
-         * Returns the attached directory to the job with the given id.
-         *
-         * @param id identifier defined on the {@link ResourceConfig} to be
-         *           used retrieve files from storage.
-         * @return {@link File} handle to the attached directory to the job with provided identifier.
-         * @since 4.0
-         */
-        @Nonnull
-        File attachedDirectory(@Nonnull String id);
-
-        /**
-         * Returns the attached file to the job with the given id.
-         *
-         * @param id identifier defined on the {@link ResourceConfig} to be
-         *           used retrieve files from storage.
-         * @return {@link File} handle to the attached file to the job with provided identifier.
-         * @since 4.0
-         */
-        @Nonnull
-        File attachedFile(@Nonnull String id);
     }
 }

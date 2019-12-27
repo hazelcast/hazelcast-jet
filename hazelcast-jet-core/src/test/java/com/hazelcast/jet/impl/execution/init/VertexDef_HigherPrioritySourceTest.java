@@ -42,6 +42,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.impl.execution.init.ExecutionPlanBuilder.createExecutionPlans;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.nCopies;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
@@ -126,7 +127,7 @@ public class VertexDef_HigherPrioritySourceTest extends SimpleTestInClusterSuppo
                 createExecutionPlans(nodeEngineImpl, membersView, dag, 0, 0, new JobConfig(), 0);
         ExecutionPlan plan = executionPlans.values().iterator().next();
         SnapshotContext ssContext = new SnapshotContext(mock(ILogger.class), "job", 0, EXACTLY_ONCE);
-        plan.initialize(nodeEngineImpl, 0, 0, ssContext);
+        plan.initialize(nodeEngineImpl, 0, 0, ssContext, emptyList());
         Set<Integer> higherPriorityVertices = VertexDef.getHigherPriorityVertices(plan.getVertices());
         String actualHigherPriorityVertices = plan.getVertices().stream()
                 .filter(v -> higherPriorityVertices.contains(v.vertexId()))

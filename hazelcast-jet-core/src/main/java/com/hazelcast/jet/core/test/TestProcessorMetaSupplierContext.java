@@ -25,8 +25,6 @@ import com.hazelcast.logging.Logger;
 
 import javax.annotation.Nonnull;
 
-import java.io.File;
-
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 
 /**
@@ -47,8 +45,6 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     private int localParallelism = 1;
     private String vertexName = "testVertex";
     private ProcessingGuarantee processingGuarantee = NONE;
-    private File attachedFile;
-    private File attachedDirectory;
 
     @Nonnull @Override
     public JetInstance jetInstance() {
@@ -175,31 +171,6 @@ public class TestProcessorMetaSupplierContext implements ProcessorMetaSupplier.C
     @Override
     public ProcessingGuarantee processingGuarantee() {
         return processingGuarantee;
-    }
-
-    @Override
-    public File attachedDirectory(@Nonnull String id) {
-        return attachedDirectory;
-    }
-
-    /**
-     * Sets the attached directory
-     * @param attachedDirectory
-     */
-    public void setAttachedDirectory(File attachedDirectory) {
-        this.attachedDirectory = attachedDirectory;
-    }
-
-    @Override
-    public File attachedFile(@Nonnull String id) {
-        return attachedFile;
-    }
-    /**
-     * Sets the attached file
-     * @param attachedFile
-     */
-    public void setAttachedFile(File attachedFile) {
-        this.attachedFile = attachedFile;
     }
 
     /**
