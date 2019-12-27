@@ -241,7 +241,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      */
     @Nonnull
     public JobConfig addJar(@Nonnull URL url) {
-        return add(url, null, ResourceType.JAR);
+        return add(url, toFilename(url), ResourceType.JAR);
     }
 
     /**
@@ -290,7 +290,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      */
     @Nonnull
     public JobConfig addJarsInZip(@Nonnull URL url) {
-        return add(url, null, ResourceType.JARS_IN_ZIP);
+        return add(url, toFilename(url), ResourceType.JARS_IN_ZIP);
     }
 
     /**
