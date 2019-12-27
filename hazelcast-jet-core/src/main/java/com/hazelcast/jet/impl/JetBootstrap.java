@@ -22,6 +22,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.DiscoveryConfig;
 import com.hazelcast.config.JoinConfig;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetCacheManager;
 import com.hazelcast.jet.JetInstance;
@@ -76,7 +77,7 @@ public final class JetBootstrap {
 
     public static synchronized void executeJar(@Nonnull Supplier<JetInstance> supplier,
                            @Nonnull String jar, @Nullable String snapshotName,
-                           @Nullable String jobName, @Nonnull List<String> args
+                           @Nullable String jobName, @Nullable String mainClass, @Nonnull List<String> args
     ) throws Exception {
         if (JetBootstrap.supplier != null) {
             throw new IllegalStateException("Supplier was already set. This method should not be called outside" +
@@ -88,12 +89,14 @@ public final class JetBootstrap {
         );
 
         try (JarFile jarFile = new JarFile(jar)) {
-            if (jarFile.getManifest() == null) {
-                error("No manifest file in " + jar);
-            }
-            String mainClass = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
-            if (mainClass == null) {
-                error("No Main-Class found in manifest");
+            if (StringUtil.isNullOrEmpty(mainClass)) {
+                if (jarFile.getManifest() == null) {
+                    error("No manifest file in " + jar + ". The -c option can be used to provide a main class.");
+                }
+                mainClass = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
+                if (mainClass == null) {
+                    error("No Main-Class found in manifest. The -c option can be used to provide a main class.");
+                }
             }
 
             URL jarUrl = new URL("file:///" + jar);
