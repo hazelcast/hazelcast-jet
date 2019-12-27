@@ -31,7 +31,6 @@ import java.util.List;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -118,7 +117,7 @@ public class JobConfigTest extends JetTestSupport {
         ResourceConfig resourceConfig = assertAndGet(config);
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
-        assertNull(resourceConfig.getId());
+        assertEquals("my.jar", resourceConfig.getId());
     }
 
     @Test
@@ -132,7 +131,7 @@ public class JobConfigTest extends JetTestSupport {
         ResourceConfig resourceConfig = assertAndGet(config);
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
-        assertNull(resourceConfig.getId());
+        assertEquals("my.jar", resourceConfig.getId());
     }
 
     @Test
@@ -146,7 +145,7 @@ public class JobConfigTest extends JetTestSupport {
         ResourceConfig resourceConfig = assertAndGet(config);
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(url, resourceConfig.getUrl());
-        assertNull(resourceConfig.getId());
+        assertEquals("my.jar", resourceConfig.getId());
     }
 
 

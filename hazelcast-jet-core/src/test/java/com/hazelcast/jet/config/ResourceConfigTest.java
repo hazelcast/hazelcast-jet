@@ -27,7 +27,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class ResourceConfigTest {
@@ -52,7 +51,7 @@ public class ResourceConfigTest {
         config.addJar(new URL(urlString));
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
-        assertNull(resourceConfig.getId());
+        assertEquals("jarfile", resourceConfig.getId());
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(urlString, resourceConfig.getUrl().toString());
     }
@@ -72,7 +71,7 @@ public class ResourceConfigTest {
         config.addJar(path);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
-        assertNull(resourceConfig.getId());
+        assertEquals("jarfile", resourceConfig.getId());
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
     }
@@ -84,7 +83,7 @@ public class ResourceConfigTest {
         config.addJar(file);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
-        assertNull(resourceConfig.getId());
+        assertEquals("jarfile", resourceConfig.getId());
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
     }
@@ -96,7 +95,7 @@ public class ResourceConfigTest {
         config.addJarsInZip(new URL(urlString));
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
-        assertNull(resourceConfig.getId());
+        assertEquals("zipFile", resourceConfig.getId());
         assertEquals(ResourceType.JARS_IN_ZIP, resourceConfig.getResourceType());
         assertEquals(urlString, resourceConfig.getUrl().toString());
     }
@@ -116,7 +115,7 @@ public class ResourceConfigTest {
         config.addJarsInZip(path);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
-        assertNull(resourceConfig.getId());
+        assertEquals("zipFile", resourceConfig.getId());
         assertEquals(ResourceType.JARS_IN_ZIP, resourceConfig.getResourceType());
         assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
     }
@@ -128,7 +127,7 @@ public class ResourceConfigTest {
         config.addJarsInZip(file);
         ResourceConfig resourceConfig = config.getResourceConfigs().iterator().next();
 
-        assertNull(resourceConfig.getId());
+        assertEquals("zipFile", resourceConfig.getId());
         assertEquals(ResourceType.JARS_IN_ZIP, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
     }
