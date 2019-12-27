@@ -84,8 +84,7 @@ import static java.util.stream.IntStream.range;
 
 public final class Util {
 
-    private static final int READ_BUFFER_SIZE = 1 << 15;
-    private static final int COPY_BUFFER_SIZE = 1 << 12;
+    private static final int BUFFER_SIZE = 1 << 14;
 
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
@@ -141,7 +140,7 @@ public final class Util {
     @Nonnull
     public static byte[] readFully(@Nonnull InputStream in) throws IOException {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] b = new byte[READ_BUFFER_SIZE];
+            byte[] b = new byte[BUFFER_SIZE];
             for (int len; (len = in.read(b)) != -1; ) {
                 out.write(b, 0, len);
             }
@@ -259,7 +258,7 @@ public final class Util {
     }
 
     public static void copyStream(InputStream in, OutputStream out) throws IOException {
-        byte[] buf = new byte[COPY_BUFFER_SIZE];
+        byte[] buf = new byte[BUFFER_SIZE];
         for (int readCount; (readCount = in.read(buf)) > 0; ) {
             out.write(buf, 0, readCount);
         }

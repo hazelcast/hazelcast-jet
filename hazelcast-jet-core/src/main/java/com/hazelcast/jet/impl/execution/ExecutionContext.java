@@ -21,6 +21,7 @@ import com.hazelcast.internal.metrics.DynamicMetricsProvider;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.metrics.MetricTags;
@@ -37,6 +38,8 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +66,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Object executionLock = new Object();
     private final ILogger logger;
     private String jobName;
+    private List<File> localFiles;
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
     private Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = emptyMap();
@@ -182,6 +186,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                         + " encountered an exception in ProcessorSupplier.close(), ignoring it", e);
             }
         }
+        cleanupLocalFiles();
     }
 
     /**
@@ -245,6 +250,20 @@ public class ExecutionContext implements DynamicMetricsProvider {
                    .get(sender)
                    .receiveStreamPacket(in);
     }
+
+    public void registerLocalFile(File file) {
+        if (localFiles == null) {
+            localFiles = new ArrayList<>();
+        }
+        localFiles.add(file);
+    }
+
+    public void cleanupLocalFiles() {
+        if (localFiles != null) {
+            localFiles.forEach(IOUtil::delete);
+        }
+    }
+
 
     public boolean hasParticipant(Address member) {
         return participants.contains(member);

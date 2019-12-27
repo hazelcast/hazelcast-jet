@@ -28,6 +28,7 @@ import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobExecutionService;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
+import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -132,13 +133,14 @@ public final class Contexts {
             HazelcastInstanceImpl instance = (HazelcastInstanceImpl) jetInstance().getHazelcastInstance();
             JetService service = instance.node.nodeEngine.getService(JetService.SERVICE_NAME);
             JobExecutionService executionService = service.getJobExecutionService();
+            ExecutionContext executionContext = executionService.getExecutionContext(executionId);
             String jobId = idToString(jobId());
             IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
             try (IMapInputStream inputStream = new IMapInputStream(map, jobId, id)) {
                 Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id);
                 unzip(inputStream, directory);
                 File file = directory.toFile();
-                executionService.registerLocalFile(executionId, file);
+                executionContext.registerLocalFile(file);
                 return file;
             } catch (IOException e) {
                 throw ExceptionUtil.rethrow(e);
