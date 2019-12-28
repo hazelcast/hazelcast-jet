@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
@@ -26,6 +27,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 
@@ -34,7 +36,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.JobRepository.FILE_STORAGE_MAP_NAME_PREFIX;
@@ -123,18 +125,18 @@ public final class Contexts {
             return processingGuarantee;
         }
 
-           }
+    }
 
     static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context {
 
         private final int memberIndex;
-        private final List<File> localFiles;
+        private final ConcurrentMap<String, File> localFiles;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         ProcSupplierCtx(
                 JetInstance jetInstance, long jobId, long executionId, JobConfig jobConfig, ILogger logger,
                 String vertexName, int localParallelism, int totalParallelism, int memberIndex, int memberCount,
-                ProcessingGuarantee processingGuarantee, List<File> localFiles) {
+                ProcessingGuarantee processingGuarantee, ConcurrentMap<String, File> localFiles) {
             super(jetInstance, jobId, executionId, jobConfig, logger, vertexName, localParallelism, totalParallelism,
                     memberCount, processingGuarantee);
             this.memberIndex = memberIndex;
@@ -148,32 +150,33 @@ public final class Contexts {
 
         @Nonnull @Override
         public File attachedDirectory(@Nonnull String id) {
-            Preconditions.checkHasText(id, "id cannot be null or empty!");
+            Preconditions.checkHasText(id, "id cannot be null or empty");
             findResourceConfigOrThrowException(id);
-            JetInstance instance = jetInstance();
-            String jobId = idToString(jobId());
-            IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
-            try (IMapInputStream inputStream = new IMapInputStream(map, jobId, id)) {
-                Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id);
-                unzip(inputStream, directory);
-                File file = directory.toFile();
-                localFiles.add(file);
-                return file;
-            } catch (IOException e) {
-                throw ExceptionUtil.rethrow(e);
-            }
+            return Util.getOrPutIfAbsentWithCleanup(localFiles, id, key -> {
+                JetInstance instance = jetInstance();
+                String jobId = idToString(jobId());
+                IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
+                try (IMapInputStream inputStream = new IMapInputStream(map, jobId, key)) {
+                    Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + key);
+                    unzip(inputStream, directory);
+                    return directory.toFile();
+                } catch (IOException e) {
+                    throw ExceptionUtil.rethrow(e);
+                }
+            }, IOUtil::delete);
+
         }
 
         @Nonnull @Override
         public File attachedFile(@Nonnull String id) {
-            Preconditions.checkHasText(id, "id cannot be null or empty!");
+            Preconditions.checkHasText(id, "id cannot be null or empty");
             ResourceConfig resourceConfig = findResourceConfigOrThrowException(id);
             return attachedDirectory(id).toPath()
                                         .resolve(resourceConfig.getUrl().getFile())
                                         .toFile();
         }
 
-        public List<File> localFiles() {
+        public ConcurrentMap<String, File> localFiles() {
             return localFiles;
         }
 
@@ -183,7 +186,7 @@ public final class Contexts {
                     .stream()
                     .filter(config -> config.getId().equals(id))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Resource with id:" + id + "cannot be found!"));
+                    .orElseThrow(() -> new IllegalArgumentException("Resource with id:" + id + "cannot be found"));
         }
     }
 
@@ -196,7 +199,7 @@ public final class Contexts {
         public ProcCtx(JetInstance instance, long jobId, long executionId, JobConfig jobConfig,
                        ILogger logger, String vertexName, int localProcessorIndex,
                        int globalProcessorIndex, ProcessingGuarantee processingGuarantee, int localParallelism,
-                       int memberIndex, int memberCount, List<File> localFiles) {
+                       int memberIndex, int memberCount, ConcurrentMap<String, File> localFiles) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
                     localFiles);

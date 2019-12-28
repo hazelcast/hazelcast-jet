@@ -39,12 +39,13 @@ import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.Util.idToString;
 import static java.util.Collections.emptyList;
@@ -66,7 +67,9 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Object executionLock = new Object();
     private final ILogger logger;
     private String jobName;
-    private List<File> localFiles = new ArrayList<>();
+
+    // key: resource identifier
+    private ConcurrentMap<String, File> localFiles = new ConcurrentHashMap<>();
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
     private Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = emptyMap();
@@ -252,8 +255,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
     }
 
     private void cleanupLocalFiles() {
-        if (localFiles != null) {
-            localFiles.forEach(IOUtil::delete);
+        if (localFiles != null && !localFiles.isEmpty()) {
+            localFiles.values().forEach(IOUtil::delete);
         }
     }
 

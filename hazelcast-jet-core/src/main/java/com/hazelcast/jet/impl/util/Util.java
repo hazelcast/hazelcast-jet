@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.internal.util.ConstructorFunction;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -57,9 +58,11 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
@@ -98,6 +101,20 @@ public final class Util {
 
     public static <T> Supplier<T> memoizeConcurrent(Supplier<T> onceSupplier) {
         return new ConcurrentMemoizingSupplier<>(onceSupplier);
+    }
+
+    public static <K, V> V getOrPutIfAbsentWithCleanup(ConcurrentMap<K, V> map, K key, ConstructorFunction<K, V> func,
+                                            Consumer<V> cleanupConsumer) {
+        V value = map.get(key);
+        if (value == null) {
+            value = func.createNew(key);
+            V current = map.putIfAbsent(key, value);
+            if (current != null) {
+                cleanupConsumer.accept(value);
+                value = current;
+            }
+        }
+        return value;
     }
 
     public static <T> T uncheckCall(@Nonnull Callable<T> callable) {

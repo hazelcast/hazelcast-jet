@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -136,7 +137,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
     }
 
     public void initialize(
-            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext, List<File> localFiles
+            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext,
+            ConcurrentMap<String, File> localFiles
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
@@ -290,7 +292,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     // End implementation of IdentifiedDataSerializable
 
-    private void initProcSuppliers(long jobId, long executionId, List<File> localFiles) {
+    private void initProcSuppliers(long jobId, long executionId, ConcurrentMap<String, File> localFiles) {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
 
         for (VertexDef vertex : vertices) {
