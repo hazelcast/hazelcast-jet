@@ -532,12 +532,12 @@ public class ObservableResultsTest extends TestInClusterSupport {
         private final AtomicInteger completions = new AtomicInteger();
 
         @Override
-        public void onNext(Long value) {
+        public void onNext(@Nonnull Long value) {
             values.add(value);
         }
 
         @Override
-        public void onError(Throwable throwable) {
+        public void onError(@Nonnull Throwable throwable) {
             error.set(throwable);
         }
 

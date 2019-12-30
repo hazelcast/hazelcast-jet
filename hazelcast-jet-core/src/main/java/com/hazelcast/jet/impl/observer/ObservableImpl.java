@@ -55,12 +55,12 @@ public class ObservableImpl<T> implements Observable<T> {
         this.logger = logger;
     }
 
-    @Override
+    @Nonnull @Override
     public String name() {
         return name;
     }
 
-    @Override
+    @Nonnull @Override
     public UUID addObserver(@Nonnull Observer<T> observer) {
         UUID id = UuidUtil.newUnsecureUUID();
         RingbufferListener<T> listener = new RingbufferListener<>(name, id, observer, hzInstance, logger);
@@ -70,7 +70,7 @@ public class ObservableImpl<T> implements Observable<T> {
     }
 
     @Override
-    public void removeObserver(UUID registrationId) {
+    public void removeObserver(@Nonnull UUID registrationId) {
         RingbufferListener<T> listener = listeners.remove(registrationId);
         if (listener == null) {
             throw new IllegalArgumentException(
@@ -172,13 +172,18 @@ public class ObservableImpl<T> implements Observable<T> {
         }
 
         private void onNewMessage(Object message) {
-            if (message instanceof WrappedThrowable) {
-                observer.onError(((WrappedThrowable) message).get());
-            } else if (message instanceof DoneItem) {
-                observer.onComplete();
-            } else {
-                //noinspection unchecked
-                observer.onNext((T) message);
+            try {
+                if (message instanceof WrappedThrowable) {
+                    observer.onError(((WrappedThrowable) message).get());
+                } else if (message instanceof DoneItem) {
+                    observer.onComplete();
+                } else {
+                    //noinspection unchecked
+                    observer.onNext((T) message);
+                }
+            } catch (Throwable t) {
+                logger.warning("Exception thrown while calling observer callback for listener '" + id + "'. Will be " +
+                        "ignored. Reason: " + t.getMessage(), t);
             }
         }
 

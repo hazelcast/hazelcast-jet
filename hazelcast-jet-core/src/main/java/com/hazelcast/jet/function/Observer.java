@@ -50,12 +50,12 @@ public interface Observer<T> {
     ) {
         return new Observer<T>() {
             @Override
-            public void onNext(T t) {
+            public void onNext(@Nonnull T t) {
                 onNext.accept(t);
             }
 
             @Override
-            public void onError(Throwable throwable) {
+            public void onError(@Nonnull Throwable throwable) {
                 onError.accept(throwable);
             }
 
