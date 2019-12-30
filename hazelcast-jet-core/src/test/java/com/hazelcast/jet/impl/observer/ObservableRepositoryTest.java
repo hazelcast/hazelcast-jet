@@ -16,208 +16,231 @@
 
 package com.hazelcast.jet.impl.observer;
 
-import com.hazelcast.collection.IList;
-import com.hazelcast.collection.ItemListener;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.jet.JetInstance;
+import com.hazelcast.cluster.Member;
+import com.hazelcast.cluster.MemberSelector;
+import com.hazelcast.instance.impl.HazelcastInstanceImpl;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.ringbuffer.Ringbuffer;
+import com.hazelcast.jet.core.TestProcessors;
+import com.hazelcast.map.IMap;
+import com.hazelcast.spi.impl.NodeEngine;
+import com.hazelcast.spi.impl.NodeEngineImpl;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_MAX_SIZE;
 import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
+import static com.hazelcast.jet.core.JetProperties.JOB_SCAN_PERIOD;
 
-public class ObservableRepositoryTest {
+public class ObservableRepositoryTest extends SimpleTestInClusterSupport {
 
-    private JetInstance jet;
-    private HazelcastInstance hz;
-    private TestTimeSource timeSource;
+    private static final int MEMBER_COUNT = 2;
+    private static final int PARALLELISM = Runtime.getRuntime().availableProcessors();
+
     private ObservableRepository repository;
-    private TestList testList;
-    private Map<String, Ringbuffer> ringbuffers;
+    private TestTimeSource timeSource;
+
+    @BeforeClass
+    public static void beforeClass() {
+        JetConfig config = new JetConfig();
+        Properties properties = config.getProperties();
+        properties.setProperty(JOB_RESULTS_TTL_SECONDS.getName(), Long.toString(10));
+        properties.setProperty(JOB_SCAN_PERIOD.getName(), Long.toString(Long.MAX_VALUE));
+
+        initializeWithClient(MEMBER_COUNT, config, null);
+    }
 
     @Before
     public void before() {
-        JetConfig config = new JetConfig();
-        Properties properties = config.getProperties();
-        properties.setProperty(JOB_RESULTS_TTL_SECONDS.getName(), Integer.toString(10));
-        properties.setProperty(JOB_RESULTS_MAX_SIZE.getName(), Integer.toString(20));
-
-        ringbuffers = new ConcurrentHashMap<>();
-
-        testList = new TestList();
-        hz = mock(HazelcastInstance.class);
-
-        jet = mock(JetInstance.class);
-        when(jet.getHazelcastInstance()).thenReturn(hz);
-
-        resetHzMock();
+        TestProcessors.reset(MEMBER_COUNT * PARALLELISM);
 
         timeSource = new TestTimeSource();
-        repository = new ObservableRepository(jet, config, timeSource);
+
+        NodeEngineImpl nodeEngine = ((HazelcastInstanceImpl) instance().getHazelcastInstance()).node.getNodeEngine();
+        MemberSelector memberSelector = new RoundRobinMemberSelector(nodeEngine);
+        repository = new ObservableRepository(instance(), timeSource, memberSelector);
     }
 
     @Test
-    public void cleanup_in_batches() {
+    public void cleanupAfterExpiration() {
+        initObservables("o1", "o2", "o3", "o4", "o5");
+
         //when
         completeObservables("o1", "o2");
-        timeSource.inc(TimeUnit.SECONDS, 1);
-        resetHzMock();
-        repository.cleanup();
+        timeSource.inc(1);                //time is: 1 sec
+        cleanup();
         //then
-        verify(hz, never()).getRingbuffer(any());
+        assertCompletedObservables("o1", "o2");                      //none have expired yet
 
         //when
         completeObservables("o3");
-        timeSource.inc(TimeUnit.SECONDS, 1);
-        resetHzMock();
-        repository.cleanup();
+        timeSource.inc(1);                //time is: 2 sec
+        cleanup();
         //then
-        verify(hz, never()).getRingbuffer(any());
+        assertCompletedObservables("o1", "o2", "o3");                //none have expired yet
 
         //when
-        completeObservables("o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14", "o15", "o16", "o17",
-                "o18", "o19", "o20");
-        timeSource.inc(TimeUnit.SECONDS, 8);
-        resetHzMock();
-        repository.cleanup();
+        completeObservables("o4", "o5");
+        cleanup();
         //then
-        verifyRingbuffersDestroyed("o1", "o2");
-        verifyNoMoreInteractions(hz);
+        assertCompletedObservables("o1", "o2", "o3", "o4", "o5");    //none have expired yet
 
         //when
-        resetHzMock();
-        timeSource.inc(TimeUnit.SECONDS, 1);
-        repository.cleanup();
+        timeSource.inc(8);                //time is: 10 sec
+        cleanup();
         //then
-        verifyRingbuffersDestroyed("o3");
-        verifyNoMoreInteractions(hz);
+        assertCompletedObservables("o3", "o4", "o5");                //some have expired
 
         //when
-        resetHzMock();
-        timeSource.inc(TimeUnit.SECONDS, 1);
-        repository.cleanup();
-        //then only a fixed number of topics get clean-ed up
-        verifyRingbuffersDestroyed("o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13");
-        verifyNoMoreInteractions(hz);
+        timeSource.inc(1);                //time is: 11 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o4", "o5");                      //more have expired
 
         //when
-        resetHzMock();
-        repository.cleanup();
-        //then more topics get cleaned up
-        verifyRingbuffersDestroyed("o14", "o15", "o16", "o17", "o18", "o19", "o20");
-        verifyNoMoreInteractions(hz);
+        timeSource.inc(1);                //time is: 12 sec
+        cleanup();
+        //then
+        assertCompletedObservables();                                //all have expired
     }
 
     @Test
-    public void cleanup_to_max_size() {
+    public void completionsResetsExpiration() {
+        initObservables("o1", "o2", "o3", "o4", "o5");
+
         //when
-        completeObservables("o1", "o2");
+        completeObservables("o1", "o2", "o3", "o4");
+        timeSource.inc(3);                //time is: 3 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o1", "o2", "o3", "o4");          //none have expired yet
 
-        timeSource.inc(TimeUnit.SECONDS, 1);
+        //when
+        completeObservables("o2");
+        timeSource.inc(1);                //time is: 4 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o1", "o2", "o3", "o4");          //none have expired yet
 
-        completeObservables("o3", "o4", "o5", "o6", "o7", "o8", "o9", "o10", "o11", "o12", "o13", "o14", "o15", "o16",
-                "o17", "o18", "o19", "o20", "o21", "o22", "o23", "o24", "o25");
+        //when
+        completeObservables("o4");
+        timeSource.inc(1);                //time is: 5 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o1", "o2", "o3", "o4");          //none have expired yet
 
-        timeSource.inc(TimeUnit.SECONDS, 9);
-        resetHzMock();
-        repository.cleanup(); //at this
+        //when
+        timeSource.inc(5);                //time is: 10 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o2", "o4");                      //some have expired
 
-        //then (at this time only "o1" & "o2" is expired)
-        verifyRingbuffersDestroyed("o1", "o2"); //expired
-        verifyRingbuffersDestroyed("o3", "o4", "o5"); //size too big
-        verifyNoMoreInteractions(hz);
+        //when
+        timeSource.inc(3);                //time is: 13 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o4");                            //more have expired
+
+        //when
+        timeSource.inc(1);                //time is: 14 sec
+        cleanup();
+        //then
+        assertCompletedObservables();                                //all have expired
     }
 
-    private void verifyRingbuffersDestroyed(String... observables) {
-        for (String observable : observables) {
-            String ringbufferName = "__jet.observables." + observable;
+    @Test
+    public void initCancelsExpiration() {
+        initObservables("o1", "o2", "o3", "o4", "o5");
 
-            verify(hz).getRingbuffer(ringbufferName);
+        //when
+        completeObservables("o1", "o2", "o3", "o4");
+        timeSource.inc(3);                //time is: 3 sec
+        cleanup();
+        //then
+        assertCompletedObservables("o1", "o2", "o3", "o4");          //none have expired yet
 
-            Ringbuffer ringbuffer = ringbuffers.get(ringbufferName);
-            verify(ringbuffer).destroy();
-        }
+        //when
+        initObservables("o2", "o4");
+        cleanup();
+        //then
+        assertCompletedObservables("o1", "o3");                      //expirations were cancelled
+    }
+
+    private void initObservables(String... observables) {
+        repository.initObservables(Arrays.asList(observables));
     }
 
     private void completeObservables(String... observables) {
         repository.completeObservables(Arrays.asList(observables), null);
     }
 
-    private void resetHzMock() {
-        reset(hz);
+    private void cleanup() {
+        for (int i = 0; i < instances().length; i++) {
+            repository.cleanup();
+        }
+    }
 
-        when(hz.getList(any())).thenReturn(testList);
+    private void assertCompletedObservables(String... observables) {
+        IMap<String, Long> map = instance().getMap(ObservableRepository.COMPLETED_OBSERVABLES_MAP_NAME);
+        assertEqualsEventually(() -> toSortedList(map.keySet()), toSortedList(observables));
+    }
 
-        doAnswer(invocation -> {
-            String name = invocation.getArgument(0);
-            return ringbuffers.computeIfAbsent(name, n -> mock(Ringbuffer.class));
-        }).when(hz).getRingbuffer(any());
+    private List<String> toSortedList(String[] array) {
+        return toSortedList(Arrays.asList(array));
+    }
+
+    private List<String> toSortedList(Collection<String> collection) {
+        List<String> list = new ArrayList<>(collection);
+        list.sort(String::compareTo);
+        return list;
+    }
+
+    private static class RoundRobinMemberSelector implements MemberSelector {
+
+        private final Member[] members;
+
+        private int index;
+        private int count;
+
+        RoundRobinMemberSelector(NodeEngine nodeEngine) {
+            members = new ArrayList<>(nodeEngine.getClusterService().getMembers()).toArray(new Member[0]);
+            index = 0;
+        }
+
+        @Override
+        public boolean select(Member member) {
+            boolean retVal = member == members[index];
+            count++;
+            if (count >= members.length) {
+                count = 0;
+                index++;
+                if (index >= members.length) {
+                    index = 0;
+                }
+            }
+            return retVal;
+        }
     }
 
     private static class TestTimeSource implements LongSupplier {
 
         private long valueMs;
 
-        void inc(TimeUnit unit, long duration) {
-            valueMs += unit.toMillis(duration);
+        void inc(long seconds) {
+            valueMs += TimeUnit.SECONDS.toMillis(seconds);
         }
 
         @Override
         public long getAsLong() {
             return valueMs;
-        }
-    }
-
-    private static class TestList<E> extends ArrayList<E> implements IList<E> {
-        @Nonnull
-        @Override
-        public String getName() {
-            return "name";
-        }
-
-        @Nonnull
-        @Override
-        public UUID addItemListener(@Nonnull ItemListener<E> listener, boolean includeValue) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean removeItemListener(@Nonnull UUID registrationId) {
-            return false;
-        }
-
-        @Override
-        public String getPartitionKey() {
-            return null;
-        }
-
-        @Override
-        public String getServiceName() {
-            return null;
-        }
-
-        @Override
-        public void destroy() {
         }
     }
 }

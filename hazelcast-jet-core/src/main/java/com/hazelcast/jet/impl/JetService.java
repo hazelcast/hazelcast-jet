@@ -104,7 +104,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
                 nodeEngine, config.getInstanceConfig().getCooperativeThreadCount(), nodeEngine.getProperties()
         );
         jobRepository = new JobRepository(jetInstance);
-        observableRepository = new ObservableRepository(jetInstance, config);
+        observableRepository = new ObservableRepository(jetInstance);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
 

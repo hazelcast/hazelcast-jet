@@ -176,6 +176,7 @@ public class JobCoordinationService {
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
                 DAG dag = deserializeDag(jobId, config, serializedDag);
                 Set<String> ownedObservables = ownedObservables(dag);
+                observableRepository.initObservables(ownedObservables);
                 JobRecord jobRecord = new JobRecord(jobId, serializedDag, dagToJson(dag), config, ownedObservables);
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
