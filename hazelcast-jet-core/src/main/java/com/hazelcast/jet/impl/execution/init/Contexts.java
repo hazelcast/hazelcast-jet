@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
-import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
@@ -27,7 +26,6 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 
@@ -38,8 +36,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
 
+import static com.hazelcast.internal.util.ConcurrencyUtil.getOrPutSynchronized;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.JobRepository.FILE_STORAGE_MAP_NAME_PREFIX;
+import static com.hazelcast.jet.impl.JobRepository.keyPrefixForChunkedMap;
 import static com.hazelcast.jet.impl.util.Util.unzip;
 
 public final class Contexts {
@@ -59,9 +59,18 @@ public final class Contexts {
         private final int memberCount;
         private final ProcessingGuarantee processingGuarantee;
 
-        MetaSupplierCtx(JetInstance jetInstance, long jobId, long executionId, JobConfig jobConfig, ILogger logger,
-                        String vertexName, int localParallelism, int totalParallelism, int memberCount,
-                        ProcessingGuarantee processingGuarantee) {
+        MetaSupplierCtx(
+                JetInstance jetInstance,
+                long jobId,
+                long executionId,
+                JobConfig jobConfig,
+                ILogger logger,
+                String vertexName,
+                int localParallelism,
+                int totalParallelism,
+                int memberCount,
+                ProcessingGuarantee processingGuarantee
+        ) {
             this.jetInstance = jetInstance;
             this.jobId = jobId;
             this.executionId = executionId;
@@ -134,9 +143,19 @@ public final class Contexts {
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         ProcSupplierCtx(
-                JetInstance jetInstance, long jobId, long executionId, JobConfig jobConfig, ILogger logger,
-                String vertexName, int localParallelism, int totalParallelism, int memberIndex, int memberCount,
-                ProcessingGuarantee processingGuarantee, ConcurrentMap<String, File> localFiles) {
+                JetInstance jetInstance,
+                long jobId,
+                long executionId,
+                JobConfig jobConfig,
+                ILogger logger,
+                String vertexName,
+                int localParallelism,
+                int totalParallelism,
+                int memberIndex,
+                int memberCount,
+                ProcessingGuarantee processingGuarantee,
+                ConcurrentMap<String, File> localFiles
+        ) {
             super(jetInstance, jobId, executionId, jobConfig, logger, vertexName, localParallelism, totalParallelism,
                     memberCount, processingGuarantee);
             this.memberIndex = memberIndex;
@@ -152,19 +171,19 @@ public final class Contexts {
         public File attachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
             findResourceConfigOrThrowException(id);
-            return Util.getOrPutIfAbsentWithCleanup(localFiles, id, key -> {
+            // TODO consider introducing a ContextMutexFactory
+            return getOrPutSynchronized(localFiles, id, localFiles, id1 -> {
                 JetInstance instance = jetInstance();
                 String jobId = idToString(jobId());
                 IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
-                try (IMapInputStream inputStream = new IMapInputStream(map, jobId, key)) {
-                    Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + key);
+                try (IMapInputStream inputStream = new IMapInputStream(map, keyPrefixForChunkedMap(jobId, id1))) {
+                    Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id1);
                     unzip(inputStream, directory);
                     return directory.toFile();
                 } catch (IOException e) {
                     throw ExceptionUtil.rethrow(e);
                 }
-            }, IOUtil::delete);
-
+            });
         }
 
         @Nonnull @Override

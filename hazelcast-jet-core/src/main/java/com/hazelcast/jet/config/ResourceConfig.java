@@ -59,14 +59,16 @@ public class ResourceConfig implements Serializable {
     }
 
     /**
-     * Returns the URL at which the resource will be available.
+     * Returns the URL at which the resource is available. Resolved on the
+     * local machine during job submission.
      */
     public URL getUrl() {
         return url;
     }
 
     /**
-     * The ID of the resource, null for archive files.
+     * Returns the ID of the resource that will be used to form the {@code
+     * IMap} key under which it will be stored in the Jet cluster.
      */
     public String getId() {
         return id;

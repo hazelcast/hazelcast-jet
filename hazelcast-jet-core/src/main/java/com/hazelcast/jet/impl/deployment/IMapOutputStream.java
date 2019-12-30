@@ -28,12 +28,12 @@ import static java.lang.Math.min;
 
 public class IMapOutputStream extends OutputStream {
     private static final int CHUNK_SIZE = 1 << 17;
-    private static final int INT_BYTES_COUNT = 4;
+
     private final String prefix;
     private final IMap<String, byte[]> map;
     private final ByteBuffer currentChunk = ByteBuffer.allocate(CHUNK_SIZE);
-    private final byte[] singleByteBuf = new byte[1];
-    private boolean closed;
+    private final byte[] singleByteBuffer = new byte[1];
+
     private int currentChunkIndex = 1;
 
     public IMapOutputStream(IMap<String, byte[]> map, String prefix) {
@@ -43,15 +43,18 @@ public class IMapOutputStream extends OutputStream {
 
     @Override
     public void close() throws IOException {
-        if (closed) {
+        if (isClosed()) {
             return;
         }
         flush();
-        ByteBuffer buf = ByteBuffer.allocate(INT_BYTES_COUNT);
+        ByteBuffer buf = ByteBuffer.allocate(Integer.BYTES);
         buf.putInt(currentChunkIndex);
         map.put(prefix, buf.array());
         currentChunkIndex = -1;
-        closed = true;
+    }
+
+    private boolean isClosed() {
+        return currentChunkIndex == -1;
     }
 
     @Override
@@ -60,7 +63,7 @@ public class IMapOutputStream extends OutputStream {
             throw new IndexOutOfBoundsException(String.format(
                     "b.length == %,d, off == %,d, len == %,d", b.length, off, len));
         }
-        if (currentChunkIndex == -1) {
+        if (isClosed()) {
             throw new IOException("Stream already closed");
         }
         for (int writeCount = 0; writeCount < len; ) {
@@ -74,8 +77,14 @@ public class IMapOutputStream extends OutputStream {
     }
 
     @Override
+    public void write(int b) throws IOException {
+        singleByteBuffer[0] = (byte) b;
+        write(singleByteBuffer);
+    }
+
+    @Override
     public void flush() throws IOException {
-        if (closed) {
+        if (isClosed()) {
             return;
         }
         boolean incompleteChunk = currentChunk.remaining() > 0;
@@ -93,11 +102,5 @@ public class IMapOutputStream extends OutputStream {
         }
         currentChunkIndex++;
         currentChunk.clear();
-    }
-
-    @Override
-    public void write(int b) throws IOException {
-        singleByteBuf[0] = (byte) b;
-        write(singleByteBuf, 0, 1);
     }
 }

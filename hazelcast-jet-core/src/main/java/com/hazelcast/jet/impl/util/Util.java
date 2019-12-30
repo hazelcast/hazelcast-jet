@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.internal.util.ConstructorFunction;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -58,11 +57,9 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
@@ -101,20 +98,6 @@ public final class Util {
 
     public static <T> Supplier<T> memoizeConcurrent(Supplier<T> onceSupplier) {
         return new ConcurrentMemoizingSupplier<>(onceSupplier);
-    }
-
-    public static <K, V> V getOrPutIfAbsentWithCleanup(ConcurrentMap<K, V> map, K key, ConstructorFunction<K, V> func,
-                                            Consumer<V> cleanupConsumer) {
-        V value = map.get(key);
-        if (value == null) {
-            value = func.createNew(key);
-            V current = map.putIfAbsent(key, value);
-            if (current != null) {
-                cleanupConsumer.accept(value);
-                value = current;
-            }
-        }
-        return value;
     }
 
     public static <T> T uncheckCall(@Nonnull Callable<T> callable) {
@@ -301,8 +284,16 @@ public final class Util {
         }
     }
 
+    /**
+     * Creates a ZIP-file stream from the directory tree rooted at the supplied
+     * {@code baseDir}. Pipes the stream into the provided output stream, closing
+     * it when done.
+     * <p>
+     * <strong>Note:</strong> files and directories starting with either {@code _}
+     * or {@code .} are ignored.
+     */
     public static void zipDirectoryToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream)
-            throws IOException {
+    throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
             for (Path dirPath; (dirPath = dirQueue.poll()) != null; ) {
@@ -336,15 +327,15 @@ public final class Util {
     }
 
     public static void zipFileToOutputStream(@Nonnull Path filePath, @Nonnull OutputStream outputStream)
-            throws IOException {
+    throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Path fileName = filePath.getFileName();
-            if (fileName != null) {
-                zipOut.putNextEntry(new ZipEntry(fileName.toString()));
-                try (InputStream in = Files.newInputStream(filePath)) {
-                    copyStream(in, zipOut);
-                }
-                zipOut.closeEntry();
+            if (fileName == null) {
+                throw new IllegalArgumentException("filePath is empty");
+            }
+            zipOut.putNextEntry(new ZipEntry(fileName.toString()));
+            try (InputStream in = Files.newInputStream(filePath)) {
+                copyStream(in, zipOut);
             }
         }
     }

@@ -89,7 +89,7 @@ public class IMapIOStreamTest extends JetTestSupport {
         }
 
         // Then
-        try (IMapInputStream iMapInputStream = new IMapInputStream(map, "test", "")) {
+        try (IMapInputStream iMapInputStream = new IMapInputStream(map, "test")) {
             byte[] bytes = new byte[(int) length];
             BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes)));
             assertTrue(IOUtil.readFullyOrNothing(iMapInputStream, bytes));

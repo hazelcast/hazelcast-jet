@@ -21,30 +21,33 @@ package com.hazelcast.jet.config;
  */
 public enum ResourceType {
     /**
-     * Represent a file of any type.
+     * Represents a plain file.
      */
     FILE,
     /**
-     * Represent a class file.
-     */
-    CLASS,
-    /**
-     * Represent a directory of regular files.
+     * Represents a directory of plain files.
      */
     DIRECTORY,
     /**
-     * Represents a JAR file.
+     * Represents a class that will be on the classpath of the Jet job.
+     */
+    CLASS,
+    /**
+     * Represents a JAR file whose classes will be on the classpath of the Jet
+     * job.
      */
     JAR,
     /**
-     * Represents a ZIP file that contains JAR files.
+     * Represents a ZIP file that contains JAR files, all of whose classes will
+     * be on the classpath of the Jet job.
      */
     JARS_IN_ZIP;
 
     /**
-     * Returns whether this resource type represents an archive file.
+     * Returns whether this resource type represents an archive containing
+     * classes.
      */
-    public boolean isArchive() {
+    public boolean isClassArchive() {
         return this == ResourceType.JAR || this == ResourceType.JARS_IN_ZIP;
     }
 

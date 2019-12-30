@@ -176,6 +176,10 @@ public class JobRepository {
         this.exportedSnapshotDetailsCache = instance.getMap(EXPORTED_SNAPSHOTS_DETAIL_CACHE);
     }
 
+    public static String keyPrefixForChunkedMap(String jobId, String fileId) {
+        return jobId + ':' + fileId;
+    }
+
     // for tests
     void setResourcesExpirationMillis(long resourcesExpirationMillis) {
         this.resourcesExpirationMillis = resourcesExpirationMillis;
@@ -199,12 +203,12 @@ public class JobRepository {
                         break;
                     case FILE:
                         IMapOutputStream os = new IMapOutputStream(getJobFileStorage(jobId).get(),
-                                idToString(jobId) + rc.getId());
+                                keyPrefixForChunkedMap(idToString(jobId), rc.getId()));
                         zipFileToOutputStream(Paths.get(rc.getUrl().getFile()), os);
                         break;
                     case DIRECTORY:
                         IMapOutputStream os2 = new IMapOutputStream(getJobFileStorage(jobId).get(),
-                                idToString(jobId) + rc.getId());
+                                keyPrefixForChunkedMap(idToString(jobId), rc.getId()));
                         zipDirectoryToOutputStream(Paths.get(rc.getUrl().getFile()), os2);
                         break;
                     case JAR:
@@ -274,8 +278,7 @@ public class JobRepository {
 
     private void readStreamAndPutCompressedToMap(
             String resourceName, Map<String, byte[]> map, InputStream in
-    )
-            throws IOException {
+    ) throws IOException {
         // ignore duplicates: the first resource in first jar takes precedence
         if (map.containsKey(resourceName)) {
             return;

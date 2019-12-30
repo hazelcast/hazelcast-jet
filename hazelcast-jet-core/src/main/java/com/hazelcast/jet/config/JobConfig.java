@@ -557,9 +557,11 @@ public class JobConfig implements IdentifiedDataSerializable {
         return resourceConfigs;
     }
 
-    private JobConfig add(URL url, String id, ResourceType resourceType) {
-        boolean duplicate = resourceConfigs.stream()
-                                           .anyMatch(c -> c.getId().equals(id));
+    private JobConfig add(@Nonnull URL url, @Nullable String id, @Nonnull ResourceType resourceType) {
+        boolean duplicate = (id != null) && resourceConfigs.stream()
+                                                           .map(ResourceConfig::getId)
+                                                           .filter(Objects::nonNull)
+                                                           .anyMatch(existingId -> existingId.equals(id));
         if (duplicate) {
             throw new IllegalArgumentException("Resource with id:" + id + " already exists");
         }

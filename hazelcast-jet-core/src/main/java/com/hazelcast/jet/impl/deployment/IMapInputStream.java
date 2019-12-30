@@ -29,18 +29,18 @@ import static java.lang.Math.min;
 public class IMapInputStream extends InputStream {
 
     private final IMap<String, byte[]> map;
-    private final String id;
+    private final String prefix;
     private final int chunkCount;
 
     private ByteBuffer currentChunk;
     private int currentChunkIndex;
 
-    public IMapInputStream(IMap<String, byte[]> map, String jobId, String fileId) {
+    public IMapInputStream(IMap<String, byte[]> map, String prefix) {
         this.map = map;
-        this.id = jobId + fileId;
-        byte[] array = Objects.requireNonNull(map.get(id), "The file with id: " + fileId +
-                " does not exist for the job: " + jobId);
-        this.chunkCount = ByteBuffer.wrap(array).getInt();
+        this.prefix = prefix;
+        byte[] encodedChunkCount = Objects.requireNonNull(map.get(prefix),
+                "Chunked IMap doesn't contain the key '" + prefix + "'");
+        this.chunkCount = ByteBuffer.wrap(encodedChunkCount).getInt();
     }
 
     @Override
@@ -49,13 +49,17 @@ public class IMapInputStream extends InputStream {
         currentChunkIndex = -1;
     }
 
+    private boolean isClosed() {
+        return currentChunkIndex == -1;
+    }
+
     @Override
     public int read(@Nonnull byte[] b, int off, int len) throws IOException {
         if ((len | off) < 0 || len > b.length - off) {
             throw new IndexOutOfBoundsException(String.format(
                     "b.length == %,d, off == %,d, len == %,d", b.length, off, len));
         }
-        if (currentChunkIndex == -1) {
+        if (isClosed()) {
             throw new IOException("Stream already closed");
         }
         try {
@@ -83,7 +87,7 @@ public class IMapInputStream extends InputStream {
         if (currentChunkIndex == chunkCount) {
             return false;
         }
-        currentChunk = ByteBuffer.wrap(map.get(id + '_' + (currentChunkIndex + 1)));
+        currentChunk = ByteBuffer.wrap(map.get(prefix + '_' + (currentChunkIndex + 1)));
         // Update currentChunkIndex only after map.get() succeeded
         currentChunkIndex++;
         return true;
