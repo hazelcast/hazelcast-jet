@@ -1025,8 +1025,8 @@ public final class Sinks {
      * JetInstance#getObservable jet.getObservable()}. Once created, it
      * lives on until explicitly {@linkplain Observable#destroy()
      * destroyed} or until destroyed by the auto-cleanup mechanism.
-     * Auto-cleanup kicks in only after there haven't been any producers or
-     * consumers for a set period (the default is one week).
+     * For details on how auto-cleanup works see the {@linkplain Observable
+     * Observable class Javadocs}.
      * <p>
      * While Jet will allow you to publish data to the same {@code Observable}
      * from many sinks, this is not the intended way of using them. The events

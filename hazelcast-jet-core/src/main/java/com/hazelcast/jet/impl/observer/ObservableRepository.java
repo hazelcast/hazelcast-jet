@@ -43,8 +43,6 @@ import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
 
 public class ObservableRepository {
 
-    //TODO (PR-1729): update javadoc for auto-cleanup functionality
-
     /**
      * Constant ID to be used as a {@link ProcessorMetaSupplier#getTags()
      * PMS tag key} for specifying when a PMS owns an {@link Observable} (ie.

@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.observer.BlockingIteratorObserver;
 import com.hazelcast.ringbuffer.Ringbuffer;
@@ -50,14 +51,24 @@ import java.util.stream.StreamSupport;
  * {@code Observable} when you acquire it by name, either by running a
  * job with an observable sink or by calling {@link JetInstance#getObservable
  * jet.getObservable()}, and after that it stays alive until you explicitly
- * {@link #destroy} it, or until the {@linkplain
- * com.hazelcast.jet.core.JetProperties#JOB_RESULTS_TTL_SECONDS
- * auto-cleanup mechanism} kicks in and destroys it for you. In particular,
- * keep in mind that a job may complete, but the {@code Observable}, along
- * with the data it published to it, lives on. <strong>Consuming the data
- * does not remove it from the Observable</strong>. If you destroy an {@code
- * Observable} that is still in active use by a sink, it will silently
- * re-create it the next time it has data to push to it.
+ * {@link #destroy} it, or until the auto-cleanup mechanism kicks in and
+ * destroys it for you. (Keep in mind that a job may complete, but the
+ * {@code Observable}, along with the data it published to it, lives on.
+ * <strong>Consuming the data does not remove it from the
+ * Observable</strong>. Also, if you destroy an {@code Observable} that is
+ * still in active use by a sink, it will silently re-create it the next
+ * time it has data to push to it.)
+ * <p>
+ * Auto-cleanup of the observables is a timeout based mechanism. The timeout
+ * duration defaults to a week and can be configured via the {@link
+ * JetProperties#JOB_RESULTS_TTL_SECONDS} property. The timer starts for an
+ * observable when the {@link Job} containing sinks for it completes
+ * (successfully, in case of batch jobs or with an error, for any job).
+ * If there are multiple jobs containing sinks for the same observable,
+ * then each subsequent job completion resets the timer (if it hasn't finished
+ * yet). If there is a timer running for an observable and a new job is
+ * submitted with sinks for that particular observable, then the timer
+ * gets cancelled.
  * <p>
  * Jet stores the {@code Observable}'s data in a {@link Ringbuffer} and
  * observers are backed by {@link Ringbuffer} listeners. This results in
