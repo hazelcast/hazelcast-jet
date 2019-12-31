@@ -16,16 +16,20 @@
 
 package com.hazelcast.jet.config;
 
+import com.hazelcast.jet.core.ProcessorSupplier;
+
 /**
  * Represents the type of the resource to be uploaded.
  */
 public enum ResourceType {
     /**
-     * Represents a plain file.
+     * Represents a plain file. It will be available to the Jet job by its ID,
+     * through {@link ProcessorSupplier.Context#attachedFile}.
      */
     FILE,
     /**
-     * Represents a directory of plain files.
+     * Represents a directory of plain files. It will be available to the Jet
+     * job by its ID, through {@link ProcessorSupplier.Context#attachedDirectory}.
      */
     DIRECTORY,
     /**

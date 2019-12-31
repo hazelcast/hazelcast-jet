@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.logging.ILogger;
 
@@ -24,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.Serializable;
+import java.net.URL;
 import java.util.Collection;
 import java.util.stream.Stream;
 
@@ -109,22 +111,24 @@ public interface ProcessorSupplier extends Serializable {
         int memberIndex();
 
         /**
-         * Returns the attached directory to the job with the given id.
+         * Uses the supplied ID to look up a directory you attached to the current
+         * Jet job. Creates a temporary directory with the same contents on the
+         * local cluster member and returns the location of the created directory.
+         * If the directory was already created, just returns its location.
          *
-         * @param id identifier defined on the {@link ResourceConfig} to be
-         *           used retrieve files from storage.
-         * @return {@link File} handle to the attached directory to the job with provided identifier.
+         * @param id the ID you used in a previous {@link JobConfig#attachDirectory} call
          * @since 4.0
          */
         @Nonnull
         File attachedDirectory(@Nonnull String id);
 
         /**
-         * Returns the attached file to the job with the given id.
+         * Uses the supplied ID to look up a file you attached to the current Jet
+         * job. Creates a temporary file with the same contents on the local
+         * cluster member and returns the location of the created file. If the
+         * file was already created, just returns its location.
          *
-         * @param id identifier defined on the {@link ResourceConfig} to be
-         *           used retrieve files from storage.
-         * @return {@link File} handle to the attached file to the job with provided identifier.
+         * @param id the ID you used in a previous {@link JobConfig#attachFile} call
          * @since 4.0
          */
         @Nonnull
