@@ -78,9 +78,10 @@ public final class Jet {
     }
 
     /**
-     * Returns either a Jet instance or a "bootstrapped" Jet client, depending
-     * on the context. The main goal of this factory method is to simplify
-     * submitting a Jet job to a remote cluster.
+     * Returns either a local Jet instance or a "bootstrapped" Jet client for
+     * a remote Jet cluster, depending on the context. The main goal of this
+     * factory method is to simplify submitting a Jet job to a remote cluster
+     * while also making it convenient to test on the local machine.
      * <p>
      * When you submit a job to a Jet instance that runs locally in your JVM,
      * it will have all the dependency classes available. However, when you
@@ -91,7 +92,7 @@ public final class Jet {
      * Normally you would have to explicitly add all the dependency classes to
      * the {@link JobConfig#addClass JobConfig}, either one by one or packaged
      * into a JAR. If you're submitting a job using the command-line tool {@code
-     * jet submit}, the JAR to attach is the same as the JAR containing the code
+     * jet submit}, the JAR to attach is the same JAR that contains the code
      * that submits the job.
      * <p>
      * This factory takes all of the above into account in order to provide a
@@ -109,26 +110,27 @@ public final class Jet {
      * in your local development/testing environment (using a local Jet
      * instance) and in production (using the remote cluster).
      * <p>
-     * To use the {@code jet submit} command, follow these steps:
+     * To use this feature, follow these steps:
      * <ol><li>
-     *     Write your {@code main()} method and your Jet code the usual way, except
-     *     for calling {@link #bootstrappedInstance()} to acquire a Jet client
-     *     instance (instead of {@link #newJetClient()}).
+     *     Write your {@code main()} method and your Jet code the usual way, making
+     *     sure you use this method (instead of {@link #newJetClient()}) to acquire
+     *     a Jet client instance.
      * <li>
-     *     Create a runnable JAR with your entry point declared as the {@code
-     *     Main-Class} in {@code MANIFEST.MF}. The JAR should include all
-     *     dependencies required to run it (except the Jet classes &mdash; these
-     *     are already available on the cluster classpath).
+     *     Create a runnable JAR (e.g. {@code jetjob.jar}) with your entry point
+     *     declared as the {@code Main-Class} in {@code MANIFEST.MF}. The JAR should
+     *     include all dependencies required to run it (except the Jet classes
+     *     &mdash; these are already available on the cluster classpath).
      * <li>
-     *     Run your JAR, but instead of {@code java -jar jetjob.jar} use {@code
-     *     jet submit jetjob.jar}. The script is found in the Jet distribution
-     *     zipfile, in the {@code bin} directory. On Windows use {@code
-     *     jet.bat}. The Jet client will be configured from {@code
-     *     hazelcast-client.xml} in the {@code config} directory in Jet's
-     *     distribution directory structure. Adjust that file as needed.
+     *     Submit the job by writing {@code jet submit jetjob.jar} on the command
+     *     line. This assumes you have downloaded the Jet distribution package and
+     *     its {@code bin} directory is on your system path. The Jet client will use
+     *     the configuration file {@code <distro_root>/config/hazelcast-client.yaml}.
+     *     Adjust that file as needed.
+     * <li>
+     *     The same code will work if you run it directly from your IDE. In this
+     *     case it will create a local Jet instance for itself to run on.
      * </ol>
-     * <p>
-     * For example, write a class like this:
+     * For example, you can write a class like this:
      * <pre>
      * public class CustomJetJob {
      *   public static void main(String[] args) {
