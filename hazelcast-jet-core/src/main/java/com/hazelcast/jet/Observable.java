@@ -28,7 +28,6 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -157,9 +156,9 @@ public interface Observable<T> extends Iterable<T> {
      * a function that will receive the job results as a {@code Stream<T>} and
      * return a single result.
      * <p>
-     * Returns a {@link Future Future<R>} that will become completed once your
-     * function has received all the job results through its {@code Stream} and
-     * returned the final result.
+     * Returns a {@link CompletableFuture CompletableFuture<R>} that will become
+     * completed once your function has received all the job results through
+     * its {@code Stream} and returned the final result.
      * <p>
      * A trivial example is counting, like this: {@code observable.toFuture(Stream::count)},
      * however the Stream API is quite rich and you can perform arbitrary
@@ -174,7 +173,7 @@ public interface Observable<T> extends Iterable<T> {
      *           be a stream
      */
     @Nonnull
-    default <R> Future<R> toFuture(@Nonnull Function<Stream<T>, R> fn) {
+    default <R> CompletableFuture<R> toFuture(@Nonnull Function<Stream<T>, R> fn) {
         Objects.requireNonNull(fn, "fn");
 
         Iterator<T> iterator = iterator();
