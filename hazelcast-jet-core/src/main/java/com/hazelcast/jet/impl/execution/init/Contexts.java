@@ -24,6 +24,7 @@ import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -36,10 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.hazelcast.internal.util.ConcurrencyUtil.getOrPutSynchronized;
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.JobRepository.FILE_STORAGE_MAP_NAME_PREFIX;
-import static com.hazelcast.jet.impl.JobRepository.keyPrefixForChunkedMap;
 import static com.hazelcast.jet.impl.util.Util.unzip;
 
 public final class Contexts {
@@ -171,35 +169,33 @@ public final class Contexts {
         public File attachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
             findResourceConfigOrThrowException(id);
-            // TODO consider introducing a ContextMutexFactory
-            return getOrPutSynchronized(localFiles, id, localFiles, id1 -> {
-                JetInstance instance = jetInstance();
-                String jobId = idToString(jobId());
-                IMap<String, byte[]> map = instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + jobId);
-                try (IMapInputStream inputStream = new IMapInputStream(map, keyPrefixForChunkedMap(jobId, id1))) {
-                    Path directory = Files.createTempDirectory("jet-" + instance.getName() + "-" + jobId + "-" + id1);
-                    unzip(inputStream, directory);
-                    return directory.toFile();
-                } catch (IOException e) {
-                    throw ExceptionUtil.rethrow(e);
-                }
-            });
+            return localFiles.computeIfAbsent(id, this::extractFileToDisk);
         }
 
         @Nonnull @Override
         public File attachedFile(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
             ResourceConfig resourceConfig = findResourceConfigOrThrowException(id);
-            return attachedDirectory(id).toPath()
-                                        .resolve(resourceConfig.getUrl().getFile())
-                                        .toFile();
+            return attachedDirectory(id).toPath().resolve(resourceConfig.getUrl().getFile()).toFile();
         }
 
         public ConcurrentMap<String, File> localFiles() {
             return localFiles;
         }
 
-        ResourceConfig findResourceConfigOrThrowException(String id) {
+        private File extractFileToDisk(String key) {
+            IMap<String, byte[]> map = jetInstance().getMap(JobRepository.jobFileStorageMapName(jobId()));
+            try (IMapInputStream inputStream = new IMapInputStream(map, key)) {
+                String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + key;
+                Path directory = Files.createTempDirectory(prefix);
+                unzip(inputStream, directory);
+                return directory.toFile();
+            } catch (IOException e) {
+                throw ExceptionUtil.rethrow(e);
+            }
+        }
+
+        private ResourceConfig findResourceConfigOrThrowException(String id) {
             return jobConfig()
                     .getResourceConfigs()
                     .stream()

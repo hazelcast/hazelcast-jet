@@ -293,7 +293,7 @@ public final class Util {
      * or {@code .} are ignored.
      */
     public static void zipDirectoryToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream)
-    throws IOException {
+            throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
             for (Path dirPath; (dirPath = dirQueue.poll()) != null; ) {
@@ -327,7 +327,7 @@ public final class Util {
     }
 
     public static void zipFileToOutputStream(@Nonnull Path filePath, @Nonnull OutputStream outputStream)
-    throws IOException {
+            throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Path fileName = filePath.getFileName();
             if (fileName == null) {

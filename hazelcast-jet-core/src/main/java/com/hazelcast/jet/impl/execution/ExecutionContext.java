@@ -66,10 +66,10 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Set<Address> participants;
     private final Object executionLock = new Object();
     private final ILogger logger;
-    private String jobName;
-
     // key: resource identifier
-    private ConcurrentMap<String, File> localFiles = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, File> localFiles = new ConcurrentHashMap<>();
+    
+    private String jobName;
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet
     private Map<Integer, Map<Integer, Map<Address, ReceiverTasklet>>> receiverMap = emptyMap();
@@ -189,7 +189,14 @@ public class ExecutionContext implements DynamicMetricsProvider {
                         + " encountered an exception in ProcessorSupplier.close(), ignoring it", e);
             }
         }
-        cleanupLocalFiles();
+
+        localFiles.forEach((k, file) -> {
+            try {
+                IOUtil.delete(file);
+            } catch (Exception e) {
+                logger.warning("Failed to delete temporary file " + file);
+            }
+        });
     }
 
     /**
@@ -252,12 +259,6 @@ public class ExecutionContext implements DynamicMetricsProvider {
                    .get(ordinal)
                    .get(sender)
                    .receiveStreamPacket(in);
-    }
-
-    private void cleanupLocalFiles() {
-        if (localFiles != null && !localFiles.isEmpty()) {
-            localFiles.values().forEach(IOUtil::delete);
-        }
     }
 
 

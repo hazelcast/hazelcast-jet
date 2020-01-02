@@ -176,10 +176,6 @@ public class JobRepository {
         this.exportedSnapshotDetailsCache = instance.getMap(EXPORTED_SNAPSHOTS_DETAIL_CACHE);
     }
 
-    public static String keyPrefixForChunkedMap(String jobId, String fileId) {
-        return jobId + ':' + fileId;
-    }
-
     // for tests
     void setResourcesExpirationMillis(long resourcesExpirationMillis) {
         this.resourcesExpirationMillis = resourcesExpirationMillis;
@@ -202,13 +198,11 @@ public class JobRepository {
                         }
                         break;
                     case FILE:
-                        IMapOutputStream os = new IMapOutputStream(getJobFileStorage(jobId).get(),
-                                keyPrefixForChunkedMap(idToString(jobId), rc.getId()));
+                        IMapOutputStream os = new IMapOutputStream(getJobFileStorage(jobId).get(), rc.getId());
                         zipFileToOutputStream(Paths.get(rc.getUrl().getFile()), os);
                         break;
                     case DIRECTORY:
-                        IMapOutputStream os2 = new IMapOutputStream(getJobFileStorage(jobId).get(),
-                                keyPrefixForChunkedMap(idToString(jobId), rc.getId()));
+                        IMapOutputStream os2 = new IMapOutputStream(getJobFileStorage(jobId).get(), rc.getId());
                         zipDirectoryToOutputStream(Paths.get(rc.getUrl().getFile()), os2);
                         break;
                     case JAR:
@@ -491,7 +485,7 @@ public class JobRepository {
      * Gets the job files storage map, lazily evaluated to avoid creating the map if it won't be needed
      */
     Supplier<IMap<String, byte[]>> getJobFileStorage(long jobId) {
-        return Util.memoizeConcurrent(() -> instance.getMap(FILE_STORAGE_MAP_NAME_PREFIX + idToString(jobId)));
+        return Util.memoizeConcurrent(() -> instance.getMap(jobFileStorageMapName(jobId)));
     }
 
     @Nullable
@@ -535,6 +529,13 @@ public class JobRepository {
      */
     public static String snapshotDataMapName(long jobId, int dataMapIndex) {
         return SNAPSHOT_DATA_MAP_PREFIX + idToString(jobId) + '.' + dataMapIndex;
+    }
+
+    /**
+     * Returns the map name in the form {@code __jet.files.<jobId>}
+     */
+    public static String jobFileStorageMapName(long jobId) {
+        return FILE_STORAGE_MAP_NAME_PREFIX + idToString(jobId);
     }
 
     /**
