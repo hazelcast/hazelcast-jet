@@ -176,12 +176,15 @@ public abstract class JtaSinkProcessorBase implements Processor {
         }
         try {
             xaResource.rollback(xid);
+            context.logger().info("aaa rolled back " + xid);
         } catch (XAException e) {
             // We ignore rollback failures.
             // If error is XAER_NOTA (transaction doesn't exist), we don't even log it, this is the normal case
             if (e.errorCode != XAException.XAER_NOTA) {
                 LoggingUtil.logFine(context.logger(), "Failed to roll back, transaction ID: %s. Error: %s",
                         xid, handleXAException(e, xid));
+            } else {
+                context.logger().info("aaa XAER_NOTA for " + xid);
             }
         }
     }

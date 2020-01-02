@@ -131,6 +131,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
         }
         try {
             for (Object item : inbox) {
+                logger.info("aaa adding to batch: " + item);
                 @SuppressWarnings("unchecked")
                 T castItem = (T) item;
                 bindFn.accept(statement, castItem);
@@ -138,6 +139,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             }
             executeBatch();
             if (!snapshotUtility.usesTransactionLifecycle()) {
+                logger.info("aaa plain commit");
                 connection.commit();
             }
             idleCount = 0;
@@ -161,6 +163,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     @Override
     public void close() {
         closeWithLogging(statement);
+        logger.info("aaa closing connection");
         closeWithLogging(connection);
     }
 
@@ -187,7 +190,8 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
                         + XADataSource.class.getName());
             }
             connection.setAutoCommit(false);
-            supportsBatch = connection.getMetaData().supportsBatchUpdates();
+//            supportsBatch = connection.getMetaData().supportsBatchUpdates();
+            supportsBatch = false; // TODO [viliam] revert
             statement = connection.prepareStatement(updateQuery);
         } catch (SQLException e) {
             logger.warning("Exception during connecting and preparing the statement", e);
@@ -209,8 +213,10 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     }
 
     private void executeBatch() throws SQLException {
+        logger.info("aaa executeBatch with " + batchCount + " items"); // TODO [viliam] remove
         if (supportsBatch && batchCount > 0) {
             statement.executeBatch();
+            logger.info("aaa executeBatch returned");
             batchCount = 0;
         }
     }

@@ -195,7 +195,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         synchronized (executionLock) {
             if (mode == null) {
-                cancellationFuture.cancel(true);
+                cancellationFuture.cancel(false); // TODO [viliam] set to true
             } else {
                 cancellationFuture.completeExceptionally(new JobTerminateRequestedException(mode));
             }
