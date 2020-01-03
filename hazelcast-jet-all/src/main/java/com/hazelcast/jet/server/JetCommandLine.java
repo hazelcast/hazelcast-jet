@@ -36,6 +36,7 @@ import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
+import com.hazelcast.jet.impl.JetBootstrap;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
 import picocli.CommandLine;
@@ -178,6 +179,10 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<name>",
                     description = "Name of the job"
             ) String name,
+            @Option(names = {"-c", "--class"},
+                    paramLabel = "<class>",
+                    description = "Fully qualified name of the main class inside the JAR file"
+            ) String mainClass,
             @Parameters(index = "0",
                     paramLabel = "<jar file>",
                     description = "The jar file to submit"
@@ -202,7 +207,7 @@ public class JetCommandLine implements Runnable {
         if (snapshotName != null) {
             printf("Will restore the job from the snapshot with name '%s'", snapshotName);
         }
-        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
+        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, mainClass, params);
     }
 
     @Command(description = "Suspends a running job")
@@ -459,7 +464,7 @@ public class JetCommandLine implements Runnable {
     }
 
     private void configureLogging() throws IOException {
-        JetMemberStarter.configureLogging();
+        JetBootstrap.configureLogging();
         Level logLevel = Level.WARNING;
         if (verbosity.isVerbose) {
             println("Verbose mode is on, setting logging level to INFO");

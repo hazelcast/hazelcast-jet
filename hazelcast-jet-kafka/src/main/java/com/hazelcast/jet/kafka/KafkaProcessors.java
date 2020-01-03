@@ -18,6 +18,7 @@ package com.hazelcast.jet.kafka;
 
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.kafka.impl.StreamKafkaP;
@@ -54,6 +55,7 @@ public final class KafkaProcessors {
     ) {
         Preconditions.checkPositive(topics.length, "At least one topic must be supplied");
         properties.put("enable.auto.commit", false);
+        properties.putIfAbsent("group.id", UuidUtil.newUnsecureUuidString());
         return ProcessorMetaSupplier.of(
                 PREFERRED_LOCAL_PARALLELISM,
                 StreamKafkaP.processorSupplier(properties, Arrays.asList(topics), projectionFn, eventTimePolicy)
@@ -68,10 +70,12 @@ public final class KafkaProcessors {
             @Nonnull Properties properties,
             @Nonnull String topic,
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn,
-            @Nonnull FunctionEx<? super T, ? extends V> extractValueFn
+            @Nonnull FunctionEx<? super T, ? extends V> extractValueFn,
+            boolean exactlyOnce
     ) {
-        return writeKafkaP(properties, (T t) ->
-                new ProducerRecord<>(topic, extractKeyFn.apply(t), extractValueFn.apply(t))
+        return writeKafkaP(properties,
+                (T t) -> new ProducerRecord<>(topic, extractKeyFn.apply(t), extractValueFn.apply(t)),
+                exactlyOnce
         );
     }
 
@@ -81,8 +85,9 @@ public final class KafkaProcessors {
      */
     public static <T, K, V> ProcessorMetaSupplier writeKafkaP(
             @Nonnull Properties properties,
-            @Nonnull FunctionEx<? super T, ? extends ProducerRecord<K, V>> toRecordFn
+            @Nonnull FunctionEx<? super T, ? extends ProducerRecord<K, V>> toRecordFn,
+            boolean exactlyOnce
     ) {
-        return ProcessorMetaSupplier.of(2, new WriteKafkaP.Supplier<T, K, V>(properties, toRecordFn));
+        return ProcessorMetaSupplier.of(1, WriteKafkaP.supplier(properties, toRecordFn, exactlyOnce));
     }
 }

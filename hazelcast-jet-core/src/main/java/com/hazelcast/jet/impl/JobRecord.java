@@ -41,7 +41,7 @@ public class JobRecord implements IdentifiedDataSerializable {
     private long jobId;
     private long creationTime;
     private Data dag;
-    // JSON representation of DAG, used by management center
+    // JSON representation of DAG, used by Management Center
     private String dagJson;
     private JobConfig config;
     private Set<String> ownedObservables;
@@ -74,7 +74,7 @@ public class JobRecord implements IdentifiedDataSerializable {
         return dag;
     }
 
-    // used by ManCenter
+    // used by Management Center
     public String getDagJson() {
         return dagJson;
     }
