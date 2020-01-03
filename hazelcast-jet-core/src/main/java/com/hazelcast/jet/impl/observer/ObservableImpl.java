@@ -87,7 +87,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
         onDestroy.accept(this);
 
-        //TODO: it shouldn't be allowed to use this class after destroying
+        //TODO (PR-1729): we shouldn't allow usages of this class, after it has been destroyed
     }
 
     private static class RingbufferListener<T> {
