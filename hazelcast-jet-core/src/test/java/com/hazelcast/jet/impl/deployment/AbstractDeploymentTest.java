@@ -18,11 +18,11 @@ package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.config.JobClassLoaderFactory;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
-import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.impl.deployment.LoadResource.LoadResourceMetaSupplier;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
@@ -48,16 +48,12 @@ import static java.util.Collections.singleton;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public abstract class AbstractDeploymentTest extends JetTestSupport {
+public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport {
 
     protected abstract JetInstance getJetInstance();
 
-    protected abstract void createCluster();
-
     @Test
     public void testDeployment_whenJarAddedAsResource_thenClassesAvailableOnClassLoader() throws Throwable {
-        createCluster();
-
         DAG dag = new DAG();
         dag.newVertex("load class", () -> new LoadPersonIsolated(true));
 
@@ -70,8 +66,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
     @Test
     public void testDeployment_whenClassAddedAsResource_thenClassAvailableOnClassLoader() throws Throwable {
-        createCluster();
-
         DAG dag = new DAG();
         dag.newVertex("create and print person", () -> new LoadPersonIsolated(true));
 
@@ -86,8 +80,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
     @Test
     public void testDeployment_whenClassAddedAsResource_then_availableInDestroyWhenCancelled() throws Throwable {
-        createCluster();
-
         DAG dag = new DAG();
         LoadPersonIsolated.assertionErrorInClose = null;
         dag.newVertex("v", () -> new LoadPersonIsolated(false));
@@ -108,8 +100,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
     @Test
     public void testDeployment_when_customClassLoaderFactory_then_used() throws Throwable {
-        createCluster();
-
         DAG dag = new DAG();
         dag.newVertex("load resource", new LoadResourceMetaSupplier());
 
@@ -121,8 +111,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
     @Test
     public void testDeployment_whenZipAddedAsResource_thenClassesAvailableOnClassLoader() throws Throwable {
-        createCluster();
-
         DAG dag = new DAG();
         dag.newVertex("load class", () -> new LoadPersonIsolated(true));
 
@@ -135,8 +123,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
     @Test
     public void testDeployment_whenFileAddedAsResource_thenFilesAvailableOnMembers() throws Throwable {
-        createCluster();
-
         Pipeline pipeline = Pipeline.create();
 
         pipeline.readFrom(TestSources.items(1))
@@ -169,8 +155,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
 
     @Test
     public void testDeployment_whenDirectoryAddedAsResource_thenFilesAvailableOnMembers() throws Throwable {
-        createCluster();
-
         Pipeline pipeline = Pipeline.create();
 
         pipeline.readFrom(TestSources.items(1))
