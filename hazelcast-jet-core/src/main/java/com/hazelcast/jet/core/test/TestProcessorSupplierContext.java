@@ -80,8 +80,12 @@ public class TestProcessorSupplierContext
         return attachedDirectory;
     }
 
-    public void setAttachedDirectory(File attachedDirectory) {
+    /**
+     * Set attached directory
+     */
+    public TestProcessorSupplierContext setAttachedDirectory(File attachedDirectory) {
         this.attachedDirectory = attachedDirectory;
+        return this;
     }
 
     @Nonnull @Override
@@ -89,10 +93,17 @@ public class TestProcessorSupplierContext
         return attachedFile;
     }
 
-    public void setAttachedFile(File attachedFile) {
+    /**
+     * Set attached file
+     */
+    public TestProcessorSupplierContext setAttachedFile(File attachedFile) {
         this.attachedFile = attachedFile;
+        return this;
     }
 
+    /**
+     * Sets member index
+     */
     public TestProcessorSupplierContext setMemberIndex(int memberIndex) {
         this.memberIndex = memberIndex;
         return this;

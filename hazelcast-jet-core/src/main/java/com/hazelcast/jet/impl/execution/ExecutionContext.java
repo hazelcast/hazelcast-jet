@@ -68,7 +68,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final ILogger logger;
     // key: resource identifier
     private final ConcurrentMap<String, File> tempDirectories = new ConcurrentHashMap<>();
-    
+
     private String jobName;
 
     // dest vertex id --> dest ordinal --> sender addr --> receiver tasklet

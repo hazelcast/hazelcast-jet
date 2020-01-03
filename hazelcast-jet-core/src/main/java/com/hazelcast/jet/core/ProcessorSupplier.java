@@ -18,14 +18,12 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.Serializable;
-import java.net.URL;
 import java.util.Collection;
 import java.util.stream.Stream;
 
