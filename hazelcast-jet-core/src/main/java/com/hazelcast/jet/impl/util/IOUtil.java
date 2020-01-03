@@ -24,17 +24,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.Iterator;
-import java.util.Queue;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import static java.util.Collections.singletonList;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 
 public final class IOUtil {
 
@@ -54,37 +51,24 @@ public final class IOUtil {
             justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
     public static void packDirectoryIntoZip(@Nonnull Path baseDir, @Nonnull OutputStream destination)
             throws IOException {
-        try (ZipOutputStream zipOut = new ZipOutputStream(destination)) {
-            Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
-            for (Path dirPath; (dirPath = dirQueue.poll()) != null; ) {
-                if (Files.isHidden(dirPath)) {
-                    continue;
-                }
-                try (DirectoryStream<Path> listing = Files.newDirectoryStream(dirPath)) {
-                    Iterator<Path> iter = listing.iterator();
-                    if (!iter.hasNext()) {
-                        // Write this empty directory as an explicit ZIP entry
-                        zipOut.putNextEntry(new ZipEntry(baseDir.relativize(dirPath).toString()));
-                        zipOut.closeEntry();
-                        continue;
+        try (
+                ZipOutputStream zipOut = new ZipOutputStream(destination);
+                Stream<Path> fileStream = Files.walk(baseDir)
+        ) {
+            fileStream.forEach(p -> {
+                try {
+                    if (Files.isHidden(p) || p == baseDir) {
+                        return;
                     }
-                    // DirectoryStream.iterator() may not be called twice
-                    for (Path filePath : (Iterable<Path>) () -> iter) {
-                        if (Files.isDirectory(filePath)) {
-                            dirQueue.add(filePath);
-                            continue;
-                        }
-                        if (Files.isHidden(filePath)) {
-                            continue;
-                        }
-                        zipOut.putNextEntry(new ZipEntry(baseDir.relativize(filePath).toString()));
-                        try (InputStream in = Files.newInputStream(filePath)) {
-                            copyStream(in, zipOut);
-                        }
-                        zipOut.closeEntry();
+                    zipOut.putNextEntry(new ZipEntry(baseDir.relativize(p).toString()));
+                    if (!Files.isDirectory(p)) {
+                        Files.copy(p, zipOut);
                     }
+                    zipOut.closeEntry();
+                } catch (IOException e) {
+                    throw sneakyThrow(e);
                 }
-            }
+            });
         }
     }
 
@@ -131,18 +115,12 @@ public final class IOUtil {
     public static void unzip(InputStream is, Path targetDir) throws IOException {
         try (ZipInputStream zipIn = new ZipInputStream(is)) {
             for (ZipEntry ze; (ze = zipIn.getNextEntry()) != null; ) {
-                String entryName = ze.getName();
-                Path destPath = targetDir.resolve(entryName);
+                Path resolvedPath = targetDir.resolve(ze.getName());
                 if (ze.isDirectory()) {
-                    Files.createDirectory(destPath);
+                    Files.createDirectories(resolvedPath);
                 } else {
-                    Path parent = destPath.getParent();
-                    if (parent != null) {
-                        Files.createDirectories(parent);
-                        try (OutputStream fileOut = Files.newOutputStream(destPath)) {
-                            copyStream(zipIn, fileOut);
-                        }
-                    }
+                    Files.createDirectories(resolvedPath.getParent());
+                    Files.copy(zipIn, resolvedPath);
                 }
             }
         }
