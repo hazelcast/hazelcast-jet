@@ -176,7 +176,7 @@ public class JobCoordinationService {
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
                 DAG dag = deserializeDag(jobId, config, serializedDag);
                 Set<String> ownedObservables = ownedObservables(dag);
-                observableRepository.initObservables(ownedObservables);
+                observableRepository.init(ownedObservables);
                 JobRecord jobRecord = new JobRecord(jobId, serializedDag, dagToJson(dag), config, ownedObservables);
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
@@ -640,8 +640,7 @@ public class JobCoordinationService {
                             : null;
             jobRepository.completeJob(masterContext, jobMetrics,  completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
-                Set<String> ownedObservables = masterContext.jobRecord().getOwnedObservables();
-                observableRepository.completeObservables(ownedObservables, error);
+                observableRepository.complete(masterContext.jobRecord().getOwnedObservables(), error);
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
                 MasterContext existing = masterContexts.get(masterContext.jobId());
@@ -892,7 +891,6 @@ public class JobCoordinationService {
                         jobRepository.getJobExecutionRecord(jobRecord.getJobId()));
                 startJobIfNotStartedOrCompleted(jobRecord, jobExecutionRecord, "discovered by scanning of JobRecords");
             }
-            observableRepository.cleanup();
             jobRepository.cleanup(nodeEngine);
             if (!jobsScanned) {
                 synchronized (lock) {

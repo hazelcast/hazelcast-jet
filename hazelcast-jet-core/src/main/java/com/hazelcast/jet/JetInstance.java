@@ -21,6 +21,7 @@ import com.hazelcast.collection.IList;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
@@ -338,6 +339,16 @@ public interface JetInstance {
      */
     @Nonnull
     <T> Observable<T> getObservable(@Nonnull String name);
+
+    /**
+     * Returns an observable with a randomly generated name
+     *
+     * @since 4.0
+     */
+    @Nonnull
+    default <T> Observable<T> getObservable() {
+        return getObservable(UuidUtil.newUnsecureUuidString());
+    }
 
     /**
      * Shuts down the current instance. If this is a client instance, it

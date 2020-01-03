@@ -164,7 +164,7 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     private void onDestroy(Observable<?> observable) {
-        ObservableRepository.destroyRingbuffer(observable.name(), hazelcastInstance);
+        ObservableRepository.destroy(hazelcastInstance, observable.name());
         observables.remove(observable.name());
     }
 

@@ -86,6 +86,8 @@ public class ObservableImpl<T> implements Observable<T> {
         listeners.clear();
 
         onDestroy.accept(this);
+
+        //TODO: it shouldn't be allowed to use this class after destroying
     }
 
     private static class RingbufferListener<T> {
@@ -109,7 +111,7 @@ public class ObservableImpl<T> implements Observable<T> {
                 ILogger logger
         ) {
             this.observer = observer;
-            this.ringbuffer = hzInstance.getRingbuffer(ObservableRepository.getRingbufferName(observable));
+            this.ringbuffer = hzInstance.getRingbuffer(ObservableRepository.ringbufferName(observable));
             this.id = uuid.toString() + "/" + ringbuffer.getName();
             this.executor = getExecutor(hzInstance);
             this.sequence = ringbuffer.headSequence();

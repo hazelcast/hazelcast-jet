@@ -16,15 +16,10 @@
 
 package com.hazelcast.jet.impl.observer;
 
-import com.hazelcast.cluster.Member;
-import com.hazelcast.cluster.MemberSelector;
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.TestProcessors;
 import com.hazelcast.map.IMap;
-import com.hazelcast.spi.impl.NodeEngine;
-import com.hazelcast.spi.impl.NodeEngineImpl;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,13 +32,13 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
-import static com.hazelcast.jet.core.JetProperties.JOB_RESULTS_TTL_SECONDS;
 import static com.hazelcast.jet.core.JetProperties.JOB_SCAN_PERIOD;
 
 public class ObservableRepositoryTest extends SimpleTestInClusterSupport {
 
     private static final int MEMBER_COUNT = 2;
     private static final int PARALLELISM = Runtime.getRuntime().availableProcessors();
+    private static final int TTL_SECONDS = 10;
 
     private ObservableRepository repository;
     private TestTimeSource timeSource;
@@ -52,7 +47,6 @@ public class ObservableRepositoryTest extends SimpleTestInClusterSupport {
     public static void beforeClass() {
         JetConfig config = new JetConfig();
         Properties properties = config.getProperties();
-        properties.setProperty(JOB_RESULTS_TTL_SECONDS.getName(), Long.toString(10));
         properties.setProperty(JOB_SCAN_PERIOD.getName(), Long.toString(Long.MAX_VALUE));
 
         initializeWithClient(MEMBER_COUNT, config, null);
@@ -63,10 +57,9 @@ public class ObservableRepositoryTest extends SimpleTestInClusterSupport {
         TestProcessors.reset(MEMBER_COUNT * PARALLELISM);
 
         timeSource = new TestTimeSource();
-
-        NodeEngineImpl nodeEngine = ((HazelcastInstanceImpl) instance().getHazelcastInstance()).node.getNodeEngine();
-        MemberSelector memberSelector = new RoundRobinMemberSelector(nodeEngine);
-        repository = new ObservableRepository(instance(), timeSource, memberSelector);
+        repository = new ObservableRepository(
+                instance().getHazelcastInstance(), TimeUnit.SECONDS.toMillis(TTL_SECONDS), timeSource
+        );
     }
 
     @Test
@@ -175,17 +168,15 @@ public class ObservableRepositoryTest extends SimpleTestInClusterSupport {
     }
 
     private void initObservables(String... observables) {
-        repository.initObservables(Arrays.asList(observables));
+        repository.init(Arrays.asList(observables));
     }
 
     private void completeObservables(String... observables) {
-        repository.completeObservables(Arrays.asList(observables), null);
+        repository.complete(Arrays.asList(observables), null);
     }
 
     private void cleanup() {
-        for (int i = 0; i < instances().length; i++) {
-            repository.cleanup();
-        }
+        repository.cleanup();
     }
 
     private void assertCompletedObservables(String... observables) {
@@ -201,33 +192,6 @@ public class ObservableRepositoryTest extends SimpleTestInClusterSupport {
         List<String> list = new ArrayList<>(collection);
         list.sort(String::compareTo);
         return list;
-    }
-
-    private static class RoundRobinMemberSelector implements MemberSelector {
-
-        private final Member[] members;
-
-        private int index;
-        private int count;
-
-        RoundRobinMemberSelector(NodeEngine nodeEngine) {
-            members = new ArrayList<>(nodeEngine.getClusterService().getMembers()).toArray(new Member[0]);
-            index = 0;
-        }
-
-        @Override
-        public boolean select(Member member) {
-            boolean retVal = member == members[index];
-            count++;
-            if (count >= members.length) {
-                count = 0;
-                index++;
-                if (index >= members.length) {
-                    index = 0;
-                }
-            }
-            return retVal;
-        }
     }
 
     private static class TestTimeSource implements LongSupplier {

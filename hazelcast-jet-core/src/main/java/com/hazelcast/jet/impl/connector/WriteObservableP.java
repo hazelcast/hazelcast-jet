@@ -37,7 +37,7 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
 
     private WriteObservableP(String observableName, HazelcastInstance instance) {
         super(instance, MAX_PARALLEL_ASYNC_OPS);
-        this.ringbuffer = instance.getRingbuffer(ObservableRepository.getRingbufferName(observableName));
+        this.ringbuffer = instance.getRingbuffer(ObservableRepository.ringbufferName(observableName));
     }
 
     @Override
