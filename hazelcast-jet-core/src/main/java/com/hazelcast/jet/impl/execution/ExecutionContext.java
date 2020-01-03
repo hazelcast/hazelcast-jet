@@ -47,6 +47,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_DURATION;
+import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_START_TIME;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
@@ -302,8 +304,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         long executionStartTime = startTime.get();
         if (executionStartTime > 0) {
-            context.collect(descriptor, "execution_start_time", ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
-            context.collect(descriptor, "execution_duration", ProbeLevel.INFO, ProbeUnit.MS,
+            context.collect(descriptor, EXECUTION_START_TIME, ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
+            context.collect(descriptor, EXECUTION_DURATION, ProbeLevel.INFO, ProbeUnit.MS,
                     System.currentTimeMillis() - executionStartTime);
         }
         for (Tasklet tasklet : tasklets) {
