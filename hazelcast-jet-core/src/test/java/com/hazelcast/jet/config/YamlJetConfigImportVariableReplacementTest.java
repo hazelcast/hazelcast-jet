@@ -21,7 +21,6 @@ import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.TestRepl
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -392,7 +391,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         File tempFile = createConfigFile("jet", ".yaml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_YAML_JET_WITH_VARIABLES);
-            os.write(Util.readFully(resourceAsStream));
+            os.write(com.hazelcast.jet.impl.util.IOUtil.readFully(resourceAsStream));
         }
 
         //When
@@ -436,7 +435,7 @@ public class YamlJetConfigImportVariableReplacementTest extends AbstractJetConfi
         File tempFile = createConfigFile("jet", ".yaml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_YAML_JET_WITH_VARIABLES);
-            os.write(Util.readFully(resourceAsStream));
+            os.write(com.hazelcast.jet.impl.util.IOUtil.readFully(resourceAsStream));
         }
 
         //When

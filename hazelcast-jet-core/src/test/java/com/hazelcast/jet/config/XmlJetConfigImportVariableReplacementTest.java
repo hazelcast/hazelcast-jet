@@ -22,7 +22,6 @@ import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.core.HazelcastException;
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -434,7 +433,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         File tempFile = File.createTempFile("jet", ".xml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_XML_JET_WITH_VARIABLES);
-            os.write(Util.readFully(resourceAsStream));
+            os.write(com.hazelcast.jet.impl.util.IOUtil.readFully(resourceAsStream));
         }
 
         //When
@@ -482,7 +481,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         File tempFile = File.createTempFile("jet", ".xml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_XML_JET_WITH_VARIABLES);
-            os.write(Util.readFully(resourceAsStream));
+            os.write(com.hazelcast.jet.impl.util.IOUtil.readFully(resourceAsStream));
         }
 
         //When

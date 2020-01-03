@@ -72,8 +72,8 @@ import java.util.zip.ZipInputStream;
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.Util.directoryAsZipToOutputStream;
-import static com.hazelcast.jet.impl.util.Util.fileAsZipToOutputStream;
+import static com.hazelcast.jet.impl.util.IOUtil.copyDirectoryAsZip;
+import static com.hazelcast.jet.impl.util.IOUtil.copyFileAsZip;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
@@ -201,11 +201,11 @@ public class JobRepository {
                         break;
                     case FILE:
                         IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId());
-                        fileAsZipToOutputStream(rc.getUrl(), os);
+                        copyFileAsZip(rc.getUrl(), os);
                         break;
                     case DIRECTORY:
                         IMapOutputStream os2 = new IMapOutputStream(jobFileStorage.get(), rc.getId());
-                        directoryAsZipToOutputStream(Paths.get(rc.getUrl().getFile()), os2);
+                        copyDirectoryAsZip(Paths.get(rc.getUrl().getFile()), os2);
                         break;
                     case JAR:
                         loadJar(tmpMap, rc);

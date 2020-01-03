@@ -19,7 +19,6 @@ package com.hazelcast.jet.impl.deployment;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.map.IMap;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Assert;
@@ -34,6 +33,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.ByteBuffer;
 
+import static com.hazelcast.jet.impl.util.IOUtil.copyStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -52,7 +52,7 @@ public class IMapIOStreamTest extends JetTestSupport {
 
         // When
         try (IMapOutputStream ios = new IMapOutputStream(map, "test")) {
-            Util.copyStream(inputStream, ios);
+            copyStream(inputStream, ios);
         }
 
         // Then
@@ -85,7 +85,7 @@ public class IMapIOStreamTest extends JetTestSupport {
 
         // When
         try (IMapOutputStream ios = new IMapOutputStream(map, "test")) {
-            Util.copyStream(inputStream, ios);
+            copyStream(inputStream, ios);
         }
 
         // Then

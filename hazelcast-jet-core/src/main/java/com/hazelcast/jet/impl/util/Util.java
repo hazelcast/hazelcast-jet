@@ -29,36 +29,23 @@ import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InvalidClassException;
 import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayDeque;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,9 +55,6 @@ import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -80,15 +64,12 @@ import static com.hazelcast.jet.core.processor.SourceProcessors.readMapP;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static java.lang.Math.abs;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
 public final class Util {
-
-    private static final int BUFFER_SIZE = 1 << 14;
 
     private static final DateTimeFormatter LOCAL_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
     private static final Pattern TRAILING_NUMBER_PATTERN = Pattern.compile("(.*)-([0-9]+)");
@@ -139,17 +120,6 @@ public final class Util {
 
     public static JetInstance getJetInstance(NodeEngine nodeEngine) {
         return nodeEngine.<JetService>getService(JetService.SERVICE_NAME).getJetInstance();
-    }
-
-    @Nonnull
-    public static byte[] readFully(@Nonnull InputStream in) throws IOException {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] b = new byte[BUFFER_SIZE];
-            for (int len; (len = in.read(b)) != -1; ) {
-                out.write(b, 0, len);
-            }
-            return out.toByteArray();
-        }
     }
 
     public static long addClamped(long a, long b) {
@@ -259,93 +229,6 @@ public final class Util {
             res[i] = j;
         }
         return res;
-    }
-
-    public static void copyStream(InputStream in, OutputStream out) throws IOException {
-        byte[] buf = new byte[BUFFER_SIZE];
-        for (int readCount; (readCount = in.read(buf)) > 0; ) {
-            out.write(buf, 0, readCount);
-        }
-    }
-
-    public static void unzip(InputStream is, Path targetPath) throws IOException {
-        try (ZipInputStream zipIn = new ZipInputStream(is)) {
-            for (ZipEntry ze; (ze = zipIn.getNextEntry()) != null; ) {
-                String entryName = ze.getName();
-                Path destPath = targetPath.resolve(entryName);
-                if (ze.isDirectory()) {
-                    Files.createDirectory(destPath);
-                } else {
-                    Path parent = destPath.getParent();
-                    if (parent != null) {
-                        Files.createDirectories(parent);
-                        try (OutputStream fileOut = Files.newOutputStream(destPath)) {
-                            copyStream(zipIn, fileOut);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Creates a ZIP-file stream from the directory tree rooted at the supplied
-     * {@code baseDir}. Pipes the stream into the provided output stream, closing
-     * it when done.
-     * <p>
-     * <strong>Note:</strong> files and directories starting with either {@code _}
-     * or {@code .} are ignored.
-     */
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
-            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static void directoryAsZipToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream)
-            throws IOException {
-        try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
-            Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
-            for (Path dirPath; (dirPath = dirQueue.poll()) != null; ) {
-                String filename = Objects.toString(dirPath.getFileName());
-                if (filename.startsWith("_") || filename.startsWith(".")) {
-                    continue;
-                }
-                try (DirectoryStream<Path> listing = Files.newDirectoryStream(dirPath)) {
-                    Iterator<Path> iter = listing.iterator();
-                    if (!iter.hasNext()) {
-                        // Write this empty directory as an explicit ZIP entry
-                        zipOut.putNextEntry(new ZipEntry(baseDir.relativize(dirPath).toString()));
-                        zipOut.closeEntry();
-                        continue;
-                    }
-                    // DirectoryStream.iterator() may not be called twice
-                    for (Path filePath : (Iterable<Path>) () -> iter) {
-                        if (Files.isDirectory(filePath)) {
-                            dirQueue.add(filePath);
-                            continue;
-                        }
-                        zipOut.putNextEntry(new ZipEntry(baseDir.relativize(filePath).toString()));
-                        try (InputStream in = Files.newInputStream(filePath)) {
-                            copyStream(in, zipOut);
-                        }
-                        zipOut.closeEntry();
-                    }
-                }
-            }
-        }
-    }
-
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
-            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static void fileAsZipToOutputStream(@Nonnull URL url, @Nonnull OutputStream outputStream)
-            throws IOException, URISyntaxException {
-        try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
-            Path fileName = Paths.get(url.toURI()).getFileName();
-            if (fileName == null) {
-                throw new IllegalArgumentException("filePath is empty");
-            }
-            zipOut.putNextEntry(new ZipEntry(fileName.toString()));
-            try (InputStream in = url.openStream()) {
-                copyStream(in, zipOut);
-            }
-        }
     }
 
     private static class NullOutputStream extends OutputStream {

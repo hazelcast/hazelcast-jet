@@ -38,7 +38,7 @@ import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.util.Util.unzip;
+import static com.hazelcast.jet.impl.util.IOUtil.unzip;
 
 public final class Contexts {
 
