@@ -74,7 +74,7 @@ public class IMapInputStream extends InputStream {
             } while (readCount < len && fetchNextChunk());
             return readCount > 0 ? readCount : -1;
         } catch (Exception e) {
-            throw new IOException("Reading chunked IMap failed", e);
+            throw new IOException("Reading chunked IMap failed: " + e, e);
         }
     }
 

@@ -95,7 +95,7 @@ public class IMapOutputStream extends OutputStream {
         try {
             map.put(prefix + '_' + currentChunkIndex, value);
         } catch (Exception e) {
-            throw new IOException("Writing to chunked IMap failed", e);
+            throw new IOException("Writing to chunked IMap failed: " + e, e);
         }
         if (incompleteChunk) {
             return;
