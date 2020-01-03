@@ -16,12 +16,14 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriter;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.internal.serialization.Data;
 
 import javax.annotation.Nonnull;
 import java.util.Map.Entry;
@@ -148,6 +150,11 @@ public class StoreSnapshotTasklet implements Tasklet {
             }
         }
         return true;
+    }
+
+    @Override
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+        snapshotContext.provideDynamicMetrics(descriptor, context);
     }
 
     @Override

@@ -16,11 +16,16 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.impl.operation.SnapshotPhase2Operation;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
+import com.hazelcast.jet.impl.operation.SnapshotPhase2Operation;
 import com.hazelcast.logging.ILogger;
 
 import java.util.concurrent.CancellationException;
@@ -29,9 +34,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_BYTES;
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_CHUNKS;
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_KEYS;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-public class SnapshotContext {
+public class SnapshotContext implements DynamicMetricsProvider {
 
     private final ILogger logger;
 
@@ -74,11 +82,6 @@ public class SnapshotContext {
      * It's in the range 0..numSsTasklets (inclusive) or 0..numPTasklets.
      */
     private final AtomicInteger numRemainingTasklets = new AtomicInteger();
-
-    /**
-     * Holder for the snapshot error, if any
-     */
-    private final AtomicReference<Throwable> snapshotError = new AtomicReference<>();
 
     /**
      * Snapshot id of current active snapshot. Source processors read
@@ -129,9 +132,16 @@ public class SnapshotContext {
      */
     private volatile CompletableFuture<Void> phase2Future;
 
-    private final AtomicLong totalBytes = new AtomicLong();
-    private final AtomicLong totalKeys = new AtomicLong();
-    private final AtomicLong totalChunks = new AtomicLong();
+    /**
+     * Cumulated results for all tasklets, from the ongoing phase 1 (if any).
+     */
+    private final OngoingResults ongoingResults = new OngoingResults();
+
+    /**
+     * Cumulated results for all tasklets, for the latest finished phase 1.
+     */
+    private final StableResults stableResults = new StableResults();
+
     private boolean isCancelled;
 
     public SnapshotContext(ILogger logger, String jobNameAndExecutionId, long activeSnapshotId,
@@ -344,9 +354,7 @@ public class SnapshotContext {
      * all async flush operations are done).
      */
     void phase1DoneForTasklet(long numBytes, long numKeys, long numChunks) {
-        totalBytes.addAndGet(numBytes);
-        totalKeys.addAndGet(numKeys);
-        totalChunks.addAndGet(numChunks);
+        ongoingResults.add(numBytes, numKeys, numChunks);
         int newRemainingTasklets = numRemainingTasklets.decrementAndGet();
         assert newRemainingTasklets >= 0 : "newRemainingTasklets=" + newRemainingTasklets;
         if (newRemainingTasklets == 0) {
@@ -388,14 +396,16 @@ public class SnapshotContext {
             assert phase1Future == null : "phase1Future=" + phase1Future;
             return;
         }
-        phase1Future.complete(
-                new SnapshotPhase1Result(totalBytes.get(), totalKeys.get(), totalChunks.get(), snapshotError.get()));
+        long bytes = ongoingResults.getBytes();
+        long keys = ongoingResults.getKeys();
+        long chunks = ongoingResults.getChunks();
+        Throwable error = ongoingResults.getError();
+
+        phase1Future.complete(new SnapshotPhase1Result(bytes, keys, chunks, error));
 
         phase1Future = null;
-        snapshotError.set(null);
-        totalBytes.set(0);
-        totalKeys.set(0);
-        totalChunks.set(0);
+        ongoingResults.clear();
+        stableResults.set(bytes, keys, chunks);
         currentMapName = null;
     }
 
@@ -409,11 +419,78 @@ public class SnapshotContext {
     }
 
     void reportError(Throwable ex) {
-        snapshotError.compareAndSet(null, ex);
+        ongoingResults.setError(ex);
     }
 
     // public-visible for tests
     AtomicInteger getNumRemainingTasklets() {
         return numRemainingTasklets;
+    }
+
+    @Override
+    public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+        stableResults.provideDynamicMetrics(descriptor, context);
+    }
+
+    private static class OngoingResults {
+
+        private final AtomicReference<Throwable> error = new AtomicReference<>();
+        private final AtomicLong bytes = new AtomicLong();
+        private final AtomicLong keys = new AtomicLong();
+        private final AtomicLong chunks = new AtomicLong();
+
+        Throwable getError() {
+            return error.get();
+        }
+
+        long getBytes() {
+            return bytes.get();
+        }
+
+        long getKeys() {
+            return keys.get();
+        }
+
+        long getChunks() {
+            return chunks.get();
+        }
+
+        void setError(Throwable ex) {
+            error.compareAndSet(null, ex);
+        }
+
+        void add(long bytes, long keys, long chunks) {
+            this.bytes.addAndGet(bytes);
+            this.keys.addAndGet(keys);
+            this.chunks.addAndGet(chunks);
+        }
+
+        void clear() {
+            error.set(null);
+            bytes.set(0);
+            keys.set(0);
+            chunks.set(0);
+        }
+    }
+
+    private static class StableResults implements DynamicMetricsProvider {
+
+        private long bytes;
+        private long keys;
+        private long chunks;
+
+        synchronized void set(long bytes, long keys, long chunks) {
+            this.bytes = bytes;
+            this.keys = keys;
+            this.chunks = chunks;
+        }
+
+        @Override
+        public synchronized void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+            context.collect(descriptor, SNAPSHOT_BYTES, ProbeLevel.INFO, ProbeUnit.COUNT, bytes);
+            context.collect(descriptor, SNAPSHOT_KEYS, ProbeLevel.INFO, ProbeUnit.COUNT, keys);
+            context.collect(descriptor, SNAPSHOT_CHUNKS, ProbeLevel.INFO, ProbeUnit.COUNT, chunks);
+        }
+
     }
 }

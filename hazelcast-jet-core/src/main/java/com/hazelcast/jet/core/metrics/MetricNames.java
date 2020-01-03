@@ -116,6 +116,24 @@ public final class MetricNames {
     public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
 
     /**
+     * Tracks the total number of bytes written out in the last snapshot.
+     * The values are totals for a given execution of a specific job.
+     */
+    public static final String SNAPSHOT_BYTES = "snapshotBytes";
+
+    /**
+     * Tracks the total number of keys written out in the last snapshot.
+     * The values are totals for a given execution of a specific job.
+     */
+    public static final String SNAPSHOT_KEYS = "snapshotKeys";
+
+    /**
+     * Tracks the total number of chunks written out in the last snapshot.
+     * The values are totals for a given execution of a specific job.
+     */
+    public static final String SNAPSHOT_CHUNKS = "snapshotChunks";
+
+    /**
      * Tracks the size (in bytes) of snapshot data written out by a
      * particular {@link Processor} instance of a particular {@link Vertex}.
      * The {@link Vertex} and the {@link Processor} can be identified
