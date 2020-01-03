@@ -134,15 +134,6 @@ public final class MetricNames {
     public static final String SNAPSHOT_CHUNKS = "snapshotChunks";
 
     /**
-     * Tracks the size (in bytes) of snapshot data written out by a
-     * particular {@link Processor} instance of a particular {@link Vertex}.
-     * The {@link Vertex} and the {@link Processor} can be identified
-     * based on the {@link MetricTags#VERTEX} & {@link MetricTags#PROCESSOR}
-     * tags of the metric.
-     */
-    public static final String SNAPSHOT_SIZE = "snapshotSize";
-
-    /**
      * Counts data items coming in over the network for DISTRIBUTED input
      * {@link Edge}s of particular {@link Vertex} instances running on
      * various {@link Processor}s. These in turn can be identified based

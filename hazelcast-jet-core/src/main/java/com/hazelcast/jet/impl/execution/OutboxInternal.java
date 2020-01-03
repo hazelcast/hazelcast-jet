@@ -47,19 +47,4 @@ public interface OutboxInternal extends Outbox {
      */
     long lastForwardedWm();
 
-    /**
-     * Return the snapshot data size in bytes that has been written out (so
-     * far) through this outbox (so keys and values).
-     * <p>
-     * The size value is not strictly accurate in the sense that it's not the
-     * exact number of bytes that will end up in persistent storage. It's
-     * just the useful size of snapshot data (number of bytes of the
-     * serialized form) and does not include any overhead incurred by the
-     * concrete persistent storage technology being used.
-     * <p>
-     * Should still be useful, should give an accurate estimate of the
-     * data volumes going out towards persistent storage.
-     */
-    long snapshotSize();
-
 }

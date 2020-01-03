@@ -33,7 +33,6 @@ import java.util.stream.IntStream;
 
 import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.impl.util.Util.lazyAdd;
 import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 
 public class OutboxImpl implements OutboxInternal {
@@ -57,7 +56,6 @@ public class OutboxImpl implements OutboxInternal {
     private Object unfinishedSnapshotKey;
     private Object unfinishedSnapshotValue;
     private final AtomicLong lastForwardedWm = new AtomicLong(Long.MIN_VALUE);
-    private final AtomicLong snapshotSize = new AtomicLong(0);
 
     private boolean blocked;
 
@@ -198,7 +196,6 @@ public class OutboxImpl implements OutboxInternal {
             Data sKey = serializationService.toData(key);
             Data sValue = serializationService.toData(value);
             pendingSnapshotEntry = entry(sKey, sValue);
-            lazyAdd(snapshotSize, sKey.dataSize() + sValue.dataSize());
         }
 
         boolean success = offerInternal(snapshotEdge, pendingSnapshotEntry);
@@ -251,10 +248,5 @@ public class OutboxImpl implements OutboxInternal {
     @Override
     public long lastForwardedWm() {
         return lastForwardedWm.get();
-    }
-
-    @Override
-    public long snapshotSize() {
-        return snapshotSize.get();
     }
 }

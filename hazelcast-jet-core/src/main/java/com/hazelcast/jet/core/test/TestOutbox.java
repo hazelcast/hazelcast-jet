@@ -223,11 +223,6 @@ public final class TestOutbox implements OutboxInternal {
     }
 
     @Override
-    public long snapshotSize() {
-        return outbox.snapshotSize();
-    }
-
-    @Override
     public String toString() {
         return Arrays.toString(buckets);
     }
