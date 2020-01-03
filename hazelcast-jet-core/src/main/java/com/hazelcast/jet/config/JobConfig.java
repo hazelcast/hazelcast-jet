@@ -453,8 +453,9 @@ public class JobConfig implements IdentifiedDataSerializable {
 
     /**
      * Adds the directory identified by the supplied pathname to the list of
-     * files that will be available to the job while it's executing in
-     * the Jet cluster. The directory name will be used as its ID.
+     * files that will be available to the job while it's executing in the Jet
+     * cluster. The directory name will be used as its ID. Hidden files in the
+     * directory will be ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
@@ -471,8 +472,9 @@ public class JobConfig implements IdentifiedDataSerializable {
 
     /**
      * Adds the directory identified by the supplied pathname to the list of
-     * files that will be available to the job while it's executing in
-     * the Jet cluster. The directory will be registered under the supplied ID.
+     * files that will be available to the job while it's executing in the Jet
+     * cluster. The directory will be registered under the supplied ID. Hidden
+     * files in the directory will be ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
@@ -488,9 +490,9 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the supplied directory to the list of files that will be
-     * available to the job while it's executing in the Jet cluster.
-     * The directory name will be used as its ID.
+     * Adds the supplied directory to the list of files that will be available
+     * to the job while it's executing in the Jet cluster. The directory name
+     * will be used as its ID. Hidden files in the directory will be ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
@@ -506,9 +508,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the supplied directory to the list of files that will be
-     * available to the job while it's executing in the Jet cluster.
-     * The directory will be registered under the supplied ID.
+     * Adds the supplied directory to the list of files that will be available
+     * to the job while it's executing in the Jet cluster. The directory will
+     * be registered under the supplied ID. Hidden files in the directory will
+     * be ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
@@ -528,9 +531,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the directory identified by the supplied URL to the list of
-     * files that will be available to the job while it's executing in
-     * the Jet cluster. The directory name will be used as its ID.
+     * Adds the directory identified by the supplied URL to the list of files
+     * that will be available to the job while it's executing in the Jet
+     * cluster. The directory name will be used as its ID. Hidden files in the
+     * directory will be ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
@@ -546,9 +550,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the directory identified by the supplied URL to the list of
-     * files that will be available to the job while it's executing in
-     * the Jet cluster. The directory will be registered under the supplied ID.
+     * Adds the directory identified by the supplied URL to the list of files
+     * that will be available to the job while it's executing in the Jet
+     * cluster. The directory will be registered under the supplied ID. Hidden
+     * files in the directory will be ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},

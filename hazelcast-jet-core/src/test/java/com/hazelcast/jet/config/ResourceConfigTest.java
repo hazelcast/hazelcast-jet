@@ -43,7 +43,7 @@ public class ResourceConfigTest {
     @Test
     public void testAddClass_with_Class() {
         config.addClass(this.getClass());
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals(this.getClass().getName().replace('.', '/') + ".class", resourceConfig.getId());
         assertEquals(ResourceType.CLASS, resourceConfig.getResourceType());
@@ -53,14 +53,14 @@ public class ResourceConfigTest {
     public void testAddJar_with_Url() throws Exception {
         String urlString = "file://path/to/jarfile";
         config.addJar(new URL(urlString));
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("jarfile", resourceConfig.getId());
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
         assertEquals(urlString, resourceConfig.getUrl().toString());
     }
 
-    private ResourceConfig getNext() {
+    private ResourceConfig getFirstResourceConfig() {
         return config.getResourceConfigs().values().iterator().next();
     }
 
@@ -75,7 +75,7 @@ public class ResourceConfigTest {
     public void testAddJar_with_Path() throws Exception {
         String path = "/path/to/jarfile";
         config.addJar(path);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("jarfile", resourceConfig.getId());
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
@@ -86,7 +86,7 @@ public class ResourceConfigTest {
     public void testAddJar_with_File() throws Exception {
         File file = new File("/path/to/jarfile");
         config.addJar(file);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("jarfile", resourceConfig.getId());
         assertEquals(ResourceType.JAR, resourceConfig.getResourceType());
@@ -97,7 +97,7 @@ public class ResourceConfigTest {
     public void testAddZipOfJar_with_Url() throws Exception {
         String urlString = "file://path/to/zipFile";
         config.addJarsInZip(new URL(urlString));
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("zipFile", resourceConfig.getId());
         assertEquals(ResourceType.JARS_IN_ZIP, resourceConfig.getResourceType());
@@ -115,7 +115,7 @@ public class ResourceConfigTest {
     public void testAddZipOfJar_with_Path() throws Exception {
         String path = "/path/to/zipFile";
         config.addJarsInZip(path);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("zipFile", resourceConfig.getId());
         assertEquals(ResourceType.JARS_IN_ZIP, resourceConfig.getResourceType());
@@ -126,7 +126,7 @@ public class ResourceConfigTest {
     public void testAddZipOfJar_with_File() throws Exception {
         File file = new File("/path/to/zipFile");
         config.addJarsInZip(file);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("zipFile", resourceConfig.getId());
         assertEquals(ResourceType.JARS_IN_ZIP, resourceConfig.getResourceType());
@@ -137,7 +137,7 @@ public class ResourceConfigTest {
     public void testAttachFile_with_Url() throws Exception {
         String urlString = "file://path/to/resourceFile";
         config.attachFile(new URL(urlString));
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("resourceFile", resourceConfig.getId());
         assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
@@ -156,7 +156,7 @@ public class ResourceConfigTest {
         String resourceName = "resourceFileName";
         String urlString = "file://path/to/resourceFile";
         config.attachFile(new URL(urlString), resourceName);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals(resourceName, resourceConfig.getId());
         assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
@@ -167,7 +167,7 @@ public class ResourceConfigTest {
     public void testAttachFile_with_Path() throws Exception {
         String path = "/path/to/resource";
         config.attachFile(path);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("resource", resourceConfig.getId());
         assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
@@ -179,7 +179,7 @@ public class ResourceConfigTest {
         String resourceName = "resourceFileName";
         String path = "/path/to/jarfile";
         config.attachFile(path, resourceName);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals(resourceName, resourceConfig.getId());
         assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
@@ -190,7 +190,7 @@ public class ResourceConfigTest {
     public void testAttachFile_with_File() throws Exception {
         File file = new File("/path/to/resource");
         config.attachFile(file);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("resource", resourceConfig.getId());
         assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
@@ -202,7 +202,7 @@ public class ResourceConfigTest {
         String resourceName = "resourceFileName";
         File file = new File("/path/to/resource");
         config.attachFile(file, resourceName);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals(resourceName, resourceConfig.getId());
         assertEquals(ResourceType.FILE, resourceConfig.getResourceType());
@@ -225,7 +225,7 @@ public class ResourceConfigTest {
     public void testAttachDirectory_with_Url() throws Exception {
         String urlString = "file://path/to/resourceFile";
         config.attachDirectory(new URL(urlString));
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("resourceFile", resourceConfig.getId());
         assertEquals(ResourceType.DIRECTORY, resourceConfig.getResourceType());
@@ -245,7 +245,7 @@ public class ResourceConfigTest {
         String resourceName = "resourceFileName";
         String urlString = "file://path/to/resourceFile";
         config.attachDirectory(new URL(urlString), resourceName);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals(resourceName, resourceConfig.getId());
         assertEquals(ResourceType.DIRECTORY, resourceConfig.getResourceType());
@@ -256,7 +256,7 @@ public class ResourceConfigTest {
     public void testAttachDirectory_with_Path() throws Exception {
         String path = "/path/to/resource";
         config.attachDirectory(path);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("resource", resourceConfig.getId());
         assertEquals(ResourceType.DIRECTORY, resourceConfig.getResourceType());
@@ -268,7 +268,7 @@ public class ResourceConfigTest {
         String resourceName = "resourceFileName";
         String path = "/path/to/jarfile";
         config.attachDirectory(path, resourceName);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals(resourceName, resourceConfig.getId());
         assertEquals(ResourceType.DIRECTORY, resourceConfig.getResourceType());
@@ -279,7 +279,7 @@ public class ResourceConfigTest {
     public void testAttachDirectory_with_File() throws Exception {
         File file = new File("/path/to/resource");
         config.attachDirectory(file);
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
 
         assertEquals("resource", resourceConfig.getId());
         assertEquals(ResourceType.DIRECTORY, resourceConfig.getResourceType());
@@ -292,7 +292,7 @@ public class ResourceConfigTest {
         File file = new File("/path/to/resource");
         config.attachDirectory(file, resourceName);
 
-        ResourceConfig resourceConfig = getNext();
+        ResourceConfig resourceConfig = getFirstResourceConfig();
         assertEquals(resourceName, resourceConfig.getId());
         assertEquals(ResourceType.DIRECTORY, resourceConfig.getResourceType());
         assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
