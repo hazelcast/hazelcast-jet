@@ -76,6 +76,9 @@ public final class IOUtil {
                             dirQueue.add(filePath);
                             continue;
                         }
+                        if (Files.isHidden(filePath)) {
+                            continue;
+                        }
                         zipOut.putNextEntry(new ZipEntry(baseDir.relativize(filePath).toString()));
                         try (InputStream in = Files.newInputStream(filePath)) {
                             copyStream(in, zipOut);
