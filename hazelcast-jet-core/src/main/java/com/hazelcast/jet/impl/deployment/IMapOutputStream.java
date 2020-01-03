@@ -34,7 +34,7 @@ public class IMapOutputStream extends OutputStream {
     private final ByteBuffer currentChunk = ByteBuffer.allocate(CHUNK_SIZE);
     private final byte[] singleByteBuffer = new byte[1];
 
-    private int currentChunkIndex = 1;
+    private int currentChunkIndex;
 
     public IMapOutputStream(IMap<String, byte[]> map, String prefix) {
         this.map = map;
@@ -54,7 +54,7 @@ public class IMapOutputStream extends OutputStream {
     }
 
     private boolean isClosed() {
-        return currentChunkIndex == -1;
+        return currentChunkIndex < 0;
     }
 
     @Override
@@ -87,18 +87,15 @@ public class IMapOutputStream extends OutputStream {
         if (isClosed()) {
             return;
         }
-        boolean incompleteChunk = currentChunk.remaining() > 0;
         byte[] value = currentChunk.array();
-        if (incompleteChunk) {
+        if (currentChunk.remaining() > 0) {
+            // if we have remaining capacity, we need to truncate the value
             value = Arrays.copyOf(value, currentChunk.position());
         }
         try {
             map.put(prefix + '_' + currentChunkIndex, value);
         } catch (Exception e) {
             throw new IOException("Writing to chunked IMap failed: " + e, e);
-        }
-        if (incompleteChunk) {
-            return;
         }
         currentChunkIndex++;
         currentChunk.clear();

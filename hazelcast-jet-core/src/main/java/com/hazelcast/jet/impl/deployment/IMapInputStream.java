@@ -39,7 +39,7 @@ public class IMapInputStream extends InputStream {
         this.map = map;
         this.prefix = prefix;
         byte[] encodedChunkCount = Objects.requireNonNull(map.get(prefix),
-                "The attached files map doesn't contain the key '" + prefix + "'");
+                "A file/directory with id '" + prefix + "' wasn't attached");
         this.chunkCount = ByteBuffer.wrap(encodedChunkCount).getInt();
     }
 
@@ -50,7 +50,7 @@ public class IMapInputStream extends InputStream {
     }
 
     private boolean isClosed() {
-        return currentChunkIndex == -1;
+        return currentChunkIndex < 0;
     }
 
     @Override
@@ -87,7 +87,7 @@ public class IMapInputStream extends InputStream {
         if (currentChunkIndex == chunkCount) {
             return false;
         }
-        currentChunk = ByteBuffer.wrap(map.get(prefix + '_' + (currentChunkIndex + 1)));
+        currentChunk = ByteBuffer.wrap(map.get(prefix + '_' + currentChunkIndex));
         // Update currentChunkIndex only after map.get() succeeded
         currentChunkIndex++;
         return true;

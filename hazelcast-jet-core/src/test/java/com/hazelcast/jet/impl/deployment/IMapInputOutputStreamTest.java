@@ -17,11 +17,11 @@
 package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.internal.nio.IOUtil;
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.map.IMap;
-import com.hazelcast.test.HazelcastParallelClassRunner;
+import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -37,8 +37,13 @@ import static com.hazelcast.jet.impl.util.IOUtil.copyStream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(HazelcastParallelClassRunner.class)
-public class IMapIOStreamTest extends JetTestSupport {
+@RunWith(HazelcastSerialClassRunner.class)
+public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
+
+    @BeforeClass
+    public static void beforeClass() {
+        initialize(1, null);
+    }
 
     @Test
     public void test_writeFile_to_IMap_then_fileReadFromIMapAsByteArray() throws Exception {
@@ -46,23 +51,24 @@ public class IMapIOStreamTest extends JetTestSupport {
         URL resource = this.getClass().getClassLoader().getResource("deployment/resource.txt");
         File file = new File(resource.toURI());
         long length = file.length();
-        InputStream inputStream = resource.openStream();
-        JetInstance jet = createJetMember();
-        IMap<String, byte[]> map = jet.getMap(randomMapName());
+        IMap<String, byte[]> map = instance().getMap(randomMapName());
 
         // When
-        try (IMapOutputStream ios = new IMapOutputStream(map, "test")) {
-            copyStream(inputStream, ios);
+        try (
+                InputStream in = resource.openStream();
+                IMapOutputStream ios = new IMapOutputStream(map, "test")
+        ) {
+            copyStream(in, ios);
         }
 
         // Then
         byte[] bytes = map.get("test");
         Assert.assertNotNull(bytes);
-        int chunks = ByteBuffer.wrap(bytes).getInt();
-        assertEquals(chunks + 1, map.size());
+        int numChunks = ByteBuffer.wrap(bytes).getInt();
+        assertEquals(numChunks + 1, map.size());
         int lengthFromMap = 0;
         ByteBuffer byteBuffer = ByteBuffer.allocate((int) length);
-        for (int i = 1; i <= chunks; i++) {
+        for (int i = 0; i < numChunks; i++) {
             byte[] chunk = map.get("test_" + i);
             byteBuffer.put(chunk);
             lengthFromMap += chunk.length;
@@ -79,12 +85,13 @@ public class IMapIOStreamTest extends JetTestSupport {
         URL resource = this.getClass().getClassLoader().getResource("deployment/resource.txt");
         File file = new File(resource.toURI());
         long length = file.length();
-        InputStream inputStream = resource.openStream();
-        JetInstance jet = createJetMember();
-        IMap<String, byte[]> map = jet.getMap(randomMapName());
+        IMap<String, byte[]> map = instance().getMap(randomMapName());
 
         // When
-        try (IMapOutputStream ios = new IMapOutputStream(map, "test")) {
+        try (
+                InputStream inputStream = resource.openStream();
+                IMapOutputStream ios = new IMapOutputStream(map, "test")
+        ) {
             copyStream(inputStream, ios);
         }
 
@@ -96,5 +103,4 @@ public class IMapIOStreamTest extends JetTestSupport {
             assertTrue(reader.readLine().startsWith("AAAP|Advanced"));
         }
     }
-
 }
