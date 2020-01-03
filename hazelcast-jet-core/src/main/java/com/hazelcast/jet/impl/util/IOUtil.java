@@ -119,6 +119,7 @@ public final class IOUtil {
                 if (ze.isDirectory()) {
                     Files.createDirectories(resolvedPath);
                 } else {
+                    assert resolvedPath.getParent() != null : "null parent: " + resolvedPath;
                     Files.createDirectories(resolvedPath.getParent());
                     Files.copy(zipIn, resolvedPath);
                 }
