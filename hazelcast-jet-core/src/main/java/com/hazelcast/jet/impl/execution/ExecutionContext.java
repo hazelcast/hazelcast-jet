@@ -67,7 +67,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Object executionLock = new Object();
     private final ILogger logger;
     // key: resource identifier
-    private final ConcurrentMap<String, File> localFiles = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, File> tempDirectories = new ConcurrentHashMap<>();
     
     private String jobName;
 
@@ -121,7 +121,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, localFiles);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -190,7 +190,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
             }
         }
 
-        localFiles.forEach((k, file) -> {
+        tempDirectories.forEach((k, file) -> {
             try {
                 IOUtil.delete(file);
             } catch (Exception e) {

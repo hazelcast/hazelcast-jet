@@ -137,7 +137,7 @@ public final class Contexts {
     static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context {
 
         private final int memberIndex;
-        private final ConcurrentMap<String, File> localFiles;
+        private final ConcurrentMap<String, File> tempDirectories;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         ProcSupplierCtx(
@@ -152,12 +152,12 @@ public final class Contexts {
                 int memberIndex,
                 int memberCount,
                 ProcessingGuarantee processingGuarantee,
-                ConcurrentMap<String, File> localFiles
+                ConcurrentMap<String, File> tempDirectories
         ) {
             super(jetInstance, jobId, executionId, jobConfig, logger, vertexName, localParallelism, totalParallelism,
                     memberCount, processingGuarantee);
             this.memberIndex = memberIndex;
-            this.localFiles = localFiles;
+            this.tempDirectories = tempDirectories;
         }
 
         @Override
@@ -169,7 +169,7 @@ public final class Contexts {
         public File attachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
             findResourceConfigOrThrowException(id);
-            return localFiles.computeIfAbsent(id, this::extractFileToDisk);
+            return tempDirectories.computeIfAbsent(id, this::extractFileToDisk);
         }
 
         @Nonnull @Override
@@ -179,8 +179,8 @@ public final class Contexts {
             return attachedDirectory(id).toPath().resolve(resourceConfig.getUrl().getFile()).toFile();
         }
 
-        public ConcurrentMap<String, File> localFiles() {
-            return localFiles;
+        public ConcurrentMap<String, File> tempDirectories() {
+            return tempDirectories;
         }
 
         private File extractFileToDisk(String key) {
@@ -214,10 +214,10 @@ public final class Contexts {
         public ProcCtx(JetInstance instance, long jobId, long executionId, JobConfig jobConfig,
                        ILogger logger, String vertexName, int localProcessorIndex,
                        int globalProcessorIndex, ProcessingGuarantee processingGuarantee, int localParallelism,
-                       int memberIndex, int memberCount, ConcurrentMap<String, File> localFiles) {
+                       int memberIndex, int memberCount, ConcurrentMap<String, File> tempDirectories) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
-                    localFiles);
+                    tempDirectories);
             this.localProcessorIndex = localProcessorIndex;
             this.globalProcessorIndex = globalProcessorIndex;
         }

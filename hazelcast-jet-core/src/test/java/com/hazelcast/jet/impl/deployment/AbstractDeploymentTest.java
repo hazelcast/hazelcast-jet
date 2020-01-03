@@ -32,15 +32,12 @@ import org.junit.Test;
 
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.io.Serializable;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
-import java.util.Map;
-import java.util.function.Function;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.executeAndPeel;
@@ -136,7 +133,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         executeAndPeel(jetInstance.newJob(dag, jobConfig));
     }
 
-
     @Test
     public void testDeployment_whenFileAddedAsResource_thenFilesAvailableOnMembers() throws Throwable {
         createCluster();
@@ -171,7 +167,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         executeAndPeel(jetInstance.newJob(pipeline, jobConfig));
     }
 
-
     @Test
     public void testDeployment_whenDirectoryAddedAsResource_thenFilesAvailableOnMembers() throws Throwable {
         createCluster();
@@ -197,7 +192,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
         executeAndPeel(jetInstance.newJob(pipeline, jobConfig));
     }
 
-
     static class MyJobClassLoaderFactory implements JobClassLoaderFactory {
 
         @Nonnull
@@ -219,14 +213,6 @@ public abstract class AbstractDeploymentTest extends JetTestSupport {
                     return en.hasMoreElements() ? en.nextElement() : null;
                 }
             };
-        }
-    }
-
-    static class MyMapper implements Function<Map.Entry<Integer, Integer>, Integer>, Serializable {
-
-        @Override
-        public Integer apply(Map.Entry<Integer, Integer> entry) {
-            return entry.getKey();
         }
     }
 }

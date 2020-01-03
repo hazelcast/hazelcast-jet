@@ -216,15 +216,15 @@ public class ResourceConfigTest {
     }
 
     @Test
-    public void testAttachFile_with_DuplicateId_throws_Exception() throws Exception {
+    public void testAttachFile_with_DuplicateId_throws_Exception() {
         JobConfig config = new JobConfig();
         String id = "resourceFileName";
         File file = new File("/path/to/resource");
 
+        config.attachFile(file, id);
+
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage(id);
-
-        config.attachFile(file, id);
         config.attachFile(file, id);
     }
 
@@ -312,15 +312,15 @@ public class ResourceConfigTest {
     }
 
     @Test
-    public void testAttachDirectory_with_DuplicateId_throws_Exception() throws Exception {
+    public void testAttachDirectory_with_DuplicateId_throws_Exception() {
         JobConfig config = new JobConfig();
         String id = "dirName";
         File file = new File("/path/to/dirName");
 
+        config.attachDirectory(file, id);
+
         expectedException.expect(IllegalArgumentException.class);
         expectedException.expectMessage(id);
-
-        config.attachDirectory(file, id);
         config.attachDirectory(file, id);
     }
 

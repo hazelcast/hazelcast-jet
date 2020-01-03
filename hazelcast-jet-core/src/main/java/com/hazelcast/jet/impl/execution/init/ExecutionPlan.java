@@ -138,11 +138,11 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     public void initialize(
             NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext,
-            ConcurrentMap<String, File> localFiles
+            ConcurrentMap<String, File> tempDirectories
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
-        initProcSuppliers(jobId, executionId, localFiles);
+        initProcSuppliers(jobId, executionId, tempDirectories);
         initDag();
 
         this.ptionArrgmt = new PartitionArrangement(partitionOwners, nodeEngine.getThisAddress());
@@ -186,7 +186,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         vertex.localParallelism(),
                         memberIndex,
                         memberCount,
-                        localFiles
+                        tempDirectories
                 );
 
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
@@ -292,7 +292,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     // End implementation of IdentifiedDataSerializable
 
-    private void initProcSuppliers(long jobId, long executionId, ConcurrentMap<String, File> localFiles) {
+    private void initProcSuppliers(long jobId, long executionId, ConcurrentMap<String, File> tempDirectories) {
         JetService service = nodeEngine.getService(JetService.SERVICE_NAME);
 
         for (VertexDef vertex : vertices) {
@@ -312,7 +312,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                         memberIndex,
                         memberCount,
                         jobConfig.getProcessingGuarantee(),
-                        localFiles
+                        tempDirectories
                 ));
             } catch (Exception e) {
                 throw sneakyThrow(e);
