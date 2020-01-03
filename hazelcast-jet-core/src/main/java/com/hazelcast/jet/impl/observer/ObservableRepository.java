@@ -81,11 +81,13 @@ public class ObservableRepository {
     }
 
     public void init(Collection<String> observables) {
+        //TODO (PR-1729): called from JobCoordinationService's coordinator thread pool, might be racy
         for (String observable : observables) {
             completedObservables.remove(observable);
         }
     }
 
+    //TODO (PR-1729): called from JobCoordinationService's coordinator thread pool, might be racy
     public void complete(Collection<String> observables, Throwable error) {
         for (String observable : observables) {
             String ringbufferName = ringbufferName(observable);
