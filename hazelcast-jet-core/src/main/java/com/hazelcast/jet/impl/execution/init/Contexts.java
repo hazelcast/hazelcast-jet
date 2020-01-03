@@ -168,25 +168,23 @@ public final class Contexts {
         @Nonnull @Override
         public File attachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
-            ResourceConfig config = getResourceConfig(id);
-            return tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(config));
+            return tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(id));
         }
 
         @Nonnull @Override
         public File attachedFile(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
-            ResourceConfig resourceConfig = getResourceConfig(id);
-            return attachedDirectory(id).toPath().resolve(resourceConfig.getUrl().getFile()).toFile();
+            return new File(attachedDirectory(id), id);
         }
 
         public ConcurrentMap<String, File> tempDirectories() {
             return tempDirectories;
         }
 
-        private File extractFileToDisk(ResourceConfig config) {
+        private File extractFileToDisk(String id) {
             IMap<String, byte[]> map = jetInstance().getMap(JobRepository.jobFileStorageMapName(jobId()));
-            try (IMapInputStream inputStream = new IMapInputStream(map, config.getId())) {
-                String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + config.getId();
+            try (IMapInputStream inputStream = new IMapInputStream(map, id)) {
+                String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + id;
                 Path directory = Files.createTempDirectory(prefix);
                 unzip(inputStream, directory);
                 return directory.toFile();

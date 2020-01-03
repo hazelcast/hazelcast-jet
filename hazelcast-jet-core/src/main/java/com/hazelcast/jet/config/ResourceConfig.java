@@ -57,7 +57,7 @@ public class ResourceConfig implements Serializable {
      *
      * @param clazz the class to deploy
      */
-    ResourceConfig(@Nonnull Class clazz) {
+    ResourceConfig(@Nonnull Class<?> clazz) {
         Preconditions.checkNotNull(clazz, "clazz");
 
         String id = clazz.getName().replace('.', '/') + ".class";

@@ -23,12 +23,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Queue;
@@ -47,14 +45,14 @@ public final class IOUtil {
 
     /**
      * Creates a ZIP-file stream from the directory tree rooted at the supplied
-     * {@code baseDir}. Pipes the stream into the provided output stream, closing
+     * {@code baseDir}. Copies the stream into the provided output stream, closing
      * it when done.
      * <p>
      * <strong>Note:</strong> hidden files and directories are ignored
      */
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
             justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static void copyDirectoryAsZip(@Nonnull Path baseDir, @Nonnull OutputStream destination)
+    public static void packDirectoryIntoZip(@Nonnull Path baseDir, @Nonnull OutputStream destination)
             throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(destination)) {
             Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
@@ -92,21 +90,23 @@ public final class IOUtil {
 
     /**
      * Creates a ZIP-file stream from the supplied file. The file will be the
-     * sole entry in the created zip.
+     * sole entry in the created zip. The {@code destination} stream will be
+     * closed.
+     *
+     * @param srcUrl the URL to copy from
+     * @param destination the stream to write to
+     * @param fileName the name of the file in the destination ZIP
      */
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
             justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static void copyFileAsZip(@Nonnull URL url, @Nonnull OutputStream destination)
-            throws IOException, URISyntaxException {
-        try (ZipOutputStream zipOut = new ZipOutputStream(destination)) {
-            Path fileName = Paths.get(url.toURI()).getFileName();
-            if (fileName == null) {
-                throw new IllegalArgumentException("filePath is empty");
-            }
-            zipOut.putNextEntry(new ZipEntry(fileName.toString()));
-            try (InputStream in = url.openStream()) {
-                copyStream(in, zipOut);
-            }
+    public static void packFileIntoZip(@Nonnull URL srcUrl, @Nonnull OutputStream destination, @Nonnull String fileName)
+            throws IOException {
+        try (
+                InputStream srcStream = srcUrl.openStream();
+                ZipOutputStream dstZipStream = new ZipOutputStream(destination)
+        ) {
+            dstZipStream.putNextEntry(new ZipEntry(fileName));
+            copyStream(srcStream, dstZipStream);
         }
     }
 
@@ -128,11 +128,11 @@ public final class IOUtil {
         }
     }
 
-    public static void unzip(InputStream is, Path targetPath) throws IOException {
+    public static void unzip(InputStream is, Path targetDir) throws IOException {
         try (ZipInputStream zipIn = new ZipInputStream(is)) {
             for (ZipEntry ze; (ze = zipIn.getNextEntry()) != null; ) {
                 String entryName = ze.getName();
-                Path destPath = targetPath.resolve(entryName);
+                Path destPath = targetDir.resolve(entryName);
                 if (ze.isDirectory()) {
                     Files.createDirectory(destPath);
                 } else {

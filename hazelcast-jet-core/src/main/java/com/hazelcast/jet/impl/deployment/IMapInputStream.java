@@ -39,7 +39,7 @@ public class IMapInputStream extends InputStream {
         this.map = map;
         this.prefix = prefix;
         byte[] encodedChunkCount = Objects.requireNonNull(map.get(prefix),
-                "Chunked IMap doesn't contain the key '" + prefix + "'");
+                "The attached files map doesn't contain the key '" + prefix + "'");
         this.chunkCount = ByteBuffer.wrap(encodedChunkCount).getInt();
     }
 

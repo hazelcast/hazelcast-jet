@@ -71,9 +71,9 @@ import java.util.zip.ZipInputStream;
 
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.util.IOUtil.packDirectoryIntoZip;
+import static com.hazelcast.jet.impl.util.IOUtil.packFileIntoZip;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.IOUtil.copyDirectoryAsZip;
-import static com.hazelcast.jet.impl.util.IOUtil.copyFileAsZip;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
@@ -200,12 +200,14 @@ public class JobRepository {
                         }
                         break;
                     case FILE:
-                        IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId());
-                        copyFileAsZip(rc.getUrl(), os);
+                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId())) {
+                            packFileIntoZip(rc.getUrl(), os, rc.getId());
+                        }
                         break;
                     case DIRECTORY:
-                        IMapOutputStream os2 = new IMapOutputStream(jobFileStorage.get(), rc.getId());
-                        copyDirectoryAsZip(Paths.get(rc.getUrl().getFile()), os2);
+                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId())) {
+                            packDirectoryIntoZip(Paths.get(rc.getUrl().toURI()), os);
+                        }
                         break;
                     case JAR:
                         loadJar(tmpMap, rc);
@@ -233,7 +235,6 @@ public class JobRepository {
         }
         return jobId;
     }
-
 
     private long newJobId() {
         return idGenerator.newId();
@@ -314,7 +315,7 @@ public class JobRepository {
      * newQuorumSize}.
      */
     void updateJobQuorumSizeIfSmaller(long jobId, int newQuorumSize) {
-        jobExecutionRecords.executeOnKey(jobId, ImdgUtil.<Long, JobExecutionRecord>entryProcessor((key, value) -> {
+        jobExecutionRecords.executeOnKey(jobId, ImdgUtil.entryProcessor((key, value) -> {
             if (value == null) {
                 return null;
             }
@@ -434,6 +435,7 @@ public class JobRepository {
             // Job might be in the process of uploading resources, check how long the map has been there.
             // If we happen to recreate a just-deleted map, it will be destroyed again after
             // resourcesExpirationMillis.
+            @SuppressWarnings("rawtypes")
             IMap resourceMap = (IMap) map;
             long creationTime = resourceMap.getLocalMapStats().getCreationTime();
             if (isResourceMapExpired(creationTime)) {
