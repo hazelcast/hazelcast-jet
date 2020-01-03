@@ -90,7 +90,7 @@ public class JobRepositoryTest extends JetTestSupport {
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).get().isEmpty());
+        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).isEmpty());
     }
 
     @Test
@@ -107,7 +107,7 @@ public class JobRepositoryTest extends JetTestSupport {
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse(jobRepository.getJobResources(jobId).get().isEmpty());
+        assertFalse(jobRepository.getJobResources(jobId).isEmpty());
     }
 
     @Test
@@ -118,7 +118,7 @@ public class JobRepositoryTest extends JetTestSupport {
 
         cleanup();
 
-        assertTrue(jobRepository.getJobResources(jobId).get().isEmpty());
+        assertTrue(jobRepository.getJobResources(jobId).isEmpty());
     }
 
     @Test

@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.deployment;
 
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.config.JobConfig;
+import com.hazelcast.jet.impl.JobRepository;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -43,12 +45,12 @@ public class JetClassLoader extends ClassLoader {
 
     public JetClassLoader(@Nonnull NodeEngine nodeEngine,
                           @Nullable ClassLoader parent, @Nullable String jobName,
-                          long jobId, @Nonnull Supplier<IMap<String, byte[]>> resourcesSupplier
+                          long jobId, @Nonnull JobRepository jobRepository
     ) {
         super(parent == null ? JetClassLoader.class.getClassLoader() : parent);
         this.jobName = jobName;
         this.jobId = jobId;
-        this.resourcesSupplier = resourcesSupplier;
+        this.resourcesSupplier = Util.memoizeConcurrent(() -> jobRepository.getJobResources(jobId));
         this.logger = nodeEngine.getLogger(getClass());
     }
 

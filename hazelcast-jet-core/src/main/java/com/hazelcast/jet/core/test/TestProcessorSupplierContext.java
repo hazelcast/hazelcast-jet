@@ -23,6 +23,8 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Implementation of {@link ProcessorSupplier.Context} suitable to be used
@@ -35,8 +37,7 @@ public class TestProcessorSupplierContext
         implements ProcessorSupplier.Context {
 
     private int memberIndex;
-    private File attachedFile;
-    private File attachedDirectory;
+    private final Map<String, File> attached = new HashMap<>();
 
     @Nonnull @Override
     public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
@@ -77,33 +78,31 @@ public class TestProcessorSupplierContext
 
     @Nonnull @Override
     public File attachedDirectory(@Nonnull String id) {
-        return attachedDirectory;
-    }
-
-    /**
-     * Set attached directory
-     */
-    public TestProcessorSupplierContext setAttachedDirectory(File attachedDirectory) {
-        this.attachedDirectory = attachedDirectory;
-        return this;
+        return attachedFile(id);
     }
 
     @Nonnull @Override
     public File attachedFile(@Nonnull String id) {
-        return attachedFile;
+        File file = attached.get(id);
+        if (file == null) {
+            throw new IllegalArgumentException("File '" + id + "' was not found");
+        }
+        return file;
     }
 
     /**
-     * Set attached file
+     * Add an attached file or folder. The test context doesn't distinguish
+     * between files and folders;
      */
-    public TestProcessorSupplierContext setAttachedFile(File attachedFile) {
-        this.attachedFile = attachedFile;
+    public TestProcessorSupplierContext addFile(@Nonnull String id, @Nonnull File file) {
+        attached.put(id, file);
         return this;
     }
 
     /**
-     * Sets member index
+     * Sets the member index
      */
+    @Nonnull
     public TestProcessorSupplierContext setMemberIndex(int memberIndex) {
         this.memberIndex = memberIndex;
         return this;

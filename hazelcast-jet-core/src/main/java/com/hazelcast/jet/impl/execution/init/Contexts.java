@@ -168,14 +168,14 @@ public final class Contexts {
         @Nonnull @Override
         public File attachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
-            findResourceConfigOrThrowException(id);
-            return tempDirectories.computeIfAbsent(id, this::extractFileToDisk);
+            ResourceConfig config = getResourceConfig(id);
+            return tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(config));
         }
 
         @Nonnull @Override
         public File attachedFile(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
-            ResourceConfig resourceConfig = findResourceConfigOrThrowException(id);
+            ResourceConfig resourceConfig = getResourceConfig(id);
             return attachedDirectory(id).toPath().resolve(resourceConfig.getUrl().getFile()).toFile();
         }
 
@@ -183,10 +183,10 @@ public final class Contexts {
             return tempDirectories;
         }
 
-        private File extractFileToDisk(String key) {
+        private File extractFileToDisk(ResourceConfig config) {
             IMap<String, byte[]> map = jetInstance().getMap(JobRepository.jobFileStorageMapName(jobId()));
-            try (IMapInputStream inputStream = new IMapInputStream(map, key)) {
-                String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + key;
+            try (IMapInputStream inputStream = new IMapInputStream(map, config.getId())) {
+                String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + config.getId();
                 Path directory = Files.createTempDirectory(prefix);
                 unzip(inputStream, directory);
                 return directory.toFile();
@@ -195,13 +195,13 @@ public final class Contexts {
             }
         }
 
-        private ResourceConfig findResourceConfigOrThrowException(String id) {
-            return jobConfig()
-                    .getResourceConfigs()
-                    .stream()
-                    .filter(config -> config.getId().equals(id))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Resource with id:" + id + "cannot be found"));
+        private ResourceConfig getResourceConfig(String id) {
+            ResourceConfig config = jobConfig().getResourceConfigs().get(id);
+            if (config == null) {
+                throw new IllegalArgumentException("Resource with id '" + id + "' was not found." +
+                        " Was it added to JobConfig?");
+            }
+            return config;
         }
     }
 

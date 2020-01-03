@@ -29,6 +29,7 @@ import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -40,9 +41,12 @@ import java.io.NotSerializableException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -292,7 +296,9 @@ public final class Util {
      * <strong>Note:</strong> files and directories starting with either {@code _}
      * or {@code .} are ignored.
      */
-    public static void zipDirectoryToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream)
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
+    public static void directoryAsZipToOutputStream(@Nonnull Path baseDir, @Nonnull OutputStream outputStream)
             throws IOException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
             Queue<Path> dirQueue = new ArrayDeque<>(singletonList(baseDir));
@@ -326,15 +332,17 @@ public final class Util {
         }
     }
 
-    public static void zipFileToOutputStream(@Nonnull Path filePath, @Nonnull OutputStream outputStream)
-            throws IOException {
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
+    public static void fileAsZipToOutputStream(@Nonnull URL url, @Nonnull OutputStream outputStream)
+            throws IOException, URISyntaxException {
         try (ZipOutputStream zipOut = new ZipOutputStream(outputStream)) {
-            Path fileName = filePath.getFileName();
+            Path fileName = Paths.get(url.toURI()).getFileName();
             if (fileName == null) {
                 throw new IllegalArgumentException("filePath is empty");
             }
             zipOut.putNextEntry(new ZipEntry(fileName.toString()));
-            try (InputStream in = Files.newInputStream(filePath)) {
+            try (InputStream in = url.openStream()) {
                 copyStream(in, zipOut);
             }
         }

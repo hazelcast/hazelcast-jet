@@ -50,6 +50,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Collection;
@@ -71,8 +72,8 @@ import java.util.zip.ZipInputStream;
 import static com.hazelcast.jet.Util.idFromString;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
-import static com.hazelcast.jet.impl.util.Util.zipDirectoryToOutputStream;
-import static com.hazelcast.jet.impl.util.Util.zipFileToOutputStream;
+import static com.hazelcast.jet.impl.util.Util.directoryAsZipToOutputStream;
+import static com.hazelcast.jet.impl.util.Util.fileAsZipToOutputStream;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.toList;
@@ -190,7 +191,8 @@ public class JobRepository {
         long jobId = newJobId();
         Map<String, byte[]> tmpMap = new HashMap<>();
         try {
-            for (ResourceConfig rc : jobConfig.getResourceConfigs()) {
+            Supplier<IMap<String, byte[]>> jobFileStorage = Util.memoize(() -> getJobFileStorage(jobId));
+            for (ResourceConfig rc : jobConfig.getResourceConfigs().values()) {
                 switch (rc.getResourceType()) {
                     case CLASS:
                         try (InputStream in = rc.getUrl().openStream()) {
@@ -198,17 +200,15 @@ public class JobRepository {
                         }
                         break;
                     case FILE:
-                        IMapOutputStream os = new IMapOutputStream(getJobFileStorage(jobId).get(), rc.getId());
-                        zipFileToOutputStream(Paths.get(rc.getUrl().getFile()), os);
+                        IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId());
+                        fileAsZipToOutputStream(rc.getUrl(), os);
                         break;
                     case DIRECTORY:
-                        IMapOutputStream os2 = new IMapOutputStream(getJobFileStorage(jobId).get(), rc.getId());
-                        zipDirectoryToOutputStream(Paths.get(rc.getUrl().getFile()), os2);
+                        IMapOutputStream os2 = new IMapOutputStream(jobFileStorage.get(), rc.getId());
+                        directoryAsZipToOutputStream(Paths.get(rc.getUrl().getFile()), os2);
                         break;
                     case JAR:
-                        try (InputStream in = rc.getUrl().openStream()) {
-                            loadJarFromInputStream(tmpMap, in);
-                        }
+                        loadJar(tmpMap, rc);
                         break;
                     case JARS_IN_ZIP:
                         loadJarsInZip(tmpMap, rc.getUrl());
@@ -217,12 +217,12 @@ public class JobRepository {
                         throw new JetException("Unsupported resource type: " + rc.getResourceType());
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
             throw new JetException("Job resource upload failed", e);
         }
         // avoid creating resources map if map is empty
         if (tmpMap.size() > 0) {
-            IMap<String, Object> jobResourcesMap = getJobResources(jobId).get();
+            IMap<String, byte[]> jobResourcesMap = getJobResources(jobId);
             // now upload it all
             try {
                 jobResourcesMap.putAll(tmpMap);
@@ -234,8 +234,17 @@ public class JobRepository {
         return jobId;
     }
 
+
     private long newJobId() {
         return idGenerator.newId();
+    }
+
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
+    private void loadJar(Map<String, byte[]> tmpMap, ResourceConfig rc) throws IOException {
+        try (InputStream in = rc.getUrl().openStream()) {
+            loadJarFromInputStream(tmpMap, in);
+        }
     }
 
     /**
@@ -475,17 +484,17 @@ public class JobRepository {
     }
 
     /**
-     * Gets the job resources map, lazily evaluated to avoid creating the map if it won't be needed
+     * Gets the job resources map
      */
-    <T> Supplier<IMap<String, T>> getJobResources(long jobId) {
-        return Util.memoizeConcurrent(() -> instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId)));
+    public IMap<String, byte[]> getJobResources(long jobId) {
+        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId));
     }
 
     /**
-     * Gets the job files storage map, lazily evaluated to avoid creating the map if it won't be needed
+     * Gets the job files storage map
      */
-    Supplier<IMap<String, byte[]>> getJobFileStorage(long jobId) {
-        return Util.memoizeConcurrent(() -> instance.getMap(jobFileStorageMapName(jobId)));
+    IMap<String, byte[]> getJobFileStorage(long jobId) {
+        return instance.getMap(jobFileStorageMapName(jobId));
     }
 
     @Nullable

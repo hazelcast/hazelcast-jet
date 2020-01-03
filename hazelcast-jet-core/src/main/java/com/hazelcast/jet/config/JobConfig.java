@@ -32,8 +32,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
@@ -57,7 +57,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean enableMetrics = true;
     private boolean storeMetricsAfterJobCompletion;
 
-    private List<ResourceConfig> resourceConfigs = new ArrayList<>();
+    private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
 
@@ -228,7 +228,8 @@ public class JobConfig implements IdentifiedDataSerializable {
         checkNotNull(classes, "Classes can not be null");
 
         for (Class clazz : classes) {
-            resourceConfigs.add(new ResourceConfig(clazz));
+            ResourceConfig cfg = new ResourceConfig(clazz);
+            resourceConfigs.put(cfg.getId(), cfg);
         }
         return this;
     }
@@ -566,19 +567,15 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Returns all the registered resource configurations.
      */
     @Nonnull
-    public List<ResourceConfig> getResourceConfigs() {
+    public Map<String, ResourceConfig> getResourceConfigs() {
         return resourceConfigs;
     }
 
-    private JobConfig add(@Nonnull URL url, @Nullable String id, @Nonnull ResourceType resourceType) {
-        boolean duplicate = (id != null) && resourceConfigs.stream()
-                                                           .map(ResourceConfig::getId)
-                                                           .filter(Objects::nonNull)
-                                                           .anyMatch(existingId -> existingId.equals(id));
-        if (duplicate) {
+    private JobConfig add(@Nonnull URL url, @Nonnull String id, @Nonnull ResourceType resourceType) {
+        ResourceConfig cfg = new ResourceConfig(url, id, resourceType);
+        if (resourceConfigs.putIfAbsent(id, cfg) != null) {
             throw new IllegalArgumentException("Resource with id:" + id + " already exists");
         }
-        resourceConfigs.add(new ResourceConfig(url, id, resourceType));
         return this;
     }
 
