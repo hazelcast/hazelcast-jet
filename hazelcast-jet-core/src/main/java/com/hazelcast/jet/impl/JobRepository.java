@@ -48,10 +48,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
@@ -205,13 +208,17 @@ public class JobRepository {
                         }
                         break;
                     case FILE:
-                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))) {
-                            packFileIntoZip(rc.getUrl(), os, rc.getId());
+                        try (
+                                InputStream in = rc.getUrl().openStream();
+                                IMapOutputStream os = new IMapOutputStream(jobFileStorage, fileKeyName(rc.getId()))
+                        ) {
+                            packFileIntoZip(in, os, rc.getId());
                         }
                         break;
                     case DIRECTORY:
-                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))) {
-                            packDirectoryIntoZip(Paths.get(rc.getUrl().toURI()), os);
+                        Path baseDir = validateAndGetDirectoryPath(rc);
+                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage, fileKeyName(rc.getId()))) {
+                            packDirectoryIntoZip(baseDir, os);
                         }
                         break;
                     case JAR:
@@ -239,6 +246,14 @@ public class JobRepository {
             }
         }
         return jobId;
+    }
+
+    private Path validateAndGetDirectoryPath(ResourceConfig rc) throws URISyntaxException, IOException {
+        Path baseDir = Paths.get(rc.getUrl().toURI());
+        if (!Files.isDirectory(baseDir)) {
+            throw new FileNotFoundException(baseDir + " is not a valid path");
+        }
+        return baseDir;
     }
 
     private long newJobId() {
@@ -551,6 +566,7 @@ public class JobRepository {
     public static String fileKeyName(String id) {
         return FILE_STORAGE_KEY_NAME_PREFIX + id;
     }
+
     /**
      * Returns the key name in the form {@code class.<id>}
      */

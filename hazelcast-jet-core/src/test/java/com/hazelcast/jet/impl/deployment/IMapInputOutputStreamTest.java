@@ -55,7 +55,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
     public void test_writeToClosedStream_then_throwsException() throws IOException {
         expectedException.expect(IOException.class);
         IMap<String, byte[]> map = instance().getMap(randomMapName());
-        IMapOutputStream outputStream = new IMapOutputStream(map, "test");
+        IMapOutputStream outputStream = new IMapOutputStream(() -> map, "test");
 
         outputStream.close();
         outputStream.write(5);
@@ -64,7 +64,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
     @Test
     public void test_multipleCallsToCloseStream_then_flushesOnlyOnce() throws IOException {
         IMap<String, byte[]> map = instance().getMap(randomMapName());
-        IMapOutputStream outputStream = new IMapOutputStream(map, "test");
+        IMapOutputStream outputStream = new IMapOutputStream(() -> map, "test");
 
         outputStream.close();
         long putOperationCountBeforeCloses = map.getLocalMapStats().getPutOperationCount();
@@ -90,7 +90,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
     public void test_writeOutOfBounds_then_throwsException() throws IOException {
         expectedException.expect(IndexOutOfBoundsException.class);
         IMap<String, byte[]> map = instance().getMap(randomMapName());
-        IMapOutputStream outputStream = new IMapOutputStream(map, "test");
+        IMapOutputStream outputStream = new IMapOutputStream(() -> map, "test");
 
         outputStream.write(new byte[] {1}, 5, 5);
     }
@@ -116,7 +116,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
         // When
         try (
                 InputStream in = resource.openStream();
-                IMapOutputStream ios = new IMapOutputStream(map, "test")
+                IMapOutputStream ios = new IMapOutputStream(() -> map, "test")
         ) {
             copyStream(in, ios);
         }
@@ -150,7 +150,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
         // When
         try (
                 InputStream inputStream = resource.openStream();
-                IMapOutputStream ios = new IMapOutputStream(map, "test")
+                IMapOutputStream ios = new IMapOutputStream(() -> map, "test")
         ) {
             copyStream(inputStream, ios);
         }

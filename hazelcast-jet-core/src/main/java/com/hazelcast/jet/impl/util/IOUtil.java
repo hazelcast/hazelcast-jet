@@ -23,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
@@ -73,24 +72,24 @@ public final class IOUtil {
     }
 
     /**
-     * Creates a ZIP-file stream from the supplied file. The file will be the
-     * sole entry in the created zip. The {@code destination} stream will be
+     * Creates a ZIP-file stream from the supplied file stream. The file will be
+     * the sole entry in the created zip. The {@code destination} stream will be
      * closed.
      *
-     * @param srcUrl the URL to copy from
+     * @param source the stream to copy from
      * @param destination the stream to write to
      * @param fileName the name of the file in the destination ZIP
      */
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
             justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static void packFileIntoZip(@Nonnull URL srcUrl, @Nonnull OutputStream destination, @Nonnull String fileName)
+    public static void packFileIntoZip(@Nonnull InputStream source, @Nonnull OutputStream destination,
+                                       @Nonnull String fileName)
             throws IOException {
         try (
-                InputStream srcStream = srcUrl.openStream();
                 ZipOutputStream dstZipStream = new ZipOutputStream(destination)
         ) {
             dstZipStream.putNextEntry(new ZipEntry(fileName));
-            copyStream(srcStream, dstZipStream);
+            copyStream(source, dstZipStream);
         }
     }
 

@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.core.DistributedObject;
+import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -32,7 +33,6 @@ import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -122,8 +122,20 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     @Test
-    public void when_jobResourceUploadFails_then_jobResourcesCleanedUp() {
+    public void when_jobFileUploadFails_then_jobResourcesCleanedUp() {
         jobConfig.attachFile("invalid path");
+        try {
+            jobRepository.uploadJobResources(jobConfig);
+            fail();
+        } catch (JetException e) {
+            Collection<DistributedObject> objects = instance.getHazelcastInstance().getDistributedObjects();
+            assertTrue(objects.stream().noneMatch(o -> o.getName().startsWith(JobRepository.RESOURCES_MAP_NAME_PREFIX)));
+        }
+    }
+
+    @Test
+    public void when_jobDirectoryUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.attachDirectory("invalid path");
         try {
             jobRepository.uploadJobResources(jobConfig);
             fail();
