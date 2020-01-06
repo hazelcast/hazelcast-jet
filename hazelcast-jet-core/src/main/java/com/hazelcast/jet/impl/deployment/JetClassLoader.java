@@ -38,6 +38,7 @@ import java.util.function.Supplier;
 import java.util.zip.InflaterInputStream;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.JobRepository.classKeyName;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JetClassLoader extends ClassLoader {
@@ -81,7 +82,7 @@ public class JetClassLoader extends ClassLoader {
     @Override
     protected URL findResource(String name) {
         if (!checkShutdown(name)) {
-            if (isEmpty(name) || !resourcesSupplier.get().containsKey(name)) {
+            if (isEmpty(name) || !resourcesSupplier.get().containsKey(classKeyName(name))) {
                 return null;
             }
 
@@ -111,7 +112,7 @@ public class JetClassLoader extends ClassLoader {
     @SuppressWarnings("unchecked")
     private InputStream resourceStream(String name) {
         if (!checkShutdown(name)) {
-            byte[] classData = resourcesSupplier.get().get(name);
+            byte[] classData = resourcesSupplier.get().get(classKeyName(name));
             if (classData == null) {
                 return null;
             }

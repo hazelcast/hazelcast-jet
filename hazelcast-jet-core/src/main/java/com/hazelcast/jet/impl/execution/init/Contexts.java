@@ -23,7 +23,6 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
-import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -37,6 +36,8 @@ import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.impl.JobRepository.fileKeyName;
+import static com.hazelcast.jet.impl.JobRepository.jobResourcesMapName;
 import static com.hazelcast.jet.impl.util.IOUtil.unzip;
 
 public final class Contexts {
@@ -181,8 +182,8 @@ public final class Contexts {
         }
 
         private File extractFileToDisk(String id) {
-            IMap<String, byte[]> map = jetInstance().getMap(JobRepository.jobFileStorageMapName(jobId()));
-            try (IMapInputStream inputStream = new IMapInputStream(map, id)) {
+            IMap<String, byte[]> map = jetInstance().getMap(jobResourcesMapName(jobId()));
+            try (IMapInputStream inputStream = new IMapInputStream(map, fileKeyName(id))) {
                 String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + id;
                 Path directory = Files.createTempDirectory(prefix);
                 unzip(inputStream, directory);

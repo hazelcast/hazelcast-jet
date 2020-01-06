@@ -99,14 +99,19 @@ public class JobRepository {
     public static final String EXPORTED_SNAPSHOTS_DETAIL_CACHE = INTERNAL_JET_OBJECTS_PREFIX + "exportedSnapshotsCache";
 
     /**
-     * Name of internal IMap which stores job resources.
+     * Name of internal IMap which stores job resources and attached files.
      */
     public static final String RESOURCES_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "resources.";
 
     /**
-     * Name of internal IMap which stores attached job files.
+     * Key prefix for attached job files in the IMap named {@link JobRepository#RESOURCES_MAP_NAME_PREFIX}.
      */
-    public static final String FILE_STORAGE_MAP_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "files.";
+    public static final String FILE_STORAGE_KEY_NAME_PREFIX = "file.";
+
+    /**
+     * Key prefix for added class resources in the IMap named {@link JobRepository#RESOURCES_MAP_NAME_PREFIX}.
+     */
+    public static final String CLASS_STORAGE_KEY_NAME_PREFIX = "class.";
 
     /**
      * Name of internal flake ID generator which is used for unique id generation.
@@ -191,7 +196,7 @@ public class JobRepository {
         long jobId = newJobId();
         Map<String, byte[]> tmpMap = new HashMap<>();
         try {
-            Supplier<IMap<String, byte[]>> jobFileStorage = Util.memoize(() -> getJobFileStorage(jobId));
+            Supplier<IMap<String, byte[]>> jobFileStorage = Util.memoize(() -> getJobResources(jobId));
             for (ResourceConfig rc : jobConfig.getResourceConfigs().values()) {
                 switch (rc.getResourceType()) {
                     case CLASS:
@@ -200,12 +205,12 @@ public class JobRepository {
                         }
                         break;
                     case FILE:
-                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId())) {
+                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))) {
                             packFileIntoZip(rc.getUrl(), os, rc.getId());
                         }
                         break;
                     case DIRECTORY:
-                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), rc.getId())) {
+                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))) {
                             packDirectoryIntoZip(Paths.get(rc.getUrl().toURI()), os);
                         }
                         break;
@@ -293,7 +298,7 @@ public class JobRepository {
             IOUtil.drainTo(in, compressor);
         }
 
-        map.put(resourceName, baos.toByteArray());
+        map.put(CLASS_STORAGE_KEY_NAME_PREFIX + resourceName, baos.toByteArray());
     }
 
     /**
@@ -400,9 +405,7 @@ public class JobRepository {
                     map.destroy();
                 }
             } else if (map.getName().startsWith(RESOURCES_MAP_NAME_PREFIX)) {
-                deleteMap(activeJobs, map, RESOURCES_MAP_NAME_PREFIX);
-            } else if (map.getName().startsWith(FILE_STORAGE_MAP_NAME_PREFIX)) {
-                deleteMap(activeJobs, map, FILE_STORAGE_MAP_NAME_PREFIX);
+                deleteMap(activeJobs, map);
             }
         }
         int maxNoResults = Math.max(1, nodeEngine.getProperties().getInteger(JetProperties.JOB_RESULTS_MAX_SIZE));
@@ -421,8 +424,8 @@ public class JobRepository {
         logger.fine("Job cleanup took " + TimeUnit.NANOSECONDS.toMillis(elapsed) + "ms");
     }
 
-    private void deleteMap(Set<Long> activeJobs, DistributedObject map, String mapNamePrefix) {
-        long id = jobIdFromMapName(map.getName(), mapNamePrefix);
+    private void deleteMap(Set<Long> activeJobs, DistributedObject map) {
+        long id = jobIdFromMapName(map.getName(), RESOURCES_MAP_NAME_PREFIX);
         if (activeJobs.contains(id)) {
             // job is still active, do nothing
             return;
@@ -489,14 +492,7 @@ public class JobRepository {
      * Gets the job resources map
      */
     public IMap<String, byte[]> getJobResources(long jobId) {
-        return instance.getMap(RESOURCES_MAP_NAME_PREFIX + idToString(jobId));
-    }
-
-    /**
-     * Gets the job files storage map
-     */
-    IMap<String, byte[]> getJobFileStorage(long jobId) {
-        return instance.getMap(jobFileStorageMapName(jobId));
+        return instance.getMap(jobResourcesMapName(jobId));
     }
 
     @Nullable
@@ -543,10 +539,23 @@ public class JobRepository {
     }
 
     /**
-     * Returns the map name in the form {@code __jet.files.<jobId>}
+     * Returns the map name in the form {@code __jet.resources.<jobId>}
      */
-    public static String jobFileStorageMapName(long jobId) {
-        return FILE_STORAGE_MAP_NAME_PREFIX + idToString(jobId);
+    public static String jobResourcesMapName(long jobId) {
+        return RESOURCES_MAP_NAME_PREFIX + idToString(jobId);
+    }
+
+    /**
+     * Returns the key name in the form {@code file.<id>}
+     */
+    public static String fileKeyName(String id) {
+        return FILE_STORAGE_KEY_NAME_PREFIX + id;
+    }
+    /**
+     * Returns the key name in the form {@code class.<id>}
+     */
+    public static String classKeyName(String id) {
+        return CLASS_STORAGE_KEY_NAME_PREFIX + id;
     }
 
     /**
