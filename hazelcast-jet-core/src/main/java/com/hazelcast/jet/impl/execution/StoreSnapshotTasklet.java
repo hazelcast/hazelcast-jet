@@ -34,7 +34,6 @@ import java.util.Map.Entry;
 import java.util.function.Predicate;
 
 import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_BYTES;
-import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_CHUNKS;
 import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_KEYS;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DONE;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DRAIN;
@@ -134,7 +133,7 @@ public class StoreSnapshotTasklet implements Tasklet {
                 long keys = ssWriter.getTotalKeys();
                 long chunks = ssWriter.getTotalChunks();
                 snapshotContext.phase1DoneForTasklet(bytes, keys, chunks);
-                metrics.set(bytes, keys, chunks);
+                metrics.set(bytes, keys);
                 ssWriter.resetStats();
                 pendingSnapshotId++;
                 hasReachedBarrier = false;
@@ -189,12 +188,10 @@ public class StoreSnapshotTasklet implements Tasklet {
 
         private long bytes;
         private long keys;
-        private long chunks;
 
-        synchronized void set(long bytes, long keys, long chunks) {
+        synchronized void set(long bytes, long keys) {
             this.bytes = bytes;
             this.keys = keys;
-            this.chunks = chunks;
         }
 
         @Override
@@ -202,7 +199,6 @@ public class StoreSnapshotTasklet implements Tasklet {
             if (bytes > 0) {
                 context.collect(descriptor, SNAPSHOT_BYTES, ProbeLevel.INFO, ProbeUnit.COUNT, bytes);
                 context.collect(descriptor, SNAPSHOT_KEYS, ProbeLevel.INFO, ProbeUnit.COUNT, keys);
-                context.collect(descriptor, SNAPSHOT_CHUNKS, ProbeLevel.INFO, ProbeUnit.COUNT, chunks);
             }
         }
 
