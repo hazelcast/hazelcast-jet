@@ -298,7 +298,7 @@ public class JobRepository {
             IOUtil.drainTo(in, compressor);
         }
 
-        map.put(CLASS_STORAGE_KEY_NAME_PREFIX + resourceName, baos.toByteArray());
+        map.put(classKeyName(resourceName), baos.toByteArray());
     }
 
     /**
