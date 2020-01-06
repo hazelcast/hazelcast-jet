@@ -28,6 +28,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
+import java.util.Enumeration;
+import java.util.NoSuchElementException;
 import java.util.function.Supplier;
 import java.util.zip.InflaterInputStream;
 
@@ -36,10 +42,13 @@ import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 
 public class JetClassLoader extends ClassLoader {
 
+    private static final String JOB_URL_PROTOCOL = "jet-job-resource";
+
     private final long jobId;
     private final String jobName;
     private final Supplier<IMap<String, byte[]>> resourcesSupplier;
     private final ILogger logger;
+    private final JobResourceURLStreamHandler jobResourceURLStreamHandler;
 
     private volatile boolean isShutdown;
 
@@ -52,6 +61,7 @@ public class JetClassLoader extends ClassLoader {
         this.jobId = jobId;
         this.resourcesSupplier = Util.memoizeConcurrent(() -> jobRepository.getJobResources(jobId));
         this.logger = nodeEngine.getLogger(getClass());
+        this.jobResourceURLStreamHandler = new JobResourceURLStreamHandler();
     }
 
     @Override
@@ -66,6 +76,28 @@ public class JetClassLoader extends ClassLoader {
         }
         byte[] classBytes = uncheckCall(() -> IOUtil.toByteArray(classBytesStream));
         return defineClass(name, classBytes, 0, classBytes.length);
+    }
+
+    @Override
+    protected URL findResource(String name) {
+        if (!checkShutdown(name)) {
+            if (isEmpty(name) || !resourcesSupplier.get().containsKey(name)) {
+                return null;
+            }
+
+            try {
+                return new URL(JOB_URL_PROTOCOL, null, -1, name, jobResourceURLStreamHandler);
+            } catch (MalformedURLException e) {
+                // this should never happen with custom URLStreamHandler
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected Enumeration<URL> findResources(String name) {
+        return new SingleURLEnumeration(findResource(name));
     }
 
     public void shutdown() {
@@ -106,6 +138,56 @@ public class JetClassLoader extends ClassLoader {
 
     private static boolean isEmpty(String className) {
         return className == null || className.isEmpty();
+    }
+
+    private final class JobResourceURLStreamHandler extends URLStreamHandler {
+
+        @Override
+        protected URLConnection openConnection(URL url) {
+            return new JobResourceURLConnection(url);
+        }
+    }
+
+    private final class JobResourceURLConnection extends URLConnection {
+
+        private JobResourceURLConnection(URL url) {
+            super(url);
+        }
+
+        @Override
+        public void connect() {
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return resourceStream(url.getFile());
+        }
+    }
+
+    private static final class SingleURLEnumeration implements Enumeration<URL> {
+
+        private URL url;
+
+        private SingleURLEnumeration(URL url) {
+            this.url = url;
+        }
+
+        @Override
+        public boolean hasMoreElements() {
+            return url != null;
+        }
+
+        @Override
+        public URL nextElement() {
+            if (url == null) {
+                throw new NoSuchElementException();
+            }
+            try {
+                return url;
+            } finally {
+                url = null;
+            }
+        }
     }
 
     @Override
