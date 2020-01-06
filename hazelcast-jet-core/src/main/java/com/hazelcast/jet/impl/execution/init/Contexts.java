@@ -192,15 +192,6 @@ public final class Contexts {
                 throw ExceptionUtil.rethrow(e);
             }
         }
-
-        private ResourceConfig getResourceConfig(String id) {
-            ResourceConfig config = jobConfig().getResourceConfigs().get(id);
-            if (config == null) {
-                throw new IllegalArgumentException("Resource with id '" + id + "' was not found." +
-                        " Was it added to JobConfig?");
-            }
-            return config;
-        }
     }
 
     public static class ProcCtx extends ProcSupplierCtx implements Processor.Context {
