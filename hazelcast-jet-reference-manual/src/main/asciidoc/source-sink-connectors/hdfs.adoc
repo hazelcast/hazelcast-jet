@@ -125,6 +125,9 @@ dependencies in `share/hadoop/mapreduce/lib/`.
 You can either copy all the necessary JARs to the `lib` directory or
 set `CLASSPATH` variable before starting the cluster using
 `bin/jet-start` script and submitting the job using `bin/jet` script.
+You can use this
+https://hadoop.apache.org/docs/r2.10.0/hadoop-project-dist/hadoop-common/CommandsManual.html#classpath[command]
+to obtain the class path needed for the Hadoop JARs.
 
 [source]
 ----
