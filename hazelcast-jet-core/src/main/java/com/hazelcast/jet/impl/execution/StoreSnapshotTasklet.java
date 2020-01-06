@@ -196,10 +196,8 @@ public class StoreSnapshotTasklet implements Tasklet {
 
         @Override
         public synchronized void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
-            if (bytes > 0) {
-                context.collect(descriptor, SNAPSHOT_BYTES, ProbeLevel.INFO, ProbeUnit.COUNT, bytes);
-                context.collect(descriptor, SNAPSHOT_KEYS, ProbeLevel.INFO, ProbeUnit.COUNT, keys);
-            }
+            context.collect(descriptor, SNAPSHOT_BYTES, ProbeLevel.INFO, ProbeUnit.COUNT, bytes);
+            context.collect(descriptor, SNAPSHOT_KEYS, ProbeLevel.INFO, ProbeUnit.COUNT, keys);
         }
 
     }
