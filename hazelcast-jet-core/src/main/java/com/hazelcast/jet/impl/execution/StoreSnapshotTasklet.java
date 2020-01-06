@@ -16,10 +16,14 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.internal.metrics.DynamicMetricsProvider;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
+import com.hazelcast.internal.metrics.ProbeLevel;
+import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.util.AsyncSnapshotWriter;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -29,6 +33,9 @@ import javax.annotation.Nonnull;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_BYTES;
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_CHUNKS;
+import static com.hazelcast.jet.core.metrics.MetricNames.SNAPSHOT_KEYS;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DONE;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.DRAIN;
 import static com.hazelcast.jet.impl.execution.StoreSnapshotTasklet.State.FLUSH;
@@ -46,6 +53,7 @@ public class StoreSnapshotTasklet implements Tasklet {
 
     private final AsyncSnapshotWriter ssWriter;
     private final ProgressTracker progTracker = new ProgressTracker();
+    private final Metrics metrics = new Metrics();
     private State state = DRAIN;
     private boolean hasReachedBarrier;
     private Entry<Data, Data> pendingEntry;
@@ -122,8 +130,11 @@ public class StoreSnapshotTasklet implements Tasklet {
                     snapshotContext.reportError(error);
                 }
                 progTracker.madeProgress();
-                snapshotContext.phase1DoneForTasklet(ssWriter.getTotalPayloadBytes(), ssWriter.getTotalKeys(),
-                        ssWriter.getTotalChunks());
+                long bytes = ssWriter.getTotalPayloadBytes();
+                long keys = ssWriter.getTotalKeys();
+                long chunks = ssWriter.getTotalChunks();
+                snapshotContext.phase1DoneForTasklet(bytes, keys, chunks);
+                metrics.set(bytes, keys, chunks);
                 ssWriter.resetStats();
                 pendingSnapshotId++;
                 hasReachedBarrier = false;
@@ -154,7 +165,8 @@ public class StoreSnapshotTasklet implements Tasklet {
 
     @Override
     public void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
-        snapshotContext.provideDynamicMetrics(descriptor, context);
+        descriptor = descriptor.withTag(MetricTags.VERTEX, vertexName);
+        metrics.provideDynamicMetrics(descriptor, context);
     }
 
     @Override
@@ -171,5 +183,28 @@ public class StoreSnapshotTasklet implements Tasklet {
         REACHED_BARRIER,
         /** Input is done, terminal state. */
         DONE
+    }
+
+    private static class Metrics implements DynamicMetricsProvider {
+
+        private long bytes;
+        private long keys;
+        private long chunks;
+
+        synchronized void set(long bytes, long keys, long chunks) {
+            this.bytes = bytes;
+            this.keys = keys;
+            this.chunks = chunks;
+        }
+
+        @Override
+        public synchronized void provideDynamicMetrics(MetricDescriptor descriptor, MetricsCollectionContext context) {
+            if (bytes > 0) {
+                context.collect(descriptor, SNAPSHOT_BYTES, ProbeLevel.INFO, ProbeUnit.COUNT, bytes);
+                context.collect(descriptor, SNAPSHOT_KEYS, ProbeLevel.INFO, ProbeUnit.COUNT, keys);
+                context.collect(descriptor, SNAPSHOT_CHUNKS, ProbeLevel.INFO, ProbeUnit.COUNT, chunks);
+            }
+        }
+
     }
 }

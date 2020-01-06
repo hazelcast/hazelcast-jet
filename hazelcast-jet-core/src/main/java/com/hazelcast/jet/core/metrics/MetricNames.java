@@ -116,29 +116,23 @@ public final class MetricNames {
     public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
 
     /**
-     * Tracks the total number of bytes written out in the last snapshot.
-     * The values are totals for a given execution of a specific job. The
-     * execution and the job can be identified based on the
-     * {@link MetricTags#EXECUTION} & {@link MetricTags#JOB} tags of the
-     * metric.
+     * Tracks the total number of bytes written out in the last snapshot
+     * by a particular {@link Vertex}. The name of the vertex can be found
+     * in the {@link MetricTags#VERTEX} tag of the metric.
      */
     public static final String SNAPSHOT_BYTES = "snapshotBytes";
 
     /**
-     * Tracks the total number of keys written out in the last snapshot.
-     * The values are totals for a given execution of a specific job. The
-     * execution and the job can be identified based on the
-     * {@link MetricTags#EXECUTION} & {@link MetricTags#JOB} tags of the
-     * metric.
+     * Tracks the total number of keys written out in the last snapshot
+     * by a particular {@link Vertex}. The name of the vertex can be found
+     * in the {@link MetricTags#VERTEX} tag of the metric.
      */
     public static final String SNAPSHOT_KEYS = "snapshotKeys";
 
     /**
-     * Tracks the total number of chunks written out in the last snapshot.
-     * The values are totals for a given execution of a specific job. The
-     * execution and the job can be identified based on the
-     * {@link MetricTags#EXECUTION} & {@link MetricTags#JOB} tags of the
-     * metric.
+     * Tracks the total number of chunks written out in the last snapshot
+     * by a particular {@link Vertex}. The name of the vertex can be found
+     * in the {@link MetricTags#VERTEX} tag of the metric.
      */
     public static final String SNAPSHOT_CHUNKS = "snapshotChunks";
 
