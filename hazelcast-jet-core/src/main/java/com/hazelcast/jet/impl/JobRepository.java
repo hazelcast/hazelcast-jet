@@ -109,12 +109,12 @@ public class JobRepository {
     /**
      * Key prefix for attached job files in the IMap named {@link JobRepository#RESOURCES_MAP_NAME_PREFIX}.
      */
-    public static final String FILE_STORAGE_KEY_NAME_PREFIX = "file.";
+    public static final String FILE_STORAGE_KEY_NAME_PREFIX = "f.";
 
     /**
      * Key prefix for added class resources in the IMap named {@link JobRepository#RESOURCES_MAP_NAME_PREFIX}.
      */
-    public static final String CLASS_STORAGE_KEY_NAME_PREFIX = "class.";
+    public static final String CLASS_STORAGE_KEY_NAME_PREFIX = "c.";
 
     /**
      * Name of internal flake ID generator which is used for unique id generation.
@@ -210,14 +210,14 @@ public class JobRepository {
                     case FILE:
                         try (
                                 InputStream in = rc.getUrl().openStream();
-                                IMapOutputStream os = new IMapOutputStream(jobFileStorage, fileKeyName(rc.getId()))
+                                IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))
                         ) {
                             packFileIntoZip(in, os, rc.getId());
                         }
                         break;
                     case DIRECTORY:
                         Path baseDir = validateAndGetDirectoryPath(rc);
-                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage, fileKeyName(rc.getId()))) {
+                        try (IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))) {
                             packDirectoryIntoZip(baseDir, os);
                         }
                         break;
@@ -251,7 +251,7 @@ public class JobRepository {
     private Path validateAndGetDirectoryPath(ResourceConfig rc) throws URISyntaxException, IOException {
         Path baseDir = Paths.get(rc.getUrl().toURI());
         if (!Files.isDirectory(baseDir)) {
-            throw new FileNotFoundException(baseDir + " is not a valid path");
+            throw new FileNotFoundException(baseDir + " is not a valid directory");
         }
         return baseDir;
     }

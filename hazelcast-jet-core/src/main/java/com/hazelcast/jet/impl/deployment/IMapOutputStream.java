@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.function.Supplier;
 
 import static java.lang.Math.min;
 
@@ -31,14 +30,14 @@ public class IMapOutputStream extends OutputStream {
     private static final int CHUNK_SIZE = 1 << 17;
 
     private final String prefix;
-    private final Supplier<IMap<String, byte[]>> mapSupplier;
+    private final IMap<String, byte[]> map;
     private final ByteBuffer currentChunk = ByteBuffer.allocate(CHUNK_SIZE);
     private final byte[] singleByteBuffer = new byte[1];
 
     private int currentChunkIndex;
 
-    public IMapOutputStream(Supplier<IMap<String, byte[]>> mapSupplier, String prefix) {
-        this.mapSupplier = mapSupplier;
+    public IMapOutputStream(IMap<String, byte[]> map, String prefix) {
+        this.map = map;
         this.prefix = prefix;
     }
 
@@ -50,7 +49,7 @@ public class IMapOutputStream extends OutputStream {
         flush();
         ByteBuffer buf = ByteBuffer.allocate(Integer.BYTES);
         buf.putInt(currentChunkIndex);
-        mapSupplier.get().put(prefix, buf.array());
+        map.put(prefix, buf.array());
         currentChunkIndex = -1;
     }
 
@@ -94,7 +93,7 @@ public class IMapOutputStream extends OutputStream {
             value = Arrays.copyOf(value, currentChunk.position());
         }
         try {
-            mapSupplier.get().put(prefix + '_' + currentChunkIndex, value);
+            map.put(prefix + '_' + currentChunkIndex, value);
         } catch (Exception e) {
             throw new IOException("Writing to chunked IMap failed: " + e, e);
         }

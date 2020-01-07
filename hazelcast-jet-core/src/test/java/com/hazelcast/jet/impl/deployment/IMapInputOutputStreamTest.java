@@ -38,6 +38,7 @@ import java.nio.ByteBuffer;
 
 import static com.hazelcast.jet.impl.util.IOUtil.copyStream;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastSerialClassRunner.class)
@@ -53,18 +54,18 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
 
     @Test
     public void test_writeToClosedStream_then_throwsException() throws IOException {
-        expectedException.expect(IOException.class);
         IMap<String, byte[]> map = instance().getMap(randomMapName());
-        IMapOutputStream outputStream = new IMapOutputStream(() -> map, "test");
+        IMapOutputStream outputStream = new IMapOutputStream(map, "test");
 
         outputStream.close();
+        expectedException.expect(IOException.class);
         outputStream.write(5);
     }
 
     @Test
     public void test_multipleCallsToCloseStream_then_flushesOnlyOnce() throws IOException {
         IMap<String, byte[]> map = instance().getMap(randomMapName());
-        IMapOutputStream outputStream = new IMapOutputStream(() -> map, "test");
+        IMapOutputStream outputStream = new IMapOutputStream(map, "test");
 
         outputStream.close();
         long putOperationCountBeforeCloses = map.getLocalMapStats().getPutOperationCount();
@@ -77,38 +78,39 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
 
     @Test
     public void test_readFromClosedStream_then_throwsException() throws IOException {
-        expectedException.expect(IOException.class);
         IMap<String, byte[]> map = instance().getMap(randomMapName());
         map.put("test", new byte[] {0, 0, 0, 4});
         IMapInputStream inputStream = new IMapInputStream(map, "test");
 
         inputStream.close();
-        inputStream.read(new byte[] {1}, 0, 1);
+        expectedException.expect(IOException.class);
+        System.out.println(inputStream.read(new byte[] {1}, 0, 1));
     }
 
     @Test
     public void test_writeOutOfBounds_then_throwsException() throws IOException {
-        expectedException.expect(IndexOutOfBoundsException.class);
         IMap<String, byte[]> map = instance().getMap(randomMapName());
-        IMapOutputStream outputStream = new IMapOutputStream(() -> map, "test");
+        IMapOutputStream outputStream = new IMapOutputStream(map, "test");
 
+        expectedException.expect(IndexOutOfBoundsException.class);
         outputStream.write(new byte[] {1}, 5, 5);
     }
 
     @Test
     public void test_readOutOfBounds_then_throwsException() throws IOException {
-        expectedException.expect(IndexOutOfBoundsException.class);
         IMap<String, byte[]> map = instance().getMap(randomMapName());
         map.put("test", new byte[] {0, 0, 0, 4});
         IMapInputStream inputStream = new IMapInputStream(map, "test");
 
-        inputStream.read(new byte[] {1}, 5, 5);
+        expectedException.expect(IndexOutOfBoundsException.class);
+        System.out.println(inputStream.read(new byte[] {1}, 5, 5));
     }
 
     @Test
     public void test_writeFile_to_IMap_then_fileReadFromIMapAsByteArray() throws Exception {
         // Given
         URL resource = this.getClass().getClassLoader().getResource("deployment/resource.txt");
+        assertNotNull(resource);
         File file = new File(resource.toURI());
         long length = file.length();
         IMap<String, byte[]> map = instance().getMap(randomMapName());
@@ -116,7 +118,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
         // When
         try (
                 InputStream in = resource.openStream();
-                IMapOutputStream ios = new IMapOutputStream(() -> map, "test")
+                IMapOutputStream ios = new IMapOutputStream(map, "test")
         ) {
             copyStream(in, ios);
         }
@@ -143,6 +145,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
     public void test_writeFile_to_IMap_then_fileReadFromIMap_with_IMapInputStream() throws Exception {
         // Given
         URL resource = this.getClass().getClassLoader().getResource("deployment/resource.txt");
+        assertNotNull(resource);
         File file = new File(resource.toURI());
         long length = file.length();
         IMap<String, byte[]> map = instance().getMap(randomMapName());
@@ -150,7 +153,7 @@ public class IMapInputOutputStreamTest extends SimpleTestInClusterSupport {
         // When
         try (
                 InputStream inputStream = resource.openStream();
-                IMapOutputStream ios = new IMapOutputStream(() -> map, "test")
+                IMapOutputStream ios = new IMapOutputStream(map, "test")
         ) {
             copyStream(inputStream, ios);
         }
