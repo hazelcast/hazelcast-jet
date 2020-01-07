@@ -219,7 +219,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * available on the job's classpath while it's executing in the Jet
      * cluster.
      * <p>
-     * See also {@link #addJar} and {@link #attachFile}.
+     * See also {@link #addJar} and {@link #addClasspathResource}.
      *
      * @return {@code this} instance for fluent API
      */
