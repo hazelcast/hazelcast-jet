@@ -72,9 +72,9 @@ public final class IOUtil {
     }
 
     /**
-     * Creates a ZIP-file stream from the supplied file stream. The file will be
-     * the sole entry in the created zip. The {@code destination} stream will be
-     * closed.
+     * Creates a ZIP-file stream from the supplied input stream. The input will
+     * be stored in a single file in the created zip. The {@code destination}
+     * stream will be closed.
      *
      * @param source the stream to copy from
      * @param destination the stream to write to
@@ -82,8 +82,8 @@ public final class IOUtil {
      */
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
             justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
-    public static void packFileIntoZip(@Nonnull InputStream source, @Nonnull OutputStream destination,
-                                       @Nonnull String fileName)
+    public static void packStreamIntoZip(@Nonnull InputStream source, @Nonnull OutputStream destination,
+                                         @Nonnull String fileName)
             throws IOException {
         try (
                 ZipOutputStream dstZipStream = new ZipOutputStream(destination)

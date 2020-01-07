@@ -45,7 +45,6 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import static com.hazelcast.jet.Util.idToString;
 import static java.util.Collections.emptyList;
@@ -66,8 +65,11 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Set<Address> participants;
     private final Object executionLock = new Object();
     private final ILogger logger;
+
     // key: resource identifier
-    private final ConcurrentMap<String, File> tempDirectories = new ConcurrentHashMap<>();
+    // we use ConcurrentHashMap because ConcurrentMap doesn't guarantee that computeIfAbsent
+    // executes the supplier strictly only if it's needed.
+    private final ConcurrentHashMap<String, File> tempDirectories = new ConcurrentHashMap<>();
 
     private String jobName;
 
@@ -190,11 +192,11 @@ public class ExecutionContext implements DynamicMetricsProvider {
             }
         }
 
-        tempDirectories.forEach((k, file) -> {
+        tempDirectories.forEach((k, dir) -> {
             try {
-                IOUtil.delete(file);
+                IOUtil.delete(dir);
             } catch (Exception e) {
-                logger.warning("Failed to delete temporary file " + file);
+                logger.warning("Failed to delete temporary directory " + dir);
             }
         });
     }
@@ -260,7 +262,6 @@ public class ExecutionContext implements DynamicMetricsProvider {
                    .get(sender)
                    .receiveStreamPacket(in);
     }
-
 
     public boolean hasParticipant(Address member) {
         return participants.contains(member);

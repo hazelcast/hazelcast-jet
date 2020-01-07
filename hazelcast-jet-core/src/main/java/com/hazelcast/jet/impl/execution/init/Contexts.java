@@ -33,7 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.impl.JobRepository.fileKeyName;
@@ -137,7 +137,7 @@ public final class Contexts {
     static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context {
 
         private final int memberIndex;
-        private final ConcurrentMap<String, File> tempDirectories;
+        private final ConcurrentHashMap<String, File> tempDirectories;
 
         @SuppressWarnings("checkstyle:ParameterNumber")
         ProcSupplierCtx(
@@ -152,7 +152,7 @@ public final class Contexts {
                 int memberIndex,
                 int memberCount,
                 ProcessingGuarantee processingGuarantee,
-                ConcurrentMap<String, File> tempDirectories
+                ConcurrentHashMap<String, File> tempDirectories
         ) {
             super(jetInstance, jobId, executionId, jobConfig, logger, vertexName, localParallelism, totalParallelism,
                     memberCount, processingGuarantee);
@@ -177,7 +177,7 @@ public final class Contexts {
             return new File(attachedDirectory(id), id);
         }
 
-        public ConcurrentMap<String, File> tempDirectories() {
+        public ConcurrentHashMap<String, File> tempDirectories() {
             return tempDirectories;
         }
 
@@ -203,7 +203,7 @@ public final class Contexts {
         public ProcCtx(JetInstance instance, long jobId, long executionId, JobConfig jobConfig,
                        ILogger logger, String vertexName, int localProcessorIndex,
                        int globalProcessorIndex, ProcessingGuarantee processingGuarantee, int localParallelism,
-                       int memberIndex, int memberCount, ConcurrentMap<String, File> tempDirectories) {
+                       int memberIndex, int memberCount, ConcurrentHashMap<String, File> tempDirectories) {
             super(instance, jobId, executionId, jobConfig, logger, vertexName, localParallelism,
                     memberCount * localParallelism, memberIndex, memberCount, processingGuarantee,
                     tempDirectories);
