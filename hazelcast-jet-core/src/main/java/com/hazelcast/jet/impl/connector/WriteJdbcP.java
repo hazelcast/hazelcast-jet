@@ -62,6 +62,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     private final String updateQuery;
 
     private ILogger logger;
+    private XAConnection xaConnection;
     private Connection connection;
     private PreparedStatement statement;
     private int idleCount;
@@ -131,7 +132,6 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
         }
         try {
             for (Object item : inbox) {
-                logger.info("aaa adding to batch: " + item);
                 @SuppressWarnings("unchecked")
                 T castItem = (T) item;
                 bindFn.accept(statement, castItem);
@@ -139,7 +139,6 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             }
             executeBatch();
             if (!snapshotUtility.usesTransactionLifecycle()) {
-                logger.info("aaa plain commit");
                 connection.commit();
             }
             idleCount = 0;
@@ -161,9 +160,12 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
+        super.close();
         closeWithLogging(statement);
-        logger.info("aaa closing connection");
+        if (xaConnection != null) {
+            xaConnection.close();
+        }
         closeWithLogging(connection);
     }
 
@@ -174,7 +176,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
                     throw new JetException("When using exactly-once, the dataSource must implement "
                             + XADataSource.class.getName());
                 }
-                XAConnection xaConnection = ((XADataSource) dataSource).getXAConnection();
+                xaConnection = ((XADataSource) dataSource).getXAConnection();
                 connection = xaConnection.getConnection();
                 // we never ignore errors in ex-once mode
                 assert idleCount == 0 : "idleCount=" + idleCount;
@@ -190,8 +192,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
                         + XADataSource.class.getName());
             }
             connection.setAutoCommit(false);
-//            supportsBatch = connection.getMetaData().supportsBatchUpdates();
-            supportsBatch = false; // TODO [viliam] revert
+            supportsBatch = connection.getMetaData().supportsBatchUpdates();
             statement = connection.prepareStatement(updateQuery);
         } catch (SQLException e) {
             logger.warning("Exception during connecting and preparing the statement", e);
@@ -213,10 +214,8 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     }
 
     private void executeBatch() throws SQLException {
-        logger.info("aaa executeBatch with " + batchCount + " items"); // TODO [viliam] remove
         if (supportsBatch && batchCount > 0) {
             statement.executeBatch();
-            logger.info("aaa executeBatch returned");
             batchCount = 0;
         }
     }
@@ -225,9 +224,11 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
         if (idleCount == 0) {
             return true;
         }
+        assert !snapshotUtility.usesTransactionLifecycle() : "attempt to reconnect in XA mode";
         IDLER.idle(idleCount);
 
-        close();
+        closeWithLogging(statement);
+        closeWithLogging(connection);
 
         return connectAndPrepareStatement();
     }

@@ -261,9 +261,10 @@ public class ProcessorTasklet implements Tasklet {
                 break;
 
             case NULLARY_PROCESS:
-                if (isSnapshotInbox() || processor.tryProcess()) {
+                // if currInstream is null, maybe fillInbox wasn't called yet. Avoid calling tryProcess in that case.
+                if (currInstream == null || isSnapshotInbox() || processor.tryProcess()) {
                     state = PROCESS_INBOX;
-                        outbox.reset();
+                    outbox.reset();
                     stateMachineStep(); // recursion
                 }
                 break;

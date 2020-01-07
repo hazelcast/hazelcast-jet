@@ -176,15 +176,12 @@ public abstract class JtaSinkProcessorBase implements Processor {
         }
         try {
             xaResource.rollback(xid);
-            context.logger().info("aaa rolled back " + xid);
         } catch (XAException e) {
             // We ignore rollback failures.
             // If error is XAER_NOTA (transaction doesn't exist), we don't even log it, this is the normal case
             if (e.errorCode != XAException.XAER_NOTA) {
                 LoggingUtil.logFine(context.logger(), "Failed to roll back, transaction ID: %s. Error: %s",
                         xid, handleXAException(e, xid));
-            } else {
-                context.logger().info("aaa XAER_NOTA for " + xid);
             }
         }
     }
@@ -201,6 +198,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
     private final class JtaTransaction implements TransactionalResource<JtaTransactionId> {
         private final JtaTransactionId xid;
         private boolean ignoreCommit;
+        private boolean isAssociated;
 
         private JtaTransaction(JtaTransactionId xid) {
             this.xid = xid;
@@ -213,8 +211,10 @@ public abstract class JtaSinkProcessorBase implements Processor {
 
         @Override
         public void begin() throws XAException {
+            assert !isAssociated : "already associated";
             try {
                 xaResource.start(xid, TMNOFLAGS);
+                isAssociated = true;
             } catch (XAException e) {
                 throw handleXAException(e, xid);
             }
@@ -222,8 +222,10 @@ public abstract class JtaSinkProcessorBase implements Processor {
 
         @Override
         public void endAndPrepare() throws XAException {
+            assert isAssociated : "not associated";
             try {
                 xaResource.end(xid, TMSUCCESS);
+                isAssociated = false;
                 int res = xaResource.prepare(xid);
                 ignoreCommit = res == XA_RDONLY;
             } catch (XAException e) {
@@ -244,11 +246,20 @@ public abstract class JtaSinkProcessorBase implements Processor {
 
         @Override
         public void rollback() throws XAException {
+            assert isAssociated : "not associated";
             try {
                 xaResource.end(xid, TMFAIL);
+                isAssociated = false;
                 xaResource.rollback(xid);
             } catch (XAException e) {
                 throw handleXAException(e, xid);
+            }
+        }
+
+        @Override
+        public void release() throws Exception {
+            if (isAssociated) {
+                xaResource.end(xid, TMSUCCESS);
             }
         }
     }
