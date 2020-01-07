@@ -195,6 +195,8 @@ public class JobRepository {
      * If the upload process fails for any reason, such as being unable to access a resource,
      * uploaded resources are cleaned up.
      */
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
     long uploadJobResources(JobConfig jobConfig) {
         long jobId = newJobId();
         Map<String, byte[]> tmpMap = new HashMap<>();
