@@ -203,6 +203,10 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         return jobRepository;
     }
 
+    public ObservableRepository getObservableRepository() {
+        return observableRepository;
+    }
+
     public NodeEngineImpl getNodeEngine() {
         return nodeEngine;
     }
