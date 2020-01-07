@@ -27,6 +27,8 @@ import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.util.Clock;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.MwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.config.JetConfig;
@@ -990,34 +992,34 @@ public class JobCoordinationService  {
     private static class Stats {
 
         @Probe(name = MetricNames.JOBS_SUBMITTED)
-        private final AtomicInteger jobSubmitted = new AtomicInteger();
+        private final Counter jobSubmitted = MwCounter.newMwCounter();
         @Probe(name = MetricNames.JOBS_COMPLETED_SUCCESSFULLY)
-        private final AtomicInteger jobCompletedSuccessfully = new AtomicInteger();
+        private final Counter jobCompletedSuccessfully = MwCounter.newMwCounter();
         @Probe(name = MetricNames.JOBS_COMPLETED_WITH_FAILURE)
-        private final AtomicInteger jobCompletedWithFailure = new AtomicInteger();
+        private final Counter jobCompletedWithFailure = MwCounter.newMwCounter();
         @Probe(name = MetricNames.JOB_EXECUTIONS_STARTED)
-        private final AtomicInteger executionStarted = new AtomicInteger();
+        private final Counter executionStarted = MwCounter.newMwCounter();
         @Probe(name = MetricNames.JOB_EXECUTIONS_TERMINATED)
-        private final AtomicInteger executionTerminated = new AtomicInteger();
+        private final Counter executionTerminated = MwCounter.newMwCounter();
 
         void jobSubmitted() {
-            jobSubmitted.incrementAndGet();
+            jobSubmitted.inc();
         }
 
         void jobCompleted(Throwable error) {
             if (error == null) {
-                jobCompletedSuccessfully.incrementAndGet();
+                jobCompletedSuccessfully.inc();
             } else {
-                jobCompletedWithFailure.incrementAndGet();
+                jobCompletedWithFailure.inc();
             }
         }
 
         public void executionStarted() {
-            executionStarted.incrementAndGet();
+            executionStarted.inc();
         }
 
         void executionTerminated() {
-            executionTerminated.incrementAndGet();
+            executionTerminated.inc();
         }
 
     }

@@ -23,6 +23,8 @@ import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.MwCounter;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.metrics.MetricTags;
@@ -44,7 +46,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_DURATION;
@@ -67,7 +68,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Set<Address> participants;
     private final Object executionLock = new Object();
     private final ILogger logger;
-    private final AtomicLong startTime = new AtomicLong();
+    private final Counter startTime = MwCounter.newMwCounter();
 
     private String jobName;
 

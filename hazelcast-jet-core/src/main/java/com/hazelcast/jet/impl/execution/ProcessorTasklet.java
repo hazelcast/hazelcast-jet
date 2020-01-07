@@ -23,6 +23,8 @@ import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -49,7 +51,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Predicate;
 
@@ -130,10 +131,10 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLongArray emittedCounts;
 
     @Probe(name = MetricNames.QUEUES_SIZE)
-    private final AtomicLong queuesSize = new AtomicLong();
+    private final Counter queuesSize = SwCounter.newSwCounter();
 
     @Probe(name = MetricNames.QUEUES_CAPACITY)
-    private final AtomicLong queuesCapacity = new AtomicLong();
+    private final Counter queuesCapacity = SwCounter.newSwCounter();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
     private final MetricsContext metricsContext = new MetricsContext();
@@ -498,8 +499,8 @@ public class ProcessorTasklet implements Tasklet {
         if (!inbox.isEmpty()) {
             lazyIncrement(receivedBatches, currInstream.ordinal());
         }
-        queuesCapacity.lazySet(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::capacities));
-        queuesSize.lazySet(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::sizes));
+        queuesCapacity.set(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::capacities));
+        queuesSize.set(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::sizes));
     }
 
     private CircularListCursor<InboundEdgeStream> popInstreamGroup() {
