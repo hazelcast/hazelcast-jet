@@ -55,6 +55,8 @@ public class ObservableRepository {
     static final String COMPLETED_OBSERVABLES_MAP_NAME = INTERNAL_JET_OBJECTS_PREFIX + "completedObservables";
 
     private final HazelcastInstance instance;
+
+    // contains entries in the form of (observable name, completion timestamp)
     private final IMap<String, Long> completedObservables;
 
     // expiry TTL in millis
