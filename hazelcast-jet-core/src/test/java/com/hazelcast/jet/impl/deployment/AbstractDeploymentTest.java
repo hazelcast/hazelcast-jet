@@ -176,6 +176,18 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
         executeAndPeel(jetInstance.newJob(pipeline, jobConfig));
     }
 
+    @Test
+    public void testDeployment_whenFileAddedAsResource_thenAvailableOnClassLoader() throws Throwable {
+        DAG dag = new DAG();
+        dag.newVertex("load resource", new LoadResourceMetaSupplier());
+
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.addClasspathResource(this.getClass().getResource("/deployment/resource.txt"), "customId");
+
+        executeAndPeel(getJetInstance().newJob(dag, jobConfig));
+    }
+
+
     static class MyJobClassLoaderFactory implements JobClassLoaderFactory {
 
         @Nonnull

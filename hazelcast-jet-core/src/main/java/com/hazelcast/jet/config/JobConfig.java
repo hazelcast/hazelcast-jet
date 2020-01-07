@@ -336,6 +336,86 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
+     * Adds the resource identified by the supplied URL to the list of
+     * resources that will be on the job's classpath while it's executing in
+     * the Jet cluster. The resource's filename will be used as its ID.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addClasspathResource(@Nonnull URL url) {
+        return addClasspathResource(url, toFilename(url));
+    }
+
+    /**
+     * Adds the resource identified by the supplied URL to the list of
+     * resources that will be on the job's classpath while it's executing in
+     * the Jet cluster. The resource will be registered under the supplied ID.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addClasspathResource(@Nonnull URL url, @Nonnull String id) {
+        return add(url, id, ResourceType.CLASSPATH_RESOURCE);
+    }
+
+    /**
+     * Adds the supplied file to the list of resources that will be on the
+     * job's classpath while it's executing in the Jet cluster. The resource's
+     * filename will be used as its ID.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addClasspathResource(@Nonnull File file) {
+        try {
+            return addClasspathResource(file.toURI().toURL(), file.getName());
+        } catch (MalformedURLException e) {
+            throw rethrow(e);
+        }
+    }
+
+    /**
+     * Adds the supplied file to the list of resources that will be on the
+     * job's classpath while it's executing in the Jet cluster. The resource
+     * will be registered under the supplied ID.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addClasspathResource(@Nonnull File file, @Nonnull String id) {
+        try {
+            return add(file.toURI().toURL(), id, ResourceType.CLASSPATH_RESOURCE);
+        } catch (MalformedURLException e) {
+            throw rethrow(e);
+        }
+    }
+
+    /**
+     * Adds the resource identified by the supplied pathname to the list of
+     * resources that will be on the job's classpath while it's executing in
+     * the Jet cluster. The resource's filename will be used as its ID.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addClasspathResource(@Nonnull String path) {
+        return addClasspathResource(new File(path));
+    }
+
+    /**
+     * Adds the resource identified by the supplied pathname to the list of
+     * resources that will be on the job's classpath while it's executing in
+     * the Jet cluster. The resource will be registered under the supplied ID.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addClasspathResource(@Nonnull String path, @Nonnull String id) {
+        return addClasspathResource(new File(path), id);
+    }
+
+    /**
      * Adds the file identified by the supplied URL to the list of
      * resources that will be available to the job while it's executing in
      * the Jet cluster. The resource's filename will be used as its ID.

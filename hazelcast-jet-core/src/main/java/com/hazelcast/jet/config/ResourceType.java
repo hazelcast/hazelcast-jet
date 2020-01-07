@@ -23,6 +23,11 @@ import com.hazelcast.jet.core.ProcessorSupplier;
  */
 public enum ResourceType {
     /**
+     * Represents a classpath resource that will be on the classpath of the Jet
+     * job.
+     */
+    CLASSPATH_RESOURCE,
+    /**
      * Represents a plain file. It will be available to the Jet job by its ID,
      * through {@link ProcessorSupplier.Context#attachedFile}.
      */

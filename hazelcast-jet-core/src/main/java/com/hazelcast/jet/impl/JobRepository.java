@@ -204,6 +204,7 @@ public class JobRepository {
             Supplier<IMap<String, byte[]>> jobFileStorage = Util.memoize(() -> getJobResources(jobId));
             for (ResourceConfig rc : jobConfig.getResourceConfigs().values()) {
                 switch (rc.getResourceType()) {
+                    case CLASSPATH_RESOURCE:
                     case CLASS:
                         try (InputStream in = rc.getUrl().openStream()) {
                             readStreamAndPutCompressedToMap(rc.getId(), tmpMap, in);

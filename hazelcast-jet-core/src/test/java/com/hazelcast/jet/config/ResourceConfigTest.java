@@ -134,6 +134,90 @@ public class ResourceConfigTest {
     }
 
     @Test
+    public void when_addResourceWithPath_thenReturnsResourceConfig() throws MalformedURLException {
+        // When
+        String path = "/path/to/my.txt";
+        config.addClasspathResource(path);
+
+        // Then
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(ResourceType.CLASSPATH_RESOURCE, resourceConfig.getResourceType());
+        assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
+        assertEquals("my.txt", resourceConfig.getId());
+    }
+
+    @Test
+    public void when_addResourceWithPathAndId_thenReturnsResourceConfig() throws MalformedURLException {
+        // When
+        String path = "/path/to/my.txt";
+        config.addClasspathResource(path, "customId");
+
+        // Then
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(ResourceType.CLASSPATH_RESOURCE, resourceConfig.getResourceType());
+        assertEquals(new File(path).toURI().toURL(), resourceConfig.getUrl());
+        assertEquals("customId", resourceConfig.getId());
+    }
+
+    @Test
+    public void when_addResourceWithFile_thenReturnsResourceConfig() throws MalformedURLException {
+        // When
+        File file = new File("/path/to/my.txt");
+        config.addClasspathResource(file);
+
+        // Then
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(ResourceType.CLASSPATH_RESOURCE, resourceConfig.getResourceType());
+        assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
+        assertEquals("my.txt", resourceConfig.getId());
+    }
+
+    @Test
+    public void when_addResourceWithFileAndId_thenReturnsResourceConfig() throws MalformedURLException {
+        // When
+        File file = new File("/path/to/my.txt");
+        config.addClasspathResource(file, "customId");
+
+        // Then
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(ResourceType.CLASSPATH_RESOURCE, resourceConfig.getResourceType());
+        assertEquals(file.toURI().toURL(), resourceConfig.getUrl());
+        assertEquals("customId", resourceConfig.getId());
+    }
+
+    @Test
+    public void when_addResourceWithURL_thenReturnsResourceConfig() throws MalformedURLException {
+        // When
+        URL url = new URL("http://path.to/my.txt");
+        config.addClasspathResource(url);
+
+        // Then
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(ResourceType.CLASSPATH_RESOURCE, resourceConfig.getResourceType());
+        assertEquals(url, resourceConfig.getUrl());
+        assertEquals("my.txt", resourceConfig.getId());
+    }
+
+    @Test
+    public void testResource_with_MalformedUrl_throws_Exception() throws Exception {
+        expectedException.expect(MalformedURLException.class);
+        String urlString = "filezzz://path/to/resource";
+        config.addClasspathResource(new URL(urlString));
+    }
+
+    @Test
+    public void testResource_with_DuplicateId_throws_Exception() {
+        String id = "resourceFileName";
+        File file = new File("/path/to/resource");
+
+        config.addClasspathResource(file, id);
+
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage(id);
+        config.addClasspathResource(file, id);
+    }
+
+    @Test
     public void testAttachFile_with_Url() throws Exception {
         String urlString = "file://path/to/resourceFile";
         config.attachFile(new URL(urlString));
