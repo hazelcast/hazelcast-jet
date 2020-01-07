@@ -122,8 +122,36 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     @Test
+    public void when_jobJarUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.addJar("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobZipUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.addJarsInZip("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobClasspathResourceUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.addClasspathResource("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
     public void when_jobFileUploadFails_then_jobResourcesCleanedUp() {
         jobConfig.attachFile("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobDirectoryUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.attachDirectory("invalid path");
+        testResourceCleanup();
+    }
+
+    public void testResourceCleanup() {
         try {
             jobRepository.uploadJobResources(jobConfig);
             fail();
@@ -133,17 +161,6 @@ public class JobRepositoryTest extends JetTestSupport {
         }
     }
 
-    @Test
-    public void when_jobDirectoryUploadFails_then_jobResourcesCleanedUp() {
-        jobConfig.attachDirectory("invalid path");
-        try {
-            jobRepository.uploadJobResources(jobConfig);
-            fail();
-        } catch (JetException e) {
-            Collection<DistributedObject> objects = instance.getHazelcastInstance().getDistributedObjects();
-            assertTrue(objects.stream().noneMatch(o -> o.getName().startsWith(JobRepository.RESOURCES_MAP_NAME_PREFIX)));
-        }
-    }
 
     @Test
     public void test_getJobRecordFromClient() {

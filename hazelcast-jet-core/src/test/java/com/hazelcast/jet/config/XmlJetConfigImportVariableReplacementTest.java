@@ -21,7 +21,7 @@ import com.hazelcast.config.AbstractConfigImportVariableReplacementTest.TestRepl
 import com.hazelcast.config.InvalidConfigurationException;
 import com.hazelcast.config.replacer.EncryptionReplacer;
 import com.hazelcast.core.HazelcastException;
-import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.jet.impl.util.IOUtil;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -278,11 +278,8 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
     public void testReplacers() throws Exception {
         //Given
         File passwordFile = tempFolder.newFile(getClass().getSimpleName() + ".pwd");
-        PrintWriter out = new PrintWriter(passwordFile);
-        try {
+        try (PrintWriter out = new PrintWriter(passwordFile)) {
             out.print("This is a password");
-        } finally {
-            IOUtil.closeResource(out);
         }
         String xml = JET_START_TAG
                 + "    <config-replacers>\n"
@@ -433,7 +430,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         File tempFile = File.createTempFile("jet", ".xml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_XML_JET_WITH_VARIABLES);
-            os.write(com.hazelcast.jet.impl.util.IOUtil.readFully(resourceAsStream));
+            os.write(IOUtil.readFully(resourceAsStream));
         }
 
         //When
@@ -481,7 +478,7 @@ public class XmlJetConfigImportVariableReplacementTest extends AbstractJetConfig
         File tempFile = File.createTempFile("jet", ".xml");
         try (FileOutputStream os = new FileOutputStream(tempFile)) {
             InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream(TEST_XML_JET_WITH_VARIABLES);
-            os.write(com.hazelcast.jet.impl.util.IOUtil.readFully(resourceAsStream));
+            os.write(IOUtil.readFully(resourceAsStream));
         }
 
         //When
