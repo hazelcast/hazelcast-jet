@@ -30,11 +30,9 @@ import com.hazelcast.internal.services.MembershipServiceEvent;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.impl.execution.TaskletExecutionService;
 import com.hazelcast.jet.impl.metrics.JobMetricsPublisher;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
@@ -80,7 +78,6 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     private Networking networking;
     private TaskletExecutionService taskletExecutionService;
     private JobRepository jobRepository;
-    private ObservableRepository observableRepository;
     private JobCoordinationService jobCoordinationService;
     private JobExecutionService jobExecutionService;
 
@@ -106,8 +103,6 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
         );
         jobRepository = new JobRepository(jetInstance);
 
-        long expirationLimit = engine.getProperties().getMillis(JetProperties.JOB_RESULTS_TTL_SECONDS);
-        observableRepository = new ObservableRepository(engine.getHazelcastInstance(), expirationLimit);
         jobExecutionService = new JobExecutionService(nodeEngine, taskletExecutionService, jobRepository);
         jobCoordinationService = createJobCoordinationService();
 
@@ -184,7 +179,7 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
     }
 
     JobCoordinationService createJobCoordinationService() {
-        return new JobCoordinationService(nodeEngine, this, config, jobRepository, observableRepository);
+        return new JobCoordinationService(nodeEngine, this, config, jobRepository);
     }
 
     public Operation createExportSnapshotOperation(long jobId, String name, boolean cancelJob) {
@@ -201,10 +196,6 @@ public class JetService implements ManagedService, MembershipAwareService, LiveO
 
     public JobRepository getJobRepository() {
         return jobRepository;
-    }
-
-    public ObservableRepository getObservableRepository() {
-        return observableRepository;
     }
 
     public NodeEngineImpl getNodeEngine() {

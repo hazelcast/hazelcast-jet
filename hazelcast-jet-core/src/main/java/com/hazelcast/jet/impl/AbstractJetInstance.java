@@ -29,11 +29,11 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.hazelcast.ringbuffer.impl.RingbufferService;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -157,6 +158,17 @@ public abstract class AbstractJetInstance implements JetInstance {
                 new ObservableImpl<T>(observableName, hazelcastInstance, this::onDestroy, getLogger()));
     }
 
+    @Nonnull
+    @Override
+    public List<Observable> getObservables() {
+        return hazelcastInstance.getDistributedObjects().stream()
+                  .filter(o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME))
+                  .filter(o -> o.getName().startsWith(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX))
+                  .map(o -> o.getName().substring(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX.length()))
+                  .map(this::getObservable)
+                  .collect(Collectors.toList());
+    }
+
     @Override
     public void shutdown() {
         observables.values().forEach(Observable::destroy);
@@ -164,7 +176,6 @@ public abstract class AbstractJetInstance implements JetInstance {
     }
 
     private void onDestroy(Observable<?> observable) {
-        ObservableRepository.destroy(hazelcastInstance, observable.name());
         observables.remove(observable.name());
     }
 

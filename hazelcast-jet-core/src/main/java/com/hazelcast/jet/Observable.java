@@ -16,9 +16,9 @@
 
 package com.hazelcast.jet;
 
-import com.hazelcast.jet.core.JetProperties;
 import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.observer.BlockingIteratorObserver;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.ringbuffer.Ringbuffer;
 
 import javax.annotation.Nonnull;
@@ -34,48 +34,17 @@ import java.util.stream.StreamSupport;
 
 /**
  * Represents a flowing sequence of events produced by one or more {@link
- * com.hazelcast.jet.pipeline.Sinks#observable(String) observable sinks}.
+ * Sinks#observable(String) observable sinks}.
  * To observe the events, call {@link #addObserver
- * jet.getObservable(name).addObserver(myObserver)}.
+ * jet.getObservable(name).addObserver(myObserver)}. The {@code Observable}
+ * is backed by a {@link Ringbuffer} and has a fixed capacity for storing
+ * messages. It supports reading by multiple subscribers, which will all
+ * observe the same sequence of messages. A new subscriber will start
+ * reading automatically from the oldest sequence available. Once the
+ * capacity is full, the oldest messages will be overwritten as new ones
+ * arrive.
  * <p>
- * The identity of an {@code Observable} is its name. You can get any
- * number of {@code Observable} objects by the same name and they will
- * all correspond to the same entity. All registered observers will get
- * all the published events. Likewise, you can create any number of sinks
- * using the same name and they will all push the events to the same
- * {@code Observable}.
- * <p>
- * Even though an observable sink is the only way to publish data to an
- * {@code Observable}, their lifecycles are decoupled. You create an
- * {@code Observable} when you acquire it by name, either by running a
- * job with an observable sink or by calling {@link JetInstance#getObservable
- * jet.getObservable()}, and after that it stays alive until you explicitly
- * {@link #destroy} it, or until the auto-cleanup mechanism kicks in and
- * destroys it for you. (Keep in mind that a job may complete, but the
- * {@code Observable}, along with the data it published to it, lives on.
- * <strong>Consuming the data does not remove it from the
- * Observable</strong>. Also, if you destroy an {@code Observable} that is
- * still in active use by a sink, it will silently re-create it the next
- * time it has data to push to it.)
- * <p>
- * Auto-cleanup of the observables is a timeout based mechanism. The timeout
- * duration defaults to a week and can be configured via the {@link
- * JetProperties#JOB_RESULTS_TTL_SECONDS} property. The timer starts for an
- * observable when the {@link Job} containing sinks for it completes
- * (successfully, in case of batch jobs or with an error, for any job).
- * If there are multiple jobs containing sinks for the same observable,
- * then each subsequent job completion resets the timer (if it hasn't finished
- * yet). If there is a timer running for an observable and a new job is
- * submitted with sinks for that particular observable, then the timer
- * gets cancelled.
- * <p>
- * Jet stores the {@code Observable}'s data in a {@link Ringbuffer} and
- * observers are backed by {@link Ringbuffer} listeners. This results in
- * the following data retention semantics: an {@code Observable} holds on
- * to all the published events until reaching the configured capacity and
- * then starts overwriting the old events with new ones. A freshly
- * registered observer will see all the data available in the {@code
- * Ringbuffer}, including events that were published before registration.
+ * TODO: how to configure capacity, what is the default one?
  * <p>
  * In addition to data events, the observer can also observe completion and
  * failure events. Completion means that no further values will appear in
@@ -83,16 +52,21 @@ import java.util.stream.StreamSupport;
  * production of the sequence's values and the event attempts to provide
  * useful information about the cause of the problem.
  * <p>
- * You should explicitly destroy the {@code Observable} after use. Even if
- * the client that originally created the {@code Observable} crashes, any
- * other client can obtain the same {@code Observable} and destroy it.
+ * <strong>Lifecycle</strong>
  * <p>
- * While it's technically possible to use the same {@code Observable} from
- * multiple sinks or even jobs, it is not the intended kind of usage. The
- * events hold no metadata on their origin so the client will observe
- * events from all sinks arbitrarily interleaved with no way to tell which
- * came from which sink or job.
- *
+ * The lifecycle of the {@code Observable} is decoupled from the lifecycle
+ * of the job. The {@code Observable} is created either when the user
+ * gets a reference to it through {@link JetInstance#getObservable(String)}
+ * or when the sink starts writing to it.
+ * <p>
+ * The {@code Observable} must be explicitly destroyed when it's no longer
+ * in use, or data will be retained in the cluster.
+ * <p>
+ * <strong>Important:</strong> The same {@code Observable} must
+ * <strong>not</strong> be used again in a new job since this will cause
+ * in completion events interleaving and causing data loss or other unexpected
+ * behaviour.
+ * <p>
  * @param <T> type of the values in the sequence
  *
  * @since 4.0

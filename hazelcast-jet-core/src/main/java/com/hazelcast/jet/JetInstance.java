@@ -341,14 +341,20 @@ public interface JetInstance {
     <T> Observable<T> getObservable(@Nonnull String name);
 
     /**
-     * Returns an observable with a randomly generated name
+     * Returns a new observable with a randomly generated name
      *
      * @since 4.0
      */
     @Nonnull
-    default <T> Observable<T> getObservable() {
+    default <T> Observable<T> newObservable() {
         return getObservable(UuidUtil.newUnsecureUuidString());
     }
+
+    /**
+     * Returns a list of all the observables that are active
+     */
+    @Nonnull
+    List<Observable> getObservables();
 
     /**
      * Shuts down the current instance. If this is a client instance, it

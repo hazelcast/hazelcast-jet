@@ -28,11 +28,9 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
-import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
@@ -1065,31 +1063,25 @@ public final class Sinks {
 
     /**
      * Returns a sink that publishes to the {@link Observable} with the
-     * provided name.
+     * provided name. The records that are sent to the observable can be
+     * read through first getting a handle to it through
+     * {@link JetInstance#getObservable(String)} and then subscribing to
+     * the events using the methods on {@link Observable}.
      * <p>
-     * Each instance of this sink is backed by a {@link Ringbuffer} with the
-     * name derived from the {@code Observable}. If multiple sink instances
-     * use the same name, they will be backed by the same {@link Ringbuffer}
-     * and all their data will be interleaved in it.
-     * <p>
-     * Jet creates the {@code Ringbuffer} either while initializing a job that
-     * refers to it, or when you directly obtain it with {@link
-     * JetInstance#getObservable jet.getObservable()}. Once created, it
-     * lives on until explicitly {@linkplain Observable#destroy()
-     * destroyed} or until destroyed by the auto-cleanup mechanism.
-     * For details on how auto-cleanup works see the {@linkplain Observable
-     * Observable class Javadocs}.
-     * <p>
-     * While Jet will allow you to publish data to the same {@code Observable}
-     * from many sinks, this is not the intended way of using them. The events
-     * coming from all sinks will be arbitrarily interleaved and won't have
-     * any metadata that distinguishes their origin.
-     * <p>
-     * This sink is not designed to receive exceptions as data. It will
-     * interpret any {@link Throwable} as a processing error and cause the
-     * Jet job to fail. The {@code Observer} will receive it through its {@link
-     * Observer#onError} callback.
-     * <p>
+     * The {@code Observable} must be destroyed after using it. For the full
+     * description see {@link Observable the javadoc for Observable}.
+     * Example:<pre>{@code
+     *   Observable<Integer> observable = jet.newObservable();
+     *   CompletableFuture<List<Integer>> list = observable.toFuture(o -> o.collect(toList()));
+     *
+     *   pipeline.readFrom(TestSources.items(1, 2, 3, 4))
+     *           .writeTo(Sinks.observable(observable));
+     *
+     *   Job job = jet.newJob(pipeline);
+     *
+     *   System.out.println(list.get());
+     *   observable.destroy();
+     * }</pre>
      * This sink is cooperative and uses a local parallelism of 1.
      *
      * @since 4.0

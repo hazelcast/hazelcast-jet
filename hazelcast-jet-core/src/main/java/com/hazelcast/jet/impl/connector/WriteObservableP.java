@@ -19,7 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Processor;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.impl.RingbufferProxy;
@@ -37,7 +37,7 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
 
     private WriteObservableP(String observableName, HazelcastInstance instance) {
         super(instance, MAX_PARALLEL_ASYNC_OPS);
-        this.ringbuffer = instance.getRingbuffer(ObservableRepository.ringbufferName(observableName));
+        this.ringbuffer = instance.getRingbuffer(ObservableImpl.ringbufferName(observableName));
     }
 
     @Override

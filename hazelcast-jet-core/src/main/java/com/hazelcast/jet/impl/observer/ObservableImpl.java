@@ -23,6 +23,7 @@ import com.hazelcast.core.OperationTimeoutException;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.util.UuidUtil;
 import com.hazelcast.jet.Observable;
+import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.logging.ILogger;
@@ -40,7 +41,23 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import static com.hazelcast.jet.impl.JobRepository.INTERNAL_JET_OBJECTS_PREFIX;
+
 public class ObservableImpl<T> implements Observable<T> {
+
+    /**
+     * Prefix of all topic names used to back {@link Observable} implementations,
+     * necessary so that such topics can't clash with regular topics used
+     * for other purposes.
+     */
+    public static final String JET_OBSERVABLE_NAME_PREFIX = INTERNAL_JET_OBJECTS_PREFIX + "observables.";
+
+    /**
+     * Constant ID to be used as a {@link ProcessorMetaSupplier#getTags()
+     * PMS tag key} for specifying when a PMS owns an {@link Observable} (ie.
+     * is the entity populating the {@link Observable} with data).
+     */
+    public static final String OWNED_OBSERVABLE = "owned_observable";
 
     private final ConcurrentMap<UUID, RingbufferListener<T>> listeners = new ConcurrentHashMap<>();
     private final String name;
@@ -85,9 +102,15 @@ public class ObservableImpl<T> implements Observable<T> {
         listeners.keySet().forEach(this::removeObserver);
         listeners.clear();
 
+        // destroy the underlying ringbuffer
+        hzInstance.getRingbuffer(ringbufferName(name)).destroy();
         onDestroy.accept(this);
-
         //TODO (PR-1729): we shouldn't allow usages of this class, after it has been destroyed
+    }
+
+    @Nonnull
+    public static String ringbufferName(String observableName) {
+        return JET_OBSERVABLE_NAME_PREFIX + observableName;
     }
 
     private static class RingbufferListener<T> {
@@ -111,7 +134,7 @@ public class ObservableImpl<T> implements Observable<T> {
                 ILogger logger
         ) {
             this.observer = observer;
-            this.ringbuffer = hzInstance.getRingbuffer(ObservableRepository.ringbufferName(observable));
+            this.ringbuffer = hzInstance.getRingbuffer(ringbufferName(observable));
             this.id = uuid.toString() + "/" + ringbuffer.getName();
             this.executor = getExecutor(hzInstance);
             this.sequence = ringbuffer.headSequence();

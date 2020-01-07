@@ -32,11 +32,15 @@ import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
+import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
-import com.hazelcast.jet.impl.observer.ObservableRepository;
+import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.observer.WrappedThrowable;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.ringbuffer.OverflowPolicy;
+import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.ExecutionService;
@@ -115,7 +119,6 @@ public class JobCoordinationService {
     private final JetConfig config;
     private final ILogger logger;
     private final JobRepository jobRepository;
-    private final ObservableRepository observableRepository;
     private final ConcurrentMap<Long, MasterContext> masterContexts = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, CompletableFuture<Void>> membersShuttingDown = new ConcurrentHashMap<>();
     /**
@@ -133,14 +136,14 @@ public class JobCoordinationService {
 
     private long maxJobScanPeriodInMillis;
 
-    JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
-                           JobRepository jobRepository, ObservableRepository observableRepository) {
+    JobCoordinationService(
+            NodeEngineImpl nodeEngine, JetService jetService, JetConfig config, JobRepository jobRepository
+    ) {
         this.nodeEngine = nodeEngine;
         this.jetService = jetService;
         this.config = config;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobRepository = jobRepository;
-        this.observableRepository = observableRepository;
 
         ExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
@@ -179,7 +182,6 @@ public class JobCoordinationService {
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
                 DAG dag = deserializeDag(jobId, config, serializedDag);
                 Set<String> ownedObservables = ownedObservables(dag);
-                observableRepository.init(ownedObservables);
                 JobRecord jobRecord = new JobRecord(jobId, serializedDag, dagToJson(dag), config, ownedObservables);
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
@@ -227,7 +229,7 @@ public class JobCoordinationService {
 
     private static Set<String> ownedObservables(DAG dag) {
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
-                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableRepository.OWNED_OBSERVABLE))
+                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableImpl.OWNED_OBSERVABLE))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
     }
@@ -652,7 +654,7 @@ public class JobCoordinationService {
                             : null;
             jobRepository.completeJob(masterContext, jobMetrics,  completionTime, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
-                observableRepository.complete(masterContext.jobRecord().getOwnedObservables(), error);
+                completeObservables(masterContext.jobRecord().getOwnedObservables(), error);
                 logger.fine(masterContext.jobIdString() + " is completed");
             } else {
                 MasterContext existing = masterContexts.get(masterContext.jobId());
@@ -980,5 +982,14 @@ public class JobCoordinationService {
 
     void assertOnCoordinatorThread() {
         assert IS_JOB_COORDINATOR_THREAD.get() : "not on coordinator thread";
+    }
+
+    private void completeObservables(Set<String> observables, Throwable error) {
+        for (String observable : observables) {
+            String ringbufferName = ObservableImpl.ringbufferName(observable);
+            Ringbuffer<Object> ringbuffer = nodeEngine.getHazelcastInstance().getRingbuffer(ringbufferName);
+            Object completion = error == null ? DoneItem.DONE_ITEM : WrappedThrowable.of(error);
+            ringbuffer.addAsync(completion, OverflowPolicy.OVERWRITE);
+        }
     }
 }
