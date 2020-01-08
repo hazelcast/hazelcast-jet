@@ -59,17 +59,19 @@ public class ObservableImpl<T> implements Observable<T> {
      */
     public static final String OWNED_OBSERVABLE = "owned_observable";
 
-    private final ConcurrentMap<UUID, RingbufferListener<T>> listeners = new ConcurrentHashMap<>();
     private final String name;
     private final HazelcastInstance hzInstance;
     private final Consumer<Observable<T>> onDestroy;
     private final ILogger logger;
+
+    private ConcurrentMap<UUID, RingbufferListener<T>> listeners;
 
     public ObservableImpl(String name, HazelcastInstance hzInstance, Consumer<Observable<T>> onDestroy, ILogger logger) {
         this.name = name;
         this.hzInstance = hzInstance;
         this.onDestroy = onDestroy;
         this.logger = logger;
+        this.listeners = new ConcurrentHashMap<>();
     }
 
     @Nonnull @Override
@@ -79,6 +81,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Nonnull @Override
     public UUID addObserver(@Nonnull Observer<T> observer) {
+        checkIfLive();
         UUID id = UuidUtil.newUnsecureUUID();
         RingbufferListener<T> listener = new RingbufferListener<>(name, id, observer, hzInstance, logger);
         listeners.put(id, listener);
@@ -88,6 +91,7 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void removeObserver(@Nonnull UUID registrationId) {
+        checkIfLive();
         RingbufferListener<T> listener = listeners.remove(registrationId);
         if (listener == null) {
             throw new IllegalArgumentException(
@@ -99,13 +103,21 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void destroy() {
+        checkIfLive();
+
         listeners.keySet().forEach(this::removeObserver);
         listeners.clear();
+        listeners = null;
 
         // destroy the underlying ringbuffer
         hzInstance.getRingbuffer(ringbufferName(name)).destroy();
         onDestroy.accept(this);
-        //TODO (PR-1729): we shouldn't allow usages of this class, after it has been destroyed
+    }
+
+    private void checkIfLive() {
+        if (listeners == null) {
+            throw new IllegalStateException("Has already been destroyed");
+        }
     }
 
     @Nonnull

@@ -44,7 +44,19 @@ import java.util.stream.StreamSupport;
  * capacity is full, the oldest messages will be overwritten as new ones
  * arrive.
  * <p>
- * TODO (PR-1729): how to configure capacity, what is the default one?
+ * Being backed by a {@link Ringbuffer}, an {@link Observable}'s capacity
+ * is basically the {@link Ringbuffer}'s capacity, which defaults to 10,000.
+ * So when using observables you don't need to worry about any data loss
+ * (not receiving some results) if you produce less than 10,000 of them (
+ * data loss only occurs if you produce them at a very high rate anyways).
+ * <p>
+ * If for some reason this default capacity is not suitable for your use case,
+ * then it can be configured on a case-by-case basis. For how to do this
+ * consult the IMDG Reference Manual, the "Configuring Ringbuffer Capacity"
+ * section. All the extra information you need is that the name of a
+ * {@link Ringbuffer} backing a certain {@link Observable} is
+ * a fixed prefix ("<strong>__jet.observables.</strong>") plus the
+ * {@link Observable#name() observable's name}.
  * <p>
  * In addition to data events, the observer can also observe completion and
  * failure events. Completion means that no further values will appear in
