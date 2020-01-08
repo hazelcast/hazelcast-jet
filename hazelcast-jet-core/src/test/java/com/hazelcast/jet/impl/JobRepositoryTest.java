@@ -91,7 +91,7 @@ public class JobRepositoryTest extends JetTestSupport {
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).get().isEmpty());
+        assertFalse("job repository should not be empty", jobRepository.getJobResources(jobId).isEmpty());
     }
 
     @Test
@@ -108,7 +108,7 @@ public class JobRepositoryTest extends JetTestSupport {
         cleanup();
 
         assertNotNull(jobRepository.getJobRecord(jobId));
-        assertFalse(jobRepository.getJobResources(jobId).get().isEmpty());
+        assertFalse(jobRepository.getJobResources(jobId).isEmpty());
     }
 
     @Test
@@ -119,12 +119,40 @@ public class JobRepositoryTest extends JetTestSupport {
 
         cleanup();
 
-        assertTrue(jobRepository.getJobResources(jobId).get().isEmpty());
+        assertTrue(jobRepository.getJobResources(jobId).isEmpty());
     }
 
     @Test
-    public void when_jobResourceUploadFails_then_jobResourcesCleanedUp() {
-        jobConfig.addResource("invalid path");
+    public void when_jobJarUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.addJar("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobZipUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.addJarsInZip("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobClasspathResourceUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.addClasspathResource("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobFileUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.attachFile("invalid path");
+        testResourceCleanup();
+    }
+
+    @Test
+    public void when_jobDirectoryUploadFails_then_jobResourcesCleanedUp() {
+        jobConfig.attachDirectory("invalid path");
+        testResourceCleanup();
+    }
+
+    public void testResourceCleanup() {
         try {
             jobRepository.uploadJobResources(jobConfig);
             fail();
@@ -133,6 +161,7 @@ public class JobRepositoryTest extends JetTestSupport {
             assertTrue(objects.stream().noneMatch(o -> o.getName().startsWith(JobRepository.RESOURCES_MAP_NAME_PREFIX)));
         }
     }
+
 
     @Test
     public void test_getJobRecordFromClient() {
