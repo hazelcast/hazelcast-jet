@@ -23,7 +23,6 @@ import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
-import com.hazelcast.test.annotation.Repeat;
 import org.apache.activemq.ActiveMQXAConnectionFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.BeforeClass;
@@ -63,13 +62,11 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    @Repeat(20)
     public void test_transactional_withRestarts_forceful() throws Exception {
         test_transactional_withRestarts(false);
     }
 
     private void test_transactional_withRestarts(boolean graceful) throws Exception {
-        // TODO [viliam] make this test faster
         int numItems = 1000;
         Pipeline p = Pipeline.create();
         String destinationName = randomString();
@@ -77,7 +74,7 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
                                 .fillBufferFn((ctx, buf) -> {
                                     if (ctx[0] < numItems) {
                                         buf.add(ctx[0]++);
-                                        sleepMillis(10);
+                                        sleepMillis(5);
                                     }
                                 })
                                 .createSnapshotFn(ctx -> ctx[0])

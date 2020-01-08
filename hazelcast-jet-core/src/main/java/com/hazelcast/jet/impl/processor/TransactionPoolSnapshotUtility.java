@@ -138,7 +138,6 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
         if (!usesTransactionLifecycle()) {
             return;
         }
-        // TODO [viliam] update
         // If a member is removed or the local parallelism is reduced, the
         // transactions with higher processor index won't be used. We need to
         // roll these back too. We probe transaction IDs with processorIndex

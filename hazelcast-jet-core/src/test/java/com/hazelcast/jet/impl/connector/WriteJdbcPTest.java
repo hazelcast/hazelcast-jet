@@ -256,14 +256,13 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
     }
 
     private void test_transactional_withRestarts(boolean graceful) throws Exception {
-        // TODO [viliam] make this test faster
         int numItems = 1000;
         Pipeline p = Pipeline.create();
         p.readFrom(SourceBuilder.stream("src", procCtx -> new int[1])
                                 .<Integer>fillBufferFn((ctx, buf) -> {
                                     if (ctx[0] < numItems) {
                                         buf.add(ctx[0]++);
-                                        sleepMillis(10);
+                                        sleepMillis(5);
                                     }
                                 })
                                 .createSnapshotFn(ctx -> ctx[0])
@@ -287,7 +286,7 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         try (Connection conn = ((DataSource) createDataSource(false)).getConnection();
              PreparedStatement stmt = conn.prepareStatement("select id from " + tableName)
         ) {
-            long endTime = System.nanoTime() + SECONDS.toNanos(20); // TODO [viliam] longer timeout
+            long endTime = System.nanoTime() + SECONDS.toNanos(60);
             int lastCount = 0;
             String expectedRows = IntStream.range(0, numItems).mapToObj(Integer::toString).collect(joining("\n"));
             SortedSet<Integer> actualRows = new TreeSet<>();
