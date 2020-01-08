@@ -21,7 +21,6 @@ import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
-import com.hazelcast.cluster.Cluster;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
@@ -32,7 +31,6 @@ import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobSummaryListCodec;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -68,17 +66,10 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Nonnull
     @Override
     public List<Job> getJobs() {
-        ClientInvocation invocation = new ClientInvocation(
-                client, JetGetJobIdsCodec.encodeRequest(), null, masterUUID(client.getCluster())
-        );
-
-        try {
-            ClientMessage response = invocation.invoke().get();
-            List<Long> jobs = JetGetJobIdsCodec.decodeResponse(response).response;
+        return invokeRequestOnMasterAndDecodeResponse(JetGetJobIdsCodec.encodeRequest(), resp -> {
+            List<Long> jobs = JetGetJobIdsCodec.decodeResponse(resp).response;
             return jobs.stream().map(jobId -> new ClientJobProxy(this, jobId)).collect(toList());
-        } catch (Throwable t) {
-            throw rethrow(t);
-        }
+        });
     }
 
     /**
@@ -133,7 +124,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     private <S> S invokeRequestOnMasterAndDecodeResponse(ClientMessage request,
                                                          Function<ClientMessage, Object> decoder) {
-        return invokeRequestAndDecodeResponse(masterUUID(client.getCluster()), request, decoder);
+        UUID masterUuid = client.getClientClusterService().getMasterMember().getUuid();
+        return invokeRequestAndDecodeResponse(masterUuid, request, decoder);
     }
 
     private <S> S invokeRequestOnAnyMemberAndDecodeResponse(ClientMessage request,
@@ -152,8 +144,4 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         }
     }
 
-    @Nonnull
-    private static UUID masterUUID(Cluster cluster) {
-        return Util.getMaster(cluster).getUuid();
-    }
 }
