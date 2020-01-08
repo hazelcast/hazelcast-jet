@@ -32,6 +32,7 @@ import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsByNameCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobIdsCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetGetJobSummaryListCodec;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
@@ -151,9 +152,8 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         }
     }
 
+    @Nonnull
     private static UUID masterUUID(Cluster cluster) {
-        return cluster.getMembers().stream().findFirst()
-                      .orElseThrow(() -> new IllegalStateException("No members found in cluster"))
-                      .getUuid();
+        return Util.getMaster(cluster).getUuid();
     }
 }

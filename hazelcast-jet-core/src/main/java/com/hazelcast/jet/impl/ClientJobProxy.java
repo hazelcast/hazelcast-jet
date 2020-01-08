@@ -18,7 +18,6 @@ package com.hazelcast.jet.impl;
 
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
-import com.hazelcast.cluster.Member;
 import com.hazelcast.internal.serialization.Data;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
@@ -37,11 +36,11 @@ import com.hazelcast.jet.impl.client.protocol.codec.JetJoinSubmittedJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetResumeJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetSubmitJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetTerminateJobCodec;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.spi.exception.TargetNotMemberException;
 
 import javax.annotation.Nonnull;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -164,8 +163,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     @Override
     protected UUID masterUuid() {
-        Optional<Member> first = container().getCluster().getMembers().stream().findFirst();
-        return first.orElseThrow(() -> new IllegalStateException("No members found in cluster")).getUuid();
+        return Util.getMaster(container().getCluster()).getUuid();
     }
 
     @Override

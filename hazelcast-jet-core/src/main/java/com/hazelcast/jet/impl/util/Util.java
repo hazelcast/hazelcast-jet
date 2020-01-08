@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.cluster.Cluster;
+import com.hazelcast.cluster.Member;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -428,5 +430,14 @@ public final class Util {
      */
     public static ProcessingGuarantee min(ProcessingGuarantee g1, ProcessingGuarantee g2) {
         return g1.ordinal() < g2.ordinal() ? g1 : g2;
+    }
+
+    @Nonnull
+    public static Member getMaster(Cluster cluster) {
+        Collection<Member> members = cluster.getMembers();
+        if (members.isEmpty()) {
+            throw new IllegalStateException("No members in cluster");
+        }
+        return members.iterator().next();
     }
 }
