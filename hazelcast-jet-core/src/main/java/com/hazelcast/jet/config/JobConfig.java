@@ -25,6 +25,7 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,7 +58,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean enableMetrics = true;
     private boolean storeMetricsAfterJobCompletion;
 
-    private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
+    private transient Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
 
@@ -652,6 +653,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * Returns all the registered resource configurations.
      */
     @Nonnull
+    @PrivateApi
     public Map<String, ResourceConfig> getResourceConfigs() {
         return resourceConfigs;
     }
@@ -796,7 +798,6 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeLong(snapshotIntervalMillis);
         out.writeBoolean(autoScaling);
         out.writeBoolean(splitBrainProtectionEnabled);
-        out.writeObject(resourceConfigs);
         out.writeObject(classLoaderFactory);
         out.writeUTF(initialSnapshotName);
         out.writeBoolean(enableMetrics);
@@ -810,7 +811,6 @@ public class JobConfig implements IdentifiedDataSerializable {
         snapshotIntervalMillis = in.readLong();
         autoScaling = in.readBoolean();
         splitBrainProtectionEnabled = in.readBoolean();
-        resourceConfigs = in.readObject();
         classLoaderFactory = in.readObject();
         initialSnapshotName = in.readUTF();
         enableMetrics = in.readBoolean();
