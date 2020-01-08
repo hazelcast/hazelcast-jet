@@ -598,20 +598,6 @@ public class JobRepository {
         exportedSnapshotDetailsCache.set(snapshotName, validationRecord);
     }
 
-    /**
-     * Returns map name in the form {@code "_jet.snapshot.<jobId>.<dataMapIndex>"}.
-     */
-    public static String snapshotDataMapName(long jobId, int dataMapIndex) {
-        return SNAPSHOT_DATA_MAP_PREFIX + idToString(jobId) + '.' + dataMapIndex;
-    }
-
-    /**
-     * Returns map name in the form {@code "_jet.exportedSnapshot.<jobId>.<dataMapIndex>"}.
-     */
-    public static String exportedSnapshotMapName(String name) {
-        return JobRepository.EXPORTED_SNAPSHOTS_PREFIX + name;
-    }
-
     public static final class UpdateJobExecutionRecordEntryProcessor implements
             EntryProcessor<Long, JobExecutionRecord, Object>,
             IdentifiedDataSerializable {
