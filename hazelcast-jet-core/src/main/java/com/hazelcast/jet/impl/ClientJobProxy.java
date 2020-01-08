@@ -36,7 +36,6 @@ import com.hazelcast.jet.impl.client.protocol.codec.JetJoinSubmittedJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetResumeJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetSubmitJobCodec;
 import com.hazelcast.jet.impl.client.protocol.codec.JetTerminateJobCodec;
-import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.spi.exception.TargetNotMemberException;
 
@@ -163,7 +162,7 @@ public class ClientJobProxy extends AbstractJobProxy<JetClientInstanceImpl> {
 
     @Override
     protected UUID masterUuid() {
-        return Util.getMaster(container().getCluster()).getUuid();
+        return container().getHazelcastClient().getClientClusterService().getMasterMember().getUuid();
     }
 
     @Override
