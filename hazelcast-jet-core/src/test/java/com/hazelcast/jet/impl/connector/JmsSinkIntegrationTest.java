@@ -17,12 +17,8 @@
 package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.JobProxy;
-import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.SourceBuilder;
 import org.apache.activemq.ActiveMQXAConnectionFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.BeforeClass;
@@ -36,14 +32,8 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static javax.jms.Session.DUPS_OK_ACKNOWLEDGE;
-import static org.junit.Assert.assertEquals;
 
 public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
     @ClassRule
@@ -67,27 +57,8 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
     }
 
     private void test_transactional_withRestarts(boolean graceful) throws Exception {
-        int numItems = 1000;
-        Pipeline p = Pipeline.create();
         String destinationName = randomString();
-        p.readFrom(SourceBuilder.stream("src", procCtx -> new int[1])
-                                .fillBufferFn((ctx, buf) -> {
-                                    if (ctx[0] < numItems) {
-                                        buf.add(ctx[0]++);
-                                        sleepMillis(5);
-                                    }
-                                })
-                                .createSnapshotFn(ctx -> ctx[0])
-                                .restoreSnapshotFn((ctx, state) -> ctx[0] = state.get(0))
-                                .build())
-         .withoutTimestamps()
-         .map(String::valueOf)
-         .writeTo(Sinks.jmsQueue(destinationName, () -> new ActiveMQXAConnectionFactory(broker.getVmURL())));
-
-        JobConfig config = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
-                .setSnapshotIntervalMillis(50);
-        JobProxy job = (JobProxy) instance().newJob(p, config);
+        Sink<Integer> sink = Sinks.jmsQueue(destinationName, () -> new ActiveMQXAConnectionFactory(broker.getVmURL()));
 
         try (
                 Connection connection = broker.createConnectionFactory().createConnection();
@@ -95,40 +66,13 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
                 MessageConsumer consumer = session.createConsumer(session.createQueue(destinationName))
         ) {
             connection.start();
-            long endTime = System.nanoTime() + SECONDS.toNanos(120);
             Set<Integer> actualSinkContents = new HashSet<>();
-
-            Set<Integer> expected = IntStream.range(0, numItems).boxed().collect(Collectors.toSet());
-            // We'll restart once, then restart again after a short sleep (possibly during initialization), then restart
-            // again and then assert some output so that the test isn't constantly restarting without any progress
-            for (;;) {
-                assertJobStatusEventually(job, RUNNING);
-                job.restart(graceful);
-                assertJobStatusEventually(job, RUNNING);
-                sleepMillis(ThreadLocalRandom.current().nextInt(400));
-                job.restart(graceful);
-                try {
-                    Message msg;
-                    for (int countThisRound = 0; countThisRound < 100 && (msg = consumer.receive(5000)) != null
-                            && actualSinkContents.size() < expected.size(); ) {
-                        actualSinkContents.add(Integer.valueOf(((TextMessage) msg).getText()));
-                        countThisRound++;
-                    }
-
-                    logger.info("number of committed items in the sink so far: " + actualSinkContents.size());
-                    assertEquals(expected, actualSinkContents);
-                    // if content matches, break the loop. Otherwise restart and try again
-                    break;
-                } catch (AssertionError e) {
-                    if (System.nanoTime() >= endTime) {
-                        throw e;
-                    }
+            ExactlyOnceSinkTestUtil.test_transactional_withRestarts(instance(), logger, sink, graceful, () -> {
+                for (Message msg; (msg = consumer.receiveNoWait()) != null; ) {
+                    actualSinkContents.add(Integer.valueOf(((TextMessage) msg).getText()));
                 }
-            }
-        } finally {
-            // We have to remove the job before bringing down Kafka broker because
-            // the producer can get stuck otherwise.
-            ditchJob(job, instances());
+                return actualSinkContents;
+            });
         }
     }
 }

@@ -19,12 +19,9 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.function.BiConsumerEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
-import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.config.ProcessingGuarantee;
-import com.hazelcast.jet.impl.JobProxy;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
-import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.transaction.impl.xa.SerializableXID;
 import org.junit.Before;
@@ -50,18 +47,13 @@ import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
 import java.sql.Statement;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.core.JobStatus.RUNNING;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.joining;
 import static javax.transaction.xa.XAResource.TMFAIL;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doAnswer;
@@ -256,72 +248,25 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
     }
 
     private void test_transactional_withRestarts(boolean graceful) throws Exception {
-        int numItems = 1000;
-        Pipeline p = Pipeline.create();
-        p.readFrom(SourceBuilder.stream("src", procCtx -> new int[1])
-                                .<Integer>fillBufferFn((ctx, buf) -> {
-                                    if (ctx[0] < numItems) {
-                                        buf.add(ctx[0]++);
-                                        sleepMillis(5);
-                                    }
-                                })
-                                .createSnapshotFn(ctx -> ctx[0])
-                                .restoreSnapshotFn((ctx, state) -> ctx[0] = state.get(0))
-                                .build())
-         .withoutTimestamps()
-         .peek()
-         .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
-                 () -> createDataSource(true),
-                 (stmt, item) -> {
-                     stmt.setInt(1, item);
-                     stmt.setString(2, "name-" + item);
-                 }
-         ));
-
-        JobConfig config = new JobConfig()
-                .setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE)
-                .setSnapshotIntervalMillis(50);
-        JobProxy job = (JobProxy) instance().newJob(p, config);
+        Sink<Integer> sink = Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
+                () -> createDataSource(true),
+                (stmt, item) -> {
+                    stmt.setInt(1, item);
+                    stmt.setString(2, "name-" + item);
+                }
+        );
 
         try (Connection conn = ((DataSource) createDataSource(false)).getConnection();
              PreparedStatement stmt = conn.prepareStatement("select id from " + tableName)
         ) {
-            long endTime = System.nanoTime() + SECONDS.toNanos(60);
-            int lastCount = 0;
-            String expectedRows = IntStream.range(0, numItems).mapToObj(Integer::toString).collect(joining("\n"));
-            SortedSet<Integer> actualRows = new TreeSet<>();
-            // We'll restart once, then restart again after a short sleep (possibly during initialization), then restart
-            // again and then assert some output so that the test isn't constantly restarting without any progress
-            for (;;) {
-                assertJobStatusEventually(job, RUNNING);
-                job.restart(graceful);
-                assertJobStatusEventually(job, RUNNING);
-                sleepMillis(ThreadLocalRandom.current().nextInt(400));
-                job.restart(graceful);
-                try {
-                    do {
-                        actualRows.clear();
-                        ResultSet resultSet = stmt.executeQuery();
-                        while (resultSet.next()) {
-                            actualRows.add(resultSet.getInt(1));
-                        }
-                    } while (actualRows.size() < Math.min(numItems, 100 + lastCount)
-                            && System.nanoTime() < endTime);
-                    lastCount = actualRows.size();
-                    logger.info("number of committed items in the sink so far: " + lastCount);
-                    assertEquals(expectedRows, actualRows.stream().map(Objects::toString).collect(joining("\n")));
-                    // if content matches, break the loop. Otherwise restart and try again
-                    break;
-                } catch (AssertionError e) {
-                    if (System.nanoTime() >= endTime) {
-                        throw e;
-                    }
+            ExactlyOnceSinkTestUtil.test_transactional_withRestarts(instance(), logger, sink, graceful, () -> {
+                ResultSet resultSet = stmt.executeQuery();
+                SortedSet<Integer> actualRows = new TreeSet<>();
+                while (resultSet.next()) {
+                    actualRows.add(resultSet.getInt(1));
                 }
-            }
-        } finally {
-            // We have to remove the job before bringing down Kafka broker because
-            // the producer can get stuck otherwise.
-            ditchJob(job, instances());
+                return actualRows;
+            });
         }
     }
 
