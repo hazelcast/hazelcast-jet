@@ -23,6 +23,7 @@ import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.util.counters.Counter;
 import com.hazelcast.internal.util.counters.MwCounter;
 import com.hazelcast.jet.config.JobConfig;
@@ -41,11 +42,13 @@ import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_DURATION;
@@ -69,6 +72,11 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Object executionLock = new Object();
     private final ILogger logger;
     private final Counter startTime = MwCounter.newMwCounter();
+
+    // key: resource identifier
+    // we use ConcurrentHashMap because ConcurrentMap doesn't guarantee that computeIfAbsent
+    // executes the supplier strictly only if it's needed.
+    private final ConcurrentHashMap<String, File> tempDirectories = new ConcurrentHashMap<>();
 
     private String jobName;
 
@@ -122,7 +130,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
@@ -190,6 +198,14 @@ public class ExecutionContext implements DynamicMetricsProvider {
                         + " encountered an exception in ProcessorSupplier.close(), ignoring it", e);
             }
         }
+
+        tempDirectories.forEach((k, dir) -> {
+            try {
+                IOUtil.delete(dir);
+            } catch (Exception e) {
+                logger.warning("Failed to delete temporary directory " + dir);
+            }
+        });
     }
 
     /**
