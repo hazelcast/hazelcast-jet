@@ -428,7 +428,6 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
-    @Ignore //TODO (PR-1729): should work after StaleSequenceException is removed from RB's readMany
     public void fastResultsDoNotGetLost_moreThanRingbufferCapacity() {
         fastResultsDoNotGetLost(250_000);
     }
@@ -451,7 +450,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     }
 
     @Test
-    @Ignore //TODO (PR-1729): should work after StaleSequenceException is removed from RB's readMany
+    @Ignore //TODO (PR-1729): fast results still can get lost, if using iterator
     public void fastResultsDoNotGetLost_whenUsingIterator() throws Exception {
         int noOfResults = 250_000;
 

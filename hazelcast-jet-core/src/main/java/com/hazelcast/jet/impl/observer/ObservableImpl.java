@@ -167,16 +167,22 @@ public class ObservableImpl<T> implements Observable<T> {
             cancelled = true;
         }
 
-        private void accept(ReadResultSet<Object> resultSet, Throwable throwable) {
+        private void accept(ReadResultSet<Object> result, Throwable throwable) {
             if (cancelled) {
                 return;
             }
             if (throwable == null) {
                 // we process all messages in batch. So we don't release the thread and reschedule ourselves;
                 // but we'll process whatever was received in 1 go.
-                for (Object result : resultSet) {
+
+                long lostCount = result.getNextSequenceToReadFrom() - result.readCount() - sequence;
+                if (lostCount != 0) {
+                    logger.warning(String.format("Message loss of %d messages detected in listener '%s'", lostCount, id));
+                }
+
+                for (int i = 0; i < result.size(); i++) {
                     try {
-                        onNewMessage(result);
+                        onNewMessage(result.get(i));
                     } catch (Throwable t) {
                         logger.warning("Terminating message listener '" + id + "'. " +
                                 "Reason: Unhandled exception, message: " + t.getMessage(), t);
@@ -184,8 +190,9 @@ public class ObservableImpl<T> implements Observable<T> {
                         return;
                     }
 
-                    sequence++;
                 }
+
+                sequence = result.getNextSequenceToReadFrom();
                 next();
             } else {
                 if (handleInternalException(throwable)) {
@@ -267,15 +274,14 @@ public class ObservableImpl<T> implements Observable<T> {
 
         /**
          * Handles a {@link StaleSequenceException} associated with requesting
-         * a sequence older than the {@code headSequence}.
-         * This may indicate that the reader was too slow and items in the
-         * ringbuffer were already overwritten.
+         * a sequence older than the {@code headSequence}. This should not
+         * happen with latest ringbuffer implementation, but keeping it here
+         * to be safe.
          *
          * @param staleSequenceException the exception
          * @return if the exception was handled and the listener may continue reading
          */
         private boolean handleStaleSequenceException(StaleSequenceException staleSequenceException) {
-            //TODO (PR-1729): update to IMDG changes
             long headSeq = ringbuffer.headSequence();
             if (logger.isFinestEnabled()) {
                 logger.finest("Message listener '" + id + "' ran into a stale sequence. Jumping from oldSequence "
