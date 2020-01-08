@@ -64,6 +64,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static javax.transaction.xa.XAResource.TMFAIL;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 public class WriteJdbcPTest extends SimpleTestInClusterSupport {
 
@@ -351,10 +353,15 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
 
             @Override
             public DataSource getEx() throws SQLException {
-                if (remainingFailures-- > 0) {
-                    throw new SQLException("connection failure");
-                }
-                return ((DataSource) createDataSource(false));
+                DataSource realDs = (DataSource) createDataSource(false);
+                DataSource mockDs = mock(DataSource.class);
+                doAnswer(invocation -> {
+                    if (remainingFailures-- > 0) {
+                        throw new SQLException("connection failure");
+                    }
+                    return realDs.getConnection();
+                }).when(mockDs).getConnection();
+                return mockDs;
             }
         };
     }
