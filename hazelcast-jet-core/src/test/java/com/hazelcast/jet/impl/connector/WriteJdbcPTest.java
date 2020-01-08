@@ -98,11 +98,11 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
          .map(item -> entry(item, item.toString()))
          .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
+                 () -> createDataSource(false),
                  (stmt, item) -> {
                      stmt.setInt(1, item.getKey());
                      stmt.setString(2, item.getValue());
-                 },
-                 () -> createDataSource(false)
+                 }
          ));
 
         instance().newJob(p).join();
@@ -115,7 +115,7 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
          .map(item -> entry(item, item.toString()))
          .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
-                 failTwiceConnectionSupplier(), failOnceBindFn()
+                 failTwiceDataSourceSupplier(), failOnceBindFn()
          ));
 
         instance().newJob(p).join();
@@ -128,10 +128,10 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         p.readFrom(TestSources.items(IntStream.range(0, PERSON_COUNT).boxed().toArray(Integer[]::new)))
          .map(item -> entry(item, item.toString()))
          .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
+                 () -> createDataSource(false),
                  (stmt, item) -> {
                      throw new SQLNonTransientException();
-                 },
-                 () -> createDataSource(false)
+                 }
          ));
 
         instance().newJob(p).join();
@@ -270,11 +270,11 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
          .withoutTimestamps()
          .peek()
          .writeTo(Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
+                 () -> createDataSource(true),
                  (stmt, item) -> {
                      stmt.setInt(1, item);
                      stmt.setString(2, "name-" + item);
-                 },
-                 () -> createDataSource(true)
+                 }
          ));
 
         JobConfig config = new JobConfig()
@@ -345,16 +345,16 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         return dataSource;
     }
 
-    private static SupplierEx<Connection> failTwiceConnectionSupplier() {
-        return new SupplierEx<Connection>() {
+    private static SupplierEx<DataSource> failTwiceDataSourceSupplier() {
+        return new SupplierEx<DataSource>() {
             int remainingFailures = 2;
 
             @Override
-            public Connection getEx() throws SQLException {
+            public DataSource getEx() throws SQLException {
                 if (remainingFailures-- > 0) {
                     throw new SQLException("connection failure");
                 }
-                return ((DataSource) createDataSource(false)).getConnection();
+                return ((DataSource) createDataSource(false));
             }
         };
     }

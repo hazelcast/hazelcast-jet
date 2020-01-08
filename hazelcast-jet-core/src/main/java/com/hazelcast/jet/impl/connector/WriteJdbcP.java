@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -72,9 +73,10 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     private WriteJdbcP(
             @Nonnull String updateQuery,
             @Nonnull CommonDataSource dataSource,
-            @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn
+            @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn,
+            boolean exactlyOnce
     ) {
-        super(EXACTLY_ONCE, 2); // TODO [viliam] allow the user to choose
+        super(exactlyOnce ? EXACTLY_ONCE : AT_LEAST_ONCE, 2);
         this.updateQuery = updateQuery;
         this.dataSource = dataSource;
         this.bindFn = bindFn;
@@ -86,7 +88,8 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
     public static <T> ProcessorMetaSupplier metaSupplier(
             @Nonnull String updateQuery,
             @Nonnull SupplierEx<? extends CommonDataSource> dataSourceSupplier,
-            @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn
+            @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn,
+            boolean exactlyOnce
     ) {
         checkSerializable(dataSourceSupplier, "newConnectionFn");
         checkSerializable(bindFn, "bindFn");
@@ -103,7 +106,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
                     @Nonnull @Override
                     public Collection<? extends Processor> get(int count) {
                         return IntStream.range(0, count)
-                                        .mapToObj(i -> new WriteJdbcP<>(updateQuery, dataSource, bindFn))
+                                        .mapToObj(i -> new WriteJdbcP<>(updateQuery, dataSource, bindFn, exactlyOnce))
                                         .collect(Collectors.toList());
                     }
                 });

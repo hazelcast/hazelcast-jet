@@ -25,8 +25,6 @@ import com.hazelcast.function.BinaryOperatorEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
-import com.hazelcast.jet.core.processor.SinkProcessors;
-import com.hazelcast.jet.impl.connector.DataSourceFromConnectionSupplier;
 import com.hazelcast.jet.impl.pipeline.SinkImpl;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
@@ -35,8 +33,6 @@ import javax.annotation.Nonnull;
 import javax.jms.ConnectionFactory;
 import javax.sql.CommonDataSource;
 import java.nio.charset.Charset;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
@@ -955,84 +951,114 @@ public final class Sinks {
     }
 
     /**
-     * Returns a sink that connects to the specified database using the given
-     * {@code newConnectionFn}, prepares a statement using the given {@code
-     * updateQuery} and inserts/updates the items.
+     * A shortcut for:
+     * <pre>{@code
+     *     Sinks.<T>jdbcBuilder()
+     *             .updateQuery(updateQuery)
+     *             .dataSourceSupplier(dataSourceSupplier)
+     *             .bindFn(bindFn)
+     *             .build();
+     * }</pre>
+     *
+     * See {@link #jdbcBuilder()} for more information.
+     */
+    @Nonnull
+    public static <T> Sink<T> jdbc(
+            @Nonnull String updateQuery,
+            @Nonnull SupplierEx<? extends CommonDataSource> dataSourceSupplier,
+            @Nonnull BiConsumerEx<PreparedStatement, T> bindFn
+    ) {
+        return Sinks.<T>jdbcBuilder()
+                .updateQuery(updateQuery)
+                .dataSourceSupplier(dataSourceSupplier)
+                .bindFn(bindFn)
+                .build();
+    }
+
+    /**
+     * A shortcut for:
+     * <pre>{@code
+     *     jdbcBuilder(updateQuery, bindFn)
+     *              .jdbcUrl(jdbcUrl)
+     *              .build()
+     * }</pre>
+     *
+     * See {@link #jdbcBuilder()} for more information.
+     */
+    @Nonnull
+    public static <T> Sink<T> jdbc(
+            @Nonnull String updateQuery,
+            @Nonnull String jdbcUrl,
+            @Nonnull BiConsumerEx<PreparedStatement, T> bindFn
+    ) {
+        return Sinks.<T>jdbcBuilder()
+                .updateQuery(updateQuery)
+                .jdbcUrl(jdbcUrl)
+                .bindFn(bindFn)
+                .build();
+    }
+
+    /**
+     * Returns a builder to build a sink that connects to a JDBC database,
+     * prepares an SQL statement and executes it for each item. On the returned
+     * builder you must specify a connection (either using a {@linkplain
+     * JdbcSinkBuilder#jdbcUrl(String) JDBC URL} or using a {@linkplain
+     * JdbcSinkBuilder#dataSourceSupplier(SupplierEx) datasource}), the
+     * {@linkplain JdbcSinkBuilder#updateQuery(String) SQL statement} and a
+     * {@linkplain JdbcSinkBuilder#bindFn(BiConsumerEx) bind function}.
      * <p>
-     * The {@code updateQuery} should contain a parametrized query. The {@code
-     * bindFn} will receive a {@code PreparedStatement} created for this query
-     * and should bind parameters to it. It should not execute the query,
-     * call commit or any other method.
-     * <p>
-     * The records will be committed after each batch of records and a batch
-     * mode will be used (if the driver supports it). Auto-commit will be
-     * disabled on the connection.
-     * <p>
-     * Example:<pre>{@code
-     *     p.writeTo(Sinks.jdbc(
-     *             "REPLACE into table (id, name) values(?, ?)",
-     *             () -> return DriverManager.getConnection("jdbc:..."),
-     *             (stmt, item) -> {
-     *                 stmt.setInt(1, item.id);
-     *                 stmt.setInt(2, item.name);
-     *             }
-     *     ));
+     * <b>Example</b>
+     *
+     * <pre>{@code
+     * stage.writeTo(Sinks.<Entry<Integer, String>>jdbcBuilder()
+     *     .updateQuery("INSET INTO table (key, value) VALUES(?, ?)")
+     *     .bindFn((stmt, item) -> {
+     *         stmt.setInt(1, item.getKey());
+     *         stmt.setString(2, item.getValue());
+     *     })
+     *     .jdbcUrl("jdbc:...")
+     *     .build());
      * }</pre>
      * <p>
-     * In case of an {@link SQLException} the processor will automatically try
-     * to reconnect and the job won't fail, except for the {@link
-     * SQLNonTransientException} subclass. The default local parallelism for
-     * this sink is 1.
+     * <b>Commit behavior</b>
      * <p>
-     * No state is saved to snapshot for this sink. After the job is restarted,
-     * the items will likely be duplicated, providing an <i>at-least-once</i>
-     * guarantee. For this reason you should not use {@code INSERT} statement
-     * which can fail on duplicate primary key. Rather use an
-     * <em>insert-or-update</em> statement that can tolerate duplicate writes.
+     * The commit behavior depends on the job guarantee:<ul>
+     *     <li><b>Exactly-once:</b> XA transactions will be used to commit the
+     *     work in phase two of the snapshot, that is after all other vertices
+     *     in the job have performed the snapshot. Very small state will be
+     *     saved to snapshot.
      *
-     * @param updateQuery the SQL query which will do the insert/update
-     * @param newConnectionFn the supplier of database connection
-     * @param bindFn the function to set the parameters of the statement for
-     *                 each item received
+     *     <li><b>At-least-once or no guarantee:</b> Records will be committed
+     *     in batches. A batch is created from records that are readily available
+     *     at the sink.
+     * </ul>
+     * <p>
+     * If the job is in exactly-once mode, the overhead in the database and the
+     * output latency are higher. This is caused by the fact that Jet will not
+     * commit the transaction until the next snapshot occurs and the number of
+     * uncommitted records in the transactions can be very high. Latency is
+     * high because the changes are visible only after the transactions are
+     * committed. Configure the snapshot interval accordingly.
+     * <p>
+     * If your driver doesn't support XA transactions or if you want to avoid
+     * the performance or latency penalty, you can decrease the guarantee just
+     * for this sink by calling {@link JdbcSinkBuilder#exactlyOnce(boolean)
+     * exactlyOnce(false)} on the returned builder.
+     * <p>
+     * <b>Notes</b>
+     * <p>
+     * In non-XA mode, in case of an {@link SQLException} the processor will
+     * transparently reconnect and the job won't fail, except for an {@link
+     * SQLNonTransientException} subclass. In XA mode the job will fail
+     * immediately.
+     * <p>
+     * The default local parallelism for this sink is 1.
+     *
      * @param <T> type of the items the sink accepts
+     * @since 4.0
      */
     @Nonnull
-    public static <T> Sink<T> jdbc(
-            @Nonnull String updateQuery,
-            @Nonnull SupplierEx<Connection> newConnectionFn,
-            @Nonnull BiConsumerEx<PreparedStatement, T> bindFn
-    ) {
-       return jdbc(updateQuery, bindFn, () -> new DataSourceFromConnectionSupplier(newConnectionFn));
-    }
-
-    /**
-     * Convenience for {@link Sinks#jdbc(String, SupplierEx,
-     * BiConsumerEx)}. The connection will be created from {@code
-     * connectionUrl}.
-     */
-    @Nonnull
-    public static <T> Sink<T> jdbc(
-            @Nonnull String updateQuery,
-            @Nonnull String connectionUrl,
-            @Nonnull BiConsumerEx<PreparedStatement, T> bindFn
-    ) {
-        return Sinks.jdbc(updateQuery, () -> DriverManager.getConnection(connectionUrl), bindFn);
-    }
-
-    /**
-     * TODO [viliam]
-     *
-     * There's no need to use {@link javax.sql.ConnectionPoolDataSource}. One
-     * connection is given to each processor and returned when the execution
-     * finishes.
-     */
-    @Nonnull
-    public static <T> Sink<T> jdbc(
-            @Nonnull String updateQuery,
-            @Nonnull BiConsumerEx<PreparedStatement, T> bindFn,
-            @Nonnull SupplierEx<? extends CommonDataSource> dataSourceSupplier
-    ) {
-        return Sinks.fromProcessor("jdbcSink",
-                SinkProcessors.writeJdbcP(updateQuery, dataSourceSupplier, bindFn));
+    public static <T> JdbcSinkBuilder<T> jdbcBuilder() {
+        return new JdbcSinkBuilder<>();
     }
 }

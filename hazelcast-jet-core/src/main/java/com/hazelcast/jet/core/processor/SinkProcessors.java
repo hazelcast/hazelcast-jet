@@ -27,8 +27,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.impl.connector.HazelcastWriters;
-import com.hazelcast.jet.impl.connector.WriteFileP;
 import com.hazelcast.jet.impl.connector.WriteBufferedP;
+import com.hazelcast.jet.impl.connector.WriteFileP;
 import com.hazelcast.jet.impl.connector.WriteJdbcP;
 import com.hazelcast.jet.impl.connector.WriteJmsP;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -46,6 +46,7 @@ import java.net.Socket;
 import java.nio.charset.Charset;
 import java.sql.PreparedStatement;
 
+import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
@@ -321,15 +322,18 @@ public final class SinkProcessors {
     }
 
     /**
-     * Returns a supplier of processors for {@link
-     * Sinks#jdbc(String, SupplierEx, BiConsumerEx)}.
+     * Returns a supplier of processors for {@link Sinks#jdbcBuilder()}.
      */
     @Nonnull
     public static <T> ProcessorMetaSupplier writeJdbcP(
             @Nonnull String updateQuery,
             @Nonnull SupplierEx<? extends CommonDataSource> dataSourceSupplier,
-            @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn
+            @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn,
+            boolean exactlyOnce
     ) {
-        return WriteJdbcP.metaSupplier(updateQuery, dataSourceSupplier, bindFn);
+        checkNotNull(updateQuery, "updateQuery");
+        checkNotNull(dataSourceSupplier, "dataSourceSupplier");
+        checkNotNull(bindFn, "bindFn");
+        return WriteJdbcP.metaSupplier(updateQuery, dataSourceSupplier, bindFn, exactlyOnce);
     }
 }

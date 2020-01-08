@@ -16,12 +16,12 @@
 
 package com.hazelcast.jet.impl.connector;
 
-import com.hazelcast.function.SupplierEx;
-
 import javax.annotation.Nonnull;
 import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
 
@@ -30,20 +30,20 @@ import java.util.logging.Logger;
  * javax.sql.DataSource}.
  */
 public class DataSourceFromConnectionSupplier implements DataSource {
-    private final SupplierEx<Connection> newConnectionFn;
+    private final String jdbcUrl;
 
-    public DataSourceFromConnectionSupplier(@Nonnull SupplierEx<Connection> newConnectionFn) {
-        this.newConnectionFn = newConnectionFn;
+    public DataSourceFromConnectionSupplier(@Nonnull String jdbcUrl) {
+        this.jdbcUrl = jdbcUrl;
     }
 
     @Override
-    public Connection getConnection() {
-        return newConnectionFn.get();
+    public Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(jdbcUrl);
     }
 
     @Override
-    public Connection getConnection(String username, String password) {
-        throw new UnsupportedOperationException();
+    public Connection getConnection(String username, String password) throws SQLException {
+        return DriverManager.getConnection(jdbcUrl, username, password);
     }
 
     @Override
