@@ -44,7 +44,7 @@ import java.util.stream.StreamSupport;
  * capacity is full, the oldest messages will be overwritten as new ones
  * arrive.
  * <p>
- * TODO: how to configure capacity, what is the default one?
+ * TODO (PR-1729): how to configure capacity, what is the default one?
  * <p>
  * In addition to data events, the observer can also observe completion and
  * failure events. Completion means that no further values will appear in
@@ -64,8 +64,9 @@ import java.util.stream.StreamSupport;
  * <p>
  * <strong>Important:</strong> The same {@code Observable} must
  * <strong>not</strong> be used again in a new job since this will cause
- * in completion events interleaving and causing data loss or other unexpected
- * behaviour.
+ * completion events interleaving and causing data loss or other unexpected
+ * behaviour. Same goes for using one observable name in multiple
+ * {@link Sinks#observable(String) observable sinks} in the same job.
  * <p>
  * @param <T> type of the values in the sequence
  *
