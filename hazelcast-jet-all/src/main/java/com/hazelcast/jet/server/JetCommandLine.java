@@ -34,9 +34,9 @@ import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.JetBootstrap;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
-import com.hazelcast.jet.impl.JetBootstrap;
 import com.hazelcast.jet.impl.config.ConfigProvider;
 import com.hazelcast.jet.server.JetCommandLine.JetVersionProvider;
 import picocli.CommandLine;
@@ -61,6 +61,8 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -406,7 +408,7 @@ public class JetCommandLine implements Runnable {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
             ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
-            Member masterMember = clientClusterService.getMember(clientClusterService.getMasterAddress());
+            Member masterMember = clientClusterService.getMember(masterUuid(clientClusterService));
             MCClusterMetadata clusterMetadata = FutureUtil.getValue(hazelcastClient.getManagementCenterService()
                                                                                    .getClusterMetadata(masterMember));
             Cluster cluster = client.getCluster();
@@ -421,6 +423,11 @@ public class JetCommandLine implements Runnable {
             printf(format, "ADDRESS", "UUID");
             cluster.getMembers().forEach(member -> printf(format, member.getAddress(), member.getUuid()));
         });
+    }
+
+    private static UUID masterUuid(ClientClusterService clusterService) {
+        Optional<Member> first = clusterService.getMemberList().stream().findFirst();
+        return first.orElseThrow(() -> new IllegalStateException("No members found in cluster")).getUuid();
     }
 
     private void runWithJet(Verbosity verbosity, Consumer<JetInstance> consumer) throws IOException {
