@@ -274,15 +274,24 @@ public final class JetSpringServices {
         private transient ApplicationContext context;
 
         public <T> T getBean(String name) {
+            checkContext();
             return (T) context.getBean(name);
         }
 
         public <T> T getBean(String name, Class<T> type) {
+            checkContext();
             return context.getBean(name, type);
         }
 
         public <T> T getBean(Class<T> type) {
+            checkContext();
             return context.getBean(type);
+        }
+
+        private void checkContext() {
+            if (context == null) {
+                throw new IllegalStateException("The spring managed context is not configured properly");
+            }
         }
     }
 }
