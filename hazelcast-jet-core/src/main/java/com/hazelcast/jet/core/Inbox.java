@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -61,7 +62,7 @@ public interface Inbox extends Iterable<Object> {
      * The returned iterator doesn't support the {@link Iterator#remove()}
      * method.
      */
-    @Override
+    @Override @Nonnull
     Iterator<Object> iterator();
 
     /**
@@ -75,11 +76,13 @@ public interface Inbox extends Iterable<Object> {
      * @param target the collection to drain this object's items into
      * @return the number of elements actually drained
      */
+    @SuppressWarnings("unchecked")
     default <E> int drainTo(Collection<E> target) {
-        int drained = 0;
-        for (E o; (o = (E) poll()) != null; drained++) {
-            target.add(o);
+        for (Object o : this) {
+            target.add((E) o);
         }
+        int drained = size();
+        clear();
         return drained;
     }
 
@@ -88,11 +91,13 @@ public interface Inbox extends Iterable<Object> {
      *
      * @return the number of elements drained
      */
+    @SuppressWarnings("unchecked")
     default <E> int drain(Consumer<E> consumer) {
-        int consumed = 0;
-        for (E o; (o = (E) poll()) != null; consumed++) {
-            consumer.accept(o);
+        for (Object o : this) {
+            consumer.accept((E) o);
         }
+        int consumed = size();
+        clear();
         return consumed;
     }
 
