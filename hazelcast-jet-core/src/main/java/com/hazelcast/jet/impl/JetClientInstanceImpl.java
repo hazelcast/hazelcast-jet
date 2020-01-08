@@ -21,7 +21,6 @@ import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.protocol.ClientMessage;
 import com.hazelcast.client.impl.protocol.codec.ClientGetDistributedObjectsCodec;
 import com.hazelcast.client.impl.spi.impl.ClientInvocation;
-import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Cluster;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.jet.Job;
@@ -37,6 +36,7 @@ import com.hazelcast.logging.ILogger;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
@@ -68,7 +68,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
     @Override
     public List<Job> getJobs() {
         ClientInvocation invocation = new ClientInvocation(
-                client, JetGetJobIdsCodec.encodeRequest(), null, masterAddress(client.getCluster())
+                client, JetGetJobIdsCodec.encodeRequest(), null, masterUUID(client.getCluster())
         );
 
         try {
@@ -132,7 +132,7 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
 
     private <S> S invokeRequestOnMasterAndDecodeResponse(ClientMessage request,
                                                          Function<ClientMessage, Object> decoder) {
-        return invokeRequestAndDecodeResponse(masterAddress(client.getCluster()), request, decoder);
+        return invokeRequestAndDecodeResponse(masterUUID(client.getCluster()), request, decoder);
     }
 
     private <S> S invokeRequestOnAnyMemberAndDecodeResponse(ClientMessage request,
@@ -140,9 +140,9 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         return invokeRequestAndDecodeResponse(null, request, decoder);
     }
 
-    private <S> S invokeRequestAndDecodeResponse(Address address, ClientMessage request,
+    private <S> S invokeRequestAndDecodeResponse(UUID uuid, ClientMessage request,
                                                  Function<ClientMessage, Object> decoder) {
-        ClientInvocation invocation = new ClientInvocation(client, request, null, address);
+        ClientInvocation invocation = new ClientInvocation(client, request, null, uuid);
         try {
             ClientMessage response = invocation.invoke().get();
             return serializationService.toObject(decoder.apply(response));
@@ -151,9 +151,9 @@ public class JetClientInstanceImpl extends AbstractJetInstance {
         }
     }
 
-    private static Address masterAddress(Cluster cluster) {
+    private static UUID masterUUID(Cluster cluster) {
         return cluster.getMembers().stream().findFirst()
                       .orElseThrow(() -> new IllegalStateException("No members found in cluster"))
-                      .getAddress();
+                      .getUuid();
     }
 }
