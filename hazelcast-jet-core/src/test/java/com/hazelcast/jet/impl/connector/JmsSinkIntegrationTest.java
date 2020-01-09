@@ -16,9 +16,12 @@
 
 package com.hazelcast.jet.impl.connector;
 
+import com.hazelcast.collection.IList;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.Sources;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQXAConnectionFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
@@ -27,6 +30,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
@@ -34,15 +39,143 @@ import javax.jms.TextMessage;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.hazelcast.jet.impl.connector.JmsTestUtil.consumeMessages;
+import static java.util.stream.IntStream.range;
 import static javax.jms.Session.DUPS_OK_ACKNOWLEDGE;
 
 public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
+
     @ClassRule
     public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
+
+    private static final int MESSAGE_COUNT = 100;
+    
+    private static int counter;
+
+    private String destinationName = "dest" + counter++;
+    private IList<Object> srcList = instance().getList("src-" + counter++);
 
     @BeforeClass
     public static void beforeClass() {
         initialize(2, null);
+    }
+
+    @Test
+    public void sinkQueue() throws JMSException {
+        populateList();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.list(srcList.getName()))
+         .writeTo(Sinks.jmsQueue(destinationName, JmsSinkIntegrationTest::getConnectionFactory));
+
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, true, MESSAGE_COUNT);
+
+        instance().newJob(p);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(srcList, messages);
+    }
+
+    @Test
+    public void sinkTopic() throws JMSException {
+        populateList();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.list(srcList.getName()))
+         .writeTo(Sinks.jmsTopic(destinationName, JmsSinkIntegrationTest::getConnectionFactory));
+
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, true, MESSAGE_COUNT);
+        sleepSeconds(1);
+
+        instance().newJob(p);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(srcList, messages);
+    }
+
+    @Test
+    public void sinkQueue_whenBuilder() throws JMSException {
+        populateList();
+
+        Sink<String> sink = Sinks.<String>jmsQueueBuilder(JmsSinkIntegrationTest::getConnectionFactory)
+                .destinationName(destinationName)
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.<String>list(srcList.getName()))
+         .writeTo(sink);
+
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, true, MESSAGE_COUNT);
+
+        instance().newJob(p);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(srcList, messages);
+    }
+
+    @Test
+    public void sinkQueue_whenBuilder_withFunctions() throws JMSException {
+        populateList();
+
+        Sink<String> sink = Sinks.<String>jmsQueueBuilder(JmsSinkIntegrationTest::getConnectionFactory)
+                .connectionFn(ConnectionFactory::createConnection)
+                .messageFn(Session::createTextMessage)
+                .destinationName(destinationName)
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.<String>list(srcList.getName()))
+         .writeTo(sink);
+
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, true, MESSAGE_COUNT);
+
+        instance().newJob(p);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(srcList, messages);
+    }
+
+    @Test
+    public void sinkTopic_whenBuilder() throws JMSException {
+        populateList();
+
+        Sink<String> sink = Sinks.<String>jmsTopicBuilder(JmsSinkIntegrationTest::getConnectionFactory)
+                .destinationName(destinationName)
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.<String>list(srcList.getName()))
+         .writeTo(sink);
+
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, false, MESSAGE_COUNT);
+        sleepSeconds(1);
+
+        instance().newJob(p);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(srcList, messages);
+    }
+
+    @Test
+    public void sinkTopic_whenBuilder_withParameters() throws JMSException {
+        populateList();
+
+        Sink<String> sink = Sinks.<String>jmsTopicBuilder(JmsSinkIntegrationTest::getConnectionFactory)
+                .connectionParams(null, null)
+                .destinationName(destinationName)
+                .build();
+
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.<String>list(srcList.getName()))
+         .writeTo(sink);
+
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, false, MESSAGE_COUNT);
+        sleepSeconds(1);
+
+        instance().newJob(p);
+
+        assertEqualsEventually(messages::size, MESSAGE_COUNT);
+        assertContainsAll(srcList, messages);
     }
 
     @Test
@@ -89,5 +222,13 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
                 return actualSinkContents;
             });
         }
+    }
+
+    private void populateList() {
+        range(0, MESSAGE_COUNT).mapToObj(i -> randomString()).forEach(srcList::add);
+    }
+
+    private static ConnectionFactory getConnectionFactory() {
+        return new ActiveMQConnectionFactory(broker.getVmURL());
     }
 }
