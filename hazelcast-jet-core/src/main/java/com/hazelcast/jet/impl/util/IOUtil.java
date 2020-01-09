@@ -20,7 +20,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -62,7 +61,8 @@ public final class IOUtil {
                     }
                     String relativePath = baseDir.relativize(p).toString();
                     boolean directory = Files.isDirectory(p);
-                    relativePath = directory ? relativePath + File.separator : relativePath;
+                    // slash has been added instead of File.seperator since ZipEntry.isDirectory is checking against it.
+                    relativePath = directory ? relativePath + "/" : relativePath;
                     zipOut.putNextEntry(new ZipEntry(relativePath));
                     if (!directory) {
                         Files.copy(p, zipOut);
