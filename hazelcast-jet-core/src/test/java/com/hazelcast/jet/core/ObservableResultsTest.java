@@ -55,6 +55,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ObservableResultsTest extends TestInClusterSupport {
 
@@ -62,7 +63,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     private TestObserver testObserver;
     private Observable<Long> testObservable;
     private UUID registrationId;
-    private Set<Observable> usedObservables;
+    private Set<Observable<?>> usedObservables;
 
     @Before
     public void before() {
@@ -112,7 +113,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     @Test
     public void batchJobFails() {
         BatchSource<String> errorSource = SourceBuilder
-                .batch("error-source", x -> (Object) null)
+                .batch("error-source", x -> null)
                 .<String>fillBufferFn((in, Void) -> {
                     throw new Exception("Intentionally thrown!");
                 })
@@ -311,7 +312,7 @@ public class ObservableResultsTest extends TestInClusterSupport {
     @Test
     public void observableRegisteredAfterJobFailedGetError() {
         BatchSource<String> errorSource = SourceBuilder
-                .batch("error-source", x -> (Object) null)
+                .batch("error-source", x -> null)
                 .<String>fillBufferFn((in, Void) -> {
                     throw new Exception("Intentionally thrown!");
                 })
@@ -500,6 +501,46 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertEquals("throwable", ((Throwable) results.get(3)).getMessage());
     }
 
+    @Test
+    public void configureCapacity() {
+        //when
+        Observable<Object> o = getObservable("capacity_observable");
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(o));
+        //then
+        o.setCapacity(20_000); //still possible, pipeline not executing yet
+        assertThrowsIllegalStateException(o::getCapacity);
+
+        //when
+        Job job = jet().newJob(pipeline);
+        assertExecutionStarted(job);
+        //then
+        assertThrowsIllegalStateException(() -> o.setCapacity(30_000));
+        assertEquals(20_000, o.getCapacity());
+
+        //when
+        job.join();
+        ///then
+        assertThrowsIllegalStateException(() -> o.setCapacity(30_000));
+        assertEquals(20_000, o.getCapacity());
+    }
+
+    private void assertExecutionStarted(Job job) {
+        assertTrueEventually(() -> assertTrue(JobStatus.RUNNING.equals(job.getStatus())
+                || JobStatus.COMPLETED.equals(job.getStatus())));
+    }
+
+    private void assertThrowsIllegalStateException(Runnable action) {
+        //then
+        try {
+            action.run();
+            fail("Expected exception not thrown");
+        } catch (IllegalStateException ise) {
+            //ignore, expected
+        }
+    }
+
     private <T> Observable<T> getObservable(String name) {
         Observable<T> observable = jet().getObservable(name);
         usedObservables.add(observable);
@@ -546,7 +587,6 @@ public class ObservableResultsTest extends TestInClusterSupport {
             completions.incrementAndGet();
         }
 
-        @Nonnull
         int getNoOfValues() {
             synchronized (values) {
                 return values.size();

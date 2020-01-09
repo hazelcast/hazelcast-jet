@@ -18,12 +18,14 @@ package com.hazelcast.jet.impl.connector;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.core.Inbox;
+import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.observer.ObservableImpl;
 import com.hazelcast.ringbuffer.OverflowPolicy;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.impl.RingbufferProxy;
 
+import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,12 +34,22 @@ public final class WriteObservableP<T> extends AsyncHazelcastWriterP {
     private static final int MAX_PARALLEL_ASYNC_OPS = 1;
     private static final int MAX_BATCH_SIZE = RingbufferProxy.MAX_BATCH_SIZE;
 
-    private final Ringbuffer<Object> ringbuffer;
+    private final String observableName;
     private final List<T> batch = new ArrayList<>(MAX_BATCH_SIZE);
+
+    private Ringbuffer<Object> ringbuffer;
 
     private WriteObservableP(String observableName, HazelcastInstance instance) {
         super(instance, MAX_PARALLEL_ASYNC_OPS);
-        this.ringbuffer = instance.getRingbuffer(ObservableImpl.ringbufferName(observableName));
+        this.observableName = observableName;
+    }
+
+    @Override
+    public void init(@Nonnull Outbox outbox, @Nonnull Context context) throws Exception {
+        // we want to potentially create the Ringbuffer as late as possible to
+        // maximize the window when its properties (like capacity) can still be
+        // configured
+        ringbuffer = instance().getRingbuffer(ObservableImpl.ringbufferName(observableName));
     }
 
     @Override

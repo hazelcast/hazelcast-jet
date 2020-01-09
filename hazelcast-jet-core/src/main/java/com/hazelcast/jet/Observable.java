@@ -33,46 +33,50 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * Represents a flowing sequence of events produced by one or more {@link
- * Sinks#observable(String) observable sinks}.
- * To observe the events, call {@link #addObserver
- * jet.getObservable(name).addObserver(myObserver)}. The {@code Observable}
- * is backed by a {@link Ringbuffer} and has a fixed capacity for storing
- * messages. It supports reading by multiple subscribers, which will all
- * observe the same sequence of messages. A new subscriber will start
- * reading automatically from the oldest sequence available. Once the
- * capacity is full, the oldest messages will be overwritten as new ones
- * arrive.
+ * Represents a flowing sequence of events produced an
+ * {@link Sinks#observable(String) observable sinks}. To observe the events,
+ * call {@link #addObserver jet.getObservable(name).addObserver(myObserver)}.
  * <p>
- * Being backed by a {@link Ringbuffer}, an {@link Observable}'s capacity
- * is basically the {@link Ringbuffer}'s capacity, which defaults to 10,000.
- * So when using observables you don't need to worry about any data loss
- * (not receiving some results) if you produce less than 10,000 of them (
- * data loss only occurs if you produce them at a very high rate anyways).
+ * The {@code Observable} is backed by a {@link Ringbuffer}, which, once
+ * created, has a fixed capacity for storing messages. It supports reading
+ * by multiple {@code Observer}s, which will all observe the same sequence of
+ * messages. A new {@code Observers} will start reading automatically from the
+ * oldest sequence available. Once the capacity is full, the oldest messages
+ * will be overwritten as new ones arrive.
  * <p>
- * If for some reason this default capacity is not suitable for your use case,
- * then it can be configured on a case-by-case basis. For how to do this
- * consult the IMDG Reference Manual, the "Configuring Ringbuffer Capacity"
- * section. All the extra information you need is that the name of a
- * {@link Ringbuffer} backing a certain {@link Observable} is
- * a fixed prefix ("<strong>__jet.observables.</strong>") plus the
- * {@link Observable#name() observable's name}.
+ * The {@code Ringbuffer}'s capacity defaults to 10,000, but can be changed
+ * (via the {@link #setCapacity(int) setCapacity()} method), as long as the
+ * {@code Ringbuffer} hasn't been created yet (see the "Lifecycle" section below).
  * <p>
- * In addition to data events, the observer can also observe completion and
- * failure events. Completion means that no further values will appear in
- * the sequence. Failure means that something went wrong during the
- * production of the sequence's values and the event attempts to provide
- * useful information about the cause of the problem.
+ * In addition to data events, the {@code Observer} can also observe
+ * completion and failure events. Completion means that no further values
+ * will appear in the sequence. Failure means that something went wrong
+ * during the production of the sequence's values and the event attempts
+ * to provide useful information about the cause of the problem.
  * <p>
  * <strong>Lifecycle</strong>
  * <p>
- * The lifecycle of the {@code Observable} is decoupled from the lifecycle
- * of the job. The {@code Observable} is created either when the user
- * gets a reference to it through {@link JetInstance#getObservable(String)}
- * or when the sink starts writing to it.
+ * When talking about the lifecycle of an {@code Observable} (which is
+ * basically just a client side object and has a lifecycle just like any
+ * other POJO) it's better to actually consider the lifecycle of the
+ * underlying {@code Ringbuffer}, since that is the significant
+ * distributed entity.
  * <p>
- * The {@code Observable} must be explicitly destroyed when it's no longer
- * in use, or data will be retained in the cluster.
+ * The lifecycle of the {@code Ringbuffer} is decoupled from the lifecycle
+ * of the job. The {@code Ringbuffer} is created either when the user
+ * gets a reference to its equivalent {@code Observable} (through
+ * {@link JetInstance#getObservable(String) JetInstance.getObservable()})
+ * and registers the first {@link Observer} on it (through
+ * {@link Observable#addObserver(Observer) Observable.addObserver()})
+ * or when the job containing the sink for it starts executing.
+ * <p>
+ * The {@code Ringbuffer} must be explicitly destroyed when it's no longer
+ * in use, or data will be retained in the cluster. This is done via the
+ * {@link #destroy() Observable.destroy()} method. Note: even if the
+ * {@code Observable} POJO gets lost and its underlying {@code Ringbuffer}
+ * floats around in the cluster, it's still possible to manually destroy
+ * it later by creating another {@code Observable} instance with the same
+ * name and calling {@code destroy()} on that.
  * <p>
  * <strong>Important:</strong> The same {@code Observable} must
  * <strong>not</strong> be used again in a new job since this will cause
@@ -96,11 +100,11 @@ public interface Observable<T> extends Iterable<T> {
 
     /**
      * Registers an {@link Observer} to this {@code Observable}. It will
-     * receive all events currently in the backing {@link Ringbuffer} and then
-     * continue receiving any future events.
+     * receive all events currently in the backing {@link Ringbuffer} and
+     * then continue receiving any future events.
      *
-     * @return registration ID associated with the added {@code Observer}, can be used
-     *         to remove the {@code Observer} later
+     * @return registration ID associated with the added {@code Observer},
+     * can be used to remove the {@code Observer} later
      */
     @Nonnull
     UUID addObserver(@Nonnull Observer<T> observer);
@@ -112,12 +116,44 @@ public interface Observable<T> extends Iterable<T> {
      */
     void removeObserver(@Nonnull UUID registrationId);
 
+    /**
+     * Set the capacity of the {@code Observable}. Being backed by a
+     * {@link Ringbuffer}, an {@code Observable}'s capacity is basically
+     * the {@code Ringbuffer}'s capacity, which defaults to 10,000.
+     * <p>
+     * This method can be called only before the {@code Ringbuffer} gets
+     * created. This means before any {@link Observer}s are added to the
+     * {@code Observable} and before any jobs containing
+     * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
+     * sinks} (with the same observable name) are submitted for execution.
+     * <p>
+     * If the {@code Ringbuffer} has already been created, then this
+     * method will throw an {@link IllegalStateException}.
+     */
     void setCapacity(int capacity);
+
+    /**
+     * Returns the current capacity of the {@code Observable}. Being backed
+     * by a {@link Ringbuffer}, an {@code Observable}'s capacity is basically
+     * the {@code Ringbuffer}'s capacity.
+     * <p>
+     * This method only works if the backing {@code Ringbuffer} has already
+     * been created. If so, it will be queried for its actual capacity,
+     * which can't be changed any longer. (Reminder: the {@code Ringbuffer}
+     * gets created either when the first {@link Observer} is added or when
+     * the job containing the {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
+     * observable sink} (with the same observable name) is submitted for
+     * execution.)
+     * <p>
+     * If the backing {@code Ringbuffer} has not yet been created, then an
+     * {@link IllegalStateException} will be thrown.
+     */
+    int getCapacity();
 
     /**
      * Returns an iterator over the sequence of events produced by this
      * {@code Observable}. If there are currently no events to observe,
-     * the iterator's {@code Iterator#hasNext hasNext()} and {@code
+     * the iterator's {@link Iterator#hasNext hasNext()} and {@link
      * Iterator#next next()} methods will block. A completion event
      * completes the iterator ({@code hasNext()} will return false) and
      * a failure event makes the iterator's methods throw the underlying
@@ -143,7 +179,8 @@ public interface Observable<T> extends Iterable<T> {
      * Allows you to post-process the results of a Jet job on the client side
      * using the standard Java {@link java.util.stream Stream API}. You provide
      * a function that will receive the job results as a {@code Stream<T>} and
-     * return a single result.
+     * return a single result (which can in fact be another {@code Stream},
+     * if so desired).
      * <p>
      * Returns a {@link CompletableFuture CompletableFuture<R>} that will become
      * completed once your function has received all the job results through

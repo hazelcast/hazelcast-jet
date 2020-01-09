@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.observer;
 
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.config.RingbufferConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.core.OperationTimeoutException;
@@ -104,13 +105,28 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void setCapacity(int capacity) {
-        String ringbufferName = ringbufferName(this.name);
-        if (hzInstance.getDistributedObjects().stream().anyMatch(
-                o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME) && o.getName().equals(ringbufferName))
-        ) {
+        String ringbufferName = ringbufferName(name);
+        if (ringbufferExists(ringbufferName)) {
             throw new IllegalStateException("Underlying buffer for observable '" + name + "' is already created.");
         }
-        hzInstance.getConfig().getRingbufferConfig(ringbufferName).setCapacity(capacity);
+        hzInstance.getConfig().addRingBufferConfig(new RingbufferConfig(ringbufferName).setCapacity(capacity));
+    }
+
+    @Override
+    public int getCapacity() {
+        String ringbufferName = ringbufferName(name);
+        if (ringbufferExists(ringbufferName)) {
+            return (int) hzInstance.getRingbuffer(ringbufferName).capacity();
+        } else {
+            //theoretically we could read the default config's capacity, but that's not possible
+            //when the HazelcastInstance is just a client
+            throw new IllegalStateException("Underlying buffer for observable '" + name + "' is not yet created.");
+        }
+    }
+
+    private boolean ringbufferExists(String ringbufferName) {
+        return hzInstance.getDistributedObjects().stream().anyMatch(
+                o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME) && o.getName().equals(ringbufferName));
     }
 
     @Override
