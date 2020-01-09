@@ -23,6 +23,7 @@ import com.hazelcast.jet.core.Inbox;
 import com.hazelcast.jet.core.Outbox;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionId;
 import com.hazelcast.jet.impl.processor.TwoPhaseSnapshotCommitUtility.TransactionalResource;
@@ -154,6 +155,11 @@ public final class WriteFileP<T> implements Processor {
     }
 
     @Override
+    public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
+        return true;
+    }
+
+    @Override
     public boolean complete() {
         utility.afterCompleted();
         return true;
@@ -224,6 +230,8 @@ public final class WriteFileP<T> implements Processor {
         }
     }
 
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
+            justification = "it's a false positive since java 11: https://github.com/spotbugs/spotbugs/issues/756")
     private void abortUnfinishedTransactions() {
         try (Stream<Path> fileStream = Files.list(directory)) {
             fileStream

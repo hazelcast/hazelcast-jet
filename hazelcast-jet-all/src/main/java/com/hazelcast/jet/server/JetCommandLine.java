@@ -23,7 +23,6 @@ import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
 import com.hazelcast.client.impl.management.MCClusterMetadata;
 import com.hazelcast.client.impl.spi.ClientClusterService;
 import com.hazelcast.cluster.Cluster;
-import com.hazelcast.cluster.Member;
 import com.hazelcast.instance.JetBuildInfo;
 import com.hazelcast.internal.util.FutureUtil;
 import com.hazelcast.jet.Jet;
@@ -34,6 +33,7 @@ import com.hazelcast.jet.JobStateSnapshot;
 import com.hazelcast.jet.Util;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.impl.JetBootstrap;
 import com.hazelcast.jet.impl.JetClientInstanceImpl;
 import com.hazelcast.jet.impl.JobSummary;
 import com.hazelcast.jet.impl.config.ConfigProvider;
@@ -178,6 +178,10 @@ public class JetCommandLine implements Runnable {
                     paramLabel = "<name>",
                     description = "Name of the job"
             ) String name,
+            @Option(names = {"-c", "--class"},
+                    paramLabel = "<class>",
+                    description = "Fully qualified name of the main class inside the JAR file"
+            ) String mainClass,
             @Parameters(index = "0",
                     paramLabel = "<jar file>",
                     description = "The jar file to submit"
@@ -202,7 +206,7 @@ public class JetCommandLine implements Runnable {
         if (snapshotName != null) {
             printf("Will restore the job from the snapshot with name '%s'", snapshotName);
         }
-        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, params);
+        JetBootstrap.executeJar(this::getJetClient, file.getAbsolutePath(), snapshotName, name, mainClass, params);
     }
 
     @Command(description = "Suspends a running job")
@@ -401,9 +405,8 @@ public class JetCommandLine implements Runnable {
             JetClientInstanceImpl client = (JetClientInstanceImpl) jet;
             HazelcastClientInstanceImpl hazelcastClient = client.getHazelcastClient();
             ClientClusterService clientClusterService = hazelcastClient.getClientClusterService();
-            Member masterMember = clientClusterService.getMember(clientClusterService.getMasterAddress());
             MCClusterMetadata clusterMetadata = FutureUtil.getValue(hazelcastClient.getManagementCenterService()
-                                                                                   .getClusterMetadata(masterMember));
+                    .getClusterMetadata(clientClusterService.getMasterMember()));
             Cluster cluster = client.getCluster();
 
             println("State: " + clusterMetadata.getCurrentState());
@@ -458,8 +461,8 @@ public class JetCommandLine implements Runnable {
         return config != null;
     }
 
-    private void configureLogging() throws IOException {
-        JetMemberStarter.configureLogging();
+    private void configureLogging() {
+        JetBootstrap.configureLogging();
         Level logLevel = Level.WARNING;
         if (verbosity.isVerbose) {
             println("Verbose mode is on, setting logging level to INFO");
