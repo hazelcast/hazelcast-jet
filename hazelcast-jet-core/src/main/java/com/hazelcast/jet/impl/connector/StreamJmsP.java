@@ -50,6 +50,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.stream.IntStream.range;
 import static javax.jms.Session.DUPS_OK_ACKNOWLEDGE;
@@ -149,7 +150,14 @@ public class StreamJmsP<T> extends AbstractProcessor {
     @Override
     public boolean snapshotCommitPrepare() {
         snapshotInProgress = guarantee != NONE;
-        return guarantee != EXACTLY_ONCE || getOutbox().offerToSnapshot(SEEN_IDS_KEY, seenIds);
+        if (guarantee != EXACTLY_ONCE) {
+            return true;
+        }
+        if (!getOutbox().offerToSnapshot(SEEN_IDS_KEY, seenIds)) {
+            return false;
+        }
+        logFine(getLogger(), "Saved %d message(s) IDs to snapshot", seenIds.size());
+        return true;
     }
 
     @Override
@@ -160,6 +168,7 @@ public class StreamJmsP<T> extends AbstractProcessor {
         if (success) {
             try {
                 session.commit();
+                getLogger().fine("Session committed");
             } catch (JMSException e) {
                 throw sneakyThrow(e);
             }
@@ -180,8 +189,10 @@ public class StreamJmsP<T> extends AbstractProcessor {
         }
         @SuppressWarnings("unchecked")
         Set<Object> castValue = (Set<Object>) value;
-        // we could add the restored
+        // We need to add the restored keys to our collection because we'll restore the seen IDs multiple
+        // times (for all processors)
         if (guarantee == EXACTLY_ONCE) {
+            logFine(getLogger(), "Restored %d seen keys from snapshot", castValue.size());
             seenIds.addAll(castValue);
         }
     }
