@@ -44,13 +44,24 @@ public class IOUtilTest extends JetTestSupport {
 
     @Test
     public void test_zipAndUnzipNestedFolder_then_contentsShouldBeSame() throws Exception {
+        Path originalPath = Paths.get(this.getClass().getResource("/nested").toURI());
+        test(originalPath);
+    }
+
+    @Test
+    public void test_zipAndUnzipNestedFoldersWithAnEmptySubFolder_then_contentsShouldBeSame() throws Exception {
+        Path originalPath = Paths.get(this.getClass().getResource("/nested").toURI());
+        Files.createDirectory(originalPath.resolve(randomName())).toFile().deleteOnExit();
+        test(originalPath);
+    }
+
+    public void test(Path originalPath) throws IOException {
         //Given
         ByteArrayOutputStream baos = new ByteArrayOutputStream(1000);
 
         //When
-        Path originalPath = Paths.get(this.getClass().getResource("/nested").toURI());
-        Path unzippedPath = temporaryFolder.newFolder().toPath();
         packDirectoryIntoZip(originalPath, baos);
+        Path unzippedPath = temporaryFolder.newFolder().toPath();
         unzip(new ByteArrayInputStream(baos.toByteArray()), unzippedPath);
 
         //Then
