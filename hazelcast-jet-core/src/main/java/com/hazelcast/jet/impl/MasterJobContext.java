@@ -689,7 +689,7 @@ public class MasterJobContext {
             return true;
         }
         if (failure instanceof CancellationException || failure instanceof JobTerminateRequestedException) {
-            logger.info(formatExecutionSummary(String.format("got terminated, reason=%s", failure)));
+            logger.info(formatExecutionSummary("got terminated, reason=" + failure));
             return false;
         }
         logger.severe(formatExecutionSummary("failed"), failure);
@@ -698,7 +698,8 @@ public class MasterJobContext {
 
     private String formatExecutionSummary(String conclusion) {
         long executionEndTime = System.currentTimeMillis();
-        StringBuilder sb = new StringBuilder(String.format("Running %s %s", mc.jobIdString(), conclusion));
+        StringBuilder sb = new StringBuilder();
+        sb.append("Execution of ").append(mc.jobIdString()).append(' ').append(conclusion);
         sb.append("\n\t").append("Start time: ").append(Util.toLocalDateTime(executionStartTime));
         sb.append("\n\t").append("Duration: ").append(String.format("%,d ms", executionEndTime - executionStartTime));
         if (jobMetrics.stream().noneMatch(rjm -> rjm.getBlob() != null)) {
@@ -714,10 +715,10 @@ public class MasterJobContext {
             sb.append("\n\tVertices:");
             for (Vertex vertex : vertices) {
                 sb.append("\n\t\t").append(vertex.getName());
-                sb.append(getValueForVertex("\n\t\t\t", vertex, receivedCounts, MetricNames.RECEIVED_COUNT));
-                sb.append(getValueForVertex("\n\t\t\t", vertex, emittedCounts, MetricNames.EMITTED_COUNT));
-                sb.append(getValueForVertex("\n\t\t\t", vertex, distributedBytesIn, MetricNames.DISTRIBUTED_BYTES_IN));
-                sb.append(getValueForVertex("\n\t\t\t", vertex, distributedBytesOut, MetricNames.DISTRIBUTED_BYTES_OUT));
+                sb.append(getValueForVertex("\n\t\t\t" + MetricNames.RECEIVED_COUNT, vertex, receivedCounts));
+                sb.append(getValueForVertex("\n\t\t\t" + MetricNames.EMITTED_COUNT, vertex, emittedCounts));
+                sb.append(getValueForVertex("\n\t\t\t" + MetricNames.DISTRIBUTED_BYTES_IN, vertex, distributedBytesIn));
+                sb.append(getValueForVertex("\n\t\t\t" + MetricNames.DISTRIBUTED_BYTES_OUT, vertex, distributedBytesOut));
             }
         }
         return sb.toString();
@@ -731,14 +732,9 @@ public class MasterJobContext {
         ));
     }
 
-    @SuppressWarnings("SameParameterValue")
-    private static String getValueForVertex(String padding, Vertex vertex, Map<String, Long> values, String metric) {
+    private static String getValueForVertex(String label, Vertex vertex, Map<String, Long> values) {
         Long value = values.get(vertex.getName());
-        if (value != null) {
-            return padding + metric + ": " + value;
-        } else {
-            return "";
-        }
+        return value == null ? "" : label + ": " + value;
     }
 
     private void logIgnoredCompletion(@Nullable Throwable failure, JobStatus status) {

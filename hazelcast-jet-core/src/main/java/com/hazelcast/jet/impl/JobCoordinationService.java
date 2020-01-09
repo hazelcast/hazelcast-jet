@@ -100,7 +100,7 @@ import static java.util.stream.Collectors.toList;
  * A service that handles MasterContexts on the coordinator member.
  * Job-control operations from client are handled here.
  */
-public class JobCoordinationService  {
+public class JobCoordinationService {
 
     private static final String COORDINATOR_EXECUTOR_NAME = "jet:coordinator";
 
@@ -167,7 +167,6 @@ public class JobCoordinationService  {
 
     public CompletableFuture<Void> submitJob(long jobId, Data dag, Data serializedConfig) {
         CompletableFuture<Void> res = new CompletableFuture<>();
-        stats.jobSubmitted();
         submitToCoordinatorThread(() -> {
             MasterContext masterContext;
             try {
@@ -218,6 +217,7 @@ public class JobCoordinationService  {
                 }
 
                 // If there is no master context and job result at the same time, it means this is the first submission
+                stats.jobSubmitted();
                 jobRepository.putNewJobRecord(jobRecord);
 
                 logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request");
@@ -650,7 +650,6 @@ public class JobCoordinationService  {
      */
     @CheckReturnValue
     CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error) {
-        long completionTime = System.currentTimeMillis();
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
             long jobId = masterContext.jobId();
@@ -659,7 +658,7 @@ public class JobCoordinationService  {
                             ? masterContext.jobContext().jobMetrics()
                             : null;
             UUID coordinator = nodeEngine.getNode().getThisUuid();
-            jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), completionTime, error);
+            jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 logger.fine(masterContext.jobIdString() + " is completed");
                 stats.jobCompleted(error);

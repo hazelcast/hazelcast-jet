@@ -97,8 +97,5 @@ public final class JobMetricsUtil {
             }
             return Measurement.of(descriptor.metric(), value, timestamp, tags);
         }
-
     }
-
-
 }

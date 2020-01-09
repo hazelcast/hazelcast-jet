@@ -116,14 +116,14 @@ public final class MetricNames {
     public static final String LAST_FORWARDED_WM_LATENCY = "lastForwardedWmLatency";
 
     /**
-     * Tracks the total number of bytes written out in the last snapshot
+     * Tracks the total number of bytes written in the last snapshot
      * by a particular {@link Vertex}. The name of the vertex can be found
      * in the {@link MetricTags#VERTEX} tag of the metric.
      */
     public static final String SNAPSHOT_BYTES = "snapshotBytes";
 
     /**
-     * Tracks the total number of keys written out in the last snapshot
+     * Tracks the total number of keys written in the last snapshot
      * by a particular {@link Vertex}. The name of the vertex can be found
      * in the {@link MetricTags#VERTEX} tag of the metric.
      */
@@ -184,18 +184,27 @@ public final class MetricNames {
     /**
      * Number of computational jobs submitted to a particular Jet cluster
      * member.
+     * <p>
+     * This metric is zero on non-master members. When a master fails and a new
+     * master takes over, the count is reset.
      */
     public static final String JOBS_SUBMITTED = "jobs.submitted";
 
     /**
      * Number of computational jobs successfully completed by a particular
      * Jet cluster member.
+     * <p>
+     * This metric is zero on non-master members. When a master fails and a new
+     * master takes over, the count is reset.
      */
     public static final String JOBS_COMPLETED_SUCCESSFULLY = "jobs.completedSuccessfully";
 
     /**
      * Number of computational jobs that have failed on a particular Jet
      * cluster member.
+     * <p>
+     * This metric is zero on non-master members. When a master fails and a new
+     * master takes over, the count is reset.
      */
     public static final String JOBS_COMPLETED_WITH_FAILURE = "jobs.completedWithFailure";
 

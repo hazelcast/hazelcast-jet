@@ -320,7 +320,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
                                .withTag(MetricTags.EXECUTION, idToString(executionId));
 
         long executionStartTime = startTime.get();
-        if (executionStartTime > 0) {
+        if (executionStartTime != 0) {
             context.collect(descriptor, EXECUTION_START_TIME, ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
             context.collect(descriptor, EXECUTION_DURATION, ProbeLevel.INFO, ProbeUnit.MS,
                     System.currentTimeMillis() - executionStartTime);
