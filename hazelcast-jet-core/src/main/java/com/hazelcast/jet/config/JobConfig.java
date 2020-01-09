@@ -834,7 +834,6 @@ public class JobConfig implements IdentifiedDataSerializable {
                 storeMetricsAfterJobCompletion == jobConfig.storeMetricsAfterJobCompletion &&
                 Objects.equals(name, jobConfig.name) &&
                 processingGuarantee == jobConfig.processingGuarantee &&
-                Objects.equals(resourceConfigs, jobConfig.resourceConfigs) &&
                 Objects.equals(classLoaderFactory, jobConfig.classLoaderFactory) &&
                 Objects.equals(initialSnapshotName, jobConfig.initialSnapshotName);
     }
@@ -842,7 +841,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Override
     public int hashCode() {
         return Objects.hash(name, processingGuarantee, snapshotIntervalMillis, autoScaling,
-                splitBrainProtectionEnabled, enableMetrics, storeMetricsAfterJobCompletion, resourceConfigs,
+                splitBrainProtectionEnabled, enableMetrics, storeMetricsAfterJobCompletion,
                 classLoaderFactory, initialSnapshotName
         );
     }
