@@ -58,7 +58,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean enableMetrics = true;
     private boolean storeMetricsAfterJobCompletion;
 
-    private transient Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
+    private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
 
@@ -798,6 +798,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeLong(snapshotIntervalMillis);
         out.writeBoolean(autoScaling);
         out.writeBoolean(splitBrainProtectionEnabled);
+        out.writeObject(resourceConfigs);
         out.writeObject(classLoaderFactory);
         out.writeUTF(initialSnapshotName);
         out.writeBoolean(enableMetrics);
@@ -811,6 +812,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         snapshotIntervalMillis = in.readLong();
         autoScaling = in.readBoolean();
         splitBrainProtectionEnabled = in.readBoolean();
+        resourceConfigs = in.readObject();
         classLoaderFactory = in.readObject();
         initialSnapshotName = in.readUTF();
         enableMetrics = in.readBoolean();
@@ -834,6 +836,7 @@ public class JobConfig implements IdentifiedDataSerializable {
                 storeMetricsAfterJobCompletion == jobConfig.storeMetricsAfterJobCompletion &&
                 Objects.equals(name, jobConfig.name) &&
                 processingGuarantee == jobConfig.processingGuarantee &&
+                Objects.equals(resourceConfigs, jobConfig.resourceConfigs) &&
                 Objects.equals(classLoaderFactory, jobConfig.classLoaderFactory) &&
                 Objects.equals(initialSnapshotName, jobConfig.initialSnapshotName);
     }
@@ -841,7 +844,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Override
     public int hashCode() {
         return Objects.hash(name, processingGuarantee, snapshotIntervalMillis, autoScaling,
-                splitBrainProtectionEnabled, enableMetrics, storeMetricsAfterJobCompletion,
+                splitBrainProtectionEnabled, enableMetrics, storeMetricsAfterJobCompletion, resourceConfigs,
                 classLoaderFactory, initialSnapshotName
         );
     }
