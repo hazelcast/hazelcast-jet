@@ -47,8 +47,8 @@ public class JMS {
         //tag::s3[]
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list("inputList"))
-         .writeTo(Sinks.jmsQueue("queue", () -> new ActiveMQConnectionFactory(
-                 "tcp://localhost:61616")));
+         .writeTo(Sinks.jmsQueue("queue",
+                 () -> new ActiveMQConnectionFactory("tcp://localhost:61616")));
         //end::s3[]
     }
 
@@ -56,8 +56,8 @@ public class JMS {
         //tag::s4[]
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list("inputList"))
-         .writeTo(Sinks.jmsTopic("topic", () -> new ActiveMQConnectionFactory(
-                 "tcp://localhost:61616")));
+         .writeTo(Sinks.jmsTopic("topic",
+                 () -> new ActiveMQConnectionFactory("tcp://localhost:61616")));
         //end::s4[]
     }
 }

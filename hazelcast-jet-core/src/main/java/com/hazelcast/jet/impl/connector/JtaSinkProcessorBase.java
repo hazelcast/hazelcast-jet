@@ -44,14 +44,14 @@ import static javax.transaction.xa.XAResource.TMSUCCESS;
 import static javax.transaction.xa.XAResource.XA_RDONLY;
 
 /**
- * Base class for JTA-based sinks.
+ * Base class for Java Transaction API-based sinks.
  */
 public abstract class JtaSinkProcessorBase implements Processor {
     private static final int COMMIT_RETRY_DELAY_MS = 100;
 
-    protected TransactionPoolSnapshotUtility<JtaTransactionId, JtaTransaction> snapshotUtility;
     private final int poolSize;
     private ProcessingGuarantee externalGuarantee;
+    protected TransactionPoolSnapshotUtility<JtaTransactionId, JtaTransaction> snapshotUtility;
     private Context context;
     private XAResource xaResource;
 
@@ -144,8 +144,8 @@ public abstract class JtaSinkProcessorBase implements Processor {
                         LoggingUtil.logFine(context.logger(), "Retrying commit %s", xid);
                         continue;
                     case XAException.XA_HEURCOM:
-                        LoggingUtil.logFine(context.logger(), "Due to a heuristic decision, the work done on behalf of " +
-                                "the specified transaction branch was already committed. Transaction ID: %s", xid);
+                        context.logger().info("Due to a heuristic decision, the work done on behalf of " +
+                                "the specified transaction branch was already committed. Transaction ID: " + xid);
                         break;
                     case XAException.XA_HEURRB:
                         context.logger().warning("Due to a heuristic decision, the work done on behalf of the restored " +
@@ -178,7 +178,8 @@ public abstract class JtaSinkProcessorBase implements Processor {
             xaResource.rollback(xid);
         } catch (XAException e) {
             // We ignore rollback failures.
-            // If error is XAER_NOTA (transaction doesn't exist), we don't even log it, this is the normal case
+            // If error is XAER_NOTA (transaction doesn't exist), we don't even log it, this is the normal
+            // case, we roll back preemptively
             if (e.errorCode != XAException.XAER_NOTA) {
                 LoggingUtil.logFine(context.logger(), "Failed to roll back, transaction ID: %s. Error: %s",
                         xid, handleXAException(e, xid));

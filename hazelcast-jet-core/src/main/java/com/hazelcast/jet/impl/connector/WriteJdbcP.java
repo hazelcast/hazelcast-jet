@@ -146,9 +146,10 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             }
             idleCount = 0;
             inbox.clear();
-        } catch (Exception e) {
-            if (e instanceof SQLNonTransientException ||
-                    e.getCause() instanceof SQLNonTransientException) {
+        } catch (SQLException e) {
+            if (e instanceof SQLNonTransientException
+                    || e.getCause() instanceof SQLNonTransientException
+                    || snapshotUtility.usesTransactionLifecycle()) {
                 throw ExceptionUtil.rethrow(e);
             } else {
                 logger.warning("Exception during update", e);
@@ -198,7 +199,10 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             supportsBatch = connection.getMetaData().supportsBatchUpdates();
             statement = connection.prepareStatement(updateQuery);
         } catch (SQLException e) {
-            logger.warning("Exception during connecting and preparing the statement", e);
+            if (snapshotUtility.usesTransactionLifecycle()) {
+                throw ExceptionUtil.rethrow(e);
+            }
+            logger.warning("Exception when connecting and preparing the statement", e);
             idleCount++;
             return false;
         }
