@@ -28,7 +28,7 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.test.TestInbox;
 import com.hazelcast.jet.core.test.TestOutbox;
 import com.hazelcast.jet.core.test.TestProcessorContext;
-import com.hazelcast.jet.impl.connector.ExactlyOnceSinkTestUtil;
+import com.hazelcast.jet.impl.connector.SinkStressTestUtil;
 import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sink;
@@ -49,11 +49,11 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 
 import static com.hazelcast.jet.Util.entry;
 import static java.util.Collections.singletonMap;
@@ -195,24 +195,35 @@ public class WriteKafkaPTest extends SimpleTestInClusterSupport {
     }
 
     @Test
-    public void test_transactional_withRestarts_graceful() {
-        test_transactional_withRestarts(true);
+    public void test_transactional_withRestarts_graceful_exOnce() {
+        test_transactional_withRestarts(true, true);
     }
 
     @Test
-    public void test_transactional_withRestarts_forceful() {
-        test_transactional_withRestarts(false);
+    public void test_transactional_withRestarts_forceful_exOnce() {
+        test_transactional_withRestarts(false, true);
     }
 
-    private void test_transactional_withRestarts(boolean graceful) {
+    @Test
+    public void test_transactional_withRestarts_graceful_atLeastOnce() {
+        test_transactional_withRestarts(false, false);
+    }
+
+    @Test
+    public void test_transactional_withRestarts_forceful_atLeastOnce() {
+        test_transactional_withRestarts(false, false);
+    }
+
+    private void test_transactional_withRestarts(boolean graceful, boolean exactlyOnce) {
         String topicLocal = topic;
         Sink<Integer> sink = KafkaSinks.<Integer>kafka(properties)
                 .toRecordFn(v -> new ProducerRecord<>(topicLocal, 0, null, v.toString()))
+                .exactlyOnce(exactlyOnce)
                 .build();
 
         try (KafkaConsumer<String, String> consumer = kafkaTestSupport.createConsumer(topic)) {
-            Set<Integer> actualSinkContents = new HashSet<>();
-            ExactlyOnceSinkTestUtil.test_transactional_withRestarts(instance(), logger, sink, graceful, () -> {
+            List<Integer> actualSinkContents = new ArrayList<>();
+            SinkStressTestUtil.test_withRestarts(instance(), logger, sink, graceful, exactlyOnce, () -> {
                 for (ConsumerRecords<String, String> records;
                      !(records = consumer.poll(Duration.ofMillis(10))).isEmpty();
                 ) {

@@ -19,6 +19,7 @@ package com.hazelcast.jet.impl.connector;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.Sinks;
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQXAConnectionFactory;
 import org.apache.activemq.junit.EmbeddedActiveMQBroker;
 import org.junit.BeforeClass;
@@ -30,8 +31,8 @@ import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import static javax.jms.Session.DUPS_OK_ACKNOWLEDGE;
 
@@ -44,21 +45,35 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
         initialize(2, null);
     }
 
-    // TODO [viliam] more tests
-
     @Test
-    public void test_transactional_withRestarts_graceful() throws Exception {
-        test_transactional_withRestarts(true);
+    public void test_transactional_withRestarts_graceful_exOnce() throws Exception {
+        test_transactional_withRestarts(true, true);
     }
 
     @Test
-    public void test_transactional_withRestarts_forceful() throws Exception {
-        test_transactional_withRestarts(false);
+    public void test_transactional_withRestarts_forceful_exOnce() throws Exception {
+        test_transactional_withRestarts(false, true);
     }
 
-    private void test_transactional_withRestarts(boolean graceful) throws Exception {
+    @Test
+    public void test_transactional_withRestarts_graceful_atLeastOnce() throws Exception {
+        test_transactional_withRestarts(false, false);
+    }
+
+    @Test
+    public void test_transactional_withRestarts_forceful_atLeastOnce() throws Exception {
+        test_transactional_withRestarts(false, false);
+    }
+
+    private void test_transactional_withRestarts(boolean graceful, boolean exactlyOnce) throws Exception {
         String destinationName = randomString();
-        Sink<Integer> sink = Sinks.jmsQueue(destinationName, () -> new ActiveMQXAConnectionFactory(broker.getVmURL()));
+        Sink<Integer> sink = Sinks
+                .<Integer>jmsQueueBuilder(() -> exactlyOnce
+                        ? new ActiveMQXAConnectionFactory(broker.getVmURL())
+                        : new ActiveMQConnectionFactory(broker.getVmURL()))
+                .destinationName(destinationName)
+                .exactlyOnce(exactlyOnce)
+                .build();
 
         try (
                 Connection connection = broker.createConnectionFactory().createConnection();
@@ -66,8 +81,8 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
                 MessageConsumer consumer = session.createConsumer(session.createQueue(destinationName))
         ) {
             connection.start();
-            Set<Integer> actualSinkContents = new HashSet<>();
-            ExactlyOnceSinkTestUtil.test_transactional_withRestarts(instance(), logger, sink, graceful, () -> {
+            List<Integer> actualSinkContents = new ArrayList<>();
+            SinkStressTestUtil.test_withRestarts(instance(), logger, sink, graceful, exactlyOnce, () -> {
                 for (Message msg; (msg = consumer.receiveNoWait()) != null; ) {
                     actualSinkContents.add(Integer.valueOf(((TextMessage) msg).getText()));
                 }

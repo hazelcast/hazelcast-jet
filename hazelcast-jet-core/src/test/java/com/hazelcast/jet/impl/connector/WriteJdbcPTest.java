@@ -46,9 +46,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
@@ -82,7 +82,7 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         logger.info("Will use table: " + tableName);
         try (Connection connection = ((DataSource) createDataSource(false)).getConnection()) {
             connection.createStatement()
-                      .execute("CREATE TABLE " + tableName + "(id int primary key, name varchar(255))");
+                      .execute("CREATE TABLE " + tableName + "(id int, name varchar(255))");
         }
     }
 
@@ -235,33 +235,44 @@ public class WriteJdbcPTest extends SimpleTestInClusterSupport {
         stmt.executeBatch();
     }
 
-    // TODO [viliam] more tests
-
     @Test
-    public void test_transactional_withRestarts_graceful() throws Exception {
-        test_transactional_withRestarts(true);
+    public void test_transactional_withRestarts_graceful_exOnce() throws Exception {
+        test_transactional_withRestarts(true, true);
     }
 
     @Test
-    public void test_transactional_withRestarts_forceful() throws Exception {
-        test_transactional_withRestarts(false);
+    public void test_transactional_withRestarts_forceful_exOnce() throws Exception {
+        test_transactional_withRestarts(false, true);
     }
 
-    private void test_transactional_withRestarts(boolean graceful) throws Exception {
-        Sink<Integer> sink = Sinks.jdbc("INSERT INTO " + tableName + " VALUES(?, ?)",
-                () -> createDataSource(true),
-                (stmt, item) -> {
-                    stmt.setInt(1, item);
-                    stmt.setString(2, "name-" + item);
-                }
-        );
+    @Test
+    public void test_transactional_withRestarts_graceful_atLeastOnce() throws Exception {
+        test_transactional_withRestarts(false, false);
+    }
+
+    @Test
+    public void test_transactional_withRestarts_forceful_atLeastOnce() throws Exception {
+        test_transactional_withRestarts(false, false);
+    }
+
+    private void test_transactional_withRestarts(boolean graceful, boolean exactlyOnce) throws Exception {
+        Sink<Integer> sink = Sinks.<Integer>jdbcBuilder()
+                                  .updateQuery("INSERT INTO " + tableName + " VALUES(?, ?)")
+                                  .dataSourceSupplier(() -> createDataSource(true))
+                                  .bindFn(
+                                          (stmt, item) -> {
+                                              stmt.setInt(1, item);
+                                              stmt.setString(2, "name-" + item);
+                                          })
+                                  .exactlyOnce(exactlyOnce)
+                                  .build();
 
         try (Connection conn = ((DataSource) createDataSource(false)).getConnection();
              PreparedStatement stmt = conn.prepareStatement("select id from " + tableName)
         ) {
-            ExactlyOnceSinkTestUtil.test_transactional_withRestarts(instance(), logger, sink, graceful, () -> {
+            SinkStressTestUtil.test_withRestarts(instance(), logger, sink, graceful, exactlyOnce, () -> {
                 ResultSet resultSet = stmt.executeQuery();
-                SortedSet<Integer> actualRows = new TreeSet<>();
+                List<Integer> actualRows = new ArrayList<>();
                 while (resultSet.next()) {
                     actualRows.add(resultSet.getInt(1));
                 }
