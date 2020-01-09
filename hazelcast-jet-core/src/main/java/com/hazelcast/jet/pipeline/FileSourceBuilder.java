@@ -17,11 +17,15 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
+import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.pipeline.Sources.batchFromProcessor;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -29,9 +33,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Builder for a file source which reads lines from files in a directory (but not
  * its subdirectories) and emits output object created by {@code mapOutputFn}
- *
  * @since 3.0
  */
+@SuppressWarnings("unchecked")
 public final class FileSourceBuilder {
 
     private static final String GLOB_WILDCARD = "*";
@@ -79,7 +83,7 @@ public final class FileSourceBuilder {
      * java.nio.charset.StandardCharsets#UTF_8}.
      * <p>
      * Setting this component does not have any effect if builder is used by
-     * Avro module.
+     * Avro module or user will provide custom {@code readFileFn}.
      */
     public FileSourceBuilder charset(@Nonnull Charset charset) {
         this.charset = charset;
@@ -87,11 +91,11 @@ public final class FileSourceBuilder {
     }
 
     /**
-     * Convenience for {@link FileSourceBuilder#build(BiFunctionEx)}.
+     * Convenience for {@link FileSourceBuilder#build(FunctionEx, BiFunctionEx)}.
      * Source emits lines to downstream without any transformation.
      */
     public BatchSource<String> build() {
-        return build((filename, line) -> line);
+        return build(path -> Files.lines(path, charset), (filename, line) -> line);
     }
 
     /**
@@ -107,13 +111,17 @@ public final class FileSourceBuilder {
      * The default local parallelism for this processor is 2 (or 1 if just 1
      * CPU is available).
      *
+     * @param readFileFn the function which reads line and emits immediate items from it.
+     *                   Gets file {@code Path} as parameter and returns Stream of immediate items.
      * @param mapOutputFn the function which creates output object from each
      *                    line. Gets the filename and line as parameters
+     * @param <I> the type of immediate items returned from file reading
      * @param <T> the type of the items the source emits
      */
-    public <T> BatchSource<T> build(BiFunctionEx<String, String, ? extends T> mapOutputFn) {
+    public <I, T> BatchSource<T> build(@Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn,
+                                       @Nonnull BiFunctionEx<String, I, ? extends T> mapOutputFn) {
         return batchFromProcessor("filesSource(" + new File(directory, glob) + ')',
-                SourceProcessors.readFilesP(directory, charset, glob, sharedFileSystem, mapOutputFn));
+                SourceProcessors.readFilesP(directory, glob, sharedFileSystem, readFileFn, mapOutputFn));
     }
 
     /**

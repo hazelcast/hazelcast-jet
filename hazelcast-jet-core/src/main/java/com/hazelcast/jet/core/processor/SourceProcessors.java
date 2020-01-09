@@ -58,10 +58,12 @@ import javax.jms.MessageConsumer;
 import javax.jms.Session;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static com.hazelcast.jet.Util.cacheEventToEntry;
@@ -311,8 +313,28 @@ public final class SourceProcessors {
             @Nonnull BiFunctionEx<? super String, ? super String, ? extends R> mapOutputFn
     ) {
         String charsetName = charset.name();
+        return readFilesP(
+                    directory,
+                    glob,
+                    sharedFileSystem,
+                    path -> Files.lines(path, Charset.forName(charsetName)),
+                    mapOutputFn
+                );
+    }
+    /**
+     * Returns a supplier of processors for {@link Sources#filesBuilder}.
+     * See {@link FileSourceBuilder#build} for more details.
+     */
+    @Nonnull
+    public static <I, R> ProcessorMetaSupplier readFilesP(
+            @Nonnull String directory,
+            @Nonnull String glob,
+            boolean sharedFileSystem,
+            @Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn,
+            @Nonnull BiFunctionEx<? super String, ? super I, ? extends R> mapOutputFn
+    ) {
         return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem,
-                path -> Files.lines(path, Charset.forName(charsetName)),
+                readFileFn,
                 mapOutputFn);
     }
 
