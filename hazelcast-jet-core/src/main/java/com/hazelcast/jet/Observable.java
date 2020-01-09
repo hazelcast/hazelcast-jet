@@ -112,6 +112,8 @@ public interface Observable<T> extends Iterable<T> {
      */
     void removeObserver(@Nonnull UUID registrationId);
 
+    void setCapacity(int capacity);
+
     /**
      * Returns an iterator over the sequence of events produced by this
      * {@code Observable}. If there are currently no events to observe,

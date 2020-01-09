@@ -31,6 +31,7 @@ import com.hazelcast.ringbuffer.ReadResultSet;
 import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.ringbuffer.StaleSequenceException;
 import com.hazelcast.ringbuffer.impl.RingbufferProxy;
+import com.hazelcast.ringbuffer.impl.RingbufferService;
 import com.hazelcast.spi.exception.DistributedObjectDestroyedException;
 import com.hazelcast.spi.impl.executionservice.ExecutionService;
 
@@ -99,6 +100,17 @@ public class ObservableImpl<T> implements Observable<T> {
         } else {
             listener.cancel();
         }
+    }
+
+    @Override
+    public void setCapacity(int capacity) {
+        String ringbufferName = ringbufferName(this.name);
+        if (hzInstance.getDistributedObjects().stream().anyMatch(
+                o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME) && o.getName().equals(ringbufferName))
+        ) {
+            throw new IllegalStateException("Underlying buffer for observable '" + name + "' is already created.");
+        }
+        hzInstance.getConfig().getRingbufferConfig(ringbufferName).setCapacity(capacity);
     }
 
     @Override
