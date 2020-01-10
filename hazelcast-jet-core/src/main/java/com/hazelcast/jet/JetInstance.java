@@ -324,13 +324,12 @@ public interface JetInstance {
     /**
      * Returns an {@link Observable} instance with the specified name.
      * Represents a flowing sequence of events produced by jobs containing
-     * {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
-     * observable sinks}.
+     * {@linkplain Sinks#observable(String) observable sinks}.
      * <p>
-     * You can acquire many instances of the same {@code Observable}. They will
-     * all produce the same data.
+     * Multiple calls of this method with the same name return the same
+     * instance (unless it was destroyed in the meantime).
      * <p>
-     * In order to observe the events, register an {@link Observer} on the
+     * In order to observe the events register an {@link Observer} on the
      * {@code Observable}.
      *
      * @param name name of the observable
@@ -354,12 +353,13 @@ public interface JetInstance {
     /**
      * Returns a list of all the {@link Observable Observables} that are active.
      * By "active" we mean that their backing {@link Ringbuffer} has been
-     * created, which happens either when their first {@link Observer} is
+     * created, which happens when either their first {@link Observer} is
      * registered or when the job publishing their data (via
-     * {@link Sinks#observable(String) observable sinks}) starts executing.
+     * {@linkplain Sinks#observable(String) observable sinks}) starts
+     * executing.
      */
     @Nonnull
-    List<Observable> getObservables();
+    List<Observable<?>> getObservables();
 
     /**
      * Shuts down the current instance. If this is a client instance, it

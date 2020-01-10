@@ -104,7 +104,7 @@ public class ObservableImpl<T> implements Observable<T> {
     }
 
     @Override
-    public void setCapacity(int capacity) {
+    public void configureCapacity(int capacity) {
         String ringbufferName = ringbufferName(name);
         if (ringbufferExists(ringbufferName)) {
             throw new IllegalStateException("Underlying buffer for observable '" + name + "' is already created.");
@@ -113,7 +113,7 @@ public class ObservableImpl<T> implements Observable<T> {
     }
 
     @Override
-    public int getCapacity() {
+    public int getConfiguredCapacity() {
         String ringbufferName = ringbufferName(name);
         if (ringbufferExists(ringbufferName)) {
             return (int) hzInstance.getRingbuffer(ringbufferName).capacity();

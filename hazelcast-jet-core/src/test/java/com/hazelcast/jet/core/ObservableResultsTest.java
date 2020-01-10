@@ -509,21 +509,21 @@ public class ObservableResultsTest extends TestInClusterSupport {
         pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .writeTo(Sinks.observable(o));
         //then
-        o.setCapacity(20_000); //still possible, pipeline not executing yet
-        assertThrowsIllegalStateException(o::getCapacity);
+        o.configureCapacity(20_000); //still possible, pipeline not executing yet
+        assertThrowsIllegalStateException(o::getConfiguredCapacity);
 
         //when
         Job job = jet().newJob(pipeline);
         assertExecutionStarted(job);
         //then
-        assertThrowsIllegalStateException(() -> o.setCapacity(30_000));
-        assertEquals(20_000, o.getCapacity());
+        assertThrowsIllegalStateException(() -> o.configureCapacity(30_000));
+        assertEquals(20_000, o.getConfiguredCapacity());
 
         //when
         job.join();
         ///then
-        assertThrowsIllegalStateException(() -> o.setCapacity(30_000));
-        assertEquals(20_000, o.getCapacity());
+        assertThrowsIllegalStateException(() -> o.configureCapacity(30_000));
+        assertEquals(20_000, o.getConfiguredCapacity());
     }
 
     @Test

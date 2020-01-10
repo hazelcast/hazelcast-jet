@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet;
 
+import com.hazelcast.config.RingbufferConfig;
 import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.observer.BlockingIteratorObserver;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -33,26 +34,26 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * Represents a flowing sequence of events produced an
- * {@link Sinks#observable(String) observable sinks}. To observe the events,
- * call {@link #addObserver jet.getObservable(name).addObserver(myObserver)}.
+ * Represents a flowing sequence of events produced by {@linkplain
+ * Sinks#observable(String) observable sinks}. To observe the events, call
+ * {@link #addObserver jet.getObservable(name).addObserver(myObserver)}.
  * <p>
  * The {@code Observable} is backed by a {@link Ringbuffer}, which, once
  * created, has a fixed capacity for storing messages. It supports reading
  * by multiple {@code Observer Observers}, which will all observe the same
- * sequence of messages. A new {@code Observers} will start reading
+ * sequence of messages. A new {@code Observer} will start reading
  * automatically from the oldest sequence available. Once the capacity is
  * full, the oldest messages will be overwritten as new ones arrive.
  * <p>
- * The {@code Ringbuffer}'s capacity defaults to 10,000, but can be changed
- * (via the {@link #setCapacity(int) setCapacity()} method), as long as the
- * {@code Ringbuffer} hasn't been created yet (see the "Lifecycle" section below).
+ * The {@code Ringbuffer}'s capacity defaults to {@value
+ * RingbufferConfig#DEFAULT_CAPACITY}, but can be changed (via the {@link
+ * #configureCapacity(int)} method), as long as the {@code Ringbuffer} hasn't
+ * been created yet (see the "Lifecycle" section below).
  * <p>
  * In addition to data events, the {@code Observer} can also observe
  * completion and failure events. Completion means that no further values
  * will appear in the sequence. Failure means that something went wrong
- * during the production of the sequence's values and the event attempts
- * to provide useful information about the cause of the problem.
+ * during the job execution .
  * <p>
  * <strong>Lifecycle</strong>
  * <p>
@@ -74,7 +75,7 @@ import java.util.stream.StreamSupport;
  * in use, or data will be retained in the cluster. This is done via the
  * {@link #destroy() Observable.destroy()} method. Note: even if the
  * {@code Observable} POJO gets lost and its underlying {@code Ringbuffer}
- * floats around in the cluster, it's still possible to manually destroy
+ * is leaked in the cluster, it's still possible to manually destroy
  * it later by creating another {@code Observable} instance with the same
  * name and calling {@code destroy()} on that.
  * <p>
@@ -83,10 +84,10 @@ import java.util.stream.StreamSupport;
  * completion events interleaving and causing data loss or other unexpected
  * behaviour. Using one observable name in multiple
  * {@link Sinks#observable(String) observable sinks} in the same job is
- * allowed, this will not produce multiple completion or error event (just
+ * allowed, this will not produce multiple completion or error events (just
  * an intermingling of the results from the two sinks, but that should be
  * fine in some use cases).
- * <p>
+ *
  * @param <T> type of the values in the sequence
  *
  * @since 4.0
@@ -94,9 +95,7 @@ import java.util.stream.StreamSupport;
 public interface Observable<T> extends Iterable<T> {
 
     /**
-     * Returns the name identifying this particular observable.
-     *
-     * @return name of observable
+     * Name of this instance.
      */
     @Nonnull
     String name();
@@ -120,25 +119,22 @@ public interface Observable<T> extends Iterable<T> {
     void removeObserver(@Nonnull UUID registrationId);
 
     /**
-     * Set the capacity of the {@code Observable}. Being backed by a
-     * {@link Ringbuffer}, an {@code Observable}'s capacity is basically
-     * the {@code Ringbuffer}'s capacity, which defaults to 10,000.
+     * Set the capacity of the underlying {@link Ringbuffer}, which defaults to
+     * {@value RingbufferConfig#DEFAULT_CAPACITY}.
      * <p>
      * This method can be called only before the {@code Ringbuffer} gets
      * created. This means before any {@link Observer Observers} are added
      * to the {@code Observable} and before any jobs containing
      * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
      * sinks} (with the same observable name) are submitted for execution.
-     * <p>
-     * If the {@code Ringbuffer} has already been created, then this
-     * method will throw an {@link IllegalStateException}.
+     *
+     * @throws IllegalStateException if the {@code Ringbuffer} has already been
+     * created
      */
-    void setCapacity(int capacity);
+    void configureCapacity(int capacity);
 
     /**
-     * Returns the current capacity of the {@code Observable}. Being backed
-     * by a {@link Ringbuffer}, an {@code Observable}'s capacity is basically
-     * the {@code Ringbuffer}'s capacity.
+     * Returns the configured capacity of the underlying {@link Ringbuffer}..
      * <p>
      * This method only works if the backing {@code Ringbuffer} has already
      * been created. If so, it will be queried for its actual capacity,
@@ -147,20 +143,19 @@ public interface Observable<T> extends Iterable<T> {
      * the job containing the {@link com.hazelcast.jet.pipeline.Sinks#observable(String)
      * observable sink} (with the same observable name) is submitted for
      * execution.)
-     * <p>
-     * If the backing {@code Ringbuffer} has not yet been created, then an
-     * {@link IllegalStateException} will be thrown.
+     *
+     * @throws IllegalStateException if the backing {@code Ringbuffer} has not
+     * yet been created
      */
-    int getCapacity();
+    int getConfiguredCapacity();
 
     /**
      * Returns an iterator over the sequence of events produced by this
      * {@code Observable}. If there are currently no events to observe,
-     * the iterator's {@link Iterator#hasNext hasNext()} and {@link
-     * Iterator#next next()} methods will block. A completion event
-     * completes the iterator ({@code hasNext()} will return false) and
-     * a failure event makes the iterator's methods throw the underlying
-     * exception.
+     * the iterator's {@code hasNext()} and {@code next()} methods will block.
+     * A completion event completes the iterator ({@code hasNext()} will return
+     * false) and a failure event makes the iterator's methods throw the
+     * underlying exception.
      * <p>
      * If used against an {@code Observable} populated from a streaming job,
      * the iterator will complete only in the case of an error or job
