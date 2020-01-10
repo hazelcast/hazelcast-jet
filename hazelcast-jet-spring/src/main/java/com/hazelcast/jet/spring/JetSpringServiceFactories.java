@@ -50,7 +50,7 @@ public final class JetSpringServiceFactories {
      * <pre>{@code
      * Pipeline pipeline = Pipeline.create();
      * pipeline.<String>readFrom(Sources.list(LIST_NAME))
-     *         .mapUsingService(JetSpringServiceFactories.beanServiceFactory("userDao", UserDao.class),
+     *         .mapUsingService(JetSpringServiceFactories.bean("userDao", UserDao.class),
      *                 (userDao, item) -> userDao.findByName(item.toLowerCase()))
      *         .writeTo(Sinks.logger());
      * }</pre>
@@ -76,7 +76,7 @@ public final class JetSpringServiceFactories {
      * <pre>{@code
      * Pipeline pipeline = Pipeline.create();
      * pipeline.<String>readFrom(Sources.list(LIST_NAME))
-     *         .mapUsingService(JetSpringServiceFactories.beanServiceFactory(UserDao.class),
+     *         .mapUsingService(JetSpringServiceFactories.bean(UserDao.class),
      *                 (userDao, item) -> userDao.findByName(item.toLowerCase()))
      *         .writeTo(Sinks.logger());
      * }</pre>
@@ -101,7 +101,7 @@ public final class JetSpringServiceFactories {
      * <pre>{@code
      * Pipeline pipeline = Pipeline.create();
      * pipeline.<String>readFrom(Sources.list(LIST_NAME))
-     *         .mapUsingService(JetSpringServiceFactories.beanServiceFactory("userDao"),
+     *         .mapUsingService(JetSpringServiceFactories.bean("userDao"),
      *                 (userDao, item) -> userDao.findByName(item.toLowerCase()))
      *         .writeTo(Sinks.logger());
      * }</pre>
