@@ -48,7 +48,7 @@ public class BeanAsAServiceSample {
 
         Pipeline pipeline = Pipeline.create();
         pipeline.<String>readFrom(Sources.list(LIST_NAME))
-                .mapUsingService(JetSpringServiceFactories.beanServiceFactory(UserDao.class),
+                .mapUsingService(JetSpringServiceFactories.bean(UserDao.class),
                         (userDao, item) -> userDao.findByName(item.toLowerCase()))
                 .writeTo(Sinks.logger());
 

@@ -60,7 +60,7 @@ public final class JetSpringServiceFactories {
      * @param requiredType the class of the bean
      * @param <T>          the type of the bean
      */
-    public static <T> ServiceFactory<?, T> beanServiceFactory(@Nonnull String beanName, @Nonnull Class<T> requiredType) {
+    public static <T> ServiceFactory<?, T> bean(@Nonnull String beanName, @Nonnull Class<T> requiredType) {
         return ServiceFactory.withCreateContextFn(ctx -> new BeanExtractor())
                              .withCreateServiceFn((c, g) -> g.getBean(beanName, requiredType));
     }
@@ -85,7 +85,7 @@ public final class JetSpringServiceFactories {
      * @param requiredType the class of the bean
      * @param <T>          the type of the bean
      */
-    public static <T> ServiceFactory<?, T> beanServiceFactory(@Nonnull Class<T> requiredType) {
+    public static <T> ServiceFactory<?, T> bean(@Nonnull Class<T> requiredType) {
         return ServiceFactory.withCreateContextFn(ctx -> new BeanExtractor())
                              .withCreateServiceFn((c, g) -> g.getBean(requiredType));
     }
@@ -110,7 +110,7 @@ public final class JetSpringServiceFactories {
      * @param beanName the name of the bean
      * @param <T>      the type of the bean
      */
-    public static <T> ServiceFactory<?, T> beanServiceFactory(@Nonnull String beanName) {
+    public static <T> ServiceFactory<?, T> bean(@Nonnull String beanName) {
         return ServiceFactory.withCreateContextFn(ctx -> new BeanExtractor())
                              .withCreateServiceFn((c, g) -> g.getBean(beanName));
     }
