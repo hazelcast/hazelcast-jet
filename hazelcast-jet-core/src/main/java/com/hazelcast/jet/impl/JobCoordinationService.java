@@ -310,7 +310,6 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> terminateJob(long jobId, TerminationMode terminationMode) {
-        stats.executionTerminated();
         return runWithJob(jobId,
                 masterContext -> {
                     // User can cancel in any state, other terminations are allowed only when running.
@@ -432,7 +431,6 @@ public class JobCoordinationService {
     }
 
     public CompletableFuture<Void> resumeJob(long jobId) {
-        stats.executionStarted();
         return runWithJob(jobId,
                 masterContext -> masterContext.jobContext().resumeJob(jobRepository::newExecutionId),
                 jobResult -> {
@@ -865,7 +863,6 @@ public class JobCoordinationService {
     }
 
     private void tryStartJob(MasterContext masterContext) {
-        stats.executionStarted();
         masterContext.jobContext().tryStartJob(jobRepository::newExecutionId);
     }
 
@@ -996,10 +993,6 @@ public class JobCoordinationService {
         private final Counter jobCompletedSuccessfully = MwCounter.newMwCounter();
         @Probe(name = MetricNames.JOBS_COMPLETED_WITH_FAILURE)
         private final Counter jobCompletedWithFailure = MwCounter.newMwCounter();
-        @Probe(name = MetricNames.JOB_EXECUTIONS_STARTED)
-        private final Counter executionStarted = MwCounter.newMwCounter();
-        @Probe(name = MetricNames.JOB_EXECUTIONS_TERMINATED)
-        private final Counter executionTerminated = MwCounter.newMwCounter();
 
         void jobSubmitted() {
             jobSubmitted.inc();
@@ -1011,14 +1004,6 @@ public class JobCoordinationService {
             } else {
                 jobCompletedWithFailure.inc();
             }
-        }
-
-        public void executionStarted() {
-            executionStarted.inc();
-        }
-
-        void executionTerminated() {
-            executionTerminated.inc();
         }
 
     }

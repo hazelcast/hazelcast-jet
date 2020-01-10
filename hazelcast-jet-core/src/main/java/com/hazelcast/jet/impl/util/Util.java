@@ -238,11 +238,11 @@ public final class Util {
     }
 
     public static String jobNameAndExecutionId(String jobName, long executionId) {
-        return "job '" + jobName + "', execution '" + idToString(executionId) + "'";
+        return "job '" + jobName + "', execution " + idToString(executionId);
     }
 
     public static String jobIdAndExecutionId(long jobId, long executionId) {
-        return "job " + idToString(jobId) + ", execution '" + idToString(executionId) + "'";
+        return "job " + idToString(jobId) + ", execution " + idToString(executionId);
     }
 
     private static ZonedDateTime toZonedDateTime(long timestamp) {

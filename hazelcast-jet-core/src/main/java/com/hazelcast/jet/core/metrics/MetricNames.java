@@ -138,12 +138,12 @@ public final class MetricNames {
     public static final String EXECUTION_START_TIME = "executionStartTime";
 
     /**
-     * Tracks the total amount of time since a given execution of a specific
-     * job is running. The execution and the job can be identified based
-     * on the {@link MetricTags#EXECUTION} & {@link MetricTags#JOB} tags
-     * of the metric.
+     * Tracks the completion time of a given execution of a specific job.
+     * The execution and the job can be identified based on the
+     * {@link MetricTags#EXECUTION} & {@link MetricTags#JOB} tags of
+     * the metric.
      */
-    public static final String EXECUTION_DURATION = "executionDuration";
+    public static final String EXECUTION_COMPLETION_TIME = "executionCompletionTime";
 
     /**
      * Counts data items coming in over the network for DISTRIBUTED input

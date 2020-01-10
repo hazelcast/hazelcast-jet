@@ -56,7 +56,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-public class StatisticalMetricsTest {
+public class JobLifecycleMetricsTest {
 
     private static final int MEMBER_COUNT = 1;
 
@@ -114,7 +114,7 @@ public class StatisticalMetricsTest {
         }
 
         //then
-        assertTrueEventually(() -> assertJobStats(2, 2, 1, 1, 1));
+        assertTrueEventually(() -> assertJobStats(2, 2, 2, 1, 1));
     }
 
     @Test

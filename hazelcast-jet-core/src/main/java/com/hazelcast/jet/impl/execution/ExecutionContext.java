@@ -51,7 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_DURATION;
+import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_COMPLETION_TIME;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_START_TIME;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -72,6 +72,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private final Object executionLock = new Object();
     private final ILogger logger;
     private final Counter startTime = MwCounter.newMwCounter();
+    private final Counter completionTime = MwCounter.newMwCounter();
 
     // key: resource identifier
     // we use ConcurrentHashMap because ConcurrentMap doesn't guarantee that computeIfAbsent
@@ -180,6 +181,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
     public void completeExecution(Throwable error) {
         assert executionFuture == null || executionFuture.isDone()
                 : "If execution was begun, then completeExecution() should not be called before execution is done.";
+
+        completionTime.set(System.currentTimeMillis());
 
         for (Tasklet tasklet : tasklets) {
             try {
@@ -320,11 +323,15 @@ public class ExecutionContext implements DynamicMetricsProvider {
                                .withTag(MetricTags.EXECUTION, idToString(executionId));
 
         long executionStartTime = startTime.get();
-        if (executionStartTime != 0) {
+        if (executionStartTime > 0) {
             context.collect(descriptor, EXECUTION_START_TIME, ProbeLevel.INFO, ProbeUnit.MS, executionStartTime);
-            context.collect(descriptor, EXECUTION_DURATION, ProbeLevel.INFO, ProbeUnit.MS,
-                    System.currentTimeMillis() - executionStartTime);
         }
+
+        long executionCompletionTime = completionTime.get();
+        if (executionCompletionTime > 0) {
+            context.collect(descriptor, EXECUTION_COMPLETION_TIME, ProbeLevel.INFO, ProbeUnit.MS, executionCompletionTime);
+        }
+
         for (Tasklet tasklet : tasklets) {
             tasklet.provideDynamicMetrics(descriptor.copy(), context);
         }
