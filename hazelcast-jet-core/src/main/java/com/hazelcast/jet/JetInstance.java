@@ -37,6 +37,7 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.impl.MapService;
 import com.hazelcast.replicatedmap.ReplicatedMap;
+import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
@@ -329,7 +330,7 @@ public interface JetInstance {
      * You can acquire many instances of the same {@code Observable}. They will
      * all produce the same data.
      * <p>
-     * In order to observe the events, register an {@link Observer}s on the
+     * In order to observe the events, register an {@link Observer} on the
      * {@code Observable}.
      *
      * @param name name of the observable
@@ -351,7 +352,11 @@ public interface JetInstance {
     }
 
     /**
-     * Returns a list of all the observables that are active
+     * Returns a list of all the {@link Observable Observables} that are active.
+     * By "active" we mean that their backing {@link Ringbuffer} has been
+     * created, which happens either when their first {@link Observer} is
+     * registered or when the job publishing their data (via
+     * {@link Sinks#observable(String) observable sinks}) starts executing.
      */
     @Nonnull
     List<Observable> getObservables();

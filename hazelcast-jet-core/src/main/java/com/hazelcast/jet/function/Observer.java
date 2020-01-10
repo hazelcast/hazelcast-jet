@@ -40,7 +40,7 @@ public interface Observer<T> {
 
     /**
      * Utility method for building an {@link Observer} from its basic
-     * components.
+     * callback components.
      */
     @Nonnull
     static <T> Observer<T> of(
@@ -64,6 +64,15 @@ public interface Observer<T> {
                 onComplete.run();
             }
         };
+    }
+
+    /**
+     * Utility method for building an {@link Observer} only from its data
+     * callback, with default behaviour for completion & error.
+     */
+    @Nonnull
+    static <T> Observer<T> of(@Nonnull ConsumerEx<? super T> onNext) {
+        return onNext::accept;
     }
 
     /**

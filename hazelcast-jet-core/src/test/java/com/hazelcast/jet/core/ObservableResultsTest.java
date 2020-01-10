@@ -526,6 +526,37 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertEquals(20_000, o.getCapacity());
     }
 
+    @Test
+    public void unnamedObservable() {
+        Observable<Long> unnamedObservable = newObservable();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(unnamedObservable));
+
+        TestObserver observer = new TestObserver();
+        unnamedObservable.addObserver(observer);
+
+        //when
+        jet().newJob(pipeline).join();
+        //then
+        assertSortedValues(observer, 0L, 1L, 2L, 3L, 4L);
+        assertError(observer, null);
+        assertCompletions(observer, 1);
+    }
+
+    @Test
+    public void getObservables() {
+        //when
+        getObservable("a").addObserver(Observer.of(ConsumerEx.noop()));
+        getObservable("b");
+        getObservable("c").addObserver(Observer.of(ConsumerEx.noop()));
+
+        //then
+        Set<String> activeObservables = jet().getObservables().stream().map(Observable::name).collect(Collectors.toSet());
+        assertTrue(activeObservables.containsAll(Arrays.asList("a", "c")));
+    }
+
     private void assertExecutionStarted(Job job) {
         assertTrueEventually(() -> assertTrue(JobStatus.RUNNING.equals(job.getStatus())
                 || JobStatus.COMPLETED.equals(job.getStatus())));
@@ -539,6 +570,12 @@ public class ObservableResultsTest extends TestInClusterSupport {
         } catch (IllegalStateException ise) {
             //ignore, expected
         }
+    }
+
+    private <T> Observable<T> newObservable() {
+        Observable<T> observable = jet().newObservable();
+        usedObservables.add(observable);
+        return observable;
     }
 
     private <T> Observable<T> getObservable(String name) {

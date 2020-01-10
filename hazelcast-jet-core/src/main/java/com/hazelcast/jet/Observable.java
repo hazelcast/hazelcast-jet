@@ -39,10 +39,10 @@ import java.util.stream.StreamSupport;
  * <p>
  * The {@code Observable} is backed by a {@link Ringbuffer}, which, once
  * created, has a fixed capacity for storing messages. It supports reading
- * by multiple {@code Observer}s, which will all observe the same sequence of
- * messages. A new {@code Observers} will start reading automatically from the
- * oldest sequence available. Once the capacity is full, the oldest messages
- * will be overwritten as new ones arrive.
+ * by multiple {@code Observer Observers}, which will all observe the same
+ * sequence of messages. A new {@code Observers} will start reading
+ * automatically from the oldest sequence available. Once the capacity is
+ * full, the oldest messages will be overwritten as new ones arrive.
  * <p>
  * The {@code Ringbuffer}'s capacity defaults to 10,000, but can be changed
  * (via the {@link #setCapacity(int) setCapacity()} method), as long as the
@@ -81,8 +81,11 @@ import java.util.stream.StreamSupport;
  * <strong>Important:</strong> The same {@code Observable} must
  * <strong>not</strong> be used again in a new job since this will cause
  * completion events interleaving and causing data loss or other unexpected
- * behaviour. Same goes for using one observable name in multiple
- * {@link Sinks#observable(String) observable sinks} in the same job.
+ * behaviour. Using one observable name in multiple
+ * {@link Sinks#observable(String) observable sinks} in the same job is
+ * allowed, this will not produce multiple completion or error event (just
+ * an intermingling of the results from the two sinks, but that should be
+ * fine in some use cases).
  * <p>
  * @param <T> type of the values in the sequence
  *
@@ -122,8 +125,8 @@ public interface Observable<T> extends Iterable<T> {
      * the {@code Ringbuffer}'s capacity, which defaults to 10,000.
      * <p>
      * This method can be called only before the {@code Ringbuffer} gets
-     * created. This means before any {@link Observer}s are added to the
-     * {@code Observable} and before any jobs containing
+     * created. This means before any {@link Observer Observers} are added
+     * to the {@code Observable} and before any jobs containing
      * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
      * sinks} (with the same observable name) are submitted for execution.
      * <p>
