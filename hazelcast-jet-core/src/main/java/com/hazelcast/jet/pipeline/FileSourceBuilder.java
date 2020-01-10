@@ -35,7 +35,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * its subdirectories) and emits output object created by {@code mapOutputFn}
  * @since 3.0
  */
-@SuppressWarnings("unchecked")
 public final class FileSourceBuilder {
 
     private static final String GLOB_WILDCARD = "*";
@@ -95,7 +94,8 @@ public final class FileSourceBuilder {
      * Source emits lines to downstream without any transformation.
      */
     public BatchSource<String> build() {
-        return build(path -> Files.lines(path, charset), (filename, line) -> line);
+        String charsetName = charset.name();
+        return build(path -> Files.lines(path, Charset.forName(charsetName)), (filename, line) -> line);
     }
 
     /**
