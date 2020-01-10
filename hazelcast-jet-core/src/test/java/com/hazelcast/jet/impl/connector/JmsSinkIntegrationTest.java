@@ -84,7 +84,7 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
         p.readFrom(Sources.list(srcList.getName()))
          .writeTo(Sinks.jmsTopic(destinationName, JmsSinkIntegrationTest::getConnectionFactory));
 
-        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, true, MESSAGE_COUNT);
+        List<Object> messages = consumeMessages(getConnectionFactory(), destinationName, false, MESSAGE_COUNT);
         sleepSeconds(1);
 
         instance().newJob(p);
