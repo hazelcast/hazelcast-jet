@@ -34,10 +34,7 @@ import java.util.concurrent.CompletionException;
 
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertCollectedEventually;
-import static com.hazelcast.jet.spring.JetSpringServices.filterBatchUsingSpringBean;
-import static com.hazelcast.jet.spring.JetSpringServices.filterStreamUsingSpringBean;
-import static com.hazelcast.jet.spring.JetSpringServices.mapBatchUsingSpringBean;
-import static com.hazelcast.jet.spring.JetSpringServices.mapStreamUsingSpringBean;
+import static com.hazelcast.jet.spring.JetSpringServiceFactories.beanServiceFactory;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,7 +58,7 @@ public class SpringServicesTest {
     public void testMapBatchUsingSpringBean() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.items(1L, 2L, 3L, 4L, 5L, 6L))
-                .apply(mapBatchUsingSpringBean("risk-calculator", RiskCalculator::calculateRisk))
+                .mapUsingService(beanServiceFactory("calculator"), Calculator::multiply)
                 .writeTo(assertAnyOrder(asList(-1L, -2L, -3L, -4L, -5L, -6L)));
 
         jetInstance.newJob(pipeline).join();
@@ -71,7 +68,7 @@ public class SpringServicesTest {
     public void testFilterBatchUsingSpringBean() {
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.items(1L, 2L, 3L, 4L, 5L, 6L))
-                .apply(filterBatchUsingSpringBean("risk-calculator", RiskCalculator::checkRisk))
+                .filterUsingService(beanServiceFactory("calculator"), Calculator::filter)
                 .writeTo(assertAnyOrder(asList(2L, 4L, 6L)));
 
         jetInstance.newJob(pipeline).join();
@@ -83,7 +80,7 @@ public class SpringServicesTest {
         pipeline.readFrom(TestSources.itemStream(100))
                 .withNativeTimestamps(0)
                 .map(SimpleEvent::sequence)
-                .apply(mapStreamUsingSpringBean("risk-calculator", RiskCalculator::calculateRisk))
+                .mapUsingService(beanServiceFactory("calculator"), Calculator::multiply)
                 .writeTo(assertCollectedEventually(10, c -> {
                     assertTrue(c.size() > 100);
                     c.forEach(i -> assertTrue(i <= 0));
@@ -99,7 +96,7 @@ public class SpringServicesTest {
         pipeline.readFrom(TestSources.itemStream(100))
                 .withNativeTimestamps(0)
                 .map(SimpleEvent::sequence)
-                .apply(filterStreamUsingSpringBean("risk-calculator", RiskCalculator::checkRisk))
+                .filterUsingService(beanServiceFactory("calculator"), Calculator::filter)
                 .writeTo(assertCollectedEventually(10, c -> {
                     assertTrue(c.size() > 100);
                     c.forEach(i -> assertEquals(0, i % 2));

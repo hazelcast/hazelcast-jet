@@ -16,7 +16,15 @@
 
 package com.hazelcast.jet.spring;
 
-public interface RiskCalculator {
-    long calculateRisk(long input);
-    boolean checkRisk(long input);
+public class SillyCalculator implements Calculator {
+
+    @Override
+    public long multiply(long input) {
+        return -input;
+    }
+
+    @Override
+    public boolean filter(long input) {
+        return input % 2 == 0;
+    }
 }

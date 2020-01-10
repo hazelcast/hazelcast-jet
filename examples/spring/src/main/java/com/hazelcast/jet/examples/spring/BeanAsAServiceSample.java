@@ -25,7 +25,7 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
-import com.hazelcast.jet.spring.JetSpringServices;
+import com.hazelcast.jet.spring.JetSpringServiceFactories;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -34,7 +34,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * The pipeline reads the names from a list and maps each name to a {@link User}
  * using the Spring Bean obtained from the context.
  *
- * For more information and other usages see {@link JetSpringServices}
+ * For more information and other usages see {@link JetSpringServiceFactories}
  */
 public class BeanAsAServiceSample {
 
@@ -48,14 +48,8 @@ public class BeanAsAServiceSample {
 
         Pipeline pipeline = Pipeline.create();
         pipeline.<String>readFrom(Sources.list(LIST_NAME))
-                .apply(JetSpringServices.mapBatchUsingSpringBean(UserDao.class,
-                        (userDao, item) -> userDao.findByName(item.toLowerCase())))
-
-                // You can either apply the transform function or call `mapUsingService`
-                // directly. For both cases JetSpringServices provides conveniences.
-
-                //.mapUsingService(JetSpringServices.beanServiceFactory(UserDao.class),
-                //        (userDao, item) -> userDao.findByName(item.toLowerCase()))
+                .mapUsingService(JetSpringServiceFactories.beanServiceFactory(UserDao.class),
+                        (userDao, item) -> userDao.findByName(item.toLowerCase()))
                 .writeTo(Sinks.logger());
 
         jet.newJob(pipeline).join();
