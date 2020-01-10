@@ -526,6 +526,12 @@ public class ObservableResultsTest extends TestInClusterSupport {
         assertEquals(20_000, o.getConfiguredCapacity());
     }
 
+    @Test(expected = RuntimeException.class)
+    public void configureCapacityMultipleTimes() {
+        Observable<Object> o = getObservable("capacity_observable");
+        o.configureCapacity(10).configureCapacity(20);
+    }
+
     @Test
     public void unnamedObservable() {
         Observable<Long> unnamedObservable = newObservable();

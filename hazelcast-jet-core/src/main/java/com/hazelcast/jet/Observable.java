@@ -127,11 +127,14 @@ public interface Observable<T> extends Iterable<T> {
      * to the {@code Observable} and before any jobs containing
      * {@link com.hazelcast.jet.pipeline.Sinks#observable(String) observable
      * sinks} (with the same observable name) are submitted for execution.
+     * <p>
+     * <strong>Important:</strong> only configure capacity once, multiple
+     * configuration are currently not supported.
      *
      * @throws IllegalStateException if the {@code Ringbuffer} has already been
      * created
      */
-    void configureCapacity(int capacity);
+    Observable<T> configureCapacity(int capacity);
 
     /**
      * Returns the configured capacity of the underlying {@link Ringbuffer}..

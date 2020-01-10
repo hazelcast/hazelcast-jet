@@ -17,6 +17,7 @@
 package com.hazelcast.jet.impl.observer;
 
 import com.hazelcast.client.impl.clientside.HazelcastClientInstanceImpl;
+import com.hazelcast.config.Config;
 import com.hazelcast.config.RingbufferConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
@@ -61,19 +62,17 @@ public class ObservableImpl<T> implements Observable<T> {
      */
     public static final String OWNED_OBSERVABLE = "owned_observable";
 
+    private final ConcurrentMap<UUID, RingbufferListener<T>> listeners = new ConcurrentHashMap<>();
     private final String name;
     private final HazelcastInstance hzInstance;
     private final Consumer<Observable<T>> onDestroy;
     private final ILogger logger;
-
-    private ConcurrentMap<UUID, RingbufferListener<T>> listeners;
 
     public ObservableImpl(String name, HazelcastInstance hzInstance, Consumer<Observable<T>> onDestroy, ILogger logger) {
         this.name = name;
         this.hzInstance = hzInstance;
         this.onDestroy = onDestroy;
         this.logger = logger;
-        this.listeners = new ConcurrentHashMap<>();
     }
 
     @Nonnull @Override
@@ -83,7 +82,6 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Nonnull @Override
     public UUID addObserver(@Nonnull Observer<T> observer) {
-        checkIfLive();
         UUID id = UuidUtil.newUnsecureUUID();
         RingbufferListener<T> listener = new RingbufferListener<>(name, id, observer, hzInstance, logger);
         listeners.put(id, listener);
@@ -93,7 +91,6 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void removeObserver(@Nonnull UUID registrationId) {
-        checkIfLive();
         RingbufferListener<T> listener = listeners.remove(registrationId);
         if (listener == null) {
             throw new IllegalArgumentException(
@@ -104,12 +101,18 @@ public class ObservableImpl<T> implements Observable<T> {
     }
 
     @Override
-    public void configureCapacity(int capacity) {
+    public Observable<T> configureCapacity(int capacity) {
         String ringbufferName = ringbufferName(name);
         if (ringbufferExists(ringbufferName)) {
             throw new IllegalStateException("Underlying buffer for observable '" + name + "' is already created.");
         }
-        hzInstance.getConfig().addRingBufferConfig(new RingbufferConfig(ringbufferName).setCapacity(capacity));
+        Config config = hzInstance.getConfig();
+        try {
+            config.addRingBufferConfig(new RingbufferConfig(ringbufferName).setCapacity(capacity));
+        } catch (Exception e) {
+            throw new RuntimeException("Capacity already configured");
+        }
+        return this;
     }
 
     @Override
@@ -131,21 +134,12 @@ public class ObservableImpl<T> implements Observable<T> {
 
     @Override
     public void destroy() {
-        checkIfLive();
-
         listeners.keySet().forEach(this::removeObserver);
         listeners.clear();
-        listeners = null;
 
         // destroy the underlying ringbuffer
         hzInstance.getRingbuffer(ringbufferName(name)).destroy();
         onDestroy.accept(this);
-    }
-
-    private void checkIfLive() {
-        if (listeners == null) {
-            throw new IllegalStateException("Has already been destroyed");
-        }
     }
 
     @Nonnull
