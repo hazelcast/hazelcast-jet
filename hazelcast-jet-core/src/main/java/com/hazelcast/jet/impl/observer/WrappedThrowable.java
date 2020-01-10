@@ -24,6 +24,11 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Objects;
 
+/**
+ * A class used when a Throwable is added by Jet to a collection or stream of
+ * user objects and we want to safely distinguish Jet's throwable from user's,
+ * however rare that is.
+ */
 public class WrappedThrowable implements IdentifiedDataSerializable {
 
     private Throwable throwable;

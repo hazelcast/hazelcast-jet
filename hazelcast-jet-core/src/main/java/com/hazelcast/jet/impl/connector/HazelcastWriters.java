@@ -41,7 +41,6 @@ import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +51,7 @@ import java.util.function.Function;
 import static com.hazelcast.jet.core.ProcessorMetaSupplier.preferLocalParallelismOne;
 import static com.hazelcast.jet.impl.util.ImdgUtil.asXmlString;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static java.util.Collections.singletonMap;
 
 /**
  * This is private API. Check out the {@link SinkProcessors} class for
@@ -159,16 +159,10 @@ public final class HazelcastWriters {
 
     public static ProcessorMetaSupplier writeObservableSupplier(@Nonnull String name) {
         return new ProcessorMetaSupplier() {
-
-            private final Map<String, String> tags = Collections.singletonMap(
-                    ObservableImpl.OWNED_OBSERVABLE,
-                    name
-            );
-
             @Nonnull
             @Override
             public Map<String, String> getTags() {
-                return tags;
+                return singletonMap(ObservableImpl.OWNED_OBSERVABLE, name);
             }
 
             @Override

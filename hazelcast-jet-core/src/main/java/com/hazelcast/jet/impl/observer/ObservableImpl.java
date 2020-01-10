@@ -60,7 +60,7 @@ public class ObservableImpl<T> implements Observable<T> {
      * PMS tag key} for specifying when a PMS owns an {@link Observable} (ie.
      * is the entity populating the {@link Observable} with data).
      */
-    public static final String OWNED_OBSERVABLE = "owned_observable";
+    public static final String OWNED_OBSERVABLE = ObservableImpl.class.getName() + ".ownedObservable";
 
     private final ConcurrentMap<UUID, RingbufferListener<T>> listeners = new ConcurrentHashMap<>();
     private final String name;

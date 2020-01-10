@@ -911,7 +911,7 @@ include::{javasource}/BuildComputation.java[tag=apply3]
 [[return-results-to-caller]]
 = Return results to caller
 
-For certain jobs, especially batch ones which produce a reasonably small
+For certain jobs, especially batch ones, which produce a reasonably small
 amount of output it is convenient to be able to examine the results directly
 in the client submitting the job, instead of needing to look them up
 in files, maps and such.
@@ -934,7 +934,7 @@ as used in the `Sink`. {jet-javadoc}/Observable.html[Observables] can be obtaine
 Jet member or client.
 
 {jet-javadoc}/Observable.html[Observables] can be observed by registering
-{jet-javadoc}/Observer.html[Observers] on them, which are basically call-backs for
+{jet-javadoc}/Observer.html[Observers] on them, which are basically callbacks for
 handling results, errors and completion events. In order to make sure that no results are
 lost it is recommended that the `Observables` and `Observers` are set up before `Job`
 submission.
@@ -945,13 +945,10 @@ will produce parallel, independent streams of events which will end up in the sa
 and can get intermingled in unexpected ways, thus creating confusion. It is also possible to
 use observable `Sinks` with the same name in multiple `Jobs` and that can create the same problem.
 
-`Observables` are backed by distributed data structures which should be cleaned-up
+`Observables` are backed by ringbuffers stored in the cluster which should be cleaned up
 by the client, once they are no longer necessary. They have a
-{jet-javadoc}/Observable.html#destroy--[destroy method] which does just that. These same
-backing data structures will also be cleaned-up automatically after their owner `Jobs`
-have completed, failed or have been cancelled. The automatic clean-up is happens by default
-7 days after `Job` completion and can be configured via the `jet.job.results.ttl.seconds`
-property (see <<system-properties, System Properties>> section).
+{jet-javadoc}/Observable.html#destroy--[destroy method] which does just that. If the
+`Observable` isn't destroyed, its memory will be leaked in the cluster forever.
 
 
 [[developing-and-testing]]

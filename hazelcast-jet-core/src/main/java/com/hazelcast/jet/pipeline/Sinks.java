@@ -1068,7 +1068,7 @@ public final class Sinks {
      * {@link JetInstance#getObservable(String)} and then subscribing to
      * the events using the methods on {@link Observable}.
      * <p>
-     * The {@code Observable} must be destroyed after using it. For the full
+     * The {@code Observable} should be destroyed after using it. For the full
      * description see {@link Observable the javadoc for Observable}.
      * Example:<pre>{@code
      *   Observable<Integer> observable = jet.newObservable();
