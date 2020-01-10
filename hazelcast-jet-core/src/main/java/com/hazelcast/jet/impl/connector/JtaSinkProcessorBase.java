@@ -49,9 +49,9 @@ import static javax.transaction.xa.XAResource.XA_RDONLY;
 public abstract class JtaSinkProcessorBase implements Processor {
     private static final int COMMIT_RETRY_DELAY_MS = 100;
 
+    protected TransactionPoolSnapshotUtility<JtaTransactionId, JtaTransaction> snapshotUtility;
     private final int poolSize;
     private ProcessingGuarantee externalGuarantee;
-    protected TransactionPoolSnapshotUtility<JtaTransactionId, JtaTransaction> snapshotUtility;
     private Context context;
     private XAResource xaResource;
 

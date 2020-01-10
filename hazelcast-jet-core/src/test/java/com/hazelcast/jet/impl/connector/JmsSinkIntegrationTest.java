@@ -49,7 +49,7 @@ public class JmsSinkIntegrationTest extends SimpleTestInClusterSupport {
     public static EmbeddedActiveMQBroker broker = new EmbeddedActiveMQBroker();
 
     private static final int MESSAGE_COUNT = 100;
-    
+
     private static int counter;
 
     private String destinationName = "dest" + counter++;
