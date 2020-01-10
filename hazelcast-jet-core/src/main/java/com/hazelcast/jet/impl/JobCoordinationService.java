@@ -132,7 +132,13 @@ public class JobCoordinationService {
     private volatile boolean jobsScanned;
 
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
-    private final Stats stats = new Stats();
+
+    @Probe(name = MetricNames.JOBS_SUBMITTED)
+    private final Counter jobSubmitted = MwCounter.newMwCounter();
+    @Probe(name = MetricNames.JOBS_COMPLETED_SUCCESSFULLY)
+    private final Counter jobCompletedSuccessfully = MwCounter.newMwCounter();
+    @Probe(name = MetricNames.JOBS_COMPLETED_WITH_FAILURE)
+    private final Counter jobCompletedWithFailure = MwCounter.newMwCounter();
 
     private long maxJobScanPeriodInMillis;
 
@@ -151,7 +157,7 @@ public class JobCoordinationService {
         MetricsRegistry registry = nodeEngine.getMetricsRegistry();
         MetricDescriptor descriptor = registry.newMetricDescriptor()
                 .withTag(MetricTags.MODULE, "jet");
-        registry.registerStaticMetrics(descriptor, stats);
+        registry.registerStaticMetrics(descriptor, this);
     }
 
     public JobRepository jobRepository() {
@@ -217,7 +223,7 @@ public class JobCoordinationService {
                 }
 
                 // If there is no master context and job result at the same time, it means this is the first submission
-                stats.jobSubmitted();
+                jobSubmitted.inc();
                 jobRepository.putNewJobRecord(jobRecord);
 
                 logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request");
@@ -659,7 +665,7 @@ public class JobCoordinationService {
             jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
                 logger.fine(masterContext.jobIdString() + " is completed");
-                stats.jobCompleted(error);
+                (error == null ? jobCompletedSuccessfully : jobCompletedWithFailure).inc();
             } else {
                 MasterContext existing = masterContexts.get(jobId);
                 if (existing != null) {
@@ -985,26 +991,4 @@ public class JobCoordinationService {
         assert IS_JOB_COORDINATOR_THREAD.get() : "not on coordinator thread";
     }
 
-    private static class Stats {
-
-        @Probe(name = MetricNames.JOBS_SUBMITTED)
-        private final Counter jobSubmitted = MwCounter.newMwCounter();
-        @Probe(name = MetricNames.JOBS_COMPLETED_SUCCESSFULLY)
-        private final Counter jobCompletedSuccessfully = MwCounter.newMwCounter();
-        @Probe(name = MetricNames.JOBS_COMPLETED_WITH_FAILURE)
-        private final Counter jobCompletedWithFailure = MwCounter.newMwCounter();
-
-        void jobSubmitted() {
-            jobSubmitted.inc();
-        }
-
-        void jobCompleted(Throwable error) {
-            if (error == null) {
-                jobCompletedSuccessfully.inc();
-            } else {
-                jobCompletedWithFailure.inc();
-            }
-        }
-
-    }
 }

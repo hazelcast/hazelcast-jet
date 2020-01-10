@@ -60,6 +60,7 @@ import static org.junit.Assert.fail;
 public class JobLifecycleMetricsTest extends JetTestSupport {
 
     private static final int MEMBER_COUNT = 1;
+    //TODO: need to test on multiple members, some metrics get set only on master
 
     private static final String PREFIX = "com.hazelcast.jet";
 
@@ -167,7 +168,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     }
 
     @Test
-    public void test_jobDurationMetrics() {
+    public void executionRelatedMetrics() {
         Job job1 = jetInstance.newJob(batchPipeline(), new JobConfig().setStoreMetricsAfterJobCompletion(true));
         job1.join();
         JobMetrics metrics = job1.getMetrics();
@@ -209,7 +210,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
                 Arrays.asList(
                         entry(MetricNames.JOBS_SUBMITTED, submitted),
                         entry(MetricNames.JOB_EXECUTIONS_STARTED, executionsStarted),
-                        entry(MetricNames.JOB_EXECUTIONS_TERMINATED, executionsTerminated),
+                        entry(MetricNames.JOB_EXECUTIONS_COMPLETED, executionsTerminated),
                         entry(MetricNames.JOBS_COMPLETED_SUCCESSFULLY, completedSuccessfully),
                         entry(MetricNames.JOBS_COMPLETED_WITH_FAILURE, completedWithFailure))
         );

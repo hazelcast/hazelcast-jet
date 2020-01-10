@@ -85,7 +85,10 @@ public class JobExecutionService implements DynamicMetricsProvider {
     // key: jobId
     private final ConcurrentHashMap<Long, JetClassLoader> classLoaders = new ConcurrentHashMap<>();
 
-    private final Stats stats = new Stats();
+    @Probe(name = MetricNames.JOB_EXECUTIONS_STARTED)
+    private final Counter executionStarted = MwCounter.newMwCounter();
+    @Probe(name = MetricNames.JOB_EXECUTIONS_COMPLETED)
+    private final Counter executionCompleted = MwCounter.newMwCounter();
 
     JobExecutionService(NodeEngineImpl nodeEngine, TaskletExecutionService taskletExecutionService,
                         JobRepository jobRepository) {
@@ -98,7 +101,7 @@ public class JobExecutionService implements DynamicMetricsProvider {
         MetricsRegistry registry = nodeEngine.getMetricsRegistry();
         MetricDescriptor descriptor = registry.newMetricDescriptor()
                 .withTag(MetricTags.MODULE, "jet");
-        registry.registerStaticMetrics(descriptor, stats);
+        registry.registerStaticMetrics(descriptor, this);
     }
 
     public ClassLoader getClassLoader(JobConfig config, long jobId) {
@@ -361,10 +364,10 @@ public class JobExecutionService implements DynamicMetricsProvider {
     public CompletableFuture<Void> beginExecution(Address coordinator, long jobId, long executionId) {
         ExecutionContext execCtx = assertExecutionContext(coordinator, jobId, executionId, "ExecuteJobOperation");
         logger.info("Start execution of " + execCtx.jobNameAndExecutionId() + " from coordinator " + coordinator);
-        stats.executionStarted();
+        executionStarted.inc();
         CompletableFuture<Void> future = execCtx.beginExecution();
         future.whenComplete(withTryCatch(logger, (i, e) -> {
-            stats.executionTerminated();
+            executionCompleted.inc();
             if (e instanceof CancellationException) {
                 logger.fine("Execution of " + execCtx.jobNameAndExecutionId() + " was cancelled");
             } else if (e != null) {
@@ -387,22 +390,5 @@ public class JobExecutionService implements DynamicMetricsProvider {
         executionContexts.forEach((id, ctx) -> {
             ctx.provideDynamicMetrics(descriptor.copy(), context);
         });
-    }
-
-    private static class Stats {
-
-        @Probe(name = MetricNames.JOB_EXECUTIONS_STARTED)
-        private final Counter executionStarted = MwCounter.newMwCounter();
-        @Probe(name = MetricNames.JOB_EXECUTIONS_TERMINATED)
-        private final Counter executionTerminated = MwCounter.newMwCounter();
-
-        public void executionStarted() {
-            executionStarted.inc();
-        }
-
-        void executionTerminated() {
-            executionTerminated.inc();
-        }
-
     }
 }

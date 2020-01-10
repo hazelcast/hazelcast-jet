@@ -182,8 +182,7 @@ public final class MetricNames {
     public static final String DISTRIBUTED_BYTES_OUT = "distributedBytesOut";
 
     /**
-     * Number of computational jobs submitted to a particular Jet cluster
-     * member.
+     * Number of jobs submitted to the Jet cluster.
      * <p>
      * This metric is zero on non-master members. When a master fails and a new
      * master takes over, the count is reset.
@@ -191,8 +190,7 @@ public final class MetricNames {
     public static final String JOBS_SUBMITTED = "jobs.submitted";
 
     /**
-     * Number of computational jobs successfully completed by a particular
-     * Jet cluster member.
+     * Number of jobs successfully completed by the Jet cluster.
      * <p>
      * This metric is zero on non-master members. When a master fails and a new
      * master takes over, the count is reset.
@@ -200,8 +198,7 @@ public final class MetricNames {
     public static final String JOBS_COMPLETED_SUCCESSFULLY = "jobs.completedSuccessfully";
 
     /**
-     * Number of computational jobs that have failed on a particular Jet
-     * cluster member.
+     * Number of jobs that have failed on the Jet cluster.
      * <p>
      * This metric is zero on non-master members. When a master fails and a new
      * master takes over, the count is reset.
@@ -209,18 +206,18 @@ public final class MetricNames {
     public static final String JOBS_COMPLETED_WITH_FAILURE = "jobs.completedWithFailure";
 
     /**
-     * Number of computational job executions started on a particular Jet
-     * cluster member. Each job can execute multiple times, for example when
-     * it's restarted or suspended and then resumed.
+     * Number of job executions started on the Jet cluster. Each job can
+     * execute multiple times, for example when it's restarted or suspended
+     * and then resumed.
      */
     public static final String JOB_EXECUTIONS_STARTED = "jobs.executionStarted";
 
     /**
-     * Number of computational job executions finished on a particular Jet
-     * cluster member. Each job can execute multiple times, for example when
-     * it's restarted or suspended and then resumed.
+     * Number of job executions finished on the Jet cluster. Each job can
+     * execute multiple times, for example when it's restarted or suspended
+     * and then resumed.
      */
-    public static final String JOB_EXECUTIONS_TERMINATED = "jobs.executionTerminated";
+    public static final String JOB_EXECUTIONS_COMPLETED = "jobs.executionCompleted";
 
     private MetricNames() {
     }
