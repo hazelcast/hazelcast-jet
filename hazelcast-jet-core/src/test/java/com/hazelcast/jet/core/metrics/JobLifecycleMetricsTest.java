@@ -20,7 +20,9 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
+import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -51,12 +53,11 @@ import static com.hazelcast.jet.core.TestProcessors.MockPMS;
 import static com.hazelcast.jet.core.TestProcessors.MockPS;
 import static com.hazelcast.jet.core.TestProcessors.reset;
 import static com.hazelcast.jet.core.test.JetAssert.assertTrue;
-import static com.hazelcast.test.HazelcastTestSupport.assertTrueEventually;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-public class JobLifecycleMetricsTest {
+public class JobLifecycleMetricsTest extends JetTestSupport {
 
     private static final int MEMBER_COUNT = 1;
 
@@ -75,7 +76,7 @@ public class JobLifecycleMetricsTest {
         JetConfig config = new JetConfig();
         config.getHazelcastConfig().getMetricsConfig().setCollectionFrequencySeconds(1);
 
-        jetInstance = Jet.newJetInstance(config);
+        jetInstance = createJetMember(config);
 
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
         objectNameWithModule = new ObjectName(PREFIX + ":*");
@@ -163,6 +164,27 @@ public class JobLifecycleMetricsTest {
 
         //then
         assertTrueEventually(() -> assertJobStats(1, 1, 1, 0, 1));
+    }
+
+    @Test
+    public void test_jobDurationMetrics() {
+        Job job1 = jetInstance.newJob(batchPipeline(), new JobConfig().setStoreMetricsAfterJobCompletion(true));
+        job1.join();
+        JobMetrics metrics = job1.getMetrics();
+
+        System.out.println(metrics);
+        List<Measurement> startTime = metrics.get(MetricNames.EXECUTION_START_TIME);
+        assertEquals(MEMBER_COUNT, startTime.size());
+        long startTimeVal = startTime.get(0).value();
+        assertTrue("startTime.value=" + startTimeVal, startTimeVal != 0);
+
+        List<Measurement> completionTime = metrics.get(MetricNames.EXECUTION_COMPLETION_TIME);
+        assertEquals(MEMBER_COUNT, completionTime.size());
+        long completionTimeVal = completionTime.get(0).value();
+        assertTrue("completionTime.value=" + completionTimeVal, completionTimeVal != 0);
+
+        assertTrue("startTime=" + startTimeVal + ", completionTime=" + completionTimeVal,
+                startTimeVal <= completionTimeVal);
     }
 
     private Pipeline batchPipeline() {

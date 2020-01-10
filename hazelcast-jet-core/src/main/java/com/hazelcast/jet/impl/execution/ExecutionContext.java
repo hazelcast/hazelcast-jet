@@ -182,8 +182,6 @@ public class ExecutionContext implements DynamicMetricsProvider {
         assert executionFuture == null || executionFuture.isDone()
                 : "If execution was begun, then completeExecution() should not be called before execution is done.";
 
-        completionTime.set(System.currentTimeMillis());
-
         for (Tasklet tasklet : tasklets) {
             try {
                 tasklet.close();
@@ -335,5 +333,9 @@ public class ExecutionContext implements DynamicMetricsProvider {
         for (Tasklet tasklet : tasklets) {
             tasklet.provideDynamicMetrics(descriptor.copy(), context);
         }
+    }
+
+    public void setCompletionTime() {
+        completionTime.set(System.currentTimeMillis());
     }
 }

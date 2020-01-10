@@ -324,6 +324,13 @@ public class JobExecutionService implements DynamicMetricsProvider {
         return executionContext;
     }
 
+    public void beforeCompleteExecution(long executionId) {
+        ExecutionContext executionContext = executionContexts.get(executionId);
+        if (executionContext != null) {
+            executionContext.setCompletionTime();
+        }
+    }
+
     /**
      * Completes and cleans up execution of the given job
      */
