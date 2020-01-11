@@ -16,12 +16,7 @@
 
 package com.hazelcast.jet.spring;
 
-import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.BiPredicateEx;
-import com.hazelcast.function.FunctionEx;
-import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.spring.context.SpringAware;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -55,7 +50,6 @@ public final class JetSpringServiceFactories {
      *         .writeTo(Sinks.logger());
      * }</pre>
      *
-     *
      * @param beanName     the name of the bean
      * @param requiredType the class of the bean
      * @param <T>          the type of the bean
@@ -81,7 +75,6 @@ public final class JetSpringServiceFactories {
      *         .writeTo(Sinks.logger());
      * }</pre>
      *
-     *
      * @param requiredType the class of the bean
      * @param <T>          the type of the bean
      */
@@ -105,7 +98,6 @@ public final class JetSpringServiceFactories {
      *                 (userDao, item) -> userDao.findByName(item.toLowerCase()))
      *         .writeTo(Sinks.logger());
      * }</pre>
-     *
      *
      * @param beanName the name of the bean
      * @param <T>      the type of the bean
