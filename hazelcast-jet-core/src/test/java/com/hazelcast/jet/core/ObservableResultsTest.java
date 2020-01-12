@@ -504,32 +504,33 @@ public class ObservableResultsTest extends TestInClusterSupport {
     @Test
     public void configureCapacity() {
         //when
-        Observable<Object> o = getObservable("capacity_observable");
+        Observable<Object> o = newObservable();
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
                 .writeTo(Sinks.observable(o));
         //then
         o.configureCapacity(20_000); //still possible, pipeline not executing yet
-        assertThrowsIllegalStateException(o::getConfiguredCapacity);
+        assertThrowsException(o::getConfiguredCapacity, IllegalStateException.class);
 
         //when
         Job job = jet().newJob(pipeline);
         assertExecutionStarted(job);
         //then
-        assertThrowsIllegalStateException(() -> o.configureCapacity(30_000));
+        assertThrowsException(() -> o.configureCapacity(30_000), IllegalStateException.class);
         assertEquals(20_000, o.getConfiguredCapacity());
 
         //when
         job.join();
         ///then
-        assertThrowsIllegalStateException(() -> o.configureCapacity(30_000));
+        assertThrowsException(() -> o.configureCapacity(30_000), IllegalStateException.class);
         assertEquals(20_000, o.getConfiguredCapacity());
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void configureCapacityMultipleTimes() {
-        Observable<Object> o = getObservable("capacity_observable");
-        o.configureCapacity(10).configureCapacity(20);
+        Observable<Object> o = newObservable();
+        o.configureCapacity(10);
+        assertThrowsException(() -> o.configureCapacity(20), RuntimeException.class);
     }
 
     @Test
@@ -568,13 +569,13 @@ public class ObservableResultsTest extends TestInClusterSupport {
                 || JobStatus.COMPLETED.equals(job.getStatus())));
     }
 
-    private void assertThrowsIllegalStateException(Runnable action) {
+    private void assertThrowsException(Runnable action, Class<? extends Throwable> exceptionClass) {
         //then
         try {
             action.run();
             fail("Expected exception not thrown");
-        } catch (IllegalStateException ise) {
-            //ignore, expected
+        } catch (Throwable t) {
+            assertEquals(exceptionClass, t.getClass());
         }
     }
 

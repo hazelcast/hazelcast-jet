@@ -359,7 +359,7 @@ public interface JetInstance {
      * executing.
      */
     @Nonnull
-    List<Observable<?>> getObservables();
+    Collection<Observable<?>> getObservables();
 
     /**
      * Shuts down the current instance. If this is a client instance, it

@@ -110,7 +110,7 @@ public class ObservableImpl<T> implements Observable<T> {
         try {
             config.addRingBufferConfig(new RingbufferConfig(ringbufferName).setCapacity(capacity));
         } catch (Exception e) {
-            throw new RuntimeException("Capacity already configured");
+            throw new RuntimeException("Failed configuring capacity", e);
         }
         return this;
     }

@@ -37,6 +37,7 @@ import com.hazelcast.ringbuffer.impl.RingbufferService;
 import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -160,7 +161,7 @@ public abstract class AbstractJetInstance implements JetInstance {
 
     @Nonnull
     @Override
-    public List<Observable<?>> getObservables() {
+    public Collection<Observable<?>> getObservables() {
         return hazelcastInstance.getDistributedObjects().stream()
                   .filter(o -> o.getServiceName().equals(RingbufferService.SERVICE_NAME))
                   .filter(o -> o.getName().startsWith(ObservableImpl.JET_OBSERVABLE_NAME_PREFIX))
