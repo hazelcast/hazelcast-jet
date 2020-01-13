@@ -48,4 +48,5 @@
     <hz:queue instance-ref="hzInstance" name="my-queue" id="my-queue-bean"/>
 
     <bean name="calculator" class="com.hazelcast.jet.spring.SillyCalculator" />
+    
 </beans>

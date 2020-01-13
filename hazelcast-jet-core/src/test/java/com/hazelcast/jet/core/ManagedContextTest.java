@@ -146,4 +146,5 @@ public class ManagedContextTest extends JetTestSupport {
     private static final class SinkContext {
         private String injectedValue;
     }
+
 }
