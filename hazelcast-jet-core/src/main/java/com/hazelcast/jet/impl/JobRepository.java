@@ -363,7 +363,6 @@ public class JobRepository {
     void completeJob(
             @Nonnull MasterContext masterContext,
             @Nullable List<RawJobMetrics> terminalMetrics,
-            long completionTime,
             @Nullable Throwable error
     ) {
         long jobId = masterContext.jobId();
@@ -375,7 +374,8 @@ public class JobRepository {
 
         JobConfig config = jobRecord.getConfig();
         long creationTime = jobRecord.getCreationTime();
-        JobResult jobResult = new JobResult(jobId, config, creationTime, completionTime, toErrorMsg(error));
+        JobResult jobResult = new JobResult(jobId, config, creationTime, System.currentTimeMillis(),
+                toErrorMsg(error));
 
         if (terminalMetrics != null) {
             List<RawJobMetrics> prevMetrics = jobMetrics.put(jobId, terminalMetrics);
