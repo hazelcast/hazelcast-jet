@@ -16,23 +16,24 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.collection.IList;
 import com.hazelcast.core.ManagedContext;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
 import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.core.Edge.between;
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
@@ -45,25 +46,35 @@ public class ManagedContextTest extends JetTestSupport {
 
     @Before
     public void setup() {
-        JetConfig jetConfig = new JetConfig();
-        jetConfig.getHazelcastConfig().setManagedContext(new MockManagedContext());
-        jet = this.createJetMember(jetConfig);
+        JetConfig jetConfig = new JetConfig()
+                .configureHazelcast(hzConfig -> hzConfig.setManagedContext(new MockManagedContext()));
+        jet = createJetMember(jetConfig);
     }
 
     @Test
     public void when_managedContextSet_then_processorsInitWithContext() {
         // Given
-        DAG dag = new DAG();
-        Vertex p = dag.newVertex("p", TestProcessor::new).localParallelism(1);
-        Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
-        dag.edge(between(p, sink));
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.batchFromProcessor("testSource",
+                ProcessorMetaSupplier.preferLocalParallelismOne(TestProcessor::new)))
+         .writeTo(assertAnyOrder(singletonList(INJECTED_VALUE)));
 
         // When
-        jet.newJob(dag).join();
+        jet.newJob(p).join();
+    }
 
-        // Then
-        IList<Object> list = jet.getList("sink");
-        assertEquals(singletonList(INJECTED_VALUE), list.subList(0, list.size()));
+    @Test
+    public void when_managedContextSet_then_serviceContextInitialized() {
+        // Given
+        ServiceFactory<?, TestServiceContext> serviceFactory =
+                ServiceFactories.sharedService(TestServiceContext::new, ConsumerEx.noop());
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items("item"))
+         .mapUsingService(serviceFactory, (c, item) -> item + c.injectedValue)
+         .writeTo(assertAnyOrder(singletonList("item" + INJECTED_VALUE)));
+
+        // When
+        jet.newJob(p).join();
     }
 
     @Test
@@ -84,8 +95,8 @@ public class ManagedContextTest extends JetTestSupport {
     @Test
     public void when_managedContextSet_then_SinkContextInitializedWithContext() {
         Sink<Object> sink = SinkBuilder.sinkBuilder("sink", c -> new SinkContext())
-                .receiveFn((c, i) -> assertEquals(INJECTED_VALUE, c.injectedValue))
-                .build();
+                                       .receiveFn((c, i) -> assertEquals(INJECTED_VALUE, c.injectedValue))
+                                       .build();
 
         Pipeline pipeline = Pipeline.create();
         pipeline.readFrom(TestSources.items(1))
@@ -101,6 +112,9 @@ public class ManagedContextTest extends JetTestSupport {
             if (obj instanceof TestProcessor) {
                 ((TestProcessor) obj).injectedValue = INJECTED_VALUE;
             }
+            if (obj instanceof TestServiceContext) {
+                ((TestServiceContext) obj).injectedValue = INJECTED_VALUE;
+            }
             if (obj instanceof SourceContext) {
                 ((SourceContext) obj).injectedValue = INJECTED_VALUE;
             }
@@ -111,11 +125,7 @@ public class ManagedContextTest extends JetTestSupport {
         }
     }
 
-    private static final class SourceContext {
-        private String injectedValue;
-    }
-
-    private static final class SinkContext {
+    private static class TestServiceContext {
         private String injectedValue;
     }
 
@@ -127,5 +137,13 @@ public class ManagedContextTest extends JetTestSupport {
         public boolean complete() {
             return tryEmit(injectedValue);
         }
+    }
+
+    private static final class SourceContext {
+        private String injectedValue;
+    }
+
+    private static final class SinkContext {
+        private String injectedValue;
     }
 }

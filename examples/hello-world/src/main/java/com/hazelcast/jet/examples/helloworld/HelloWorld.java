@@ -17,7 +17,7 @@
 package com.hazelcast.jet.examples.helloworld;
 
 import com.hazelcast.function.ComparatorEx;
-//import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -26,9 +26,7 @@ import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
-import com.hazelcast.jet.server.JetBootstrap;
 import com.hazelcast.map.IMap;
-import org.apache.log4j.Logger;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -45,8 +43,6 @@ public class HelloWorld {
 
     private static final String KEY = "top10";
     private static final String MAP_NAME = "top10_results";
-
-    private static Logger LOGGER = Logger.getLogger(HelloWorld.class);
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
@@ -66,13 +62,7 @@ public class HelloWorld {
     }
 
     public static void main(String[] args) throws InterruptedException {
-        /*
-         * JetBootstrap.getInstance() can be changed to Jet.newJetInstance()
-         * to start an embedded Jet node instead and submit the job to it.
-         */
-        JetInstance jet = JetBootstrap.getInstance();
-//        JetInstance jet = Jet.newJetInstance();
-
+        JetInstance jet = Jet.bootstrappedInstance();
         Pipeline p = buildPipeline();
 
         JobConfig config = new JobConfig();
@@ -80,17 +70,17 @@ public class HelloWorld {
         config.setProcessingGuarantee(ProcessingGuarantee.EXACTLY_ONCE);
         Job job = jet.newJobIfAbsent(p, config);
 
-        LOGGER.info("Generating a stream of random numbers and calculating the top 10");
-        LOGGER.info("The results will be written to a distributed map");
+        System.out.println("Generating a stream of random numbers and calculating the top 10");
+        System.out.println("The results will be written to a distributed map");
 
         while (true) {
             IMap<String, List<Long>> top10Map = jet.getMap(MAP_NAME);
 
             List<Long> top10numbers = top10Map.get(KEY);
             if (top10numbers != null) {
-                LOGGER.info("Top 10 random numbers observed so far in the stream are: ");
+                System.out.println("Top 10 random numbers observed so far in the stream are: ");
                 for (int i = 0; i < top10numbers.size(); i++) {
-                    LOGGER.info(String.format("%d. %,d", i + 1, top10numbers.get(i)));
+                    System.out.println(String.format("%d. %,d", i + 1, top10numbers.get(i)));
                 }
             }
             Thread.sleep(1000);
