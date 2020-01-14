@@ -19,7 +19,7 @@ package com.hazelcast.jet.s3;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.SourceBuilder;
@@ -33,7 +33,6 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
@@ -41,7 +40,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
+import static com.hazelcast.jet.Traversers.traverseStream;
 import static com.hazelcast.jet.Util.entry;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -56,7 +57,7 @@ public final class S3Sources {
     }
 
     /**
-     * Convenience for {@link #s3(List, String, Charset, SupplierEx, FunctionEx, BiFunctionEx)}.
+     * Convenience for {@link #s3(List, String, Charset, SupplierEx, BiFunctionEx)}.
      * Emits lines to downstream without any transformation and uses {@link
      * StandardCharsets#UTF_8}.
      */
@@ -113,75 +114,21 @@ public final class S3Sources {
     ) {
         String charsetName = charset.name();
 
-        FunctionEx<InputStream, Iterator<? extends String>> readFileFn = responseInputStream -> {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(responseInputStream, charset));
+        FunctionEx<InputStream, Stream<String>> readFileFn = responseInputStream -> {
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(responseInputStream, Charset.forName(charsetName)));
 
-            return new LineIterator(reader);
+            return reader.lines();
         };
-        return SourceBuilder
-                .batch("s3-source", context ->
-                        new S3SourceContext<String, T>(bucketNames, prefix, charsetName, context, clientSupplier, readFileFn, mapFn))
-                .<T>fillBufferFn(S3SourceContext::fillBuffer)
-                .distributed(LOCAL_PARALLELISM)
-                .destroyFn(S3SourceContext::close)
-                .build();
-    }
 
-    private static class LineIterator implements Iterator<String> {
-        private final BufferedReader reader;
-        private boolean streamEnded = false;
-        private String lastLine;
-
-        public LineIterator(BufferedReader reader) {
-            this.reader = reader;
-        }
-
-        @Override
-        public boolean hasNext() {
-            if (streamEnded) return false;
-            try {
-                lastLine = reader.readLine();
-                streamEnded = lastLine == null;
-                if (streamEnded) {
-                    IOUtil.closeResource(reader);
-                }
-                return !streamEnded;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } finally {
-                if (streamEnded) {
-                    IOUtil.closeResource(reader);
-                }
-            }
-        }
-
-        @Override
-        public String next() {
-            if (streamEnded) return null;
-            if (lastLine != null) {
-                String last = lastLine;
-                lastLine = null;
-                return last;
-            }
-            try {
-                String line = reader.readLine();
-                streamEnded = line == null;
-                return line;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } finally {
-                if (streamEnded) {
-                    IOUtil.closeResource(reader);
-                }
-            }
-        }
+        return s3(bucketNames, prefix, clientSupplier, readFileFn, mapFn);
     }
 
     /**
      * Creates an AWS S3 {@link BatchSource} which lists all the objects in the
-     * bucket-list using given {@code prefix}, reads them using provided {@code readFileFn},
-     * transforms each read item to the desired output object using given {@code
-     * mapFn} and emits them to downstream.
+     * bucket-list using given {@code prefix}, reads them using provided {@code
+     * readFileFn}, transforms each read item to the desired output object
+     * using given {@code mapFn} and emits them to downstream.
      * <p>
      * The source does not save any state to snapshot. If the job is restarted,
      * it will re-emit all entries.
@@ -218,15 +165,14 @@ public final class S3Sources {
     public static <I, T> BatchSource<T> s3(
             @Nonnull List<String> bucketNames,
             @Nullable String prefix,
-            @Nonnull Charset charset,
             @Nonnull SupplierEx<? extends S3Client> clientSupplier,
-            @Nonnull FunctionEx<InputStream, Iterator<? extends I>> readFileFn,
-            @Nonnull BiFunctionEx<String, I, ? extends T> mapFn
+            @Nonnull FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn,
+            @Nonnull BiFunctionEx<String, ? super I, ? extends T> mapFn
     ) {
-        String charsetName = charset.name();
         return SourceBuilder
                 .batch("s3-source", context ->
-                        new S3SourceContext<I, T>(bucketNames, prefix, charsetName, context, clientSupplier, readFileFn, mapFn))
+                        new S3SourceContext<I, T>(bucketNames, prefix, context, clientSupplier, readFileFn,
+                                mapFn))
                 .<T>fillBufferFn(S3SourceContext::fillBuffer)
                 .distributed(LOCAL_PARALLELISM)
                 .destroyFn(S3SourceContext::close)
@@ -239,24 +185,24 @@ public final class S3Sources {
 
         private final String prefix;
         private final S3Client amazonS3;
-        private final FunctionEx<InputStream, Iterator<? extends I>> readFileFn;
-        private final BiFunctionEx<String, I, ? extends T> mapFn;
+        private final FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn;
+        private final BiFunctionEx<String, ? super I, ? extends T> mapFn;
         private final int processorIndex;
         private final int totalParallelism;
 
         // (bucket, key)
         private Iterator<Entry<String, String>> objectIterator;
-        private Iterator<? extends I> itemIterator;
+        private Traverser<I> itemTraverser;
         private String currentKey;
 
         private S3SourceContext(
                 List<String> bucketNames,
                 String prefix,
-                String charsetName,
                 Context context,
                 SupplierEx<? extends S3Client> clientSupplier,
-                FunctionEx<InputStream, Iterator<? extends I>> readFileFn,
-                BiFunctionEx<String, I, ? extends T> mapFn) {
+                FunctionEx<? super InputStream, ? extends Stream<I>> readFileFn,
+                BiFunctionEx<String, ? super I, ? extends T> mapFn
+        ) {
             this.prefix = prefix;
             this.amazonS3 = clientSupplier.get();
             this.readFileFn = readFileFn;
@@ -267,14 +213,14 @@ public final class S3Sources {
                     .stream()
                     .flatMap(bucket -> amazonS3.listObjectsV2Paginator(b ->
                             b.bucket(bucket).prefix(this.prefix)).contents().stream()
-                            .map(S3Object::key)
-                            .filter(this::belongsToThisProcessor)
-                            .map(key -> entry(bucket, key))
+                                    .map(S3Object::key)
+                                    .filter(this::belongsToThisProcessor)
+                                    .map(key -> entry(bucket, key))
                     ).iterator();
         }
 
         private void fillBuffer(SourceBuffer<? super T> buffer) {
-            if (itemIterator.hasNext()) {
+            if (itemTraverser != null) {
                 addBatchToBuffer(buffer);
                 return;
             }
@@ -291,7 +237,7 @@ public final class S3Sources {
 
                 ResponseInputStream<GetObjectResponse> responseInputStream = amazonS3.getObject(getObjectRequest);
                 currentKey = key;
-                itemIterator = readFileFn.apply(responseInputStream);
+                itemTraverser = traverseStream(readFileFn.apply(responseInputStream));
                 addBatchToBuffer(buffer);
             } else {
                 // iterator is empty, we've exhausted all the objects
@@ -302,9 +248,14 @@ public final class S3Sources {
 
         private void addBatchToBuffer(SourceBuffer<? super T> buffer) {
             assert currentKey != null : "currentKey must not be null";
-            for (int i = 0; i < BATCH_COUNT && itemIterator.hasNext(); i++) {
-                I line = itemIterator.next();
-                buffer.add(mapFn.apply(currentKey, line));
+            for (int i = 0; i < BATCH_COUNT; i++) {
+                I item = itemTraverser.next();
+                if (item == null) {
+                    itemTraverser = null;
+                    currentKey = null;
+                    return;
+                }
+                buffer.add(mapFn.apply(currentKey, item));
             }
         }
 
@@ -316,5 +267,4 @@ public final class S3Sources {
             amazonS3.close();
         }
     }
-
 }

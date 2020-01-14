@@ -317,25 +317,26 @@ public final class SourceProcessors {
                     directory,
                     glob,
                     sharedFileSystem,
-                    path -> Files.lines(path, Charset.forName(charsetName)),
-                    mapOutputFn
+                    path -> {
+                        String fileName = path.getFileName().toString();
+                        return Files.lines(path, Charset.forName(charsetName))
+                                    .map(l -> mapOutputFn.apply(fileName, l));
+                    }
                 );
     }
+
     /**
      * Returns a supplier of processors for {@link Sources#filesBuilder}.
      * See {@link FileSourceBuilder#build} for more details.
      */
     @Nonnull
-    public static <I, R> ProcessorMetaSupplier readFilesP(
+    public static <I> ProcessorMetaSupplier readFilesP(
             @Nonnull String directory,
             @Nonnull String glob,
             boolean sharedFileSystem,
-            @Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn,
-            @Nonnull BiFunctionEx<? super String, ? super I, ? extends R> mapOutputFn
+            @Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn
     ) {
-        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem,
-                readFileFn,
-                mapOutputFn);
+        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem, readFileFn, (f, l) -> l);
     }
 
     /**
