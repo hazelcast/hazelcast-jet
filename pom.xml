@@ -74,6 +74,7 @@
 
         <!-- Main IMDG dependency -->
         <hazelcast.version>4.0-SNAPSHOT</hazelcast.version>
+        <hazelcast.spring.version>4.0-SNAPSHOT</hazelcast.spring.version>
         <!-- Dependencies on IMDG modules: must be the same versions IMDG depends on! -->
         <hazelcast.protocol.version>1.8.0-5</hazelcast.protocol.version>
         <hazelcast.aws.version>3.0.1-SNAPSHOT</hazelcast.aws.version>
