@@ -43,5 +43,4 @@
     <jet:list instance-ref="jet-instance" name="my-list" id="my-list-bean"/>
 
     <jet:map instance-ref="jet-instance" name="my-map" id="my-map-bean"/>
-
 </beans>
