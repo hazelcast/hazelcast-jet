@@ -29,11 +29,11 @@
         <hz:config>
             <hz:spring-aware/>
             <hz:cluster-name>jet-spring</hz:cluster-name>
-            <hz:network port="5737" port-auto-increment="true">
+            <hz:network port="5797" port-auto-increment="true">
                 <hz:join>
                     <hz:multicast enabled="false"/>
                     <hz:tcp-ip enabled="true">
-                        <hz:member>127.0.0.1:5737</hz:member>
+                        <hz:member>127.0.0.1:5797</hz:member>
                     </hz:tcp-ip>
                 </hz:join>
             </hz:network>
@@ -42,6 +42,7 @@
 
     <jet:list instance-ref="jet-instance" name="my-list" id="my-list-bean"/>
 
-    <jet:map instance-ref="jet-instance" name="my-map" id="my-map-bean"/>
+    <bean id="hzInstance" factory-bean="jet-instance" factory-method="getHazelcastInstance"/>
+    <hz:queue instance-ref="hzInstance" name="my-queue" id="my-queue-bean"/>
 
 </beans>

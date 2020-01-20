@@ -42,8 +42,9 @@ import static java.util.Arrays.asList;
 
 
 @RunWith(CustomSpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = {"application-context-processor.xml"})
+@ContextConfiguration(locations = {"application-context-builder.xml"})
 public class SourceSinkBuilderTest {
+
     @Resource(name = "jet-instance")
     private JetInstance jetInstance;
 
