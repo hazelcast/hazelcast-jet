@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.pipeline.test;
 
+import com.google.common.collect.Range;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.WindowDefinition;
@@ -75,9 +76,11 @@ public class TestSourcesTest extends PipelineTestSupport {
          .window(WindowDefinition.tumbling(1000))
          .aggregate(AggregateOperations.counting())
          .apply(assertCollectedEventually(10, windowResults -> {
-             // find any window that has 10 items, some may be incomplete due to hiccups
-             boolean matched = windowResults.stream().anyMatch(r -> r.result() == itemsPerSecond);
-             assertTrue("Did not find any window with 10 items: " + windowResults, matched);
+             Range<Integer> range = Range.closed(itemsPerSecond - 1, itemsPerSecond + 1);
+             int total = windowResults.size();
+             int matched = (int) windowResults.stream().filter(r -> range.contains(r.result().intValue())).count();
+             assertTrue(String.format("Did not find enough good windows, only %d out of %d: %s",
+                     matched, total, windowResults), matched >= 0.5d * total);
          }));
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
