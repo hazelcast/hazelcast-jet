@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
@@ -197,10 +198,11 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void init() {
-        if (serializationService.getManagedContext() != null) {
+        ManagedContext managedContext = serializationService.getManagedContext();
+        if (managedContext != null) {
             Processor toInit = processor instanceof ProcessorWrapper
                     ? ((ProcessorWrapper) processor).getWrapped() : processor;
-            Object initialized = serializationService.getManagedContext().initialize(toInit);
+            Object initialized = managedContext.initialize(toInit);
             assert initialized == toInit : "different object returned";
         }
         try {

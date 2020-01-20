@@ -21,6 +21,7 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
@@ -56,13 +57,7 @@ public final class ProcessorSupplierWithService<C, S> implements ProcessorSuppli
         ManagedContext managedContext = hazelcastInstance.getSerializationService().getManagedContext();
         serviceContext = serviceFactory.createContextFn().apply(context);
         if (serviceContext != null) {
-            Object initializedObject = managedContext.initialize(serviceContext);
-            Class<?> serviceContextClass = serviceContext.getClass();
-            if (!serviceContextClass.isInstance(initializedObject)) {
-                throw new IllegalArgumentException(String.format("The initialized service context object should " +
-                        "be an instance of %s", serviceContextClass));
-            }
-            serviceContext = (C) initializedObject;
+            serviceContext = Util.initializeObject(managedContext, serviceContext);
         }
     }
 

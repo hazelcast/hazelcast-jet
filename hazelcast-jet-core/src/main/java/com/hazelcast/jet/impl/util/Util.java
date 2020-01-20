@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.EdgeConfig;
@@ -414,6 +415,16 @@ public final class Util {
      */
     public static ProcessingGuarantee min(ProcessingGuarantee g1, ProcessingGuarantee g2) {
         return g1.ordinal() < g2.ordinal() ? g1 : g2;
+    }
+
+    public static <T> T initializeObject(ManagedContext managedContext, T object) {
+        Object initializedObject = managedContext.initialize(object);
+        Class<?> objectClass = object.getClass();
+        if (!objectClass.isInstance(initializedObject)) {
+            throw new IllegalArgumentException(String.format("The initialized service context object should " +
+                    "be an instance of %s", objectClass));
+        }
+        return (T) initializedObject;
     }
 
 }
