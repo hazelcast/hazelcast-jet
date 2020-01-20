@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.util.IOUtil.packDirectoryIntoZip;
 import static com.hazelcast.jet.impl.util.IOUtil.unzip;
-import static org.junit.Assert.fail;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class IOUtilTest extends JetTestSupport {
