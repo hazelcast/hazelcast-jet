@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.pipeline.test;
 
-import com.google.common.collect.Range;
 import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.pipeline.PipelineTestSupport;
 import com.hazelcast.jet.pipeline.WindowDefinition;
@@ -75,12 +74,24 @@ public class TestSourcesTest extends PipelineTestSupport {
          .withNativeTimestamps(0)
          .window(WindowDefinition.tumbling(1000))
          .aggregate(AggregateOperations.counting())
-         .apply(assertCollectedEventually(10, windowResults -> {
-             Range<Integer> range = Range.closed(itemsPerSecond - 1, itemsPerSecond + 1);
-             int total = windowResults.size();
-             int matched = (int) windowResults.stream().filter(r -> range.contains(r.result().intValue())).count();
-             assertTrue(String.format("Did not find enough good windows, only %d out of %d: %s",
-                     matched, total, windowResults), matched >= 0.5d * total);
+         .apply(assertCollectedEventually(60, windowResults -> {
+             //look at last 5 windows at most
+             int windowsToConsider = Math.min(5, windowResults.size());
+
+             //count the total no. of items emitted in those windows
+             int totalItems = windowResults.stream()
+                     .skip(windowResults.size() - windowsToConsider)
+                     .mapToInt(r -> r.result().intValue())
+                     .sum();
+
+             //compute their average
+             double avgItems = (double) totalItems / windowsToConsider;
+
+             //compute how far the actual average is from the desired one
+             double deviationFromTarget = Math.abs(avgItems - itemsPerSecond);
+
+             assertTrue(String.format("Average items per second (%.2f) too far from target (%d)",
+                     avgItems, itemsPerSecond), deviationFromTarget <= 0.1d);
          }));
 
         expectedException.expectMessage(AssertionCompletedException.class.getName());
