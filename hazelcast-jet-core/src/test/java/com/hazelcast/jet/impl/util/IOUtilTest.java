@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.util.IOUtil.packDirectoryIntoZip;
 import static com.hazelcast.jet.impl.util.IOUtil.unzip;
+import static org.junit.Assert.fail;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class IOUtilTest extends JetTestSupport {
@@ -68,6 +69,9 @@ public class IOUtilTest extends JetTestSupport {
         Set<Path> originalSet = getChildrenFromRoot(originalPath);
         Set<Path> unzippedSet = getChildrenFromRoot(unzippedPath);
 
+        if (originalSet.size() != unzippedSet.size()) {
+            fail(String.format("Expected children set: ` %s`, actual children set: `%s`", originalSet, unzippedPath));
+        }
         assertCollection(originalSet, unzippedSet);
 
         boolean allMatch = Files.walk(unzippedPath)
