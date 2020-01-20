@@ -75,8 +75,8 @@ public class TestSourcesTest extends PipelineTestSupport {
          .window(WindowDefinition.tumbling(1000))
          .aggregate(AggregateOperations.counting())
          .apply(assertCollectedEventually(60, windowResults -> {
-             //look at last 5 windows at most
-             int windowsToConsider = Math.min(5, windowResults.size());
+             //look at last 5 windows at most, always ignore first
+             int windowsToConsider = Math.min(5, Math.max(windowResults.size() - 1, 0));
 
              //count the total no. of items emitted in those windows
              int totalItems = windowResults.stream()
