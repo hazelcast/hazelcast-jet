@@ -70,6 +70,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
 
     private long currentWm = Long.MIN_VALUE;
     private Traverser<? extends Entry<?, ?>> snapshotTraverser;
+    private boolean inComplete;
 
     public TransformStatefulP(
             long ttl,
@@ -121,6 +122,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
 
     @Override
     public boolean complete() {
+        inComplete = true;
         // flush everything with a terminal watermark
         return tryProcessWatermark(FLUSHING_WATERMARK);
     }
@@ -165,6 +167,9 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
 
     @Override
     public boolean saveToSnapshot() {
+        if (inComplete) {
+            return complete();
+        }
         if (snapshotTraverser == null) {
             snapshotTraverser = Traversers.<Entry<?, ?>>traverseIterable(keyToState.entrySet())
                     .append(entry(broadcastKey(SnapshotKeys.WATERMARK), currentWm))
