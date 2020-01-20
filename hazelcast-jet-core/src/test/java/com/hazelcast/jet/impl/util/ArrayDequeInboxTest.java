@@ -72,6 +72,32 @@ public class ArrayDequeInboxTest {
     }
 
     @Test
+    public void test_drainToCollectionWithLimit_0() {
+        test_drainToCollectionWithLimit(0);
+    }
+
+    @Test
+    public void test_drainToCollectionWithLimit_1() {
+        test_drainToCollectionWithLimit(1);
+    }
+
+    @Test
+    public void test_drainToCollectionWithLimit_2() {
+        test_drainToCollectionWithLimit(2);
+    }
+
+    @Test
+    public void test_drainToCollectionWithLimit_3() {
+        test_drainToCollectionWithLimit(3);
+    }
+
+    private void test_drainToCollectionWithLimit(int n) {
+        ArrayList<Object> sink = new ArrayList<>();
+        inbox.drainTo(sink, n);
+        assertEquals(ITEMS.subList(0, Math.min(n, ITEMS.size())), sink);
+    }
+
+    @Test
     public void when_drainToConsumer_then_allDrained() {
         ArrayList<Object> sink = new ArrayList<>();
         inbox.drain(sink::add);
