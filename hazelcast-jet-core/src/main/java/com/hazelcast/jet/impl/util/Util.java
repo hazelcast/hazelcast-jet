@@ -418,6 +418,9 @@ public final class Util {
     }
 
     public static <T> T initializeObject(ManagedContext managedContext, T object) {
+        if (object == null) {
+            return null;
+        }
         Object initializedObject = managedContext.initialize(object);
         Class<?> objectClass = object.getClass();
         if (!objectClass.isInstance(initializedObject)) {
