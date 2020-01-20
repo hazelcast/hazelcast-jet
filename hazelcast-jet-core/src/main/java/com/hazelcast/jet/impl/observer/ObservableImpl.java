@@ -110,7 +110,7 @@ public class ObservableImpl<T> implements Observable<T> {
         try {
             config.addRingBufferConfig(new RingbufferConfig(ringbufferName).setCapacity(capacity));
         } catch (Exception e) {
-            throw new RuntimeException("Failed configuring capacity", e);
+            throw new RuntimeException("Failed configuring capacity: " + e, e);
         }
         return this;
     }
@@ -135,7 +135,6 @@ public class ObservableImpl<T> implements Observable<T> {
     @Override
     public void destroy() {
         listeners.keySet().forEach(this::removeObserver);
-        listeners.clear();
 
         // destroy the underlying ringbuffer
         hzInstance.getRingbuffer(ringbufferName(name)).destroy();
