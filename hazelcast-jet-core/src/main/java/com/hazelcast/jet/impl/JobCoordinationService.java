@@ -21,9 +21,13 @@ import com.hazelcast.cluster.impl.MemberImpl;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
 import com.hazelcast.instance.impl.Node;
 import com.hazelcast.internal.cluster.ClusterService;
+import com.hazelcast.internal.metrics.MetricDescriptor;
+import com.hazelcast.internal.metrics.MetricsRegistry;
+import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.partition.impl.InternalPartitionServiceImpl;
 import com.hazelcast.internal.serialization.Data;
-import com.hazelcast.internal.util.Clock;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.MwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JobAlreadyExistsException;
 import com.hazelcast.jet.config.JetConfig;
@@ -32,11 +36,18 @@ import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobNotFoundException;
 import com.hazelcast.jet.core.JobStatus;
 import com.hazelcast.jet.core.TopologyChangedException;
+import com.hazelcast.jet.core.metrics.MetricNames;
+import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.exception.EnteringPassiveClusterStateException;
+import com.hazelcast.jet.impl.execution.DoneItem;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
+import com.hazelcast.jet.impl.observer.ObservableImpl;
+import com.hazelcast.jet.impl.observer.WrappedThrowable;
 import com.hazelcast.jet.impl.operation.NotifyMemberShutdownOperation;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.ringbuffer.OverflowPolicy;
+import com.hazelcast.ringbuffer.Ringbuffer;
 import com.hazelcast.spi.exception.RetryableHazelcastException;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 import com.hazelcast.spi.impl.executionservice.ExecutionService;
@@ -52,7 +63,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -63,6 +76,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.hazelcast.cluster.ClusterState.IN_TRANSITION;
 import static com.hazelcast.cluster.ClusterState.PASSIVE;
@@ -126,10 +141,18 @@ public class JobCoordinationService {
 
     private final AtomicInteger scaleUpScheduledCount = new AtomicInteger();
 
+    @Probe(name = MetricNames.JOBS_SUBMITTED)
+    private final Counter jobSubmitted = MwCounter.newMwCounter();
+    @Probe(name = MetricNames.JOBS_COMPLETED_SUCCESSFULLY)
+    private final Counter jobCompletedSuccessfully = MwCounter.newMwCounter();
+    @Probe(name = MetricNames.JOBS_COMPLETED_WITH_FAILURE)
+    private final Counter jobCompletedWithFailure = MwCounter.newMwCounter();
+
     private long maxJobScanPeriodInMillis;
 
-    JobCoordinationService(NodeEngineImpl nodeEngine, JetService jetService, JetConfig config,
-                           JobRepository jobRepository) {
+    JobCoordinationService(
+            NodeEngineImpl nodeEngine, JetService jetService, JetConfig config, JobRepository jobRepository
+    ) {
         this.nodeEngine = nodeEngine;
         this.jetService = jetService;
         this.config = config;
@@ -138,6 +161,12 @@ public class JobCoordinationService {
 
         ExecutionService executionService = nodeEngine.getExecutionService();
         executionService.register(COORDINATOR_EXECUTOR_NAME, COORDINATOR_THREADS_POOL_SIZE, Integer.MAX_VALUE, CACHED);
+
+        // register metrics
+        MetricsRegistry registry = nodeEngine.getMetricsRegistry();
+        MetricDescriptor descriptor = registry.newMetricDescriptor()
+                .withTag(MetricTags.MODULE, "jet");
+        registry.registerStaticMetrics(descriptor, this);
     }
 
     public JobRepository jobRepository() {
@@ -151,7 +180,7 @@ public class JobCoordinationService {
         executionService.schedule(COORDINATOR_EXECUTOR_NAME, this::scanJobs, 0, MILLISECONDS);
     }
 
-    public CompletableFuture<Void> submitJob(long jobId, Data dag, Data serializedConfig) {
+    public CompletableFuture<Void> submitJob(long jobId, Data serializedDag, Data serializedConfig) {
         CompletableFuture<Void> res = new CompletableFuture<>();
         submitToCoordinatorThread(() -> {
             MasterContext masterContext;
@@ -171,8 +200,9 @@ public class JobCoordinationService {
                 }
 
                 int quorumSize = config.isSplitBrainProtectionEnabled() ? getQuorumSize() : 0;
-                String dagJson = dagToJson(jobId, config, dag);
-                JobRecord jobRecord = new JobRecord(jobId, Clock.currentTimeMillis(), dag, dagJson, config);
+                DAG dag = deserializeDag(jobId, config, serializedDag);
+                Set<String> ownedObservables = ownedObservables(dag);
+                JobRecord jobRecord = new JobRecord(jobId, serializedDag, dagToJson(dag), config, ownedObservables);
                 JobExecutionRecord jobExecutionRecord = new JobExecutionRecord(jobId, quorumSize, false);
                 masterContext = createMasterContext(jobRecord, jobExecutionRecord);
 
@@ -203,6 +233,7 @@ public class JobCoordinationService {
                 }
 
                 // If there is no master context and job result at the same time, it means this is the first submission
+                jobSubmitted.inc();
                 jobRepository.putNewJobRecord(jobRecord);
 
                 logger.info("Starting job " + idToString(masterContext.jobId()) + " based on submit request");
@@ -217,6 +248,13 @@ public class JobCoordinationService {
         return res;
     }
 
+    private static Set<String> ownedObservables(DAG dag) {
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(dag.iterator(), 0), false)
+                .map(vertex -> vertex.getMetaSupplier().getTags().get(ObservableImpl.OWNED_OBSERVABLE))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
     @SuppressWarnings("WeakerAccess") // used by jet-enterprise
     MasterContext createMasterContext(JobRecord jobRecord, JobExecutionRecord jobExecutionRecord) {
         return new MasterContext(nodeEngine, this, jobRecord, jobExecutionRecord);
@@ -228,7 +266,7 @@ public class JobCoordinationService {
         // therefore, we will retry until scanJob() task runs at least once.
         if (!jobsScanned) {
             throw new RetryableHazelcastException("Cannot submit job with name '" + jobName
-                    + "' before the master node initializes job coordination service state");
+                    + "' before the master node initializes job coordination service's state");
         }
 
         return masterContexts.values()
@@ -322,7 +360,6 @@ public class JobCoordinationService {
                     }
                     logger.fine("Ignoring cancellation of a completed job " + idToString(jobId));
                 },
-                null,
                 jobExecutionRecord -> {
                     // we'll eventually learn of the job through scanning of records or from a join operation
                     throw new RetryableHazelcastException("No MasterContext found for job " + idToString(jobId) + " for "
@@ -396,7 +433,6 @@ public class JobCoordinationService {
                     List<RawJobMetrics> metrics = jobRepository.getJobMetrics(jobId);
                     cf.complete(metrics != null ? metrics : emptyList());
                 },
-                null,
                 record -> cf.complete(emptyList())
         );
         return cf;
@@ -421,7 +457,6 @@ public class JobCoordinationService {
                 jobResult -> {
                     throw new IllegalStateException("Job already completed");
                 },
-                null,
                 jobExecutionRecord -> {
                     throw new RetryableHazelcastException("Job " + idToString(jobId) + " not yet discovered");
                 }
@@ -525,13 +560,12 @@ public class JobCoordinationService {
             long jobId,
             @Nonnull Consumer<MasterContext> masterContextHandler,
             @Nonnull Consumer<JobResult> jobResultHandler,
-            @Nullable Consumer<JobRecord> jobRecordHandler,
             @Nullable Consumer<JobExecutionRecord> jobExecutionRecordHandler
     ) {
         return callWithJob(jobId,
                 toNullFunction(masterContextHandler),
                 toNullFunction(jobResultHandler),
-                toNullFunction(jobRecordHandler),
+                toNullFunction(null),
                 toNullFunction(jobExecutionRecordHandler)
         );
     }
@@ -632,20 +666,20 @@ public class JobCoordinationService {
      * Completes the job which is coordinated with the given master context object.
      */
     @CheckReturnValue
-    CompletableFuture<Void> completeJob(MasterContext masterContext, long completionTime, Throwable error) {
+    CompletableFuture<Void> completeJob(MasterContext masterContext, Throwable error) {
         return submitToCoordinatorThread(() -> {
             // the order of operations is important.
-            long jobId = masterContext.jobId();
             List<RawJobMetrics> jobMetrics =
                     masterContext.jobConfig().isStoreMetricsAfterJobCompletion()
                             ? masterContext.jobContext().jobMetrics()
                             : null;
-            UUID coordinator = nodeEngine.getNode().getThisUuid();
-            jobRepository.completeJob(jobId, jobMetrics, coordinator.toString(), completionTime, error);
+            jobRepository.completeJob(masterContext, jobMetrics, error);
             if (masterContexts.remove(masterContext.jobId(), masterContext)) {
+                completeObservables(masterContext.jobRecord().getOwnedObservables(), error);
                 logger.fine(masterContext.jobIdString() + " is completed");
+                (error == null ? jobCompletedSuccessfully : jobCompletedWithFailure).inc();
             } else {
-                MasterContext existing = masterContexts.get(jobId);
+                MasterContext existing = masterContexts.get(masterContext.jobId());
                 if (existing != null) {
                     logger.severe("Different master context found to complete " + masterContext.jobIdString()
                             + ", master context execution " + idToString(existing.executionId()));
@@ -776,9 +810,12 @@ public class JobCoordinationService {
                 && getInternalPartitionService().getPartitionStateManager().isInitialized();
     }
 
-    private String dagToJson(long jobId, JobConfig jobConfig, Data dagData) {
+    private DAG deserializeDag(long jobId, JobConfig jobConfig, Data dagData) {
         ClassLoader classLoader = jetService.getJobExecutionService().getClassLoader(jobConfig, jobId);
-        DAG dag = deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
+        return deserializeWithCustomClassLoader(nodeEngine.getSerializationService(), classLoader, dagData);
+    }
+
+    private String dagToJson(DAG dag) {
         int coopThreadCount = getJetInstance(nodeEngine).getConfig().getInstanceConfig().getCooperativeThreadCount();
         return dag.toJson(coopThreadCount).toString();
     }
@@ -967,5 +1004,14 @@ public class JobCoordinationService {
 
     void assertOnCoordinatorThread() {
         assert IS_JOB_COORDINATOR_THREAD.get() : "not on coordinator thread";
+    }
+
+    private void completeObservables(Set<String> observables, Throwable error) {
+        for (String observable : observables) {
+            String ringbufferName = ObservableImpl.ringbufferName(observable);
+            Ringbuffer<Object> ringbuffer = nodeEngine.getHazelcastInstance().getRingbuffer(ringbufferName);
+            Object completion = error == null ? DoneItem.DONE_ITEM : WrappedThrowable.of(error);
+            ringbuffer.addAsync(completion, OverflowPolicy.OVERWRITE);
+        }
     }
 }

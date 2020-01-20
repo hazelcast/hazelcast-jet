@@ -17,6 +17,7 @@
 package com.hazelcast.jet.core;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -39,12 +40,14 @@ public interface Inbox extends Iterable<Object> {
      * Retrieves, but does not remove, the head of this inbox, or returns
      * {@code null} if it is empty.
      */
+    @Nullable
     Object peek();
 
     /**
      * Retrieves and removes the head of this inbox, or returns {@code null}
      * if it is empty.
      */
+    @Nullable
     Object poll();
 
     /**
@@ -77,7 +80,7 @@ public interface Inbox extends Iterable<Object> {
      * @return the number of elements actually drained
      */
     @SuppressWarnings("unchecked")
-    default <E> int drainTo(Collection<E> target) {
+    default <E> int drainTo(@Nonnull Collection<E> target) {
         for (Object o : this) {
             target.add((E) o);
         }
@@ -87,12 +90,31 @@ public interface Inbox extends Iterable<Object> {
     }
 
     /**
+     * Drains at most {@code limit} elements into the provided {@link
+     * Collection}.
+     *
+     * @param target the collection to drain this object's items into
+     * @param limit the maximum amount of items to drain
+     * @return the number of elements actually drained
+     *
+     * @since 4.0
+     */
+    @SuppressWarnings("unchecked")
+    default <E> int drainTo(@Nonnull Collection<E> target, int limit) {
+        int drained = 0;
+        for (E o; drained < limit && (o = (E) poll()) != null; drained++) {
+            target.add(o);
+        }
+        return drained;
+    }
+
+    /**
      * Passes each of this object's items to the supplied consumer until it is empty.
      *
      * @return the number of elements drained
      */
     @SuppressWarnings("unchecked")
-    default <E> int drain(Consumer<E> consumer) {
+    default <E> int drain(@Nonnull Consumer<E> consumer) {
         for (Object o : this) {
             consumer.accept((E) o);
         }
