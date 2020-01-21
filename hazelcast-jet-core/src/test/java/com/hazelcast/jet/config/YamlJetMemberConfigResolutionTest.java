@@ -31,7 +31,7 @@ import static com.hazelcast.internal.config.DeclarativeConfigUtil.SYSPROP_MEMBER
 import static org.junit.Assert.assertEquals;
 
 @RunWith(HazelcastSerialClassRunner.class)
-public class YamlJetConfigBuilderMemberConfigResolutionTest {
+public class YamlJetMemberConfigResolutionTest {
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
