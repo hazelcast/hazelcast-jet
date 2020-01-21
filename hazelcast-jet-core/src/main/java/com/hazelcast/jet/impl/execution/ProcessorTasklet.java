@@ -208,7 +208,7 @@ public class ProcessorTasklet implements Tasklet {
                 toInit = (Processor) initialized;
             } catch (ClassCastException e) {
                 throw new IllegalArgumentException(String.format(
-                        "The initialized object(%s) should be an instance of %s", initialized, Processor.class));
+                        "The initialized object(%s) should be an instance of %s", initialized, Processor.class), e);
             }
             if (processor instanceof ProcessorWrapper) {
                 ((ProcessorWrapper) processor).setWrapped(toInit);
