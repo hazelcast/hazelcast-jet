@@ -20,14 +20,12 @@ import com.hazelcast.core.ManagedContext;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sink;
 import com.hazelcast.jet.pipeline.SinkBuilder;
-import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.SourceBuilder;
 import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -36,12 +34,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.concurrent.CompletionException;
-
 import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 @RunWith(HazelcastParallelClassRunner.class)
 public class ManagedContextTest extends JetTestSupport {
@@ -66,23 +61,6 @@ public class ManagedContextTest extends JetTestSupport {
 
         // When
         jet.newJob(p).join();
-    }
-
-    @Test
-    public void when_managedContextSet_then_processorsFailToInitWithContext() {
-        // Given
-        Pipeline p = Pipeline.create();
-        p.readFrom(Sources.batchFromProcessor("testSource",
-                ProcessorMetaSupplier.preferLocalParallelismOne(FailToInitializeProcessor::new)))
-         .writeTo(Sinks.noop());
-
-        // When
-        try {
-            jet.newJob(p).join();
-            fail();
-        } catch (CompletionException e) {
-            assertContains(e.getCause().getMessage(), "different object returned");
-        }
     }
 
     @Test
@@ -131,9 +109,6 @@ public class ManagedContextTest extends JetTestSupport {
 
         @Override
         public Object initialize(Object obj) {
-            if (obj instanceof FailToInitializeProcessor) {
-                return Processors.noopP();
-            }
             if (obj instanceof TestProcessor) {
                 ((TestProcessor) obj).injectedValue = INJECTED_VALUE;
             }
@@ -161,14 +136,6 @@ public class ManagedContextTest extends JetTestSupport {
         @Override
         public boolean complete() {
             return tryEmit(injectedValue);
-        }
-    }
-
-    private static class FailToInitializeProcessor extends AbstractProcessor {
-
-        @Override
-        public boolean complete() {
-            return true;
         }
     }
 
