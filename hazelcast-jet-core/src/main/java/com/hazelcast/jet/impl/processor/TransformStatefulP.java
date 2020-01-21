@@ -168,6 +168,8 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     @Override
     public boolean saveToSnapshot() {
         if (inComplete) {
+            // If we are in completing phase, we can have a half-emitted item. Instead of finishing it and
+            // writing a snapshot, we finish the final items and save no state.
             return complete();
         }
         if (snapshotTraverser == null) {
