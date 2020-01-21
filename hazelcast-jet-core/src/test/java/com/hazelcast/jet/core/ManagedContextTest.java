@@ -151,7 +151,7 @@ public class ManagedContextTest extends JetTestSupport {
             }
             if (obj instanceof TestServiceContext) {
                 ((TestServiceContext) obj).injectedValue = INJECTED_VALUE;
-            } else if (obj instanceof AnotherTestServiceContext){
+            } else if (obj instanceof AnotherTestServiceContext) {
                 return new TestServiceContext().setInjectedValue(INJECTED_VALUE);
             }
             if (obj instanceof SourceContext) {
@@ -188,7 +188,7 @@ public class ManagedContextTest extends JetTestSupport {
 
         private String injectedValue;
 
-        public TestProcessor() {
+        TestProcessor() {
         }
 
         public TestProcessor setInjectedValue(String injectedValue) {
