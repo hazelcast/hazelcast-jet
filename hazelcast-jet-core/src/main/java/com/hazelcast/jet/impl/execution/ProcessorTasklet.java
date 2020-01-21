@@ -97,7 +97,6 @@ public class ProcessorTasklet implements Tasklet {
     private final OutboxImpl outbox;
     private final Processor.Context context;
 
-    private final Processor processor;
     private final SnapshotContext ssContext;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the ordinal
 
@@ -108,6 +107,7 @@ public class ProcessorTasklet implements Tasklet {
     private final SerializationService serializationService;
     private final List<? extends InboundEdgeStream> instreams;
 
+    private Processor processor;
     private int numActiveOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
@@ -202,8 +202,19 @@ public class ProcessorTasklet implements Tasklet {
         if (managedContext != null) {
             Processor toInit = processor instanceof ProcessorWrapper
                     ? ((ProcessorWrapper) processor).getWrapped() : processor;
-            Object initialized = managedContext.initialize(toInit);
-            assert initialized == toInit : "different object returned";
+            Object initialized = null;
+            try {
+                initialized = managedContext.initialize(toInit);
+                toInit = (Processor) initialized;
+            } catch (ClassCastException e) {
+                throw new IllegalArgumentException(String.format(
+                        "The initialized object(%s) should be an instance of %s", initialized, Processor.class));
+            }
+            if (processor instanceof ProcessorWrapper) {
+                ((ProcessorWrapper) processor).setWrapped(toInit);
+            } else {
+                processor = toInit;
+            }
         }
         try {
             processor.init(outbox, context);

@@ -28,7 +28,6 @@ import com.hazelcast.jet.core.EventTimeMapper;
 import com.hazelcast.jet.core.EventTimePolicy;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.impl.JetEvent;
-import com.hazelcast.jet.impl.util.Util;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -110,7 +109,7 @@ public class ConvenientSourceP<C, T, S> extends AbstractProcessor implements Ser
     @Override
     protected void init(@Nonnull Context context) {
         // createFn is allowed to return null, we'll call `destroyFn` even for null `ctx`
-        ctx = Util.initializeObject(managedContext, createFn.apply(context));
+        ctx = (C) managedContext.initialize(createFn.apply(context));
         snapshotKey = broadcastKey(context.globalProcessorIndex());
         initialized = true;
     }
