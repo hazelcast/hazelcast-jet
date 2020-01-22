@@ -550,7 +550,6 @@ public class JobCoordinationService {
             return false;
         }
         if (!getInternalPartitionService().getPartitionStateManager().isInitialized()) {
-            logger.fine("Not starting jobs because partitions are not yet initialized.");
             return false;
         }
         return true;
