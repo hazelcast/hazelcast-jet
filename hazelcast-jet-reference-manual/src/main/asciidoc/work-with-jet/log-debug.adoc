@@ -178,8 +178,8 @@ Additionally, if the vertex sourcing them is a data source or data sink, then th
 |===
 |Names|Extra tags
 
-|**executionStartTime**: Start time of the current execution of a job. +
-**executionCompletionTime**: Start time of the current execution of a job. +
+|**executionStartTime**: Start time of the current execution of the job. +
+**executionCompletionTime**: Start time of the current execution of the job. +
 
 Both contain epoch time in milliseconds.
 |** * only ones without `vertex` tag** +
