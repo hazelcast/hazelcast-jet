@@ -21,11 +21,11 @@
 
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
-    <name>hazelcast-jet-examples</name>
+    <name>examples</name>
     <description>Hazelcast Jet Examples</description>
 
     <groupId>com.hazelcast.jet.examples</groupId>
-    <artifactId>hazelcast-jet-examples</artifactId>
+    <artifactId>examples</artifactId>
 
     <parent>
         <groupId>com.hazelcast.jet</groupId>
