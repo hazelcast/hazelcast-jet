@@ -14,13 +14,13 @@ Jet is simple to set up. The nodes you start discover each other and
 form a cluster automatically. You can do the same locally, even on the
 same machine (your laptop, for example). This is great for quick testing.
 
-With Jet it's easy to build fault-tolerant and elastic data processing
+With Jet, it's easy to build fault-tolerant and elastic data processing
 pipelines. Jet keeps processing data without loss even if a node fails,
 and you can add more nodes that immediately start sharing the
 computation load.
 
-You can embed Jet as a part of your application, it's just a single JAR
-without dependencies. You can also deploy it standalone, as a
+You can embed Jet as a part of your application. It's just a single JAR
+without dependencies. You can also deploy it standalone as a
 stream-processing cluster.
 
 Jet also provides a highly available, distributed in-memory data store.
@@ -70,16 +70,16 @@ jet.newJob(p).join();
 
 When you run this, point the `path` variable to some directory with text
 files in it. Jet will analyze all the files and give you the word
-frequency distribution in the log output (for each word it will say how
+frequency distribution in the log output (for each word, it will say how
 many times it appears in the files).
 
 The above was an example of processing data at rest (i.e., _batch
-processing_). It's conceptually simpler than stream processing so we
+processing_). It's conceptually simpler than stream processing, so we
 used it as our first example.
 
 ### Stream Processing with Jet
 
-For stream processing you need a streaming data source. A simple example
+For stream processing, you need a streaming data source. A simple example
 is watching a folder of text files for changes and processing each new
 appended line. Here's the code you can try out:
 
@@ -103,8 +103,8 @@ p.readFrom(Sources.fileWatcher(path))
 jet.newJob(p).join();
 ```
 
-Before running this make an empty directory and point the `path`
-variable to it. While the job is running copy some text files into it
+Before running this, make an empty directory and point the `path`
+variable to it. While the job is running, copy some text files into it
 and Jet will process them right away.
 
 ## Features:
@@ -115,7 +115,7 @@ and Jet will process them right away.
 and [Kubernetes support](https://github.com/hazelcast/hazelcast-jet-code-samples/tree/master/integration/kubernetes)
 including Helm Charts.
 * Elastic - Jet can scale jobs up and down while running
-* Fault Tolerant - At-least-once and exactly-once processing guarantees
+* Fault-Tolerant - At-least-once and exactly-once processing guarantees
 * In-memory storage - Jet provides robust distributed in-memory storage
 for caching, enrichment or storing job results
 * Sources and sinks for Apache Kafka, Hadoop, Hazelcast IMDG, sockets, files
@@ -192,7 +192,7 @@ mvnw clean package -DskipTests
 
 ### Contributions
 
-We encourage pull requests and process them promptly.
+We encourage contributions via Pull Requests and process them promptly.
 
 To contribute:
 
