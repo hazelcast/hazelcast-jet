@@ -182,12 +182,12 @@ Additionally, if the vertex sourcing them is a data source or data sink, then th
 **executionCompletionTime**: Start time of the current execution of the job. +
 
 Both contain epoch time in milliseconds.
-|** * only ones without `vertex` tag** +
+|** no extra tags, they are even missing `vertex`** +
 There will be a single instance of these metrics for each job execution.
 
 |**snapshotBytes**: Total number of bytes written out in the last snapshot. +
 **snapshotKeys**: Total number of keys written out in the last snapshot.
-|**none** +
+|**no extra tags** +
 There will be a single instance of these metrics for each vertex.
 
 |**distributedBytesIn**: Total number of bytes received from remote
