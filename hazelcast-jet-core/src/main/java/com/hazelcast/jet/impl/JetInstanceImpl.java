@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
-import static java.util.stream.Collectors.toList;
+import static com.hazelcast.jet.impl.util.Util.mappedList;
 
 /**
  * Member-side {@code JetInstance} implementation
@@ -64,10 +64,7 @@ public class JetInstanceImpl extends AbstractJetInstance {
                 .invoke();
 
         try {
-            return future.get()
-                         .stream()
-                         .map(jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId))
-                         .collect(toList());
+            return mappedList(future.get(), jobId -> new JobProxy((NodeEngineImpl) nodeEngine, jobId));
         } catch (Throwable t) {
             throw rethrow(t);
         }

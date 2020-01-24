@@ -41,6 +41,7 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.Util.mappedList;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
@@ -152,16 +153,15 @@ public final class ReadHadoopOldApiP<K, V, R> extends AbstractProcessor {
             InputFormat inputFormat = jobConf.getInputFormat();
             Processor noopProcessor = Processors.noopP().get();
 
-            return processorToSplits
-                    .values().stream()
-                    .map(splits -> splits.isEmpty()
+            return mappedList(processorToSplits.values(),
+                    splits -> splits.isEmpty()
                             ? noopProcessor
                             : new ReadHadoopOldApiP<>(splits.stream()
                                                             .map(IndexedInputSplit::getOldSplit)
                                                             .map(split -> uncheckCall(() ->
                                                                   inputFormat.getRecordReader(split, jobConf, NULL)))
                                                             .collect(toList()), projectionFn)
-                    ).collect(toList());
+                    );
         }
     }
 }

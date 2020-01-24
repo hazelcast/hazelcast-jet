@@ -61,7 +61,7 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncBatchedP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
-import static com.hazelcast.jet.impl.util.Util.mapList;
+import static com.hazelcast.jet.impl.util.Util.mappedList;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
 import static java.util.stream.Collectors.joining;
@@ -186,7 +186,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
             executor.submit(() -> {
                 // simulate random async call latency
                 sleepMillis(ThreadLocalRandom.current().nextInt(5));
-                return f.complete(mapList(items, transformFn));
+                return f.complete(mappedList(items, transformFn));
             });
             return f;
         };

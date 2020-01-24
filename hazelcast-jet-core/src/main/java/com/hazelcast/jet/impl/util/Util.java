@@ -419,10 +419,11 @@ public final class Util {
     }
 
     /**
-     * Maps a collection using the provided {@code mapFn}. Doesn't map
-     * in-place, returns a new List.
+     * Returns elements of the given {@code coll} in a new {@code List}, mapped
+     * using the given {@code mapFn}.
      */
-    public static <T, R> List<R> mapList(Collection<T> coll, Function<T, R> mapFn) {
+    @Nonnull
+    public static <T, R> List<R> mappedList(@Nonnull Collection<T> coll, Function<? super T, ? extends R> mapFn) {
         return coll.stream().map(mapFn).collect(Collectors.toList());
     }
 }

@@ -64,6 +64,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
+import static com.hazelcast.jet.impl.util.Util.mappedList;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
@@ -181,11 +182,9 @@ public class TaskletExecutionService {
         @SuppressWarnings("unchecked")
         final List<TaskletTracker>[] trackersByThread = new List[cooperativeWorkers.length];
         Arrays.setAll(trackersByThread, i -> new ArrayList());
-        List<? extends Future<?>> futures = tasklets
-                .stream()
-                .map(tasklet -> hzExecutionService.submit(TASKLET_INIT_CLOSE_EXECUTOR_NAME, () ->
-                        Util.doWithClassLoader(jobClassLoader, tasklet::init)))
-                .collect(toList());
+        List<? extends Future<?>> futures = mappedList(tasklets,
+                tasklet -> hzExecutionService.submit(TASKLET_INIT_CLOSE_EXECUTOR_NAME, () ->
+                        Util.doWithClassLoader(jobClassLoader, tasklet::init)));
         awaitAll(futures);
 
         // We synchronize so that no two jobs submit their tasklets in

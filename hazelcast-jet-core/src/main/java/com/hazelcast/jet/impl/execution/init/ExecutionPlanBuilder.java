@@ -45,7 +45,7 @@ import java.util.function.Function;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
-import static java.util.stream.Collectors.toList;
+import static com.hazelcast.jet.impl.util.Util.mappedList;
 
 public final class ExecutionPlanBuilder {
 
@@ -62,7 +62,7 @@ public final class ExecutionPlanBuilder {
         final Address[] partitionOwners = new Address[nodeEngine.getPartitionService().getPartitionCount()];
         initPartitionOwnersAndMembers(nodeEngine, membersView, members, partitionOwners);
 
-        final List<Address> addresses = members.stream().map(MemberInfo::getAddress).collect(toList());
+        final List<Address> addresses = mappedList(members, MemberInfo::getAddress);
         final int clusterSize = members.size();
         final boolean isJobDistributed = clusterSize > 1;
         final EdgeConfig defaultEdgeConfig = instance.getConfig().getDefaultEdgeConfig();
@@ -116,10 +116,8 @@ public final class ExecutionPlanBuilder {
             List<Edge> edges, EdgeConfig defaultEdgeConfig,
             Function<Edge, Integer> oppositeVtxId, boolean isJobDistributed
     ) {
-        return edges.stream()
-                    .map(edge -> new EdgeDef(edge, edge.getConfig() == null ? defaultEdgeConfig : edge.getConfig(),
-                            oppositeVtxId.apply(edge), isJobDistributed))
-                    .collect(toList());
+        return mappedList(edges, edge -> new EdgeDef(edge, edge.getConfig() == null ? defaultEdgeConfig : edge.getConfig(),
+                            oppositeVtxId.apply(edge), isJobDistributed));
     }
 
     private static void initPartitionOwnersAndMembers(NodeEngine nodeEngine,

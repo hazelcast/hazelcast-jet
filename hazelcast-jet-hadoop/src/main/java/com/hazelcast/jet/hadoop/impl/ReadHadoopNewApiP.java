@@ -53,9 +53,9 @@ import java.util.function.Function;
 import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.hadoop.HadoopSources.COPY_ON_READ;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
+import static com.hazelcast.jet.impl.util.Util.mappedList;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
 import static java.util.Collections.emptyList;
-import static java.util.stream.Collectors.toList;
 
 /**
  * See {@link HadoopSources#inputFormat}.
@@ -222,16 +222,11 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
             Map<Integer, List<IndexedInputSplit>> processorToSplits = Util.distributeObjects(count, assignedSplits);
             InputFormat inputFormat = uncheckCall(() -> getInputFormat(configuration));
 
-            return processorToSplits
-                    .values().stream()
-                    .map(splits -> {
-                                List<InputSplit> mappedSplits = splits
-                                        .stream()
-                                        .map(IndexedInputSplit::getNewSplit)
-                                        .collect(toList());
-                                return new ReadHadoopNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
-                            }
-                    ).collect(toList());
+            return mappedList(processorToSplits.values(),
+                    splits -> {
+                        List<InputSplit> mappedSplits = mappedList(splits, IndexedInputSplit::getNewSplit);
+                        return new ReadHadoopNewApiP<>(configuration, inputFormat, mappedSplits, projectionFn);
+                    });
         }
     }
 
