@@ -108,7 +108,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
     }
 
     @Test
-    public void stressTest_withRestart() {
+    public void stressTest_withRestart_graceful() {
         stressTestInt(true);
     }
 

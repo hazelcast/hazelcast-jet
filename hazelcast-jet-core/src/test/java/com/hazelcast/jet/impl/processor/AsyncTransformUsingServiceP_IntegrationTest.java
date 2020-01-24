@@ -124,7 +124,7 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
     }
 
     @Test
-    public void stressTest_withRestart() {
+    public void stressTest_withRestart_graceful() {
         stressTestInt(true);
     }
 
