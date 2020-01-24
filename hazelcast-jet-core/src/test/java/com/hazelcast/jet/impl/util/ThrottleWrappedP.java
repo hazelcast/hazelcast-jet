@@ -21,6 +21,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.impl.processor.ProcessorWrapper;
 
 import javax.annotation.Nonnull;
+import java.util.function.BooleanSupplier;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
@@ -62,17 +63,21 @@ public final class ThrottleWrappedP extends ProcessorWrapper {
 
         @Override
         public boolean offer(int ordinal, @Nonnull Object item) {
-            return offer(new int[]{ordinal}, item);
+            return offerInternal(() -> wrappedOutbox.offer(ordinal, item));
         }
 
         @Override
         public boolean offer(@Nonnull int[] ordinals, @Nonnull Object item) {
+            return offerInternal(() -> wrappedOutbox.offer(ordinals, item));
+        }
+
+        private boolean offerInternal(BooleanSupplier action) {
             if (startTs == Long.MIN_VALUE) {
                 startTs = System.nanoTime();
             }
             long elapsed = System.nanoTime() - startTs;
             if (NANOSECONDS.toSeconds(elapsed * itemsPerSecond) <= emitCount
-                    || !wrappedOutbox.offer(ordinals, item)) {
+                    || !action.getAsBoolean()) {
                 return false;
             }
             emitCount++;
