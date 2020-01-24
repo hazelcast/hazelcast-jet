@@ -25,7 +25,6 @@ import com.hazelcast.jet.function.PredicateEx;
 import com.hazelcast.jet.function.SupplierEx;
 import com.hazelcast.jet.impl.JetEvent;
 import com.hazelcast.logging.ILogger;
-import com.hazelcast.test.HazelcastParametersRunnerFactory;
 import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
 import org.junit.Before;
 import org.junit.Test;
