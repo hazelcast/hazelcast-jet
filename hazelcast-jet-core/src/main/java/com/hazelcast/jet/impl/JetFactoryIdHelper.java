@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,9 @@ public final class JetFactoryIdHelper {
 
     public static final String JET_JOB_METRICS_DS_FACTORY = "hazelcast.serialization.ds.jet.job_metrics";
     public static final int JET_JOB_METRICS_DS_FACTORY_ID = -10005;
+
+    public static final String JET_OBSERVER_DS_FACTORY = "hazelcast.serialization.ds.jet.observer";
+    public static final int JET_OBSERVER_DS_FACTORY_ID = -10006;
 
     private JetFactoryIdHelper() {
     }

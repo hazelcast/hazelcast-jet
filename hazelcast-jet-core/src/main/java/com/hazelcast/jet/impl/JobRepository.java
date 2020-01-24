@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -361,12 +361,12 @@ public class JobRepository {
      * @throws IllegalStateException if the JobResult is already present
      */
     void completeJob(
-            long jobId,
+            @Nonnull MasterContext masterContext,
             @Nullable List<RawJobMetrics> terminalMetrics,
-            @Nonnull String coordinator,
-            long completionTime,
             @Nullable Throwable error
     ) {
+        long jobId = masterContext.jobId();
+
         JobRecord jobRecord = getJobRecord(jobId);
         if (jobRecord == null) {
             throw new JobNotFoundException(jobId);
@@ -374,7 +374,7 @@ public class JobRepository {
 
         JobConfig config = jobRecord.getConfig();
         long creationTime = jobRecord.getCreationTime();
-        JobResult jobResult = new JobResult(jobId, config, coordinator, creationTime, completionTime,
+        JobResult jobResult = new JobResult(jobId, config, creationTime, System.currentTimeMillis(),
                 toErrorMsg(error));
 
         if (terminalMetrics != null) {

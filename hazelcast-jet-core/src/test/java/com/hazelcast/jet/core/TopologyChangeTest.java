@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -505,7 +506,7 @@ public class TopologyChangeTest extends JetTestSupport {
             memberInfos.add(new MemberInfo(getNode(instances[i].getHazelcastInstance()).getLocalMember()));
         }
 
-        JobRecord jobRecord = new JobRecord(jobId, 0, null, "", new JobConfig());
+        JobRecord jobRecord = new JobRecord(jobId, null, "", new JobConfig(), Collections.emptySet());
         instances[0].getMap(JOB_RECORDS_MAP_NAME).put(jobId, jobRecord);
 
         InitExecutionOperation op = new InitExecutionOperation(jobId, executionId, memberListVersion, memberInfos, null);

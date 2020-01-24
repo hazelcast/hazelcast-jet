@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,6 +95,11 @@ enum ProcessorState {
      * Waiting for the outbox to accept the {@code DONE_ITEM}.
      */
     EMIT_DONE_ITEM,
+
+    /**
+     * Waiting until the close method completes in a separate thread.
+     */
+    CLOSE,
 
     /**
      * The processor is done.

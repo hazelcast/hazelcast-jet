@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,10 +36,12 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static java.util.stream.Collectors.toList;
 
 public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements StreamStage<T> {
 
@@ -118,6 +120,17 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     ) {
         return attachFlatMapUsingServiceAsync("map", serviceFactory,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
+    }
+
+    @Nonnull @Override
+    public <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncBatchedFn
+    ) {
+        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+                (s, t) -> mapAsyncBatchedFn.apply(s, t).thenApply(list ->
+                        list.stream().map(Traversers::singleton).collect(toList())));
     }
 
     @Nonnull @Override

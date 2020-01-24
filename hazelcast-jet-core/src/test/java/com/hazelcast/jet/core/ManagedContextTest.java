@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,26 @@
 
 package com.hazelcast.jet.core;
 
-import com.hazelcast.collection.IList;
 import com.hazelcast.core.ManagedContext;
+import com.hazelcast.function.ConsumerEx;
+import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
-import com.hazelcast.jet.core.processor.SinkProcessors;
+import com.hazelcast.jet.pipeline.BatchSource;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.pipeline.ServiceFactory;
+import com.hazelcast.jet.pipeline.Sink;
+import com.hazelcast.jet.pipeline.SinkBuilder;
+import com.hazelcast.jet.pipeline.SourceBuilder;
+import com.hazelcast.jet.pipeline.Sources;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.hazelcast.jet.core.Edge.between;
+import static com.hazelcast.jet.pipeline.test.AssertionSinks.assertAnyOrder;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
@@ -38,32 +47,123 @@ public class ManagedContextTest extends JetTestSupport {
 
     @Before
     public void setup() {
-        JetConfig jetConfig = new JetConfig();
-        jetConfig.getHazelcastConfig().setManagedContext(new MockManagedContext());
-        jet = this.createJetMember(jetConfig);
+        JetConfig jetConfig = new JetConfig()
+                .configureHazelcast(hzConfig -> hzConfig.setManagedContext(new MockManagedContext()));
+        jet = createJetMember(jetConfig);
     }
 
     @Test
     public void when_managedContextSet_then_processorsInitWithContext() {
-        // Given
-        DAG dag = new DAG();
-        Vertex p = dag.newVertex("p", TestProcessor::new).localParallelism(1);
-        Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP("sink"));
-        dag.edge(between(p, sink));
-
-        // When
-        jet.newJob(dag).join();
-
-        // Then
-        IList<Object> list = jet.getList("sink");
-        assertEquals(singletonList(INJECTED_VALUE), list.subList(0, list.size()));
+        testProcessors(TestProcessor::new);
     }
 
+    @Test
+    public void when_managedContextSet_then_differentProcessorReturnedFromContext() {
+        testProcessors(AnotherTestProcessor::new);
+    }
+
+    private void testProcessors(SupplierEx<Processor> processorSupplier) {
+        // Given
+        Pipeline p = Pipeline.create();
+        p.readFrom(Sources.batchFromProcessor("testSource",
+                ProcessorMetaSupplier.preferLocalParallelismOne(processorSupplier)))
+         .writeTo(assertAnyOrder(singletonList(INJECTED_VALUE)));
+
+        // When
+        jet.newJob(p).join();
+    }
+
+    @Test
+    public void when_managedContextSet_then_serviceContextInitialized() {
+        testServices(TestServiceContext::new);
+    }
+
+    @Test
+    public void when_managedContextSet_then_differentServiceContextReturnedFromContext() {
+        testServices(AnotherTestServiceContext::new);
+    }
+
+    private void testServices(SupplierEx<? extends AnotherTestServiceContext> serviceSupplier) {
+        // Given
+        ServiceFactory<?, ? extends AnotherTestServiceContext> serviceFactory =
+                ServiceFactories.sharedService(serviceSupplier, ConsumerEx.noop());
+        Pipeline p = Pipeline.create();
+        p.readFrom(TestSources.items("item"))
+         .mapUsingService(serviceFactory, (c, item) -> item + c.injectedValue)
+         .writeTo(assertAnyOrder(singletonList("item" + INJECTED_VALUE)));
+
+        // When
+        jet.newJob(p).join();
+    }
+
+    @Test
+    public void when_managedContextSet_then_sourceContextInitializedWithContext() {
+        testSources(SourceContext::new);
+    }
+
+    @Test
+    public void when_managedContextSet_then_differentSourceContextReturnedFromContext() {
+        testSources(AnotherSourceContext::new);
+    }
+
+    private void testSources(SupplierEx<? extends AnotherSourceContext> sourceSupplier) {
+        BatchSource<String> src = SourceBuilder.batch("source", c -> sourceSupplier.get())
+                .<String>fillBufferFn((c, b) -> {
+                    b.add(c.injectedValue);
+                    b.close();
+                }).build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(src)
+                .writeTo(assertAnyOrder(singletonList(INJECTED_VALUE)));
+
+        jet.newJob(pipeline).join();
+    }
+
+    @Test
+    public void when_managedContextSet_then_SinkContextInitializedWithContext() {
+        testSinks(SinkContext::new);
+    }
+
+    @Test
+    public void when_managedContextSet_then_differentSinkContextReturnedFromContext() {
+        testSinks(AnotherSinkContext::new);
+    }
+
+    private void testSinks(SupplierEx<? extends AnotherSinkContext> sinkSupplier) {
+        Sink<Object> sink = SinkBuilder.sinkBuilder("sink", c -> sinkSupplier.get())
+                                       .receiveFn((c, i) -> assertEquals(INJECTED_VALUE, c.injectedValue))
+                                       .build();
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(1))
+                .writeTo(sink);
+
+        jet.newJob(pipeline).join();
+    }
 
     private static class MockManagedContext implements ManagedContext {
 
         @Override
         public Object initialize(Object obj) {
+            if (obj instanceof AnotherTestProcessor) {
+                return new TestProcessor().setInjectedValue(INJECTED_VALUE);
+            }
+            if (obj instanceof TestServiceContext) {
+                ((TestServiceContext) obj).injectedValue = INJECTED_VALUE;
+            } else if (obj instanceof AnotherTestServiceContext) {
+                return new TestServiceContext().setInjectedValue(INJECTED_VALUE);
+            }
+            if (obj instanceof SourceContext) {
+                ((SourceContext) obj).injectedValue = INJECTED_VALUE;
+            } else if (obj instanceof AnotherSourceContext) {
+                return new SourceContext().setInjectedValue(INJECTED_VALUE);
+            }
+            if (obj instanceof SinkContext) {
+                ((SinkContext) obj).injectedValue = INJECTED_VALUE;
+            } else if (obj instanceof AnotherSinkContext) {
+                return new SinkContext().setInjectedValue(INJECTED_VALUE);
+            }
             if (obj instanceof TestProcessor) {
                 ((TestProcessor) obj).injectedValue = INJECTED_VALUE;
             }
@@ -71,13 +171,62 @@ public class ManagedContextTest extends JetTestSupport {
         }
     }
 
+    private static class TestServiceContext extends AnotherTestServiceContext {
+
+        private TestServiceContext setInjectedValue(String injectedValue) {
+            this.injectedValue = injectedValue;
+            return this;
+        }
+
+    }
+
+    private static class AnotherTestServiceContext {
+        protected String injectedValue;
+    }
+
     private static class TestProcessor extends AbstractProcessor {
 
         private String injectedValue;
+
+        TestProcessor() {
+        }
+
+        public TestProcessor setInjectedValue(String injectedValue) {
+            this.injectedValue = injectedValue;
+            return this;
+        }
 
         @Override
         public boolean complete() {
             return tryEmit(injectedValue);
         }
     }
+
+    private static class AnotherTestProcessor extends AbstractProcessor {
+    }
+
+    private static final class SourceContext extends AnotherSourceContext {
+
+        private SourceContext setInjectedValue(String injectedValue) {
+            this.injectedValue = injectedValue;
+            return this;
+        }
+    }
+
+    private static class AnotherSourceContext {
+        protected String injectedValue;
+    }
+
+    private static final class SinkContext extends AnotherSinkContext {
+
+        private SinkContext setInjectedValue(String injectedValue) {
+            this.injectedValue = injectedValue;
+            return this;
+        }
+    }
+
+    private static class AnotherSinkContext {
+        protected String injectedValue;
+    }
+
 }

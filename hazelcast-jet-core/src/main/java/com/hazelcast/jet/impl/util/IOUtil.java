@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,8 +59,12 @@ public final class IOUtil {
                     if (Files.isHidden(p) || p == baseDir) {
                         return;
                     }
-                    zipOut.putNextEntry(new ZipEntry(baseDir.relativize(p).toString()));
-                    if (!Files.isDirectory(p)) {
+                    String relativePath = baseDir.relativize(p).toString();
+                    boolean directory = Files.isDirectory(p);
+                    // slash has been added instead of File.seperator since ZipEntry.isDirectory is checking against it.
+                    relativePath = directory ? relativePath + "/" : relativePath;
+                    zipOut.putNextEntry(new ZipEntry(relativePath));
+                    if (!directory) {
                         Files.copy(p, zipOut);
                     }
                     zipOut.closeEntry();

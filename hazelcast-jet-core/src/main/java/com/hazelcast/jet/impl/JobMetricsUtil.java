@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,15 +56,18 @@ public final class JobMetricsUtil {
     }
 
     static JobMetrics toJobMetrics(List<RawJobMetrics> rawJobMetrics) {
-        JobMetricsConsumer consumer = new JobMetricsConsumer();
+        JobMetricsConsumer consumer = null;
         for (RawJobMetrics metrics : rawJobMetrics) {
             if (metrics.getBlob() == null) {
                 continue;
             }
+            if (consumer == null) {
+                consumer = new JobMetricsConsumer();
+            }
             consumer.timestamp = metrics.getTimestamp();
             MetricsCompressor.extractMetrics(metrics.getBlob(), consumer);
         }
-        return JobMetrics.of(consumer.metrics);
+        return consumer == null ? JobMetrics.empty() : JobMetrics.of(consumer.metrics);
 
     }
 
@@ -89,11 +92,10 @@ public final class JobMetricsUtil {
             for (int i = 0; i < descriptor.tagCount(); i++) {
                 tags.put(descriptor.tag(i), descriptor.tagValue(i));
             }
-            tags.put(descriptor.discriminator(), descriptor.discriminatorValue());
+            if (descriptor.discriminator() != null || descriptor.discriminatorValue() != null) {
+                tags.put(descriptor.discriminator(), descriptor.discriminatorValue());
+            }
             return Measurement.of(descriptor.metric(), value, timestamp, tags);
         }
-
     }
-
-
 }

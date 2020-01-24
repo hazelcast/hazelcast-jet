@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,19 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.JetException;
+import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Watermark;
+import com.hazelcast.jet.core.test.TestInbox;
+import com.hazelcast.jet.core.test.TestOutbox;
+import com.hazelcast.jet.core.test.TestProcessorContext;
 import com.hazelcast.jet.core.test.TestSupport;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
-import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
+import com.hazelcast.test.HazelcastSerialParametersRunnerFactory;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -39,17 +45,18 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
-import static com.hazelcast.jet.core.JetTestSupport.wm;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
-import static com.hazelcast.test.HazelcastTestSupport.spawn;
+import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
+import static com.hazelcast.jet.pipeline.ServiceFactory.MAX_PENDING_CALLS_DEFAULT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
-@Parameterized.UseParametersRunnerFactory(HazelcastParallelParametersRunnerFactory.class)
-public class AsyncTransformUsingServicePTest {
+@Parameterized.UseParametersRunnerFactory(HazelcastSerialParametersRunnerFactory.class)
+public class AsyncTransformUsingServicePTest extends SimpleTestInClusterSupport {
 
     @Rule
     public ExpectedException exception = ExpectedException.none();
@@ -62,20 +69,35 @@ public class AsyncTransformUsingServicePTest {
         return asList(true, false);
     }
 
-    private ProcessorSupplier getSupplier(BiFunctionEx<? super String, ? super String,
-                            CompletableFuture<Traverser<String>>> mapFn
+    private ProcessorSupplier getSupplier(
+            BiFunctionEx<? super String, ? super String, CompletableFuture<Traverser<String>>> mapFn
     ) {
-        ServiceFactory<?, String> serviceFactory = ServiceFactories.nonSharedService(() -> "foo", ConsumerEx.noop());
+        return getSupplier(MAX_PENDING_CALLS_DEFAULT, mapFn);
+    }
+
+    private ProcessorSupplier getSupplier(
+            int maxPendingCalls,
+            BiFunctionEx<? super String, ? super String, CompletableFuture<Traverser<String>>> mapFn
+    ) {
+        ServiceFactory<?, String> serviceFactory = ServiceFactories
+                .nonSharedService(() -> "foo", ConsumerEx.noop())
+                .withMaxPendingCallsPerProcessor(maxPendingCalls);
         if (!ordered) {
             serviceFactory = serviceFactory.withUnorderedAsyncResponses();
         }
         return flatMapUsingServiceAsyncP(serviceFactory, FunctionEx.identity(), mapFn);
     }
 
+    @BeforeClass
+    public static void setUp() {
+        initialize(1, null);
+    }
+
     @Test
     public void test_completedFutures() {
         TestSupport
                 .verifyProcessor(getSupplier((ctx, item) -> completedFuture(traverseItems(item + "-1", item + "-2"))))
+                .jetInstance(instance())
                 .input(asList("a", "b"))
                 .outputChecker((expected, actual) ->
                         actual.equals(asList("a-1", "a-2", "b-1", "b-2"))
@@ -93,6 +115,7 @@ public class AsyncTransformUsingServicePTest {
                             return f;
                         })
                 )
+                .jetInstance(instance())
                 .input(asList("a", "b", new Watermark(10)))
                 .outputChecker((expected, actual) ->
                         actual.equals(asList("a-1", "a-2", "b-1", "b-2", wm(10)))
@@ -107,6 +130,7 @@ public class AsyncTransformUsingServicePTest {
                 .verifyProcessor(getSupplier((ctx, item) -> {
                     throw new UnsupportedOperationException();
                 }))
+                .jetInstance(instance())
                 .input(singletonList(wm(10)))
                 .expectOutput(singletonList(wm(10)));
     }
@@ -115,6 +139,7 @@ public class AsyncTransformUsingServicePTest {
     public void when_mapFnReturnsNullFuture_then_filteredOut() {
         TestSupport
                 .verifyProcessor(getSupplier((ctx, item) -> null))
+                .jetInstance(instance())
                 .input(asList("a", "b"))
                 .expectOutput(emptyList());
     }
@@ -123,6 +148,7 @@ public class AsyncTransformUsingServicePTest {
     public void when_futureReturnsNullTraverser_then_resultFilteredOut() {
         TestSupport
                 .verifyProcessor(getSupplier((ctx, item) -> null))
+                .jetInstance(instance())
                 .input(singletonList(wm(10)))
                 .expectOutput(singletonList(wm(10)));
     }
@@ -132,13 +158,38 @@ public class AsyncTransformUsingServicePTest {
         exception.expect(JetException.class);
         exception.expectMessage("test exception");
         TestSupport
-                .verifyProcessor(getSupplier((ctx, item) -> {
-                    CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
-                    f.completeExceptionally(new RuntimeException("test exception"));
-                    return f;
-                }))
+                .verifyProcessor(getSupplier((ctx, item) ->
+                        exceptionallyCompletedFuture(new RuntimeException("test exception"))))
+                .jetInstance(instance())
                 .input(singletonList("a"))
                 .expectOutput(emptyList());
+    }
 
+    @Test
+    public void test_wmNotCountedToParallelOps() throws Exception {
+        Processor processor = getSupplier(2, (ctx, item) -> new CompletableFuture<>()).get(1).iterator().next();
+        processor.init(new TestOutbox(128), new TestProcessorContext());
+        TestInbox inbox = new TestInbox();
+        inbox.add("foo");
+        processor.process(0, inbox);
+        assertTrue("inbox not empty", inbox.isEmpty());
+        assertTrue("wm rejected", processor.tryProcessWatermark(wm(0)));
+        inbox.add("bar");
+        processor.process(0, inbox);
+        assertTrue("2nd item rejected even though max parallel ops is 1", inbox.isEmpty());
+    }
+
+    @Test
+    public void test_watermarksConflated() throws Exception {
+        Processor processor = getSupplier(2, (ctx, item) -> new CompletableFuture<>()).get(1).iterator().next();
+        processor.init(new TestOutbox(128), new TestProcessorContext());
+        TestInbox inbox = new TestInbox();
+        // i have to add an item first because otherwise the WMs are forwarded right away
+        inbox.add("foo");
+        processor.process(0, inbox);
+        assertTrue("inbox not empty", inbox.isEmpty());
+        assertTrue("wm rejected", processor.tryProcessWatermark(wm(0)));
+        assertTrue("wm rejected", processor.tryProcessWatermark(wm(1)));
+        assertTrue("wm rejected", processor.tryProcessWatermark(wm(2)));
     }
 }

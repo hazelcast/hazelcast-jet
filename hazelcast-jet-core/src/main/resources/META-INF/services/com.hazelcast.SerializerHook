@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+# Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,3 +37,4 @@ com.hazelcast.jet.impl.execution.ExecutionSerializerHooks$BroadcastKeyHook
 com.hazelcast.jet.impl.execution.ExecutionSerializerHooks$DoneItemHook
 com.hazelcast.jet.impl.execution.init.CustomClassLoadedObject$Hook
 com.hazelcast.jet.impl.metrics.JetMetricsDataSerializerHook
+com.hazelcast.jet.impl.observer.JetObserverDataSerializerHook

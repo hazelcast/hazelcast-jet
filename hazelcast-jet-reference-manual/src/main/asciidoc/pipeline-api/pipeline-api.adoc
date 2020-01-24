@@ -908,6 +908,71 @@ include::{javasource}/BuildComputation.java[tag=apply3]
 ----
 
 
+[[return-results-to-caller]]
+= Return Results to the Caller
+
+For certain jobs, especially batch ones, which produce a reasonably small
+amount of output it is convenient to be able to examine the results directly
+in the client submitting the job, instead of needing to look them up
+in files, maps and such.
+
+This functionality is possible by using
+{jet-javadoc}/pipeline/Sinks.html#observable-java.lang.String-[observable type Sinks]
+in your pipelines. The client side code for observing such results would look like this:
+
+[source]
+----
+include::{javasource}/BuildComputation.java[tag=retres1]
+----
+
+As we can see {jet-javadoc}/Observable.html[Observables] can be obtained from any
+Jet member or client. An `Observable` can be observed by registering
+{jet-javadoc}/function/Observer.html[Observers] on them, which are basically callbacks for
+handling results, errors and completion events. In order to make sure that no results are
+lost it is recommended that the `Observers` are registered with their `Observables` before
+`Job` submission.
+
+There are other ways of using this functionality, which are possible, but not recommended.
+In the previous code we have used an unnamed `Observable` and created a `Pipeline`/`Sink`
+directly out of this reference, but in fact each `Observable` and any observable `Sink` is
+a  named entity, fully identified by their name and having the same name is enough for them to
+be linked together. So the previous code could have looked like this:
+
+[source]
+----
+include::{javasource}/BuildComputation.java[tag=retres2]
+----
+
+With this approach it becomes possible to use multiple observable `Sinks` with the same name
+in a `Job`, but these will produce parallel, independent streams of events which will end up
+in the same `Observable` and can get intermingled in unexpected ways, thus creating confusion.
+It is also possible to use observable `Sinks` with the same name in multiple `Jobs` and that
+can create the same problem. For this reason we prefer the version with unnamed `Observables`
+because it discourages reuse.
+
+When working with batch jobs there are more convenient ways of using `Observables`.
+The finite set of results from such a job can be examined either
+{jet-javadoc}/Observable.html#iterator--[as an iterator] or
+{jet-javadoc}/Observable.html#toFuture-java.util.function.Function-[as a Future]. For example
+just counting the results and printing the counts is as simple as:
+
+[source]
+----
+include::{javasource}/BuildComputation.java[tag=retres3]
+----
+
+`Observables` are backed by `Ringbuffers` stored in the cluster which should be cleaned up
+by the client, once they are no longer necessary. They have a
+{jet-javadoc}/Observable.html#destroy--[destroy method] which does just that. If the
+`Observable` isn't destroyed, its memory will be leaked in the cluster forever.
+
+In case the client crashes, or looses track of its `Observables` for any reason it's still
+possible to identify all live instances, by using
+{jet-javadoc}/JetInstance.html#getObservables--[JetInstance.getObservables()] and then
+the ones no longer needed can be cleaned-up via their
+{jet-javadoc}/Observable.html#destroy--[destroy methods].
+
+
 [[developing-and-testing]]
 = Developing and testing your pipeline
 

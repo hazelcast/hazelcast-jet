@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ public interface Job {
      * Returns a snapshot of the current values of all job-specific metrics.
      * <p>
      * While the job is running the metric values are updated periodically
-     * (see {@link MetricsConfig#setCollectionIntervalSeconds metrics
+     * (see {@link MetricsConfig#setCollectionFrequencySeconds metrics
      * collection interval}), assuming
      * that both {@link MetricsConfig#setEnabled global metrics collection}
      * and {@link JobConfig#isMetricsEnabled() per job metrics collection}

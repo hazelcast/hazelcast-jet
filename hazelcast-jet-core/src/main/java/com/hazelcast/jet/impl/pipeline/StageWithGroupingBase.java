@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ class StageWithGroupingBase<T, K> {
     @Nonnull
     <S, R, RET> RET attachFlatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
         return computeStage.attachFlatMapUsingPartitionedService(serviceFactory, keyFn, (s, t) -> {

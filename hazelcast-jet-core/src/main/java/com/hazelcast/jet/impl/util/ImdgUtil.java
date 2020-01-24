@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -122,7 +122,7 @@ public final class ImdgUtil {
      * Async version of {@code IMap.putAll()}. This is based on IMDG's code and
      * currently does not invalidate the near cache.
      * <p>
-     * TODO remove this method once https://github.com/hazelcast/hazelcast/pull/15463 is released
+     * TODO remove this method once https://github.com/hazelcast/hazelcast/issues/16449 is done
      *
      * @param targetIMap imap to write to
      * @param items      items to add

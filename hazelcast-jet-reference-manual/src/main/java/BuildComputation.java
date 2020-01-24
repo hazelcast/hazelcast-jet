@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.hazelcast.function.ComparatorEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.accumulator.LongAccumulator;
 import com.hazelcast.jet.aggregate.AggregateOperation1;
@@ -53,6 +54,7 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.jet.pipeline.StreamHashJoinBuilder;
 import com.hazelcast.jet.pipeline.StreamSource;
 import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.IMap;
 
 import java.util.List;
@@ -608,6 +610,54 @@ class BuildComputation {
 
     private static String fooMap(String t) {
         return null;
+    }
+
+    static void retres1() {
+        //tag::retres1[]
+        JetInstance jet = Jet.newJetInstance();
+        Observable<Long> observable = jet.newObservable();
+        observable.addObserver(System.out::println);
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable(observable));
+
+        jet.newJob(pipeline).join();
+
+        observable.destroy();
+        //end::retres1[]
+    }
+
+    static void retres2() {
+        //tag::retres2[]
+        JetInstance jet = Jet.newJetInstance();
+        Observable<Long> observable = jet.getObservable("results");
+        observable.addObserver(System.out::println);
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable("results"));
+
+        jet.newJob(pipeline).join();
+
+        observable.destroy();
+        //end::retres2[]
+    }
+
+    static void retres3() {
+        //tag::retres3[]
+        JetInstance jet = Jet.newJetInstance();
+        Observable<Long> observable = jet.getObservable("results");
+
+        Pipeline pipeline = Pipeline.create();
+        pipeline.readFrom(TestSources.items(0L, 1L, 2L, 3L, 4L))
+                .writeTo(Sinks.observable("results"));
+
+        observable.toFuture(Stream::count).thenAccept(System.out::println);
+        jet.newJob(pipeline).join();
+
+        observable.destroy();
+        //end::retres3[]
     }
 }
 

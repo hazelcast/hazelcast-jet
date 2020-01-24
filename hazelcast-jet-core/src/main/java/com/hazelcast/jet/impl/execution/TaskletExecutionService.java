@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,9 @@ import com.hazelcast.internal.metrics.MetricsRegistry;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.util.concurrent.BackoffIdleStrategy;
 import com.hazelcast.internal.util.concurrent.IdleStrategy;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.MwCounter;
+import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.metrics.MetricTags;
 import com.hazelcast.jet.impl.metrics.MetricsImpl;
@@ -48,7 +51,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -62,7 +64,6 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
-import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
@@ -73,7 +74,7 @@ import static java.util.stream.Collectors.toList;
 
 public class TaskletExecutionService {
 
-    static final String TASKLET_INIT_EXECUTOR_NAME = "jet:tasklet_init";
+    public static final String TASKLET_INIT_CLOSE_EXECUTOR_NAME = "jet:tasklet_initClose";
 
     private final ExecutorService blockingTaskletExecutor = newCachedThreadPool(new BlockingTaskThreadFactory());
     private final ExecutionService hzExecutionService;
@@ -83,7 +84,7 @@ public class TaskletExecutionService {
     private final ILogger logger;
     private int cooperativeThreadIndex;
     @Probe(name = "blockingWorkerCount")
-    private final AtomicInteger blockingWorkerCount = new AtomicInteger();
+    private final Counter blockingWorkerCount = MwCounter.newMwCounter();
     private volatile boolean isShutdown;
     private final Object lock = new Object();
     private volatile IdleStrategy idlerCooperative;
@@ -91,7 +92,7 @@ public class TaskletExecutionService {
 
     public TaskletExecutionService(NodeEngineImpl nodeEngine, int threadCount, HazelcastProperties properties) {
         hzExecutionService = nodeEngine.getExecutionService();
-        hzExecutionService.register(TASKLET_INIT_EXECUTOR_NAME,
+        hzExecutionService.register(TASKLET_INIT_CLOSE_EXECUTOR_NAME,
                 Runtime.getRuntime().availableProcessors(), Integer.MAX_VALUE, CACHED);
         this.hzInstanceName = nodeEngine.getHazelcastInstance().getName();
         this.cooperativeWorkers = new CooperativeWorker[threadCount];
@@ -114,7 +115,6 @@ public class TaskletExecutionService {
         MetricsRegistry registry = nodeEngine.getMetricsRegistry();
         MetricDescriptor descriptor = registry.newMetricDescriptor()
                                                      .withTag(MetricTags.MODULE, "jet");
-
         registry.registerStaticMetrics(descriptor, this);
         for (int i = 0; i < cooperativeWorkers.length; i++) {
             registry.registerStaticMetrics(
@@ -156,7 +156,7 @@ public class TaskletExecutionService {
     public void shutdown() {
         isShutdown = true;
         blockingTaskletExecutor.shutdownNow();
-        hzExecutionService.shutdownExecutor(TASKLET_INIT_EXECUTOR_NAME);
+        hzExecutionService.shutdownExecutor(TASKLET_INIT_CLOSE_EXECUTOR_NAME);
     }
 
     private void submitBlockingTasklets(ExecutionTracker executionTracker, ClassLoader jobClassLoader,
@@ -183,7 +183,7 @@ public class TaskletExecutionService {
         Arrays.setAll(trackersByThread, i -> new ArrayList());
         List<? extends Future<?>> futures = tasklets
                 .stream()
-                .map(tasklet -> hzExecutionService.submit(TASKLET_INIT_EXECUTOR_NAME, () ->
+                .map(tasklet -> hzExecutionService.submit(TASKLET_INIT_CLOSE_EXECUTOR_NAME, () ->
                         Util.doWithClassLoader(jobClassLoader, tasklet::init)))
                 .collect(toList());
         awaitAll(futures);
@@ -283,7 +283,7 @@ public class TaskletExecutionService {
             MetricsImpl.Container userMetricsContextContainer = MetricsImpl.container();
 
             try {
-                blockingWorkerCount.incrementAndGet();
+                blockingWorkerCount.inc();
                 userMetricsContextContainer.setContext(t.getMetricsContext());
                 startedLatch.countDown();
                 t.init();
@@ -303,7 +303,7 @@ public class TaskletExecutionService {
                 logger.warning("Exception in " + t, e);
                 tracker.executionTracker.exception(new JetException("Exception in " + t + ": " + e, e));
             } finally {
-                blockingWorkerCount.decrementAndGet();
+                blockingWorkerCount.inc(-1L);
                 userMetricsContextContainer.setContext(null);
                 currentThread().setContextClassLoader(clBackup);
                 tracker.executionTracker.taskletDone();
@@ -317,7 +317,7 @@ public class TaskletExecutionService {
         @Probe(name = "taskletCount")
         private final CopyOnWriteArrayList<TaskletTracker> trackers;
         @Probe(name = "iterationCount")
-        private final AtomicLong iterationCount = new AtomicLong();
+        private final Counter iterationCount = SwCounter.newSwCounter();
 
         private final ProgressTracker progressTracker = new ProgressTracker();
         // prevent lambda allocation on each iteration
@@ -344,7 +344,7 @@ public class TaskletExecutionService {
                 progressTracker.reset();
                 // garbage-free iteration -- relies on implementation in COWArrayList that doesn't use an Iterator
                 trackers.forEach(runTasklet);
-                lazyIncrement(iterationCount);
+                iterationCount.inc();
                 if (progressTracker.isMadeProgress()) {
                     idleCount = 0;
                 } else {

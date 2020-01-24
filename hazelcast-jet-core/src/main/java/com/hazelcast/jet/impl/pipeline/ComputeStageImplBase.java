@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,9 +48,12 @@ import com.hazelcast.jet.pipeline.StreamStage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
+import static com.hazelcast.jet.Traversers.traverseIterable;
 import static com.hazelcast.jet.core.EventTimePolicy.DEFAULT_IDLE_TIMEOUT;
 import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
@@ -64,6 +67,7 @@ import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.custo
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.filterUsingServiceTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceAsyncTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceTransform;
+import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceAsyncBatchedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.mapUsingServiceTransform;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
@@ -103,14 +107,14 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <R, RET> RET attachMap(@Nonnull FunctionEx<? super T, ? extends R> mapFn) {
         checkSerializable(mapFn, "mapFn");
         return (RET) attach(new MapTransform("map", this.transform, fnAdapter.adaptMapFn(mapFn)), fnAdapter);
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
         PredicateEx<T> adaptedFn = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
@@ -118,16 +122,16 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <R, RET> RET attachFlatMap(
-            @Nonnull FunctionEx<? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull FunctionEx<? super T, ? extends Traverser<R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
         return (RET) attach(new FlatMapTransform("flat-map", transform, fnAdapter.adaptFlatMapFn(flatMapFn)), fnAdapter);
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, R, RET> RET attachGlobalMapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
@@ -144,7 +148,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, R, RET> RET attachGlobalFlatMapStateful(
             @Nonnull SupplierEx<? extends S> createFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
@@ -161,7 +165,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <K, S, R, RET> RET attachMapStateful(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
@@ -187,7 +191,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <K, S, R, RET> RET attachFlatMapStateful(
             long ttl,
             @Nonnull FunctionEx<? super T, ? extends K> keyFn,
@@ -213,7 +217,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, R, RET> RET attachMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
@@ -226,7 +230,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, RET> RET attachFilterUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
@@ -239,10 +243,10 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, R, RET> RET attachFlatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceFn(flatMapFn);
@@ -252,7 +256,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, R, RET> RET attachFlatMapUsingServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
@@ -266,7 +270,35 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    <S, R, RET> RET attachFlatMapUsingServiceAsyncBatched(
+            @Nonnull String operationName,
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>,
+                    ? extends CompletableFuture<List<Traverser<R>>>> flatMapAsyncBatchedFn
+    ) {
+        checkSerializable(flatMapAsyncBatchedFn, operationName + "AsyncBatchedFn");
+        BiFunctionEx adaptedFn = fnAdapter.adaptFlatMapUsingServiceAsyncBatchedFn(flatMapAsyncBatchedFn);
+
+        // Here we flatten the result from List<Traverser<R>> to Traverser<R>.
+        // The former is used in pipeline API, the latter in core API.
+        BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flattenedFn =
+                (svc, items) -> {
+                    // R might actually be JetEvent<R> -- we can't represent this with static types
+                    CompletableFuture<List<Traverser<R>>> f =
+                            (CompletableFuture<List<Traverser<R>>>) adaptedFn.apply(svc, items);
+                    return f.thenApply(res -> traverseIterable(res).flatMap(Function.identity()));
+                };
+
+        return (RET) attach(
+                flatMapUsingServiceAsyncBatchedTransform(
+                        transform, operationName, serviceFactory, maxBatchSize, flattenedFn),
+                fnAdapter);
+    }
+
+    @Nonnull
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, K, R, RET> RET attachMapUsingPartitionedService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
@@ -282,7 +314,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, K, RET> RET attachFilterUsingPartitionedService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
@@ -299,11 +331,11 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, K, R, RET> RET attachFlatMapUsingPartitionedService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<? extends R>> flatMapFn
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
@@ -316,7 +348,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <S, K, R, RET> RET attachTransformUsingPartitionedServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
@@ -334,6 +366,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
+    @SuppressWarnings("rawtypes")
     <RET> RET attachMerge(@Nonnull GeneralStage<? extends T> other) {
         ComputeStageImplBase castOther = (ComputeStageImplBase) other;
         if (fnAdapter != castOther.fnAdapter) {
@@ -359,7 +392,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <K1, T1_IN, T1, K2, T2_IN, T2, R, TA, RET> RET attachHashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
@@ -377,7 +410,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <RET> RET attachPeek(
             @Nonnull PredicateEx<? super T> shouldLogFn,
             @Nonnull FunctionEx<? super T, ? extends CharSequence> toStringFn
@@ -398,7 +431,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     <K, RET> RET attachPartitionedCustomTransform(
             @Nonnull String stageName,
             @Nonnull ProcessorMetaSupplier procSupplier,
@@ -411,7 +444,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public SinkStage writeTo(@Nonnull Sink<? super T> sink) {
         SinkImpl sinkImpl = (SinkImpl) sink;
         SinkTransform<T> sinkTransform = new SinkTransform(sinkImpl, transform, fnAdapter == ADAPT_TO_JET_EVENT);
@@ -424,6 +457,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     @Nonnull
     abstract <RET> RET attach(@Nonnull AbstractTransform transform, @Nonnull FunctionAdapter fnAdapter);
 
+    @SuppressWarnings("rawtypes")
     static void ensureJetEvents(@Nonnull ComputeStageImplBase stage, @Nonnull String name) {
         if (stage.fnAdapter != ADAPT_TO_JET_EVENT) {
             throw new IllegalStateException(

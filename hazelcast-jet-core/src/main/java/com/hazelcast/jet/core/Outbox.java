@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,8 @@ public interface Outbox {
      * and only a single processor instance will receive the key.
      * <p>
      * This method may only be called from the {@link
-     * Processor#saveToSnapshot()} method.
+     * Processor#saveToSnapshot()} or {@link Processor#snapshotCommitPrepare()}
+     * methods.
      * <p>
      * Keys and values offered to snapshot are serialized and can be further
      * mutated as soon as this method returns.

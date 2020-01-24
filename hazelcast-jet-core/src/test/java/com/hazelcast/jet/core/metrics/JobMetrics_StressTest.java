@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,10 +111,10 @@ public class JobMetrics_StressTest extends JetTestSupport {
 
     private static final class IncrementingProcessor implements Processor {
 
-        @Probe
+        @Probe(name = "initCount")
         static final AtomicInteger initCount = new AtomicInteger();
 
-        @Probe
+        @Probe(name = "completeCount")
         static final AtomicInteger completeCount = new AtomicInteger();
 
         @Override

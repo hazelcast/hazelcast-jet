@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.internal.metrics.Probe;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -33,14 +35,12 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
-import static com.hazelcast.jet.impl.util.Util.lazyIncrement;
 import static com.hazelcast.jet.impl.util.Util.logLateEvent;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -48,9 +48,10 @@ import static java.lang.Math.min;
 public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     private static final int HASH_MAP_INITIAL_CAPACITY = 16;
     private static final float HASH_MAP_LOAD_FACTOR = 0.75f;
+    private static final Watermark FLUSHING_WATERMARK = new Watermark(Long.MAX_VALUE);
 
     @Probe(name = "lateEventsDropped")
-    private final AtomicLong lateEventsDropped = new AtomicLong();
+    private final Counter lateEventsDropped = SwCounter.newSwCounter();
 
     private final long ttl;
     private final Function<? super T, ? extends K> keyFn;
@@ -69,6 +70,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
 
     private long currentWm = Long.MIN_VALUE;
     private Traverser<? extends Entry<?, ?>> snapshotTraverser;
+    private boolean inComplete;
 
     public TransformStatefulP(
             long ttl,
@@ -97,7 +99,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
         long timestamp = timestampFn.applyAsLong(event);
         if (timestamp < currentWm && ttl != Long.MAX_VALUE) {
             logLateEvent(getLogger(), currentWm, event);
-            lazyIncrement(lateEventsDropped);
+            lateEventsDropped.inc();
             return Traversers.empty();
         }
         K key = keyFn.apply(event);
@@ -118,12 +120,23 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
         return evictingTraverserFlattened;
     }
 
+    @Override
+    public boolean complete() {
+        inComplete = true;
+        // flush everything with a terminal watermark
+        return tryProcessWatermark(FLUSHING_WATERMARK);
+    }
+
     private class EvictingTraverser implements Traverser<Traverser<?>> {
         private Iterator<Entry<K, TimestampedItem<S>>> keyToStateIterator;
         private final ResettableSingletonTraverser<Watermark> wmTraverser = new ResettableSingletonTraverser<>();
 
         void reset(Watermark wm) {
             keyToStateIterator = keyToState.entrySet().iterator();
+            if (wm == FLUSHING_WATERMARK) {
+                // don't forward the flushing watermark
+                return;
+            }
             wmTraverser.accept(wm);
         }
 
@@ -154,6 +167,11 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
 
     @Override
     public boolean saveToSnapshot() {
+        if (inComplete) {
+            // If we are in completing phase, we can have a half-emitted item. Instead of finishing it and
+            // writing a snapshot, we finish the final items and save no state.
+            return complete();
+        }
         if (snapshotTraverser == null) {
             snapshotTraverser = Traversers.<Entry<?, ?>>traverseIterable(keyToState.entrySet())
                     .append(entry(broadcastKey(SnapshotKeys.WATERMARK), currentWm))
@@ -165,7 +183,7 @@ public class TransformStatefulP<T, K, S, R> extends AbstractProcessor {
     @Override
     protected void restoreFromSnapshot(@Nonnull Object key, @Nonnull Object value) {
         if (key instanceof BroadcastKey) {
-            assert ((BroadcastKey) key).key() == SnapshotKeys.WATERMARK : "Unexpected " + key;
+            assert ((BroadcastKey<?>) key).key() == SnapshotKeys.WATERMARK : "Unexpected " + key;
             long wm = (long) value;
             currentWm = (currentWm == Long.MIN_VALUE) ? wm : min(currentWm, wm);
         } else {

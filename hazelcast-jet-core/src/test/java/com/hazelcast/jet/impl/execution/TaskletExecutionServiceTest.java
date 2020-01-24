@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
 
-import static com.hazelcast.jet.impl.execution.TaskletExecutionService.TASKLET_INIT_EXECUTOR_NAME;
+import static com.hazelcast.jet.impl.execution.TaskletExecutionService.TASKLET_INIT_CLOSE_EXECUTOR_NAME;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
@@ -93,7 +93,7 @@ public class TaskletExecutionServiceTest extends JetTestSupport {
 
         ExecutionService es = mock(ExecutionService.class);
         when(neMock.getExecutionService()).thenReturn(es);
-        when(es.submit(eq(TASKLET_INIT_EXECUTOR_NAME), any(Runnable.class)))
+        when(es.submit(eq(TASKLET_INIT_CLOSE_EXECUTOR_NAME), any(Runnable.class)))
                 .then(invocationOnMock -> executor.submit(invocationOnMock.<Runnable>getArgument(1)));
 
         LoggingService loggingService = mock(LoggingService.class);

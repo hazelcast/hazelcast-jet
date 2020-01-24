@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,10 +58,12 @@ import javax.jms.MessageConsumer;
 import javax.jms.Session;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNegative;
 import static com.hazelcast.jet.Util.cacheEventToEntry;
@@ -311,9 +313,30 @@ public final class SourceProcessors {
             @Nonnull BiFunctionEx<? super String, ? super String, ? extends R> mapOutputFn
     ) {
         String charsetName = charset.name();
-        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem,
-                path -> Files.lines(path, Charset.forName(charsetName)),
-                mapOutputFn);
+        return readFilesP(
+                    directory,
+                    glob,
+                    sharedFileSystem,
+                    path -> {
+                        String fileName = path.getFileName().toString();
+                        return Files.lines(path, Charset.forName(charsetName))
+                                    .map(l -> mapOutputFn.apply(fileName, l));
+                    }
+                );
+    }
+
+    /**
+     * Returns a supplier of processors for {@link Sources#filesBuilder}.
+     * See {@link FileSourceBuilder#build} for more details.
+     */
+    @Nonnull
+    public static <I> ProcessorMetaSupplier readFilesP(
+            @Nonnull String directory,
+            @Nonnull String glob,
+            boolean sharedFileSystem,
+            @Nonnull FunctionEx<? super Path, ? extends Stream<I>> readFileFn
+    ) {
+        return ReadFilesP.metaSupplier(directory, glob, sharedFileSystem, readFileFn, (f, l) -> l);
     }
 
     /**

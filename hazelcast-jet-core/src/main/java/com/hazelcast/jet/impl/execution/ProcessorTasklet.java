@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
@@ -23,6 +24,8 @@ import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.internal.util.counters.Counter;
+import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -49,7 +52,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.function.Predicate;
 
@@ -61,6 +65,7 @@ import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_BATCHES;
 import static com.hazelcast.jet.core.metrics.MetricNames.RECEIVED_COUNT;
 import static com.hazelcast.jet.core.metrics.MetricNames.TOP_OBSERVED_WM;
 import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
+import static com.hazelcast.jet.impl.execution.ProcessorState.CLOSE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.COMPLETE_EDGE;
 import static com.hazelcast.jet.impl.execution.ProcessorState.EMIT_BARRIER;
@@ -69,10 +74,10 @@ import static com.hazelcast.jet.impl.execution.ProcessorState.END;
 import static com.hazelcast.jet.impl.execution.ProcessorState.FINAL_ON_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.ProcessorState.NULLARY_PROCESS;
 import static com.hazelcast.jet.impl.execution.ProcessorState.ON_SNAPSHOT_COMPLETED;
-import static com.hazelcast.jet.impl.execution.ProcessorState.SNAPSHOT_PREPARE_COMMIT;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_INBOX;
 import static com.hazelcast.jet.impl.execution.ProcessorState.PROCESS_WATERMARK;
 import static com.hazelcast.jet.impl.execution.ProcessorState.SAVE_SNAPSHOT;
+import static com.hazelcast.jet.impl.execution.ProcessorState.SNAPSHOT_PREPARE_COMMIT;
 import static com.hazelcast.jet.impl.execution.ProcessorState.WAITING_FOR_SNAPSHOT_COMPLETED;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.IDLE_MESSAGE;
 import static com.hazelcast.jet.impl.execution.WatermarkCoalescer.NO_NEW_WM;
@@ -95,7 +100,6 @@ public class ProcessorTasklet implements Tasklet {
     private final OutboxImpl outbox;
     private final Processor.Context context;
 
-    private final Processor processor;
     private final SnapshotContext ssContext;
     private final BitSet receivedBarriers; // indicates if current snapshot is received on the ordinal
 
@@ -105,7 +109,9 @@ public class ProcessorTasklet implements Tasklet {
     private final ILogger logger;
     private final SerializationService serializationService;
     private final List<? extends InboundEdgeStream> instreams;
+    private final ExecutorService executionService;
 
+    private Processor processor;
     private int numActiveOrdinals; // counter for remaining active ordinals
     private CircularListCursor<InboundEdgeStream> instreamCursor;
     private InboundEdgeStream currInstream;
@@ -117,7 +123,6 @@ public class ProcessorTasklet implements Tasklet {
 
     private SnapshotBarrier currentBarrier;
     private Watermark pendingWatermark;
-    private boolean processorClosed;
 
     // Tells whether we are operating in exactly-once or at-least-once mode.
     // In other words, whether a barrier from all inputs must be present before
@@ -130,16 +135,19 @@ public class ProcessorTasklet implements Tasklet {
     private final AtomicLongArray emittedCounts;
 
     @Probe(name = MetricNames.QUEUES_SIZE)
-    private final AtomicLong queuesSize = new AtomicLong();
+    private final Counter queuesSize = SwCounter.newSwCounter();
 
     @Probe(name = MetricNames.QUEUES_CAPACITY)
-    private final AtomicLong queuesCapacity = new AtomicLong();
+    private final Counter queuesCapacity = SwCounter.newSwCounter();
 
     private final Predicate<Object> addToInboxFunction = inbox.queue()::add;
     private final MetricsContext metricsContext = new MetricsContext();
+    private Future<?> closeFuture;
 
     @SuppressWarnings("checkstyle:ExecutableStatementCount")
-    public ProcessorTasklet(@Nonnull Context context,
+    public ProcessorTasklet(
+            @Nonnull Context context,
+            @Nonnull ExecutorService executionService,
             @Nonnull SerializationService serializationService,
             @Nonnull Processor processor,
             @Nonnull List<? extends InboundEdgeStream> instreams,
@@ -149,6 +157,7 @@ public class ProcessorTasklet implements Tasklet {
     ) {
         Preconditions.checkNotNull(processor, "processor");
         this.context = context;
+        this.executionService = executionService;
         this.serializationService = serializationService;
         this.processor = processor;
         this.numActiveOrdinals = instreams.size();
@@ -196,11 +205,23 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void init() {
-        if (serializationService.getManagedContext() != null) {
+        ManagedContext managedContext = serializationService.getManagedContext();
+        if (managedContext != null) {
             Processor toInit = processor instanceof ProcessorWrapper
                     ? ((ProcessorWrapper) processor).getWrapped() : processor;
-            Object initialized = serializationService.getManagedContext().initialize(toInit);
-            assert initialized == toInit : "different object returned";
+            Object initialized = null;
+            try {
+                initialized = managedContext.initialize(toInit);
+                toInit = (Processor) initialized;
+            } catch (ClassCastException e) {
+                throw new IllegalArgumentException(String.format(
+                        "The initialized object(%s) should be an instance of %s", initialized, Processor.class), e);
+            }
+            if (processor instanceof ProcessorWrapper) {
+                ((ProcessorWrapper) processor).setWrapped(toInit);
+            } else {
+                processor = toInit;
+            }
         }
         try {
             processor.init(outbox, context);
@@ -211,21 +232,15 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override @Nonnull
     public ProgressState call() {
-        assert !processorClosed : "processor closed";
+        assert state != END : "already in terminal state";
         progTracker.reset();
         progTracker.notDone();
         outbox.reset();
         stateMachineStep();
-        ProgressState progressState = progTracker.toProgressState();
-        if (progressState.isDone()) {
-            closeProcessor();
-            processorClosed = true;
-        }
-        return progressState;
+        return progTracker.toProgressState();
     }
 
     private void closeProcessor() {
-        assert !processorClosed : "processor already closed";
         try {
             processor.close();
         } catch (Throwable e) {
@@ -342,9 +357,27 @@ public class ProcessorTasklet implements Tasklet {
             case EMIT_DONE_ITEM:
                 if (outbox.offerToEdgesAndSnapshot(DONE_ITEM)) {
                     ssContext.processorTaskletDone();
-                    state = END;
-                    progTracker.done();
+                    progTracker.madeProgress();
+                    state = CLOSE;
+                    stateMachineStep();
                 }
+                return;
+
+            case CLOSE:
+                if (isCooperative()) {
+                    if (closeFuture == null) {
+                        closeFuture = executionService.submit(this::closeProcessor);
+                        progTracker.madeProgress();
+                    }
+                    if (!closeFuture.isDone()) {
+                        return;
+                    }
+                    progTracker.madeProgress();
+                } else {
+                    closeProcessor();
+                }
+                state = END;
+                progTracker.done();
                 return;
 
             default:
@@ -498,8 +531,8 @@ public class ProcessorTasklet implements Tasklet {
         if (!inbox.isEmpty()) {
             lazyIncrement(receivedBatches, currInstream.ordinal());
         }
-        queuesCapacity.lazySet(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::capacities));
-        queuesSize.lazySet(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::sizes));
+        queuesCapacity.set(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::capacities));
+        queuesSize.set(instreamCursor == null ? 0 : sum(instreamCursor.getList(), InboundEdgeStream::sizes));
     }
 
     private CircularListCursor<InboundEdgeStream> popInstreamGroup() {
@@ -563,9 +596,14 @@ public class ProcessorTasklet implements Tasklet {
 
     @Override
     public void close() {
-        if (!processorClosed) {
+        if (state == CLOSE) {
+            try {
+                closeFuture.get();
+            } catch (Exception e) {
+                throw sneakyThrow(e);
+            }
+        } else if (state != END) {
             closeProcessor();
-            processorClosed = true;
         }
     }
 
