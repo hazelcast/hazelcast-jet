@@ -25,10 +25,12 @@ import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.Vertex.LOCAL_PARALLELISM_USE_DEFAULT;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
+import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncBatchedP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceP;
@@ -86,7 +88,7 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull Transform upstream,
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         // TODO use better key so that snapshots are local. Currently they will
         //      be sent to a random member. We keep it this way for simplicity:
@@ -96,8 +98,23 @@ public class ProcessorTransform extends AbstractTransform {
                         flatMapUsingServiceAsyncP(serviceFactory, Object::hashCode, flatMapAsyncFn)));
     }
 
-    static <S> int getPreferredLP(@Nonnull ServiceFactory<?, S> serviceFactory) {
-        return serviceFactory.isCooperative() ? LOCAL_PARALLELISM_USE_DEFAULT : NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
+    public static <S, T, R> ProcessorTransform flatMapUsingServiceAsyncBatchedTransform(
+            @Nonnull Transform upstream,
+            @Nonnull String operationName,
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>,
+                    ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    ) {
+        return new ProcessorTransform(operationName + "UsingServiceAsyncBatched", upstream,
+                ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
+                        flatMapUsingServiceAsyncBatchedP(serviceFactory, maxBatchSize, flatMapAsyncFn)));
+    }
+
+    static int getPreferredLP(@Nonnull ServiceFactory<?, ?> serviceFactory) {
+        return serviceFactory.isCooperative()
+                ? LOCAL_PARALLELISM_USE_DEFAULT
+                : NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
     }
 
     @Override

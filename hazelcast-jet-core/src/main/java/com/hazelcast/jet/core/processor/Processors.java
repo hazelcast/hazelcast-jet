@@ -40,6 +40,7 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceBatchedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
@@ -1014,11 +1015,37 @@ public final class Processors {
     public static <C, S, T, K, R> ProcessorSupplier flatMapUsingServiceAsyncP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return serviceFactory.hasOrderedAsyncResponses()
                 ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, flatMapAsyncFn)
                 : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, flatMapAsyncFn, extractKeyFn);
+    }
+
+    /**
+     * Asynchronous, batched version of {@link #flatMapUsingServiceP}: {@code
+     * flatMapAsyncFn} takes a list and returns a {@code
+     * CompletableFuture<List<Traverser<R>>>}. The result list of traversers
+     * must match one-to-one with the input list, but any given traverser may
+     * be empty.
+     *
+     * @param serviceFactory the service factory
+     * @param maxBatchSize max size of the input list
+     * @param flatMapAsyncFn the mapping function
+     * @param <C> type of context object
+     * @param <S> type of service object
+     * @param <T> type of input item
+     * @param <R> type of result item
+     *
+     * @since 4.0
+     */
+    @Nonnull
+    public static <C, S, T, R> ProcessorSupplier flatMapUsingServiceAsyncBatchedP(
+            @Nonnull ServiceFactory<C, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
+    ) {
+        return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, maxBatchSize, flatMapAsyncFn);
     }
 
     /**
