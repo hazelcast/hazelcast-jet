@@ -76,7 +76,7 @@ public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
             @Nonnull BiConsumerEx<? super PreparedStatement, ? super T> bindFn,
             boolean exactlyOnce
     ) {
-        super(exactlyOnce ? EXACTLY_ONCE : AT_LEAST_ONCE, 2);
+        super(exactlyOnce ? EXACTLY_ONCE : AT_LEAST_ONCE);
         this.updateQuery = updateQuery;
         this.dataSource = dataSource;
         this.bindFn = bindFn;
