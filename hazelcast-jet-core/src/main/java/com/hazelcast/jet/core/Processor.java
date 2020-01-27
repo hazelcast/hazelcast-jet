@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,6 +137,9 @@ public interface Processor {
      * methods</em> must use to deposit their output items. This method will be
      * called exactly once and strictly before any calls to other methods
      * (except for the {@link #isCooperative()} method.
+     * <p>
+     * Even if this processor is cooperative, this method is allowed to do
+     * blocking operations.
      * <p>
      * The default implementation does nothing.
      *
@@ -431,8 +434,13 @@ public interface Processor {
      * true}, that is before the job is finished. The job might still be
      * running other processors.
      * <p>
+     * Even if this processor is cooperative, this method is allowed to do
+     * blocking operations.
+     * <p>
      * If this method throws an exception, it is logged but it won't be
      * reported as a job failure or cause the job to fail.
+     * <p>
+     * The default implementation does nothing.
      */
     default void close() throws Exception {
     }

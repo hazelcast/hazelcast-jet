@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ import javax.annotation.Nonnull;
  * To obtain an instance, use {@link Metrics#metric}. The instance is tied to
  * the processor it was created for and is or is not thread-safe based on the
  * method that was used to create it.
+ *
+ * @since 4.0
  */
 public interface Metric {
 

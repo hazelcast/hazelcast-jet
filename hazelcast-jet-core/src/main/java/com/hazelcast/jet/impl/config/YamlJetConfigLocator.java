@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import static com.hazelcast.jet.impl.config.JetDeclarativeConfigUtil.SYSPROP_JET
  */
 public final class YamlJetConfigLocator extends AbstractConfigLocator {
 
-    private static final String HAZELCAST_JET_YAML = "hazelcast-jet.yaml";
     private static final String HAZELCAST_JET_DEFAULT_YAML = "hazelcast-jet-default.yaml";
 
     public YamlJetConfigLocator() {
@@ -45,12 +44,12 @@ public final class YamlJetConfigLocator extends AbstractConfigLocator {
 
     @Override
     protected boolean locateInWorkDir() {
-        return loadFromWorkingDirectory(HAZELCAST_JET_YAML);
+        return loadFromWorkingDirectory("hazelcast-jet", YAML_ACCEPTED_SUFFIXES);
     }
 
     @Override
     protected boolean locateOnClasspath() {
-        return loadConfigurationFromClasspath(HAZELCAST_JET_YAML);
+        return loadConfigurationFromClasspath("hazelcast-jet", YAML_ACCEPTED_SUFFIXES);
     }
 
     @Override

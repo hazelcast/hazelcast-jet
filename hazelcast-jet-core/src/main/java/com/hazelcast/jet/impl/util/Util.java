@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,10 +50,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.Util.idToString;
@@ -416,4 +418,11 @@ public final class Util {
         return g1.ordinal() < g2.ordinal() ? g1 : g2;
     }
 
+    /**
+     * Maps a collection using the provided {@code mapFn}. Doesn't map
+     * in-place, returns a new List.
+     */
+    public static <T, R> List<R> mapList(Collection<T> coll, Function<T, R> mapFn) {
+        return coll.stream().map(mapFn).collect(Collectors.toList());
+    }
 }

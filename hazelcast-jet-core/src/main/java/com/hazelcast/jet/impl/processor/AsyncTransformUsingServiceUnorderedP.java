@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ import static com.hazelcast.jet.impl.util.LoggingUtil.logFine;
  */
 public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends AbstractTransformUsingServiceP<C, S> {
 
-    private final BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn;
+    private final BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn;
     private final Function<? super T, ? extends K> extractKeyFn;
 
     private ManyToOneConcurrentArrayQueue<Tuple3<T, Long, Object>> resultQueue;
@@ -82,6 +82,7 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
     private final SortedMap<Long, Long> watermarkCounts = new TreeMap<>();
     private final Map<T, Integer> inFlightItems = new IdentityHashMap<>();
     private Traverser<Object> currentTraverser = Traversers.empty();
+    @SuppressWarnings("rawtypes")
     private Traverser<Entry> snapshotTraverser;
 
     private Long lastReceivedWm = Long.MIN_VALUE;
@@ -102,14 +103,13 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
     private AsyncTransformUsingServiceUnorderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull C serviceContext,
-            @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull Function<? super T, ? extends K> extractKeyFn
     ) {
         super(serviceFactory, serviceContext);
         this.callAsyncFn = callAsyncFn;
         this.extractKeyFn = extractKeyFn;
     }
-
 
     @Override
     protected void init(@Nonnull Processor.Context context) throws Exception {
@@ -155,7 +155,7 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
 
     @Override
     public boolean tryProcessWatermark(@Nonnull Watermark watermark) {
-        if (getOutbox().hasUnfinishedItem() && !emitFromTraverser(currentTraverser)) {
+        if (!emitFromTraverser(currentTraverser)) {
             return false;
         }
         assert lastEmittedWm <= lastReceivedWm : "lastEmittedWm=" + lastEmittedWm + ", lastReceivedWm=" + lastReceivedWm;
@@ -306,7 +306,7 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
      */
     public static <C, S, T, K, R> ProcessorSupplier supplier(
             @Nonnull ServiceFactory<C, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> callAsyncFn,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn
     ) {
         return supplierWithService(serviceFactory,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import static com.hazelcast.jet.impl.execution.init.ExecutionPlan.createLoggerNa
  */
 public abstract class ProcessorWrapper implements Processor {
 
-    private final Processor wrapped;
+    private Processor wrapped;
 
     protected ProcessorWrapper(Processor wrapped) {
         this.wrapped = wrapped;
@@ -43,6 +43,13 @@ public abstract class ProcessorWrapper implements Processor {
 
     public Processor getWrapped() {
         return wrapped;
+    }
+
+    /**
+     * Can be used only before any other method is called.
+     */
+    public void setWrapped(Processor wrapped) {
+        this.wrapped = wrapped;
     }
 
     @Override

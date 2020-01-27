@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019, Hazelcast, Inc. All Rights Reserved.
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -244,7 +244,9 @@ public class TransformStatefulPTest {
                            jetEvent(3, entry("a", 3L)),
                            jetEvent(4, entry("b", evictSignal)),
                            wm(4),
-                           jetEvent(4, entry("b", 4L))
+                           jetEvent(4, entry("b", 4L)),
+                           jetEvent(Long.MAX_VALUE, entry("a", 99L)),
+                           jetEvent(Long.MAX_VALUE, entry("b", 99L))
                    ));
     }
 
