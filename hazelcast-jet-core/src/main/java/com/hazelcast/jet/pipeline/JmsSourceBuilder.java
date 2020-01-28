@@ -86,8 +86,8 @@ public final class JmsSourceBuilder {
      * If not provided, this function is used:
      * <pre>
      *     connectionFn = factory -> username != null || password != null
-     *                     ? factory.createConnection(usernameLocal, passwordLocal)
-     *                     : factory.createConnection()
+     *         ? factory.createConnection(usernameLocal, passwordLocal)
+     *         : factory.createConnection()
      * </pre>
      * The user name and password set with {@link #connectionParams} are used.
      *
