@@ -74,7 +74,6 @@ import static com.hazelcast.jet.impl.util.Util.distributeObjects;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
 import static com.hazelcast.jet.impl.util.Util.arrayIndexOf;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_CURRENT;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -473,8 +472,10 @@ public final class StreamEventJournalP<E, T> extends AbstractProcessor {
         @Override
         @Nonnull
         public List<Processor> get(int count) {
-            return mappedList(distributeObjects(count, ownedPartitions).values(),
-                    this::processorForPartitions);
+            return distributeObjects(count, ownedPartitions)
+                    .values().stream()
+                    .map(this::processorForPartitions)
+                    .collect(toList());
         }
 
         private Processor processorForPartitions(List<Integer> partitions) {

@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.Util.entry;
@@ -52,7 +53,6 @@ import static com.hazelcast.jet.impl.execution.DoneItem.DONE_ITEM;
 import static com.hazelcast.jet.impl.util.ProgressState.DONE;
 import static com.hazelcast.jet.impl.util.ProgressState.MADE_PROGRESS;
 import static com.hazelcast.jet.impl.util.ProgressState.NO_PROGRESS;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -403,8 +403,9 @@ public class ProcessorTaskletTest_Snapshots {
     }
 
     private List<Object> getSnapshotBufferValues() {
-        return mappedList(snapshotCollector.getBuffer(),
-                e -> (e instanceof Map.Entry) ? deserializeEntryValue((Map.Entry) e) : e);
+        return snapshotCollector.getBuffer().stream()
+                                .map(e -> (e instanceof Map.Entry) ? deserializeEntryValue((Map.Entry) e) : e)
+                                .collect(Collectors.toList());
     }
 
     private Object deserializeEntryValue(Entry e) {

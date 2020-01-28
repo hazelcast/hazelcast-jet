@@ -46,6 +46,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.getJetInstance;
 import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static java.util.stream.Collectors.toList;
 
 public final class ExecutionPlanBuilder {
 
@@ -116,8 +117,10 @@ public final class ExecutionPlanBuilder {
             List<Edge> edges, EdgeConfig defaultEdgeConfig,
             Function<Edge, Integer> oppositeVtxId, boolean isJobDistributed
     ) {
-        return mappedList(edges, edge -> new EdgeDef(edge, edge.getConfig() == null ? defaultEdgeConfig : edge.getConfig(),
-                            oppositeVtxId.apply(edge), isJobDistributed));
+        return edges.stream()
+                    .map(edge -> new EdgeDef(edge, edge.getConfig() == null ? defaultEdgeConfig : edge.getConfig(),
+                            oppositeVtxId.apply(edge), isJobDistributed))
+                    .collect(toList());
     }
 
     private static void initPartitionOwnersAndMembers(NodeEngine nodeEngine,
