@@ -2,21 +2,21 @@
 <rss version="2.0">
     <channel>
         <title>Hazelcast Jet Blog</title>
-        <link>https://hazelcast.github.io/hazelcast-jetblog</link>
+        <link>https://hazelcast.github.io/hazelcast-jet/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
         <lastBuildDate>Tue, 28 Jan 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
             <title>Hazelcast Jet Blog</title>
-            <url>https://hazelcast.github.io/hazelcast-jetimg/logo.png</url>
-            <link>https://hazelcast.github.io/hazelcast-jetblog</link>
+            <url>https://hazelcast.github.io/hazelcast-jet/img/logo.png</url>
+            <link>https://hazelcast.github.io/hazelcast-jet/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
         <item>
             <title><![CDATA[Announcing Our Project Website]]></title>
-            <link>https://hazelcast.github.io/hazelcast-jetblog/2020/01/28/blog-post.html</link>
-            <guid>https://hazelcast.github.io/hazelcast-jetblog/2020/01/28/blog-post.html</guid>
+            <link>https://hazelcast.github.io/hazelcast-jet/blog/2020/01/28/blog-post.html</link>
+            <guid>https://hazelcast.github.io/hazelcast-jet/blog/2020/01/28/blog-post.html</guid>
             <pubDate>Tue, 28 Jan 2020 06:00:00 GMT</pubDate>
             <description><![CDATA[<p>We are excited to tell you that we've just launched a new website for Hazelcast Jet, where we share technical content regarding the project includeing how-to-guides and technical design documents.</p> <p>We'll keep this website frequently updated. Stay tune...</p>]]></description>
         </item>
