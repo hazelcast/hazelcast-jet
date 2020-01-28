@@ -1,0 +1,163 @@
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Kafka Connect Source · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="## Background"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Kafka Connect Source · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://your-docusaurus-test-site.com/"/><meta property="og:description" content="## Background"/><meta property="og:image" content="https://your-docusaurus-test-site.com/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://your-docusaurus-test-site.com/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://your-docusaurus-test-site.com/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://your-docusaurus-test-site.com/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu&amp;display=swap"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo.png" alt="Hazelcast Jet"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class="siteNavGroupActive"><a href="/docs/getting-started" target="_self">Getting Started</a></li><li class=""><a href="/docs/doc4" target="_self">API</a></li><li class=""><a href="/help" target="_self">Help</a></li><li class=""><a href="/blog/" target="_self">Blog</a></li><li class=""><a target="_self"></a></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Technical Design Documents</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Documentation</h3><ul class=""><li class="navListItem"><a class="navItem" href="/docs/getting-started">Getting Started</a></li></ul></div><div class="navGroup"><h3 class="navGroupCategoryTitle">Technical Design Documents</h3><ul class=""><li class="navListItem"><a class="navItem" href="/docs/tdd-unit-testing-support">Pipeline API: Unit Testing Support</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/docs/tdd-kafka-connect">Kafka Connect Source</a></li></ul></div></div></section></div><script>
+            var coll = document.getElementsByClassName('collapsible');
+            var checkActiveCategory = true;
+            for (var i = 0; i < coll.length; i++) {
+              var links = coll[i].nextElementSibling.getElementsByTagName('*');
+              if (checkActiveCategory){
+                for (var j = 0; j < links.length; j++) {
+                  if (links[j].classList.contains('navListItemActive')){
+                    coll[i].nextElementSibling.classList.toggle('hide');
+                    coll[i].childNodes[1].classList.toggle('rotate');
+                    checkActiveCategory = false;
+                    break;
+                  }
+                }
+              }
+
+              coll[i].addEventListener('click', function() {
+                var arrow = this.childNodes[1];
+                arrow.classList.toggle('rotate');
+                var content = this.nextElementSibling;
+                content.classList.toggle('hide');
+              });
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+              createToggler('#navToggler', '#docsNav', 'docsSliderActive');
+              createToggler('#tocToggler', 'body', 'tocActive');
+
+              var headings = document.querySelector('.toc-headings');
+              headings && headings.addEventListener('click', function(event) {
+                var el = event.target;
+                while(el !== headings){
+                  if (el.tagName === 'A') {
+                    document.body.classList.remove('tocActive');
+                    break;
+                  } else{
+                    el = el.parentNode;
+                  }
+                }
+              }, false);
+
+              function createToggler(togglerSelector, targetSelector, className) {
+                var toggler = document.querySelector(togglerSelector);
+                var target = document.querySelector(targetSelector);
+
+                if (!toggler) {
+                  return;
+                }
+
+                toggler.onclick = function(event) {
+                  event.preventDefault();
+
+                  target.classList.toggle(className);
+                };
+              }
+            });
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Kafka Connect Source</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="background"></a><a href="#background" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Background</h2>
+<p>From the <a href="https://docs.confluent.io/current/connect/index.html">Confluent documentation</a>:</p>
+<blockquote>
+<p>Kafka Connect, an open source component of Kafka, is a framework for connecting
+Kafka with external systems such as databases, key-value stores, search indexes,
+and file systems. Using Kafka Connect you can use existing connector
+implementations for common data sources and sinks to move data into and out of
+Kafka.</p>
+</blockquote>
+<p>Take an existing Kafka Connect source and use it as a source for Hazelcast Jet
+without the need to have a Kafka deployment. Hazelcast Jet will drive the
+Kafka Connect connector and bring the data from external systems to the pipeline
+directly.</p>
+<h2><a class="anchor" aria-hidden="true" id="user-interaction"></a><a href="#user-interaction" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>User Interaction</h2>
+<p>Sample Job ingests from RabbitMQ via Kafka Connect RabbitMQ Connector:</p>
+<pre><code class="hljs css language-java">Properties properties = <span class="hljs-keyword">new</span> Properties();
+properties.setProperty(<span class="hljs-string">"name"</span>, <span class="hljs-string">"rabbitmq-source-connector"</span>);
+properties.setProperty(<span class="hljs-string">"connector.class"</span>, <span class="hljs-string">"com.github.jcustenborder.kafka.connect.rabbitmq.RabbitMQSourceConnector"</span>);
+properties.setProperty(<span class="hljs-string">"kafka.topic"</span>, <span class="hljs-string">"messages"</span>);
+properties.setProperty(<span class="hljs-string">"rabbitmq.queue"</span>, <span class="hljs-string">"test-queue"</span>);
+properties.setProperty(<span class="hljs-string">"rabbitmq.host"</span>, <span class="hljs-string">"???"</span>);
+properties.setProperty(<span class="hljs-string">"rabbitmq.port"</span>, <span class="hljs-string">"???"</span>);
+properties.setProperty(<span class="hljs-string">"rabbitmq.username"</span>, <span class="hljs-string">"???"</span>);
+properties.setProperty(<span class="hljs-string">"rabbitmq.password"</span>, <span class="hljs-string">"???"</span>);
+ 
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(KafkaConnectSources.connect(properties))
+        .withoutTimestamps()
+        .map(record -&gt; Values.convertToString(record.valueSchema(), record.value()))
+        .writeTo(Sinks.logger());
+ 
+JobConfig jobConfig = <span class="hljs-keyword">new</span> JobConfig();
+jobConfig.addJarsInZip(<span class="hljs-string">"/path/to/kafka-connect-rabbitmq-0.0.2-SNAPSHOT.zip"</span>);
+ 
+Job job = createJetMember().newJob(pipeline, jobConfig);
+job.join();
+</code></pre>
+<p>Kafka Connect RabbitMQ Connector output in Jet Pipeline:</p>
+<pre><code class="hljs css language-java">INFO: [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5701</span> [jet] [<span class="hljs-number">4.0</span>-SNAPSHOT] Output to ordinal <span class="hljs-number">0</span>:
+{
+   <span class="hljs-string">"consumerTag"</span>:<span class="hljs-string">"amq.ctag-06l2oPQOnzjaGlAocCTzwg"</span>,
+   <span class="hljs-string">"envelope"</span>:{
+      <span class="hljs-string">"deliveryTag"</span>:<span class="hljs-number">100</span>,
+      <span class="hljs-string">"isRedeliver"</span>:<span class="hljs-keyword">false</span>,
+      <span class="hljs-string">"exchange"</span>:<span class="hljs-string">"ex"</span>,
+      <span class="hljs-string">"routingKey"</span>:<span class="hljs-string">"test"</span>
+   },
+   <span class="hljs-string">"basicProperties"</span>:{
+      <span class="hljs-string">"contentType"</span>:<span class="hljs-string">"text/plain"</span>,
+      <span class="hljs-string">"contentEncoding"</span>:<span class="hljs-string">"UTF-8"</span>,
+      <span class="hljs-string">"headers"</span>:{
+ 
+      },
+      <span class="hljs-string">"deliveryMode"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"priority"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"correlationId"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"replyTo"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"expiration"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"messageId"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"timestamp"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"type"</span>:<span class="hljs-keyword">null</span>,
+      <span class="hljs-string">"userId"</span>:<span class="hljs-string">"guest"</span>,
+      <span class="hljs-string">"appId"</span>:<span class="hljs-keyword">null</span>
+   },
+   <span class="hljs-string">"body"</span>:<span class="hljs-string">"Hello World!"</span>
+ 
+}
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="uploading-connectors-to-the-job-classpath"></a><a href="#uploading-connectors-to-the-job-classpath" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Uploading Connectors to the Job Classpath</h2>
+<p>Since we are instantiating external Kafka Connect Connectors on the Jet runtime, we need to be able to access those classes. Connectors are usually shipped as a ZIP files. When using connectors with Kafka, they need to be extracted to a certain path and that path needs to be provided to the Kafka using <code>plugin.path</code> property.</p>
+<p>When used with Jet, we added a convenience to upload the ZIP file to Jet classpath. One can use <code>addJarsInZip</code> method on JobConfig class. The JAR files inside the ZIP file will be added to the classpath of the running job. There is no standard structure inside the ZIP file as long as it contains the JARs for connector implementation and it's dependencies,</p>
+<p>Sample Job Configuration with Connector ZIP Upload:</p>
+<pre><code class="hljs css language-java">JobConfig jobConfig = <span class="hljs-keyword">new</span> JobConfig();
+jobConfig.addJarsInZip(<span class="hljs-string">"/path/to/kafka-connect-rabbitmq-0.0.2-SNAPSHOT.zip"</span>);
+ 
+Job job = createJetMember().newJob(pipeline, jobConfig);
+job.join();
+</code></pre>
+<h2><a class="anchor" aria-hidden="true" id="output-format"></a><a href="#output-format" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Output Format</h2>
+<p>The source will emit items in the <a href="https://docs.confluent.io/current/connect/javadocs/org/apache/kafka/connect/source/SourceRecord.html">SourceRecord</a> format,
+which details can be found below</p>
+<table>
+<thead>
+<tr><th>Field</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>topic</td><td>the name of the topic; may be null</td></tr>
+<tr><td>timestamp</td><td>the timestamp; may be null</td></tr>
+<tr><td>kafkaPartition</td><td>the partition number for the Kafka topic; may be null</td></tr>
+<tr><td>key</td><td>the key; may be null</td></tr>
+<tr><td>keySchema</td><td>the schema for the key; may be null</td></tr>
+<tr><td>value</td><td>the value; may be null</td></tr>
+<tr><td>valueSchema</td><td>the schema for the value; may be null</td></tr>
+<tr><td>headers</td><td>the headers; may be null or empty</td></tr>
+</tbody>
+</table>
+<p>The contents of the key, keySchema, value, and valueSchema fields are changing between each connector because each different tool has its own format for the emitted records.</p>
+<h2><a class="anchor" aria-hidden="true" id="technical-design"></a><a href="#technical-design" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Technical Design</h2>
+<h3><a class="anchor" aria-hidden="true" id="implementation"></a><a href="#implementation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Implementation</h3>
+<p>Hazelcast Jet drives the Kafka Connect connectors using the Kafka Connect API with the SourceBuilder API. Connector classname is read from the provided properties, an instance of it will be created and retrieved one of it's defined tasks which are the actual work horses for Kafka Connect API. Then we are repeatedly calling the <code>poll()</code> method on the task. Each <code>SourceRecord</code> returned from the <code>poll()</code> has been emitted to the downstream. The record's metadata has been collected to a local map which later on plugged into the snapshotting mechanism.</p>
+<h3><a class="anchor" aria-hidden="true" id="fault-tolerance"></a><a href="#fault-tolerance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Fault-Tolerance</h3>
+<p>The Kafka Connect connectors driven by Jet are participating to store their state snapshots (e.g partition offsets + any metadata which they might have to recover/restart) in Jet. This way when the job is restarted they can recover their state and continue to consume from where they left off. Since implementations may vary between Kafka Connect modules, each will have different behaviors when there is a failure. Please refer to the documentation of Kafka Connect connector of your choice for detailed information.</p>
+<h3><a class="anchor" aria-hidden="true" id="testing-criteria"></a><a href="#testing-criteria" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Testing Criteria</h3>
+<p>Integration tests added to codebase ( using testcontainers), which takes a Kafka Connect connector and uses it as a source, then verifies the items are emitted from the source.</p>
+<h2><a class="anchor" aria-hidden="true" id="future-work"></a><a href="#future-work" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Future Work</h2>
+<p>Add support for distributed reading from Kafka, currently we are reading the records from Kafka in a single task.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tdd-unit-testing-support"><span class="arrow-prev">← </span><span>Pipeline API: Unit Testing Support</span></a><a class="docs-next button" href="/docs/doc4"><span>Other Document</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#background">Background</a></li><li><a href="#user-interaction">User Interaction</a></li><li><a href="#uploading-connectors-to-the-job-classpath">Uploading Connectors to the Job Classpath</a></li><li><a href="#output-format">Output Format</a></li><li><a href="#technical-design">Technical Design</a><ul class="toc-headings"><li><a href="#implementation">Implementation</a></li><li><a href="#fault-tolerance">Fault-Tolerance</a></li><li><a href="#testing-criteria">Testing Criteria</a></li></ul></li><li><a href="#future-work">Future Work</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.png" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/en/doc1.html">Getting Started</a><a href="/docs/en/doc2.html">Tutorials</a><a href="/docs/en/doc3.html">Technical Design Documents</a></div><div><h5>Community</h5><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a></div><div><h5>More</h5><a href="/blog">Blog</a><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div></body></html>
