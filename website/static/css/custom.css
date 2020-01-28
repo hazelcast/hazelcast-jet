@@ -1,0 +1,61 @@
+/**
+ * Copyright (c) 2017-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+ 
+/* your custom css */
+body{
+    font-family: 'Ubuntu', sans-serif;
+}
+
+/* header navigation */
+.fixedHeaderContainer {
+    background-color: whitesmoke;
+}
+
+.headerTitleWithLogo {
+    color: #ff5f00;
+}
+
+.navigationSlider .slidingNav ul li a {
+    color: #ff5f00;
+}
+
+.navigationSlider .slidingNav ul li.siteNavGroupActive a,
+.navigationSlider .slidingNav ul li.siteNavItemActive a,
+.navigationSlider .slidingNav ul li a:focus,
+.navigationSlider .slidingNav ul li a:hover {
+    background: #ff5f00;
+    color: white;
+}
+
+.navigationSlider .slidingNav ul li.siteNavItemActive a {
+    background: whitesmoke;
+    color: #ff5f00;
+}
+
+.nav-footer .sitemap .nav-home {
+    height: 34px;
+    opacity: 0.7;
+    padding: 10px;
+    transition: opacity 0.15s ease-in-out;
+    width: 200px;
+}
+
+
+@media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
+}
+
+@media only screen and (min-width: 1024px) {
+}
+
+@media only screen and (max-width: 1023px) {
+}
+
+@media only screen and (min-width: 1400px) {
+}
+
+@media only screen and (min-width: 1500px) {
+}

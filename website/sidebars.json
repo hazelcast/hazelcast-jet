@@ -1,0 +1,13 @@
+{
+  "docs": {
+    "Documentation": [
+      "getting-started"
+    ]
+  },
+  "tdds": {
+    "Technical Design Documents": [
+      "unit-testing-support",
+      "kafka-connect"
+    ]
+  }
+}
