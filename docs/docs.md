@@ -1,6 +1,5 @@
 ---
-id: docs
 title: Documentation
-sidebar_label: Documentation
 ---
 
+You can find some documentation here
