@@ -211,11 +211,12 @@ public class JobRepository {
                         }
                         break;
                     case FILE:
-                        try (
-                                InputStream in = rc.getUrl().openStream();
-                                IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))
+                        Path fnamePath = Paths.get(rc.getUrl().getPath()).getFileName();
+                        assert fnamePath != null : "Resource URL has no path part: " + rc.getUrl().toExternalForm();
+                        try (InputStream in = rc.getUrl().openStream();
+                             IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))
                         ) {
-                            packStreamIntoZip(in, os, rc.getId());
+                            packStreamIntoZip(in, os, fnamePath.toString());
                         }
                         break;
                     case DIRECTORY:
