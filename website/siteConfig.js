@@ -22,7 +22,7 @@ const users = [
 
 const siteConfig = {
     title: 'Hazelcast Jet', // Title for your website.
-    tagline: 'In-Memory Streaming and Fast Batch Processing',
+    tagline: 'Distributed Stream and Batch Processing',
     url: 'https://hazelcast.github.io', // Your website URL
     baseUrl: '/hazelcast-jet/', // Base URL for your project */
     // For github.io type URLs, you would set the url and baseUrl like:
@@ -38,9 +38,9 @@ const siteConfig = {
 
     // For no header links in the top nav bar -> headerLinks: [],
     headerLinks: [
-        {doc: 'getting-started', label: 'Getting Started'},
-        {doc: 'unit-testing-support', label: 'Technical Design Documents'},
-        {page: 'help', label: 'Help'},
+        {doc: 'get-started', label: 'Get Started'},
+        {doc: 'download', label: 'Download'},
+        {doc: 'docs', label: 'Docs'},
         {blog: true, label: 'Blog'},
         {search: true},
     ],

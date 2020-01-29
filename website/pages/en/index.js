@@ -64,7 +64,7 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle tagline={siteConfig.tagline} title={siteConfig.title} />
           <PromoSection>
-            <Button href={docUrl('getting-started.html')}>Getting Started</Button>
+            <Button href={docUrl('get-started')}>Getting Started</Button>
             <Button href="https://docs.hazelcast.org/docs/jet/latest-dev/manual/">Reference Manual</Button>
             <Button href="https://github.com/hazelcast/hazelcast-jet">Github</Button>
           </PromoSection>
@@ -105,32 +105,28 @@ class Index extends React.Component {
       <Block layout="fourColumn">
         {[
           {
-            content: 'To achieve high throughputs with consistently low latency,' +
-                ' Hazelcast Jet uses a combination of distributed Directed Acyclic Graphs (DAG)' +
-                ' computation model, in-memory, data locality, partition mapping affinity, SP/SC Queues and Green Threads.\n' +
-                '\n',
-            title: 'Engineered for Performance',
+            title: 'Simple',
+            content: 'Hazelcast Jet is simple to set up. The nodes automatically discover each other to form a cluster. ' +
+                'You can do the same locally, even on the same machine (your laptop, for example). This is great for quick testing, ' +
+                'fast deployment, and easier ongoing maintenance.',
           },
           {
-            content: 'The performance of Hazelcast Jet Core can be boosted by using ' +
-            'embedded Hazelcast In-Memory Data Grid (IMDG). Hazelcast IMDG provides elastic ' +
-            'in-memory storage and is a great tool for publishing the results of the computation,' +
-            ' or as a cache, for data sets to be used during the computation. Very low end-to-end ' +
-            'latencies at extreme scale can be achieved this way.\n',
-            title: 'Low Latency End-to-End',
+            title: 'Runs everywhere',
+                content: 'Hazelcast Jet is delivered as a single JAR without dependencies that requires Java 8 to run with full ' +
+          'functionality. It’s lightweight to run on small devices, and it’s cloud-native with Docker images and' +
+          ' Kubernetes support. It can be embedded into an application for simpler packaging or deployed as a standalone cluster.'
           },
           {
-            content: 'Hazelcast Jet is built on a low latency streaming core.' +
-            ' Rather than accumulating the records into micro-batches and then processing,' +
-            ' Hazelcast Jet processes the incoming records as soon as possible to accelerate performance.\n',
-            title: 'Streaming Core',
+            title: 'Consistent low-latency',
+                content: 'Hazelcast Jet uses a combination of a directed acyclic graph (DAG) computation model,' +
+          ' in-memory processing, data locality, partition mapping affinity, SP/SC queues, and green threads to' +
+          ' achieve high throughput with predictable latency.'
           },
           {
-            content: 'Hazelcast Jet allows you to classify records in a data stream based on' +
-            ' the time stamp embedded in each record — the event time. Event time processing is a' +
-            ' natural requirement as users are mostly interested in handling the data based on the' +
-            ' time that the event originated (the event time). Event time processing is a first-class citizen in Jet.',
-            title: 'Event Time Processing',
+            title: 'Resilient, elastic data processing',
+              content: 'With Hazelcast Jet, it\'s easy to build fault-tolerant and elastic data processing pipelines. ' +
+          'Jet keeps processing data without loss even when a node fails, and you can add more nodes that immediately ' +
+          'start sharing the computation load.'
           }
 
         ]}

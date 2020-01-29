@@ -3,28 +3,33 @@
   "localized-strings": {
     "next": "Next",
     "previous": "Previous",
-    "tagline": "In-Memory Streaming and Fast Batch Processing",
+    "tagline": "Distributed Stream and Batch Processing",
     "docs": {
-      "getting-started": {
-        "title": "Getting Started",
-        "sidebar_label": "Getting Started"
-      },
-      "kafka-connect": {
+      "design-documents/kafka-connect": {
         "title": "Kafka Connect Source"
       },
-      "unit-testing-support": {
+      "design-documents/unit-testing-support": {
         "title": "Pipeline API: Unit Testing Support"
+      },
+      "docs": {
+        "title": "Documentation"
+      },
+      "download": {
+        "title": "Download Hazelcast Jet"
+      },
+      "get-started": {
+        "title": "Get Started"
       }
     },
     "links": {
-      "Getting Started": "Getting Started",
-      "Technical Design Documents": "Technical Design Documents",
-      "Help": "Help",
+      "Get Started": "Get Started",
+      "Download": "Download",
+      "Docs": "Docs",
       "Blog": "Blog"
     },
     "categories": {
       "Documentation": "Documentation",
-      "Technical Design Documents": "Technical Design Documents"
+      "Download": "Download"
     }
   },
   "pages-strings": {

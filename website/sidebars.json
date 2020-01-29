@@ -1,13 +1,14 @@
 {
   "docs": {
     "Documentation": [
-      "getting-started"
+      "docs",
+      "design-documents/kafka-connect",
+      "design-documents/unit-testing-support"
     ]
   },
-  "tdds": {
-    "Technical Design Documents": [
-      "unit-testing-support",
-      "kafka-connect"
+  "download": {
+    "Download": [
+      "download"
     ]
   }
 }
