@@ -32,7 +32,7 @@
 
     <modules>
         <module>hazelcast-jet-avro</module>
-        <module>hazelcast-jet-spring</module>
+        <module>hazelcast-jet-python</module>
     </modules>
 
     <properties>
