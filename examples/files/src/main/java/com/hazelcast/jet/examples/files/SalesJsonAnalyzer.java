@@ -28,10 +28,13 @@ import com.hazelcast.jet.pipeline.Sources;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -51,27 +54,7 @@ public class SalesJsonAnalyzer {
 
         BatchSource<SalesRecord> source = Sources.filesBuilder(sourceDir)
             .glob("*.json")
-            .build(path -> {
-                Gson gson = new Gson();
-                JsonReader reader = new JsonReader(Files.newBufferedReader(path, UTF_8));
-                reader.beginArray();
-                Iterator<SalesRecord> iterator = new Iterator<SalesRecord>() {
-                    @Override
-                    public boolean hasNext() {
-                        try {
-                            return reader.hasNext();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public SalesRecord next() {
-                        return gson.fromJson(reader, SalesRecord.class);
-                    }
-                };
-                return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.NONNULL), false);
-            });
+            .build(path -> readJsonArray(path, SalesRecord.class));
         p.readFrom(source)
          .filter(record -> record.getPrice() < 30)
          .groupingKey(SalesRecord::getPaymentType)
@@ -79,6 +62,34 @@ public class SalesJsonAnalyzer {
          .writeTo(Sinks.logger());
 
         return p;
+    }
+
+    /**
+     * Read a file denoted by the given {@code filePath} that contains a single
+     * JSON array of objects of type {@code type}. Returns the file contents as
+     * a {@code Stream}.
+     */
+    private static <T> Stream<T> readJsonArray(Path filePath, Type type) throws IOException {
+        Gson gson = new Gson();
+        JsonReader reader = new JsonReader(Files.newBufferedReader(filePath, UTF_8));
+        reader.beginArray();
+        Iterator<T> iterator = new Iterator<T>() {
+            @Override
+            public boolean hasNext() {
+                try {
+                    return reader.hasNext();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            @Override
+            public T next() {
+                return gson.fromJson(reader, type);
+            }
+        };
+
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.NONNULL), false);
     }
 
     public static void main(String[] args) {
