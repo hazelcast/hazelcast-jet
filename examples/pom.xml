@@ -25,7 +25,7 @@
     <description>Hazelcast Jet Examples</description>
 
     <groupId>com.hazelcast.jet.examples</groupId>
-    <artifactId>examples</artifactId>
+    <artifactId>hazelcast-jet-examples</artifactId>
 
     <parent>
         <groupId>com.hazelcast.jet</groupId>
