@@ -26,9 +26,15 @@ import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.Sources;
 
-import java.io.FileReader;
+import java.io.IOException;
 import java.io.Serializable;
-import java.util.stream.Stream;
+import java.nio.file.Files;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Demonstrates the usage of the file {@link Sources#filesBuilder sources}
@@ -44,12 +50,28 @@ public class SalesJsonAnalyzer {
         Pipeline p = Pipeline.create();
 
         BatchSource<SalesRecord> source = Sources.filesBuilder(sourceDir)
-                                                 .glob("*.json")
-                                                 .build(path -> {
-                                                         Gson gson = new Gson();
-                                                         JsonReader reader = new JsonReader(new FileReader(path.toFile()));
-                                                         return Stream.of(gson.fromJson(reader, SalesRecord[].class));
-                                                     });
+            .glob("*.json")
+            .build(path -> {
+                Gson gson = new Gson();
+                JsonReader reader = new JsonReader(Files.newBufferedReader(path, UTF_8));
+                reader.beginArray();
+                Iterator<SalesRecord> iterator = new Iterator<SalesRecord>() {
+                    @Override
+                    public boolean hasNext() {
+                        try {
+                            return reader.hasNext();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    @Override
+                    public SalesRecord next() {
+                        return gson.fromJson(reader, SalesRecord.class);
+                    }
+                };
+                return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.NONNULL), false);
+            });
         p.readFrom(source)
          .filter(record -> record.getPrice() < 30)
          .groupingKey(SalesRecord::getPaymentType)
