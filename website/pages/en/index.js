@@ -106,29 +106,36 @@ class Index extends React.Component {
         {[
           {
             title: 'Simple',
+            image: `${baseUrl}img/undraw_relaxation.svg`,
+            imageAlign: 'top',
             content: 'Hazelcast Jet is simple to set up. The nodes automatically discover each other to form a cluster. ' +
-                'You can do the same locally, even on the same machine (your laptop, for example). This is great for quick testing, ' +
-                'fast deployment, and easier ongoing maintenance.',
+            'You can do the same locally, even on the same machine (your laptop, for example). This is great for quick testing, ' +
+            'fast deployment, and easier ongoing maintenance.',
           },
           {
             title: 'Runs everywhere',
-                content: 'Hazelcast Jet is delivered as a single JAR without dependencies that requires Java 8 to run with full ' +
+            image: `${baseUrl}img/undraw_superhero.svg`,
+            imageAlign: 'top',
+            content: 'Hazelcast Jet is delivered as a single JAR without dependencies that requires Java 8 to run with full ' +
           'functionality. It’s lightweight to run on small devices, and it’s cloud-native with Docker images and' +
           ' Kubernetes support. It can be embedded into an application for simpler packaging or deployed as a standalone cluster.'
           },
           {
-            title: 'Consistent low-latency',
-                content: 'Hazelcast Jet uses a combination of a directed acyclic graph (DAG) computation model,' +
+            title: 'Low latency',
+            image: `${baseUrl}img/undraw_finish_line.svg`,
+            imageAlign: 'top',
+              content: 'Hazelcast Jet uses a combination of a directed acyclic graph (DAG) computation model,' +
           ' in-memory processing, data locality, partition mapping affinity, SP/SC queues, and green threads to' +
           ' achieve high throughput with predictable latency.'
           },
           {
-            title: 'Resilient, elastic data processing',
+            title: 'Resilient and Elastic',
+                image: `${baseUrl}img/undraw_working_out.svg`,
+              imageAlign: 'top',
               content: 'With Hazelcast Jet, it\'s easy to build fault-tolerant and elastic data processing pipelines. ' +
           'Jet keeps processing data without loss even when a node fails, and you can add more nodes that immediately ' +
           'start sharing the computation load.'
           }
-
         ]}
       </Block>
     );
