@@ -21,6 +21,7 @@ import com.google.gson.stream.JsonReader;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
+import com.hazelcast.jet.function.RunnableEx;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -89,7 +90,8 @@ public class SalesJsonAnalyzer {
             }
         };
 
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.NONNULL), false);
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, Spliterator.NONNULL), false)
+                .onClose((RunnableEx) reader::close);
     }
 
     public static void main(String[] args) {
