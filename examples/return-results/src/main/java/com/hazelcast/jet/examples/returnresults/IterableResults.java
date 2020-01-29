@@ -44,7 +44,7 @@ import static java.util.Comparator.comparingLong;
  * Demonstrates the usage of observable results on client side via an
  * {@link Iterator} (applicable only to batch jobs).
  * <p>
- * The concrete job we are observing the results of is a simple Word Count.
+ * The concrete job we are observing the results of is a simple word count.
  * It inserts the text of The Complete Works of William Shakespeare into a
  * Hazelcast IMap, then lets Jet count the words in it.
  * <p>

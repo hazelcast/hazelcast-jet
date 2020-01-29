@@ -64,12 +64,12 @@ public class BasicObservable {
         jet.newJob(p);
     }
 
-    private static void printResults(List<Long> top10numbers) {
-        System.out.println("Top " + TOP + " random numbers observed since last print: ");
-        for (int i = 0; i < top10numbers.size(); i++) {
-            System.out.println(String.format("%d. %,d", i + 1, top10numbers.get(i)));
+    private static void printResults(List<Long> topNumbers) {
+        StringBuilder sb = new StringBuilder(String.format("\nTop %d random numbers in the latest window: ", TOP));
+        for (int i = 0; i < topNumbers.size(); i++) {
+            sb.append(String.format("\n\t%d. %,d", i + 1, topNumbers.get(i)));
         }
-        System.out.println();
+        System.out.println(sb.toString());
     }
 
 }

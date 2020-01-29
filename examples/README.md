@@ -103,7 +103,7 @@ samples using the Core API.
   - print the results on the console
 
 ## Return Results to the Caller
-### [Basic Observables](return-results/src/main/java/com/hazelcast/jet/examples/returnresults/Observables.java)
+### [Basic Observables](return-results/src/main/java/com/hazelcast/jet/examples/returnresults/BasicObservable.java)
   - obtain an `Observable`
   - incorporate it in a streaming pipeline by wrapping it in a `Sink` 
   - register an `Observer` on it
