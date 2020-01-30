@@ -28,7 +28,6 @@
             <useProjectArtifact>false</useProjectArtifact>
             <includes>
                 <include>com.hazelcast.jet:hazelcast-jet</include>
-                <include>com.hazelcast.jet:hazelcast-jet-spring</include>
                 <include>log4j:log4j</include>
                 <include>org.slf4j:*</include>
             </includes>
@@ -39,19 +38,13 @@
             <useProjectArtifact>false</useProjectArtifact>
             <includes>
                 <include>com.hazelcast.jet:hazelcast-jet-avro</include>
+                <include>com.hazelcast.jet:hazelcast-jet-spring</include>
                 <include>com.hazelcast.jet:hazelcast-jet-python</include>
-            </includes>
-            <outputDirectory>plugins</outputDirectory>
-            <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}.${artifact.extension}</outputFileNameMapping>
-        </dependencySet>
-        <dependencySet>
-            <useProjectArtifact>false</useProjectArtifact>
-            <includes>
                 <include>com.hazelcast.jet:hazelcast-jet-hadoop</include>
                 <include>com.hazelcast.jet:hazelcast-jet-kafka</include>
                 <include>com.hazelcast.jet:hazelcast-jet-s3</include>
             </includes>
-            <outputDirectory>connectors</outputDirectory>
+            <outputDirectory>opt</outputDirectory>
             <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}.${artifact.extension}</outputFileNameMapping>
         </dependencySet>
         <dependencySet>
