@@ -29,14 +29,13 @@
     <version>4.0-SNAPSHOT</version>
 
     <modules>
+        <module>examples</module>
+        <module>extensions</module>
         <module>hazelcast-jet-all</module>
         <module>hazelcast-jet-distribution</module>
         <module>hazelcast-jet-core</module>
-        <module>hazelcast-jet-reference-manual</module>
         <module>hazelcast-jet-spring</module>
-        <module>examples</module>
-        <module>connectors</module>
-        <module>plugins</module>
+        <module>reference-manual</module>
     </modules>
 
     <repositories>

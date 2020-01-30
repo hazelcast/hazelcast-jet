@@ -215,6 +215,7 @@ Source code in this repository is covered by one of two licenses:
 
 The default license throughout the repository is Apache License 2.0 unless the  
 header specifies another license. Please see the [Licensing section](https://docs.hazelcast.org/docs/jet/latest-dev/manual/#licensing) for more information.
+
 ## Copyright
 
 Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
