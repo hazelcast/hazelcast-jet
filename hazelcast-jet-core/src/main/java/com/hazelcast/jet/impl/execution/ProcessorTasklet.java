@@ -118,7 +118,7 @@ public class ProcessorTasklet implements Tasklet {
     private InboundEdgeStream currInstream;
     private ProcessorState state;
 
-    // pending snapshot IDs are the ID of the next expected snapshot ID
+    // pending snapshot IDs are the IDs of the next expected snapshot IDs for phase 1 and 2
     private long pendingSnapshotId1;
     private long pendingSnapshotId2;
 
