@@ -62,6 +62,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestProcessors.MapWatermarksToString.mapWatermarksToString;
+import static com.hazelcast.jet.impl.connector.JmsTestUtil.consumeMessages;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.pipeline.WindowDefinition.tumbling;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -430,7 +431,7 @@ public abstract class JmsSourceIntegrationTestBase extends SimpleTestInClusterSu
         // Then
         // if the transaction was rolled back, we'll see the messages. If not, they will be blocked
         // (we configured a long transaction timeout for Artemis)
-        List<Object> messages = JmsTestUtil.consumeMessages(getConnectionFactory().get(), destinationName, true, MESSAGE_COUNT);
+        List<Object> messages = consumeMessages(getConnectionFactory().get(), destinationName, true, MESSAGE_COUNT);
         assertEqualsEventually(messages::size, MESSAGE_COUNT);
     }
 
