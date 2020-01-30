@@ -44,17 +44,18 @@ import static javax.transaction.xa.XAResource.TMSUCCESS;
 import static javax.transaction.xa.XAResource.XA_RDONLY;
 
 /**
- * Base class for Java Transaction API-based sinks.
+ * Base class for sinks writing to resources using the X/Open XA Transactions,
+ * mapped by Java Transaction API (JTA).
  */
-public abstract class JtaSinkProcessorBase implements Processor {
+public abstract class XaSinkProcessorBase implements Processor {
     private static final int COMMIT_RETRY_DELAY_MS = 100;
 
-    protected TransactionPoolSnapshotUtility<JtaTransactionId, JtaTransaction> snapshotUtility;
+    protected TransactionPoolSnapshotUtility<XaTransactionId, XaTransaction> snapshotUtility;
     private ProcessingGuarantee externalGuarantee;
     private Context context;
     private XAResource xaResource;
 
-    protected JtaSinkProcessorBase(ProcessingGuarantee externalGuarantee) {
+    protected XaSinkProcessorBase(ProcessingGuarantee externalGuarantee) {
         this.externalGuarantee = externalGuarantee;
     }
 
@@ -68,8 +69,8 @@ public abstract class JtaSinkProcessorBase implements Processor {
                 false,
                 externalGuarantee,
                 2,
-                (procIndex, txnIndex) -> new JtaTransactionId(context, procIndex, txnIndex),
-                JtaTransaction::new,
+                (procIndex, txnIndex) -> new XaTransactionId(context, procIndex, txnIndex),
+                XaTransaction::new,
                 this::recoverTransaction,
                 this::abortTransaction);
     }
@@ -194,17 +195,17 @@ public abstract class JtaSinkProcessorBase implements Processor {
         return e;
     }
 
-    private final class JtaTransaction implements TransactionalResource<JtaTransactionId> {
-        private final JtaTransactionId xid;
+    private final class XaTransaction implements TransactionalResource<XaTransactionId> {
+        private final XaTransactionId xid;
         private boolean ignoreCommit;
         private boolean isAssociated;
 
-        private JtaTransaction(JtaTransactionId xid) {
+        private XaTransaction(XaTransactionId xid) {
             this.xid = xid;
         }
 
         @Override
-        public JtaTransactionId id() {
+        public XaTransactionId id() {
             return xid;
         }
 
@@ -263,7 +264,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
         }
     }
 
-    private static final class JtaTransactionId extends SerializableXID implements TransactionId {
+    private static final class XaTransactionId extends SerializableXID implements TransactionId {
 
         /**
          * Number generated out of thin air.
@@ -278,10 +279,10 @@ public abstract class JtaSinkProcessorBase implements Processor {
         private static final int GTRID_LENGTH = OFFSET_TRANSACTION_INDEX + Bits.INT_SIZE_IN_BYTES;
 
         @SuppressWarnings("unused") // needed for deserialization
-        private JtaTransactionId() {
+        private XaTransactionId() {
         }
 
-        private JtaTransactionId(Processor.Context context, int processorIndex, int transactionIndex) {
+        private XaTransactionId(Processor.Context context, int processorIndex, int transactionIndex) {
             super(JET_FORMAT_ID,
                     createGtrid(context.jobId(),
                             stringHash(context.jobConfig().getName()),
@@ -318,7 +319,7 @@ public abstract class JtaSinkProcessorBase implements Processor {
 
         @Override
         public String toString() {
-            return JtaTransactionId.class.getSimpleName() + "{"
+            return XaTransactionId.class.getSimpleName() + "{"
                     + "jobId=" + idToString(Bits.readLong(getGlobalTransactionId(), OFFSET_JOB_ID, true)) + ", "
                     + "jobNameHash=" + Bits.readLong(getGlobalTransactionId(), OFFSET_JOB_NAME_HASH, true) + ", "
                     + "vertexIdHash=" + Bits.readLong(getGlobalTransactionId(), OFFSET_VERTEX_ID_HASH, true) + ", "

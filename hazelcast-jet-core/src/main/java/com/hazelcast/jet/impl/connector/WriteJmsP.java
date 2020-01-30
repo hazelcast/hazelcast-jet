@@ -47,7 +47,7 @@ import static java.util.stream.Collectors.toList;
  * Private API. Access via {@link SinkProcessors#writeJmsQueueP} or {@link
  * SinkProcessors#writeJmsTopicP}.
  */
-public final class WriteJmsP<T> extends JtaSinkProcessorBase {
+public final class WriteJmsP<T> extends XaSinkProcessorBase {
 
     private static final int PREFERRED_LOCAL_PARALLELISM = 1;
     private final Connection connection;

@@ -52,7 +52,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Use {@link SinkProcessors#writeJdbcP}.
  */
-public final class WriteJdbcP<T> extends JtaSinkProcessorBase {
+public final class WriteJdbcP<T> extends XaSinkProcessorBase {
 
     private static final IdleStrategy IDLER =
             new BackoffIdleStrategy(0, 0, SECONDS.toNanos(1), SECONDS.toNanos(3));
