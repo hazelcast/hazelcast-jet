@@ -79,14 +79,8 @@ public interface Inbox extends Iterable<Object> {
      * @param target the collection to drain this object's items into
      * @return the number of elements actually drained
      */
-    @SuppressWarnings("unchecked")
-    default <E> int drainTo(@Nonnull Collection<E> target) {
-        for (Object o : this) {
-            target.add((E) o);
-        }
-        int drained = size();
-        clear();
-        return drained;
+    default <E> int drainTo(Collection<E> target) {
+        return drainTo(target, Integer.MAX_VALUE);
     }
 
     /**

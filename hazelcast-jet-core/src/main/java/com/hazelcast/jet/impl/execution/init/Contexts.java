@@ -17,9 +17,11 @@
 package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
+import com.hazelcast.jet.config.ResourceConfig;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -33,12 +35,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.hazelcast.jet.Util.idToString;
+import static com.hazelcast.jet.config.ResourceType.DIRECTORY;
+import static com.hazelcast.jet.config.ResourceType.FILE;
 import static com.hazelcast.jet.impl.JobRepository.fileKeyName;
 import static com.hazelcast.jet.impl.JobRepository.jobResourcesMapName;
 import static com.hazelcast.jet.impl.util.IOUtil.unzip;
+import static java.lang.Math.min;
 
 public final class Contexts {
 
@@ -168,13 +174,33 @@ public final class Contexts {
         @Nonnull @Override
         public File attachedDirectory(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
+            ResourceConfig resourceConfig = jobConfig().getResourceConfigs().get(id);
+            if (resourceConfig == null) {
+                throw new JetException(String.format("No resource is attached with ID '%s'", id));
+            }
+            if (resourceConfig.getResourceType() != DIRECTORY) {
+                throw new JetException(String.format(
+                   "The resource with ID '%s' is not a directory, its type is %s", id, resourceConfig.getResourceType()
+                ));
+            }
             return tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(id));
         }
 
         @Nonnull @Override
         public File attachedFile(@Nonnull String id) {
             Preconditions.checkHasText(id, "id cannot be null or empty");
-            return new File(attachedDirectory(id), id);
+            ResourceConfig resourceConfig = jobConfig().getResourceConfigs().get(id);
+            if (resourceConfig == null) {
+                throw new JetException(String.format("No resource is attached with ID '%s'", id));
+            }
+            if (resourceConfig.getResourceType() != FILE) {
+                throw new JetException(String.format(
+                   "The resource with ID '%s' is not a file, its type is %s", id, resourceConfig.getResourceType()
+                ));
+            }
+            Path fnamePath = Paths.get(resourceConfig.getUrl().getPath()).getFileName();
+            assert fnamePath != null : "Resource URL" + resourceConfig.getUrl() + " has no path part";
+            return new File(tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(id)), fnamePath.toString());
         }
 
         public ConcurrentHashMap<String, File> tempDirectories() {
@@ -184,13 +210,20 @@ public final class Contexts {
         private File extractFileToDisk(String id) {
             IMap<String, byte[]> map = jetInstance().getMap(jobResourcesMapName(jobId()));
             try (IMapInputStream inputStream = new IMapInputStream(map, fileKeyName(id))) {
-                String prefix = "jet-" + jetInstance().getName() + "-" + idToString(jobId()) + "-" + id;
-                Path directory = Files.createTempDirectory(prefix);
+                Path directory = Files.createTempDirectory(tempDirPrefix(
+                        jetInstance().getName(), idToString(jobId()), id));
                 unzip(inputStream, directory);
                 return directory.toFile();
             } catch (IOException e) {
                 throw ExceptionUtil.rethrow(e);
             }
+        }
+
+        @SuppressWarnings("checkstyle:magicnumber")
+        private static String tempDirPrefix(String jetInstanceName, String jobId, String resourceId) {
+            return "jet-" + jetInstanceName
+                    + "-" + jobId
+                    + "-" + resourceId.substring(0, min(32, resourceId.length())).replaceAll("[^\\w.\\-$]", "_");
         }
     }
 

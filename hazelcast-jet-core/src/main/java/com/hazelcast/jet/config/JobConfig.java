@@ -18,6 +18,7 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.config.MetricsConfig;
 import com.hazelcast.internal.util.Preconditions;
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -32,13 +33,14 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -216,19 +218,21 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the supplied classes to the list of resources that will be
-     * available on the job's classpath while it's executing in the Jet
-     * cluster.
+     * Adds the given classes to the Jet job's classpath. They will be
+     * accessible to all the code attached to the underlying pipeline or DAG,
+     * but not to any other code. (An important example is the {@code IMap} data
+     * source, which can instantiate only the classes from the Jet instance's
+     * classpath.)
      * <p>
      * See also {@link #addJar} and {@link #addClasspathResource}.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
+    @SuppressWarnings("rawtypes")
     public JobConfig addClass(@Nonnull Class... classes) {
         checkNotNull(classes, "Classes can not be null");
-
-        for (Class clazz : classes) {
+        for (Class<?> clazz : classes) {
             ResourceConfig cfg = new ResourceConfig(clazz);
             resourceConfigs.put(cfg.getId(), cfg);
         }
@@ -236,122 +240,141 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the JAR identified by the supplied URL to the list of JARs that
-     * will be a part of the job's classpath while it's executing in the Jet
-     * cluster.
+     * Adds a JAR whose contents will be accessible to all the code attached to
+     * the underlying pipeline or DAG, but not to any other code. An important
+     * example is the {@code IMap} data source, which can instantiate only the
+     * classes from the Jet instance's classpath.)
+     * <p>
+     * This variant identifies the JAR with a URL, which must contain at least
+     * one path segment. The last path segment ("filename") will be used as the
+     * resource ID, so two JARs with the same filename will be in conflict.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     public JobConfig addJar(@Nonnull URL url) {
-        return add(url, toFilename(url), ResourceType.JAR);
+        return add(url, filenamePart(url), ResourceType.JAR);
     }
 
     /**
-     * Adds the supplied JAR file to the list of JARs that will be a part of
-     * the job's classpath while it's executing in the Jet cluster. The JAR
-     * filename will be used as the ID of the resource.
+     * Adds a JAR whose contents will be accessible to all the code attached to
+     * the underlying pipeline or DAG, but not to any other code. An important
+     * example is the {@code IMap} data source, which can instantiate only the
+     * classes from the Jet instance's classpath.)
+     * <p>
+     * This variant identifies the JAR with a {@code File}. The filename part
+     * of the path will be used as the resource ID, so two JARs with the same
+     * filename will be in conflict.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     public JobConfig addJar(@Nonnull File file) {
-        try {
-            return addJar(file.toURI().toURL());
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        ensureIsFile(file);
+        return addJar(fileToUrl(file));
     }
 
     /**
-     * Adds the JAR identified by the supplied pathname to the list of JARs
-     * that will be a part of the job's classpath while it's executing in the
-     * Jet cluster. The JAR filename will be used as the ID of the resource.
+     * Adds a JAR whose contents will be accessible to all the code attached to
+     * the underlying pipeline or DAG, but not to any other code. An important
+     * example is the {@code IMap} data source, which can instantiate only the
+     * classes from the Jet instance's classpath.)
+     * <p>
+     * This variant identifies the JAR with a path string. The filename part
+     * will be used as the resource ID, so two JARs with the same filename will
+     * be in conflict.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     public JobConfig addJar(@Nonnull String path) {
-        try {
-            File file = new File(path);
-            return addJar(file.toURI().toURL());
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        return addJar(new File(path));
     }
 
     /**
-     * Adds the ZIP file identified by the supplied URL to the list of archives
-     * that will be a part of the job's classpath while it's executing in the
-     * Jet cluster.
-     *
-     * Note: Only JAR files inside the ZIP file will be added to the
-     * job classpath.
+     * Adds a ZIP file with JARs whose contents will be accessible to all the
+     * code attached to the underlying pipeline or DAG, but not to any other
+     * code. (An important example is the {@code IMap} data source, which can
+     * instantiate only the classes from the Jet instance's classpath.)
+     * <p>
+     * This variant identifies the ZIP file with a URL, which must contain at
+     * least one path segment. The last path segment ("filename") will be used
+     * as the resource ID, so two ZIPs with the same filename will be in
+     * conflict.
+     * <p>
+     * The ZIP file should contain only JARs. Any other files will be ignored.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig addJarsInZip(@Nonnull URL url) {
-        return add(url, toFilename(url), ResourceType.JARS_IN_ZIP);
+        return add(url, filenamePart(url), ResourceType.JARS_IN_ZIP);
     }
 
     /**
-     * Adds the supplied ZIP file to the list of archives that will be a part of
-     * the job's classpath while it's executing in the Jet cluster.
-     *
-     * Note: Only JAR files inside the ZIP file will be added to the
-     * job classpath.
+     * Adds a ZIP file with JARs whose contents will be accessible to all the
+     * code attached to the underlying pipeline or DAG, but not to any other
+     * code. (An important example is the {@code IMap} data source, which can
+     * instantiate only the classes from the Jet instance's classpath.)
+     * <p>
+     * This variant identifies the ZIP file with a {@code File}. The filename
+     * part will be used as the resource ID, so two ZIPs with the same filename
+     * will be in conflict.
+     * <p>
+     * The ZIP file should contain only JARs. Any other files will be ignored.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig addJarsInZip(@Nonnull File file) {
-        try {
-            return addJarsInZip(file.toURI().toURL());
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        ensureIsFile(file);
+        return addJarsInZip(fileToUrl(file));
     }
 
     /**
-     * Adds the ZIP identified by the supplied pathname to the list of archives
-     * that will be a part of the job's classpath while it's executing in the
-     * Jet cluster.
-     *
-     * Note: Only JAR files inside the ZIP file will be added to the
-     * job classpath.
+     * Adds a ZIP file with JARs whose contents will be accessible to all the
+     * code attached to the underlying pipeline or DAG, but not to any other
+     * code. (An important example is the {@code IMap} data source, which can
+     * instantiate only the classes from the Jet instance's classpath.)
+     * <p>
+     * This variant identifies the ZIP file with a path string. The filename
+     * part will be used as the resource ID, so two ZIPs with the same filename
+     * will be in conflict.
+     * <p>
+     * The ZIP file should contain only JARs. Any other files will be ignored.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig addJarsInZip(@Nonnull String path) {
-        try {
-            File file = new File(path);
-            return addJarsInZip(file.toURI().toURL());
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        return addJarsInZip(new File(path));
     }
 
     /**
-     * Adds the resource identified by the supplied URL to the list of
-     * resources that will be on the job's classpath while it's executing in
-     * the Jet cluster. The resource's filename will be used as its ID.
+     * Adds a resource that will be available on the Jet job's classpath. All
+     * the code attached to the underlying pipeline or DAG will have access to
+     * it.
+     * <p>
+     * This variant identifies the resource with a URL, which must contain at
+     * least one path segment. The last path segment ("filename") will be used
+     * as the resource ID, so two resources with the same filename will be in
+     * conflict.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     public JobConfig addClasspathResource(@Nonnull URL url) {
-        return addClasspathResource(url, toFilename(url));
+        return addClasspathResource(url, filenamePart(url));
     }
 
     /**
-     * Adds the resource identified by the supplied URL to the list of
-     * resources that will be on the job's classpath while it's executing in
-     * the Jet cluster. The resource will be registered under the supplied ID.
+     * Adds a resource that will be available on the Jet job's classpath. All
+     * the code attached to the underlying pipeline or DAG will have access to
+     * it. The supplied {@code id} becomes the path under which the resource is
+     * available from the class loader.
      *
      * @return {@code this} instance for fluent API
      */
@@ -361,41 +384,40 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the supplied file to the list of resources that will be on the
-     * job's classpath while it's executing in the Jet cluster. The resource's
-     * filename will be used as its ID.
+     * Adds a file that will be available as a resource on the Jet job's
+     * classpath. All the code attached to the underlying pipeline or DAG
+     * will have access to it. The file will reside in the root of the
+     * classpath, under its own filename. This means that two files with the
+     * same filename will be in conflict.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     public JobConfig addClasspathResource(@Nonnull File file) {
-        try {
-            return addClasspathResource(file.toURI().toURL(), file.getName());
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        ensureIsFile(file);
+        return addClasspathResource(fileToUrl(file), file.getName());
     }
 
     /**
-     * Adds the supplied file to the list of resources that will be on the
-     * job's classpath while it's executing in the Jet cluster. The resource
-     * will be registered under the supplied ID.
+     * Adds a file that will be available as a resource on the Jet job's
+     * classpath. All the code attached to the underlying pipeline or DAG
+     * will have access to it. The supplied {@code id} becomes the path under
+     * which the resource is available from the class loader.
      *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
     public JobConfig addClasspathResource(@Nonnull File file, @Nonnull String id) {
-        try {
-            return add(file.toURI().toURL(), id, ResourceType.CLASSPATH_RESOURCE);
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        ensureIsFile(file);
+        return add(fileToUrl(file), id, ResourceType.CLASSPATH_RESOURCE);
     }
 
     /**
-     * Adds the resource identified by the supplied pathname to the list of
-     * resources that will be on the job's classpath while it's executing in
-     * the Jet cluster. The resource's filename will be used as its ID.
+     * Adds a file that will be available as a resource on the Jet job's
+     * classpath. All the code attached to the underlying pipeline or DAG
+     * will have access to it. It will reside in the root of the classpath,
+     * under its own filename. This means that two files with the same filename
+     * will be in conflict.
      *
      * @return {@code this} instance for fluent API
      */
@@ -405,9 +427,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the resource identified by the supplied pathname to the list of
-     * resources that will be on the job's classpath while it's executing in
-     * the Jet cluster. The resource will be registered under the supplied ID.
+     * Adds a file that will be available as a resource on the Jet job's
+     * classpath. All the code attached to the underlying pipeline or DAG
+     * will have access to it. The supplied {@code id} becomes the path
+     * under which the resource is available from the class loader.
      *
      * @return {@code this} instance for fluent API
      */
@@ -417,94 +440,100 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the file identified by the supplied URL to the list of
-     * resources that will be available to the job while it's executing in
-     * the Jet cluster. The resource's filename will be used as its ID.
+     * Adds the file identified by the supplied URL as a resource that will be
+     * available to the job while it's executing in the Jet cluster. The
+     * resource's filename (the last path segment in the URL) becomes its ID,
+     * so two resources with the same filename will be in conflict.
      * <p>
      * To retrieve the file from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedFile(String) ctx.attachedFile(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. The file will
+     * have the same name as the one supplied here, but it will be in a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig attachFile(@Nonnull URL url) {
-        return attachFile(url, toFilename(url));
+        return attachFile(url, filenamePart(url));
     }
 
     /**
-     * Adds the file identified by the supplied URL to the list of
-     * resources that will be available to the job while it's executing in
-     * the Jet cluster. The file will be registered under the supplied ID.
+     * Adds the file identified by the supplied URL to the list of resources
+     * that will be available to the job while it's executing in the Jet
+     * cluster. The file will be registered under the supplied ID.
      * <p>
      * To retrieve the file from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedFile(String) ctx.attachedFile(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. The file will
+     * have the same name as the one supplied here, but it will be in a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig attachFile(@Nonnull URL url, @Nonnull String id) {
+        ensureHasPath(url);
         return add(url, id, ResourceType.FILE);
     }
 
     /**
-     * Adds the supplied file to the list of resources that will be available to
-     * the job while it's executing in the Jet cluster. The filename will be
-     * used as its ID.
+     * Adds the supplied file to the list of resources that will be available
+     * to the job while it's executing in the Jet cluster. The filename becomes
+     * the ID of the file, so two files with the same name will be in conflict.
      * <p>
      * To retrieve the file from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedFile(String) ctx.attachedFile(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. The file will
+     * have the same name as the one supplied here, but it will be in a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig attachFile(@Nonnull File file) {
-        try {
-            return attachFile(file.toURI().toURL(), file.getName());
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        return attachFile(file, file.getName());
     }
 
     /**
      * Adds the supplied file to the list of files that will be available to
-     * the job while it's executing in the Jet cluster.
-     * The file will be registered under the supplied ID.
+     * the job while it's executing in the Jet cluster. The file will be
+     * registered under the supplied ID.
      * <p>
      * To retrieve the file from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedFile(String) ctx.attachedFile(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. The file will
+     * have the same name as the one supplied here, but it will be in a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig attachFile(@Nonnull File file, @Nonnull String id) {
-        try {
-            return add(file.toURI().toURL(), id, ResourceType.FILE);
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
-        }
+        ensureIsFile(file);
+        return attachFile(fileToUrl(file), id);
     }
 
     /**
      * Adds the file identified by the supplied pathname to the list of
      * files that will be available to the job while it's executing in
-     * the Jet cluster. The filename will be used as its ID.
+     * the Jet cluster. The filename becomes the ID of the file, so two
+     * files with the same name will be in conflict.
      * <p>
      * To retrieve the file from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedFile(String) ctx.attachedFile(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. The file will
+     * have the same name as the one supplied here, but it will be in a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
@@ -522,7 +551,9 @@ public class JobConfig implements IdentifiedDataSerializable {
      * To retrieve the file from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedFile(String) ctx.attachedFile(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. The file will
+     * have the same name as the one supplied here, but it will be in a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
@@ -533,15 +564,60 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the directory identified by the supplied pathname to the list of
-     * files that will be available to the job while it's executing in the Jet
-     * cluster. The directory name will be used as its ID. Hidden files in the
-     * directory will be ignored.
+     * Adds the directory identified by the supplied URL to the list of
+     * directories that will be available to the job while it's executing in
+     * the Jet cluster. Directory name (the last path segment in the URL)
+     * becomes its ID, so two directories with the same name will be in
+     * conflict. {@linkplain Files#isHidden Hidden files} are ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. It will be a
+     * temporary directory on the Jet server.
+     *
+     * @return {@code this} instance for fluent API
+     * @since 4.0
+     */
+    @Nonnull
+    public JobConfig attachDirectory(@Nonnull URL url) {
+        return attachDirectory(url, urlToFile(url).getName());
+    }
+
+    /**
+     * Adds the directory identified by the supplied URL to the list of
+     * directories that will be available to the job while it's executing in
+     * the Jet cluster. The directory will be registered under the supplied ID.
+     * {@linkplain Files#isHidden Hidden files} are ignored.
+     * <p>
+     * To retrieve the directory from within the Jet job, call {@link
+     * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
+     * where {@code ctx} is the {@code ProcessorSupplier} context available,
+     * for example, to {@link ServiceFactory#createContextFn()}. It will be a
+     * temporary directory on the Jet server.
+     *
+     * @return {@code this} instance for fluent API
+     * @since 4.0
+     */
+    @Nonnull
+    public JobConfig attachDirectory(@Nonnull URL url, @Nonnull String id) {
+        ensureHasPath(url);
+        ensureIsDirectory(urlToFile(url));
+        return add(url, id, ResourceType.DIRECTORY);
+    }
+
+    /**
+     * Adds the directory identified by the supplied pathname to the list of
+     * files that will be available to the job while it's executing in the Jet
+     * cluster. The directory name (the last path segment) becomes its ID, so two
+     * directories with the same name will be in conflict.
+     * {@linkplain Files#isHidden Hidden files} are ignored.
+     * <p>
+     * To retrieve the directory from within the Jet job, call {@link
+     * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
+     * where {@code ctx} is the {@code ProcessorSupplier} context available,
+     * for example, to {@link ServiceFactory#createContextFn()}. It will be a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
@@ -554,13 +630,14 @@ public class JobConfig implements IdentifiedDataSerializable {
     /**
      * Adds the directory identified by the supplied pathname to the list of
      * files that will be available to the job while it's executing in the Jet
-     * cluster. The directory will be registered under the supplied ID. Hidden
-     * files in the directory will be ignored.
+     * cluster. The directory will be registered under the supplied ID.
+     * {@linkplain Files#isHidden Hidden files} are ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. It will be a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
@@ -573,12 +650,15 @@ public class JobConfig implements IdentifiedDataSerializable {
     /**
      * Adds the supplied directory to the list of files that will be available
      * to the job while it's executing in the Jet cluster. The directory name
-     * will be used as its ID. Hidden files in the directory will be ignored.
+     * (the last path segment) becomes its ID, so two directories with the same
+     * name will be in conflict. {@linkplain Files#isHidden Hidden files} are
+     * ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. It will be a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
@@ -591,62 +671,62 @@ public class JobConfig implements IdentifiedDataSerializable {
     /**
      * Adds the supplied directory to the list of files that will be available
      * to the job while it's executing in the Jet cluster. The directory will
-     * be registered under the supplied ID. Hidden files in the directory will
-     * be ignored.
+     * be registered under the supplied ID. {@linkplain Files#isHidden Hidden
+     * files} are ignored.
      * <p>
      * To retrieve the directory from within the Jet job, call {@link
      * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
      * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
+     * for example, to {@link ServiceFactory#createContextFn()}. It will be a
+     * temporary directory on the Jet server.
      *
      * @return {@code this} instance for fluent API
      * @since 4.0
      */
     @Nonnull
     public JobConfig attachDirectory(@Nonnull File file, @Nonnull String id) {
-        try {
-            return add(file.toURI().toURL(), id, ResourceType.DIRECTORY);
-        } catch (MalformedURLException e) {
-            throw rethrow(e);
+        return attachDirectory(fileToUrl(file), id);
+    }
+
+    @Nonnull
+    private static String filenamePart(@Nonnull URL url) {
+        String filename = new File(url.getPath()).getName();
+        Preconditions.checkHasText(filename, "URL has no path: " + url);
+        return filename;
+    }
+
+    private static void ensureHasPath(@Nonnull URL url) {
+        if (url.getPath().isEmpty()) {
+            throw new IllegalArgumentException("URL has no path part: " + url.toExternalForm());
         }
     }
 
-    /**
-     * Adds the directory identified by the supplied URL to the list of files
-     * that will be available to the job while it's executing in the Jet
-     * cluster. The directory name will be used as its ID. Hidden files in the
-     * directory will be ignored.
-     * <p>
-     * To retrieve the directory from within the Jet job, call {@link
-     * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
-     * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
-     *
-     * @return {@code this} instance for fluent API
-     * @since 4.0
-     */
-    @Nonnull
-    public JobConfig attachDirectory(@Nonnull URL url) {
-        return attachDirectory(url, toFilename(url));
+    private static void ensureIsFile(@Nonnull File file) {
+        if (!file.isFile() || !file.canRead()) {
+            throw new JetException("Not an existing, readable file: " + file);
+        }
     }
 
-    /**
-     * Adds the directory identified by the supplied URL to the list of files
-     * that will be available to the job while it's executing in the Jet
-     * cluster. The directory will be registered under the supplied ID. Hidden
-     * files in the directory will be ignored.
-     * <p>
-     * To retrieve the directory from within the Jet job, call {@link
-     * ProcessorSupplier.Context#attachedDirectory(String) ctx.attachedDirectory(id)},
-     * where {@code ctx} is the {@code ProcessorSupplier} context available,
-     * for example, to {@link ServiceFactory#createContextFn()}.
-     *
-     * @return {@code this} instance for fluent API
-     * @since 4.0
-     */
-    @Nonnull
-    public JobConfig attachDirectory(@Nonnull URL url, @Nonnull String id) {
-        return add(url, id, ResourceType.DIRECTORY);
+    private static void ensureIsDirectory(@Nonnull File path) {
+        if (!path.isDirectory() || !path.canRead()) {
+            throw new JetException("Not an existing, readable directory: " + path);
+        }
+    }
+
+    private static URL fileToUrl(@Nonnull File file) {
+        try {
+            return file.toURI().toURL();
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid file: " + file, e);
+        }
+    }
+
+    private static File urlToFile(@Nonnull URL url) {
+        try {
+            return new File(url.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid directory URL: " + url.toExternalForm(), e);
+        }
     }
 
     /**
@@ -659,16 +739,12 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     private JobConfig add(@Nonnull URL url, @Nonnull String id, @Nonnull ResourceType resourceType) {
+        Preconditions.checkHasText(id, "Resource ID is blank");
         ResourceConfig cfg = new ResourceConfig(url, id, resourceType);
         if (resourceConfigs.putIfAbsent(id, cfg) != null) {
             throw new IllegalArgumentException("Resource with id:" + id + " already exists");
         }
         return this;
-    }
-
-    private static String toFilename(URL url) {
-        String urlFile = url.getPath();
-        return urlFile.substring(urlFile.lastIndexOf('/') + 1);
     }
 
     /**

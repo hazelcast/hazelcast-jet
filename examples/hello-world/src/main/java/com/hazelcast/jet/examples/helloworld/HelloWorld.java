@@ -43,14 +43,15 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class HelloWorld {
 
+    public static final int TOP = 10;
     private static final String RESULTS = "top10_results";
 
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
-        p.readFrom(TestSources.itemStream(10, (ts, seq) -> nextRandomNumber()))
+        p.readFrom(TestSources.itemStream(100, (ts, seq) -> nextRandomNumber()))
                 .withIngestionTimestamps()
                 .window(WindowDefinition.tumbling(1000))
-                .aggregate(AggregateOperations.topN(10, ComparatorEx.comparingLong(l -> l)))
+                .aggregate(AggregateOperations.topN(TOP, ComparatorEx.comparingLong(l -> l)))
                 .map(WindowResult::result)
                 .writeTo(Sinks.observable(RESULTS));
         return p;
@@ -74,11 +75,12 @@ public class HelloWorld {
         jet.newJobIfAbsent(p, config);
     }
 
-    private static void printResults(List<Long> top10numbers) {
-        System.out.println("Top 10 random numbers observed so far in the stream are: ");
-        for (int i = 0; i < top10numbers.size(); i++) {
-            System.out.println(String.format("%d. %,d", i + 1, top10numbers.get(i)));
+    private static void printResults(List<Long> topNumbers) {
+        StringBuilder sb = new StringBuilder(String.format("\nTop %d random numbers in the latest window: ", TOP));
+        for (int i = 0; i < topNumbers.size(); i++) {
+            sb.append(String.format("\n\t%d. %,d", i + 1, topNumbers.get(i)));
         }
+        System.out.println(sb.toString());
     }
 
 }
