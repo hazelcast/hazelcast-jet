@@ -21,7 +21,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <packaging>pom</packaging>
-    <name>hazelcast-jet-examples</name>
+    <name>examples</name>
     <description>Hazelcast Jet Examples</description>
 
     <groupId>com.hazelcast.jet.examples</groupId>
@@ -49,6 +49,7 @@
         <module>job-management</module>
         <module>kafka</module>
         <module>pattern-matching</module>
+        <module>return-results</module>
         <module>rolling-aggregation</module>
         <module>session-windows</module>
         <module>sockets</module>

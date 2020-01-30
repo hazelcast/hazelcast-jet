@@ -860,6 +860,7 @@ public final class Processors {
      *
      * @param serviceFactory the service factory
      * @param mapFn a stateless mapping function
+     * @param <C> type of context object
      * @param <S> type of service object
      * @param <T> type of received item
      * @param <R> type of emitted item
@@ -891,8 +892,11 @@ public final class Processors {
      * @param serviceFactory the service factory
      * @param extractKeyFn a function to extract snapshot keys
      * @param mapAsyncFn a stateless mapping function
+     * @param <C> type of context object
      * @param <S> type of service object
      * @param <T> type of received item
+     * @param <K> type of key
+     * @param <R> type of result item
      */
     @Nonnull
     public static <C, S, T, K, R> ProcessorSupplier mapUsingServiceAsyncP(
@@ -916,6 +920,7 @@ public final class Processors {
      *
      * @param serviceFactory the service factory
      * @param filterFn a stateless predicate to test each received item against
+     * @param <C> type of context object
      * @param <S> type of service object
      * @param <T> type of received item
      */
@@ -946,8 +951,10 @@ public final class Processors {
      * @param serviceFactory the service factory
      * @param extractKeyFn a function to extract snapshot keys
      * @param filterAsyncFn a stateless predicate to test each received item against
+     * @param <C> type of context object
      * @param <S> type of service object
      * @param <T> type of received item
+     * @param <K> type of key
      */
     @Nonnull
     public static <C, S, T, K> ProcessorSupplier filterUsingServiceAsyncP(
@@ -974,9 +981,10 @@ public final class Processors {
      * @param serviceFactory the service factory
      * @param flatMapFn a stateless function that maps the received item to a traverser over
      *                  the output items
+     * @param <C> type of context object
      * @param <S> type of service object
-     * @param <T> received item type
-     * @param <R> emitted item type
+     * @param <T> type of input item
+     * @param <R> type of result item
      */
     @Nonnull
     public static <C, S, T, R> ProcessorSupplier flatMapUsingServiceP(
@@ -988,7 +996,7 @@ public final class Processors {
     }
 
     /**
-     * Asynchronous version of {@link #flatMapUsingServiceP}: the {@code
+     * Asynchronous version of {@link #flatMapUsingServiceP}: {@code
      * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
      * instead of just a {@code Traverser<R>}.
      * <p>
@@ -1006,8 +1014,11 @@ public final class Processors {
      * @param extractKeyFn a function to extract snapshot keys
      * @param flatMapAsyncFn  a stateless function that maps the received item
      *      to a future returning a traverser over the output items
+     * @param <C> type of context object
      * @param <S> type of service object
-     * @param <T> type of received item
+     * @param <T> type of input item
+     * @param <K> type of key
+     * @param <R> type of result item
      */
     @Nonnull
     public static <C, S, T, K, R> ProcessorSupplier flatMapUsingServiceAsyncP(

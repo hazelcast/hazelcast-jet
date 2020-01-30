@@ -106,12 +106,23 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-spring</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-hadoop</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet-kafka</artifactId>
+            <version>${project.version}</version>
+            <classifier>jar-with-dependencies</classifier>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.jet</groupId>
+            <artifactId>hazelcast-jet-python</artifactId>
             <version>${project.version}</version>
             <classifier>jar-with-dependencies</classifier>
         </dependency>
