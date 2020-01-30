@@ -37,7 +37,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.NONE;
 import static com.hazelcast.jet.core.BroadcastKey.broadcastKey;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.singletonList;
 
 /**
@@ -247,7 +247,7 @@ public class TransactionPoolSnapshotUtility<TXN_ID extends TransactionId, RES ex
                 throw new IllegalStateException("transactions already released");
             }
             rollbackOtherTransactions();
-            transactions = mappedList(transactionIds, createTxnFn());
+            transactions = toList(transactionIds, createTxnFn());
         }
     }
 

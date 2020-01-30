@@ -101,7 +101,7 @@ import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.rethrow;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.jet.impl.util.LoggingUtil.logFinest;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -580,7 +580,7 @@ public class MasterJobContext {
                     logger.severe(mc.jobIdString() + ": some CompleteExecutionOperation invocations failed, execution " +
                             "resources might leak: " + responses);
                 } else {
-                    setJobMetrics(mappedList(responses, e -> (RawJobMetrics) e.getValue()));
+                    setJobMetrics(toList(responses, e -> (RawJobMetrics) e.getValue()));
                 }
                 onCompleteExecutionCompleted(error);
             }, null, true);
@@ -882,7 +882,7 @@ public class MasterJobContext {
         if (firstThrowable != null) {
             clientFuture.completeExceptionally(firstThrowable);
         } else {
-            clientFuture.complete(mappedList(metrics, e -> (RawJobMetrics) e.getValue()));
+            clientFuture.complete(toList(metrics, e -> (RawJobMetrics) e.getValue()));
         }
     }
 

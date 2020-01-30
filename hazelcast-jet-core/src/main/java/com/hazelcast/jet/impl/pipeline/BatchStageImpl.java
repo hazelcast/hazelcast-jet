@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
@@ -130,7 +130,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
         return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
-                (s, t) -> mapAsyncFn.apply(s, t).thenApply(list -> mappedList(list, Traversers::singleton)));
+                (s, t) -> mapAsyncFn.apply(s, t).thenApply(list -> toList(list, Traversers::singleton)));
     }
 
     @Nonnull @Override

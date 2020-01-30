@@ -33,7 +33,7 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.Edge.from;
 import static com.hazelcast.jet.impl.pipeline.Planner.tailList;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class HashJoinTransform<T0, R> extends AbstractTransform {
     @Nonnull
@@ -96,7 +96,7 @@ public class HashJoinTransform<T0, R> extends AbstractTransform {
     @SuppressWarnings("unchecked")
     public void addToDag(Planner p) {
         PlannerVertex primary = p.xform2vertex.get(this.upstream().get(0));
-        List keyFns = mappedList(this.clauses, JoinClause::leftKeyFn);
+        List keyFns = toList(this.clauses, JoinClause::leftKeyFn);
 
         List<Tag> tags = this.tags;
         BiFunctionEx mapToOutputBiFn = this.mapToOutputBiFn;

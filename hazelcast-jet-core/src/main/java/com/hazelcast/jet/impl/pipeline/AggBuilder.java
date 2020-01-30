@@ -32,7 +32,7 @@ import java.util.List;
 import static com.hazelcast.jet.datamodel.Tag.tag;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ADAPT_TO_JET_EVENT;
 import static com.hazelcast.jet.impl.pipeline.ComputeStageImplBase.ensureJetEvents;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class AggBuilder {
     @Nullable
@@ -68,7 +68,7 @@ public class AggBuilder {
             @Nonnull CreateOutStageFn<OUT, OUT_STAGE> createOutStageFn
     ) {
         AggregateOperation adaptedAggrOp = wDef != null ? ADAPT_TO_JET_EVENT.adaptAggregateOperation(aggrOp) : aggrOp;
-        List<Transform> upstreamTransforms = mappedList(upstreamStages, s -> ((AbstractStage) s).transform);
+        List<Transform> upstreamTransforms = toList(upstreamStages, s -> ((AbstractStage) s).transform);
         final Transform transform;
         if (wDef != null) {
             transform = new WindowAggregateTransform<>(upstreamTransforms, wDef, adaptedAggrOp);

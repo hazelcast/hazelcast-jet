@@ -41,7 +41,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
-import static com.hazelcast.jet.impl.util.Util.mappedList;
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements StreamStage<T> {
 
@@ -130,7 +130,7 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     ) {
         return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
                 (s, t) -> mapAsyncBatchedFn.apply(s, t).thenApply(list ->
-                        mappedList(list, Traversers::singleton)));
+                        toList(list, Traversers::singleton)));
     }
 
     @Nonnull @Override
