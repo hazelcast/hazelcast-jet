@@ -142,7 +142,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentJarWithFile_then_throwsException() throws Exception {
+    public void when_addNonexistentJarWithFile_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
         File file = new File(path);
@@ -188,7 +188,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentJarWithPath_then_throwsException() throws Exception {
+    public void when_addNonexistentJarWithPath_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
 
@@ -276,7 +276,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentZipOfJarsWithPath_then_throwsException() throws Exception {
+    public void when_addNonexistentZipOfJarsWithPath_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
 
@@ -320,7 +320,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentZipOfJarsWithFile_then_throwsException() throws Exception {
+    public void when_addNonexistentZipOfJarsWithFile_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
         File file = new File(path);
@@ -366,7 +366,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentResourceWithPath_then_throwsException() throws Exception {
+    public void when_addNonexistentResourceWithPath_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
 
@@ -396,7 +396,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentResourceWithPathAndId_then_throwsException() throws Exception {
+    public void when_addNonexistentResourceWithPathAndId_then_throwsException() {
         // Given
         String id = "exist";
         String path = "/i/do/not/" + id;
@@ -441,7 +441,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentResourceWithFile_then_throwsException() throws Exception {
+    public void when_addNonexistentResourceWithFile_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
         File file = new File(path);
@@ -471,7 +471,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_addNonexistentResourceWithFileAndId_then_throwsException() throws Exception {
+    public void when_addNonexistentResourceWithFileAndId_then_throwsException() {
         // Given
         String id = "exist";
         String path = "/i/do/not/" + id;
@@ -651,7 +651,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentFileWithPath_then_throwsException() throws Exception {
+    public void when_attachNonexistentFileWithPath_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
 
@@ -681,7 +681,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentFileWithPathAndId_then_throwsException() throws Exception {
+    public void when_attachNonexistentFileWithPathAndId_then_throwsException() {
         // Given
         String id = "exist";
         String path = "/i/do/not/" + id;
@@ -726,7 +726,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentFileWithFile_then_throwsException() throws Exception {
+    public void when_attachNonexistentFileWithFile_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
         File file = new File(path);
@@ -756,7 +756,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentFileWithFileAndId_then_throwsException() throws Exception {
+    public void when_attachNonexistentFileWithFileAndId_then_throwsException() {
         // Given
         String id = "exist";
         String path = "/i/do/not/" + id;
@@ -864,7 +864,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachDuplicateDirectoryWithPath_then_throwsException() throws Exception {
+    public void when_attachDuplicateDirectoryWithPath_then_throwsException() {
         // Given
         String path1 = createDirectory("path/to/dir").toString();
         String path2 = createDirectory("path/to/another/dir").toString();
@@ -878,7 +878,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentDirectoryWithPath_then_throwsException() throws Exception {
+    public void when_attachNonexistentDirectoryWithPath_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
 
@@ -908,7 +908,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentDirectoryWithPathAndId_then_throwsException() throws Exception {
+    public void when_attachNonexistentDirectoryWithPathAndId_then_throwsException() {
         // Given
         String id = "exist";
         String path = "/i/do/not/" + id;
@@ -938,7 +938,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachDuplicateDirectoryWithFile_then_throwsException() throws Exception {
+    public void when_attachDuplicateDirectoryWithFile_then_throwsException() {
         // Given
         String resourceId = "dir";
         File dir1 = createDirectory("path/to/" + resourceId);
@@ -953,7 +953,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentDirectoryWithFile_then_throwsException() throws Exception {
+    public void when_attachNonexistentDirectoryWithFile_then_throwsException() {
         // Given
         String path = "/i/do/not/exist";
         File file = new File(path);
@@ -983,7 +983,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachNonexistentDirectoryWithFileAndId_then_throwsException() throws Exception {
+    public void when_attachNonexistentDirectoryWithFileAndId_then_throwsException() {
         // Given
         String id = "exist";
         String path = "/i/do/not/" + id;
@@ -998,7 +998,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @Test
-    public void when_attachDuplicateDirectoryWithFileAndId_then_throwsException() throws Exception {
+    public void when_attachDuplicateDirectoryWithFileAndId_then_throwsException() {
         // Given
         String id = "dirName";
         File file = createDirectory("path/to/dirName");
