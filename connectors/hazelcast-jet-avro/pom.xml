@@ -29,7 +29,7 @@
 
     <parent>
         <groupId>com.hazelcast.jet</groupId>
-        <artifactId>plugins</artifactId>
+        <artifactId>connectors</artifactId>
         <version>4.0-SNAPSHOT</version>
     </parent>
 
