@@ -37,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
+import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -61,15 +62,16 @@ final class PythonService {
 
     PythonService(PythonServiceContext serviceContext) {
         logger = serviceContext.logger();
+        server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger);
         try {
-            server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger);
             int serverPort = server.start();
             chan = NettyChannelBuilder.forAddress("127.0.0.1", serverPort)
                                       .usePlaintext()
                                       .build();
             JetToPythonStub client = JetToPythonGrpc.newStub(chan);
             sink = client.streamingCall(new OutputMessageObserver());
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            server.stop();
             throw new JetException("PythonService initialization failed", e);
         }
     }
@@ -146,11 +148,10 @@ final class PythonService {
 
     @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
     void destroy() {
+        // Stopping the Python subprocess is essential, lower the interrupted flag
+        boolean interrupted = Thread.interrupted();
         try {
             sink.onCompleted();
-            // Stopping the Python subprocess is essential, lower the interrupted flag
-            //noinspection ResultOfMethodCallIgnored
-            Thread.interrupted();
             if (!completionLatch.await(1, SECONDS)) {
                 logger.info("gRPC call has not completed on time");
             }
@@ -163,6 +164,10 @@ final class PythonService {
             server.stop();
         } catch (Exception e) {
             throw new JetException("PythonService.destroy() failed: " + e, e);
+        } finally {
+            if (interrupted) {
+                currentThread().interrupt();
+            }
         }
     }
 }

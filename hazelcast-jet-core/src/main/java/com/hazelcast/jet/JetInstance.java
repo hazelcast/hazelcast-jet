@@ -43,10 +43,8 @@ import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
 
 import static com.hazelcast.jet.impl.JobRepository.exportedSnapshotMapName;
 import static java.util.stream.Collectors.toList;
