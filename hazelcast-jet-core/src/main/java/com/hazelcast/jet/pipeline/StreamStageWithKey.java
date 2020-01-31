@@ -328,12 +328,6 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    <S> StreamStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    @Nonnull @Override
     <S, R> StreamStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn

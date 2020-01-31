@@ -109,12 +109,6 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <S> BatchStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    @Nonnull @Override
     <S, R> BatchStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn

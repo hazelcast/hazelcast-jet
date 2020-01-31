@@ -206,20 +206,6 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
     }
 
     @Test
-    public void test_pipelineApi_filterNotPartitioned() {
-        Pipeline p = Pipeline.create();
-        p.readFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
-         .withoutTimestamps()
-         .filterUsingServiceAsync(serviceFactory,
-                 transformNotPartitionedFn(i -> i % 2 == 0))
-         .setLocalParallelism(2)
-         .writeTo(Sinks.list(sinkList));
-
-        instance().newJob(p, jobConfig);
-        assertResultEventually(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty(), NUM_ITEMS);
-    }
-
-    @Test
     public void test_pipelineApi_flatMapPartitioned() {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
@@ -247,21 +233,6 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
 
         instance().newJob(p, jobConfig);
         assertResultEventually(i -> Stream.of(i + "-1"), NUM_ITEMS);
-    }
-
-    @Test
-    public void test_pipelineApi_filterPartitioned() {
-        Pipeline p = Pipeline.create();
-        p.readFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
-         .withoutTimestamps()
-         .groupingKey(i -> i % 10)
-         .filterUsingServiceAsync(serviceFactory,
-                 transformPartitionedFn(i -> i % 2 == 0))
-         .setLocalParallelism(2)
-         .writeTo(Sinks.list(sinkList));
-
-        instance().newJob(p, jobConfig);
-        assertResultEventually(i -> i % 2 == 0 ? Stream.of(i + "") : Stream.empty(), NUM_ITEMS);
     }
 
     private <R> BiFunctionEx<ExecutorService, Integer, CompletableFuture<R>> transformNotPartitionedFn(

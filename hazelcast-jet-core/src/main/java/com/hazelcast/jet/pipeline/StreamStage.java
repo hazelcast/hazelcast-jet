@@ -127,12 +127,6 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <S> StreamStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    @Nonnull @Override
     <S, R> StreamStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn

@@ -936,37 +936,6 @@ public final class Processors {
     }
 
     /**
-     * Asynchronous version of {@link #mapUsingServiceP}: the {@code
-     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
-     * just a {@code boolean}.
-     * <p>
-     * The function can return a null future, but the future must not return
-     * null {@code Boolean}.
-     * <p>
-     * The {@code extractKeyFn} is used to extract keys under which to save
-     * in-flight items to the snapshot. If the input to this processor is over
-     * a partitioned edge, you should use the same key. If it's a round-robin
-     * edge, you can use any key, for example {@code Object::hashCode}.
-     *
-     * @param serviceFactory the service factory
-     * @param extractKeyFn a function to extract snapshot keys
-     * @param filterAsyncFn a stateless predicate to test each received item against
-     * @param <C> type of context object
-     * @param <S> type of service object
-     * @param <T> type of received item
-     * @param <K> type of key
-     */
-    @Nonnull
-    public static <C, S, T, K> ProcessorSupplier filterUsingServiceAsyncP(
-            @Nonnull ServiceFactory<C, S> serviceFactory,
-            @Nonnull FunctionEx<T, K> extractKeyFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return flatMapUsingServiceAsyncP(serviceFactory, extractKeyFn,
-                (s, t) -> filterAsyncFn.apply(s, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
-
-    /**
      * Returns a supplier of processors for a vertex that applies the provided
      * item-to-traverser mapping function to each received item and emits all
      * the items from the resulting traverser. The traverser must be

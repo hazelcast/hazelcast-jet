@@ -320,37 +320,6 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Asynchronous version of {@link #filterUsingService}: the {@code
-     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
-     * just a {@code boolean}.
-     * <p>
-     * The function must not return a null future.
-     * <p>
-     * Sample usage:
-     * <pre>{@code
-     * items.groupingKey(Item::getDetailId)
-     *      .filterUsingServiceAsync(
-     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry()),
-     *          (reg, key, item) -> reg.fetchDetailAsync(key)
-     *                                 .thenApply(detail -> detail.contains("blade"))
-     *      );
-     * }</pre>
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     *
-     * @param <S> type of service object
-     * @param serviceFactory the service factory
-     * @param filterAsyncFn a stateless filtering function
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S> GeneralStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    /**
      * Attaches a flat-mapping stage which applies the supplied function to
      * each input item independently and emits all the items from the
      * {@link Traverser} it returns as the output items. The traverser must

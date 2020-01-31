@@ -424,46 +424,6 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Asynchronous version of {@link #filterUsingService}: the {@code
-     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
-     * just a {@code boolean}.
-     * <p>
-     * The function must not return a null future.
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     * <p>
-     * This sample takes a stream of photos, uses an image classifier to reason
-     * about their contents, and keeps only photos of cats:
-     * <pre>{@code
-     * photos.filterUsingServiceAsync(
-     *     ServiceFactory.withCreateFn(jet -> new ImageClassifier(jet)),
-     *     (classifier, photo) -> reg.classifyAsync(photo)
-     *                               .thenApply(it -> it.equals("cat"))
-     * )
-     * }</pre>
-     *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
-     * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the service object maintains doesn't participate in Jet's
-     * fault tolerance protocol. If the state is local, it will be lost after a
-     * job restart; if it is saved to some durable storage, the state of that
-     * storage won't be rewound to the last checkpoint, so you'll perform
-     * duplicate updates.
-     *
-     * @param serviceFactory the service factory
-     * @param filterAsyncFn a stateless filtering function
-     * @param <S> type of service object
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S> GeneralStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    /**
      * Attaches a flat-mapping stage which applies the supplied function to
      * each input item independently and emits all items from the {@link
      * Traverser} it returns as the output items. The traverser must be

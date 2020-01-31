@@ -30,7 +30,6 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -41,7 +40,6 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
-import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
@@ -168,23 +166,6 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
                 .input(asList(1, 2, 1, 2))
                 .disableSnapshots()
                 .expectOutput(asList(1, 2, 2));
-    }
-
-    @Test
-    public void filterUsingServiceAsync() {
-        TestSupport
-                .verifyProcessor(filterUsingServiceAsyncP(
-                        nonSharedService(pctx -> new AtomicInteger(), ctx -> assertEquals(4, ctx.get())),
-                        t -> "k",
-                        (AtomicInteger context, Integer item) -> CompletableFuture.supplyAsync(() -> {
-                            context.incrementAndGet();
-                            return item > 1;
-                        })))
-                .jetInstance(instance())
-                .input(asList(1, 2, 1, 2))
-                .disableSnapshots()
-                .disableProgressAssertion()
-                .expectOutput(asList(2, 2));
     }
 
     @Test

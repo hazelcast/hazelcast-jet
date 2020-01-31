@@ -117,15 +117,6 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
     }
 
     @Nonnull @Override
-    public <S> StreamStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return attachTransformUsingServiceAsync("filter", serviceFactory,
-                (s, k, t) -> filterAsyncFn.apply(s, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
-
-    @Nonnull @Override
     public <S, R> StreamStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn

@@ -142,15 +142,6 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <S> BatchStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return attachFlatMapUsingServiceAsync("filter", serviceFactory,
-                (s, t) -> filterAsyncFn.apply(s, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
-
-    @Nonnull @Override
     public <S, R> BatchStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn

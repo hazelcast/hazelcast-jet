@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -64,9 +63,9 @@ import static java.util.Collections.emptyMap;
  *      Finally, Jet calls {@link #destroyContextFn()} with the context object.
  * </ol>
  * If you don't need the member-wide context object, you can call the simpler
- * methods {@link ServiceFactories#nonSharedService(SupplierEx, ConsumerEx)
+ * methods {@link ServiceFactories#nonSharedService(FunctionEx, ConsumerEx)}
  * ServiceFactories.processorLocalService} or {@link
- * ServiceFactories#sharedService(SupplierEx, ConsumerEx)
+ * ServiceFactories#sharedService(FunctionEx, ConsumerEx)}
  * ServiceFactories.memberLocalService}.
  * <p>
  * Here's a list of pipeline transforms that require a {@code ServiceFactory}:
@@ -75,14 +74,12 @@ import static java.util.Collections.emptyMap;
  *     <li>{@link GeneralStage#filterUsingService}
  *     <li>{@link GeneralStage#flatMapUsingService}
  *     <li>{@link GeneralStage#mapUsingServiceAsync}
- *     <li>{@link GeneralStage#filterUsingServiceAsync}
  *     <li>{@link GeneralStage#flatMapUsingServiceAsync}
  *     <li>{@link GeneralStage#mapUsingServiceAsyncBatched}
  *     <li>{@link GeneralStageWithKey#mapUsingService}
  *     <li>{@link GeneralStageWithKey#filterUsingService}
  *     <li>{@link GeneralStageWithKey#flatMapUsingService}
  *     <li>{@link GeneralStageWithKey#mapUsingServiceAsync}
- *     <li>{@link GeneralStageWithKey#filterUsingServiceAsync}
  *     <li>{@link GeneralStageWithKey#flatMapUsingServiceAsync}
  * </ul>
  *

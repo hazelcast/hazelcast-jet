@@ -39,7 +39,6 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.hazelcast.jet.Traversers.singleton;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static com.hazelcast.jet.impl.util.Util.toList;
 
@@ -139,15 +138,6 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
         return attachFilterUsingService(serviceFactory, filterFn);
-    }
-
-    @Nonnull @Override
-    public <S> StreamStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return attachFlatMapUsingServiceAsync("filter", serviceFactory,
-                (s, t) -> filterAsyncFn.apply(s, t).thenApply(passed -> passed ? singleton(t) : Traversers.empty()));
     }
 
     @Nonnull @Override

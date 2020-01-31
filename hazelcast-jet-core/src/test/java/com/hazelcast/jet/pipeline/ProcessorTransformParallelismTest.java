@@ -152,34 +152,6 @@ public class ProcessorTransformParallelismTest {
                         "filterUsingPartitionedService"),
                 createParamSet(
                         stage -> stage
-                                .filterUsingServiceAsync(SERVICE_FACTORY, (c, t) -> supplyAsync(() -> false))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .filterUsingServiceAsync(SERVICE_FACTORY, (c, t) -> supplyAsync(() -> false)),
-                        stage -> stage
-                                .filterUsingServiceAsync(NC_SERVICE_FACTORY, (c, t) -> supplyAsync(() -> false))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .filterUsingServiceAsync(NC_SERVICE_FACTORY, (c, t) -> supplyAsync(() -> false)),
-                        "filterUsingServiceAsync"),
-                createParamSet(
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .filterUsingServiceAsync(SERVICE_FACTORY, (c, k, t) -> supplyAsync(() -> false))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .filterUsingServiceAsync(SERVICE_FACTORY, (c, k, t) -> supplyAsync(() -> false)),
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .filterUsingServiceAsync(NC_SERVICE_FACTORY, (c, k, t) -> supplyAsync(() -> false))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .filterUsingServiceAsync(NC_SERVICE_FACTORY, (c, k, t) -> supplyAsync(() -> false)),
-                        "filterUsingPartitionedServiceAsync"),
-                createParamSet(
-                        stage -> stage
                                 .flatMapUsingService(SERVICE_FACTORY, (c, t) -> Traversers.<Integer>empty())
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         stage -> stage
