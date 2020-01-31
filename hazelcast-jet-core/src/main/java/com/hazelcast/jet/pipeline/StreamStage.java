@@ -133,12 +133,6 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
-    <S, R> StreamStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    );
-
-    @Nonnull @Override
     default <K, V, R> StreamStage<R> mapUsingReplicatedMap(
             @Nonnull String mapName,
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,

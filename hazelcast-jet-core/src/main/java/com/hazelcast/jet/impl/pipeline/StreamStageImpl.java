@@ -149,14 +149,6 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     }
 
     @Nonnull @Override
-    public <S, R> StreamStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    ) {
-        return attachFlatMapUsingServiceAsync("flatMap", serviceFactory, flatMapAsyncFn);
-    }
-
-    @Nonnull @Override
     public StreamStage<T> merge(@Nonnull StreamStage<? extends T> other) {
         return attachMerge(other);
     }

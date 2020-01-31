@@ -177,35 +177,7 @@ public class ProcessorTransformParallelismTest {
                         stage -> stage
                                 .groupingKey(i -> i)
                                 .flatMapUsingService(NC_SERVICE_FACTORY, (c, k, t) -> Traversers.empty()),
-                        "flatMapUsingPartitionedService"),
-                createParamSet(
-                        stage -> stage
-                                .flatMapUsingServiceAsync(SERVICE_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .flatMapUsingServiceAsync(SERVICE_FACTORY, (c, t) -> supplyAsync(Traversers::empty)),
-                        stage -> stage
-                                .flatMapUsingServiceAsync(NC_SERVICE_FACTORY, (c, t) -> supplyAsync(Traversers::<Integer>empty))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .flatMapUsingServiceAsync(NC_SERVICE_FACTORY, (c, t) -> supplyAsync(Traversers::empty)),
-                        "flatMapUsingServiceAsync"),
-                createParamSet(
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .flatMapUsingServiceAsync(SERVICE_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .flatMapUsingServiceAsync(SERVICE_FACTORY, (c, k, t) -> supplyAsync(Traversers::empty)),
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .flatMapUsingServiceAsync(NC_SERVICE_FACTORY, (c, k, t) -> supplyAsync(Traversers::<Integer>empty))
-                                .setLocalParallelism(LOCAL_PARALLELISM),
-                        stage -> stage
-                                .groupingKey(i -> i)
-                                .flatMapUsingServiceAsync(NC_SERVICE_FACTORY, (c, k, t) -> supplyAsync(Traversers::empty)),
-                        "flatMapUsingPartitionedServiceAsync")
+                        "flatMapUsingPartitionedService")
         );
     }
 

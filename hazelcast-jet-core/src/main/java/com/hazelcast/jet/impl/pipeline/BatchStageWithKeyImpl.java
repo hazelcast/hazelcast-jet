@@ -114,15 +114,6 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     }
 
     @Nonnull @Override
-    public <S, R> BatchStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
-    ) {
-        return attachTransformUsingServiceAsync("flatMap", serviceFactory, flatMapAsyncFn);
-    }
-
-    @Nonnull @Override
     public <R> BatchStage<R> customTransform(@Nonnull String stageName, @Nonnull ProcessorMetaSupplier procSupplier) {
         return computeStage.attachPartitionedCustomTransform(stageName, procSupplier, keyFn());
     }

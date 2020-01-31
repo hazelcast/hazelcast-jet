@@ -334,12 +334,6 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    <S, R> StreamStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    );
-
-    @Nonnull @Override
     default <R> StreamStage<R> customTransform(@Nonnull String stageName,
                                                @Nonnull SupplierEx<Processor> procSupplier
     ) {

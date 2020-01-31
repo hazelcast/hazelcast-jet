@@ -368,44 +368,6 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Asynchronous version of {@link #flatMapUsingService}: the {@code
-     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
-     * instead of just {@code Traverser<R>}.
-     * <p>
-     * The function can return a null future or the future can return a null
-     * traverser: in both cases it will act just like a filter.
-     * <p>
-     * Sample usage:
-     * <pre>{@code
-     * StreamStage<Part> productParts = products
-     *     .groupingKey(Product::getId)
-     *     .flatMapUsingServiceAsync(
-     *         ServiceFactory.withCreateFn(jet -> new PartRegistry()),
-     *         (registry, productId, product) -> registry
-     *                 .fetchPartsAsync(productId)
-     *                 .thenApply(parts -> Traversers.traverseIterable(parts))
-     *     );
-     * }</pre>
-     * <p>
-     * The latency of the async call will add to the latency of the items.
-     *
-     * @param <S> type of service object
-     * @param <R> the type of the returned stage
-     * @param serviceFactory the service factory
-     * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
-     *                      (return a null future), but the future must not
-     *                      return null traverser, but can return an {@linkplain
-     *                      Traversers#empty() empty traverser}.
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S, R> GeneralStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
-    );
-
-    /**
      * Attaches a mapping stage where for each item a lookup in the
      * {@code IMap} with the supplied name using the grouping key is performed
      * and the result of the lookup is merged with the item and emitted.

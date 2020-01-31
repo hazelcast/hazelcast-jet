@@ -40,7 +40,6 @@ import com.hazelcast.jet.core.Watermark;
 import com.hazelcast.jet.core.function.KeyedWindowResultFunction;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.function.TriFunction;
-import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceBatchedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceOrderedP;
 import com.hazelcast.jet.impl.processor.AsyncTransformUsingServiceUnorderedP;
 import com.hazelcast.jet.impl.processor.GroupP;
@@ -904,8 +903,11 @@ public final class Processors {
             @Nonnull FunctionEx<T, K> extractKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return flatMapUsingServiceAsyncP(serviceFactory, extractKeyFn,
-                (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
+        BiFunctionEx<S, T, CompletableFuture<Traverser<R>>> flatMapAsyncFn = (s, t) ->
+                mapAsyncFn.apply(s, t).thenApply(Traversers::singleton);
+        return serviceFactory.hasOrderedAsyncResponses()
+                ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, flatMapAsyncFn)
+                : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, flatMapAsyncFn, extractKeyFn);
     }
 
     /**
@@ -962,68 +964,6 @@ public final class Processors {
     ) {
         return TransformUsingServiceP.<C, S, T, R>supplier(serviceFactory,
                 (singletonTraverser, service, item) -> flatMapFn.apply(service, item));
-    }
-
-    /**
-     * Asynchronous version of {@link #flatMapUsingServiceP}: {@code
-     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
-     * instead of just a {@code Traverser<R>}.
-     * <p>
-     * The function can return a null future and the future can return a null
-     * traverser: in both cases it will act just like a filter. The traverser
-     * can't return null items - null is a terminator in {@link Traverser}, see
-     * its documentation.
-     * <p>
-     * The {@code extractKeyFn} is used to extract keys under which to save
-     * in-flight items to the snapshot. If the input to this processor is over
-     * a partitioned edge, you should use the same key. If it's a round-robin
-     * edge, you can use any key, for example {@code Object::hashCode}.
-     *
-     * @param serviceFactory the service factory
-     * @param extractKeyFn a function to extract snapshot keys
-     * @param flatMapAsyncFn  a stateless function that maps the received item
-     *      to a future returning a traverser over the output items
-     * @param <C> type of context object
-     * @param <S> type of service object
-     * @param <T> type of input item
-     * @param <K> type of key
-     * @param <R> type of result item
-     */
-    @Nonnull
-    public static <C, S, T, K, R> ProcessorSupplier flatMapUsingServiceAsyncP(
-            @Nonnull ServiceFactory<C, S> serviceFactory,
-            @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    ) {
-        return serviceFactory.hasOrderedAsyncResponses()
-                ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, flatMapAsyncFn)
-                : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, flatMapAsyncFn, extractKeyFn);
-    }
-
-    /**
-     * Asynchronous, batched version of {@link #flatMapUsingServiceP}: {@code
-     * flatMapAsyncFn} takes a list and returns a {@code
-     * CompletableFuture<List<Traverser<R>>>}. The result list of traversers
-     * must match one-to-one with the input list, but any given traverser may
-     * be empty.
-     *
-     * @param serviceFactory the service factory
-     * @param maxBatchSize max size of the input list
-     * @param flatMapAsyncFn the mapping function
-     * @param <C> type of context object
-     * @param <S> type of service object
-     * @param <T> type of input item
-     * @param <R> type of result item
-     *
-     * @since 4.0
-     */
-    @Nonnull
-    public static <C, S, T, R> ProcessorSupplier flatMapUsingServiceAsyncBatchedP(
-            @Nonnull ServiceFactory<C, S> serviceFactory,
-            int maxBatchSize,
-            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    ) {
-        return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, maxBatchSize, flatMapAsyncFn);
     }
 
     /**

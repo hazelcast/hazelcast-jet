@@ -129,13 +129,6 @@ public interface BatchStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     );
 
-    @Nonnull @Override
-    <S, R> BatchStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
-    );
-
     /**
      * Attaches a stage that performs the given group-and-aggregate operation.
      * It emits one key-value pair (in a {@code Map.Entry}) for each distinct

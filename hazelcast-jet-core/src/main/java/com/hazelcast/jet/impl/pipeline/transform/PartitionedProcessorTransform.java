@@ -30,7 +30,6 @@ import javax.annotation.Nonnull;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 
 public final class PartitionedProcessorTransform<T, K> extends ProcessorTransform {

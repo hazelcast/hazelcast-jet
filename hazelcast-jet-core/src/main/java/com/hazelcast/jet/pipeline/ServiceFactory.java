@@ -74,13 +74,11 @@ import static java.util.Collections.emptyMap;
  *     <li>{@link GeneralStage#filterUsingService}
  *     <li>{@link GeneralStage#flatMapUsingService}
  *     <li>{@link GeneralStage#mapUsingServiceAsync}
- *     <li>{@link GeneralStage#flatMapUsingServiceAsync}
  *     <li>{@link GeneralStage#mapUsingServiceAsyncBatched}
  *     <li>{@link GeneralStageWithKey#mapUsingService}
  *     <li>{@link GeneralStageWithKey#filterUsingService}
  *     <li>{@link GeneralStageWithKey#flatMapUsingService}
  *     <li>{@link GeneralStageWithKey#mapUsingServiceAsync}
- *     <li>{@link GeneralStageWithKey#flatMapUsingServiceAsync}
  * </ul>
  *
  * @param <C> type of the shared context object

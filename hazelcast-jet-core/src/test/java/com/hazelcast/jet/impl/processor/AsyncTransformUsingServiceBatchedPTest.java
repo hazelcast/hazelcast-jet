@@ -37,7 +37,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncBatchedP;
 import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -54,7 +53,7 @@ public class AsyncTransformUsingServiceBatchedPTest extends SimpleTestInClusterS
                             CompletableFuture<Traverser<String>>> mapFn
     ) {
         ServiceFactory<?, String> serviceFactory = ServiceFactories.nonSharedService(pctx -> "foo");
-        return flatMapUsingServiceAsyncBatchedP(serviceFactory, 128, mapFn);
+        return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, 128, mapFn);
     }
 
     @BeforeClass

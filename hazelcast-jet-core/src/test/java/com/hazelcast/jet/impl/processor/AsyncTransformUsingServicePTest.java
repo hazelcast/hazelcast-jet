@@ -44,7 +44,6 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
 import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
 import static com.hazelcast.jet.pipeline.ServiceFactory.MAX_PENDING_CALLS_DEFAULT;
 import static java.util.Arrays.asList;
@@ -81,10 +80,8 @@ public class AsyncTransformUsingServicePTest extends SimpleTestInClusterSupport 
         ServiceFactory<?, String> serviceFactory = ServiceFactories
                 .nonSharedService(pctx -> "foo")
                 .withMaxPendingCallsPerProcessor(maxPendingCalls);
-        if (!ordered) {
-            serviceFactory = serviceFactory.withUnorderedAsyncResponses();
-        }
-        return flatMapUsingServiceAsyncP(serviceFactory, FunctionEx.identity(), mapFn);
+        return ordered ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, mapFn) :
+                AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, mapFn, FunctionEx.identity());
     }
 
     @BeforeClass

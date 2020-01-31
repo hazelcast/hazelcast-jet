@@ -465,53 +465,6 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Asynchronous version of {@link #flatMapUsingService}: the {@code
-     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
-     * instead of just {@code Traverser<R>}.
-     * <p>
-     * The function can return a null future or the future can return a null
-     * traverser: in both cases it will act just like a filter.
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     * <p>
-     * This sample takes a stream of products and outputs an "exploded" stream
-     * of all the parts that go into making them:
-     * <pre>{@code
-     * StreamStage<Part> parts = products.flatMapUsingServiceAsync(
-     *     ServiceFactory.withCreateFn(jet -> new PartRegistryCtx()),
-     *     (registry, product) -> registry
-     *          .fetchPartsAsync(product)
-     *          .thenApply(parts -> Traversers.traverseIterable(parts))
-     * );
-     * }</pre>
-     *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
-     * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the service object maintains doesn't participate in Jet's
-     * fault tolerance protocol. If the state is local, it will be lost after a
-     * job restart; if it is saved to some durable storage, the state of that
-     * storage won't be rewound to the last checkpoint, so you'll perform
-     * duplicate updates.
-     *
-     * @param serviceFactory the service factory
-     * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
-     *      (return a null future). The future must not return a null
-     *      traverser, but can return an {@linkplain Traversers#empty() empty
-     *      traverser}.
-     * @param <S> type of service object
-     * @param <R> the type of the returned stage
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S, R> GeneralStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
-    );
-
-    /**
      * Attaches a mapping stage where for each item a lookup in the
      * {@code ReplicatedMap} with the supplied name is performed and the
      * result of the lookup is merged with the item and emitted.

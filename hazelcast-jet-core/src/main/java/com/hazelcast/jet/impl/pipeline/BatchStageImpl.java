@@ -150,14 +150,6 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <S, R> BatchStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    ) {
-        return attachFlatMapUsingServiceAsync("flatMap", serviceFactory, flatMapAsyncFn);
-    }
-
-    @Nonnull @Override
     public BatchStage<T> merge(@Nonnull BatchStage<? extends T> other) {
         return attachMerge(other);
     }
