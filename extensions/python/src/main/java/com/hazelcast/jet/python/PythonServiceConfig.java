@@ -134,8 +134,8 @@ public class PythonServiceConfig implements Serializable {
         }
         try {
             File file = new File(handlerFileStr).getCanonicalFile();
-            if (!file.isFile()) {
-                throw new IOException("Not a regular file: " + file);
+            if (!file.isFile() || !file.canRead()) {
+                throw new IOException("Not a regular, readable file: " + file);
             }
             this.handlerFile = file;
             this.handlerModule = file.getName().replaceFirst("\\.py$", "");
