@@ -28,6 +28,11 @@
         <version>4.0-SNAPSHOT</version>
     </parent>
 
+    <properties>
+        <grpc.version>1.25.0</grpc.version>
+        <protoc.version>3.9.1</protoc.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.grpc</groupId>
