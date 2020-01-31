@@ -22,6 +22,7 @@ import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.ProcessorSupplier;
+import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -38,6 +39,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
@@ -686,6 +688,32 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     public JobConfig attachDirectory(@Nonnull File file, @Nonnull String id) {
         return attachDirectory(fileToUrl(file), id);
+    }
+
+    /**
+     * Attaches all the files/directories in the supplied map, as if by calling
+     * {@link #attachDirectory(File, String) attachDirectory(dir, id)} for every
+     * entry that resolves to a directory and {@link #attachFile(File, String)
+     * attachFile(file, id)} for every entry that resolves to a regular file.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig attachAll(@Nonnull Map<String, File> idToFile) {
+        for (Entry<String, File> e : idToFile.entrySet()) {
+            File file = e.getValue();
+            if (!file.canRead()) {
+                throw new JetException("Not readable: " + file);
+            }
+            if (file.isDirectory()) {
+                attachDirectory(file, e.getKey());
+            } else if (file.isFile()) {
+                attachFile(file, e.getKey());
+            } else {
+                throw new JetException("Neither a regular file nor a directory: " + file);
+            }
+        }
+        return this;
     }
 
     @Nonnull

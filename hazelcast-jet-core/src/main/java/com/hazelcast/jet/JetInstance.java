@@ -141,21 +141,7 @@ public interface JetInstance {
      */
     @Nonnull
     default Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
-        PipelineImpl impl = (PipelineImpl) pipeline;
-        for (Entry<String, File> e : impl.attachedFiles().entrySet()) {
-            File file = e.getValue();
-            if (!file.canRead()) {
-                throw new JetException("Not readable: " + file);
-            }
-            if (file.isDirectory()) {
-                config.attachDirectory(file, e.getKey());
-            } else if (file.isFile()) {
-                config.attachFile(file, e.getKey());
-            } else {
-                throw new JetException("Neither a regular file nor a directory: " + file);
-            }
-        }
-        return newJob(pipeline.toDag(), config);
+        return newJob(pipeline.toDag(), config.attachAll(((PipelineImpl) pipeline).attachedFiles()));
     }
 
     /**
@@ -205,7 +191,7 @@ public interface JetInstance {
      */
     @Nonnull
     default Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
-        return newJobIfAbsent(pipeline.toDag(), config);
+        return newJobIfAbsent(pipeline.toDag(), config.attachAll(((PipelineImpl) pipeline).attachedFiles()));
     }
 
     /**
