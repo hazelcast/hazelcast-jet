@@ -32,9 +32,13 @@ import java.util.Objects;
 @PrivateApi
 public class ResourceConfig implements Serializable {
 
+    static final long serialVersionUID = 1L;
+
     private final URL url;
     private final String id;
     private final ResourceType resourceType;
+
+    private transient byte[] fileContent;
 
     /**
      * Creates a resource config with the given properties.
@@ -51,6 +55,7 @@ public class ResourceConfig implements Serializable {
         this.url = url;
         this.id = id;
         this.resourceType = resourceType;
+        this.fileContent = null;
     }
 
     /**
@@ -71,15 +76,29 @@ public class ResourceConfig implements Serializable {
         this.id = id;
         this.url = url;
         this.resourceType = ResourceType.CLASS;
+        this.fileContent = null;
+    }
+
+    ResourceConfig(@Nonnull byte[] fileContent, @Nonnull String id) {
+        this.id = id;
+        this.url = null;
+        this.resourceType = ResourceType.FILE_CONTENT;
+        this.fileContent = fileContent;
     }
 
     /**
      * Returns the URL at which the resource is available. Resolved on the
      * local machine during job submission.
      */
-    @Nonnull
     public URL getUrl() {
         return url;
+    }
+
+    /**
+     * TODO
+     */
+    public byte[] getFileContent() {
+        return fileContent;
     }
 
     /**

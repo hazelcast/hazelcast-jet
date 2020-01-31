@@ -440,6 +440,19 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
+     * TODO
+     */
+    @Nonnull
+    public JobConfig attachFileContent(@Nonnull byte[] fileContent, @Nonnull String id) {
+            Preconditions.checkHasText(id, "Resource ID is blank");
+            ResourceConfig cfg = new ResourceConfig(fileContent, id);
+            if (resourceConfigs.putIfAbsent(id, cfg) != null) {
+                throw new IllegalArgumentException("Resource with id:" + id + " already exists");
+            }
+            return this;
+    }
+
+    /**
      * Adds the file identified by the supplied URL as a resource that will be
      * available to the job while it's executing in the Jet cluster. The
      * resource's filename (the last path segment in the URL) becomes its ID,

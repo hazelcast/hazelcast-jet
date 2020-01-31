@@ -19,7 +19,6 @@ package com.hazelcast.jet.pipeline;
 import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
-import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -64,9 +63,9 @@ import static java.util.Collections.emptyMap;
  *      Finally, Jet calls {@link #destroyContextFn()} with the context object.
  * </ol>
  * If you don't need the member-wide context object, you can call the simpler
- * methods {@link ServiceFactories#nonSharedService(SupplierEx, ConsumerEx)
+ * methods {@link ServiceFactories#nonSharedService(FunctionEx, ConsumerEx)
  * ServiceFactories.processorLocalService} or {@link
- * ServiceFactories#sharedService(SupplierEx, ConsumerEx)
+ * ServiceFactories#sharedService(FunctionEx, ConsumerEx)
  * ServiceFactories.memberLocalService}.
  * <p>
  * Here's a list of pipeline transforms that require a {@code ServiceFactory}:
@@ -129,7 +128,7 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
     private ConsumerEx<? super C> destroyContextFn = ConsumerEx.noop();
 
     @Nonnull
-    private Map<String, File> attachedFiles = emptyMap();
+    private Map<String, Object> attachedFiles = emptyMap();
 
     private ServiceFactory(@Nonnull FunctionEx<? super ProcessorSupplier.Context, ? extends C> createContextFn) {
         this.createContextFn = createContextFn;
@@ -331,7 +330,17 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
         if (!file.isFile() || !file.canRead()) {
             throw new IllegalArgumentException("Not an existing, readable file: " + file);
         }
-        return attachFileOrDir(id, file);
+        return attach(id, file);
+    }
+
+    /**
+     * TODO
+     */
+    @Nonnull
+    public ServiceFactory<C, S> withAttachedFileContent(@Nonnull String id, @Nonnull byte[] fileContent) {
+        ServiceFactory<C, S> copy = clone();
+        copy.attachedFiles.put(id, fileContent);
+        return copy;
     }
 
     /**
@@ -349,13 +358,13 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
         if (!directory.isDirectory() || !directory.canRead()) {
             throw new IllegalArgumentException("Not an existing, readable directory: " + directory);
         }
-        return attachFileOrDir(id, directory);
+        return attach(id, directory);
     }
 
     @Nonnull
-    private ServiceFactory<C, S> attachFileOrDir(String id, @Nonnull File file) {
+    private ServiceFactory<C, S> attach(String id, @Nonnull Object object) {
         ServiceFactory<C, S> copy = clone();
-        copy.attachedFiles.put(id, file);
+        copy.attachedFiles.put(id, object);
         return copy;
     }
 
@@ -453,7 +462,7 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
      * @since 4.0
      */
     @Nonnull
-    public Map<String, File> attachedFiles() {
+    public Map<String, Object> attachedFiles() {
         return Collections.unmodifiableMap(attachedFiles);
     }
 

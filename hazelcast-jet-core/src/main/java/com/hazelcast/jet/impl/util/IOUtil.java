@@ -130,4 +130,14 @@ public final class IOUtil {
             }
         }
     }
+
+    public static byte[] unzip(InputStream is) throws IOException {
+        try (ZipInputStream zipIn = new ZipInputStream(is)) {
+            ZipEntry nextEntry = zipIn.getNextEntry();
+            assert nextEntry != null : "no entry in zip";
+            byte[] bytes = readFully(zipIn);
+            assert zipIn.getNextEntry() == null : "multiple entries in zip";
+            return bytes;
+        }
+    }
 }

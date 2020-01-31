@@ -37,7 +37,7 @@ public class TestProcessorSupplierContext
         implements ProcessorSupplier.Context {
 
     private int memberIndex;
-    private final Map<String, File> attached = new HashMap<>();
+    private final Map<String, Object> attached = new HashMap<>();
 
     @Nonnull @Override
     public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
@@ -81,9 +81,18 @@ public class TestProcessorSupplierContext
         return attachedFile(id);
     }
 
+    @Override
+    public byte[] attachedFileContent(@Nonnull String id) {
+        byte[] fileContent = (byte[]) attached.get(id);
+        if (fileContent == null) {
+            throw new IllegalArgumentException("File content '" + id + "' was not found");
+        }
+        return fileContent;
+    }
+
     @Nonnull @Override
     public File attachedFile(@Nonnull String id) {
-        File file = attached.get(id);
+        File file = (File) attached.get(id);
         if (file == null) {
             throw new IllegalArgumentException("File '" + id + "' was not found");
         }
@@ -96,6 +105,14 @@ public class TestProcessorSupplierContext
      */
     public TestProcessorSupplierContext addFile(@Nonnull String id, @Nonnull File file) {
         attached.put(id, file);
+        return this;
+    }
+
+    /**
+     * Add an attached file content.
+     */
+    public TestProcessorSupplierContext addFileContent(@Nonnull String id, @Nonnull byte[] fileContent) {
+        attached.put(id, fileContent);
         return this;
     }
 

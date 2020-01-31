@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.config.ResourceType.DIRECTORY;
 import static com.hazelcast.jet.config.ResourceType.FILE;
+import static com.hazelcast.jet.config.ResourceType.FILE_CONTENT;
 import static com.hazelcast.jet.impl.JobRepository.fileKeyName;
 import static com.hazelcast.jet.impl.JobRepository.jobResourcesMapName;
 import static com.hazelcast.jet.impl.util.IOUtil.unzip;
@@ -203,6 +204,21 @@ public final class Contexts {
             return new File(tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(id)), fnamePath.toString());
         }
 
+        @Nonnull @Override
+        public byte[] attachedFileContent(@Nonnull String id) {
+            Preconditions.checkHasText(id, "id cannot be null or empty");
+            ResourceConfig resourceConfig = jobConfig().getResourceConfigs().get(id);
+            if (resourceConfig == null) {
+                throw new JetException(String.format("No resource is attached with ID '%s'", id));
+            }
+            if (resourceConfig.getResourceType() != FILE_CONTENT) {
+                throw new JetException(String.format("The resource with ID '%s' is not a file content, its type is %s",
+                        id, resourceConfig.getResourceType()
+                ));
+            }
+            return extractFileContent(id);
+        }
+
         public ConcurrentHashMap<String, File> tempDirectories() {
             return tempDirectories;
         }
@@ -214,6 +230,15 @@ public final class Contexts {
                         jetInstance().getName(), idToString(jobId()), id));
                 unzip(inputStream, directory);
                 return directory.toFile();
+            } catch (IOException e) {
+                throw ExceptionUtil.rethrow(e);
+            }
+        }
+
+        private byte[] extractFileContent(String id) {
+            IMap<String, byte[]> map = jetInstance().getMap(jobResourcesMapName(jobId()));
+            try (IMapInputStream inputStream = new IMapInputStream(map, fileKeyName(id))) {
+                return unzip(inputStream);
             } catch (IOException e) {
                 throw ExceptionUtil.rethrow(e);
             }

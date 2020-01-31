@@ -47,6 +47,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -230,6 +231,13 @@ public class JobRepository {
                         break;
                     case JARS_IN_ZIP:
                         loadJarsInZip(tmpMap, rc.getUrl());
+                        break;
+                    case FILE_CONTENT:
+                        try (ByteArrayInputStream in = new ByteArrayInputStream(rc.getFileContent());
+                             IMapOutputStream os = new IMapOutputStream(jobFileStorage.get(), fileKeyName(rc.getId()))
+                        ) {
+                            packStreamIntoZip(in, os, rc.getId());
+                        }
                         break;
                     default:
                         throw new JetException("Unsupported resource type: " + rc.getResourceType());

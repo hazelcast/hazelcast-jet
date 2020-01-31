@@ -142,8 +142,13 @@ public interface JetInstance {
     @Nonnull
     default Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
         PipelineImpl impl = (PipelineImpl) pipeline;
-        for (Entry<String, File> e : impl.attachedFiles().entrySet()) {
-            File file = e.getValue();
+        for (Entry<String, Object> e : impl.attachedFiles().entrySet()) {
+            Object object = e.getValue();
+            if (object instanceof byte[]) {
+                config.attachFileContent((byte[]) object, e.getKey());
+                break;
+            }
+            File file = (File) object;
             if (!file.canRead()) {
                 throw new JetException("Not readable: " + file);
             }

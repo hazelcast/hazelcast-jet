@@ -131,5 +131,11 @@ public interface ProcessorSupplier extends Serializable {
          */
         @Nonnull
         File attachedFile(@Nonnull String id);
+
+        /**
+         * TODO
+         */
+        @Nonnull
+        byte[] attachedFileContent(@Nonnull String id);
     }
 }

@@ -30,6 +30,10 @@ public enum ResourceType {
      */
     CLASSPATH_RESOURCE,
     /**
+     * TODO
+     */
+    FILE_CONTENT,
+    /**
      * Represents a plain file. It will be available to the Jet job by its ID,
      * through {@link ProcessorSupplier.Context#attachedFile}.
      */
