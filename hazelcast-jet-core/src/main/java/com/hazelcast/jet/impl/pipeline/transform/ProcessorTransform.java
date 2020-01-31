@@ -91,6 +91,7 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull Transform upstream,
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         // TODO use better key so that snapshots are local. Currently they will
@@ -98,20 +99,21 @@ public class ProcessorTransform extends AbstractTransform {
         //      the number of in-flight items is limited (maxAsyncOps)
         return new ProcessorTransform(operationName + "UsingServiceAsync", upstream,
                 ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
-                        flatMapUsingServiceAsyncP(serviceFactory, Object::hashCode, flatMapAsyncFn)));
+                        flatMapUsingServiceAsyncP(serviceFactory, maxAsyncOps, Object::hashCode, flatMapAsyncFn)));
     }
 
     public static <S, T, R> ProcessorTransform flatMapUsingServiceAsyncBatchedTransform(
             @Nonnull Transform upstream,
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>,
                     ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return new ProcessorTransform(operationName + "UsingServiceAsyncBatched", upstream,
                 ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
-                        flatMapUsingServiceAsyncBatchedP(serviceFactory, maxBatchSize, flatMapAsyncFn)));
+                        flatMapUsingServiceAsyncBatchedP(serviceFactory, maxAsyncOps, maxBatchSize, flatMapAsyncFn)));
     }
 
     static int getPreferredLP(@Nonnull ServiceFactory<?, ?> serviceFactory) {
@@ -122,20 +124,22 @@ public class ProcessorTransform extends AbstractTransform {
 
     static <C, S, T, K, R> ProcessorSupplier flatMapUsingServiceAsyncP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         return serviceFactory.hasOrderedAsyncResponses()
-                ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, flatMapAsyncFn)
-                : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, flatMapAsyncFn, extractKeyFn);
+                ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, maxAsyncOps, flatMapAsyncFn)
+                : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, maxAsyncOps, flatMapAsyncFn, extractKeyFn);
     }
 
     static <C, S, T, R> ProcessorSupplier flatMapUsingServiceAsyncBatchedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
+            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, maxBatchSize, flatMapAsyncFn);
+        return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, maxAsyncOps, maxBatchSize, flatMapAsyncFn);
     }
 
     @Override

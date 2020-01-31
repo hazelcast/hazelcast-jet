@@ -45,7 +45,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
-import static com.hazelcast.jet.pipeline.ServiceFactory.MAX_PENDING_CALLS_DEFAULT;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -70,18 +69,17 @@ public class AsyncTransformUsingServicePTest extends SimpleTestInClusterSupport 
     private ProcessorSupplier getSupplier(
             BiFunctionEx<? super String, ? super String, CompletableFuture<Traverser<String>>> mapFn
     ) {
-        return getSupplier(MAX_PENDING_CALLS_DEFAULT, mapFn);
+        return getSupplier(AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS, mapFn);
     }
 
     private ProcessorSupplier getSupplier(
-            int maxPendingCalls,
+            int maxAsyncOps,
             BiFunctionEx<? super String, ? super String, CompletableFuture<Traverser<String>>> mapFn
     ) {
         ServiceFactory<?, String> serviceFactory = ServiceFactories
-                .nonSharedService(pctx -> "foo")
-                .withMaxPendingCallsPerProcessor(maxPendingCalls);
-        return ordered ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, mapFn) :
-                AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, mapFn, FunctionEx.identity());
+                .nonSharedService(pctx -> "foo");
+        return ordered ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, maxAsyncOps, mapFn) :
+                AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, maxAsyncOps, mapFn, FunctionEx.identity());
     }
 
     @BeforeClass

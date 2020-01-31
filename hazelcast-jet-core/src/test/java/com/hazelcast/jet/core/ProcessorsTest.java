@@ -46,6 +46,7 @@ import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
 import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -87,6 +88,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
                         nonSharedService(pctx -> new AtomicInteger(), ctx -> assertEquals(6, ctx.get())),
+                        MAX_ASYNC_OPS,
                         t -> "k",
                         (AtomicInteger context, Integer item) -> supplyAsync(() -> {
                             sleepMillis(100);
@@ -131,6 +133,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
                         nonSharedService(pctx -> new int[]{2}, arr -> assertEquals(2, arr[0])),
+                        MAX_ASYNC_OPS,
                         t -> "k",
                         (int[] context, Integer item) ->
                                 supplyAsync(() -> item % context[0] != 0 ? item : null)))

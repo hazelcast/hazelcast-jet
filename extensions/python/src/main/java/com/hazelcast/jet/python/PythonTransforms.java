@@ -44,7 +44,7 @@ public final class PythonTransforms {
             @Nonnull PythonServiceConfig cfg
     ) {
         return s -> s
-                .mapUsingServiceAsyncBatched(PythonService.factory(cfg), Integer.MAX_VALUE, PythonService::sendRequest)
+                .mapUsingServiceAsyncBatched(PythonService.factory(cfg), 2, Integer.MAX_VALUE, PythonService::sendRequest)
                 .setName("mapUsingPython");
     }
 
@@ -57,7 +57,7 @@ public final class PythonTransforms {
             @Nonnull PythonServiceConfig cfg
     ) {
         return s -> s
-                .mapUsingServiceAsyncBatched(PythonService.factory(cfg), Integer.MAX_VALUE, PythonService::sendRequest)
+                .mapUsingServiceAsyncBatched(PythonService.factory(cfg), 2, Integer.MAX_VALUE, PythonService::sendRequest)
                 .setName("mapUsingPython");
     }
 }

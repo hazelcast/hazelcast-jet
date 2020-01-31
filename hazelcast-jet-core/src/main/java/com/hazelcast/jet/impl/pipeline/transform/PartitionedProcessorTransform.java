@@ -92,12 +92,14 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull Transform upstream,
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
         return new PartitionedProcessorTransform<>(operationName + "UsingPartitionedServiceAsync", upstream,
                 ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
-                        flatMapUsingServiceAsyncP(serviceFactory, partitionKeyFn, flatMapAsyncFn)), partitionKeyFn);
+                        flatMapUsingServiceAsyncP(serviceFactory, maxAsyncOps, partitionKeyFn, flatMapAsyncFn)),
+                partitionKeyFn);
     }
 
     @Override

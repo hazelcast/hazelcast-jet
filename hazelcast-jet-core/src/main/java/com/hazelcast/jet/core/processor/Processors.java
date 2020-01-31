@@ -889,6 +889,7 @@ public final class Processors {
      * edge, you can use any key, for example {@code Object::hashCode}.
      *
      * @param serviceFactory the service factory
+     * @param maxAsyncOps maximum number of concurrent async operations per processor
      * @param extractKeyFn a function to extract snapshot keys
      * @param mapAsyncFn a stateless mapping function
      * @param <C> type of context object
@@ -900,14 +901,15 @@ public final class Processors {
     @Nonnull
     public static <C, S, T, K, R> ProcessorSupplier mapUsingServiceAsyncP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull FunctionEx<T, K> extractKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
         BiFunctionEx<S, T, CompletableFuture<Traverser<R>>> flatMapAsyncFn = (s, t) ->
                 mapAsyncFn.apply(s, t).thenApply(Traversers::singleton);
         return serviceFactory.hasOrderedAsyncResponses()
-                ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, flatMapAsyncFn)
-                : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, flatMapAsyncFn, extractKeyFn);
+                ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, maxAsyncOps, flatMapAsyncFn)
+                : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, maxAsyncOps, flatMapAsyncFn, extractKeyFn);
     }
 
     /**

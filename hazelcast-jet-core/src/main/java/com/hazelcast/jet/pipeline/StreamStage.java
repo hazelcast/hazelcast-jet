@@ -108,14 +108,33 @@ public interface StreamStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
+    default <S, R> StreamStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.mapUsingServiceAsync(serviceFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
     @Nonnull @Override
+    default <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    ) {
+        return (StreamStage<R>) GeneralStage.super.mapUsingServiceAsyncBatched(serviceFactory, maxBatchSize, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     );

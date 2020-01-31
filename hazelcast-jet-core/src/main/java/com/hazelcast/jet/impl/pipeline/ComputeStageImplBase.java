@@ -263,13 +263,14 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, R, RET> RET attachFlatMapUsingServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceAsyncFn(flatMapAsyncFn);
         return (RET) attach(
-                flatMapUsingServiceAsyncTransform(transform, operationName, serviceFactory, adaptedFlatMapFn),
+                flatMapUsingServiceAsyncTransform(transform, operationName, serviceFactory, maxAsyncOps, adaptedFlatMapFn),
                 fnAdapter);
     }
 
@@ -278,6 +279,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, R, RET> RET attachFlatMapUsingServiceAsyncBatched(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>,
                     ? extends CompletableFuture<List<Traverser<R>>>> flatMapAsyncBatchedFn
@@ -298,7 +300,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
         return (RET) attach(
                 flatMapUsingServiceAsyncBatchedTransform(
-                        transform, operationName, serviceFactory, maxBatchSize, flattenedFn),
+                        transform, operationName, serviceFactory, maxAsyncOps, maxBatchSize, flattenedFn),
                 fnAdapter);
     }
 
@@ -360,6 +362,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, K, R, RET> RET attachTransformUsingPartitionedServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
@@ -370,7 +373,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
                 flatMapUsingServiceAsyncPartitionedTransform(
-                        transform, operationName, serviceFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
+                        transform, operationName, serviceFactory, maxAsyncOps, adaptedFlatMapFn, adaptedPartitionKeyFn),
                 fnAdapter);
     }
 

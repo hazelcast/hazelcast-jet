@@ -115,19 +115,21 @@ public class StreamStageImpl<T> extends ComputeStageImplBase<T> implements Strea
     @Nonnull @Override
     public <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsync("map", serviceFactory,
+        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxAsyncOps,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
     }
 
     @Nonnull @Override
     public <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncBatchedFn
     ) {
-        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxAsyncOps, maxBatchSize,
                 (s, t) -> mapAsyncBatchedFn.apply(s, t).thenApply(list ->
                         toList(list, Traversers::singleton)));
     }

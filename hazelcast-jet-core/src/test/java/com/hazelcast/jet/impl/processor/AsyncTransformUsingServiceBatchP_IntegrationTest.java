@@ -62,6 +62,7 @@ import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
 import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
@@ -135,7 +136,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
                 transformNotPartitionedFn(i -> traverseItems(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"))
                 .andThen(r -> r.thenApply(results -> traverseIterable(results).flatMap(Function.identity())));
         ProcessorSupplier processorSupplier =
-                AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, 128, flatMapAsyncFn);
+                AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, MAX_ASYNC_OPS, 128, flatMapAsyncFn);
         Vertex map = dag.newVertex("map", processorSupplier).localParallelism(2);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(sinkList.getName()));
 
@@ -171,7 +172,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
-         .mapUsingServiceAsyncBatched(serviceFactory, 128,
+         .mapUsingServiceAsyncBatched(serviceFactory, MAX_ASYNC_OPS, 128,
                  transformNotPartitionedFn(i -> i + "-1"))
          .setLocalParallelism(2)
          .writeTo(Sinks.list(sinkList));

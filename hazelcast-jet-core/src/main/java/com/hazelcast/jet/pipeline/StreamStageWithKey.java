@@ -316,8 +316,17 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
+    default <S, R> GeneralStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (GeneralStage<R>) GeneralStageWithKey.super.mapUsingServiceAsync(serviceFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     );
 

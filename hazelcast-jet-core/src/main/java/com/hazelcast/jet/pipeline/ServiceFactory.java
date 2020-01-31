@@ -31,7 +31,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.hazelcast.internal.util.Preconditions.checkPositive;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Collections.emptyMap;
 
@@ -89,11 +88,6 @@ import static java.util.Collections.emptyMap;
 public final class ServiceFactory<C, S> implements Serializable, Cloneable {
 
     /**
-     * Default value for {@link #maxPendingCallsPerProcessor}.
-     */
-    public static final int MAX_PENDING_CALLS_DEFAULT = 256;
-
-    /**
      * Default value for {@link #isCooperative}.
      */
     public static final boolean COOPERATIVE_DEFAULT = true;
@@ -106,7 +100,6 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
     private boolean isCooperative = COOPERATIVE_DEFAULT;
 
     // options for async
-    private int maxPendingCallsPerProcessor = MAX_PENDING_CALLS_DEFAULT;
     private boolean orderedAsyncResponses = ORDERED_ASYNC_RESPONSES_DEFAULT;
 
     @Nonnull
@@ -240,33 +233,6 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
         ServiceFactory<C, S> copy = clone();
         copy.isCooperative = false;
         return copy;
-    }
-
-    /**
-     * Returns a copy of this {@link ServiceFactory} with the {@code
-     * maxPendingCallsPerProcessor} property set to the given value. Jet
-     * will execute at most this many concurrent async operations per processor
-     * and will apply backpressure to the upstream to enforce it.
-     * <p>
-     * If you use the same service factory on multiple pipeline stages, each
-     * stage will count the pending calls independently.
-     * <p>
-     * This value is ignored when the {@code ServiceFactory} is used in a
-     * synchronous transformation because synchronous operations are by nature
-     * performed one at a time.
-     * <p>
-     * Default value is {@value #MAX_PENDING_CALLS_DEFAULT}.
-     *
-     * @return a copy of this factory with the {@code maxPendingCallsPerProcessor}
-     *         property set
-     */
-    @Nonnull
-    public ServiceFactory<C, S> withMaxPendingCallsPerProcessor(int maxPendingCallsPerProcessor) {
-        checkPositive(maxPendingCallsPerProcessor, "maxPendingCallsPerProcessor must be >= 1");
-        ServiceFactory<C, S> copy = clone();
-        copy.maxPendingCallsPerProcessor = maxPendingCallsPerProcessor;
-        return copy;
-
     }
 
     /**
@@ -419,14 +385,6 @@ public final class ServiceFactory<C, S> implements Serializable, Cloneable {
      */
     public boolean isCooperative() {
         return isCooperative;
-    }
-
-    /**
-     * Returns the maximum pending calls per processor, see {@link
-     * #withMaxPendingCallsPerProcessor(int)}.
-     */
-    public int maxPendingCallsPerProcessor() {
-        return maxPendingCallsPerProcessor;
     }
 
     /**

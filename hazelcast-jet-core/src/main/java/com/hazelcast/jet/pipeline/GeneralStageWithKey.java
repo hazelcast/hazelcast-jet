@@ -37,6 +37,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -272,8 +273,44 @@ public interface GeneralStageWithKey<T, K> {
      * @return the newly attached stage
      */
     @Nonnull
+    default <S, R> GeneralStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return mapUsingServiceAsync(serviceFactory, MAX_ASYNC_OPS, mapAsyncFn);
+    }
+
+    /**
+     * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
+     * returns a {@code CompletableFuture<R>} instead of just {@code R}.
+     * <p>
+     * The function can return a null future or the future can return a null
+     * result: in both cases it will act just like a filter.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     * items.groupingKey(Item::getDetailId)
+     *      .mapUsingServiceAsync(
+     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry()),
+     *          (reg, key, item) -> reg.fetchDetailAsync(key)
+     *                                 .thenApply(detail -> item.setDetail(detail))
+     *      );
+     * }</pre>
+     * The latency of the async call will add to the total latency of the
+     * output.
+     *
+     * @param <S> type of service object
+     * @param <R> the future's result type of the mapping function
+     * @param serviceFactory the service factory
+     * @param maxAsyncOps maximum number of concurrent async operations per processor
+     * @param mapAsyncFn a stateless mapping function. Can map to null (return
+     *      a null future)
+     * @return the newly attached stage
+     */
+    @Nonnull
     <S, R> GeneralStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     );
 
@@ -408,7 +445,7 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull String mapName,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName),
+        return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), MAX_ASYNC_OPS,
                 (map, key, item) -> map.getAsync(key).toCompletableFuture()
                                        .thenApply(value -> mapFn.apply(item, value)));
     }

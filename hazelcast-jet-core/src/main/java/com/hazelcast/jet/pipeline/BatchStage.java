@@ -97,8 +97,17 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
+    default <S, R> BatchStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (BatchStage<R>) GeneralStage.super.mapUsingServiceAsync(serviceFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <S, R> BatchStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
@@ -115,8 +124,18 @@ public interface BatchStage<T> extends GeneralStage<T> {
     );
 
     @Nonnull @Override
+    default <S, R> BatchStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    ) {
+        return (BatchStage<R>) GeneralStage.super.mapUsingServiceAsyncBatched(serviceFactory, maxBatchSize, mapAsyncFn);
+    }
+
+    @Nonnull @Override
     <S, R> BatchStage<R> mapUsingServiceAsyncBatched(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     );
