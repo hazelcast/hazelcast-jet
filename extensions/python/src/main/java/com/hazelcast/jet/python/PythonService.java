@@ -16,7 +16,6 @@
 package com.hazelcast.jet.python;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.core.Processor.Context;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.python.grpc.InputMessage;
 import com.hazelcast.jet.python.grpc.InputMessage.Builder;
@@ -60,8 +59,8 @@ final class PythonService {
     private final CountDownLatch completionLatch = new CountDownLatch(1);
     private volatile Throwable exceptionInOutputObserver;
 
-    PythonService(Context procCtx, PythonServiceContext serviceContext) {
-        logger = procCtx.logger();
+    PythonService(PythonServiceContext serviceContext) {
+        logger = serviceContext.logger();
         try {
             server = new JetToPythonServer(serviceContext.runtimeBaseDir(), logger);
             int serverPort = server.start();
@@ -84,7 +83,7 @@ final class PythonService {
         ServiceFactory<PythonServiceContext, PythonService> fac = ServiceFactory
                 .withCreateContextFn(ctx -> new PythonServiceContext(ctx, cfg))
                 .withDestroyContextFn(PythonServiceContext::destroy)
-                .withCreateServiceFn((procCtx, serviceCtx) -> new PythonService(procCtx, serviceCtx))
+                .withCreateServiceFn((procCtx, serviceCtx) -> new PythonService(serviceCtx))
                 .withDestroyServiceFn(PythonService::destroy);
         if (cfg.baseDir() != null) {
             File baseDir = Objects.requireNonNull(cfg.baseDir());
