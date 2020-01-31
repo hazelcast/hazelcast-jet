@@ -138,23 +138,23 @@ See [examples folder](examples) for some examples.
 
 | Name                                                         | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| [Hazelcast Map](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)           | Connector for maps in local and remote Hazelcast clusters.                    |
-| [Hazelcast Map Journal](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)   | Connector for change events on maps in local and remote Hazelcast clusters.   |
-| [Hazelcast Cache](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)         | Connector for caches in local and remote Hazelcast clusters.                  |
-| [Hazelcast Cache Journal](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java) | Connector for change events on caches in local and remote Hazelcast clusters. |
-| [Hazelcast List](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)          | Connector for lists in local and remote Hazelcast clusters.                   |
+| [Amazon S3](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/s3/src/main/java/com/hazelcast/jet/s3) | A connector that allows AWS S3 read/write support for Hazelcast Jet. |
+| [Apache Avro](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/avro)   | Source and sink connector for Avro files.                                                     |
+| [Apache Hadoop](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/hadoop/src/main/java/com/hazelcast/jet/hadoop) | A connector that allows Apache Hadoop read/write support for Hazelcast Jet. |
+| [Apache Kafka](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/kafka) | A connector that allows consuming/producing events from/to Apache Kafka. |
+| [Elasticsearch](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch) | A Hazelcast Jet connector for Elasticsearch for querying/indexing objects from/to Elasticsearch. |
 | [Files](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)            | Connector for local filesystem.                                               |
+| [Hazelcast Cache Journal](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java) | Connector for change events on caches in local and remote Hazelcast clusters. |
+| [Hazelcast Cache](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)         | Connector for caches in local and remote Hazelcast clusters.                  |
+| [Hazelcast List](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)          | Connector for lists in local and remote Hazelcast clusters.                   |
+| [Hazelcast Map Journal](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)   | Connector for change events on maps in local and remote Hazelcast clusters.   |
+| [Hazelcast Map](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)           | Connector for maps in local and remote Hazelcast clusters.                    |
+| [InfluxDb](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb) | A Hazelcast Jet Connector for InfluxDb which enables pipelines to read/write data points from/to InfluxDb. |
 | [JDBC](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)          | Connector for relational databases via JDBC.                                  |
 | [JMS](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)           | Connector for JMS topics and queues.                                          |
-| [Socket](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)        | Connector for TCP sockets.                                                    |
-| [Apache Avro](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/avro)   | Source and sink connector for Avro files.                                                     |
-| [Apache Kafka](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/kafka) | A connector that allows consuming/producing events from/to Apache Kafka. |
-| [Amazon S3](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/s3/src/main/java/com/hazelcast/jet/s3) | A connector that allows AWS S3 read/write support for Hazelcast Jet. |
-| [Apache Hadoop](https://github.com/hazelcast/hazelcast-jet/tree/master/extensions/hadoop/src/main/java/com/hazelcast/jet/hadoop) | A connector that allows Apache Hadoop read/write support for Hazelcast Jet. |
-| [InfluxDb](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb) | A Hazelcast Jet Connector for InfluxDb which enables pipelines to read/write data points from/to InfluxDb. |
-| [Elasticsearch](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch) | A Hazelcast Jet connector for Elasticsearch for querying/indexing objects from/to Elasticsearch. |
-| [Redis](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis) | Hazelcast Jet connectors for various Redis data structures.  |
 | [MongoDB](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/mongodb) | A Hazelcast Jet connector for MongoDB for querying/inserting objects from/to MongoDB. |
+| [Redis](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis) | Hazelcast Jet connectors for various Redis data structures.  |
+| [Socket](https://github.com/hazelcast/hazelcast-jet/blob/master/hazelcast-jet-core/src/main/java/com/hazelcast/jet/pipeline/Sources.java)        | Connector for TCP sockets.                                                    |
 
 See [hazelcast-jet-contrib](https://github.com/hazelcast/hazelcast-jet-contrib) repository for more detailed information on community supported connectors and tools. 
 
