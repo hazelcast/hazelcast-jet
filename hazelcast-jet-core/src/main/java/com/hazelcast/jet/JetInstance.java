@@ -146,7 +146,7 @@ public interface JetInstance {
             Object object = e.getValue();
             if (object instanceof byte[]) {
                 config.attachFileContent((byte[]) object, e.getKey());
-                break;
+                continue;
             }
             File file = (File) object;
             if (!file.canRead()) {
