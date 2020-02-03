@@ -102,11 +102,11 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
     private AsyncTransformUsingServiceUnorderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull C serviceContext,
-            int maxAsyncOps,
+            int maxConcurrentOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull Function<? super T, ? extends K> extractKeyFn
     ) {
-        super(serviceFactory, serviceContext, maxAsyncOps, false);
+        super(serviceFactory, serviceContext, maxConcurrentOps, false);
         this.callAsyncFn = callAsyncFn;
         this.extractKeyFn = extractKeyFn;
     }
@@ -114,7 +114,7 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
     @Override
     protected void init(@Nonnull Processor.Context context) throws Exception {
         super.init(context);
-        resultQueue = new ManyToOneConcurrentArrayQueue<>(maxAsyncOps);
+        resultQueue = new ManyToOneConcurrentArrayQueue<>(maxConcurrentOps);
     }
 
     @Override
@@ -135,7 +135,7 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
 
     @CheckReturnValue
     private boolean processItem(@Nonnull T item) {
-        if (asyncOpsCounter == maxAsyncOps) {
+        if (asyncOpsCounter == maxConcurrentOps) {
             return false;
         }
         CompletableFuture<Traverser<R>> future = callAsyncFn.apply(service, item);
@@ -304,12 +304,13 @@ public final class AsyncTransformUsingServiceUnorderedP<C, S, T, K, R> extends A
      */
     public static <C, S, T, K, R> ProcessorSupplier supplier(
             @Nonnull ServiceFactory<C, S> serviceFactory,
-            int maxAsyncOps,
+            int maxConcurrentOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn,
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn
     ) {
         return supplierWithService(serviceFactory, (serviceFn, context) ->
-                new AsyncTransformUsingServiceUnorderedP<>(serviceFn, context, maxAsyncOps, callAsyncFn, extractKeyFn));
+                new AsyncTransformUsingServiceUnorderedP<>(
+                        serviceFn, context, maxConcurrentOps, callAsyncFn, extractKeyFn));
     }
 
     private enum Keys {

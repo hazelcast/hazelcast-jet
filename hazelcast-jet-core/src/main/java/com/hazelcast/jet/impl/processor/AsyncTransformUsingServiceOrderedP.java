@@ -69,10 +69,10 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
     AsyncTransformUsingServiceOrderedP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull C serviceContext,
-            int maxAsyncOps,
+            int maxConcurrentOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
-        super(serviceFactory, serviceContext, maxAsyncOps, true);
+        super(serviceFactory, serviceContext, maxConcurrentOps, true);
         this.callAsyncFn = callAsyncFn;
     }
 
@@ -80,7 +80,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
     protected void init(@Nonnull Context context) throws Exception {
         super.init(context);
         // Size for the worst case: interleaved output items an WMs
-        queue = new ArrayDeque<>(maxAsyncOps * 2);
+        queue = new ArrayDeque<>(maxConcurrentOps * 2);
     }
 
     @Override
@@ -98,7 +98,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
     }
 
     boolean isQueueFull() {
-        return queue.size() - queuedWmCount == maxAsyncOps;
+        return queue.size() - queuedWmCount == maxConcurrentOps;
     }
 
     @Override
@@ -188,10 +188,10 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
      */
     public static <C, S, T, R> ProcessorSupplier supplier(
             @Nonnull ServiceFactory<C, S> serviceFactory,
-            int maxAsyncOps,
+            int maxConcurrentOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
         return supplierWithService(serviceFactory, (serviceFn, context) ->
-                new AsyncTransformUsingServiceOrderedP<>(serviceFn, context, maxAsyncOps, callAsyncFn));
+                new AsyncTransformUsingServiceOrderedP<>(serviceFn, context, maxConcurrentOps, callAsyncFn));
     }
 }

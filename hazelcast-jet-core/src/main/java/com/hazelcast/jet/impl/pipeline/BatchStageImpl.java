@@ -117,11 +117,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull @Override
     public <S, R> BatchStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxAsyncOps, orderedAsyncResponses,
+        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
     }
 
@@ -131,7 +131,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, 2, maxBatchSize,
+        return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(list -> toList(list, Traversers::singleton)));
     }
 

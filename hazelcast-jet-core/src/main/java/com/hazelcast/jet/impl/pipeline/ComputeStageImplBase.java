@@ -265,15 +265,15 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, R, RET> RET attachFlatMapUsingServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
         serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceAsyncFn(flatMapAsyncFn);
         ProcessorTransform processorTransform = flatMapUsingServiceAsyncTransform(
-                transform, operationName, serviceFactory, maxAsyncOps, orderedAsyncResponses, adaptedFlatMapFn);
+                transform, operationName, serviceFactory, maxConcurrentOps, preserveOrder, adaptedFlatMapFn);
         return (RET) attach(processorTransform, fnAdapter);
     }
 
@@ -282,7 +282,6 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, R, RET> RET attachFlatMapUsingServiceAsyncBatched(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>,
                     ? extends CompletableFuture<List<Traverser<R>>>> flatMapAsyncBatchedFn
@@ -303,7 +302,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
         return (RET) attach(
                 flatMapUsingServiceAsyncBatchedTransform(
-                        transform, operationName, serviceFactory, maxAsyncOps, maxBatchSize, flattenedFn),
+                        transform, operationName, serviceFactory, 2, maxBatchSize, flattenedFn),
                 fnAdapter);
     }
 
@@ -365,8 +364,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, K, R, RET> RET attachTransformUsingPartitionedServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
@@ -379,8 +378,8 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                 transform,
                 operationName,
                 serviceFactory,
-                maxAsyncOps,
-                orderedAsyncResponses,
+                maxConcurrentOps,
+                preserveOrder,
                 adaptedFlatMapFn,
                 adaptedPartitionKeyFn
         );

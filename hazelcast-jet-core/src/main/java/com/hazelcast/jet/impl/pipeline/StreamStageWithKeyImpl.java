@@ -102,11 +102,11 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
     @Nonnull @Override
     public <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachTransformUsingServiceAsync("map", serviceFactory, maxAsyncOps, orderedAsyncResponses,
+        return attachTransformUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, k, t) -> mapAsyncFn.apply(s, k, t).thenApply(Traversers::singleton));
     }
 

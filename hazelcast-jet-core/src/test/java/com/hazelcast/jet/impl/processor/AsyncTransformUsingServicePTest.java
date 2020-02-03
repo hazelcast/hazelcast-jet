@@ -44,7 +44,7 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
-import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_CONCURRENT_OPS;
 import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -70,20 +70,20 @@ public class AsyncTransformUsingServicePTest extends SimpleTestInClusterSupport 
     private ProcessorSupplier getSupplier(
             BiFunctionEx<? super String, ? super String, CompletableFuture<Traverser<String>>> mapFn
     ) {
-        return getSupplier(MAX_ASYNC_OPS, mapFn);
+        return getSupplier(MAX_CONCURRENT_OPS, mapFn);
     }
 
     private ProcessorSupplier getSupplier(
-            int maxAsyncOps,
+            int maxConcurrentOps,
             BiFunctionEx<? super String, ? super String, CompletableFuture<Traverser<String>>> mapFn
     ) {
         ServiceFactory<?, String> serviceFactory = ServiceFactories
                 .nonSharedService(pctx -> "foo");
         return ordered
                 ? AsyncTransformUsingServiceOrderedP.supplier(
-                        serviceFactory, maxAsyncOps, mapFn)
+                        serviceFactory, maxConcurrentOps, mapFn)
                 : AsyncTransformUsingServiceUnorderedP.supplier(
-                        serviceFactory, maxAsyncOps, mapFn, FunctionEx.identity());
+                        serviceFactory, maxConcurrentOps, mapFn, FunctionEx.identity());
     }
 
     @BeforeClass

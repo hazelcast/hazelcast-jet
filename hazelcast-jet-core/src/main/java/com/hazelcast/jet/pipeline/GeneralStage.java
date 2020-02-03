@@ -39,8 +39,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.function.PredicateEx.alwaysTrue;
-import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
-import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.ORDERED_ASYNC_RESPONSES;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_CONCURRENT_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.PRESERVE_ORDER;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -335,7 +335,7 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return mapUsingServiceAsync(serviceFactory, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, mapAsyncFn);
+        return mapUsingServiceAsync(serviceFactory, MAX_CONCURRENT_OPS, PRESERVE_ORDER, mapAsyncFn);
     }
 
     /**
@@ -368,8 +368,8 @@ public interface GeneralStage<T> extends Stage {
      * duplicate updates.
      *
      * @param serviceFactory the service factory
-     * @param maxAsyncOps maxAsyncOps maximum number of concurrent async operations per processor
-     * @param orderedAsyncResponses whether the async responses are ordered or not
+     * @param maxConcurrentOps maximum number of concurrent async operations per processor
+     * @param preserveOrder whether the ordering of the input items should be preserved
      * @param mapAsyncFn a stateless mapping function. Can map to null (return
      *      a null future)
      * @param <S> type of service object
@@ -379,8 +379,8 @@ public interface GeneralStage<T> extends Stage {
     @Nonnull
     <S, R> GeneralStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
@@ -649,8 +649,8 @@ public interface GeneralStage<T> extends Stage {
     ) {
         GeneralStage<R> res = mapUsingServiceAsync(
                 ServiceFactories.<K, V>iMapService(mapName),
-                MAX_ASYNC_OPS,
-                ORDERED_ASYNC_RESPONSES,
+                MAX_CONCURRENT_OPS,
+                PRESERVE_ORDER,
                 (map, t) -> map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e))
         );
         return res.setName("mapUsingIMap");

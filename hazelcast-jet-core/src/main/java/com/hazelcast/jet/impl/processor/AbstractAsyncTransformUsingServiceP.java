@@ -23,21 +23,21 @@ import javax.annotation.Nonnull;
 public abstract class AbstractAsyncTransformUsingServiceP<C, S> extends AbstractTransformUsingServiceP<C, S> {
 
     /**
-     * Default value for {@link #maxAsyncOps}.
+     * Default value for {@link #maxConcurrentOps}.
      */
-    public static final int MAX_ASYNC_OPS = 256;
+    public static final int MAX_CONCURRENT_OPS = 256;
     /**
-     * Default value for {@link #orderedAsyncResponses}.
+     * Default value for {@link #preserveOrder}.
      */
-    public static final boolean ORDERED_ASYNC_RESPONSES = true;
+    public static final boolean PRESERVE_ORDER = true;
 
     /**
      * Jet will execute at most this many concurrent async operations per processor
      * and will apply backpressure to the upstream to enforce it.
      * <p>
-     * Default value is {@value #MAX_ASYNC_OPS}.
+     * Default value is {@value #MAX_CONCURRENT_OPS}.
      */
-    protected final int maxAsyncOps;
+    protected final int maxConcurrentOps;
 
     /**
      * Jet can process asynchronous responses in two modes:
@@ -64,20 +64,18 @@ public abstract class AbstractAsyncTransformUsingServiceP<C, S> extends Abstract
      * operation downstream from finishing, but if the operation is configured
      * to emit early results, they will be more correct with the unordered
      * approach.
-     * <p>
-     * Default value is {@value #ORDERED_ASYNC_RESPONSES}.
      */
-    protected final boolean orderedAsyncResponses;
+    protected final boolean preserveOrder;
 
     public AbstractAsyncTransformUsingServiceP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull C serviceContext,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses
+            int maxConcurrentOps,
+            boolean preserveOrder
     ) {
         super(serviceFactory, serviceContext);
-        this.maxAsyncOps = maxAsyncOps;
-        this.orderedAsyncResponses = orderedAsyncResponses;
+        this.maxConcurrentOps = maxConcurrentOps;
+        this.preserveOrder = preserveOrder;
     }
 
 }

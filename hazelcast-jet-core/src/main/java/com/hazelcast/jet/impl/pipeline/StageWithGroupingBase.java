@@ -110,14 +110,14 @@ class StageWithGroupingBase<T, K> {
     <S, R, RET> RET attachTransformUsingServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
-            boolean orderedAsyncResponses,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
                     flatMapAsyncFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
         return computeStage.attachTransformUsingPartitionedServiceAsync(
-                operationName, serviceFactory, maxAsyncOps, orderedAsyncResponses, keyFn,
+                operationName, serviceFactory, maxConcurrentOps, preserveOrder, keyFn,
                 (s, t) -> {
                     K k = keyFn.apply(t);
                     return flatMapAsyncFn.apply(s, k, t);
