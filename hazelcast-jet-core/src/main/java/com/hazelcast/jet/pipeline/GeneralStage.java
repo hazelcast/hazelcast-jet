@@ -431,65 +431,8 @@ public interface GeneralStage<T> extends Stage {
      * @since 4.0
      */
     @Nonnull
-    default <S, R> GeneralStage<R> mapUsingServiceAsyncBatched(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxBatchSize,
-            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
-    ) {
-        return mapUsingServiceAsyncBatched(serviceFactory, MAX_ASYNC_OPS, maxBatchSize, mapAsyncFn);
-    }
-
-    /**
-     * Batched version of {@link #mapUsingService}: {@code mapAsyncFn} takes
-     * a list of input items and returns a {@code CompletableFuture<List<R>>}.
-     * The size of the input list is limited by the given {@code maxBatchSize}.
-     * <p>
-     * As opposed to the non-batched variant, this transform cannot perform
-     * filtering. The output list's items must match one-to-one with the input
-     * list's.
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     * <p>
-     * This sample takes a stream of stock items and sets the {@code detail}
-     * field on them by performing batched lookups from a registry. The max
-     * size of the items to lookup is specified as {@code 100}:
-     * <pre>{@code
-     * stage.mapUsingServiceAsyncBatched(
-     *     ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
-     *     100,
-     *     (reg, itemList) -> reg
-     *             .fetchDetailsAsync(itemList)
-     *             .thenApply(detailList -> {
-     *                 for (int i = 0; i < itemList.size(); i++) {
-     *                     itemList.get(i).setDetail(detailList.get(i))
-     *                 }
-     *             })
-     * )
-     * }</pre>
-     *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
-     * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the service object maintains doesn't participate in Jet's
-     * fault tolerance protocol. If the state is local, it will be lost after a
-     * job restart; if it is saved to some durable storage, the state of that
-     * storage won't be rewound to the last checkpoint, so you'll perform
-     * duplicate updates.
-     *
-     * @param serviceFactory the service factory
-     * @param maxAsyncOps maxAsyncOps maximum number of concurrent async operations per processor
-     * @param maxBatchSize max size of the input list
-     * @param mapAsyncFn a stateless mapping function
-     * @param <S> type of service object
-     * @param <R> the future result type of the mapping function
-     * @return the newly attached stage
-     * @since 4.0
-     */
-    @Nonnull
     <S, R> GeneralStage<R> mapUsingServiceAsyncBatched(
             @Nonnull ServiceFactory<?, S> serviceFactory,
-            int maxAsyncOps,
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     );

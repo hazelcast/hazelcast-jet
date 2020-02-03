@@ -172,8 +172,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
-         .mapUsingServiceAsyncBatched(serviceFactory, MAX_ASYNC_OPS, 128,
-                 transformNotPartitionedFn(i -> i + "-1"))
+         .mapUsingServiceAsyncBatched(serviceFactory, 128, transformNotPartitionedFn(i -> i + "-1"))
          .setLocalParallelism(2)
          .writeTo(Sinks.list(sinkList));
 
