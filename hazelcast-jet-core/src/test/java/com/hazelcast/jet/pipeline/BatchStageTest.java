@@ -299,6 +299,39 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
+    public void mapUsingServiceAsync_keyed() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        BatchStage<String> mapped = batchStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsync(
+                        serviceFactory,
+                        (executor, k, i) -> {
+                            CompletableFuture<String> f = new CompletableFuture<>();
+                            executor.schedule(() -> {
+                                f.complete(formatFn.apply(suffix, i));
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream(), i -> formatFn.apply(suffix, i)),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
     public void filterUsingService() {
         // Given
         List<Integer> input = sequence(itemCount);
