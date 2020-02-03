@@ -21,6 +21,7 @@ import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
@@ -93,13 +94,15 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
-        return new PartitionedProcessorTransform<>(operationName + "UsingPartitionedServiceAsync", upstream,
-                ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
-                        flatMapUsingServiceAsyncP(serviceFactory, maxAsyncOps, partitionKeyFn, flatMapAsyncFn)),
-                partitionKeyFn);
+        String name = operationName + "UsingPartitionedServiceAsync";
+        ProcessorSupplier supplier = flatMapUsingServiceAsyncP(
+                serviceFactory, maxAsyncOps, orderedAsyncResponses, partitionKeyFn, flatMapAsyncFn);
+        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.of(getPreferredLP(serviceFactory), supplier);
+        return new PartitionedProcessorTransform<>(name, upstream, metaSupplier, partitionKeyFn);
     }
 
     @Override

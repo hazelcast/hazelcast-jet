@@ -92,14 +92,16 @@ public class ProcessorTransform extends AbstractTransform {
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         // TODO use better key so that snapshots are local. Currently they will
         //      be sent to a random member. We keep it this way for simplicity:
         //      the number of in-flight items is limited (maxAsyncOps)
-        return new ProcessorTransform(operationName + "UsingServiceAsync", upstream,
-                ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
-                        flatMapUsingServiceAsyncP(serviceFactory, maxAsyncOps, Object::hashCode, flatMapAsyncFn)));
+        ProcessorSupplier supplier = flatMapUsingServiceAsyncP(
+                serviceFactory, maxAsyncOps, orderedAsyncResponses, Object::hashCode, flatMapAsyncFn);
+        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.of(getPreferredLP(serviceFactory), supplier);
+        return new ProcessorTransform(operationName + "UsingServiceAsync", upstream, metaSupplier);
     }
 
     public static <S, T, R> ProcessorTransform flatMapUsingServiceAsyncBatchedTransform(
@@ -125,10 +127,11 @@ public class ProcessorTransform extends AbstractTransform {
     static <C, S, T, K, R> ProcessorSupplier flatMapUsingServiceAsyncP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull FunctionEx<? super T, ? extends K> extractKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
-        return serviceFactory.hasOrderedAsyncResponses()
+        return orderedAsyncResponses
                 ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, maxAsyncOps, flatMapAsyncFn)
                 : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, maxAsyncOps, flatMapAsyncFn, extractKeyFn);
     }

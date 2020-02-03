@@ -119,6 +119,7 @@ public interface StreamStage<T> extends GeneralStage<T> {
     <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 

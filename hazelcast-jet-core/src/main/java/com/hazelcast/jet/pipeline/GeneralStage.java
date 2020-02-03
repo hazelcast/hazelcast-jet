@@ -40,6 +40,7 @@ import java.util.function.Function;
 
 import static com.hazelcast.function.PredicateEx.alwaysTrue;
 import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.ORDERED_ASYNC_RESPONSES;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -334,7 +335,7 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return mapUsingServiceAsync(serviceFactory, MAX_ASYNC_OPS, mapAsyncFn);
+        return mapUsingServiceAsync(serviceFactory, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, mapAsyncFn);
     }
 
     /**
@@ -368,6 +369,7 @@ public interface GeneralStage<T> extends Stage {
      *
      * @param serviceFactory the service factory
      * @param maxAsyncOps maxAsyncOps maximum number of concurrent async operations per processor
+     * @param orderedAsyncResponses whether the async responses are ordered or not
      * @param mapAsyncFn a stateless mapping function. Can map to null (return
      *      a null future)
      * @param <S> type of service object
@@ -378,6 +380,7 @@ public interface GeneralStage<T> extends Stage {
     <S, R> GeneralStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     );
 
@@ -701,8 +704,12 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        GeneralStage<R> res = mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), MAX_ASYNC_OPS,
-                (map, t) -> map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e)));
+        GeneralStage<R> res = mapUsingServiceAsync(
+                ServiceFactories.<K, V>iMapService(mapName),
+                MAX_ASYNC_OPS,
+                ORDERED_ASYNC_RESPONSES,
+                (map, t) -> map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e))
+        );
         return res.setName("mapUsingIMap");
     }
 

@@ -34,6 +34,7 @@ import java.util.Collection;
 
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.NON_COOPERATIVE_DEFAULT_LOCAL_PARALLELISM;
 import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.ORDERED_ASYNC_RESPONSES;
 import static com.hazelcast.jet.pipeline.ServiceFactory.withCreateContextFn;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.junit.Assert.assertEquals;
@@ -110,18 +111,18 @@ public class ProcessorTransformParallelismTest {
                 createParamSet(
                         stage -> stage
                                 .groupingKey(i -> i)
-                                .mapUsingServiceAsync(SERVICE_FACTORY, MAX_ASYNC_OPS, (c, k, t) -> supplyAsync(() -> t))
+                                .mapUsingServiceAsync(SERVICE_FACTORY, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, (c, k, t) -> supplyAsync(() -> t))
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         stage -> stage
                                 .groupingKey(i -> i)
-                                .mapUsingServiceAsync(SERVICE_FACTORY, MAX_ASYNC_OPS, (c, k, t) -> supplyAsync(() -> t)),
+                                .mapUsingServiceAsync(SERVICE_FACTORY, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, (c, k, t) -> supplyAsync(() -> t)),
                         stage -> stage
                                 .groupingKey(i -> i)
-                                .mapUsingServiceAsync(NC_SERVICE_FACTORY, MAX_ASYNC_OPS, (c, k, t) -> supplyAsync(() -> t))
+                                .mapUsingServiceAsync(NC_SERVICE_FACTORY, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, (c, k, t) -> supplyAsync(() -> t))
                                 .setLocalParallelism(LOCAL_PARALLELISM),
                         stage -> stage
                                 .groupingKey(i -> i)
-                                .mapUsingServiceAsync(NC_SERVICE_FACTORY, MAX_ASYNC_OPS, (c, k, t) -> supplyAsync(() -> t)),
+                                .mapUsingServiceAsync(NC_SERVICE_FACTORY, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, (c, k, t) -> supplyAsync(() -> t)),
                         "mapUsingPartitionedServiceAsync"),
                 createParamSet(
                         stage -> stage

@@ -114,9 +114,6 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
         serviceFactory = sharedService(pctx -> Executors.newFixedThreadPool(8), ExecutorService::shutdown);
-        if (!ordered) {
-            serviceFactory = serviceFactory.withUnorderedAsyncResponses();
-        }
     }
 
     @Test
@@ -149,7 +146,7 @@ public class AsyncTransformUsingServiceP_IntegrationTest extends SimpleTestInClu
                 )), 5000));
         BiFunctionEx<ExecutorService, Integer, CompletableFuture<Traverser<String>>> flatMapAsyncFn =
                 transformNotPartitionedFn(i -> traverseItems(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"));
-        ProcessorSupplier processorSupplier = serviceFactory.hasOrderedAsyncResponses()
+        ProcessorSupplier processorSupplier = ordered
                 ? AsyncTransformUsingServiceOrderedP.supplier(serviceFactory, MAX_ASYNC_OPS, flatMapAsyncFn)
                 : AsyncTransformUsingServiceUnorderedP.supplier(serviceFactory, MAX_ASYNC_OPS, flatMapAsyncFn, identity());
         Vertex map = dag.newVertex("map", processorSupplier).localParallelism(2);

@@ -26,16 +26,58 @@ public abstract class AbstractAsyncTransformUsingServiceP<C, S> extends Abstract
      * Default value for {@link #maxAsyncOps}.
      */
     public static final int MAX_ASYNC_OPS = 256;
+    /**
+     * Default value for {@link #orderedAsyncResponses}.
+     */
+    public static final boolean ORDERED_ASYNC_RESPONSES = true;
 
+    /**
+     * Jet will execute at most this many concurrent async operations per processor
+     * and will apply backpressure to the upstream to enforce it.
+     * <p>
+     * Default value is {@value #MAX_ASYNC_OPS}.
+     */
     protected final int maxAsyncOps;
+
+    /**
+     * Jet can process asynchronous responses in two modes:
+     * <ol><li>
+     *     <b>Ordered:</b> results of the async calls are emitted in the submission
+     *     order. This is the default.
+     * <li>
+     *     <b>Unordered:</b> results of the async calls are emitted as they
+     *     arrive. This mode is enabled by this method.
+     * </ol>
+     * The unordered mode can be faster:
+     * <ul><li>
+     *     in the ordered mode, one stalling call will block all subsequent items,
+     *     even though responses for them were already received
+     * <li>
+     *     to preserve the order after a restart, the ordered implementation when
+     *     saving the state to the snapshot waits for all async calls to complete.
+     *     This creates a hiccup depending on the async call latency. The unordered
+     *     one saves in-flight items to the state snapshot.
+     * </ul>
+     * The order of watermarks is preserved even in the unordered mode. Jet
+     * forwards the watermark after having emitted all the results of the items
+     * that came before it. One stalling response will prevent a windowed
+     * operation downstream from finishing, but if the operation is configured
+     * to emit early results, they will be more correct with the unordered
+     * approach.
+     * <p>
+     * Default value is {@value #ORDERED_ASYNC_RESPONSES}.
+     */
+    protected final boolean orderedAsyncResponses;
 
     public AbstractAsyncTransformUsingServiceP(
             @Nonnull ServiceFactory<C, S> serviceFactory,
             @Nonnull C serviceContext,
-            int maxAsyncOps
+            int maxAsyncOps,
+            boolean orderedAsyncResponses
     ) {
         super(serviceFactory, serviceContext);
         this.maxAsyncOps = maxAsyncOps;
+        this.orderedAsyncResponses = orderedAsyncResponses;
     }
 
 }

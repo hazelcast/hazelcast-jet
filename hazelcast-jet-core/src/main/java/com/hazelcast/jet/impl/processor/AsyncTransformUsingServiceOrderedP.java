@@ -72,7 +72,7 @@ public class AsyncTransformUsingServiceOrderedP<C, S, T, R> extends AbstractAsyn
             int maxAsyncOps,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> callAsyncFn
     ) {
-        super(serviceFactory, serviceContext, maxAsyncOps);
+        super(serviceFactory, serviceContext, maxAsyncOps, true);
         this.callAsyncFn = callAsyncFn;
     }
 

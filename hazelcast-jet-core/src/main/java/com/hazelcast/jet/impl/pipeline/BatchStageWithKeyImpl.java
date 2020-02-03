@@ -92,9 +92,10 @@ public class BatchStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> imp
     public <S, R> BatchStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachTransformUsingServiceAsync("map", serviceFactory, maxAsyncOps,
+        return attachTransformUsingServiceAsync("map", serviceFactory, maxAsyncOps, orderedAsyncResponses,
                 (s, k, t) -> mapAsyncFn.apply(s, k, t).thenApply(Traversers::singleton));
     }
 

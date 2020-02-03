@@ -38,6 +38,7 @@ import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_ASYNC_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.ORDERED_ASYNC_RESPONSES;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -277,7 +278,7 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return mapUsingServiceAsync(serviceFactory, MAX_ASYNC_OPS, mapAsyncFn);
+        return mapUsingServiceAsync(serviceFactory, MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES, mapAsyncFn);
     }
 
     /**
@@ -303,6 +304,7 @@ public interface GeneralStageWithKey<T, K> {
      * @param <R> the future's result type of the mapping function
      * @param serviceFactory the service factory
      * @param maxAsyncOps maximum number of concurrent async operations per processor
+     * @param orderedAsyncResponses whether the async responses are ordered or not
      * @param mapAsyncFn a stateless mapping function. Can map to null (return
      *      a null future)
      * @return the newly attached stage
@@ -311,6 +313,7 @@ public interface GeneralStageWithKey<T, K> {
     <S, R> GeneralStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxAsyncOps,
+            boolean orderedAsyncResponses,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     );
 
@@ -445,7 +448,7 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull String mapName,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), MAX_ASYNC_OPS,
+        return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), MAX_ASYNC_OPS, ORDERED_ASYNC_RESPONSES,
                 (map, key, item) -> map.getAsync(key).toCompletableFuture()
                                        .thenApply(value -> mapFn.apply(item, value)));
     }
