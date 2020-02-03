@@ -1012,6 +1012,22 @@ public class ResourceConfigTest extends JetTestSupport {
         config.attachDirectory(file, id);
     }
 
+    @Test
+    public void when_attachFileContent() {
+        // Given
+        String resourceId = "resourceId";
+        byte[] fileContent = "theFileContent".getBytes();
+
+        // When
+        config.attachFileContent(fileContent, resourceId);
+
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(resourceId, resourceConfig.getId());
+        assertEquals(fileContent, resourceConfig.getFileContent());
+        assertEquals(ResourceType.FILE_CONTENT, resourceConfig.getResourceType());
+
+    }
+
     private File createFile(String path) throws IOException {
         File file = new File(baseDir, path);
         assertTrue("Failed to create parent path for " + file, file.getParentFile().mkdirs());
