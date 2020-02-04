@@ -53,10 +53,11 @@ public final class KafkaSinks {
      * The behavior depends on the job's processing guarantee:
      * <ul>
      *     <li><em>EXACTLY_ONCE:</em> the sink will use Kafka transactions to
-     *     commit the messages. This brings some overhead on the broker side,
-     *     slight throughput reduction (we don't send messages between snapshot
-     *     phases) and, most importantly, increases the latency of the messages
-     *     because they are only visible to consumers after they are committed.
+     *     commit the messages. Transactions are committed after a snapshot is
+     *     completed. This increases the latency of the messages because they
+     *     are only visible to consumers after they are committed and slightly
+     *     reduces the throughput because no messages are sent between the
+     *     snapshot phases.
      *     <p>
      *     When using transactions pay attention to your {@code
      *     transaction.timeout.ms} config property. It limits the entire
