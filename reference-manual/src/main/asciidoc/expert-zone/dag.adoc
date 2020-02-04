@@ -263,7 +263,7 @@ is often significantly faster and it's safe to use on a local edge.
 On a distributed edge it is not a safe strategy in general because
 `hashCode()` 's contract does not require repeatable results across
 JVMs or even different instances of the same JVM version. If a given
-class' Javadoc explicitly specifies the hashing function it uses, then
+class's Javadoc explicitly specifies the hashing function it uses, then
 its instances are safe to partition with `hashCode()`.
 
 You can provide your own implementation of `Partitioner` to gain full

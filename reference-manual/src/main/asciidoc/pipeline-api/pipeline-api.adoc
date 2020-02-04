@@ -196,7 +196,7 @@ enrichment_.
 
 Jet offers two basic techniques to enrich your data stream:
 
-. <<hash join, Hash-join>> the stream with one or more datasets that you
+. <<hash-join, Hash-join>> the stream with one or more datasets that you
 ingest as bounded streams. If your enriching dataset doesn't change for
 the duration of the Jet job, this is your best tool.
 
@@ -287,7 +287,7 @@ into each cluster member. That's why this operation is also known as a
 _replicated_ join. This is something to keep in mind when estimating
 the RAM requirements for a hash join operation.
 
-== Hash-Join With Four or More Streams Using the Builder
+== Hash Join With Four or More Streams Using the Builder
 
 You can hash-join a stream with up to two enriching streams using the
 API we demonstrated above. If you have more than two enriching streams,
