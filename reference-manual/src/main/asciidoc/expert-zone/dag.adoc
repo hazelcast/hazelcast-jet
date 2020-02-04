@@ -263,7 +263,7 @@ is often significantly faster and it's safe to use on a local edge.
 On a distributed edge it is not a safe strategy in general because
 `hashCode()` 's contract does not require repeatable results across
 JVMs or even different instances of the same JVM version. If a given
-class's Javadoc explicitly specifies the hashing function it uses, then
+class' Javadoc explicitly specifies the hashing function it uses, then
 its instances are safe to partition with `hashCode()`.
 
 You can provide your own implementation of `Partitioner` to gain full
@@ -321,7 +321,7 @@ include::{javasource}/expertzone/Dag.java[tag=s9]
 By default the processor receives items from all inbound edges as they
 arrive. However, there are important cases where an edge must be
 consumed in full to make the processor ready to accept data from other
-edges. A major example is a "`hash join`" which enriches the data stream
+edges. A major example is a `hash-join` which enriches the data stream
 with data from a lookup table. This can be modeled as a join of two data
 streams where the _enriching_ stream contains the data for the lookup
 table and must be consumed in full before consuming the stream to be

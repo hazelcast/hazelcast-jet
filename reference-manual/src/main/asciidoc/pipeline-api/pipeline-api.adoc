@@ -278,7 +278,7 @@ time setting a different product on it. This will create a data race
 with the downstream stage, which may observe the same product several
 times while missing the other ones.
 
-The safe way to perform a many-to-many hash join is to either package
+The safe way to perform a many-to-many `hash-join` is to either package
 the individual objects into a tuple (as in the earlier examples) or to
 create a new `Trade` object each time.
 
