@@ -25,12 +25,12 @@ Hazelcast Jet supports exactly-once processing with multiple sources and
 sinks. Each of them specifies the guarantees it is able to provide, for
 details see the summary in <<overview-of-sources-and-sinks>>.
 
-If you configure Jet job for exactly-once but use a sink with
-at-least-once guarantee, after a job restart you may get duplicates in
-the output. As opposed to doubly processing an input item, this is more
-benign because it just means getting the exact same result twice. If you
-use a source with at-least-once guarantee, some events might be
-processed multiple times.
+If you configure Jet job with the exactly-once guarantee but use a sink
+with at-least-once guarantee, after a job restart you may get duplicates
+in the output. As opposed to doubly processing an input item, this is
+more benign because it just means getting the exact same result twice.
+If you use a source with the at-least-once guarantee, some events might
+be processed multiple times.
 
 == At-Least-Once
 
@@ -44,8 +44,8 @@ In some other cases, however, duplicate processing of data items can
 have quite surprising consequences. There is more information about this
 in our <<pitfalls-alo, Jet Concepts>> chapter.
 
-Also note that duplicate event processing can occur only in case of a
-failure. If there is no failure or if the job is restarted due to a
+Also note that duplicate event processing can occur only in the case of
+a failure. If there is no failure or if the job is restarted due to a
 normal member shutdown or addition, even jobs in this mode do
 exactly-once processing.
 

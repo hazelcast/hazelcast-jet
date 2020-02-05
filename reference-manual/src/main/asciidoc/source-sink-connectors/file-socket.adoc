@@ -63,11 +63,11 @@ member will write to different file names. You can achieve the effect of
 a distributed sink if you manually collect all the output files on all
 members and combine their contents.
 
-If the job is running in exactly-once mode, items will be written to
-temporary files (ending with a ".tmp" suffix). When a snapshot is
-completed, the file will be atomically renamed to remove this suffix.
-Thanks to the two-phase commit of the snapshot, exactly-once guarantee
-is provided for the sink.
+If the job is running in exactly-once mode, items are written to
+temporary files (ending with a ".tmp" suffix). When Jet commits a
+snapshot, it atomically renames the file to remove this suffix. Thanks
+to the two-phase commit of the snapshot the sink provides exactly-once
+guarantee.
 
 The sink can roll a new file after certain size is reached or when a
 date changes.

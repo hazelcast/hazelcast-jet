@@ -26,9 +26,9 @@ keyset will be finite or by allowing the eviction of old entries.
 
 == Is it Fault-Tolerant?
 
-Can the connector work in a way that even in case of a job failure and
-restart it doesn't miss or duplicate any items it reads or creates? There are
-multiple ways this can be achieved:
+Can the connector work in a way that even in the case of a job failure
+and restart it doesn't miss or duplicate any items it reads or creates?
+There are multiple ways this can be achieved:
 
 === Replayable Source
 
@@ -51,7 +51,8 @@ fault-tolerant source. An example of this is the JMS source.
 
 Two-phase transactions are another way to achieve fault-tolerance. Jet
 can use the standard X/Open XA Transactions or equivalent API. An
-example is Kafka sink. JMS and JDBC are planned for the next release.
+example is the Kafka sink. JMS and JDBC are planned for the next
+release.
 
 === Idempotent writes
 
@@ -69,7 +70,7 @@ all targets can be written to by multiple writers. It also doesn't
 matter whether the resource actually stores data in multiple nodes.
 
 A distributed computation engine prefers to work with distributed data
-resources. If the resource is not distributed, one Jet members has to do
+resources. If the resource is not distributed, one Jet member has to do
 all the reading and then split the data for other members. Kafka, HDFS,
 `IMap` and `ICache` are all distributed. On the other hand, an `IList`
 is not: it resides on a single member. When used as a source, only one

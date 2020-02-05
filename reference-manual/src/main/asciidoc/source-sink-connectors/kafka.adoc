@@ -43,15 +43,15 @@ prevents neither data loss nor duplicate processing.
 
 == Using Kafka as a Sink
 
-The sink provides exactly-once guarantee at the cost of using Kafka
+The sink provides the exactly-once guarantee at the cost of using Kafka
 transactions: Jet commits the produced records after each snapshot is
 completed. This greatly increases the latency because consumers see the
 records only after they are committed.
 
-If you use _at-least-once_ guarantee, records a visible immediately, but
-in case of a failure some records could be produced duplicately. You can
-also have the job in exactly-once mode and decrease the guarantee just
-for a particular Kafka sink.
+If you use _at-least-once_ guarantee, records are visible immediately,
+but in the case of a failure some records could be produced duplicately.
+You can also have the job in exactly-once mode and decrease the
+guarantee just for a particular Kafka sink.
 
 == Limitations
 
