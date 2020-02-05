@@ -20,7 +20,6 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
-import com.hazelcast.jet.Util;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -30,7 +29,6 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -134,17 +132,29 @@ class StageWithGroupingBase<T, K> {
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxBatchSize,
-            @Nonnull BiFunctionEx<? super S, ? super List<Map.Entry<K, T>>, CompletableFuture<List<Traverser<R>>>>
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, CompletableFuture<List<Traverser<R>>>> flatMapAsyncFn
+    ) {
+        FunctionEx<? super T, ? extends K> keyFn = keyFn();
+        return computeStage.attachTransformUsingPartitionedServiceAsyncBatched(
+                operationName, serviceFactory, maxBatchSize, keyFn, flatMapAsyncFn);
+    }
+
+    @Nonnull
+    <S, R, RET> RET attachTransformUsingServiceAsyncBatched(
+            @Nonnull String operationName,
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>, CompletableFuture<List<Traverser<R>>>>
                     flatMapAsyncFn
     ) {
         FunctionEx<? super T, ? extends K> keyFn = keyFn();
         return computeStage.attachTransformUsingPartitionedServiceAsyncBatched(
                 operationName, serviceFactory, maxBatchSize, keyFn,
-                (s, itemList) -> {
-                    List<Map.Entry<K, T>> entryList = itemList.stream()
-                            .map(t -> Util.entry((K) keyFn.apply(t), t))
+                (s, items) -> {
+                    List<K> keys = items.stream()
+                            .map(t -> (K) keyFn.apply(t))
                             .collect(Collectors.toList());
-                    return flatMapAsyncFn.apply(s, entryList);
+                    return flatMapAsyncFn.apply(s, keys, items);
                 });
     }
 

@@ -336,7 +336,15 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             int maxBatchSize,
-            @Nonnull BiFunctionEx<? super S, ? super List<Entry<K, T>>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    );
+
+    @Nonnull @Override
+    <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>,
+                    ? extends CompletableFuture<List<R>>> mapAsyncFn
     );
 
     @Nonnull @Override

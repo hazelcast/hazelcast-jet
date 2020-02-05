@@ -332,7 +332,7 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
-    public void mapUsingServiceAsyncBatched_keyed() {
+    public void mapUsingServiceAsyncBatched_keyed_keysExposed() {
         ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
                 pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
         );
@@ -349,12 +349,52 @@ public class BatchStageTest extends PipelineTestSupport {
                 .mapUsingServiceAsyncBatched(
                         serviceFactory,
                         batchSize,
-                        (executor, entryList) -> {
+                        (executor, keys, items) -> {
                             CompletableFuture<List<String>> f = new CompletableFuture<>();
-                            assertTrue("list size", entryList.size() <= batchSize && entryList.size() > 0);
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            assertEquals("lists size equality", items.size(), keys.size());
                             executor.schedule(() -> {
-                                List<String> result = entryList.stream()
-                                        .map(i -> formatFn.apply(suffix, i.getValue()))
+                                List<String> result = items.stream()
+                                        .map(i -> formatFn.apply(suffix, i))
+                                        .collect(toList());
+                                f.complete(result);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream(), i -> formatFn.apply(suffix, i)),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_keysHidden() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 4;
+        BatchStage<String> mapped = batchStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            executor.schedule(() -> {
+                                List<String> result = items.stream()
+                                        .map(i -> formatFn.apply(suffix, i))
                                         .collect(toList());
                                 f.complete(result);
                             }, 10, TimeUnit.MILLISECONDS);
@@ -882,7 +922,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> joined = batchStageFromList(input).hashJoin(
                 enrichingStage,
                 joinMapEntries(wholeItem()),
-                (i, enriching) -> entry(i, enriching));
+                Util::entry);
 
         // Then
         joined.writeTo(sink);
@@ -929,7 +969,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Tuple3<Integer, String, String>> joined = batchStageFromList(input).hashJoin2(
                 enrichingStage1, joinMapEntries(wholeItem()),
                 enrichingStage2, joinMapEntries(wholeItem()),
-                (t1, t2, t3) -> tuple3(t1, t2, t3)
+                Tuple3::tuple3
         );
 
         // Then
@@ -962,7 +1002,7 @@ public class BatchStageTest extends PipelineTestSupport {
         Tag<String> tagA = b.add(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = b.add(enrichingStage2, joinMapEntries(wholeItem()));
         GeneralStage<Tuple2<Integer, ItemsByTag>> joined =
-                b.build((t1, t2) -> tuple2(t1, t2));
+                b.build(Tuple2::tuple2);
 
         // Then
         joined.writeTo(sink);
@@ -1106,7 +1146,6 @@ public class BatchStageTest extends PipelineTestSupport {
         Vertex tsVertex = dag.getVertex("add-timestamps");
         assertEquals(lp, tsVertex.getLocalParallelism());
     }
-
 
     @Test
     public void addTimestamps_when_upstreamHasNoPreferredLocalParallelism_then_lpMatchUpstream() {
