@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
@@ -30,6 +31,8 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> implements StreamStageWithKey<T, K> {
@@ -108,6 +111,15 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
     ) {
         return attachTransformUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, k, t) -> mapAsyncFn.apply(s, k, t).thenApply(Traversers::singleton));
+    }
+
+    @Nonnull @Override
+    public <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<Map.Entry<K, T>>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    ) {
+        throw new UnsupportedOperationException(); //todo
     }
 
     @Nonnull @Override

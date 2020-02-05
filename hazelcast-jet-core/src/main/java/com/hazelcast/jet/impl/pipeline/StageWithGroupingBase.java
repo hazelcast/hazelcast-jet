@@ -16,9 +16,11 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -27,7 +29,10 @@ import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 
@@ -121,6 +126,25 @@ class StageWithGroupingBase<T, K> {
                 (s, t) -> {
                     K k = keyFn.apply(t);
                     return flatMapAsyncFn.apply(s, k, t);
+                });
+    }
+
+    @Nonnull
+    <S, R, RET> RET attachTransformUsingServiceAsyncBatched(
+            @Nonnull String operationName,
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<Map.Entry<K, T>>, CompletableFuture<List<Traverser<R>>>>
+                    flatMapAsyncFn
+    ) {
+        FunctionEx<? super T, ? extends K> keyFn = keyFn();
+        return computeStage.attachTransformUsingPartitionedServiceAsyncBatched(
+                operationName, serviceFactory, maxBatchSize, keyFn,
+                (s, itemList) -> {
+                    List<Map.Entry<K, T>> entryList = itemList.stream()
+                            .map(t -> Util.entry((K) keyFn.apply(t), t))
+                            .collect(Collectors.toList());
+                    return flatMapAsyncFn.apply(s, entryList);
                 });
     }
 

@@ -31,6 +31,7 @@ import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -315,6 +316,49 @@ public interface GeneralStageWithKey<T, K> {
             int maxConcurrentOps,
             boolean preserveOrder,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    );
+
+    /**
+     * Batched version of {@link #mapUsingServiceAsync}: {@code mapAsyncFn} takes
+     * a list of key-input item pairs (as {@link Entry}s) and returns a
+     * {@code CompletableFuture<List<R>>}.
+     * The size of list is limited by the given {@code maxBatchSize}.
+     * <p>
+     * As opposed to the non-batched variant, this transform cannot perform
+     * filtering. The output list's items must match one-to-one with the input
+     * lists'.
+     * <p>
+     * The latency of the async call will add to the total latency of the
+     * output.
+     * <p>
+     * This sample takes a stream of stock items and sets the {@code detail}
+     * field on them by performing batched lookups from a registry. The max
+     * size of the items to lookup is specified as {@code 100}:
+     * <pre>{@code
+     * items.groupingKey(Item::getDetailId)
+     *      .mapUsingServiceAsyncBatched(
+     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
+     *          100,
+     *          (reg, entryList) -> entryList.stream()
+     *              .map(e -> reg.fetchDetailAsync(e.getKey())
+     *                           .thenApply(detail -> e.getValue().setDetail(detail)))
+     *              .collect(toList())
+     *      );
+     * }</pre>
+     *
+     * @param serviceFactory the service factory
+     * @param maxBatchSize max size of the input list
+     * @param mapAsyncFn a stateless mapping function
+     * @param <S> type of service object
+     * @param <R> the future result type of the mapping function
+     * @return the newly attached stage
+     * @since 4.0
+     */
+    @Nonnull
+    <S, R> GeneralStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<Entry<K, T>>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     );
 
     /**
