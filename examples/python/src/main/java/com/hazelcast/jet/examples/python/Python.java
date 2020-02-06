@@ -21,7 +21,6 @@ import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
 import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -84,7 +83,7 @@ public class Python {
         JetInstance jet = Jet.bootstrappedInstance();
         try {
             Observable<String> observable = jet.getObservable(RESULTS);
-            observable.addObserver(Observer.of(System.out::println));
+            observable.addObserver(System.out::println);
             JobConfig config = new JobConfig().setName("python-mapping");
             jet.newJobIfAbsent(p, config).join();
         } finally {
