@@ -470,11 +470,6 @@ public class BatchStageTest extends PipelineTestSupport {
                             assertTrue("list size", items.size() <= batchSize && items.size() > 0);
                             assertEquals("lists size equality", items.size(), keys.size());
                             executor.schedule(() -> {
-                                /*List<String> results = new ArrayList<>(items.size());
-                                for (int i = 0; i < items.size(); i++) {
-                                    results.set(i, i % 13 == 0 || keys.get(i) == 0 ? null : formatFn.apply(suffix, items.get(i)));
-                                }
-                                f.complete(results);*/
                                 List<String> results = items.isEmpty() ? Collections.emptyList() : new ArrayList<>();
                                 for (int i = 0; i < items.size(); i++) {
                                     Integer item = items.get(i);
