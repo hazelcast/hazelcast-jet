@@ -69,6 +69,10 @@ public final class KafkaSinks {
      *     about to commit, and Jet will attempt to commit the transaction
      *     after the restart, but the transaction must be still waiting in the
      *     broker. The default in Kafka 2.4 is 1 minute.
+     *     <p>
+     *     Also keep in mind the consumers need to use {@code
+     *     isolation.level=read_committed}, which is not the default. Otherwise
+     *     the consumers will see duplicate messages.
      *
      *     <li><em>AT_LEAST_ONCE:</em> messages are committed immediately, the
      *     sink ensure that all async operations are done at 1st snapshot
