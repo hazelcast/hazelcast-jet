@@ -69,9 +69,9 @@ public class ResourceConfigTest extends JetTestSupport {
         Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
         assertThat(resourceConfigs, hasSize(3));
         assertThat(resourceConfigs, containsInAnyOrder(
-                hasProperty("id", is(BaseClass.class.getName().replace('.', File.separatorChar) + ".class")),
-                hasProperty("id", is(BaseClass.class.getName().replace('.', File.separatorChar) + "$1.class")),
-                hasProperty("id", is(BaseClass.NestedClass.class.getName().replace('.', File.separatorChar) + ".class"))
+                hasProperty("id", is(BaseClass.class.getName().replace('.', '/') + ".class")),
+                hasProperty("id", is(BaseClass.class.getName().replace('.', '/') + "$1.class")),
+                hasProperty("id", is(BaseClass.NestedClass.class.getName().replace('.', '/') + ".class"))
         ));
     }
 
