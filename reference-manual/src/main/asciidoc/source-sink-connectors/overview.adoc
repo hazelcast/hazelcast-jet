@@ -50,17 +50,16 @@ fault-tolerant source. An example of this is the JMS source.
 === XA Transactions
 
 Two-phase transactions are another way to achieve fault-tolerance. Jet
-can use the standard X/Open XA Transactions or equivalent API. An
-example is the Kafka sink. JMS and JDBC are planned for the next
-release.
+can use the standard X/Open XA Transactions or equivalent API, such as
+the one of Apache Kafka.
 
 === Idempotent writes
 
 An operation is idempotent if, even if executed multiple times, the end
 result is the same as if executed just once. If a sink is idempotent and
-the job restarts and repeat some writes, the duplicate writes will have
-no effect. An example is an IMap sink, but only in case the keys are
-unique and deterministic.
+the job restarts and repeats some writes, the duplicate writes will have
+no effect. An example is an IMap sink, but only if the keys are unique
+and deterministic.
 
 == Is it Distributed?
 

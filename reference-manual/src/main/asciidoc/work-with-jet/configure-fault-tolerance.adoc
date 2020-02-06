@@ -26,11 +26,11 @@ sinks. Each of them specifies the guarantees it is able to provide, for
 details see the summary in <<overview-of-sources-and-sinks>>.
 
 If you configure Jet job with the exactly-once guarantee but use a sink
-with at-least-once guarantee, after a job restart you may get duplicates
-in the output. As opposed to doubly processing an input item, this is
-more benign because it just means getting the exact same result twice.
-If you use a source with the at-least-once guarantee, some events might
-be processed multiple times.
+with the at-least-once guarantee, after a job restart you may get
+duplicates in the output. As opposed to doubly processing an input item,
+this is more benign because it just means getting the exact same result
+twice. If you use a source with the at-least-once guarantee, some events
+might be processed multiple times.
 
 == At-Least-Once
 
