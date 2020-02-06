@@ -50,6 +50,7 @@ public final class FileSinkBuilder<T> {
     private String datePattern;
     private Long maxFileSize;
     private boolean exactlyOnce = true;
+    private boolean sharedFileSystem;
 
     /**
      * Use {@link Sinks#filesBuilder}.
@@ -127,10 +128,30 @@ public final class FileSinkBuilder<T> {
     }
 
     /**
+     * Sets if files are in a shared storage visible to all members. Default
+     * value is {@code false}.
+     * <p>
+     * If {@code sharedFileSystem} is {@code true}, Jet will assume all members
+     * see the same files. Otherwise it will assume that only processors on the
+     * local member them.
+     * <p>
+     * If you start all the members on a single machine (such as for
+     * development), set this property to true. If you have multiple machines
+     * with multiple members each and the directory is not a shared storage,
+     * it's not possible to configure the file reader correctly - use only one
+     * member per machine.
+     */
+    @Nonnull
+    public FileSinkBuilder<T> sharedFileSystem(boolean sharedFileSystem) {
+        this.sharedFileSystem = sharedFileSystem;
+        return this;
+    }
+
+    /**
      * Creates and returns the file {@link Sink} with the supplied components.
      */
     public Sink<T> build() {
         return Sinks.fromProcessor("filesSink(" + directoryName + ')',
-                writeFileP(directoryName, charset, datePattern, maxFileSize, exactlyOnce, toStringFn));
+                writeFileP(directoryName, charset, datePattern, maxFileSize, exactlyOnce, toStringFn, sharedFileSystem));
     }
 }

@@ -124,7 +124,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 10, false, false);
+        checkFileContents(0, 10, false, false, true);
     }
 
     @Test
@@ -136,7 +136,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 100_000, false, false);
+        checkFileContents(0, 100_000, false, false, true);
     }
 
     @Test
@@ -152,7 +152,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 10, false, false);
+        checkFileContents(0, 10, false, false, true);
     }
 
     @Test
@@ -164,7 +164,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString, true))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -174,7 +174,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
             semaphore.release();
             int finalI = i;
             // Then
-            assertTrueEventually(() -> checkFileContents(0, finalI + 1, false, false), 5);
+            assertTrueEventually(() -> checkFileContents(0, finalI + 1, false, false, true), 5);
         }
 
         // wait for the job to finish
@@ -225,7 +225,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         instance().newJob(p).join();
 
         // Then
-        checkFileContents(0, 10, false, false);
+        checkFileContents(0, 10, false, false, true);
     }
 
     @Test
@@ -235,7 +235,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex src = dag.newVertex("src", () -> new SlowSourceP(semaphore, numItems)).localParallelism(1);
         @SuppressWarnings("Convert2MethodRef")
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", "SSS", null, true,
+                directory.toString(), Objects::toString, "utf-8", "SSS", null, true, true,
                 (LongSupplier & Serializable) () -> clock.get()));
         dag.edge(between(src, sink));
 
@@ -265,7 +265,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         // maxFileSize is always large enough for 1 item but never for 2, both with windows and linux newlines
         long maxFileSize = 6L;
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", null, maxFileSize, true));
+                directory.toString(), Objects::toString, "utf-8", null, maxFileSize, true, true));
         dag.edge(between(src, map));
         dag.edge(between(map, sink));
 
@@ -275,7 +275,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         for (int i = 0; i < numItems; i++) {
             semaphore.release();
             int finalI = i;
-            assertTrueEventually(() -> checkFileContents(100, finalI + 101, false, false));
+            assertTrueEventually(() -> checkFileContents(100, finalI + 101, false, false, true));
         }
         for (int i = 0, j = 100; i < numItems / 2; i++) {
             Path file = directory.resolve("0-" + i);
@@ -299,7 +299,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         instance().newJob(p, config).join();
 
         // Then
-        checkFileContents(0, 10, false, false);
+        checkFileContents(0, 10, false, false, true);
     }
 
     @Test
@@ -309,7 +309,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString, true))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -327,7 +327,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         }
         job.join();
 
-        checkFileContents(0, numItems, false, false);
+        checkFileContents(0, numItems, false, false, true);
     }
 
     @Test
@@ -361,7 +361,8 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
          .withoutTimestamps()
          .writeTo(Sinks.filesBuilder(directory.toString())
                        .exactlyOnce(exactlyOnce)
-                       .build());
+                       .build())
+         .setLocalParallelism(2);
 
         JobConfig config = new JobConfig()
                 .setProcessingGuarantee(EXACTLY_ONCE)
@@ -374,7 +375,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
             sleepMillis(100);
             job.restart(graceful);
             try {
-                checkFileContents(0, numItems, exactlyOnce, true);
+                checkFileContents(0, numItems, exactlyOnce, true, false);
                 // if content matches, break the loop. Otherwise restart and try again
                 break;
             } catch (AssertionError ignored) {
@@ -384,7 +385,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         waitForNextSnapshot(new JobRepository(instance()), job.getId(), 10, true);
         ditchJob(job);
         // when the job is cancelled, there should be no temporary files
-        checkFileContents(0, numItems, exactlyOnce, false);
+        checkFileContents(0, numItems, exactlyOnce, false, false);
     }
 
     private static class SlowSourceP extends AbstractProcessor {
@@ -427,7 +428,8 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         }
     }
 
-    private void checkFileContents(int numFrom, int numTo, boolean exactlyOnce, boolean ignoreTempFiles) throws Exception {
+    private void checkFileContents(int numFrom, int numTo, boolean exactlyOnce, boolean ignoreTempFiles, boolean assertSorted)
+            throws Exception {
         List<Integer> actual = Files.list(directory)
                 .peek(f -> {
                     if (!ignoreTempFiles && f.getFileName().toString().endsWith(TEMP_FILE_SUFFIX)) {
@@ -435,9 +437,12 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
                     }
                 })
                 .filter(f -> !f.toString().endsWith(TEMP_FILE_SUFFIX))
-                .sorted(Comparator.comparing(f -> Integer.parseInt(f.getFileName().toString().substring(2))))
+                // sort by sequence number, if there is one
+                .sorted(Comparator.comparing(f -> f.getFileName().toString().length() == 1 ? 0
+                        : Integer.parseInt(f.getFileName().toString().substring(2))))
                 .flatMap(file -> uncheckCall(() -> Files.readAllLines(file).stream()))
                 .map(Integer::parseInt)
+                .sorted(assertSorted ? (l, r) -> 0 : Comparator.naturalOrder())
                 .collect(Collectors.toList());
 
         if (exactlyOnce) {

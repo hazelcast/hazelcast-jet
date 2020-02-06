@@ -51,6 +51,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.function.LongSupplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
@@ -70,6 +72,13 @@ import static com.hazelcast.jet.pipeline.FileSinkBuilder.TEMP_FILE_SUFFIX;
 public final class WriteFileP<T> implements Processor {
 
     private static final LongSupplier SYSTEM_CLOCK = (LongSupplier & Serializable) System::currentTimeMillis;
+    /**
+     * A pattern to parse processor index from a file name. File name has the form:
+     * [<date>-]<global processor index>[-<sequence>][".tmp"]
+     * This regexp assumes the sequence is present and searches from the right
+     * because the structure of the date is user-supplied and can by anything.
+     */
+    private static final Pattern FILE_INDEX_WITH_SEQ = Pattern.compile("(\\d+)-\\d+(\\.tmp)?$");
 
     private final Path directory;
     private final FunctionEx<? super T, ? extends String> toStringFn;
@@ -77,6 +86,7 @@ public final class WriteFileP<T> implements Processor {
     private final DateTimeFormatter dateFormatter;
     private final Long maxFileSize;
     private final boolean exactlyOnce;
+    private final boolean sharedFileSystem;
     private final LongSupplier clock;
 
     private UnboundedTransactionsProcessorUtility<FileId, FileResource> utility;
@@ -95,6 +105,7 @@ public final class WriteFileP<T> implements Processor {
             @Nullable String dateFormatter,
             @Nullable Long maxFileSize,
             boolean exactlyOnce,
+            boolean sharedFileSystem,
             @Nonnull LongSupplier clock
     ) {
         this.directory = Paths.get(directoryName);
@@ -103,6 +114,7 @@ public final class WriteFileP<T> implements Processor {
         this.dateFormatter = dateFormatter != null ? DateTimeFormatter.ofPattern(dateFormatter) : null;
         this.maxFileSize = maxFileSize;
         this.exactlyOnce = exactlyOnce;
+        this.sharedFileSystem = sharedFileSystem;
         this.clock = clock;
     }
 
@@ -236,6 +248,33 @@ public final class WriteFileP<T> implements Processor {
         try (Stream<Path> fileStream = Files.list(directory)) {
             fileStream
                     .filter(file -> file.getFileName().toString().endsWith(TEMP_FILE_SUFFIX))
+                    .filter(file -> {
+                        assert utility.usesTransactionLifecycle();
+                        Matcher m = FILE_INDEX_WITH_SEQ.matcher(file.getFileName().toString());
+                        if (!m.find() || m.groupCount() < 1) {
+                            context.logger().warning("file with unknown name structure found in the directory: " + file);
+                            return false;
+                        }
+                        int index;
+                        try {
+                            index = Integer.parseInt(m.group(1));
+                        } catch (NumberFormatException e) {
+                            context.logger().warning(
+                                    "file with unknown name structure found in the directory: " + file, e);
+                            return false;
+                        }
+                        int localIndexLow = context.memberIndex() * context.localParallelism();
+                        int localIndexHigh = localIndexLow + context.localParallelism();
+                        boolean isLocalIndex = index >= localIndexLow && index < localIndexHigh;
+                        if (sharedFileSystem || isLocalIndex) {
+                            // If the file index belongs to one of the local processors (when directory is not shred)
+                            // or when the directory is shared, we must leave that processor to do the cleanup
+                            return index % context.totalParallelism() == context.globalProcessorIndex();
+                        } else {
+                            // Otherwise we let the first local processor to take care of the rest of the files
+                            return context.localProcessorIndex() == 0;
+                        }
+                    })
                     .forEach(file -> uncheckRun(() -> {
                         LoggingUtil.logFine(context.logger(), "deleting %s",  file);
                         Files.delete(file);
@@ -267,9 +306,11 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull String charset,
             @Nullable String datePattern,
             @Nullable Long maxFileSize,
-            boolean exactlyOnce
+            boolean exactlyOnce,
+            boolean sharedFileSystem
     ) {
-        return metaSupplier(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce, SYSTEM_CLOCK);
+        return metaSupplier(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce, sharedFileSystem,
+                SYSTEM_CLOCK);
     }
 
     // for tests
@@ -280,10 +321,11 @@ public final class WriteFileP<T> implements Processor {
             @Nullable String datePattern,
             @Nullable Long maxFileSize,
             boolean exactlyOnce,
+            boolean sharedFileSystem,
             @Nonnull LongSupplier clock
     ) {
         return ProcessorMetaSupplier.preferLocalParallelismOne(() -> new WriteFileP<>(directoryName, toStringFn,
-                charset, datePattern, maxFileSize, exactlyOnce, clock));
+                charset, datePattern, maxFileSize, exactlyOnce, sharedFileSystem, clock));
     }
 
     private abstract class FileResource implements TransactionalResource<FileId> {
