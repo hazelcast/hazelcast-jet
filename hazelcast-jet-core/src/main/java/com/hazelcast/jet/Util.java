@@ -33,16 +33,17 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.ImdgUtil.wrapImdgFunction;
 import static com.hazelcast.jet.impl.util.ImdgUtil.wrapImdgPredicate;
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 
 /**
  * Miscellaneous utility methods useful in DAG building logic.
@@ -171,25 +172,60 @@ public final class Util {
      * <p>
      * For example, if you have a project directory {@code
      * src/main/resources/python}, the files in it will become classpath
-     * resources with the {@code "python"} path prefix. Calling
-     * {@code materializeClasspathDirectory("python")} will return the path to
+     * resources with the {@code "python"} path prefix. Calling {@code
+     * materializeClasspathDirectory("python")} will return the path to
      * a temp directory with all the files inside it.
+     * <p>
+     * The given classpath directory may contain nested directories. Since the
+     * classpath resources don't have the notion of a "directory", this method
+     * uses a heuristic to determine whether a given resource name represents a
+     * directory. First, it assumes it is not a directory if the filename part
+     * contains a dot. Second, it opens the resource as a text file and checks
+     * each line whether it's a string denoting an existing classpath resource.
+     * If all lines pass the check, then it's deemed to be a directory.
      *
      * @param classpathPrefix the path prefix of the classpath resources to materialize
      * @return a {@code Path} pointing to the created temporary directory
+     * @since 4.0
      */
     public static Path materializeClasspathDirectory(String classpathPrefix) throws IOException {
-        Path destPath = Files.createTempDirectory("hazelcast-jet-");
+        Path destPathBase = Files.createTempDirectory("hazelcast-jet-");
         ClassLoader cl = Util.class.getClassLoader();
-        try (InputStream listingStream = Objects.requireNonNull(cl.getResourceAsStream(classpathPrefix))) {
-            Stream<String> resources = new BufferedReader(new InputStreamReader(listingStream, UTF_8)).lines();
-            resources.forEach(filename -> uncheckRun(() -> {
-                Path destFile = destPath.resolve(filename);
-                try (InputStream in = cl.getResourceAsStream(classpathPrefix + '/' + filename)) {
-                    Files.copy(in, destFile);
+        Queue<String> dirNames = new ArrayDeque<>(singletonList(""));
+        for (String dirName; (dirName = dirNames.poll()) != null; ) {
+            String dirResourceName = classpathPrefix + (dirName.isEmpty() ? "" : '/' + dirName);
+            try (InputStream listingStream = Objects.requireNonNull(cl.getResourceAsStream(dirResourceName));
+                 BufferedReader rdr = new BufferedReader(new InputStreamReader(listingStream, UTF_8))
+            ) {
+                Iterable<String> relativeNames = () -> rdr.lines().iterator();
+                for (String relName : relativeNames) {
+                    String subResourceName = dirResourceName + '/' + relName;
+                    String nameRelativeToBase = dirName + (dirName.isEmpty() ? "" : "/") + relName;
+                    Path destPath = destPathBase.resolve(nameRelativeToBase);
+                    if (isDirectory(subResourceName, cl)) {
+                        Files.createDirectories(destPath);
+                        dirNames.add(nameRelativeToBase);
+                        continue;
+                    }
+                    try (InputStream in = cl.getResourceAsStream(subResourceName)) {
+                        Files.copy(in, destPath);
+                    }
                 }
-            }));
+            }
         }
-        return destPath;
+        return destPathBase;
+    }
+
+    private static boolean isDirectory(String resourceName, ClassLoader cl) {
+        if (resourceName.indexOf('.') >= 0) {
+            return false;
+        }
+        try (InputStream listingStream = Objects.requireNonNull(cl.getResourceAsStream(resourceName));
+             BufferedReader rdr = new BufferedReader(new InputStreamReader(listingStream, UTF_8))
+        ) {
+            return rdr.lines().allMatch(filename -> cl.getResource(resourceName + '/' + filename) != null);
+        } catch (IOException e) {
+            return false;
+        }
     }
 }
