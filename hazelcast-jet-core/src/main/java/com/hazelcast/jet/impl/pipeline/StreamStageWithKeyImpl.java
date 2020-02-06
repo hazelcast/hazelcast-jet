@@ -34,6 +34,8 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static com.hazelcast.jet.impl.util.Util.toList;
+
 public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> implements StreamStageWithKey<T, K> {
 
     StreamStageWithKeyImpl(
@@ -118,7 +120,8 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
             int maxBatchSize,
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
-        throw new UnsupportedOperationException(); //todo
+        return attachTransformUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+                (s, items) -> mapAsyncFn.apply(s, items).thenApply(list -> toList(list, Traversers::singleton)));
     }
 
     @Nonnull @Override
@@ -128,7 +131,9 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
             @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>,
                     ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
-        throw new UnsupportedOperationException(); //todo
+        return attachTransformUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+                (s, keys, items) -> mapAsyncFn.apply(s, keys, items)
+                        .thenApply(list -> toList(list, Traversers::singleton)));
     }
 
     @Nonnull @Override
