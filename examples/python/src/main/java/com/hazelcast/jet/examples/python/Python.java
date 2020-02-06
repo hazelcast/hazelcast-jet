@@ -69,7 +69,7 @@ public class Python {
     }
 
     public static void main(String[] args) throws IOException {
-        Path baseDir = Util.materializeClasspathDirectory("python");
+        Path baseDir = Util.copyClasspathDirectory("python");
         Pipeline p = buildPipeline(baseDir.toString());
 
         JetInstance jet = Jet.bootstrappedInstance();

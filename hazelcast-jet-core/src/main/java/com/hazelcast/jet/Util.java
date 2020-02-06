@@ -188,7 +188,7 @@ public final class Util {
      * @return a {@code Path} pointing to the created temporary directory
      * @since 4.0
      */
-    public static Path materializeClasspathDirectory(String classpathPrefix) throws IOException {
+    public static Path copyClasspathDirectory(String classpathPrefix) throws IOException {
         Path destPathBase = Files.createTempDirectory("hazelcast-jet-");
         ClassLoader cl = Util.class.getClassLoader();
         Queue<String> dirNames = new ArrayDeque<>(singletonList(""));

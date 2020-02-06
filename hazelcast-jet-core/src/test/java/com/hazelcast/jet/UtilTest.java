@@ -65,10 +65,9 @@ public class UtilTest extends JetTestSupport {
     }
 
     @Test
-    public void when_materializeClasspathDirectory_then_allFilesPresent() throws Exception {
-        Path path = Util.materializeClasspathDirectory("nested");
+    public void when_copyClasspathDirectory_then_allFilesAndDirsPresent() throws Exception {
+        Path path = Util.copyClasspathDirectory("nested");
         try {
-            System.out.println(path);
             assertTrue(Files.isRegularFile(path.resolve("folder/test")));
             assertTrue(Files.isRegularFile(path.resolve("folder1/test1")));
             assertTrue(Files.isRegularFile(path.resolve("folder2/test2")));
