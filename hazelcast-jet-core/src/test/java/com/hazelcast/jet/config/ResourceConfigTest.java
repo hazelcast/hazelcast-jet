@@ -29,8 +29,14 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collection;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -55,12 +61,15 @@ public class ResourceConfigTest extends JetTestSupport {
     @Test
     public void when_addClassWithClass() {
         // When
-        config.addClass(this.getClass());
+        config.addClass(BaseClass.class);
 
         // Then
-        ResourceConfig resourceConfig = getFirstResourceConfig();
-        assertEquals(this.getClass().getName().replace('.', '/') + ".class", resourceConfig.getId());
-        assertEquals(ResourceType.CLASS, resourceConfig.getResourceType());
+        Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
+        assertThat(resourceConfigs, hasSize(2));
+        assertThat(resourceConfigs, contains(
+                hasProperty("id", is(BaseClass.class.getName().replace('.', '/') + ".class")),
+                hasProperty("id", is(BaseClass.NestedClass.class.getName().replace('.', '/') + ".class"))
+        ));
     }
 
     @Test
@@ -1023,5 +1032,10 @@ public class ResourceConfigTest extends JetTestSupport {
         File dirFile = new File(baseDir, path);
         assertTrue("Failed to create directory " + dirFile, dirFile.mkdirs());
         return dirFile;
+    }
+
+    private static class BaseClass {
+        private static class NestedClass {
+        }
     }
 }

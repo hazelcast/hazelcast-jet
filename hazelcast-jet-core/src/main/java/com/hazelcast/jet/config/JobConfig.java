@@ -149,9 +149,9 @@ public class JobConfig implements IdentifiedDataSerializable {
      *
      * @return {@code this} instance for fluent API
      * @see InstanceConfig#setScaleUpDelayMillis
-     *        Configuring the scale-up delay
+     * Configuring the scale-up delay
      * @see #setProcessingGuarantee
-     *        Enabling/disabling snapshots
+     * Enabling/disabling snapshots
      */
     public JobConfig setAutoScaling(boolean enabled) {
         this.autoScaling = enabled;
@@ -235,6 +235,9 @@ public class JobConfig implements IdentifiedDataSerializable {
         for (Class<?> clazz : classes) {
             ResourceConfig cfg = new ResourceConfig(clazz);
             resourceConfigs.put(cfg.getId(), cfg);
+            for (Class<?> nestedClazz : clazz.getDeclaredClasses()) {
+                addClass(nestedClazz);
+            }
         }
         return this;
     }
@@ -787,7 +790,7 @@ public class JobConfig implements IdentifiedDataSerializable {
      * set to {@link ProcessingGuarantee#NONE}.
      *
      * @param initialSnapshotName the snapshot name given to {@link
-     *       Job#exportSnapshot(String)}
+     *                            Job#exportSnapshot(String)}
      * @return {@code this} instance for fluent API
      * @since 3.0
      */
