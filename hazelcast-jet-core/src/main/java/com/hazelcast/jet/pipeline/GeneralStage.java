@@ -389,9 +389,8 @@ public interface GeneralStage<T> extends Stage {
      * a list of input items and returns a {@code CompletableFuture<List<R>>}.
      * The size of the input list is limited by the given {@code maxBatchSize}.
      * <p>
-     * As opposed to the non-batched variant, this transform cannot perform
-     * filtering. The output list's items must match one-to-one with the input
-     * list's.
+     * This transform can perform filtering by putting {@code null} elements into
+     * the output list.
      * <p>
      * The latency of the async call will add to the total latency of the
      * output.
