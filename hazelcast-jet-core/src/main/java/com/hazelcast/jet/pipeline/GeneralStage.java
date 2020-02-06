@@ -29,6 +29,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
+import com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
@@ -298,6 +300,12 @@ public interface GeneralStage<T> extends Stage {
      * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
      * returns a {@code CompletableFuture<R>} instead of just {@code R}.
      * <p>
+     * Uses default values for some extra parameters, so the maximum number
+     * of concurrent async operations per processor will be limited to
+     * {@value AbstractAsyncTransformUsingServiceP#MAX_CONCURRENT_OPS} and
+     * whether or not the order of input items should be preserved will be
+     * {@value AbstractAsyncTransformUsingServiceP#PRESERVE_ORDER}.
+     * <p>
      * The function can return a null future or the future can return a null
      * result: in both cases it will act just like a filter.
      * <p>
@@ -388,6 +396,10 @@ public interface GeneralStage<T> extends Stage {
      * Batched version of {@link #mapUsingServiceAsync}: {@code mapAsyncFn} takes
      * a list of input items and returns a {@code CompletableFuture<List<R>>}.
      * The size of the input list is limited by the given {@code maxBatchSize}.
+     * <p>
+     * The number of in-flight batches being completed asynchronously is
+     * limited to {@value ComputeStageImplBase#MAX_CONCURRENT_ASYNC_BATCHES}
+     * and this mapping operation always preserves the order of input elements.
      * <p>
      * As opposed to the non-batched variant, this transform cannot perform
      * filtering. The output list's items must match one-to-one with the input
