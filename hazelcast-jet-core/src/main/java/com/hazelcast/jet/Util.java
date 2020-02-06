@@ -26,13 +26,23 @@ import com.hazelcast.jet.pipeline.Sources;
 import com.hazelcast.map.EventJournalMapEvent;
 import com.hazelcast.map.impl.journal.MapEventJournalFunctions;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Arrays;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static com.hazelcast.jet.impl.util.ImdgUtil.wrapImdgFunction;
 import static com.hazelcast.jet.impl.util.ImdgUtil.wrapImdgPredicate;
+import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Miscellaneous utility methods useful in DAG building logic.
@@ -152,5 +162,34 @@ public final class Util {
         }
         str = str.replaceAll("-", "");
         return Long.parseUnsignedLong(str, 16);
+    }
+
+    /**
+     * Takes a classpath "directory" (a path prefix) and exports it to a
+     * temporary filesystem directory. Returns the created temporary directory
+     * path.
+     * <p>
+     * For example, if you have a project directory {@code
+     * src/main/resources/python}, the files in it will become classpath
+     * resources with the {@code "python"} path prefix. Calling
+     * {@code materializeClasspathDirectory("python")} will return the path to
+     * a temp directory with all the files inside it.
+     *
+     * @param classpathPrefix the path prefix of the classpath resources to materialize
+     * @return a {@code Path} pointing to the created temporary directory
+     */
+    public static Path materializeClasspathDirectory(String classpathPrefix) throws IOException {
+        Path destPath = Files.createTempDirectory("hazelcast-jet-");
+        ClassLoader cl = Util.class.getClassLoader();
+        try (InputStream listingStream = Objects.requireNonNull(cl.getResourceAsStream(classpathPrefix))) {
+            Stream<String> resources = new BufferedReader(new InputStreamReader(listingStream, UTF_8)).lines();
+            resources.forEach(filename -> uncheckRun(() -> {
+                Path destFile = destPath.resolve(filename);
+                try (InputStream in = cl.getResourceAsStream(classpathPrefix + '/' + filename)) {
+                    Files.copy(in, destFile);
+                }
+            }));
+        }
+        return destPath;
     }
 }

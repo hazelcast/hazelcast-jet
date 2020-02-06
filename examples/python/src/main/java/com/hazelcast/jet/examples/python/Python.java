@@ -20,38 +20,31 @@ import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Observable;
+import com.hazelcast.jet.Util;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.jet.python.PythonServiceConfig;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Stream;
 
-import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static com.hazelcast.jet.python.PythonTransforms.mapUsingPython;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This example shows you how to invoke a Python function to process the
  * data in the Jet pipeline. The function gets a batch of items in a list
  * and must return a list of result items.
  * <p>
- * The provided code uses {@code src/main/resources/python} in this project
- * as the Python project directory. There are two files there:
- * {@code requirements.txt} that declares NumPy as a dependency and
- * {@code take_sqrt.py} that defines the {@code transform_list} function
- * that Jet will call with the pipeline data. The function uses uses the
- * NumPy library to transform the input list by taking the square root of
- * each element.
+ * The provided code uses the NumPy library to transform the input list by
+ * taking the square root of each element. It uses {@code
+ * src/main/resources/python} in this project as the Python project
+ * directory. There are two files there: {@code requirements.txt} that
+ * declares NumPy as a dependency and {@code take_sqrt.py} that defines the
+ * {@code transform_list} function that Jet will call with the pipeline
+ * data.
  */
 public class Python {
 
@@ -76,8 +69,7 @@ public class Python {
     }
 
     public static void main(String[] args) throws IOException {
-        Path baseDir = Files.createTempDirectory("jet-python-sample-");
-        copyClasspathResourcesToDirectory("python", baseDir);
+        Path baseDir = Util.materializeClasspathDirectory("python");
         Pipeline p = buildPipeline(baseDir.toString());
 
         JetInstance jet = Jet.bootstrappedInstance();
@@ -89,20 +81,6 @@ public class Python {
         } finally {
             IOUtil.delete(baseDir);
             Jet.shutdownAll();
-        }
-    }
-
-    private static void copyClasspathResourcesToDirectory(String sourcePath, Path destPath) throws IOException {
-        ClassLoader cl = Python.class.getClassLoader();
-        try (InputStream listingStream = Objects.requireNonNull(cl.getResourceAsStream(sourcePath))) {
-            Stream<String> resources = new BufferedReader(new InputStreamReader(listingStream, UTF_8)).lines();
-            resources.forEach(filename -> uncheckRun(() -> {
-                Path destFile = destPath.resolve(filename);
-                System.out.println(destFile);
-                try (InputStream in = cl.getResourceAsStream(sourcePath + '/' + filename)) {
-                    Files.copy(in, destFile);
-                }
-            }));
         }
     }
 }
