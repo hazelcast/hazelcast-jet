@@ -38,6 +38,8 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -736,7 +738,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     private static List<String> resources(ClassLoader classLoader, String path) {
         try (InputStream input = classLoader.getResourceAsStream(path);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
             return reader.lines().collect(toList());
         } catch (IOException ioe) {
             throw new JetException(ioe);
