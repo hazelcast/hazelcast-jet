@@ -30,6 +30,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasProperty;
@@ -1021,6 +1023,35 @@ public class ResourceConfigTest extends JetTestSupport {
         // When
         config.attachDirectory(file, id);
     }
+
+    @Test
+    public void when_attachAll() throws Exception {
+        // Given
+        String fileId = "fileId";
+        String dirId = "dirId";
+        File file = createFile("path/to/file");
+        File dir = createDirectory("path/to/directory");
+        Map<String, File> attachments = new HashMap<>();
+        attachments.put(fileId, file);
+        attachments.put(dirId, dir);
+
+        // When
+        config.attachAll(attachments);
+
+        // Then
+        Map<String, ResourceConfig> resourceConfigs = config.getResourceConfigs();
+
+        ResourceConfig fileConfig = resourceConfigs.get(fileId);
+        assertEquals(fileId, fileConfig.getId());
+        assertEquals(ResourceType.FILE, fileConfig.getResourceType());
+        assertEquals(file.toURI().toURL(), fileConfig.getUrl());
+
+        ResourceConfig dirConfig = resourceConfigs.get(dirId);
+        assertEquals(dirId, dirConfig.getId());
+        assertEquals(ResourceType.DIRECTORY, dirConfig.getResourceType());
+        assertEquals(dir.toURI().toURL(), dirConfig.getUrl());
+    }
+
 
     private File createFile(String path) throws IOException {
         File file = new File(baseDir, path);
