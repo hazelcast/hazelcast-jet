@@ -249,7 +249,7 @@ public class JobConfig implements IdentifiedDataSerializable {
             ClassLoader classLoader = clazz.getClassLoader();
             resources(classLoader, packagePath)
                     .stream()
-                    .map(resourceName -> packagePath + "/" + resourceName)
+                    .map(resource -> packagePath + "/" + resource)
                     .filter(resource -> resource.endsWith(".class") &&
                             resource.startsWith(clazzPath) &&
                             !resource.equals(clazzResource)
