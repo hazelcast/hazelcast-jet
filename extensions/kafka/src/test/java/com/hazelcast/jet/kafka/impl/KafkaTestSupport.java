@@ -49,7 +49,6 @@ import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.test.HazelcastTestSupport.randomString;
 import static java.util.Collections.singleton;
 import static kafka.admin.RackAwareMode.Disabled$.MODULE$;
 import static scala.collection.JavaConversions.asScalaSet;
@@ -178,7 +177,6 @@ public class KafkaTestSupport {
     public KafkaConsumer<String, String> createConsumer(String... topicIds) {
         Properties consumerProps = new Properties();
         consumerProps.setProperty("bootstrap.servers", brokerConnectionString);
-        consumerProps.setProperty("group.id", randomString());
         consumerProps.setProperty("client.id", "consumer0");
         consumerProps.setProperty("key.deserializer", StringDeserializer.class.getCanonicalName());
         consumerProps.setProperty("value.deserializer", StringDeserializer.class.getCanonicalName());

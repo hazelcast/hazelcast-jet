@@ -191,11 +191,6 @@ public final class StreamKafkaP<K, V, T> extends AbstractProcessor {
                 });
 
         emitFromTraverser(traverser);
-
-        if (!snapshottingEnabled && !isEmpty(records)) {
-            consumer.commitSync();
-        }
-
         return false;
     }
 
