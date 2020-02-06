@@ -30,18 +30,23 @@ import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Contains the configuration specific to one Hazelcast Jet job.
@@ -218,8 +223,8 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds the given classes to the Jet job's classpath. They will be
-     * accessible to all the code attached to the underlying pipeline or DAG,
+     * Adds the given classes and recursively all their nested classes to the Jet job's classpath.
+     * They will be accessible to all the code attached to the underlying pipeline or DAG,
      * but not to any other code. (An important example is the {@code IMap} data
      * source, which can instantiate only the classes from the Jet instance's
      * classpath.)
@@ -231,12 +236,22 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     @SuppressWarnings("rawtypes")
     public JobConfig addClass(@Nonnull Class... classes) {
-        checkNotNull(classes, "Classes can not be null");
+        checkNotNull(classes, "Classes cannot be null");
         for (Class<?> clazz : classes) {
             ResourceConfig cfg = new ResourceConfig(clazz);
             resourceConfigs.put(cfg.getId(), cfg);
-            for (Class<?> nestedClazz : clazz.getDeclaredClasses()) {
-                addClass(nestedClazz);
+
+            String clazzPath = clazz.getName().replace('.', '/');
+            String clazzResource = clazzPath + ".class";
+            String packagePath = clazz.getPackage().getName().replace('.', '/');
+            ClassLoader classLoader = clazz.getClassLoader();
+            for (String resourceName : resources(classLoader, packagePath)) {
+                String resource = packagePath + "/" + resourceName;
+                boolean isNested = resource.startsWith(clazzPath) && !resource.equals(clazzResource);
+                if (isNested) {
+                    URL url = classLoader.getResource(resource);
+                    add(url, resource, ResourceType.CLASS);
+                }
             }
         }
         return this;
@@ -689,6 +704,16 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     public JobConfig attachDirectory(@Nonnull File file, @Nonnull String id) {
         return attachDirectory(fileToUrl(file), id);
+    }
+
+    @Nonnull
+    private static List<String> resources(ClassLoader classLoader, String path) {
+        try (InputStream input = classLoader.getResourceAsStream(path);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+            return reader.lines().collect(toList());
+        } catch (IOException ioe) {
+            throw new JetException(ioe);
+        }
     }
 
     @Nonnull

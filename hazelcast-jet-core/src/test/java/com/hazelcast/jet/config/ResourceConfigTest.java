@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
 
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -65,10 +65,11 @@ public class ResourceConfigTest extends JetTestSupport {
 
         // Then
         Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
-        assertThat(resourceConfigs, hasSize(2));
-        assertThat(resourceConfigs, contains(
-                hasProperty("id", is(BaseClass.class.getName().replace('.', '/') + ".class")),
-                hasProperty("id", is(BaseClass.NestedClass.class.getName().replace('.', '/') + ".class"))
+        assertThat(resourceConfigs, hasSize(3));
+        assertThat(resourceConfigs, containsInAnyOrder(
+                hasProperty("id", is(BaseClass.class.getName().replace('.', File.separatorChar) + ".class")),
+                hasProperty("id", is(BaseClass.class.getName().replace('.', File.separatorChar) + "$1.class")),
+                hasProperty("id", is(BaseClass.NestedClass.class.getName().replace('.', File.separatorChar) + ".class"))
         ));
     }
 
@@ -1034,7 +1035,13 @@ public class ResourceConfigTest extends JetTestSupport {
         return dirFile;
     }
 
+    @SuppressWarnings("unused")
     private static class BaseClass {
+        private void method() {
+            new Object() {
+            };
+        }
+
         private static class NestedClass {
         }
     }
