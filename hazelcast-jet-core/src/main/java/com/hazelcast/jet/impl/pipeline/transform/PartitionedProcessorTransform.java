@@ -21,16 +21,17 @@ import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.processor.Processors;
 import com.hazelcast.jet.impl.pipeline.Planner;
 import com.hazelcast.jet.impl.pipeline.Planner.PlannerVertex;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 
 public final class PartitionedProcessorTransform<T, K> extends ProcessorTransform {
@@ -93,12 +94,32 @@ public final class PartitionedProcessorTransform<T, K> extends ProcessorTransfor
             @Nonnull Transform upstream,
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
     ) {
-        return new PartitionedProcessorTransform<>(operationName + "UsingPartitionedServiceAsync", upstream,
-                ProcessorMetaSupplier.of(getPreferredLP(serviceFactory),
-                        flatMapUsingServiceAsyncP(serviceFactory, partitionKeyFn, flatMapAsyncFn)), partitionKeyFn);
+        String name = operationName + "UsingPartitionedServiceAsync";
+        ProcessorSupplier supplier = flatMapUsingServiceAsyncP(
+                serviceFactory, maxConcurrentOps, preserveOrder, partitionKeyFn, flatMapAsyncFn);
+        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.of(getPreferredLP(serviceFactory), supplier);
+        return new PartitionedProcessorTransform<>(name, upstream, metaSupplier, partitionKeyFn);
+    }
+
+    public static <S, T, K, R> PartitionedProcessorTransform<T, K> flatMapUsingServiceAsyncBatchedPartitionedTransform(
+            @Nonnull Transform upstream,
+            @Nonnull String operationName,
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn,
+            @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn
+    ) {
+        String name = operationName + "UsingPartitionedServiceAsync";
+        ProcessorSupplier supplier = flatMapUsingServiceAsyncBatchedP(
+                serviceFactory, maxConcurrentOps, maxBatchSize, flatMapAsyncFn);
+        ProcessorMetaSupplier metaSupplier = ProcessorMetaSupplier.of(getPreferredLP(serviceFactory), supplier);
+        return new PartitionedProcessorTransform<>(name, upstream, metaSupplier, partitionKeyFn);
     }
 
     @Override

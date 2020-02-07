@@ -29,6 +29,7 @@ import com.hazelcast.jet.function.Observer;
 import com.hazelcast.jet.impl.AbstractJetInstance;
 import com.hazelcast.jet.impl.JobRepository;
 import com.hazelcast.jet.impl.SnapshotValidationRecord;
+import com.hazelcast.jet.impl.pipeline.PipelineImpl;
 import com.hazelcast.jet.pipeline.GeneralStage;
 import com.hazelcast.jet.pipeline.JournalInitialPosition;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -98,7 +99,7 @@ public interface JetInstance {
      */
     @Nonnull
     default Job newJob(@Nonnull Pipeline pipeline) {
-        return newJob(pipeline.toDag());
+        return newJob(pipeline, new JobConfig());
     }
 
     /**
@@ -138,7 +139,7 @@ public interface JetInstance {
      */
     @Nonnull
     default Job newJob(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
-        return newJob(pipeline.toDag(), config);
+        return newJob(pipeline.toDag(), config.attachAll(((PipelineImpl) pipeline).attachedFiles()));
     }
 
     /**
@@ -188,7 +189,7 @@ public interface JetInstance {
      */
     @Nonnull
     default Job newJobIfAbsent(@Nonnull Pipeline pipeline, @Nonnull JobConfig config) {
-        return newJobIfAbsent(pipeline.toDag(), config);
+        return newJobIfAbsent(pipeline.toDag(), config.attachAll(((PipelineImpl) pipeline).attachedFiles()));
     }
 
     /**

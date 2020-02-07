@@ -34,7 +34,9 @@ import com.hazelcast.jet.impl.pipeline.transform.HashJoinTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapStatefulTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MapTransform;
 import com.hazelcast.jet.impl.pipeline.transform.MergeTransform;
+import com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.PeekTransform;
+import com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform;
 import com.hazelcast.jet.impl.pipeline.transform.SinkTransform;
 import com.hazelcast.jet.impl.pipeline.transform.TimestampTransform;
 import com.hazelcast.jet.impl.pipeline.transform.Transform;
@@ -59,15 +61,16 @@ import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.WatermarkPolicy.limitingLag;
 import static com.hazelcast.jet.impl.JetEvent.jetEvent;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.filterUsingServicePartitionedTransform;
+import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingServiceAsyncBatchedPartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingServiceAsyncPartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.flatMapUsingServicePartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.mapUsingServicePartitionedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.PartitionedProcessorTransform.partitionedCustomProcessorTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.customProcessorTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.filterUsingServiceTransform;
+import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceAsyncBatchedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceAsyncTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceTransform;
-import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.flatMapUsingServiceAsyncBatchedTransform;
 import static com.hazelcast.jet.impl.pipeline.transform.ProcessorTransform.mapUsingServiceTransform;
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
 import static java.util.Arrays.asList;
@@ -77,6 +80,7 @@ import static java.util.Collections.singletonList;
 public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     public static final FunctionAdapter ADAPT_TO_JET_EVENT = new JetEventFunctionAdapter();
+    public static final int MAX_CONCURRENT_ASYNC_BATCHES = 2;
     static final FunctionAdapter DO_NOT_ADAPT = new FunctionAdapter();
 
     @Nonnull
@@ -114,7 +118,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     }
 
     @Nonnull
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({"unchecked"})
     <RET> RET attachFilter(@Nonnull PredicateEx<T> filterFn) {
         checkSerializable(filterFn, "filterFn");
         PredicateEx<T> adaptedFn = (PredicateEx<T>) fnAdapter.adaptFilterFn(filterFn);
@@ -223,6 +227,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends R> mapFn
     ) {
         checkSerializable(mapFn, "mapFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedMapFn = fnAdapter.adaptMapUsingServiceFn(mapFn);
         return (RET) attach(
                 mapUsingServiceTransform(transform, serviceFactory, adaptedMapFn),
@@ -236,6 +241,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull BiPredicateEx<? super S, ? super T> filterFn
     ) {
         checkSerializable(filterFn, "filterFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiPredicateEx adaptedFilterFn = fnAdapter.adaptFilterUsingServiceFn(filterFn);
         return (RET) attach(
                 filterUsingServiceTransform(transform, serviceFactory, adaptedFilterFn),
@@ -249,6 +255,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceFn(flatMapFn);
         return (RET) attach(
                 flatMapUsingServiceTransform(transform, serviceFactory, adaptedFlatMapFn),
@@ -260,13 +267,16 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, R, RET> RET attachFlatMapUsingServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceAsyncFn(flatMapAsyncFn);
-        return (RET) attach(
-                flatMapUsingServiceAsyncTransform(transform, operationName, serviceFactory, adaptedFlatMapFn),
-                fnAdapter);
+        ProcessorTransform processorTransform = flatMapUsingServiceAsyncTransform(
+                transform, operationName, serviceFactory, maxConcurrentOps, preserveOrder, adaptedFlatMapFn);
+        return (RET) attach(processorTransform, fnAdapter);
     }
 
     @Nonnull
@@ -279,6 +289,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                     ? extends CompletableFuture<List<Traverser<R>>>> flatMapAsyncBatchedFn
     ) {
         checkSerializable(flatMapAsyncBatchedFn, operationName + "AsyncBatchedFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFn = fnAdapter.adaptFlatMapUsingServiceAsyncBatchedFn(flatMapAsyncBatchedFn);
 
         // Here we flatten the result from List<Traverser<R>> to Traverser<R>.
@@ -291,10 +302,9 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
                     return f.thenApply(res -> traverseIterable(res).flatMap(Function.identity()));
                 };
 
-        return (RET) attach(
-                flatMapUsingServiceAsyncBatchedTransform(
-                        transform, operationName, serviceFactory, maxBatchSize, flattenedFn),
-                fnAdapter);
+        ProcessorTransform processorTransform = flatMapUsingServiceAsyncBatchedTransform(
+                transform, operationName, serviceFactory, MAX_CONCURRENT_ASYNC_BATCHES, maxBatchSize, flattenedFn);
+        return (RET) attach(processorTransform, fnAdapter);
     }
 
     @Nonnull
@@ -306,6 +316,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(mapFn, "mapFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedMapFn = fnAdapter.adaptMapUsingServiceFn(mapFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
@@ -322,6 +333,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(filterFn, "filterFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiPredicateEx adaptedFilterFn = fnAdapter.adaptFilterUsingServiceFn(filterFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
@@ -339,6 +351,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     ) {
         checkSerializable(flatMapFn, "flatMapFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceFn(flatMapFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
         return (RET) attach(
@@ -352,17 +365,69 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
     <S, K, R, RET> RET attachTransformUsingPartitionedServiceAsync(
             @Nonnull String operationName,
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
             @Nonnull BiFunctionEx<? super S, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     ) {
         checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
         checkSerializable(partitionKeyFn, "partitionKeyFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
         BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceAsyncFn(flatMapAsyncFn);
         FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
-        return (RET) attach(
-                flatMapUsingServiceAsyncPartitionedTransform(
-                        transform, operationName, serviceFactory, adaptedFlatMapFn, adaptedPartitionKeyFn),
-                fnAdapter);
+        PartitionedProcessorTransform processorTransform = flatMapUsingServiceAsyncPartitionedTransform(
+                transform,
+                operationName,
+                serviceFactory,
+                maxConcurrentOps,
+                preserveOrder,
+                adaptedFlatMapFn,
+                adaptedPartitionKeyFn
+        );
+        return (RET) attach(processorTransform, fnAdapter);
+    }
+
+    @Nonnull
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    <S, K, R, RET> RET attachTransformUsingPartitionedServiceAsyncBatched(
+            @Nonnull String operationName,
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull FunctionEx<? super T, ? extends K> partitionKeyFn,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, CompletableFuture<List<Traverser<R>>>> flatMapAsyncFn
+    ) {
+        checkSerializable(flatMapAsyncFn, operationName + "AsyncFn");
+        checkSerializable(partitionKeyFn, "partitionKeyFn");
+        serviceFactory = moveAttachedFilesToPipeline(serviceFactory);
+        BiFunctionEx adaptedFlatMapFn = fnAdapter.adaptFlatMapUsingServiceAsyncBatchedFn(flatMapAsyncFn);
+        FunctionEx adaptedPartitionKeyFn = fnAdapter.adaptKeyFn(partitionKeyFn);
+
+        // Here we flatten the result from List<Traverser<R>> to Traverser<R>.
+        // The former is used in pipeline API, the latter in core API.
+        BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<Traverser<R>>> flattenedFn =
+                (svc, items) -> {
+                    // R might actually be JetEvent<R> -- we can't represent this with static types
+                    CompletableFuture<List<Traverser<R>>> f =
+                            (CompletableFuture<List<Traverser<R>>>) adaptedFlatMapFn.apply(svc, items);
+                    return f.thenApply(res -> traverseIterable(res).flatMap(Function.identity()));
+                };
+
+        PartitionedProcessorTransform processorTransform = flatMapUsingServiceAsyncBatchedPartitionedTransform(
+                transform,
+                operationName,
+                serviceFactory,
+                MAX_CONCURRENT_ASYNC_BATCHES,
+                maxBatchSize,
+                flattenedFn,
+                adaptedPartitionKeyFn
+        );
+        return (RET) attach(processorTransform, fnAdapter);
+    }
+
+    @Nonnull
+    private <S> ServiceFactory<?, S> moveAttachedFilesToPipeline(@Nonnull ServiceFactory<?, S> serviceFactory) {
+        pipelineImpl.attachFiles(serviceFactory.attachedFiles());
+        return serviceFactory.withoutAttachedFiles();
     }
 
     @Nonnull
@@ -393,7 +458,7 @@ public abstract class ComputeStageImplBase<T> extends AbstractStage {
 
     @Nonnull
     @SuppressWarnings({"unchecked", "rawtypes"})
-    <K1, T1_IN, T1, K2, T2_IN, T2, R, TA, RET> RET attachHashJoin2(
+    <K1, T1_IN, T1, K2, T2_IN, T2, R, RET> RET attachHashJoin2(
             @Nonnull BatchStage<T1_IN> stage1,
             @Nonnull JoinClause<K1, ? super T, ? super T1_IN, ? extends T1> joinClause1,
             @Nonnull BatchStage<T2_IN> stage2,

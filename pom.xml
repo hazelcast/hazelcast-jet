@@ -29,16 +29,13 @@
     <version>4.0-SNAPSHOT</version>
 
     <modules>
+        <module>examples</module>
+        <module>extensions</module>
         <module>hazelcast-jet-all</module>
         <module>hazelcast-jet-distribution</module>
         <module>hazelcast-jet-core</module>
-        <module>hazelcast-jet-kafka</module>
-        <module>hazelcast-jet-hadoop</module>
-        <module>hazelcast-jet-reference-manual</module>
         <module>hazelcast-jet-spring</module>
-        <module>hazelcast-jet-avro</module>
-        <module>hazelcast-jet-s3</module>
-        <module>examples</module>
+        <module>reference-manual</module>
     </modules>
 
     <repositories>
@@ -73,11 +70,10 @@
         <timestamp>${maven.build.timestamp}</timestamp>
 
         <!-- Main IMDG dependency -->
-        <hazelcast.version>4.0-SNAPSHOT</hazelcast.version>
+        <hazelcast.version>4.0</hazelcast.version>
         <!-- Dependencies on IMDG modules: must be the same versions IMDG depends on! -->
-        <hazelcast.protocol.version>1.8.0-5</hazelcast.protocol.version>
-        <hazelcast.aws.version>3.0.1-SNAPSHOT</hazelcast.aws.version>
-        <hazelcast.kubernetes.version>2.0</hazelcast.kubernetes.version>
+        <hazelcast.aws.version>3.1</hazelcast.aws.version>
+        <hazelcast.kubernetes.version>2.0.1</hazelcast.kubernetes.version>
         <hazelcast.gcp.version>2.0</hazelcast.gcp.version>
 
         <maven.compiler.plugin.version>3.7.0</maven.compiler.plugin.version>
@@ -95,7 +91,8 @@
         <maven.enforcer.plugin.version>3.0.0-M1</maven.enforcer.plugin.version>
         <maven.surefire.plugin.version>3.0.0-M3</maven.surefire.plugin.version>
         <maven.spotbugs.plugin.version>3.1.12.2</maven.spotbugs.plugin.version>
-        <maven.checkstyle.plugin.version>3.0.0</maven.checkstyle.plugin.version>
+        <maven.checkstyle.plugin.version>3.1.0</maven.checkstyle.plugin.version>
+        <checkstyle.headerLocation>${maven.multiModuleProjectDirectory}/checkstyle/ClassHeader.txt</checkstyle.headerLocation>
         <maven.sonar.plugin.version>3.3.0.603</maven.sonar.plugin.version>
         <maven.jacoco.plugin.version>0.7.9</maven.jacoco.plugin.version>
 
@@ -113,6 +110,8 @@
         <avro.version>1.8.2</avro.version>
         <scala.version>2.12</scala.version>
         <kafka.version>2.2.0</kafka.version>
+        <grpc.version>1.26.0</grpc.version>
+        <protobuf.version>3.11.3</protobuf.version>
 
         <!-- test dependencies -->
         <activemq.version>5.15.11</activemq.version>
@@ -263,6 +262,8 @@
                 <filtering>true</filtering>
                 <includes>
                     <include>**/*.properties</include>
+                    <include>**/*.sh</include>
+                    <include>**/*.bat</include>
                 </includes>
             </resource>
         </resources>
@@ -329,19 +330,45 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>serial-tests</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${maven.test.skip}</skip>
+                            <forkCount>1</forkCount>
+                            <groups>com.hazelcast.jet.test.SerialTest</groups>
+                            <excludedGroups>
+                                com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest
+                            </excludedGroups>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regular-tests</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${maven.test.skip}</skip>
+                            <forkCount>4</forkCount>
+                            <includes>
+                                <include>/com/hazelcast/jet/**/**.java</include>
+                            </includes>
+                            <excludedGroups>
+                                com.hazelcast.jet.test.SerialTest,com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest
+                            </excludedGroups>
+                        </configuration>
+                    </execution>
+                </executions>
                 <configuration>
+                    <skip>true</skip>
                     <runOrder>failedfirst</runOrder>
-                    <forkCount>4</forkCount>
                     <trimStackTrace>false</trimStackTrace>
                     <argLine>
                         ${argLine}
                     </argLine>
-                    <includes>
-                        <include>/com/hazelcast/jet/**/**.java</include>
-                    </includes>
-                    <excludedGroups>
-                        com.hazelcast.test.annotation.SlowTest,com.hazelcast.test.annotation.NightlyTest
-                    </excludedGroups>
                 </configuration>
             </plugin>
             <plugin>
@@ -397,7 +424,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.18</version>
+                        <version>8.29</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -411,7 +438,7 @@
                 <configuration>
                     <configLocation>${maven.multiModuleProjectDirectory}/checkstyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>${maven.multiModuleProjectDirectory}/checkstyle/suppressions.xml</suppressionsLocation>
-                    <headerLocation>${maven.multiModuleProjectDirectory}/checkstyle/ClassHeader.txt</headerLocation>
+                    <headerLocation>${checkstyle.headerLocation}</headerLocation>
                     <enableRSS>false</enableRSS>
                     <linkXRef>true</linkXRef>
                     <consoleOutput>true</consoleOutput>

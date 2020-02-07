@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.Traversers;
@@ -41,6 +40,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -371,7 +371,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
 
         // When
         StreamStage<String> mapped = streamStageFromList(input).mapUsingService(
-                sharedService(() -> suffix, ConsumerEx.noop()),
+                sharedService(pctx -> suffix),
                 formatFn
         );
 
@@ -386,7 +386,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     @Test
     public void mapUsingServiceAsync() {
         ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
-                () -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
         );
 
         // Given
@@ -416,7 +416,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     @Test
     public void mapUsingServiceAsyncBatched() {
         ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
-                () -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
         );
 
         // Given
@@ -447,6 +447,43 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
+    public void mapUsingServiceAsyncBatched_withFiltering() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 4;
+        StreamStage<String> mapped = streamStageFromList(input).mapUsingServiceAsyncBatched(serviceFactory, batchSize,
+                (executor, list) -> {
+                    CompletableFuture<List<String>> f = new CompletableFuture<>();
+                    assertTrue("list size", list.size() <= batchSize && list.size() > 0);
+                    executor.schedule(() -> {
+                        List<String> result = list.stream()
+                                .map(i -> i % 13 == 0 ? null : formatFn.apply(suffix, i))
+                                .collect(toList());
+                        f.complete(result);
+                    }, 10, TimeUnit.MILLISECONDS);
+                    return f;
+                }
+        );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream()
+                        .filter(i -> i % 13 != 0)
+                        .map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
     public void mapUsingService_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -457,7 +494,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingService(
-                        sharedService(() -> suffix, ConsumerEx.noop()),
+                        sharedService(pctx -> suffix),
                         (suff, k, i) -> formatFn.apply(suff, i)
                 );
 
@@ -470,6 +507,162 @@ public class StreamStageTest extends PipelineStreamTestSupport {
     }
 
     @Test
+    public void mapUsingServiceAsync_keyed() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-keyed-context";
+
+        // When
+        StreamStage<String> mapped = streamStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsync(
+                        serviceFactory, (executor, k, i) -> {
+                            CompletableFuture<String> f = new CompletableFuture<>();
+                            executor.schedule(() -> {
+                                f.complete(formatFn.apply(suffix, i));
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_keysExposed() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-keyed-context";
+
+        // When
+        int batchSize = 4;
+        StreamStage<String> mapped = streamStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, keys, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            assertEquals("lists size equality", items.size(), keys.size());
+                            executor.schedule(() -> {
+                                List<String> result = items.stream()
+                                        .map(i -> formatFn.apply(suffix, i))
+                                        .collect(toList());
+                                f.complete(result);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_keysHidden() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-keyed-context";
+
+        // When
+        int batchSize = 4;
+        StreamStage<String> mapped = streamStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            executor.schedule(() -> {
+                                List<String> result = items.stream()
+                                        .map(i -> formatFn.apply(suffix, i))
+                                        .collect(toList());
+                                f.complete(result);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream().map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_withFiltering() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 32;
+        StreamStage<String> mapped = streamStageFromList(input)
+                .groupingKey(i -> i % 23)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, keys, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            assertEquals("lists size equality", items.size(), keys.size());
+                            executor.schedule(() -> {
+                                List<String> results = items.isEmpty() ? Collections.emptyList() : new ArrayList<>();
+                                for (int i = 0; i < items.size(); i++) {
+                                    Integer item = items.get(i);
+                                    Integer key = keys.get(i);
+                                    results.add(item % 13 == 0 || key == 0 ? null : formatFn.apply(suffix, item));
+                                }
+                                f.complete(results);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream()
+                        .filter(i -> i % 13 != 0 && i % 23 != 0)
+                        .map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
     public void filterUsingService() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -479,7 +672,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .filterUsingService(
-                        ServiceFactories.sharedService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(pctx -> acceptedRemainder),
                         (rem, i) -> i % 2 == rem
                 );
 
@@ -502,7 +695,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Integer> mapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        ServiceFactories.sharedService(() -> acceptedRemainder, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(pctx -> acceptedRemainder),
                         (rem, k, i) -> i % 2 == rem
                 );
 
@@ -524,7 +717,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         // When
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .flatMapUsingService(
-                        ServiceFactories.sharedService(() -> flatMapFn, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(pctx -> flatMapFn),
                         (fn, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -547,7 +740,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<String> flatMapped = streamStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        ServiceFactories.sharedService(() -> flatMapFn, ConsumerEx.noop()),
+                        ServiceFactories.sharedService(pctx -> flatMapFn),
                         (fn, k, i) -> traverseStream(fn.apply(i))
                 );
 
@@ -1194,7 +1387,7 @@ public class StreamStageTest extends PipelineStreamTestSupport {
         StreamStage<Object> custom = streamStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
-                        nonSharedService(HashSet::new, ConsumerEx.noop()),
+                        nonSharedService(pctx -> new HashSet<>()),
                         (Set<Integer> seen, JetEvent<Integer> jetEvent) -> {
                             Integer key = extractKeyFn.apply(jetEvent.payload());
                             return seen.add(key) ? jetEvent(jetEvent.timestamp(), key) : null;

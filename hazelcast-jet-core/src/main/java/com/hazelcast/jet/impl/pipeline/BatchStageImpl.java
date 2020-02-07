@@ -41,9 +41,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.Util.checkSerializable;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.toList;
 
 public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchStage<T> {
 
@@ -117,9 +117,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     @Nonnull @Override
     public <S, R> BatchStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachFlatMapUsingServiceAsync("map", serviceFactory,
+        return attachFlatMapUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, t) -> mapAsyncFn.apply(s, t).thenApply(Traversers::singleton));
     }
 
@@ -130,8 +132,7 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
             @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
     ) {
         return attachFlatMapUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
-                (s, t) -> mapAsyncFn.apply(s, t).thenApply(list ->
-                        list.stream().map(Traversers::singleton).collect(toList())));
+                (s, t) -> mapAsyncFn.apply(s, t).thenApply(list -> toList(list, Traversers::singleton)));
     }
 
     @Nonnull @Override
@@ -143,28 +144,11 @@ public class BatchStageImpl<T> extends ComputeStageImplBase<T> implements BatchS
     }
 
     @Nonnull @Override
-    public <S> BatchStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return attachFlatMapUsingServiceAsync("filter", serviceFactory,
-                (s, t) -> filterAsyncFn.apply(s, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
-
-    @Nonnull @Override
     public <S, R> BatchStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         return attachFlatMapUsingService(serviceFactory, flatMapFn);
-    }
-
-    @Nonnull @Override
-    public <S, R> BatchStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>> flatMapAsyncFn
-    ) {
-        return attachFlatMapUsingServiceAsync("flatMap", serviceFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

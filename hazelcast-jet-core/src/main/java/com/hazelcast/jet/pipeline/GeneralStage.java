@@ -29,6 +29,8 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.TriFunction;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
+import com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP;
 import com.hazelcast.map.IMap;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 
@@ -39,6 +41,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.function.PredicateEx.alwaysTrue;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_MAX_CONCURRENT_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_PRESERVE_ORDER;
 
 /**
  * The common aspect of {@link BatchStage batch} and {@link StreamStage
@@ -296,6 +300,12 @@ public interface GeneralStage<T> extends Stage {
      * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
      * returns a {@code CompletableFuture<R>} instead of just {@code R}.
      * <p>
+     * Uses default values for some extra parameters, so the maximum number
+     * of concurrent async operations per processor will be limited to
+     * {@value AbstractAsyncTransformUsingServiceP#DEFAULT_MAX_CONCURRENT_OPS} and
+     * whether or not the order of input items should be preserved will be
+     * {@value AbstractAsyncTransformUsingServiceP#DEFAULT_PRESERVE_ORDER}.
+     * <p>
      * The function can return a null future or the future can return a null
      * result: in both cases it will act just like a filter.
      * <p>
@@ -308,7 +318,7 @@ public interface GeneralStage<T> extends Stage {
      * stage.mapUsingServiceAsync(
      *     ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
      *     (reg, item) -> reg.fetchDetailAsync(item)
-     *                       .thenApply(detail -> item.setDetail(detail)
+     *                       .thenApply(detail -> item.setDetail(detail))
      * )
      * }</pre>
      *
@@ -325,31 +335,85 @@ public interface GeneralStage<T> extends Stage {
      * @param mapAsyncFn a stateless mapping function. Can map to null (return
      *      a null future)
      * @param <S> type of service object
-     * @param <R> the future's result type of the mapping function
+     * @param <R> the future result type of the mapping function
      * @return the newly attached stage
      */
     @Nonnull
-    <S, R> GeneralStage<R> mapUsingServiceAsync(
+    default <S, R> GeneralStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
-    );
+    ) {
+        return mapUsingServiceAsync(serviceFactory, DEFAULT_MAX_CONCURRENT_OPS, DEFAULT_PRESERVE_ORDER, mapAsyncFn);
+    }
 
     /**
-     * Batched version of {@link #mapUsingService}: {@code mapAsyncFn} takes
-     * a list of input items and returns a {@code CompletableFuture<List<R>>}.
+     * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
+     * returns a {@code CompletableFuture<R>} instead of just {@code R}.
      * <p>
-     * As opposed to the non-batched variant, this transform cannot perform
-     * filtering. The output list's items must match one-to-one with the input
-     * list's.
+     * The function can return a null future or the future can return a null
+     * result: in both cases it will act just like a filter.
      * <p>
      * The latency of the async call will add to the total latency of the
      * output.
      * <p>
      * This sample takes a stream of stock items and sets the {@code detail}
-     * field on them by performing batched lookups from a registry:
+     * field on them by looking up from a registry:
      * <pre>{@code
      * stage.mapUsingServiceAsync(
      *     ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
+     *     (reg, item) -> reg.fetchDetailAsync(item)
+     *                       .thenApply(detail -> item.setDetail(detail))
+     * )
+     * }</pre>
+     *
+     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
+     *
+     * If you use this stage in a fault-tolerant unbounded job, keep in mind
+     * that any state the service object maintains doesn't participate in Jet's
+     * fault tolerance protocol. If the state is local, it will be lost after a
+     * job restart; if it is saved to some durable storage, the state of that
+     * storage won't be rewound to the last checkpoint, so you'll perform
+     * duplicate updates.
+     *
+     * @param serviceFactory the service factory
+     * @param maxConcurrentOps maximum number of concurrent async operations per processor
+     * @param preserveOrder whether the ordering of the input items should be preserved
+     * @param mapAsyncFn a stateless mapping function. Can map to null (return
+     *      a null future)
+     * @param <S> type of service object
+     * @param <R> the future result type of the mapping function
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <S, R> GeneralStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
+            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<R>> mapAsyncFn
+    );
+
+    /**
+     * Batched version of {@link #mapUsingServiceAsync}: {@code mapAsyncFn} takes
+     * a list of input items and returns a {@code CompletableFuture<List<R>>}.
+     * The size of the input list is limited by the given {@code maxBatchSize}.
+     * <p>
+     * The number of in-flight batches being completed asynchronously is
+     * limited to {@value ComputeStageImplBase#MAX_CONCURRENT_ASYNC_BATCHES}
+     * and this mapping operation always preserves the order of input elements.
+     * <p>
+     * This transform can perform filtering by putting {@code null} elements into
+     * the output list.
+     * <p>
+     * The latency of the async call will add to the total latency of the
+     * output.
+     * <p>
+     * This sample takes a stream of stock items and sets the {@code detail}
+     * field on them by performing batched lookups from a registry. The max
+     * size of the items to lookup is specified as {@code 100}:
+     * <pre>{@code
+     * stage.mapUsingServiceAsyncBatched(
+     *     ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry(jet)),
+     *     100,
      *     (reg, itemList) -> reg
      *             .fetchDetailsAsync(itemList)
      *             .thenApply(detailList -> {
@@ -370,6 +434,7 @@ public interface GeneralStage<T> extends Stage {
      * duplicate updates.
      *
      * @param serviceFactory the service factory
+     * @param maxBatchSize max size of the input list
      * @param mapAsyncFn a stateless mapping function
      * @param <S> type of service object
      * @param <R> the future result type of the mapping function
@@ -420,46 +485,6 @@ public interface GeneralStage<T> extends Stage {
     );
 
     /**
-     * Asynchronous version of {@link #filterUsingService}: the {@code
-     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
-     * just a {@code boolean}.
-     * <p>
-     * The function must not return a null future.
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     * <p>
-     * This sample takes a stream of photos, uses an image classifier to reason
-     * about their contents, and keeps only photos of cats:
-     * <pre>{@code
-     * photos.filterUsingServiceAsync(
-     *     ServiceFactory.withCreateFn(jet -> new ImageClassifier(jet)),
-     *     (classifier, photo) -> reg.classifyAsync(photo)
-     *                               .thenApply(it -> it.equals("cat"))
-     * )
-     * }</pre>
-     *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
-     * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the service object maintains doesn't participate in Jet's
-     * fault tolerance protocol. If the state is local, it will be lost after a
-     * job restart; if it is saved to some durable storage, the state of that
-     * storage won't be rewound to the last checkpoint, so you'll perform
-     * duplicate updates.
-     *
-     * @param serviceFactory the service factory
-     * @param filterAsyncFn a stateless filtering function
-     * @param <S> type of service object
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S> GeneralStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    /**
      * Attaches a flat-mapping stage which applies the supplied function to
      * each input item independently and emits all items from the {@link
      * Traverser} it returns as the output items. The traverser must be
@@ -498,53 +523,6 @@ public interface GeneralStage<T> extends Stage {
     <S, R> GeneralStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull BiFunctionEx<? super S, ? super T, ? extends Traverser<R>> flatMapFn
-    );
-
-    /**
-     * Asynchronous version of {@link #flatMapUsingService}: the {@code
-     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
-     * instead of just {@code Traverser<R>}.
-     * <p>
-     * The function can return a null future or the future can return a null
-     * traverser: in both cases it will act just like a filter.
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     * <p>
-     * This sample takes a stream of products and outputs an "exploded" stream
-     * of all the parts that go into making them:
-     * <pre>{@code
-     * StreamStage<Part> parts = products.flatMapUsingServiceAsync(
-     *     ServiceFactory.withCreateFn(jet -> new PartRegistryCtx()),
-     *     (registry, product) -> registry
-     *          .fetchPartsAsync(product)
-     *          .thenApply(parts -> Traversers.traverseIterable(parts))
-     * );
-     * }</pre>
-     *
-     * <h3>Interaction with fault-tolerant unbounded jobs</h3>
-     *
-     * If you use this stage in a fault-tolerant unbounded job, keep in mind
-     * that any state the service object maintains doesn't participate in Jet's
-     * fault tolerance protocol. If the state is local, it will be lost after a
-     * job restart; if it is saved to some durable storage, the state of that
-     * storage won't be rewound to the last checkpoint, so you'll perform
-     * duplicate updates.
-     *
-     * @param serviceFactory the service factory
-     * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
-     *      (return a null future). The future must not return a null
-     *      traverser, but can return an {@linkplain Traversers#empty() empty
-     *      traverser}.
-     * @param <S> type of service object
-     * @param <R> the type of the returned stage
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S, R> GeneralStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull BiFunctionEx<? super S, ? super T, ? extends CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
     );
 
     /**
@@ -680,8 +658,12 @@ public interface GeneralStage<T> extends Stage {
             @Nonnull FunctionEx<? super T, ? extends K> lookupKeyFn,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        GeneralStage<R> res = mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), (map, t) ->
-                map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e)));
+        GeneralStage<R> res = mapUsingServiceAsync(
+                ServiceFactories.<K, V>iMapService(mapName),
+                DEFAULT_MAX_CONCURRENT_OPS,
+                DEFAULT_PRESERVE_ORDER,
+                (map, t) -> map.getAsync(lookupKeyFn.apply(t)).toCompletableFuture().thenApply(e -> mapFn.apply(t, e))
+        );
         return res.setName("mapUsingIMap");
     }
 

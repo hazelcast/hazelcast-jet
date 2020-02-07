@@ -22,11 +22,8 @@ What's Included
 * `config/hazelcast-client.yaml`: The client configuration file used by the 
   Jet Command Line client
 * `config/log4j.properties`: Logging configuration used by the Jet Instance
-* `opt`: Optional sources and sinks for Jet. The following are included:
-    * Kafka
-    * Hadoop
-    * S3
-    * Avro
+* `opt`: Optional extensions for Jet. You can include them in the classpath by moving
+them to the lib folder.
    
 Quickstart
 ----------
@@ -83,8 +80,9 @@ $ bin/jet list-jobs
 Additional Libraries
 --------------------
 
-To use an additional library provided in the opt folder, move it to the
-`lib` folder. Jet will automatically use it the next time you start it.
+To use an additional library provided in the `opt` folder,
+move it to the `lib` folder. Jet will automatically use it the next time you 
+start it.
 
 
 Additional Information

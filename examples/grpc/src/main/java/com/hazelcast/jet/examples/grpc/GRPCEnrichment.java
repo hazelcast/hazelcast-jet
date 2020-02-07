@@ -19,6 +19,7 @@ package com.hazelcast.jet.examples.grpc;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
@@ -38,6 +39,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.stub.AbstractStub;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
+import javax.annotation.Nonnull;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -109,12 +111,12 @@ public final class GRPCEnrichment {
                 .map(entryValue());
 
         ServiceFactory<?, ProductServiceFutureStub> productService = sharedService(
-                () -> ProductServiceGrpc.newFutureStub(getLocalChannel()),
+                pctx -> ProductServiceGrpc.newFutureStub(getLocalChannel()),
                 stub -> shutdownClient(stub)
         );
 
         ServiceFactory<?, BrokerServiceFutureStub> brokerService = sharedService(
-                () -> BrokerServiceGrpc.newFutureStub(getLocalChannel()),
+                pctx -> BrokerServiceGrpc.newFutureStub(getLocalChannel()),
                 stub -> shutdownClient(stub)
         );
 
@@ -201,10 +203,10 @@ public final class GRPCEnrichment {
             }
 
             @Override
-            public void onFailure(Throwable t) {
+            public void onFailure(@Nonnull Throwable t) {
                 f.completeExceptionally(t);
             }
-        });
+        }, MoreExecutors.directExecutor());
         return f;
     }
 }

@@ -17,7 +17,6 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.PredicateEx;
 import com.hazelcast.jet.JetInstance;
@@ -201,7 +200,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<String> mapped = batchStageFromList(input).mapUsingService(
-                sharedService(() -> suffix, ConsumerEx.noop()),
+                sharedService(pctx -> suffix),
                 formatFn
         );
 
@@ -216,7 +215,7 @@ public class BatchStageTest extends PipelineTestSupport {
     @Test
     public void mapUsingServiceAsync() {
         ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
-                () -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
         );
 
         // Given
@@ -246,7 +245,7 @@ public class BatchStageTest extends PipelineTestSupport {
     @Test
     public void mapUsingServiceAsyncBatched() {
         ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
-                () -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
         );
 
         // Given
@@ -277,6 +276,43 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
+    public void mapUsingServiceAsyncBatched_withFiltering() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 4;
+        BatchStage<String> mapped = batchStageFromList(input).mapUsingServiceAsyncBatched(serviceFactory, batchSize,
+                (executor, list) -> {
+                    CompletableFuture<List<String>> f = new CompletableFuture<>();
+                    assertTrue("list size", list.size() <= batchSize && list.size() > 0);
+                    executor.schedule(() -> {
+                        List<String> result = list.stream()
+                                .map(i -> i % 13 == 0 ? null : formatFn.apply(suffix, i))
+                                .collect(toList());
+                        f.complete(result);
+                    }, 10, TimeUnit.MILLISECONDS);
+                    return f;
+                }
+        );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream()
+                        .filter(i -> i % 13 != 0)
+                        .map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkList.stream(), Object::toString));
+    }
+
+    @Test
     public void mapUsingService_keyed() {
         // Given
         List<Integer> input = sequence(itemCount);
@@ -287,7 +323,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<String> mapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .mapUsingService(
-                        sharedService(() -> suffix, ConsumerEx.noop()),
+                        sharedService(pctx -> suffix),
                         (service, k, i) -> formatFn.apply(i, service)
                 );
 
@@ -300,13 +336,170 @@ public class BatchStageTest extends PipelineTestSupport {
     }
 
     @Test
+    public void mapUsingServiceAsync_keyed() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        BatchStage<String> mapped = batchStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsync(
+                        serviceFactory,
+                        (executor, k, i) -> {
+                            CompletableFuture<String> f = new CompletableFuture<>();
+                            executor.schedule(() -> {
+                                f.complete(formatFn.apply(suffix, i));
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream(), i -> formatFn.apply(suffix, i)),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_keysExposed() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 4;
+        BatchStage<String> mapped = batchStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, keys, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            assertEquals("lists size equality", items.size(), keys.size());
+                            executor.schedule(() -> {
+                                List<String> result = items.stream()
+                                        .map(i -> formatFn.apply(suffix, i))
+                                        .collect(toList());
+                                f.complete(result);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream(), i -> formatFn.apply(suffix, i)),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_keysHidden() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 4;
+        BatchStage<String> mapped = batchStageFromList(input)
+                .groupingKey(i -> i)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            executor.schedule(() -> {
+                                List<String> result = items.stream()
+                                        .map(i -> formatFn.apply(suffix, i))
+                                        .collect(toList());
+                                f.complete(result);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream(), i -> formatFn.apply(suffix, i)),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
+    public void mapUsingServiceAsyncBatched_keyed_withFiltering() {
+        ServiceFactory<?, ScheduledExecutorService> serviceFactory = sharedService(
+                pctx -> Executors.newScheduledThreadPool(8), ExecutorService::shutdown
+        );
+
+        // Given
+        List<Integer> input = sequence(itemCount);
+        BiFunctionEx<String, Integer, String> formatFn = (suffix, i) -> String.format("%04d%s", i, suffix);
+        String suffix = "-context";
+
+        // When
+        int batchSize = 32;
+        BatchStage<String> mapped = batchStageFromList(input)
+                .groupingKey(i -> i % 23)
+                .mapUsingServiceAsyncBatched(
+                        serviceFactory,
+                        batchSize,
+                        (executor, keys, items) -> {
+                            CompletableFuture<List<String>> f = new CompletableFuture<>();
+                            assertTrue("list size", items.size() <= batchSize && items.size() > 0);
+                            assertEquals("lists size equality", items.size(), keys.size());
+                            executor.schedule(() -> {
+                                List<String> results = items.isEmpty() ? Collections.emptyList() : new ArrayList<>();
+                                for (int i = 0; i < items.size(); i++) {
+                                    Integer item = items.get(i);
+                                    Integer key = keys.get(i);
+                                    results.add(item % 13 == 0 || key == 0 ? null : formatFn.apply(suffix, item));
+                                }
+                                f.complete(results);
+                            }, 10, TimeUnit.MILLISECONDS);
+                            return f;
+                        }
+                );
+
+        // Then
+        mapped.writeTo(sink);
+        execute();
+        assertEquals(
+                streamToString(input.stream()
+                        .filter(i -> i % 13 != 0 && i % 23 != 0)
+                        .map(i -> formatFn.apply(suffix, i)), identity()),
+                streamToString(sinkStreamOf(String.class), identity()));
+    }
+
+    @Test
     public void filterUsingService() {
         // Given
         List<Integer> input = sequence(itemCount);
 
         // When
         BatchStage<Integer> mapped = batchStageFromList(input).filterUsingService(
-                sharedService(() -> 1, ConsumerEx.noop()),
+                sharedService(pctx -> 1),
                 (svc, i) -> i % 2 == svc);
 
         // Then
@@ -327,7 +520,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Integer> mapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .filterUsingService(
-                        sharedService(() -> 1, ConsumerEx.noop()),
+                        sharedService(pctx -> 1),
                         (svc, k, r) -> r % 2 == svc);
 
         // Then
@@ -346,7 +539,7 @@ public class BatchStageTest extends PipelineTestSupport {
 
         // When
         BatchStage<Entry<Integer, String>> flatMapped = batchStageFromList(input).flatMapUsingService(
-                sharedService(() -> asList("A", "B"), ConsumerEx.noop()),
+                sharedService(pctx -> asList("A", "B")),
                 (ctx, i) -> traverseItems(entry(i, ctx.get(0)), entry(i, ctx.get(1))));
 
         // Then
@@ -367,7 +560,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> flatMapped = batchStageFromList(input)
                 .groupingKey(i -> i)
                 .flatMapUsingService(
-                        sharedService(() -> asList("A", "B"), ConsumerEx.noop()),
+                        sharedService(pctx -> asList("A", "B")),
                         (ctx, k, i) -> traverseItems(entry(i, ctx.get(0)), entry(i, ctx.get(1))));
 
         // Then
@@ -811,7 +1004,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Entry<Integer, String>> joined = batchStageFromList(input).hashJoin(
                 enrichingStage,
                 joinMapEntries(wholeItem()),
-                (i, enriching) -> entry(i, enriching));
+                Util::entry);
 
         // Then
         joined.writeTo(sink);
@@ -858,7 +1051,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Tuple3<Integer, String, String>> joined = batchStageFromList(input).hashJoin2(
                 enrichingStage1, joinMapEntries(wholeItem()),
                 enrichingStage2, joinMapEntries(wholeItem()),
-                (t1, t2, t3) -> tuple3(t1, t2, t3)
+                Tuple3::tuple3
         );
 
         // Then
@@ -891,7 +1084,7 @@ public class BatchStageTest extends PipelineTestSupport {
         Tag<String> tagA = b.add(enrichingStage1, joinMapEntries(wholeItem()));
         Tag<String> tagB = b.add(enrichingStage2, joinMapEntries(wholeItem()));
         GeneralStage<Tuple2<Integer, ItemsByTag>> joined =
-                b.build((t1, t2) -> tuple2(t1, t2));
+                b.build(Tuple2::tuple2);
 
         // Then
         joined.writeTo(sink);
@@ -973,7 +1166,7 @@ public class BatchStageTest extends PipelineTestSupport {
         BatchStage<Object> custom = batchStageFromList(input)
                 .groupingKey(extractKeyFn)
                 .customTransform("map", Processors.mapUsingServiceP(
-                        nonSharedService(HashSet::new, ConsumerEx.noop()),
+                        nonSharedService(pctx -> new HashSet<>()),
                         (Set<Integer> ctx, Integer item) -> {
                             Integer key = extractKeyFn.apply(item);
                             return ctx.add(key) ? key : null;
@@ -1035,7 +1228,6 @@ public class BatchStageTest extends PipelineTestSupport {
         Vertex tsVertex = dag.getVertex("add-timestamps");
         assertEquals(lp, tsVertex.getLocalParallelism());
     }
-
 
     @Test
     public void addTimestamps_when_upstreamHasNoPreferredLocalParallelism_then_lpMatchUpstream() {

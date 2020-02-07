@@ -17,7 +17,6 @@
 package com.hazelcast.jet.impl.processor;
 
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.Traverser;
@@ -38,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.Traversers.traverseItems;
 import static com.hazelcast.jet.Traversers.traverseIterable;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncBatchedP;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_MAX_CONCURRENT_OPS;
 import static com.hazelcast.jet.impl.util.Util.exceptionallyCompletedFuture;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -54,8 +53,8 @@ public class AsyncTransformUsingServiceBatchedPTest extends SimpleTestInClusterS
     private ProcessorSupplier getSupplier(BiFunctionEx<? super String, ? super List<String>,
                             CompletableFuture<Traverser<String>>> mapFn
     ) {
-        ServiceFactory<?, String> serviceFactory = ServiceFactories.nonSharedService(() -> "foo", ConsumerEx.noop());
-        return flatMapUsingServiceAsyncBatchedP(serviceFactory, 128, mapFn);
+        ServiceFactory<?, String> serviceFactory = ServiceFactories.nonSharedService(pctx -> "foo");
+        return AsyncTransformUsingServiceBatchedP.supplier(serviceFactory, DEFAULT_MAX_CONCURRENT_OPS, 128, mapFn);
     }
 
     @BeforeClass

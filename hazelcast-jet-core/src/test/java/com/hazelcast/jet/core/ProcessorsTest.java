@@ -30,7 +30,6 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -41,13 +40,14 @@ import static com.hazelcast.jet.core.processor.Processors.aggregateByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineByKeyP;
 import static com.hazelcast.jet.core.processor.Processors.combineP;
 import static com.hazelcast.jet.core.processor.Processors.filterP;
-import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.filterUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapP;
 import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceP;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.Processors.mapUsingServiceAsyncP;
 import static com.hazelcast.jet.core.processor.Processors.noopP;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_MAX_CONCURRENT_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_PRESERVE_ORDER;
 import static com.hazelcast.jet.pipeline.ServiceFactories.nonSharedService;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -76,7 +76,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void mapUsingService() {
         TestSupport
                 .verifyProcessor(Processors.mapUsingServiceP(
-                        nonSharedService(() -> new int[1], arr -> assertEquals(6, arr[0])),
+                        nonSharedService(pctx -> new int[1], arr -> assertEquals(6, arr[0])),
                         (int[] context, Integer item) -> context[0] += item))
                 .jetInstance(instance())
                 .disableSnapshots()
@@ -88,7 +88,9 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void mapUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
-                        nonSharedService(AtomicInteger::new, ctx -> assertEquals(6, ctx.get())),
+                        nonSharedService(pctx -> new AtomicInteger(), ctx -> assertEquals(6, ctx.get())),
+                        DEFAULT_MAX_CONCURRENT_OPS,
+                        DEFAULT_PRESERVE_ORDER,
                         t -> "k",
                         (AtomicInteger context, Integer item) -> supplyAsync(() -> {
                             sleepMillis(100);
@@ -114,7 +116,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void filteringWithMapUsingService() {
         TestSupport
                 .verifyProcessor(Processors.mapUsingServiceP(
-                        nonSharedService(() -> new int[1], arr -> assertEquals(3, arr[0])),
+                        nonSharedService(pctx -> new int[1], arr -> assertEquals(3, arr[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 return context[0] % 2 == 0 ? item : null;
@@ -132,7 +134,9 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void filteringWithMapUsingServiceAsync() {
         TestSupport
                 .verifyProcessor(mapUsingServiceAsyncP(
-                        nonSharedService(() -> new int[]{2}, arr -> assertEquals(2, arr[0])),
+                        nonSharedService(pctx -> new int[]{2}, arr -> assertEquals(2, arr[0])),
+                        DEFAULT_MAX_CONCURRENT_OPS,
+                        DEFAULT_PRESERVE_ORDER,
                         t -> "k",
                         (int[] context, Integer item) ->
                                 supplyAsync(() -> item % context[0] != 0 ? item : null)))
@@ -155,7 +159,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
     public void filterUsingService() {
         TestSupport
                 .verifyProcessor(filterUsingServiceP(
-                        nonSharedService(() -> new int[1], arr -> assertEquals(2, arr[0])),
+                        nonSharedService(pctx -> new int[1], arr -> assertEquals(2, arr[0])),
                         (int[] context, Integer item) -> {
                             try {
                                 // will pass if greater than the previous item
@@ -168,23 +172,6 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
                 .input(asList(1, 2, 1, 2))
                 .disableSnapshots()
                 .expectOutput(asList(1, 2, 2));
-    }
-
-    @Test
-    public void filterUsingServiceAsync() {
-        TestSupport
-                .verifyProcessor(filterUsingServiceAsyncP(
-                        nonSharedService(AtomicInteger::new, ctx -> assertEquals(4, ctx.get())),
-                        t -> "k",
-                        (AtomicInteger context, Integer item) -> CompletableFuture.supplyAsync(() -> {
-                            context.incrementAndGet();
-                            return item > 1;
-                        })))
-                .jetInstance(instance())
-                .input(asList(1, 2, 1, 2))
-                .disableSnapshots()
-                .disableProgressAssertion()
-                .expectOutput(asList(2, 2));
     }
 
     @Test
@@ -201,7 +188,7 @@ public class ProcessorsTest extends SimpleTestInClusterSupport {
 
         TestSupport
                 .verifyProcessor(flatMapUsingServiceP(
-                        nonSharedService(() -> context, c -> c[0] = 0),
+                        nonSharedService(pctx -> context, c -> c[0] = 0),
                         (int[] c, Integer item) -> traverseItems(item, c[0] += item)))
                 .jetInstance(instance())
                 .disableSnapshots()

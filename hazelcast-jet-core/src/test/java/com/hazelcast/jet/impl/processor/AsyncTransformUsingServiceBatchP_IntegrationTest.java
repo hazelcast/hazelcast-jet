@@ -21,11 +21,13 @@ import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.EdgeConfig;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.JobStatus;
+import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.core.WatermarkPolicy;
 import com.hazelcast.jet.core.processor.SinkProcessors;
@@ -59,9 +61,9 @@ import static com.hazelcast.jet.core.EventTimePolicy.eventTimePolicy;
 import static com.hazelcast.jet.core.JobStatus.COMPLETED;
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.throttle;
-import static com.hazelcast.jet.core.processor.Processors.flatMapUsingServiceAsyncBatchedP;
 import static com.hazelcast.jet.core.processor.SourceProcessors.streamMapP;
-import static com.hazelcast.jet.impl.util.Util.mapList;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_MAX_CONCURRENT_OPS;
+import static com.hazelcast.jet.impl.util.Util.toList;
 import static com.hazelcast.jet.pipeline.JournalInitialPosition.START_FROM_OLDEST;
 import static com.hazelcast.jet.pipeline.ServiceFactories.sharedService;
 import static java.util.stream.Collectors.joining;
@@ -99,7 +101,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
         sinkList = instance().getList(randomMapName("sinkList"));
         jobConfig = new JobConfig().setProcessingGuarantee(EXACTLY_ONCE).setSnapshotIntervalMillis(0);
 
-        serviceFactory = sharedService(() -> Executors.newFixedThreadPool(8), ExecutorService::shutdown);
+        serviceFactory = sharedService(pctx -> Executors.newFixedThreadPool(8), ExecutorService::shutdown);
     }
 
     @Test
@@ -108,7 +110,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
     }
 
     @Test
-    public void stressTest_withRestart() {
+    public void stressTest_withRestart_graceful() {
         stressTestInt(true);
     }
 
@@ -130,11 +132,12 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
                         WatermarkPolicy.limitingLag(10),
                         10, 0, 0
                 )), 5000));
-        Vertex map = dag.newVertex("map",
-                flatMapUsingServiceAsyncBatchedP(serviceFactory, 128, transformNotPartitionedFn(
-                        item -> traverseItems(item + "-1", item + "-2", item + "-3", item + "-4", item + "-5"))
-                .andThen(r -> r.thenApply(results -> traverseIterable(results).flatMap(Function.identity())))))
-                        .localParallelism(2);
+        BiFunctionEx<ExecutorService, List<Integer>, CompletableFuture<Traverser<String>>> flatMapAsyncFn =
+                transformNotPartitionedFn(i -> traverseItems(i + "-1", i + "-2", i + "-3", i + "-4", i + "-5"))
+                .andThen(r -> r.thenApply(results -> traverseIterable(results).flatMap(Function.identity())));
+        ProcessorSupplier processorSupplier = AsyncTransformUsingServiceBatchedP.supplier(serviceFactory,
+                DEFAULT_MAX_CONCURRENT_OPS, 128, flatMapAsyncFn);
+        Vertex map = dag.newVertex("map", processorSupplier).localParallelism(2);
         Vertex sink = dag.newVertex("sink", SinkProcessors.writeListP(sinkList.getName()));
 
         // Use a shorter queue to not block the barrier from the source for too long due to
@@ -169,8 +172,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.mapJournal(journaledMap, START_FROM_OLDEST, EventJournalMapEvent::getNewValue, alwaysTrue()))
          .withoutTimestamps()
-         .mapUsingServiceAsyncBatched(serviceFactory, 128,
-                 transformNotPartitionedFn(i -> i + "-1"))
+         .mapUsingServiceAsyncBatched(serviceFactory, 128, transformNotPartitionedFn(i -> i + "-1"))
          .setLocalParallelism(2)
          .writeTo(Sinks.list(sinkList));
 
@@ -186,7 +188,7 @@ public class AsyncTransformUsingServiceBatchP_IntegrationTest extends SimpleTest
             executor.submit(() -> {
                 // simulate random async call latency
                 sleepMillis(ThreadLocalRandom.current().nextInt(5));
-                return f.complete(mapList(items, transformFn));
+                return f.complete(toList(items, transformFn));
             });
             return f;
         };
