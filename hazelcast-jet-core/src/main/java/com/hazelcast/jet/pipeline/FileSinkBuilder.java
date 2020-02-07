@@ -87,6 +87,8 @@ public final class FileSinkBuilder<T> {
      * The rolling is based on system time, not on event time. By default no
      * rolling by date is done. If the system clock goes back, the outcome is
      * unspecified and possibly corrupt.
+     *
+     * @since 4.0
      */
     public FileSinkBuilder<T> rollByDate(@Nullable String datePattern) {
         this.datePattern = datePattern;
@@ -97,6 +99,8 @@ public final class FileSinkBuilder<T> {
      * Enables rolling by file size. If the size after writing a batch of items
      * exceeds the limit, a new file will be started. From this follows that
      * the file will typically be larger than the given maximum.
+     *
+     * @since 4.0
      */
     public FileSinkBuilder<T> rollByFileSize(@Nullable Long maxFileSize) {
         this.maxFileSize = maxFileSize;
@@ -121,6 +125,8 @@ public final class FileSinkBuilder<T> {
      *      guarantee. If false, sink's guarantee will be at-least-once
      *      even if job's is exactly-once
      * @return this instance for fluent API
+     *
+     * @since 4.0
      */
     public FileSinkBuilder<T> exactlyOnce(boolean enable) {
         exactlyOnce = enable;
@@ -140,6 +146,8 @@ public final class FileSinkBuilder<T> {
      * with multiple members each and the directory is not a shared storage,
      * it's not possible to configure the file reader correctly - use only one
      * member per machine.
+     *
+     * @since 4.0
      */
     @Nonnull
     public FileSinkBuilder<T> sharedFileSystem(boolean sharedFileSystem) {
