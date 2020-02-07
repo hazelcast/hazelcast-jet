@@ -250,15 +250,13 @@ public class JobConfig implements IdentifiedDataSerializable {
             String packagePrefixPath = Optional.ofNullable(clazz.getPackage())
                                                .map(pakage -> pakage.getName().replace('.', '/') + "/")
                                                .orElse("");
-            Pattern nestedPattern = Pattern.compile(clazz.getName()
-                                                         .replace(".", "\\/")
-                                                         .replace("$", "\\$") + "\\$.+" + "\\.class");
+            Pattern nestedPattern = Pattern.compile(Pattern.quote(clazz.getName().replace('.', '/')) + "\\$.+" + "\\.class");
             resources(classLoader, packagePrefixPath)
                     .stream()
                     .map(resource -> packagePrefixPath + resource)
                     .filter(resource -> nestedPattern.matcher(resource).matches())
                     .forEach(resource -> {
-                        URL url = classLoader.getResource(resource);
+                        URL url = Objects.requireNonNull(classLoader.getResource(resource));
                         add(url, resource, ResourceType.CLASS);
                     });
         }

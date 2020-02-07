@@ -1,7 +1,9 @@
 package com.hazelcast.jet.config
 
 import org.hamcrest.Matchers
-import org.junit.Assert
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.hasProperty
+import org.junit.Assert.assertThat
 import org.junit.Before
 import org.junit.Test
 
@@ -20,13 +22,13 @@ class KotlinResourceTest {
         config!!.addClass(OuterClass::class.java)
 
         // Then
-        val resourceConfigs: Collection<ResourceConfig> = config!!.resourceConfigs.values
-        Assert.assertThat(resourceConfigs, Matchers.hasSize(4))
-        Assert.assertThat(resourceConfigs, Matchers.containsInAnyOrder(
-                Matchers.hasProperty("id", Matchers.`is`(OuterClass::class.java.name.replace('.', '/') + ".class")),
-                Matchers.hasProperty("id", Matchers.`is`(OuterClass::class.java.name.replace('.', '/') + "\$method\$1.class")),
-                Matchers.hasProperty("id", Matchers.`is`(OuterClass::class.java.name.replace('.', '/') + "\$method\$lambda\$1.class")),
-                Matchers.hasProperty("id", Matchers.`is`(OuterClass.NestedClass::class.java.name.replace('.', '/') + ".class"))
+        val resourceConfigs = config!!.resourceConfigs.values
+        assertThat(resourceConfigs, Matchers.hasSize(4))
+        assertThat(resourceConfigs, Matchers.containsInAnyOrder(
+                hasProperty("id", `is`(OuterClass::class.java.name.replace('.', '/') + ".class")),
+                hasProperty("id", `is`(OuterClass::class.java.name.replace('.', '/') + "\$method\$1.class")),
+                hasProperty("id", `is`(OuterClass::class.java.name.replace('.', '/') + "\$method\$lambda\$1.class")),
+                hasProperty("id", `is`(OuterClass.NestedClass::class.java.name.replace('.', '/') + ".class"))
         ))
     }
 
@@ -35,7 +37,7 @@ class KotlinResourceTest {
         private fun method() {
             object : Any() {}
 
-            val lambda = { -> }
+            val lambda = { }
         }
 
         class NestedClass
