@@ -59,6 +59,7 @@ import static com.hazelcast.jet.config.ProcessingGuarantee.AT_LEAST_ONCE;
 import static com.hazelcast.jet.config.ProcessingGuarantee.EXACTLY_ONCE;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
+import static com.hazelcast.jet.pipeline.FileSinkBuilder.DISABLE_ROLLING;
 import static com.hazelcast.jet.pipeline.FileSinkBuilder.TEMP_FILE_SUFFIX;
 
 /**
@@ -84,7 +85,7 @@ public final class WriteFileP<T> implements Processor {
     private final FunctionEx<? super T, ? extends String> toStringFn;
     private final Charset charset;
     private final DateTimeFormatter dateFormatter;
-    private final Long maxFileSize;
+    private final long maxFileSize;
     private final boolean exactlyOnce;
     private final LongSupplier clock;
 
@@ -102,7 +103,7 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
             @Nullable String dateFormatter,
-            @Nullable Long maxFileSize,
+            long maxFileSize,
             boolean exactlyOnce,
             @Nonnull LongSupplier clock
     ) {
@@ -149,13 +150,13 @@ public final class WriteFileP<T> implements Processor {
                 T castedItem = (T) item;
                 writer.write(toStringFn.apply(castedItem));
                 writer.write(System.lineSeparator());
-                if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
+                if (maxFileSize != DISABLE_ROLLING && sizeTrackingStream.size >= maxFileSize) {
                     utility.finishActiveTransaction();
                     writer = utility.activeTransaction().writer();
                 }
             }
             writer.flush();
-            if (maxFileSize != null && sizeTrackingStream.size >= maxFileSize) {
+            if (maxFileSize != DISABLE_ROLLING && sizeTrackingStream.size >= maxFileSize) {
                 utility.finishActiveTransaction();
             }
         } catch (IOException e) {
@@ -205,7 +206,7 @@ public final class WriteFileP<T> implements Processor {
         }
         sb.append(context.globalProcessorIndex());
         String file = sb.toString();
-        boolean usesSequence = utility.externalGuarantee() == EXACTLY_ONCE || maxFileSize != null;
+        boolean usesSequence = utility.externalGuarantee() == EXACTLY_ONCE || maxFileSize != DISABLE_ROLLING;
         if (usesSequence) {
             // check existing files if the sequence number is used
             int prefixLength = sb.length();
@@ -296,7 +297,7 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
             @Nullable String datePattern,
-            @Nullable Long maxFileSize,
+            long maxFileSize,
             boolean exactlyOnce
     ) {
         return metaSupplier(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce, SYSTEM_CLOCK);
@@ -308,7 +309,7 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull FunctionEx<? super T, ? extends String> toStringFn,
             @Nonnull String charset,
             @Nullable String datePattern,
-            @Nullable Long maxFileSize,
+            long maxFileSize,
             boolean exactlyOnce,
             @Nonnull LongSupplier clock
     ) {

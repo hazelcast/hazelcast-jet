@@ -17,6 +17,7 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 
@@ -37,18 +38,20 @@ import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 public final class FileSinkBuilder<T> {
 
     /**
-     * A suffix added to file names until they are committed. Files ending with
-     * this suffix should be ignored when processing. See {@link
-     * Sinks#filesBuilder} for more information.
+     * A suffix added to file names until they are committed. Files
+     * ending with this suffix should be ignored when processing. See
+     * {@link Sinks#filesBuilder} for more information.
      */
     public static final String TEMP_FILE_SUFFIX = ".tmp";
+
+    public static final long DISABLE_ROLLING = Long.MAX_VALUE;
 
     private final String directoryName;
 
     private FunctionEx<? super T, String> toStringFn = Object::toString;
     private Charset charset = StandardCharsets.UTF_8;
     private String datePattern;
-    private Long maxFileSize;
+    private long maxFileSize = DISABLE_ROLLING;
     private boolean exactlyOnce = true;
 
     /**
@@ -101,11 +104,15 @@ public final class FileSinkBuilder<T> {
      * Enables rolling by file size. If the size after writing a batch of items
      * exceeds the limit, a new file will be started. From this follows that
      * the file will typically be larger than the given maximum.
+     * <p>
+     * To disable rolling after certain size, pass {@code
+     * DISABLE_ROLLING}. This is the default value.
      *
      * @since 4.0
      */
     @Nonnull
-    public FileSinkBuilder<T> rollByFileSize(@Nullable Long maxFileSize) {
+    public FileSinkBuilder<T> rollByFileSize(long maxFileSize) {
+        Preconditions.checkPositive(1, "rolling size must be a positive number");
         this.maxFileSize = maxFileSize;
         return this;
     }

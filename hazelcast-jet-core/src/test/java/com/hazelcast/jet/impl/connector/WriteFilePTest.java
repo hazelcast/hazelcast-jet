@@ -63,6 +63,7 @@ import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.processor.Processors.mapP;
 import static com.hazelcast.jet.core.processor.SinkProcessors.writeFileP;
 import static com.hazelcast.jet.impl.util.Util.uncheckCall;
+import static com.hazelcast.jet.pipeline.FileSinkBuilder.DISABLE_ROLLING;
 import static com.hazelcast.jet.pipeline.FileSinkBuilder.TEMP_FILE_SUFFIX;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -164,7 +165,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, DISABLE_ROLLING, true, Object::toString))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -235,7 +236,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex src = dag.newVertex("src", () -> new SlowSourceP(semaphore, numItems)).localParallelism(1);
         @SuppressWarnings("Convert2MethodRef")
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", "SSS", null, true,
+                directory.toString(), Objects::toString, "utf-8", "SSS", DISABLE_ROLLING, true,
                 (LongSupplier & Serializable) () -> clock.get()));
         dag.edge(between(src, sink));
 
@@ -309,7 +310,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, DISABLE_ROLLING, true, Object::toString))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
