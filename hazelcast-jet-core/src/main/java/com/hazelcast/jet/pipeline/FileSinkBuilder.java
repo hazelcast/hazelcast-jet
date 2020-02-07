@@ -44,6 +44,10 @@ public final class FileSinkBuilder<T> {
      */
     public static final String TEMP_FILE_SUFFIX = ".tmp";
 
+    /**
+     * A value to pass to {@link #rollByFileSize(long)} if you want to
+     * disable rolling by file size.
+     */
     public static final long DISABLE_ROLLING = Long.MAX_VALUE;
 
     private final String directoryName;
