@@ -31,6 +31,7 @@ import com.hazelcast.jet.function.TriPredicate;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -39,7 +40,7 @@ import java.util.function.Function;
 import static com.hazelcast.jet.Util.entry;
 
 /**
- * An intermediate step while constructing a pieline transform that
+ * An intermediate step while constructing a pipeline transform that
  * involves a grouping key, such as windowed group-and-aggregate. Some
  * transforms use the grouping key only to partition the stream (such as
  * {@link #mapUsingIMap}).
@@ -316,9 +317,34 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    <S, R> StreamStage<R> mapUsingServiceAsync(
+    default <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return (StreamStage<R>) GeneralStageWithKey.super.mapUsingServiceAsync(serviceFactory, mapAsyncFn);
+    }
+
+    @Nonnull @Override
+    <S, R> StreamStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    );
+
+    @Nonnull @Override
+    <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    );
+
+    @Nonnull @Override
+    <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>,
+                    ? extends CompletableFuture<List<R>>> mapAsyncFn
     );
 
     @Nonnull @Override
@@ -328,21 +354,9 @@ public interface StreamStageWithKey<T, K> extends GeneralStageWithKey<T, K> {
     );
 
     @Nonnull @Override
-    <S> StreamStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    @Nonnull @Override
     <S, R> StreamStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
-    );
-
-    @Nonnull @Override
-    <S, R> StreamStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>> flatMapAsyncFn
     );
 
     @Nonnull @Override

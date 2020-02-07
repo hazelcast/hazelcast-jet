@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.pipeline;
 
+import com.hazelcast.function.BiFunctionEx;
 import com.hazelcast.function.BiPredicateEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.function.SupplierEx;
@@ -30,7 +31,10 @@ import com.hazelcast.jet.pipeline.StreamStageWithKey;
 import com.hazelcast.jet.pipeline.WindowDefinition;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import static com.hazelcast.jet.impl.util.Util.toList;
 
 public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> implements StreamStageWithKey<T, K> {
 
@@ -102,10 +106,34 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
     @Nonnull @Override
     public <S, R> StreamStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return attachTransformUsingServiceAsync("map", serviceFactory,
+        return attachTransformUsingServiceAsync("map", serviceFactory, maxConcurrentOps, preserveOrder,
                 (s, k, t) -> mapAsyncFn.apply(s, k, t).thenApply(Traversers::singleton));
+    }
+
+    @Nonnull @Override
+    public <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    ) {
+        return attachTransformUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+                (s, items) -> mapAsyncFn.apply(s, items).thenApply(list -> toList(list, Traversers::singleton)));
+    }
+
+    @Nonnull @Override
+    public <S, R> StreamStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>,
+                    ? extends CompletableFuture<List<R>>> mapAsyncFn
+    ) {
+        return attachTransformUsingServiceAsyncBatched("map", serviceFactory, maxBatchSize,
+                (s, keys, items) -> mapAsyncFn.apply(s, keys, items)
+                        .thenApply(list -> toList(list, Traversers::singleton)));
     }
 
     @Nonnull @Override
@@ -117,29 +145,11 @@ public class StreamStageWithKeyImpl<T, K> extends StageWithGroupingBase<T, K> im
     }
 
     @Nonnull @Override
-    public <S> StreamStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    ) {
-        return attachTransformUsingServiceAsync("filter", serviceFactory,
-                (s, k, t) -> filterAsyncFn.apply(s, k, t).thenApply(passed -> passed ? Traversers.singleton(t) : null));
-    }
-
-    @Nonnull @Override
     public <S, R> StreamStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
     ) {
         return attachFlatMapUsingService(serviceFactory, flatMapFn);
-    }
-
-    @Nonnull @Override
-    public <S, R> StreamStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
-    ) {
-        return attachTransformUsingServiceAsync("flatMap", serviceFactory, flatMapAsyncFn);
     }
 
     @Nonnull @Override

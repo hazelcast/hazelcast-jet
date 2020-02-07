@@ -28,15 +28,20 @@ import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.function.TriFunction;
 import com.hazelcast.jet.function.TriPredicate;
+import com.hazelcast.jet.impl.pipeline.ComputeStageImplBase;
+import com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP;
 import com.hazelcast.map.IMap;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_MAX_CONCURRENT_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_PRESERVE_ORDER;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -220,7 +225,7 @@ public interface GeneralStageWithKey<T, K> {
      * <pre>{@code
      * items.groupingKey(Item::getDetailId)
      *      .mapUsingService(
-     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry()),
+     *          ServiceFactories.sharedService(ctx -> new ItemDetailRegistry()),
      *          (reg, key, item) -> item.setDetail(reg.fetchDetail(key))
      *      );
      * }</pre>
@@ -249,6 +254,12 @@ public interface GeneralStageWithKey<T, K> {
      * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
      * returns a {@code CompletableFuture<R>} instead of just {@code R}.
      * <p>
+     * Uses default values for some extra parameters, so the maximum number
+     * of concurrent async operations per processor will be limited to
+     * {@value AbstractAsyncTransformUsingServiceP#DEFAULT_MAX_CONCURRENT_OPS} and
+     * whether or not the order of input items should be preserved will be
+     * {@value AbstractAsyncTransformUsingServiceP#DEFAULT_PRESERVE_ORDER}.
+     * <p>
      * The function can return a null future or the future can return a null
      * result: in both cases it will act just like a filter.
      * <p>
@@ -256,9 +267,8 @@ public interface GeneralStageWithKey<T, K> {
      * <pre>{@code
      * items.groupingKey(Item::getDetailId)
      *      .mapUsingServiceAsync(
-     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry()),
-     *          (reg, key, item) -> reg.fetchDetailAsync(key)
-     *                                 .thenApply(detail -> item.setDetail(detail))
+     *          ServiceFactories.sharedService(ctx -> new ItemDetailRegistry()),
+     *          (reg, key, item) -> reg.fetchDetailAsync(key).thenApply(item::setDetail)
      *      );
      * }</pre>
      * The latency of the async call will add to the total latency of the
@@ -272,9 +282,145 @@ public interface GeneralStageWithKey<T, K> {
      * @return the newly attached stage
      */
     @Nonnull
-    <S, R> GeneralStage<R> mapUsingServiceAsync(
+    default <S, R> GeneralStage<R> mapUsingServiceAsync(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    ) {
+        return mapUsingServiceAsync(serviceFactory, DEFAULT_MAX_CONCURRENT_OPS, DEFAULT_PRESERVE_ORDER, mapAsyncFn);
+    }
+
+    /**
+     * Asynchronous version of {@link #mapUsingService}: the {@code mapAsyncFn}
+     * returns a {@code CompletableFuture<R>} instead of just {@code R}.
+     * <p>
+     * The function can return a null future or the future can return a null
+     * result: in both cases it will act just like a filter.
+     * <p>
+     * Sample usage:
+     * <pre>{@code
+     * items.groupingKey(Item::getDetailId)
+     *      .mapUsingServiceAsync(
+     *          ServiceFactories.sharedService(ctx -> new ItemDetailRegistry()),
+     *          16,
+     *          true,
+     *          (reg, key, item) -> reg.fetchDetailAsync(key).thenApply(item::setDetail)
+     *      );
+     * }</pre>
+     * The latency of the async call will add to the total latency of the
+     * output.
+     *
+     * @param <S> type of service object
+     * @param <R> the future's result type of the mapping function
+     * @param serviceFactory the service factory
+     * @param maxConcurrentOps maximum number of concurrent async operations per processor
+     * @param preserveOrder whether the async responses are ordered or not
+     * @param mapAsyncFn a stateless mapping function. Can map to null (return
+     *      a null future)
+     * @return the newly attached stage
+     */
+    @Nonnull
+    <S, R> GeneralStage<R> mapUsingServiceAsync(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxConcurrentOps,
+            boolean preserveOrder,
+            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
+    );
+
+    /**
+     * Batched version of {@link #mapUsingServiceAsync}: {@code mapAsyncFn} takes
+     * a list of input items and returns a {@code CompletableFuture<List<R>>}.
+     * The size of list is limited by the given {@code maxBatchSize}.
+     * <p>
+     * This transform can perform filtering by putting {@code null} elements into
+     * the output list.
+     * <p>
+     * The latency of the async call will add to the total latency of the
+     * output.
+     * <p>
+     * This sample takes a stream of stock items and sets the {@code detail}
+     * field on them by performing batched lookups from a registry. The max
+     * size of the items to lookup is specified as {@code 100}:
+     * <pre>{@code
+     * items.groupingKey(Item::getDetailId)
+     *      .mapUsingServiceAsyncBatched(
+     *          ServiceFactories.sharedService(ctx -> new ItemDetailRegistry()),
+     *          100,
+     *          (reg, itemList) -> reg
+     *              .fetchDetailsAsync(itemList.stream().map(Item::getDetailId).collect(Collectors.toList()))
+     *              .thenApply(details -> {
+     *                  for (int i = 0; i < itemList.size(); i++) {
+     *                      itemList.get(i).setDetail(details.get(i));
+     *                  }
+     *                  return itemList;
+     *              })
+     *      );
+     * }</pre>
+     *
+     * @param serviceFactory the service factory
+     * @param maxBatchSize max size of the input list
+     * @param mapAsyncFn a stateless mapping function
+     * @param <S> type of service object
+     * @param <R> the future result type of the mapping function
+     * @return the newly attached stage
+     * @since 4.0
+     */
+    @Nonnull
+    <S, R> GeneralStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull BiFunctionEx<? super S, ? super List<T>, ? extends CompletableFuture<List<R>>> mapAsyncFn
+    );
+
+    /**
+     * Batched version of {@link #mapUsingServiceAsync}: {@code mapAsyncFn} takes
+     * a list of input items (and a list of their corresponding keys) and
+     * returns a {@code CompletableFuture<List<R>>}.
+     * The sizes of the input lists are identical and are limited by the given
+     * {@code maxBatchSize}. The key at index N corresponds to the input item
+     * at index N.
+     * <p>
+     * The number of in-flight batches being completed asynchronously is
+     * limited to {@value ComputeStageImplBase#MAX_CONCURRENT_ASYNC_BATCHES}
+     * and this mapping operation always preserves the order of input elements.
+     * <p>
+     * This transform can perform filtering by putting {@code null} elements into
+     * the output list.
+     * <p>
+     * The latency of the async call will add to the total latency of the
+     * output.
+     * <p>
+     * This sample takes a stream of stock items and sets the {@code detail}
+     * field on them by performing batched lookups from a registry. The max
+     * size of the items to lookup is specified as {@code 100}:
+     * <p>
+     * <pre>{@code
+     * items.groupingKey(Item::getDetailId)
+     *      .mapUsingServiceAsyncBatched(
+     *          ServiceFactories.sharedService(ctx -> new ItemDetailRegistry()),
+     *          100,
+     *          (reg, keyList, itemList) -> reg.fetchDetailsAsync(keyList).thenApply(details -> {
+     *              for (int i = 0; i < itemList.size(); i++) {
+     *                  itemList.get(i).setDetail(details.get(i));
+     *              }
+     *              return itemList;
+     *          })
+     *      );
+     * }</pre>
+     *
+     * @param serviceFactory the service factory
+     * @param maxBatchSize max size of the input list
+     * @param mapAsyncFn a stateless mapping function
+     * @param <S> type of service object
+     * @param <R> the future result type of the mapping function
+     * @return the newly attached stage
+     * @since 4.0
+     */
+    @Nonnull
+    <S, R> GeneralStage<R> mapUsingServiceAsyncBatched(
+            @Nonnull ServiceFactory<?, S> serviceFactory,
+            int maxBatchSize,
+            @Nonnull TriFunction<? super S, ? super List<K>, ? super List<T>,
+                    ? extends CompletableFuture<List<R>>> mapAsyncFn
     );
 
     /**
@@ -283,6 +429,10 @@ public interface GeneralStageWithKey<T, K> {
      * to discard it. The predicate function receives another parameter, the
      * service object, which Jet will create using the supplied {@code
      * serviceFactory}.
+     * <p>
+     * The number of in-flight batches being completed asynchronously is
+     * limited to {@value ComputeStageImplBase#MAX_CONCURRENT_ASYNC_BATCHES}
+     * and this mapping operation always preserves the order of input elements.
      * <p>
      * Jet uses the {@linkplain #keyFn() key-extracting function} specified on
      * this stage for partitioning: all the items with the same key will see
@@ -295,7 +445,7 @@ public interface GeneralStageWithKey<T, K> {
      * <pre>{@code
      * items.groupingKey(Item::getDetailId)
      *      .filterUsingService(
-     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry()),
+     *          ServiceFactories.sharedService(ctx -> new ItemDetailRegistry()),
      *          (reg, key, item) -> reg.fetchDetail(key).contains("blade")
      *      );
      * }</pre>
@@ -320,37 +470,6 @@ public interface GeneralStageWithKey<T, K> {
     );
 
     /**
-     * Asynchronous version of {@link #filterUsingService}: the {@code
-     * filterAsyncFn} returns a {@code CompletableFuture<Boolean>} instead of
-     * just a {@code boolean}.
-     * <p>
-     * The function must not return a null future.
-     * <p>
-     * Sample usage:
-     * <pre>{@code
-     * items.groupingKey(Item::getDetailId)
-     *      .filterUsingServiceAsync(
-     *          ServiceFactory.withCreateFn(jet -> new ItemDetailRegistry()),
-     *          (reg, key, item) -> reg.fetchDetailAsync(key)
-     *                                 .thenApply(detail -> detail.contains("blade"))
-     *      );
-     * }</pre>
-     * <p>
-     * The latency of the async call will add to the total latency of the
-     * output.
-     *
-     * @param <S> type of service object
-     * @param serviceFactory the service factory
-     * @param filterAsyncFn a stateless filtering function
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S> GeneralStage<T> filterUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Boolean>> filterAsyncFn
-    );
-
-    /**
      * Attaches a flat-mapping stage which applies the supplied function to
      * each input item independently and emits all the items from the
      * {@link Traverser} it returns as the output items. The traverser must
@@ -370,7 +489,7 @@ public interface GeneralStageWithKey<T, K> {
      * StreamStage<Part> parts = products
      *     .groupingKey(Product::getId)
      *     .flatMapUsingService(
-     *         ServiceFactory.withCreateFn(jet -> new PartRegistry()),
+     *         ServiceFactories.sharedService(ctx -> new PartRegistry()),
      *         (registry, productId, product) -> Traversers.traverseIterable(
      *                 registry.fetchParts(productId))
      *     );
@@ -396,44 +515,6 @@ public interface GeneralStageWithKey<T, K> {
     <S, R> GeneralStage<R> flatMapUsingService(
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, ? extends Traverser<R>> flatMapFn
-    );
-
-    /**
-     * Asynchronous version of {@link #flatMapUsingService}: the {@code
-     * flatMapAsyncFn} returns a {@code CompletableFuture<Traverser<R>>}
-     * instead of just {@code Traverser<R>}.
-     * <p>
-     * The function can return a null future or the future can return a null
-     * traverser: in both cases it will act just like a filter.
-     * <p>
-     * Sample usage:
-     * <pre>{@code
-     * StreamStage<Part> productParts = products
-     *     .groupingKey(Product::getId)
-     *     .flatMapUsingServiceAsync(
-     *         ServiceFactory.withCreateFn(jet -> new PartRegistry()),
-     *         (registry, productId, product) -> registry
-     *                 .fetchPartsAsync(productId)
-     *                 .thenApply(parts -> Traversers.traverseIterable(parts))
-     *     );
-     * }</pre>
-     * <p>
-     * The latency of the async call will add to the latency of the items.
-     *
-     * @param <S> type of service object
-     * @param <R> the type of the returned stage
-     * @param serviceFactory the service factory
-     * @param flatMapAsyncFn a stateless flatmapping function. Can map to null
-     *                      (return a null future), but the future must not
-     *                      return null traverser, but can return an {@linkplain
-     *                      Traversers#empty() empty traverser}.
-     * @return the newly attached stage
-     */
-    @Nonnull
-    <S, R> GeneralStage<R> flatMapUsingServiceAsync(
-            @Nonnull ServiceFactory<?, S> serviceFactory,
-            @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<Traverser<R>>>
-                    flatMapAsyncFn
     );
 
     /**
@@ -478,6 +559,7 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
         return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName),
+                DEFAULT_MAX_CONCURRENT_OPS, DEFAULT_PRESERVE_ORDER,
                 (map, key, item) -> map.getAsync(key).toCompletableFuture()
                                        .thenApply(value -> mapFn.apply(item, value)));
     }
