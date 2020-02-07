@@ -63,15 +63,15 @@ public class ResourceConfigTest extends JetTestSupport {
     @Test
     public void when_addClassWithClass() {
         // When
-        config.addClass(BaseClass.class);
+        config.addClass(OuterClass.class);
 
         // Then
         Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
         assertThat(resourceConfigs, hasSize(3));
         assertThat(resourceConfigs, containsInAnyOrder(
-                hasProperty("id", is(BaseClass.class.getName().replace('.', '/') + ".class")),
-                hasProperty("id", is(BaseClass.class.getName().replace('.', '/') + "$1.class")),
-                hasProperty("id", is(BaseClass.NestedClass.class.getName().replace('.', '/') + ".class"))
+                hasProperty("id", is(OuterClass.class.getName().replace('.', '/') + ".class")),
+                hasProperty("id", is(OuterClass.class.getName().replace('.', '/') + "$1.class")),
+                hasProperty("id", is(OuterClass.NestedClass.class.getName().replace('.', '/') + ".class"))
         ));
     }
 
@@ -1067,7 +1067,7 @@ public class ResourceConfigTest extends JetTestSupport {
     }
 
     @SuppressWarnings("unused")
-    private static class BaseClass {
+    private static class OuterClass {
         private void method() {
             new Object() {
             };

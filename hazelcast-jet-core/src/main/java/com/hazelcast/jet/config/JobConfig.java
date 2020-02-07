@@ -45,6 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -243,17 +245,17 @@ public class JobConfig implements IdentifiedDataSerializable {
             ResourceConfig cfg = new ResourceConfig(clazz);
             resourceConfigs.put(cfg.getId(), cfg);
 
-            String clazzPath = clazz.getName().replace('.', '/');
-            String clazzResource = clazzPath + ".class";
-            String packagePath = clazz.getPackage().getName().replace('.', '/');
             ClassLoader classLoader = clazz.getClassLoader();
-            resources(classLoader, packagePath)
+            String packagePrefixPath = Optional.ofNullable(clazz.getPackage())
+                                               .map(pakage -> pakage.getName().replace('.', '/') + "/")
+                                               .orElse("");
+            Pattern nestedPattern = Pattern.compile(clazz.getName()
+                                                         .replace(".", "\\/")
+                                                         .replace("$", "\\$") + "\\$.+" + "\\.class");
+            resources(classLoader, packagePrefixPath)
                     .stream()
-                    .map(resource -> packagePath + "/" + resource)
-                    .filter(resource -> resource.endsWith(".class") &&
-                            resource.startsWith(clazzPath) &&
-                            !resource.equals(clazzResource)
-                    )
+                    .map(resource -> packagePrefixPath + resource)
+                    .filter(resource -> nestedPattern.matcher(resource).matches())
                     .forEach(resource -> {
                         URL url = classLoader.getResource(resource);
                         add(url, resource, ResourceType.CLASS);
