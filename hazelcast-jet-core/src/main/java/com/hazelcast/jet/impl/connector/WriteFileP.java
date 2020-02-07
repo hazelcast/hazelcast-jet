@@ -86,7 +86,6 @@ public final class WriteFileP<T> implements Processor {
     private final DateTimeFormatter dateFormatter;
     private final Long maxFileSize;
     private final boolean exactlyOnce;
-    private final boolean sharedFileSystem;
     private final LongSupplier clock;
 
     private UnboundedTransactionsProcessorUtility<FileId, FileResource> utility;
@@ -105,7 +104,6 @@ public final class WriteFileP<T> implements Processor {
             @Nullable String dateFormatter,
             @Nullable Long maxFileSize,
             boolean exactlyOnce,
-            boolean sharedFileSystem,
             @Nonnull LongSupplier clock
     ) {
         this.directory = Paths.get(directoryName);
@@ -114,7 +112,6 @@ public final class WriteFileP<T> implements Processor {
         this.dateFormatter = dateFormatter != null ? DateTimeFormatter.ofPattern(dateFormatter) : null;
         this.maxFileSize = maxFileSize;
         this.exactlyOnce = exactlyOnce;
-        this.sharedFileSystem = sharedFileSystem;
         this.clock = clock;
     }
 
@@ -263,17 +260,11 @@ public final class WriteFileP<T> implements Processor {
                                     "file with unknown name structure found in the directory: " + file, e);
                             return false;
                         }
-                        int localIndexLow = context.memberIndex() * context.localParallelism();
-                        int localIndexHigh = localIndexLow + context.localParallelism();
-                        boolean isLocalIndex = index >= localIndexLow && index < localIndexHigh;
-                        if (sharedFileSystem || isLocalIndex) {
-                            // If the file index belongs to one of the local processors (when directory is not shred)
-                            // or when the directory is shared, we must leave that processor to do the cleanup
-                            return index % context.totalParallelism() == context.globalProcessorIndex();
-                        } else {
-                            // Otherwise we let the first local processor to take care of the rest of the files
-                            return context.localProcessorIndex() == 0;
-                        }
+                        // this can leave some files unhandled if the index doesn't belong
+                        // to a local processor and the directory is only visible to this member.
+                        // We neglect that, some abandoned tmp files will not do much harm. To
+                        // fix it we would need to know whether the directory is shared or not.
+                        return index % context.totalParallelism() == context.globalProcessorIndex();
                     })
                     .forEach(file -> uncheckRun(() -> {
                         LoggingUtil.logFine(context.logger(), "deleting %s",  file);
@@ -306,11 +297,9 @@ public final class WriteFileP<T> implements Processor {
             @Nonnull String charset,
             @Nullable String datePattern,
             @Nullable Long maxFileSize,
-            boolean exactlyOnce,
-            boolean sharedFileSystem
+            boolean exactlyOnce
     ) {
-        return metaSupplier(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce, sharedFileSystem,
-                SYSTEM_CLOCK);
+        return metaSupplier(directoryName, toStringFn, charset, datePattern, maxFileSize, exactlyOnce, SYSTEM_CLOCK);
     }
 
     // for tests
@@ -321,11 +310,10 @@ public final class WriteFileP<T> implements Processor {
             @Nullable String datePattern,
             @Nullable Long maxFileSize,
             boolean exactlyOnce,
-            boolean sharedFileSystem,
             @Nonnull LongSupplier clock
     ) {
         return ProcessorMetaSupplier.preferLocalParallelismOne(() -> new WriteFileP<>(directoryName, toStringFn,
-                charset, datePattern, maxFileSize, exactlyOnce, sharedFileSystem, clock));
+                charset, datePattern, maxFileSize, exactlyOnce, clock));
     }
 
     private abstract class FileResource implements TransactionalResource<FileId> {

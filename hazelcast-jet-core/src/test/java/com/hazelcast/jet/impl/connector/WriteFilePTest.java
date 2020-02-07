@@ -164,7 +164,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString, true))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
@@ -235,7 +235,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex src = dag.newVertex("src", () -> new SlowSourceP(semaphore, numItems)).localParallelism(1);
         @SuppressWarnings("Convert2MethodRef")
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", "SSS", null, true, true,
+                directory.toString(), Objects::toString, "utf-8", "SSS", null, true,
                 (LongSupplier & Serializable) () -> clock.get()));
         dag.edge(between(src, sink));
 
@@ -265,7 +265,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         // maxFileSize is always large enough for 1 item but never for 2, both with windows and linux newlines
         long maxFileSize = 6L;
         Vertex sink = dag.newVertex("sink", WriteFileP.metaSupplier(
-                directory.toString(), Objects::toString, "utf-8", null, maxFileSize, true, true));
+                directory.toString(), Objects::toString, "utf-8", null, maxFileSize, true));
         dag.edge(between(src, map));
         dag.edge(between(map, sink));
 
@@ -309,7 +309,7 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         Vertex source = dag.newVertex("source", () -> new SlowSourceP(semaphore, numItems))
                            .localParallelism(1);
         Vertex sink = dag.newVertex("sink",
-                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString, true))
+                writeFileP(directory.toString(), StandardCharsets.UTF_8, null, null, true, Object::toString))
                          .localParallelism(1);
         dag.edge(between(source, sink));
 
