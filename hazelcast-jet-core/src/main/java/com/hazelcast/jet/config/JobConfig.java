@@ -27,6 +27,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.annotation.PrivateApi;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,8 +41,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -740,8 +741,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     @Nonnull
-    private static List<String> resources(ClassLoader classLoader, String path) {
-        try (InputStream input = classLoader.getResourceAsStream(path);
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification =
+            "False positive on try-with-resources as of JDK11")
+    private static Collection<String> resources(ClassLoader classLoader, String path) {
+        try (InputStream input = Objects.requireNonNull(classLoader.getResourceAsStream(path));
              BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
             return reader.lines().collect(toList());
         } catch (IOException ioe) {
