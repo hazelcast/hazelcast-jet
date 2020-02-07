@@ -40,8 +40,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.hazelcast.jet.Util.entry;
-import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.MAX_CONCURRENT_OPS;
-import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.PRESERVE_ORDER;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_MAX_CONCURRENT_OPS;
+import static com.hazelcast.jet.impl.processor.AbstractAsyncTransformUsingServiceP.DEFAULT_PRESERVE_ORDER;
 
 /**
  * An intermediate step when constructing a group-and-aggregate pipeline
@@ -256,9 +256,9 @@ public interface GeneralStageWithKey<T, K> {
      * <p>
      * Uses default values for some extra parameters, so the maximum number
      * of concurrent async operations per processor will be limited to
-     * {@value AbstractAsyncTransformUsingServiceP#MAX_CONCURRENT_OPS} and
+     * {@value AbstractAsyncTransformUsingServiceP#DEFAULT_MAX_CONCURRENT_OPS} and
      * whether or not the order of input items should be preserved will be
-     * {@value AbstractAsyncTransformUsingServiceP#PRESERVE_ORDER}.
+     * {@value AbstractAsyncTransformUsingServiceP#DEFAULT_PRESERVE_ORDER}.
      * <p>
      * The function can return a null future or the future can return a null
      * result: in both cases it will act just like a filter.
@@ -286,7 +286,7 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull ServiceFactory<?, S> serviceFactory,
             @Nonnull TriFunction<? super S, ? super K, ? super T, CompletableFuture<R>> mapAsyncFn
     ) {
-        return mapUsingServiceAsync(serviceFactory, MAX_CONCURRENT_OPS, PRESERVE_ORDER, mapAsyncFn);
+        return mapUsingServiceAsync(serviceFactory, DEFAULT_MAX_CONCURRENT_OPS, DEFAULT_PRESERVE_ORDER, mapAsyncFn);
     }
 
     /**
@@ -560,7 +560,8 @@ public interface GeneralStageWithKey<T, K> {
             @Nonnull String mapName,
             @Nonnull BiFunctionEx<? super T, ? super V, ? extends R> mapFn
     ) {
-        return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName), MAX_CONCURRENT_OPS, PRESERVE_ORDER,
+        return mapUsingServiceAsync(ServiceFactories.<K, V>iMapService(mapName),
+                DEFAULT_MAX_CONCURRENT_OPS, DEFAULT_PRESERVE_ORDER,
                 (map, key, item) -> map.getAsync(key).toCompletableFuture()
                                        .thenApply(value -> mapFn.apply(item, value)));
     }
