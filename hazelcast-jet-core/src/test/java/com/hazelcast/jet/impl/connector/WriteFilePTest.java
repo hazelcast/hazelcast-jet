@@ -428,8 +428,9 @@ public class WriteFilePTest extends SimpleTestInClusterSupport {
         }
     }
 
-    private void checkFileContents(int numFrom, int numTo, boolean exactlyOnce, boolean ignoreTempFiles, boolean assertSorted)
-            throws Exception {
+    private void checkFileContents(int numFrom, int numTo, boolean exactlyOnce, boolean ignoreTempFiles,
+                                   boolean assertSorted
+    ) throws Exception {
         List<Integer> actual = Files.list(directory)
                 .peek(f -> {
                     if (!ignoreTempFiles && f.getFileName().toString().endsWith(TEMP_FILE_SUFFIX)) {
