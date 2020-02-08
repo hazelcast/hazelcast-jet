@@ -70,7 +70,7 @@ backwards-compatible i.e. a newer PATCH version is be able to understand
 the job state from a previous PATCH version.
 
 This means that if you have a running job, using the Job Upgrade
-and Lossless Cluster Restart features you are able to upgrade the cluster 
+and Lossless Cluster Restart features you are able to upgrade the cluster
 to a newer PATCH version without losing the state of a running job.
 
 == Command Line Tools and Configuration Files
@@ -137,7 +137,7 @@ results will be automatically deleted after this size is reached.
 |_Jet installation path_
 |string
 |Root of Jet installation. Used as default location for the Lossless
-Cluster Restart store. By default it will be automatically set to the 
+Cluster Restart store. By default it will be automatically set to the
 start of the Jet installation path.
 
 |`jet.idle.cooperative.min.microseconds`
@@ -282,6 +282,53 @@ The URL used for phone home requests is
 ----
 http://phonehome.hazelcast.com/ping
 ----
+
+[appendix]
+= Migration Guides
+
+This appendix provides guidelines for upgrading to a new Hazelcast Jet version.
+See also the link:https://docs.hazelcast.org/docs/jet/release-notes/index.html[Release Notes] document
+for the changes for each Hazelcast Jet release.
+
+== Upgrading to Hazelcast Jet 4.0
+
+Jet 4.0 is a major version release. Major releases allow us to break compatibility in the API, as well as
+to remove previously deprecated parts of the API.
+
+=== Jet on IMDG 4.0
+
+Jet 4.0 uses IMDG 4.0, which is also a major release with its own breaking changes. For details see
+link:https://docs.hazelcast.org/docs/rn/index.html[IMDG Release Notes] and
+link:https://docs.hazelcast.org/docs/latest/manual/html-single/#migration-guides[IMDG Migration Guides].
+
+The most important changes that have affected Jet are as follows:
+
+* Serializable variants of `java.util.function` interfaces (such as `FunctionEx`, `PredicateEx`) have been moved to IMDG
+and removed from Jet.
+* Generic parameters on several methods and classes were updated/fixed (i.e. EntryProcessor) (see
+link:https://docs.hazelcast.org/docs/latest/manual/html-single/#introducing-lambda-friendly-interfaces[relevant section]
+in IMDG Migration Guide) and these changes have been adapted to Jet.
+* Some config options are renamed i.e. `group name` is now called `cluster name`. These changes have been adapted,
+also to the Jet Command Line.
+* `EventJournalConfig` is moved from top level config to data-structure specific config.
+* Async methods in IMDG return `CompletionStage` rather than the old `ICompletableFuture` (see
+link:https://docs.hazelcast.org/docs/latest/manual/html-single/#removal-of-icompletablefuture[relevant section] in
+IMDG Migration Guide) and these have been adapted to Jet.
+
+=== Jet API Changes
+Jet 4.0 makes multiple breaking changes in its own APIs:
+
+* `IMapJet`, `ICacheJet` and `IListJet` interfaces are removed, and replaced with IMDG's `IMap` and `IList` instead.
+* `Pipeline.drawFrom` is renamed to `Pipeline.readFrom`.
+* `GeneralStage.drainTo` is renamed to `GeneralStage.writeTo`.
+* `map/filter/flatMapUsingContext` is renamed to `map/filter/flatMapUsingService`.
+* ``ContextFactory`` is renamed to `ServiceFactory`.
+* ``mapUsingService``'s `ServiceFactory` now takes `ProcessorSupplier.Context` instead of just `JetInstance`.
+* HDFS sink and source are renamed to `Hadoop.inputFormat` and `Hadoop.outputFormat`.
+* Generic wildcard parameters in `Traverser` class are tweaked a bit.
+* Lambdas are moved to become last parameter where applicable for sources and sinks.
+* `JetBootstrap.getInstance()` is moved to `Jet.bootstrappedInstance()` which automatically creates an isolated instance
+when not running through `jet submit`.
 
 [appendix]
 = FAQ
