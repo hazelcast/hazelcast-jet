@@ -1,10 +1,3 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
 const React = require('react');
 
 const CompLibrary = require('../../core/CompLibrary.js');
@@ -64,9 +57,8 @@ class HomeSplash extends React.Component {
         <div className="inner">
           <ProjectTitle tagline={siteConfig.tagline} title={siteConfig.title} />
           <PromoSection>
-            <Button href={docUrl('get-started')}>Getting Started</Button>
-            <Button href="https://docs.hazelcast.org/docs/jet/latest-dev/manual/">Reference Manual</Button>
-            <Button href="https://github.com/hazelcast/hazelcast-jet">Github</Button>
+            <Button href={docUrl('get-started')}>Get Started</Button>
+            <Button href="https://github.com/hazelcast/hazelcast-jet">View on GitHub</Button>
           </PromoSection>
         </div>
       </SplashContainer>
@@ -91,15 +83,6 @@ class Index extends React.Component {
         />
       </Container>
     );
-
-    const FeatureCallout = () => (
-      <div
-        className="productShowcaseSection paddingBottom"
-        style={{textAlign: 'center'}}>
-        <h2>Distributed Computing, Simplified.</h2>
-      </div>
-    );
-
 
     const Features = () => (
       <Block layout="fourColumn">
@@ -139,42 +122,12 @@ class Index extends React.Component {
         ]}
       </Block>
     );
-
-    const Showcase = () => {
-      if ((siteConfig.users || []).length === 0) {
-        return null;
-      }
-
-      const showcase = siteConfig.users
-        .filter(user => user.pinned)
-        .map(user => (
-          <a href={user.infoLink} key={user.infoLink}>
-            <img src={user.image} alt={user.caption} title={user.caption} />
-          </a>
-        ));
-
-      const pageUrl = page => baseUrl + (language ? `${language}/` : '') + page;
-
-      return (
-        <div className="productShowcaseSection paddingBottom">
-          <h2>Who is Using This?</h2>
-          <p>This project is used by all these people</p>
-          <div className="logos">{showcase}</div>
-          <div className="more-users">
-            <a className="button" href={pageUrl('users.html')}>
-              More {siteConfig.title} Users
-            </a>
-          </div>
-        </div>
-      );
-    };
-
+  
     return (
       <div>
         <HomeSplash siteConfig={siteConfig} language={language} />
         <div className="mainContainer">
           <Features />
-          <Showcase />
         </div>
       </div>
     );
