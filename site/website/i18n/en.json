@@ -5,31 +5,77 @@
     "previous": "Previous",
     "tagline": "Distributed Stream and Batch Processing",
     "docs": {
-      "design-documents/kafka-connect": {
+      "concepts/distributed-computing": {
+        "title": "Distributed Computing"
+      },
+      "concepts/elasticity": {
+        "title": "Elasticity"
+      },
+      "concepts/in-memory-storage": {
+        "title": "In-memory Storage"
+      },
+      "concepts/stream-processing": {
+        "title": "Stream Processing"
+      },
+      "design-docs/kafka-connect": {
         "title": "Kafka Connect Source"
       },
-      "design-documents/unit-testing-support": {
+      "design-docs/unit-testing": {
         "title": "Pipeline API: Unit Testing Support"
-      },
-      "docs": {
-        "title": "Documentation"
       },
       "download": {
         "title": "Download Hazelcast Jet"
       },
-      "get-started": {
-        "title": "Get Started"
+      "get-started/first-job": {
+        "title": "Writing and executing your first job"
+      },
+      "get-started/installation": {
+        "title": "Installing a standalone cluster"
+      },
+      "get-started/intro": {
+        "title": "Introduction"
+      },
+      "get-started/scale-job": {
+        "title": "Scale your job"
+      },
+      "get-started/start-cluster": {
+        "title": "Start a Hazelcast Jet cluster"
+      },
+      "get-started/submit-job": {
+        "title": "Submitting a job to the cluster"
+      },
+      "operations/cluster-design": {
+        "title": "Cluster Design"
+      },
+      "operations/configuration": {
+        "title": "Configuration"
+      },
+      "operations/kubernetes": {
+        "title": "Jet on Kubernetes"
+      },
+      "operations/serialization": {
+        "title": "Serialization"
+      },
+      "reference-manual": {
+        "title": "API Reference"
+      },
+      "roadmap": {
+        "title": "Roadmap"
       }
     },
     "links": {
-      "Get Started": "Get Started",
-      "Download": "Download",
-      "Docs": "Docs",
+      "Documentation": "Documentation",
+      "Downloads": "Downloads",
+      "View on GitHub": "View on GitHub",
       "Blog": "Blog"
     },
     "categories": {
-      "Documentation": "Documentation",
-      "Download": "Download"
+      "Get Started": "Get Started",
+      "API Guide": "API Guide",
+      "Concepts": "Concepts",
+      "Operations Guide": "Operations Guide",
+      "Design Documents": "Design Documents",
+      "Roadmap": "Roadmap"
     }
   },
   "pages-strings": {

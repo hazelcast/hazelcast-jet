@@ -38,9 +38,9 @@ const siteConfig = {
 
     // For no header links in the top nav bar -> headerLinks: [],
     headerLinks: [
-        {doc: 'get-started', label: 'Get Started'},
-        {doc: 'download', label: 'Download'},
-        {doc: 'docs', label: 'Docs'},
+        {doc: 'get-started/intro', label: 'Documentation'},
+        {href: 'https://github.com/hazelcast/hazelcast-jet/releases', label: "Downloads"},
+        {href: 'https://github.com/hazelcast/hazelcast-jet', label: "View on GitHub"},
         {blog: true, label: 'Blog'},
         {search: true},
     ],
@@ -94,7 +94,7 @@ const siteConfig = {
 
     // For sites with a sizable amount of content, set collapsible to true.
     // Expand/collapse the links and subcategories under categories.
-    // docsSideNavCollapsible: true,
+    docsSideNavCollapsible: true,
 
     // Show documentation's last contributor's name.
     // enableUpdateBy: true,

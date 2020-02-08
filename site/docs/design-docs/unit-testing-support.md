@@ -1,19 +1,25 @@
 ---
 title: Pipeline API: Unit Testing Support
+id: unit-testing
 ---
 
 ## Background
- We want to improve the developer experience when you just want to have some data to mock a pipeline with. Currently this requires using one of the built-in sources (file, sink, map etc) which, while somewhat convenient for batch they are quite inconvenient for streaming and are not completely foolproof. We also want to improve the experience so that you can write tests to assert the output of a pipeline without having to write boilerplate code (i.e. writing the results to an IList and then retrieve it to verify it later).
- 
- The functionality is implemented as two parts:
- 
 
+We want to improve the developer experience when you just want to have 
+some data to mock a pipeline with. Currently this requires using one of
+the built-in sources (file, sink, map etc) which, while somewhat 
+convenient for batch they are quite inconvenient for streaming and 
+are not completely foolproof. We also want to improve the experience
+so that you can write tests to assert the output of a pipeline without
+having to write boilerplate code (i.e. writing the results to an IList and then retrieve it to verify it later).
+ 
+The functionality is implemented as two parts:
 
 ## Test Sources
 
-There are now new sources which can be used to generate some data for writing a
- test pipeline:
-           
+There are now new sources which can be used to generate some data for 
+writing a test pipeline:
+
 ### Batch Sources
 
 These sources create a fixed amount of data. These sources are non-distributed.
