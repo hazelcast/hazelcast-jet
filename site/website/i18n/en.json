@@ -23,9 +23,6 @@
       "design-docs/unit-testing": {
         "title": "Pipeline API: Unit Testing Support"
       },
-      "download": {
-        "title": "Download Hazelcast Jet"
-      },
       "get-started/first-job": {
         "title": "Writing and executing your first job"
       },
@@ -44,6 +41,9 @@
       "get-started/submit-job": {
         "title": "Submitting a job to the cluster"
       },
+      "operations/cloud-discovery": {
+        "title": "operations/cloud-discovery"
+      },
       "operations/cluster-design": {
         "title": "Cluster Design"
       },
@@ -53,19 +53,31 @@
       "operations/kubernetes": {
         "title": "Jet on Kubernetes"
       },
+      "operations/monitoring": {
+        "title": "Monitoring and Metrics"
+      },
       "operations/serialization": {
         "title": "Serialization"
+      },
+      "operations/spring": {
+        "title": "Spring Integration"
       },
       "reference-manual": {
         "title": "API Reference"
       },
       "roadmap": {
         "title": "Roadmap"
+      },
+      "tutorials/kafka": {
+        "title": "Import data from Kafka"
+      },
+      "tutorials/stream-imap": {
+        "title": "Stream changes from IMap"
       }
     },
     "links": {
       "Documentation": "Documentation",
-      "Downloads": "Downloads",
+      "Releases": "Releases",
       "View on GitHub": "View on GitHub",
       "Blog": "Blog"
     },

@@ -4,7 +4,7 @@ id: intro
 ---
 
 Jet is a distributed data processing engine that treats the data as a
-stream. It can process both static datasets (i.e., _batch jobs_) and
+stream. It can process both static datasets (i.e. _batch jobs_) and
 live event streams. It can compute aggregate functions over infinite
 data streams by using the concept of windowing: dividing the stream into
 a sequence of subsets (windows) and applying the aggregate function over

@@ -11,7 +11,8 @@
       "reference-manual"
     ],
     "Tutorials" : [
-      "tutorials/kafka"
+      "tutorials/kafka",
+      "tutorials/stream-imap"
     ],
     "Concepts": [
       "concepts/distributed-computing",
@@ -23,7 +24,9 @@
       "operations/configuration",
       "operations/cluster-design",
       "operations/serialization",
-      "operations/kubernetes"
+      "operations/kubernetes",
+      "operations/monitoring",
+      "operations/spring"
     ],
     "Design Documents": [
       "design-docs/unit-testing",
