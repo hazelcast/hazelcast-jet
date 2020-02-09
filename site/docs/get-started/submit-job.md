@@ -14,10 +14,10 @@ TODO
 
 TODO
 
-### Submit using the jet command
+### Use the jet command
 
 TODO
 
-### Submit using the Jet Client
+### Use the Jet Client
 
 TODO
