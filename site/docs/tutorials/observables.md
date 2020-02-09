@@ -1,8 +1,9 @@
 ---
-title: Reactive Job Results
+title: Reactive Streams
 id: observables
 ---
 
-## React to Job Results
+Jet implements reactive streams to allow observation of a job's output
+from the caller.
 
 TODO

@@ -5,7 +5,7 @@ id: installation
 
 Now that you have submitted a job to an embedded node, the next step is
 to setup an actual Jet cluster. After setting up the cluster, we'll 
-submit the pipeline we previously created for it.
+submit the pipeline we previously created to it.
 
 There are two main recommended ways to set up a Hazelcast Jet cluster:
 
@@ -33,10 +33,17 @@ bin/jet-start
 This will start a Jet node in the foreground, you can use the `-d` option
 to start it in daemon mode.
 
-You can check the cluster state using the following command:
+You can check the cluster state using the following command, which will
+list the cluster status and all the active nodes:
 
 ```bash
-bin/jet cluster
+$ bin/jet cluster
+State: ACTIVE
+Version: 4.0-SNAPSHOT
+Size: 1
+
+ADDRESS                  UUID               
+[192.168.0.2]:5701       27a73154-f4bb-477a-aef2-27ffa6f03a2d
 ```
 
 The distribution package also contains a pre-packaged Jet job in a JAR
