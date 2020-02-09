@@ -24,10 +24,10 @@
         "title": "Pipeline API: Unit Testing Support"
       },
       "get-started/first-job": {
-        "title": "Writing and executing your first job"
+        "title": "Write and run your first job"
       },
       "get-started/installation": {
-        "title": "Installing a standalone cluster"
+        "title": "Install the cluster"
       },
       "get-started/intro": {
         "title": "Introduction"
@@ -39,10 +39,7 @@
         "title": "Start a Hazelcast Jet cluster"
       },
       "get-started/submit-job": {
-        "title": "Submitting a job to the cluster"
-      },
-      "operations/cloud-discovery": {
-        "title": "operations/cloud-discovery"
+        "title": "Submit the job to the cluster"
       },
       "operations/cluster-design": {
         "title": "Cluster Design"

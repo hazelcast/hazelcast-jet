@@ -1,5 +1,5 @@
 ---
-title: Writing and executing your first job
+title: Write and run your first job
 id: first-job
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Installing a standalone cluster
+title: Install the cluster
 id: installation
 ---
 
