@@ -10,6 +10,9 @@
     "API Guide": [
       "reference-manual"
     ],
+    "Tutorials" : [
+      "tutorials/kafka"
+    ],
     "Concepts": [
       "concepts/distributed-computing",
       "concepts/stream-processing",

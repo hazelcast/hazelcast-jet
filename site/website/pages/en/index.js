@@ -99,9 +99,9 @@ class Index extends React.Component {
             title: 'Runs everywhere',
             image: `${baseUrl}img/undraw_superhero.svg`,
             imageAlign: 'top',
-            content: 'Jet is delivered as a single JAR without dependencies that requires Java 8 to run with full ' +
-          'functionality. It’s lightweight to run on small devices, and it’s cloud-native with Docker images and' +
-          ' Kubernetes support. It can be embedded into an application for simpler packaging or deployed as a standalone cluster.'
+            content: 'Jet is delivered as a single JAR without dependencies. It’s lightweight to run on small devices, ' + 
+            'and it’s cloud-native with Docker images and Kubernetes support. It can be embedded into an application for ' +
+            'simpler packaging or deployed as a standalone cluster.'
           },
           {
             title: 'Low latency',
@@ -115,7 +115,7 @@ class Index extends React.Component {
             title: 'Resilient and Elastic',
             image: `${baseUrl}img/undraw_working_out.svg`,
             imageAlign: 'top',
-            content: 'With Hazelcast Jet, it\'s easy to build fault-tolerant and elastic data processing pipelines. ' +
+            content: 'With Jet, it\'s easy to build fault-tolerant and elastic data processing pipelines. ' +
           'Jet keeps processing data without loss even when a node fails, and you can add more nodes that immediately ' +
           'start sharing the computation load.'
           }
