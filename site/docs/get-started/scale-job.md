@@ -15,7 +15,7 @@ First, let's make sure that the job that you submitted earlier in the previous s
 is still running: 
 
 ```bash
-bin/jet list-jobs
+$ bin/jet list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 03de-e38d-3480-0001 RUNNING            2020-02-09T16:30:26.843 N/A
 ```
