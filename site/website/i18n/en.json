@@ -35,9 +35,6 @@
       "get-started/scale-job": {
         "title": "Scale your job"
       },
-      "get-started/start-cluster": {
-        "title": "Start a Hazelcast Jet cluster"
-      },
       "get-started/submit-job": {
         "title": "Submit the job to the cluster"
       },
@@ -65,11 +62,26 @@
       "roadmap": {
         "title": "Roadmap"
       },
+      "tutorials/cdc": {
+        "title": "Change Data Capture"
+      },
       "tutorials/kafka": {
         "title": "Import data from Kafka"
       },
+      "tutorials/map-join": {
+        "title": "Join Static Data to a Stream"
+      },
+      "tutorials/observables": {
+        "title": "Reactive Job Results"
+      },
+      "tutorials/python": {
+        "title": "tutorials/python"
+      },
       "tutorials/stream-imap": {
         "title": "Stream changes from IMap"
+      },
+      "tutorials/windowing": {
+        "title": "Windowed Aggregations"
       }
     },
     "links": {

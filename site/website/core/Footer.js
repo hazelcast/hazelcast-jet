@@ -30,17 +30,14 @@ class Footer extends React.Component {
           </a>
           <div>
             <h5>Docs</h5>
-            <a href={this.docUrl('installation', this.props.language)}>
-              Installation
+            <a href={this.docUrl('get-started/intro', this.props.language)}>
+              Get Started
             </a>
-            <a href={this.docUrl('tutorial', this.props.language)}>
+            <a href={this.docUrl('tutorials/kafka', this.props.language)}>
               Tutorials
             </a>
-            <a href={this.docUrl('architecture', this.props.language)}>
+            <a href={this.docUrl('concepts/distributed-computing', this.props.language)}>
               Concepts and Architecture
-            </a>
-            <a href="https://docs.hazelcast.org/docs/jet/latest-dev/manual/">
-              Reference Manual
             </a>
           </div>
           <div>

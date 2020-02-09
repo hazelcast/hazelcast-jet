@@ -8,7 +8,7 @@ id: first-job
 Hazelcast Jet is distributed as a single JAR with no other dependencies. 
 It requires Java version 8 or higher to run.
 
-### Install as a Java depedency
+### Add Jet as a Java depedency
 
 The easiest way to get started with Hazelcast Jet is to add it as a
 dependency to a Java application. Jet is packaged as just a single Jet
@@ -24,13 +24,13 @@ Below are the Maven and Gradle snippets you can use:
   <dependency>
     <groupId>com.hazelcast.jet</groupId>
     <artifactId>hazelcast-jet</artifactId>
-    <version>3.2.2</version>
+    <version>4.0</version>
   </dependency>
 </dependencies>
 ```
 <!--Gradle-->
 ```
-compile 'com.hazelcast.jet:hazelcast-jet:3.2.2'
+compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -43,12 +43,14 @@ the provided the test sources within Jet. These sources emit a mock
 stream at a fixed rate and can be used for writing test pipelines.
 
 ```java
-Pipeline p = Pipeline.create();
-p.readFrom(TestSources.itemStream(10))
- .withIngestionTimestamps()
- .filter(event -> event.sequence() % 2 == 0)
- .setName("filter out odd numbers")
- .writeTo(Sinks.logger());
+public static void main(String[] args) {
+  Pipeline p = Pipeline.create();
+  p.readFrom(TestSources.itemStream(10))
+  .withIngestionTimestamps()
+  .filter(event -> event.sequence() % 2 == 0)
+  .setName("filter out odd numbers")
+  .writeTo(Sinks.logger());
+}
 ```
 
 Each test item emitted has a _sequence_ and a _timestamp_. In this case,
@@ -57,16 +59,30 @@ numbers out.
 
 ### Create an embedded Jet node, and run the pipeline
 
-Now that we have defined our pipeline, we need to create a Jet node to
-submit the pipeline to. An embedded is a fully functional Jet node, running
-inside the same JVM and has the same performance as a standalone node.
+Now that we have defined our pipeline, we will create a Jet node to
+submit the pipeline to. You can create a Jet node which lives inside
+your application, which is generally referred to as an "embedded node".
+An embedded is a fully functional Jet node, running inside the same JVM
+and has the same performance as a standalone node. In general, it's
+useful for testing because you don't need to setup complex
+infrastructure and can have a fully functioning node with just a line of
+code.
 
-You can create a single Jet node and submit the job using the following syntax:
+You can create a single Jet node and submit the job to it using the
+following syntax:
 
 ```java
-JetInstance jet = Jet.newJetInstance();
-Job job = jet.newJob(p).join();
+public static void main(String[] args) {
+  Pipeline p = Pipeline.create();
+  ..
+
+  JetInstance jet = Jet.newJetInstance();
+  Job job = jet.newJob(p).join();
+}
 ```
+
+A `JetInstance` refers to either a client connected to a Jet cluster, or
+an embedded Jet node. It's the main interface for interacting with Jet.
 
 Note that submitting a job is asnychronous, so we must also call `join()`
 afterwards to make sure that we wait for the job to proceed. When you the

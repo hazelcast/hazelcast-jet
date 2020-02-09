@@ -33,6 +33,12 @@ bin/jet-start
 This will start a Jet node in the foreground, you can use the `-d` option
 to start it in daemon mode.
 
+You can check the cluster state using the following command:
+
+```bash
+bin/jet cluster
+```
+
 The distribution package also contains a pre-packaged Jet job in a JAR
 that you can use to run to verify the installation test. After opening a
 new terminal window, you can submit this job to the cluster using the

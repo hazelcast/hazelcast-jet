@@ -20,6 +20,15 @@ body{
     color: #ff5f00;
 }
 
+.projectTitle {
+    color:#24292e;
+    font-size: 325%
+}
+
+a.button {
+    font-weight: bold;
+}
+
 .navigationSlider .slidingNav ul li a {
     color: #ff5f00;
 }

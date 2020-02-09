@@ -11,8 +11,12 @@
       "reference-manual"
     ],
     "Tutorials" : [
+      "tutorials/map-join",
       "tutorials/kafka",
-      "tutorials/stream-imap"
+      "tutorials/observables",
+      "tutorials/cdc",
+      "tutorials/stream-imap",
+      "tutorials/windowing"
     ],
     "Concepts": [
       "concepts/distributed-computing",
