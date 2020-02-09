@@ -16,6 +16,7 @@
       "tutorials/observables",
       "tutorials/cdc",
       "tutorials/stream-imap",
+      "tutorials/python",
       "tutorials/windowing"
     ],
     "Concepts": [

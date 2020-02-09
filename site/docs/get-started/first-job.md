@@ -92,7 +92,7 @@ afterwards to make sure that we wait for the job to proceed. When you run
 the application, you should output like the following, indicating that the
 odd numbers have been filtering out:
 
-```log
+```bash
 11:28:24.039 [INFO] [loggerSink#0] (timestamp=11:28:24.000, sequence=0)
 11:28:24.246 [INFO] [loggerSink#0] (timestamp=11:28:24.200, sequence=2)
 11:28:24.443 [INFO] [loggerSink#0] (timestamp=11:28:24.400, sequence=4)

@@ -5,8 +5,8 @@ id: reference-manual
 
 ## Pipeline API
 
-Jet's main API is called the Pipeline API. You can find detail information
-about it inside the Jet Reference Manual.
+Jet's main API is called the Pipeline API. You can find detailed
+information about it inside the Jet Reference Manual.
 
 ## Javadoc
 

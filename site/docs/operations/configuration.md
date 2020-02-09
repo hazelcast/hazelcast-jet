@@ -3,4 +3,8 @@ title: Configuration
 id: configuration
 ---
 
-## YAML Configuration
+TODO
+
+## Embedded Mode Configuration
+
+## Client Configuration

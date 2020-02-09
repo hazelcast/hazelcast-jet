@@ -66,7 +66,7 @@
         "title": "Change Data Capture"
       },
       "tutorials/kafka": {
-        "title": "Import data from Kafka"
+        "title": "Work with Apache Kafka"
       },
       "tutorials/map-join": {
         "title": "Join Static Data to a Stream"
@@ -75,7 +75,7 @@
         "title": "Reactive Streams"
       },
       "tutorials/python": {
-        "title": "tutorials/python"
+        "title": "Apply Transforms using Python"
       },
       "tutorials/stream-imap": {
         "title": "Stream changes from IMap"

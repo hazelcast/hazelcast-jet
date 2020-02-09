@@ -3,11 +3,14 @@ title: Monitoring and Metrics
 id: monitoring
 ---
 
-## Metrics in Hazelcast Jet
+TODO
+
+## Metrics
 
 ### Cluster-wide Metrics
 
 TODO
+
 ### Job-specific Metrics
 
 TODO

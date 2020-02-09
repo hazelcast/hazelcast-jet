@@ -12,7 +12,7 @@ a node fails, and you can add more nodes that immediately start sharing
 the computation load.
 
 First, let's make sure that the job that you submitted earlier in the previous section 
-is still running: 
+is still running:
 
 ```bash
 $ bin/jet list-jobs
@@ -29,16 +29,23 @@ start another Jet node, and see what happens:
 bin/jet-start
 ```
 
-After a little time, you should some output similar to this:
+After a little time, you should some output similar to below:
 
-```
+```bash
 Members {size:2, ver:2} [
-	Member [192.168.0.2]:5701 - 7717160d-98fd-48cf-95c8-1cd2063763ff
-	Member [192.168.0.2]:5702 - 5635b256-b6d5-4c88-bf45-200f6bf32104 this
+    Member [192.168.0.2]:5701 - 7717160d-98fd-48cf-95c8-1cd2063763ff
+    Member [192.168.0.2]:5702 - 5635b256-b6d5-4c88-bf45-200f6bf32104 this
 ]
 ```
 
-Congratulations, now you have created a cluster of two nodes!
+Congratulations, now you have created a cluster of two nodes! 
+
+>If for some reason your nodes didn't find each other, this is likely
+>because multicast is turned off or not working correctly in your
+>environment. In this case, please see the
+>[Configuration](../operations/configuration) section as this will
+>require you to use another cluster discovery mechanism than the
+>default, which is multicast.
 
 You will now see that the job is running both nodes automatically, and
 you will start seeing log output on both of the nodes. One thing you'll
@@ -52,3 +59,10 @@ tolerance](concepts/fault-tolerance) section.
 We can also the reverse, just terminate one of the nodes by kill the
 processes and the job will restart automatically and keep running on the
 remaining nodes.
+
+## Next Steps
+
+You've now successfully deployed and scaled your first distributed data
+pipeline. The next step is getting a deeper understanding of the
+[Pipeline API](../reference) which will allow you to write more complex
+data transforms.
