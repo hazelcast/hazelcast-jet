@@ -1,4 +1,4 @@
-package com.hazelcast.jet.config
+package com.hazelcast.jet.impl.util
 
 import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.hasSize
@@ -17,8 +17,8 @@ class KotlinReflectionUtilsTest {
         assertThat(classes, containsInAnyOrder(
                 OuterClass::class.java,
                 OuterClass.NestedClass::class.java,
-                Class.forName("com.hazelcast.jet.config.KotlinReflectionUtilsTest\$OuterClass\$method\$1"),
-                Class.forName("com.hazelcast.jet.config.KotlinReflectionUtilsTest\$OuterClass\$method\$lambda\$1")
+                Class.forName("com.hazelcast.jet.impl.util.KotlinReflectionUtilsTest\$OuterClass\$method\$1"),
+                Class.forName("com.hazelcast.jet.impl.util.KotlinReflectionUtilsTest\$OuterClass\$method\$lambda\$1")
         ))
     }
 
