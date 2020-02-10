@@ -107,7 +107,7 @@ public final class ReflectionUtils {
         return packageName.replace('.', '/');
     }
 
-    public static class PackageContent {
+    public static final class PackageContent {
 
         private final Collection<Class<?>> classes;
         private final Collection<URL> resources;
