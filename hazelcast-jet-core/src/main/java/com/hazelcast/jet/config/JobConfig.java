@@ -21,6 +21,7 @@ import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.config.ReflectionUtils.PackageContent;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.nio.ObjectDataInput;
@@ -242,11 +243,12 @@ public class JobConfig implements IdentifiedDataSerializable {
     }
 
     /**
-     * Adds recursively all the classes in given packages to the Jet job's
-     * classpath. They will be accessible to all the code attached to the
-     * underlying pipeline or DAG, but not to any other code.
-     * (An important example is the {@code IMap} data source, which can
-     * instantiate only the classes from the Jet instance's classpath.)
+     * Adds recursively all the classes and resources in given packages
+     * to the Jet job's classpath. They will be accessible to all the
+     * code attached to the underlying pipeline or DAG, but not to any
+     * other code. (An important example is the {@code IMap} data source,
+     * which can instantiate only the classes from the Jet instance's
+     * classpath.)
      * <p>
      * See also {@link #addJar} and {@link #addClasspathResource}.
      *
@@ -255,11 +257,12 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     public JobConfig addPackage(@Nonnull String... packages) {
         checkNotNull(packages, "Packages cannot be null");
-        ReflectionUtils.memberClassesOf(packages)
-                       .forEach(clazz -> {
-                           ResourceConfig cfg = new ResourceConfig(clazz);
-                           resourceConfigs.put(cfg.getId(), cfg);
-                       });
+        PackageContent content = ReflectionUtils.contentOf(packages);
+        content.classes().forEach(clazz -> {
+            ResourceConfig cfg = new ResourceConfig(clazz);
+            resourceConfigs.put(cfg.getId(), cfg);
+        });
+        content.resources().forEach(this::addClasspathResource);
         return this;
     }
 

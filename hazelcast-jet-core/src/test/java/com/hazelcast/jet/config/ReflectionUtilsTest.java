@@ -16,14 +16,20 @@
 
 package com.hazelcast.jet.config;
 
+import com.hazelcast.jet.config.ReflectionUtils.PackageContent;
 import org.junit.Test;
 
+import java.net.URL;
 import java.util.Collection;
+import java.util.List;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertThat;
 
 public class ReflectionUtilsTest {
@@ -43,13 +49,18 @@ public class ReflectionUtilsTest {
     }
 
     @Test
-    public void shouldDiscoverAllClassesInAPackage() {
+    public void shouldDiscoverAllClassesAndResourcesInAPackage() {
         // When
-        Collection<Class<?>> classes = ReflectionUtils.memberClassesOf(OuterClass.class.getPackage().getName());
+        PackageContent content = ReflectionUtils.contentOf(OuterClass.class.getPackage().getName());
 
         // Then
+        Collection<Class<?>> classes = content.classes().collect(toList());
         assertThat(classes, hasSize(greaterThan(3)));
         assertThat(classes, hasItem(OuterClass.class));
+
+        List<URL> resources = content.resources().collect(toList());
+        assertThat(resources, hasSize(1));
+        assertThat(resources, hasItem(hasToString(containsString("package.properties"))));
     }
 
     @SuppressWarnings("unused")

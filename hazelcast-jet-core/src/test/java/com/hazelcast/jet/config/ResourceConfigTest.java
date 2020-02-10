@@ -62,12 +62,12 @@ public class ResourceConfigTest extends JetTestSupport {
 
         // Then
         ResourceConfig resourceConfig = getFirstResourceConfig();
-        assertEquals(this.getClass().getName().replace('.', '/') + ".class", resourceConfig.getId());
+        assertEquals(toId(this.getClass()), resourceConfig.getId());
         assertEquals(ResourceType.CLASS, resourceConfig.getResourceType());
     }
 
     @Test
-    public void when_addClassWithPackage() {
+    public void when_addResourcesWithPackage() {
         // When
         config.addPackage(this.getClass().getPackage().getName());
 
@@ -76,8 +76,15 @@ public class ResourceConfigTest extends JetTestSupport {
         assertTrue(resourceConfigs
                 .stream()
                 .anyMatch(resourceConfig ->
-                        resourceConfig.getId().equals(this.getClass().getName().replace('.', '/') + ".class") &&
-                                resourceConfig.getResourceType().equals(ResourceType.CLASS)));
+                        resourceConfig.getId().equals(toId(this.getClass())) &&
+                                resourceConfig.getResourceType().equals(ResourceType.CLASS)
+                ));
+        assertTrue(resourceConfigs
+                .stream()
+                .anyMatch(resourceConfig ->
+                        resourceConfig.getId().contains("package.properties") &&
+                                resourceConfig.getResourceType().equals(ResourceType.CLASSPATH_RESOURCE)
+                ));
     }
 
     @Test
@@ -1057,7 +1064,6 @@ public class ResourceConfigTest extends JetTestSupport {
         assertEquals(dir.toURI().toURL(), dirConfig.getUrl());
     }
 
-
     private File createFile(String path) throws IOException {
         File file = new File(baseDir, path);
         assertTrue("Failed to create parent path for " + file, file.getParentFile().mkdirs());
@@ -1069,5 +1075,9 @@ public class ResourceConfigTest extends JetTestSupport {
         File dirFile = new File(baseDir, path);
         assertTrue("Failed to create directory " + dirFile, dirFile.mkdirs());
         return dirFile;
+    }
+
+    private static String toId(Class<?> clazz) {
+        return clazz.getName().replace('.', '/') + ".class";
     }
 }
