@@ -44,7 +44,9 @@ expires.
 
 ## Implementation with Hazelcast Jet
 
-Let’s say I am running a discussion forum and I have a microservice that sends a new message whenever a user posts a new comment. The message looks like this:
+Let’s say I am running a discussion forum and I have a microservice that
+sends a new message whenever a user posts a new comment. The message
+looks like this:
 
 ```java
 public final class AddNewComment implements Serializable {
@@ -54,7 +56,10 @@ public final class AddNewComment implements Serializable {
 }
 ```
 
-The UUID field is unique for each message posted. My consumer is a Hazelcast Jet application, and I want a processing pipeline to discard all messages with a UUID already processed in the past. It turns out to be really trivial:
+The UUID field is unique for each message posted. My consumer is a
+Hazelcast Jet application, and I want a processing pipeline to discard
+all messages with a UUID already processed in the past. It turns out to
+be really trivial:
 
 ```java
 stage.groupingKey(AddNewComment::getUuid)
@@ -90,9 +95,9 @@ duplicated elements.
 ## Further Improvements
 
 Let’s encapsulate the filtering logic into a reusable unit that can be
-applied to an arbitrary pipeline. We are going to use the `apply()` method
-to transform a pipeline. A utility class with this method is all that’s
-needed:
+applied to an arbitrary pipeline. We are going to use the `apply()`
+method to transform a pipeline. A utility class with this method is all
+that’s needed:
 
 ```java
 public static <T> FunctionEx<StreamStage<T>, StreamStage<T>>
