@@ -19,10 +19,21 @@ package com.hazelcast.jet.impl.util;
 import com.hazelcast.instance.BuildInfoProvider;
 
 import java.util.logging.Formatter;
+import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.StreamHandler;
 
 public class JetLogHandler extends StreamHandler {
+
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_BLACK = "\u001B[30m";
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_YELLOW = "\u001B[33m";
+    public static final String ANSI_BLUE = "\u001B[34m";
+    public static final String ANSI_PURPLE = "\u001B[35m";
+    public static final String ANSI_CYAN = "\u001B[36m";
+    public static final String ANSI_WHITE = "\u001B[37m";
 
     public JetLogHandler() {
         super(System.out, new JetLogFormatter());
@@ -65,11 +76,28 @@ public class JetLogHandler extends StreamHandler {
                     message = message.substring(versionIdx + VERSION_STR.length() + 1);
                 }
             }
-            return String.format("%s [%7s] [%25s] %s%n",
+            return String.format("%s [%s%7s%s] [%s%25s%s] %s%n",
                     Util.toLocalTime(record.getMillis()),
+                    getColor(record.getLevel()),
                     record.getLevel(),
+                    ANSI_RESET,
+                    ANSI_BLUE,
                     loggerName,
+                    ANSI_RESET,
                     message);
+        }
+
+        private String getColor(Level level) {
+            switch (level.intValue()) {
+                case 1000: // ERROR
+                    return ANSI_RED;
+                case 900: // WARN
+                    return ANSI_YELLOW;
+                case 800: // INFO
+                    return ANSI_GREEN;
+                default:
+                    return ANSI_RESET;
+            }
         }
     }
 }
