@@ -93,7 +93,7 @@ final class ReflectionUtils {
         private final Collection<Class<?>> classes;
         private final Collection<URL> resources;
 
-        public PackageContent(Collection<Class<?>> classes, Collection<URL> resources) {
+        PackageContent(Collection<Class<?>> classes, Collection<URL> resources) {
             this.classes = classes;
             this.resources = resources;
         }
