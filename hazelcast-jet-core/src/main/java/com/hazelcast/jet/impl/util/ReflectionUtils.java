@@ -60,7 +60,7 @@ public final class ReflectionUtils {
     @Nonnull
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification =
             "False positive on try-with-resources as of JDK11")
-    public static Collection<Class<?>> memberClassesOf(Class<?>... classes) {
+    public static Collection<Class<?>> nestedClassesOf(Class<?>... classes) {
         String[] packageNames = stream(classes).map(ReflectionUtils::toPackageName).toArray(String[]::new);
         try (ScanResult scanResult = new ClassGraph()
                 .whitelistPackages(packageNames)
@@ -86,7 +86,7 @@ public final class ReflectionUtils {
     @Nonnull
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification =
             "False positive on try-with-resources as of JDK11")
-    public static PackageContent contentOf(String... packages) {
+    public static Resources resourcesOf(String... packages) {
         String[] paths = stream(packages).map(ReflectionUtils::toPath).toArray(String[]::new);
         try (ScanResult scanResult = new ClassGraph()
                 .whitelistPackages(packages)
@@ -98,8 +98,8 @@ public final class ReflectionUtils {
                                                      .stream()
                                                      .map(ClassInfo::loadClass)
                                                      .collect(toList());
-            Collection<URL> resources = scanResult.getAllResources().nonClassFilesOnly().getURLs();
-            return new ReflectionUtils.PackageContent(classes, resources);
+            Collection<URL> nonClasses = scanResult.getAllResources().nonClassFilesOnly().getURLs();
+            return new Resources(classes, nonClasses);
         }
     }
 
@@ -107,22 +107,22 @@ public final class ReflectionUtils {
         return packageName.replace('.', '/');
     }
 
-    public static final class PackageContent {
+    public static final class Resources {
 
         private final Collection<Class<?>> classes;
-        private final Collection<URL> resources;
+        private final Collection<URL> nonClasses;
 
-        private PackageContent(Collection<Class<?>> classes, Collection<URL> resources) {
+        private Resources(Collection<Class<?>> classes, Collection<URL> nonClasses) {
             this.classes = classes;
-            this.resources = resources;
+            this.nonClasses = nonClasses;
         }
 
         public Stream<Class<?>> classes() {
             return classes.stream();
         }
 
-        public Stream<URL> resources() {
-            return resources.stream();
+        public Stream<URL> nonClasses() {
+            return nonClasses.stream();
         }
     }
 }

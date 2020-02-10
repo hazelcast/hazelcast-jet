@@ -10,7 +10,7 @@ class KotlinReflectionUtilsTest {
     @Test
     fun shouldAddNestedAndAnonymousClasses() {
         // When
-        val classes = ReflectionUtils.memberClassesOf(OuterClass::class.java)
+        val classes = ReflectionUtils.nestedClassesOf(OuterClass::class.java)
 
         // Then
         assertThat(classes, hasSize(4))

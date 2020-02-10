@@ -23,7 +23,7 @@ import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.util.ReflectionUtils;
-import com.hazelcast.jet.impl.util.ReflectionUtils.PackageContent;
+import com.hazelcast.jet.impl.util.ReflectionUtils.Resources;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -235,11 +235,10 @@ public class JobConfig implements IdentifiedDataSerializable {
     @SuppressWarnings("rawtypes")
     public JobConfig addClass(@Nonnull Class... classes) {
         checkNotNull(classes, "Classes cannot be null");
-        ReflectionUtils.memberClassesOf(classes)
-                       .forEach(clazz -> {
-                           ResourceConfig cfg = new ResourceConfig(clazz);
-                           resourceConfigs.put(cfg.getId(), cfg);
-                       });
+        ReflectionUtils.nestedClassesOf(classes).forEach(clazz -> {
+            ResourceConfig cfg = new ResourceConfig(clazz);
+            resourceConfigs.put(cfg.getId(), cfg);
+        });
         return this;
     }
 
@@ -258,12 +257,12 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     public JobConfig addPackage(@Nonnull String... packages) {
         checkNotNull(packages, "Packages cannot be null");
-        PackageContent content = ReflectionUtils.contentOf(packages);
-        content.classes().forEach(clazz -> {
+        Resources resources = ReflectionUtils.resourcesOf(packages);
+        resources.classes().forEach(clazz -> {
             ResourceConfig cfg = new ResourceConfig(clazz);
             resourceConfigs.put(cfg.getId(), cfg);
         });
-        content.resources().forEach(this::addClasspathResource);
+        resources.nonClasses().forEach(this::addClasspathResource);
         return this;
     }
 

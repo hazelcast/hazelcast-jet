@@ -16,7 +16,7 @@
 
 package com.hazelcast.jet.impl.util;
 
-import com.hazelcast.jet.impl.util.ReflectionUtils.PackageContent;
+import com.hazelcast.jet.impl.util.ReflectionUtils.Resources;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,7 +66,7 @@ public class ReflectionUtilsTest {
     @Test
     public void shouldDiscoverAllMemberClasses() throws ClassNotFoundException {
         // When
-        Collection<Class<?>> classes = ReflectionUtils.memberClassesOf(OuterClass.class);
+        Collection<Class<?>> classes = ReflectionUtils.nestedClassesOf(OuterClass.class);
 
         // Then
         assertThat(classes, hasSize(3));
@@ -80,18 +80,19 @@ public class ReflectionUtilsTest {
     @Test
     public void shouldDiscoverAllClassesAndResourcesInAPackage() {
         // When
-        PackageContent content = ReflectionUtils.contentOf(OuterClass.class.getPackage().getName());
+        Resources resources = ReflectionUtils.resourcesOf(OuterClass.class.getPackage().getName());
 
         // Then
-        Collection<Class<?>> classes = content.classes().collect(toList());
+        Collection<Class<?>> classes = resources.classes().collect(toList());
         assertThat(classes, hasSize(greaterThan(3)));
         assertThat(classes, hasItem(OuterClass.class));
 
-        List<URL> resources = content.resources().collect(toList());
-        assertThat(resources, hasSize(1));
-        assertThat(resources, hasItem(hasToString(containsString("package.properties"))));
+        List<URL> nonClasses = resources.nonClasses().collect(toList());
+        assertThat(nonClasses, hasSize(1));
+        assertThat(nonClasses, hasItem(hasToString(containsString("package.properties"))));
     }
 
+    @SuppressWarnings("unused")
     public static final class MyClass {
         public static String staticPublicField = "staticPublicFieldContent";
         private static String staticPrivateField = "staticPrivateFieldContent";
