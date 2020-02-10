@@ -94,7 +94,7 @@ public class JetLogHandler extends StreamHandler {
         private static String getLoggerName(String name) {
             // abbreviate package names, credit Martin Ender:
             // https://codegolf.stackexchange.com/questions/119126/shorten-the-java-package/119133#119133
-            return name.replaceAll("\\B\\w+(\\.[a-zA-Z])","$1");
+            return name.replaceAll("\\B\\w+(\\.[a-zA-Z])", "$1");
         }
 
         private static String getExceptionString(LogRecord record) {
