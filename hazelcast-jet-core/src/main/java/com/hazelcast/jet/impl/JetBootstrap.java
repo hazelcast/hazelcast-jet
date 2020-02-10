@@ -41,6 +41,7 @@ import com.hazelcast.topic.ITopic;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -170,8 +171,11 @@ public final class JetBootstrap {
 
     public static void configureLogging() {
         if (LOGGING_CONFIGURED.compareAndSet(false, true)) {
-            InputStream input = JetBootstrap.class.getClassLoader().getResourceAsStream("logging.properties");
-            Util.uncheckRun(() -> LogManager.getLogManager().readConfiguration(input));
+            try (InputStream input = JetBootstrap.class.getClassLoader().getResourceAsStream("logging.properties")) {
+                Util.uncheckRun(() -> LogManager.getLogManager().readConfiguration(input));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
