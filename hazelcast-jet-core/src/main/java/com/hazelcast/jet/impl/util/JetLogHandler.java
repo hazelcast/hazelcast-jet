@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.util;
 
 import com.hazelcast.instance.BuildInfoProvider;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -58,6 +60,11 @@ public class JetLogHandler extends StreamHandler {
         private static final boolean ENABLE_DETAILS = Boolean.parseBoolean(
                 getDetailsProperty());
 
+
+        private static final int ERROR_LEVEL = 1000;
+        private static final int WARNING_LEVEL = 900;
+        private static final int INFO_LEVEL = 800;
+
         private static String getDetailsProperty() {
             return System.getProperties().getProperty("hazelcast.logging.details.enabled", "false");
         }
@@ -76,7 +83,7 @@ public class JetLogHandler extends StreamHandler {
                     message = message.substring(versionIdx + VERSION_STR.length() + 1);
                 }
             }
-            return String.format("%s [%s%7s%s] [%s%25s%s] %s%n",
+            return String.format("%s [%s%7s%s] [%s%25s%s] %s%s",
                     Util.toLocalTime(record.getMillis()),
                     getColor(record.getLevel()),
                     record.getLevel(),
@@ -84,16 +91,27 @@ public class JetLogHandler extends StreamHandler {
                     ANSI_BLUE,
                     loggerName,
                     ANSI_RESET,
-                    message);
+                    message,
+                    record.getThrown() == null ? System.lineSeparator() : getExceptionString(record));
+        }
+
+        private String getExceptionString(LogRecord record) {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            pw.write(System.lineSeparator());
+            pw.write(ANSI_RED);
+            record.getThrown().printStackTrace(new PrintWriter(sw));
+            pw.write(ANSI_RESET);
+            return sw.toString();
         }
 
         private String getColor(Level level) {
             switch (level.intValue()) {
-                case 1000: // ERROR
+                case ERROR_LEVEL: // ERROR
                     return ANSI_RED;
-                case 900: // WARN
+                case WARNING_LEVEL: // WARN
                     return ANSI_YELLOW;
-                case 800: // INFO
+                case INFO_LEVEL: // INFO
                     return ANSI_GREEN;
                 default:
                     return ANSI_RESET;
