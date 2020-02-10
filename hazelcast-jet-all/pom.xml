@@ -69,14 +69,11 @@
                     <createDependencyReducedPom>true</createDependencyReducedPom>
                     <artifactSet>
                         <includes>
-                            <include>com.hazelcast.jet:hazelcast-jet-core</include>
+                            <include>com.hazelcast.jet:*</include>
                             <include>com.hazelcast:hazelcast</include>
                             <include>com.hazelcast:hazelcast-aws</include>
                             <include>com.hazelcast:hazelcast-gcp</include>
                             <include>com.hazelcast:hazelcast-kubernetes</include>
-                            <include>org.apache.geronimo.specs:geronimo-jms_1.1_spec</include>
-                            <include>com.rabbitmq.jms:rabbitmq-jms</include>
-                            <include>com.rabbitmq:amqp-client</include>
                             <include>info.picocli:picocli</include>
                         </includes>
                     </artifactSet>
