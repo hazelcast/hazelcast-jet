@@ -57,9 +57,7 @@ public class JetLogHandler extends StreamHandler {
         private static final String VERSION_STR =
                 "[" + BuildInfoProvider.getBuildInfo().getJetBuildInfo().getVersion() + "]";
 
-        private static final boolean ENABLE_DETAILS = Boolean.parseBoolean(
-                getDetailsProperty());
-
+        private static final boolean ENABLE_DETAILS = Boolean.parseBoolean(getDetailsProperty());
 
         private static final int ERROR_LEVEL = 1000;
         private static final int WARNING_LEVEL = 900;
@@ -107,11 +105,11 @@ public class JetLogHandler extends StreamHandler {
 
         private String getColor(Level level) {
             switch (level.intValue()) {
-                case ERROR_LEVEL: // ERROR
+                case ERROR_LEVEL:
                     return ANSI_RED;
-                case WARNING_LEVEL: // WARN
+                case WARNING_LEVEL:
                     return ANSI_YELLOW;
-                case INFO_LEVEL: // INFO
+                case INFO_LEVEL:
                     return ANSI_GREEN;
                 default:
                     return ANSI_RESET;
