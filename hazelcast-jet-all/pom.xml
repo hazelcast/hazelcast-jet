@@ -70,10 +70,7 @@
                     <artifactSet>
                         <includes>
                             <include>com.hazelcast.jet:*</include>
-                            <include>com.hazelcast:hazelcast</include>
-                            <include>com.hazelcast:hazelcast-aws</include>
-                            <include>com.hazelcast:hazelcast-gcp</include>
-                            <include>com.hazelcast:hazelcast-kubernetes</include>
+                            <include>com.hazelcast:*</include>
                             <include>info.picocli:picocli</include>
                         </includes>
                     </artifactSet>
