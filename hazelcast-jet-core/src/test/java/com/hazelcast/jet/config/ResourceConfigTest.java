@@ -69,7 +69,7 @@ public class ResourceConfigTest extends JetTestSupport {
     @Test
     public void when_addClassWithPackage() {
         // When
-        config.addPackage(this.getClass().getPackage());
+        config.addPackage(this.getClass().getPackage().getName());
 
         // Then
         Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();

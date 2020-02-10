@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.config;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.classgraph.ClassGraph;
@@ -31,16 +31,16 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.concat;
 
-public final class Reflections {
+public final class ReflectionUtils {
 
-    private Reflections() {
+    private ReflectionUtils() {
     }
 
     @Nonnull
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification =
             "False positive on try-with-resources as of JDK11")
     public static Collection<Class<?>> memberClassesOf(Class<?>... classes) {
-        String[] packageNames = stream(classes).map(Reflections::toPackageName).toArray(String[]::new);
+        String[] packageNames = stream(classes).map(ReflectionUtils::toPackageName).toArray(String[]::new);
         try (ScanResult scanResult = new ClassGraph()
                 .whitelistPackages(packageNames)
                 .enableClassInfo()
@@ -61,10 +61,9 @@ public final class Reflections {
     @Nonnull
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification =
             "False positive on try-with-resources as of JDK11")
-    public static Collection<Class<?>> memberClassesOf(Package... packages) {
-        String[] packageNames = stream(packages).map(Package::getName).toArray(String[]::new);
+    public static Collection<Class<?>> memberClassesOf(String... packages) {
         try (ScanResult scanResult = new ClassGraph()
-                .whitelistPackages(packageNames)
+                .whitelistPackages(packages)
                 .enableClassInfo()
                 .ignoreClassVisibility()
                 .scan()) {

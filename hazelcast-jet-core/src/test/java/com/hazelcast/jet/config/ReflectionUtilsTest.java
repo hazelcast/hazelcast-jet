@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet;
+package com.hazelcast.jet.config;
 
 import org.junit.Test;
 
@@ -26,26 +26,26 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 
-public class ReflectionsTest {
+public class ReflectionUtilsTest {
 
     @Test
     public void shouldDiscoverAllMemberClasses() throws ClassNotFoundException {
         // When
-        Collection<Class<?>> classes = Reflections.memberClassesOf(OuterClass.class);
+        Collection<Class<?>> classes = ReflectionUtils.memberClassesOf(OuterClass.class);
 
         // Then
         assertThat(classes, hasSize(3));
         assertThat(classes, containsInAnyOrder(
                 OuterClass.class,
                 OuterClass.NestedClass.class,
-                Class.forName("com.hazelcast.jet.ReflectionsTest$OuterClass$1")
+                Class.forName("com.hazelcast.jet.config.ReflectionUtilsTest$OuterClass$1")
         ));
     }
 
     @Test
     public void shouldDiscoverAllClassesInAPackage() {
         // When
-        Collection<Class<?>> classes = Reflections.memberClassesOf(OuterClass.class.getPackage());
+        Collection<Class<?>> classes = ReflectionUtils.memberClassesOf(OuterClass.class.getPackage().getName());
 
         // Then
         assertThat(classes, hasSize(greaterThan(3)));
