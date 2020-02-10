@@ -62,6 +62,8 @@ public class JetLogHandler extends StreamHandler {
         private static final int ERROR_LEVEL = 1000;
         private static final int WARNING_LEVEL = 900;
         private static final int INFO_LEVEL = 800;
+        private static final int DEBUG_LEVEL = 500;
+        private static final int TRACE_LEVEL = 400;
 
         private static String getDetailsProperty() {
             return System.getProperties().getProperty("hazelcast.logging.details.enabled", "false");
@@ -69,11 +71,7 @@ public class JetLogHandler extends StreamHandler {
 
         @Override
         public String format(LogRecord record) {
-            String loggerName = record.getLoggerName();
-            int idx = loggerName.lastIndexOf((int) '.');
-            if (idx > 0 && loggerName.length() > idx + 1) {
-                loggerName = loggerName.substring(idx + 1);
-            }
+            String loggerName = getLoggerName(record.getLoggerName());
             String message = record.getMessage();
             if (!ENABLE_DETAILS) {
                 int versionIdx = message.indexOf(VERSION_STR);
@@ -81,10 +79,10 @@ public class JetLogHandler extends StreamHandler {
                     message = message.substring(versionIdx + VERSION_STR.length() + 1);
                 }
             }
-            return String.format("%s [%s%7s%s] [%s%25s%s] %s%s",
+            return String.format("%s [%s%5s%s] [%s%s%s] %s%s",
                     Util.toLocalTime(record.getMillis()),
-                    getColor(record.getLevel()),
-                    record.getLevel(),
+                    getLevelColor(record.getLevel()),
+                    getLevel(record.getLevel()),
                     ANSI_RESET,
                     ANSI_BLUE,
                     loggerName,
@@ -93,7 +91,13 @@ public class JetLogHandler extends StreamHandler {
                     record.getThrown() == null ? System.lineSeparator() : getExceptionString(record));
         }
 
-        private String getExceptionString(LogRecord record) {
+        private static String getLoggerName(String name) {
+            // abbreviate package names, credit Martin Ender:
+            // https://codegolf.stackexchange.com/questions/119126/shorten-the-java-package/119133#119133
+            return name.replaceAll("\\B\\w+(\\.[a-z])","$1");
+        }
+
+        private static String getExceptionString(LogRecord record) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
             pw.write(System.lineSeparator());
@@ -103,7 +107,7 @@ public class JetLogHandler extends StreamHandler {
             return sw.toString();
         }
 
-        private String getColor(Level level) {
+        private static String getLevelColor(Level level) {
             switch (level.intValue()) {
                 case ERROR_LEVEL:
                     return ANSI_RED;
@@ -113,6 +117,23 @@ public class JetLogHandler extends StreamHandler {
                     return ANSI_GREEN;
                 default:
                     return ANSI_RESET;
+            }
+        }
+
+        private static String getLevel(Level level) {
+            switch (level.intValue()) {
+                case ERROR_LEVEL:
+                    return  "ERROR";
+                case WARNING_LEVEL:
+                    return  "WARN";
+                case INFO_LEVEL:
+                    return  "INFO";
+                case DEBUG_LEVEL:
+                    return  "DEBUG";
+                case TRACE_LEVEL:
+                    return  "TRACE";
+                default:
+                    return level.toString();
             }
         }
     }
