@@ -41,6 +41,11 @@ a.button {
     color: white;
 }
 
+.imageAlignTop .blockImage {
+    height: 120px;
+    max-width: 120px;
+}
+
 .navigationSlider .slidingNav ul li.siteNavItemActive a {
     background: whitesmoke;
     color: #ff5f00;
