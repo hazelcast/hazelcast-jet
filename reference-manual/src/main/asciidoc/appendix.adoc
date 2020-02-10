@@ -303,32 +303,43 @@ link:https://docs.hazelcast.org/docs/latest/manual/html-single/#migration-guides
 
 The most important changes that have affected Jet are as follows:
 
-* Serializable variants of `java.util.function` interfaces (such as `FunctionEx`, `PredicateEx`) have been moved to IMDG
-and removed from Jet.
-* Generic parameters on several methods and classes were updated/fixed (i.e. EntryProcessor) (see
+* Many packages have been renamed, or classes moved from one package to another and these changes have been followed in
+Jet. For details see link:https://docs.hazelcast.org/docs/rn/index.html#4-0[IMDG Release Notes]. The change most obvious
+in Jet is that many classes have been moved from the generic `com.hazelcast.core` package to more specific packages,
+like `com.hazelcast.map` or `com.hazelcast.collection`.
+* Serializable variants of `java.util.function` interfaces have been moved to IMDG and removed from Jet: `BiConsumerEx`,
+`BiFunctionEx`, `BinaryOperatorEx`, `BiPredicateEx`, `ComparatorEx`, `ComparatorsEx`, `ConsumerEx`, `FunctionEx`,
+`Functions`, `PredicateEx`, `SupplierEx`, `ToDoubleFunctionEx`, `ToIntFunctionEx`, `ToLongFunctionEx`.
+* `Functions` utility class has been moved to IMDG and removed from Jet (from `com.hazelcast.jet.function`
+to `com.hazelcast.function`).
+* Generic parameters on several methods and classes have been updated/fixed (i.e. `EntryProcessor`) (see
 link:https://docs.hazelcast.org/docs/latest/manual/html-single/#introducing-lambda-friendly-interfaces[relevant section]
-in IMDG Migration Guide) and these changes have been adapted to Jet.
-* Some config options are renamed i.e. `group name` is now called `cluster name`. These changes have been adapted,
-also to the Jet Command Line.
-* `EventJournalConfig` is moved from top level config to data-structure specific config.
-* Async methods in IMDG return `CompletionStage` rather than the old `ICompletableFuture` (see
+in IMDG Migration Guide). These changes have been adopted in Jet.
+* `group name` config option is now called `cluster name`. These changes have been adapted to the Jet Command Line too
+(`-g/--groupName` replaced by `-n/--cluster-name` option).
+* `EventJournalConfig` has been moved from top level `Config` class to data-structure specific configs (`MapConfig`,
+`CacheConfig`).
+* Async methods in IMDG return `CompletionStage` now rather than the old `ICompletableFuture` (see
 link:https://docs.hazelcast.org/docs/latest/manual/html-single/#removal-of-icompletablefuture[relevant section] in
-IMDG Migration Guide) and these have been adapted to Jet.
+IMDG Migration Guide) and these have been adopted in Jet.
 
 === Jet API Changes
 Jet 4.0 makes multiple breaking changes in its own APIs:
 
-* `IMapJet`, `ICacheJet` and `IListJet` interfaces are removed, and replaced with IMDG's `IMap` and `IList` instead.
-* `Pipeline.drawFrom` is renamed to `Pipeline.readFrom`.
-* `GeneralStage.drainTo` is renamed to `GeneralStage.writeTo`.
-* `map/filter/flatMapUsingContext` is renamed to `map/filter/flatMapUsingService`.
-* ``ContextFactory`` is renamed to `ServiceFactory`.
+* `IMapJet`, `ICacheJet` and `IListJet` interfaces have been removed and have been replaced with IMDG's `IMap` and
+`IList`.
+* `Pipeline.drawFrom` has been renamed to `Pipeline.readFrom`.
+* `GeneralStage.drainTo` has been renamed to `GeneralStage.writeTo`.
+* `map/filter/flatMapUsingContext` has been renamed to `map/filter/flatMapUsingService`.
+* ``ContextFactory`` has been renamed to `ServiceFactory`.
 * ``mapUsingService``'s `ServiceFactory` now takes `ProcessorSupplier.Context` instead of just `JetInstance`.
-* HDFS sink and source are renamed to `Hadoop.inputFormat` and `Hadoop.outputFormat`.
-* Generic wildcard parameters in `Traverser` class are tweaked a bit.
-* Lambdas are moved to become last parameter where applicable for sources and sinks.
-* `JetBootstrap.getInstance()` is moved to `Jet.bootstrappedInstance()` which automatically creates an isolated instance
-when not running through `jet submit`.
+* Signature of `com.hazelcast.jet.pipeline.Sinks#mapWithEntryProcessor` method has changed.
+* HDFS sink and source have been renamed to `Hadoop.inputFormat` and `Hadoop.outputFormat`.
+* `MetricsConfig` is no longer part of `JetConfig`, but resides in the IMDG `Config` class.
+* Generic wildcard parameters in `Traverser` class have been tweaked slightly.
+* Lambdas have been moved to become last parameter, where applicable, for sources and sinks.
+* `JetBootstrap.getInstance()` has been moved to `Jet.bootstrappedInstance()` which automatically creates an isolated
+instance when not running through `jet submit`.
 
 [appendix]
 = FAQ
