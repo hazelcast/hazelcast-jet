@@ -33,12 +33,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.hasProperty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -63,16 +58,26 @@ public class ResourceConfigTest extends JetTestSupport {
     @Test
     public void when_addClassWithClass() {
         // When
-        config.addClass(OuterClass.class);
+        config.addClass(this.getClass());
+
+        // Then
+        ResourceConfig resourceConfig = getFirstResourceConfig();
+        assertEquals(this.getClass().getName().replace('.', '/') + ".class", resourceConfig.getId());
+        assertEquals(ResourceType.CLASS, resourceConfig.getResourceType());
+    }
+
+    @Test
+    public void when_addClassWithPackage() {
+        // When
+        config.addPackage(this.getClass().getPackage());
 
         // Then
         Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
-        assertThat(resourceConfigs, hasSize(3));
-        assertThat(resourceConfigs, containsInAnyOrder(
-                hasProperty("id", is(OuterClass.class.getName().replace('.', '/') + ".class")),
-                hasProperty("id", is(OuterClass.class.getName().replace('.', '/') + "$1.class")),
-                hasProperty("id", is(OuterClass.NestedClass.class.getName().replace('.', '/') + ".class"))
-        ));
+        assertTrue(resourceConfigs
+                .stream()
+                .anyMatch(resourceConfig ->
+                        resourceConfig.getId().equals(this.getClass().getName().replace('.', '/') + ".class") &&
+                                resourceConfig.getResourceType().equals(ResourceType.CLASS)));
     }
 
     @Test
@@ -1064,16 +1069,5 @@ public class ResourceConfigTest extends JetTestSupport {
         File dirFile = new File(baseDir, path);
         assertTrue("Failed to create directory " + dirFile, dirFile.mkdirs());
         return dirFile;
-    }
-
-    @SuppressWarnings("unused")
-    private static class OuterClass {
-        private void method() {
-            new Object() {
-            };
-        }
-
-        private static class NestedClass {
-        }
     }
 }

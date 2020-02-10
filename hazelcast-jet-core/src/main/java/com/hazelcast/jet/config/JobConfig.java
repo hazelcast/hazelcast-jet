@@ -21,37 +21,29 @@ import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
+import com.hazelcast.jet.Reflections;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.annotation.PrivateApi;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.regex.Pattern;
 
 import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Contains the configuration specific to one Hazelcast Jet job.
@@ -242,26 +234,33 @@ public class JobConfig implements IdentifiedDataSerializable {
     @SuppressWarnings("rawtypes")
     public JobConfig addClass(@Nonnull Class... classes) {
         checkNotNull(classes, "Classes cannot be null");
-        for (Class<?> clazz : classes) {
-            ResourceConfig cfg = new ResourceConfig(clazz);
-            resourceConfigs.put(cfg.getId(), cfg);
+        Reflections.memberClassesOf(classes)
+                   .forEach(clazz -> {
+                       ResourceConfig cfg = new ResourceConfig(clazz);
+                       resourceConfigs.put(cfg.getId(), cfg);
+                   });
+        return this;
+    }
 
-            ClassLoader classLoader = clazz.getClassLoader();
-            String packagePrefixPath = Optional.ofNullable(clazz.getPackage())
-                                               .map(pakage -> pakage.getName().replace('.', '/') + "/")
-                                               .orElse("");
-            Pattern nestedPattern = Pattern.compile(
-                    Pattern.quote(clazz.getName().replace('.', '/')) + "\\$.+" + "\\.class"
-            );
-            resources(classLoader, packagePrefixPath)
-                    .stream()
-                    .map(resource -> packagePrefixPath + resource)
-                    .filter(resource -> nestedPattern.matcher(resource).matches())
-                    .forEach(resource -> {
-                        URL url = Objects.requireNonNull(classLoader.getResource(resource));
-                        add(url, resource, ResourceType.CLASS);
-                    });
-        }
+    /**
+     * Adds recursively all the classes in given packages to the Jet job's
+     * classpath. They will be accessible to all the code attached to the
+     * underlying pipeline or DAG, but not to any other code.
+     * (An important example is the {@code IMap} data source, which can
+     * instantiate only the classes from the Jet instance's classpath.)
+     * <p>
+     * See also {@link #addJar} and {@link #addClasspathResource}.
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public JobConfig addPackage(@Nonnull Package... packages) {
+        checkNotNull(packages, "Packages cannot be null");
+        Reflections.memberClassesOf(packages)
+                   .forEach(clazz -> {
+                       ResourceConfig cfg = new ResourceConfig(clazz);
+                       resourceConfigs.put(cfg.getId(), cfg);
+                   });
         return this;
     }
 
@@ -738,18 +737,6 @@ public class JobConfig implements IdentifiedDataSerializable {
             }
         }
         return this;
-    }
-
-    @Nonnull
-    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification =
-            "False positive on try-with-resources as of JDK11")
-    private static Collection<String> resources(ClassLoader classLoader, String path) {
-        try (InputStream input = Objects.requireNonNull(classLoader.getResourceAsStream(path));
-             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-            return reader.lines().collect(toList());
-        } catch (IOException ioe) {
-            throw new JetException(ioe);
-        }
     }
 
     @Nonnull
