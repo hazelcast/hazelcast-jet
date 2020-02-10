@@ -71,7 +71,7 @@ public class JetLogHandler extends StreamHandler {
 
         @Override
         public String format(LogRecord record) {
-            String loggerName = getLoggerName(record.getLoggerName());
+            String loggerName = abbreviateLoggerName(record.getLoggerName());
             String message = record.getMessage();
             if (!ENABLE_DETAILS) {
                 int versionIdx = message.indexOf(VERSION_STR);
@@ -91,10 +91,8 @@ public class JetLogHandler extends StreamHandler {
                     record.getThrown() == null ? System.lineSeparator() : getExceptionString(record));
         }
 
-        private static String getLoggerName(String name) {
-            // abbreviate package names, credit Martin Ender:
-            // https://codegolf.stackexchange.com/questions/119126/shorten-the-java-package/119133#119133
-            return name.replaceAll("\\B\\w+(\\.[a-zA-Z])", "$1");
+        private static String abbreviateLoggerName(String name) {
+            return name.replaceAll("\\B\\w+\\.", ".");
         }
 
         private static String getExceptionString(LogRecord record) {
