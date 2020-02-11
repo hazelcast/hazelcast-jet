@@ -134,7 +134,7 @@ public final class JetBootstrap {
         try {
             return classLoader.loadClass(mainClass);
         } catch (ClassNotFoundException e) {
-            System.err.println("Cannot load main class: " + mainClass);
+            System.err.println("Cannot find or load main class: " + mainClass);
             throw e;
         }
     }
