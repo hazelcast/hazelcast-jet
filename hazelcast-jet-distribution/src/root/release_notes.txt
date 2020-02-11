@@ -5,6 +5,78 @@ issues at https://github.com/hazelcast/hazelcast-jet/issues/<issue number>.
 
 The label in the brackets refer to the respective module.
 
+** Hazelcast Jet 4.0 **
+
+1. New Features
+[core] Update Jet to use IMDG 4 [#1552]
+[core] Add support for the creation of Jet blue/green client [#1658]
+[core] Enable client to collect the results of a job it submitted ("return results to caller") [#1729]
+[core] Call a Python Function from Jet Pipeline [#1870]
+[core] Introduce non-classpath resource upload mechanism [#1824]
+[core] Add two phase commit (2PC) support to snapshots [#1438]
+[core] Add build-in metrics for job-lifecycle and snapshot statistics [#1715]
+[core] Add instance-wide resource management to ServiceFactory (previously ContextFactory) [#1787, #1797]
+[core] Add batched version of async mapping using service (previously context) [#1803]
+[core] Add keyed version of async mapping using service (previously context) [#1929]
+[pipeline-api] Add support for user-defined metrics [#1692]
+[integration] Add transaction support to Kafka sink [#1654]
+[integration] Add transaction support to File sink [#1655]
+[integration] Add transaction support to JMS source [#1804]
+[integration] Source for Debezium (CDC) [https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/debezium]
+[integration] Source for Kafka Connect [https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/kafka-connect]
+[integration] H2O ML Model Inference with Hazelcast Jet [https://github.com/hazelcast/hazelcast-jet-demos/tree/master/h2o-breast-cancer-classification]
+
+2. Enhancements
+[core] Improve default log experience [#1948]
+[core] Make empty traversers more efficient [#1700]
+[core] Add convenience method to simplify building jet configs inline [#1714]
+[core] Parallelize tasklet initialization [#1740]
+[core] Add option to specify unicast routing policy for DAG edges [#1766]
+[core] Update default parallelism of map/cache sources and sinks to 1 [#1774]
+[core] Replace JetBoostrap.getInstance() with Jet.bootstrappedInstance() [#1827]
+[code-samples] Add examples for Cloud Object Storages using Hadoop [#1623]
+[documentation] Write deployment and operations guide for Jet
+[documentation] Add migration guide to new Jet versions [#1947]
+[documentation] Explain how to parametrise jobs when submitting it using jet.sh [#1794]
+[documentation] Document S3 sink behaviour and limitation for streaming jobs [#1795]
+[distribution] Make Jet distribution more dev-ops friendly [#1703]
+[distribution] Auto import modules in JDK9+ in start script [#1737]
+[distribution] Introduce ability to add Jars in ZIP files as job resources [#1681]
+[distribution] Include slf4j-logj12 in the distribution [#1718]
+[distribution] Enhance Hadoop JARs and Classpath chapter in reference manual [#1830]
+[jet-cli] Add daemon mode and rolling file logger [#1783]
+[jet-cli] Introduced an option to pick main class from JAR files [#1800]
+[jet-cli] Allow for the selection of an entry class when submitting job from the CLI [#1796]
+[integration] Move connectors and plugins to the Hazelcast Community License [#1892]
+[integration] Slim down and improve JMS sink [#1807]
+[integration] Introduce a new variant in the HDFS source which uses new API [#1636]
+[integration] Make reading of frequently used file formats convenient (CSV, JSON, Parquet, Avro) [#1849]
+[integration] Unify Source Context and Sink Writer [#1785]
+
+3. Fixes
+[core] Fix long job start times [#1806, #1825]
+[core] Fix CLI logging [#1820]
+[core] Make error messages more descriptive [#1951]
+[core] Fix deserialization exception for Object[] when using remote map sink [#1444]
+[core] Change join job operation to not be retried on failure [#1656]
+[core] Fix OperationTimeoutException when join request is sent to non-master node [#1661]
+[core] Fix race in job coordination service [#1680]
+[core] Fix multiple bugs in JDBC sink affecting jobs with timestamps [#1678, #1682]
+[core] Avoid nested wildcards in flatMap [#1736]
+[core] Fix job related methods misbehaving when master is in the process of going down [#1624]
+[core] Fix inconsistencies with @Nonnull and @Nullable annotations [#1675]
+[core] Fix "Buffer full" error when saving large snapshots [#1769]
+[core] Fix fragmentation type error in saving snapshots [#1771]
+[core] Fix merging of differently-timestamped streams [#1776]
+[core] Fix a problem in Kafka source, when used with no processing guaranties [#1705, #1831]
+[core] Get rid of metrics related warning messages [#1699]
+[core] Fix a data loss bug manifesting on batch job completion [#1861]
+[core] Fix a data loss bug affecting the S3 sink [#1629]
+[core] Fix a bug causing the emission old watermarks [#1879]
+[core] Remove checked exceptions from JobConfig [#1896]
+[jet-cli] Fix jet.sh submit to not report error messages as NULL [#1717]
+[integration] Fix RabbitMQ sink related issues [#1886]
+
 ** Hazelcast Jet 3.2 **
 
 1. New Features
