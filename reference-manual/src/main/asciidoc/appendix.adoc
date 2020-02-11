@@ -308,9 +308,10 @@ Jet. For details see link:https://docs.hazelcast.org/docs/rn/index.html#4-0[IMDG
 in Jet is that many classes have been moved from the generic `com.hazelcast.core` package to more specific packages,
 like `com.hazelcast.map` or `com.hazelcast.collection`.
 
-* Serializable variants of `java.util.function` interfaces have been moved to IMDG and removed from Jet: `BiConsumerEx`,
-`BiFunctionEx`, `BinaryOperatorEx`, `BiPredicateEx`, `ComparatorEx`, `ComparatorsEx`, `ConsumerEx`, `FunctionEx`,
-`Functions`, `PredicateEx`, `SupplierEx`, `ToDoubleFunctionEx`, `ToIntFunctionEx`, `ToLongFunctionEx`.
+* Serializable variants of `java.util.function` interfaces have been moved from Jet (`com.hazelcast.jet.function` package)
+to IMDG (`com.hazelcast.function` package): `BiConsumerEx`,`BiFunctionEx`, `BinaryOperatorEx`, `BiPredicateEx`,
+`ComparatorEx`, `ComparatorsEx`, `ConsumerEx`, `FunctionEx`,`Functions`, `PredicateEx`, `SupplierEx`,
+`ToDoubleFunctionEx`, `ToIntFunctionEx`, `ToLongFunctionEx`.
 
 * Generic parameters on several methods and classes have been updated/fixed (i.e. `EntryProcessor`) (see
 link:https://docs.hazelcast.org/docs/latest/manual/html-single/#introducing-lambda-friendly-interfaces[relevant section]
