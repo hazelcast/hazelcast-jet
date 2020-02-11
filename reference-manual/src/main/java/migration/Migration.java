@@ -1,0 +1,105 @@
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package migration;
+
+import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.config.Config;
+import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.Jet;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.map.EntryProcessor;
+import com.hazelcast.map.IMap;
+
+import java.util.Map;
+
+class Migration {
+
+    static void config() {
+        ClientConfig clientConfig = new ClientConfig();
+        //tag::config1[]
+        clientConfig.setClusterName("cluster_name");
+        //clientConfig.getGroupConfig().setName("cluster_name")
+        //end::config1[]
+
+        Config config = new Config();
+        //tag::config2[]
+        config.getMapConfig("map_name").getEventJournalConfig();
+        //config.getMapEventJournalConfig("map_name")
+        //end::config2[]
+
+        JetConfig jetConfig = new JetConfig();
+        //tag::config3[]
+        jetConfig.getHazelcastConfig().getMetricsConfig().setCollectionFrequencySeconds(1);
+        //jetConfig.getMetricsConfig().setCollectionIntervalSeconds(1);
+        //end::config3[]
+    }
+
+    static void pipeline() {
+        Pipeline pipeline = Pipeline.create();
+        //tag::pipeline1[]
+        pipeline.readFrom(TestSources.items(1, 2, 3)).writeTo(Sinks.logger());
+        //pipeline.drawFrom(TestSources.items(1, 2, 3)).drainTo(Sinks.logger());
+        //end::pipeline1[]
+
+        //tag::pipeline2[]
+        pipeline.readFrom(TestSources.items(1, 2, 3))
+                .filterUsingService(
+                        ServiceFactories.sharedService(pctx -> 1),
+                        (svc, i) -> i % 2 == svc)
+                .writeTo(Sinks.logger());
+
+        /*
+        pipeline.drawFrom(TestSources.items(1, 2, 3))
+                .filterUsingContext(
+                        ContextFactory.withCreateFn(i -> 1),
+                        (ctx, i) -> i % 2 == ctx)
+                .drainTo(Sinks.logger());
+        */
+        //end::pipeline2[]
+    }
+
+    static void entryP() {
+        JetInstance jet = Jet.newJetInstance();
+        IMap<Object, Object> map = jet.getMap("map");
+
+        //tag::entryP1[]
+        FunctionEx<Map.Entry<String, Integer>, EntryProcessor<String, Integer, Void>> entryProcFn =
+                entry ->
+                        (EntryProcessor<String, Integer, Void>) e -> {
+                            e.setValue(e.getValue() == null ? 1 : e.getValue() + 1);
+                            return null;
+                        };
+        Sinks.mapWithEntryProcessor(map, Map.Entry::getKey, entryProcFn);
+
+        /*
+        FunctionEx<Map.Entry<String, Integer>, EntryProcessor<String, Integer>> entryProcFn =
+                entry ->
+                        (EntryProcessor<String, Integer>) e -> {
+                            e.setValue(e.getValue() == null ? 1 : e.getValue() + 1);
+                            return null;
+                        };
+        Sinks.mapWithEntryProcessor(map, Map.Entry::getKey, entryProcFn);
+        */
+        //end::entryP1[]
+    }
+
+}
