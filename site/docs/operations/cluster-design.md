@@ -1,7 +1,18 @@
 ---
-title: Cluster Design
-id: cluster-design
+title: Cluster Topology
+id: cluster-topology
 ---
+
+Hazelcast Jet is a distributed system, where each Hazelcast Jet node is
+referred to as a _member_. Each member is a Java application, running in
+a JVM.
+
+Broadly speaking, Hazelcast Jet generally can be used in one of two ways:
+
+1. **Client-server**: A Jet cluster is 
+2. **Embedded**:
+
+![Embedded vs Client-Server Cluster Topology](assets/deployment-options.png)
 
 ## Cluster Topologies
 

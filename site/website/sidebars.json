@@ -1,4 +1,9 @@
 {
+  "connectors": {
+    "Connectors" : [
+      "connectors/imap"
+    ]
+  },
   "docs": {
     "Get Started": [
       "get-started/intro",

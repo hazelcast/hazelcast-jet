@@ -47,11 +47,16 @@ Congratulations, now you have created a cluster of two nodes!
 >require you to use another cluster discovery mechanism than the
 >default, which is multicast.
 
-You will now see that the job is running both nodes automatically, and
-you will start seeing log output on both of the nodes. One thing you'll
-notice here is that the sequence numbers that are outputted will have
-reset, this is because the test source we are using is not
-fault-tolerant. This is explained in detail in the [fault
+You will now see that the job is running both nodes automatically,
+although you will still only see output on one of the nodes. This is
+because the test data source is non-distributed, and we don't have any
+steps in the pipeline which require data re-partionining. We will
+explain this later in detail in the
+[distributed computing](../concepts/distributed-computing) section.
+
+Another thing you'll notice here is that the sequence numbers that are
+outputted will have reset, this is because the test source we are using
+is not fault-tolerant. This is explained in detail in the [fault
 tolerance](concepts/fault-tolerance) section.
 
 ## Terminate one of the nodes

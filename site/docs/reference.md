@@ -8,9 +8,14 @@ id: reference-manual
 Jet's main API is called the Pipeline API. You can find detailed
 information about it inside the Jet Reference Manual.
 
+The content in the reference manual will eventually be moved to this
+website, though this is currently a work in progress.
+
 ## Javadoc
 
-Jet contains extensive information about each public API inside the Javadoc. 
+Jet also contains extensive Javadoc about each public API and should be
+consulted first as the primary source of information regarding specific
+details of the API.
 
 | Version        |            |   |
 | ------------- |:-------------:| -----:|

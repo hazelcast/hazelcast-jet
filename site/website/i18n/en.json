@@ -17,6 +17,9 @@
       "concepts/stream-processing": {
         "title": "Stream Processing"
       },
+      "connectors/imap": {
+        "title": "IMap"
+      },
       "design-docs/kafka-connect": {
         "title": "Kafka Connect Source"
       },
@@ -38,8 +41,8 @@
       "get-started/submit-job": {
         "title": "Submit the job to the cluster"
       },
-      "operations/cluster-design": {
-        "title": "Cluster Design"
+      "operations/cluster-topology": {
+        "title": "Cluster Topology"
       },
       "operations/configuration": {
         "title": "Configuration"
@@ -91,6 +94,7 @@
       "Blog": "Blog"
     },
     "categories": {
+      "Connectors": "Connectors",
       "Get Started": "Get Started",
       "API Guide": "API Guide",
       "Tutorials": "Tutorials",
