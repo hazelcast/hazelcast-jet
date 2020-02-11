@@ -64,7 +64,7 @@ public class ReflectionUtilsTest {
     }
 
     @Test
-    public void shouldDiscoverAllMemberClasses() throws ClassNotFoundException {
+    public void shouldDiscoverAllNestedClasses() throws ClassNotFoundException {
         // When
         Collection<Class<?>> classes = ReflectionUtils.nestedClassesOf(OuterClass.class);
 
