@@ -18,10 +18,12 @@ package migration;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.Config;
+import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
+import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.Sinks;
@@ -29,7 +31,11 @@ import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 class Migration {
 
@@ -77,11 +83,11 @@ class Migration {
         //end::pipeline2[]
     }
 
-    static void entryP() {
+    static void entryProcessor() {
         JetInstance jet = Jet.newJetInstance();
         IMap<Object, Object> map = jet.getMap("map");
 
-        //tag::entryP1[]
+        //tag::entryProcessor1[]
         FunctionEx<Map.Entry<String, Integer>, EntryProcessor<String, Integer, Void>> entryProcFn =
                 entry ->
                         (EntryProcessor<String, Integer, Void>) e -> {
@@ -99,7 +105,38 @@ class Migration {
                         };
         Sinks.mapWithEntryProcessor(map, Map.Entry::getKey, entryProcFn);
         */
-        //end::entryP1[]
+        //end::entryProcessor1[]
+    }
+
+    static void serviceFactory() {
+        //tag::serviceFactory1[]
+        ServiceFactories.sharedService(ctx -> Executors.newFixedThreadPool(8), ExecutorService::shutdown);
+        //ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8)).withLocalSharing();
+
+        ServiceFactories.nonSharedService(ctx -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS"), ConsumerEx.noop());
+        //ContextFactory.withCreateFn(jet -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
+        //end::serviceFactory1[]
+
+        Pipeline pipeline = Pipeline.create();
+        BatchStage<Runnable> stage = pipeline.readFrom(TestSources.items(1, 2, 3)).map(i -> (Runnable) () -> {});
+
+        //tag::serviceFactory2[]
+        stage.mapUsingServiceAsync(
+                ServiceFactories.sharedService(ctx -> Executors.newFixedThreadPool(8)),
+                2,
+                false,
+                (exec, task) -> CompletableFuture.supplyAsync(() -> task, exec)
+        );
+
+        /*
+        stage.mapUsingContextAsync(
+                ContextFactory.withCreateFn(jet -> Executors.newFixedThreadPool(8))
+                        .withMaxPendingCallsPerProcessor(2)
+                        .withUnorderedAsyncResponses(),
+                (exec, task) -> CompletableFuture.supplyAsync(() -> task, exec)
+        );
+        */
+        //end::serviceFactory2[]
     }
 
 }
