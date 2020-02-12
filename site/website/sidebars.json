@@ -12,8 +12,10 @@
       "get-started/submit-job",
       "get-started/scale-job"
     ],
-    "API Guide": [
-      "reference-manual"
+    "Programming Guide": [
+      "api/reference-manual",
+      "api/serialization",
+      "api/testing"
     ],
     "Tutorials" : [
       "tutorials/map-join",
@@ -25,10 +27,11 @@
       "tutorials/windowing"
     ],
     "Concepts": [
+      "concepts/dag",
       "concepts/distributed-computing",
       "concepts/stream-processing",
       "concepts/in-memory-storage",
-      "concepts/elasticity"
+      "concepts/fault-tolerance"
     ],
     "Operations Guide": [
       "operations/configuration",
@@ -37,6 +40,12 @@
       "operations/kubernetes",
       "operations/monitoring",
       "operations/spring"
+    ],
+    "Architecture": [
+      "architecture/distributed-computing",
+      "architecture/execution-engine",
+      "architecture/snapshots",
+      "architecture/event-time"
     ],
     "Design Documents": [
       "design-docs/unit-testing",

@@ -5,11 +5,35 @@
     "previous": "Previous",
     "tagline": "Distributed Stream and Batch Processing",
     "docs": {
+      "api/reference-manual": {
+        "title": "API Reference"
+      },
+      "api/serialization": {
+        "title": "Serialization"
+      },
+      "api/testing": {
+        "title": "Testing"
+      },
+      "architecture/distributed-computing": {
+        "title": "Distributed Execution"
+      },
+      "architecture/event-time": {
+        "title": "Event Time Processing"
+      },
+      "architecture/execution-engine": {
+        "title": "Cooperative Threading"
+      },
+      "architecture/snapshots": {
+        "title": "Distributed Snapshots"
+      },
+      "concepts/dag": {
+        "title": "Directed Acylic Graphs (DAG)"
+      },
       "concepts/distributed-computing": {
         "title": "Distributed Computing"
       },
-      "concepts/elasticity": {
-        "title": "Elasticity"
+      "concepts/fault-tolerance": {
+        "title": "Fault Tolerance"
       },
       "concepts/in-memory-storage": {
         "title": "In-memory Storage"
@@ -53,14 +77,8 @@
       "operations/monitoring": {
         "title": "Monitoring and Metrics"
       },
-      "operations/serialization": {
-        "title": "Serialization"
-      },
       "operations/spring": {
         "title": "Spring Integration"
-      },
-      "reference-manual": {
-        "title": "API Reference"
       },
       "roadmap": {
         "title": "Roadmap"
@@ -96,10 +114,11 @@
     "categories": {
       "Connectors": "Connectors",
       "Get Started": "Get Started",
-      "API Guide": "API Guide",
+      "Programming Guide": "Programming Guide",
       "Tutorials": "Tutorials",
       "Concepts": "Concepts",
       "Operations Guide": "Operations Guide",
+      "Architecture": "Architecture",
       "Design Documents": "Design Documents",
       "Roadmap": "Roadmap"
     }

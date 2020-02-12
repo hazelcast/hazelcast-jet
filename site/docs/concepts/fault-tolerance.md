@@ -1,6 +1,6 @@
 ---
-title: Elasticity
-id: elasticity
+title: Fault Tolerance
+id: fault-tolerance
 ---
 
 ## Fault Tolerance and Processing Guarantees
