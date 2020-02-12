@@ -73,4 +73,66 @@ Top 10 random numbers in the latest window:
 
 ## Install using Docker
 
-TODO
+The official Docker images for Hazelcast Jet can be used to install 
+Hazelcast Jet in Docker environment. 
+
+Use the following command to start the node:
+
+```bash
+docker run  hazelcast/hazelcast-jet
+```
+
+After seeing it started a new Hazelcast Jet node in a Docker container,
+switch to a different terminal window and repeat the same command. 
+
+```bash
+docker run  hazelcast/hazelcast-jet
+```
+
+A second Hazelcast Jet node in a Docker container should start and they
+should form a cluster using multicast discovery with a log line
+similar to the below: 
+
+```
+INFO: [172.17.0.2]:5701 [jet] [3.2.2] 
+
+Members {size:2, ver:2} [
+	Member [172.17.0.2]:5701 - 3048be69-dd2f-482b-bc71-ff72e3274569 this
+	Member [172.17.0.3]:5701 - 4e6cc14a-6d4c-4fa9-8f38-be0eb2b01e9e
+]
+```
+
+Please note one of the IP address of the Docker images, we'll use it 
+as a parameter to the command-line interface later on.
+
+We will submit an example application which is included with the
+[distribution package](https://jet.hazelcast.org/download) of Hazelcast
+Jet.
+
+After downloading, unzip the distribution and use the following commands
+to submit the example job to the cluster running inside Docker. 
+
+```bash
+cd <jet_install_directory>
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+```
+
+The command basically mounts the local examples directory from the 
+distribution package to the container and uses Hazelcast Jet command-line 
+tool to submit the example JAR file to the cluster. 
+
+After the job is submitted you should see this in the log output:
+
+```text
+Top 10 random numbers in the latest window:
+    1. 9,148,584,845,265,430,884
+    2. 9,062,844,734,542,410,944
+    3. 8,803,176,683,229,613,741
+    4. 8,779,035,965,085,775,340
+    5. 8,542,080,641,730,428,499
+    6. 8,528,134,348,376,217,974
+    7. 8,290,200,710,152,066,026
+    8. 8,008,893,323,519,996,615
+    9. 7,804,055,086,912,769,625
+    10. 7,681,774,251,691,230,162
+```
