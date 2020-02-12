@@ -35,8 +35,7 @@
     ],
     "Operations Guide": [
       "operations/configuration",
-      "operations/cluster-design",
-      "operations/serialization",
+      "operations/cluster-topology",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/spring"
