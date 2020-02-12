@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+import java.io.File;
+
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.Job;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.StreamStage;
 
@@ -44,10 +47,10 @@ public class MLModelPrediction {
     static void s2() {
         //tag::s2[]
         StreamStage<ItemToBeClassified> sourceStage = sourceStage();
-        sourceStage.mapUsingService(ServiceFactory.withCreateContextFn(context -> {
-            String model = context.attachedFile("gbm_mojo").toString();
-            return new EasyPredictModelWrapper(MojoModel.load(model));
-        }).withCreateServiceFn((context, easyPredictModelWrapper) -> easyPredictModelWrapper), 
+        sourceStage.mapUsingService(ServiceFactories.sharedService(context -> {
+            File modelFile = context.attachedFile("gbm_mojo");
+            return new EasyPredictModelWrapper(MojoModel.load(modelFile.toString()));
+        }), 
         (modelWrapper, item) -> {
             BinomialModelPrediction p = modelWrapper.predictBinomial(item.asRow());
             return p.label;

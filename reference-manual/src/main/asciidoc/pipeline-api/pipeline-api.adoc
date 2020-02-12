@@ -424,7 +424,7 @@ Jet pipeline.
 
 == Machine Learning Model Prediction
 Usage of pre-trained Machine Learning models are common to see in the
-pipelines as an external scoring/classification mechanisms. 
+pipelines as external scoring/classification mechanisms. 
 Hazelcast Jet comes with the facility that enables uploading files or 
 directories along with the job for later retrieval in the 
 service objects. The transformation step can take advantage of having a 
@@ -442,7 +442,7 @@ include::{javasource}/MLModelPrediction.java[tag=s1]
 After configuring the job to include the MOJO file, it can be accessed
 in the context object passed in to the service factory via the {jet-javadoc}/core/ProcessorSupplier.Context.html#attachedFile-java.lang.String-[`attachedFile()`]
 or {jet-javadoc}/core/ProcessorSupplier.Context.html#attachedDirectory-java.lang.String-[`attachedDirectory()`]
-method. That method returns the file or directory locally which has been 
+method. That methods returns the file or directory locally which has been 
 uploaded on the job submission. Then, depending on the use case and
 selection of the Machine Learning library, user needs to build the 
 service required for serving the models. 
@@ -454,7 +454,7 @@ include::{javasource}/MLModelPrediction.java[tag=s2]
 
 The service will be passed in the next stage of the transformation along 
 with the stream where you can actually invoke methods on the service to 
-implement scoring/classification. In the example above, the binomial 
+execute scoring/classification. In the example above, the binomial 
 prediction has been done for each item on the stream and the predicted 
 labels are emitted to the downstream.
 
