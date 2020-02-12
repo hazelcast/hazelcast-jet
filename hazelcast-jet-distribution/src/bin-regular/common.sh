@@ -28,7 +28,7 @@ if [ "$JAVA_VERSION" -ge "9" ]; then
 fi
 
 if [ "$JET_LICENSE_KEY" ]; then
-  JAVA_OPTS_ARRAY+=("-Dhazelcast.enterprise.license.key=${JET_LICENSE_KEY}")
+    LICENSING_OPTS="-Dhazelcast.enterprise.license.key=${JET_LICENSE_KEY}"
 fi
 
 CLASSPATH="$JET_HOME/lib/*:$CLASSPATH"
