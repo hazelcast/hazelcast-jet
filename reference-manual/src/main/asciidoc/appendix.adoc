@@ -311,7 +311,7 @@ as follows:
 
 * We renamed many packages and moved classes around. For details see the
 https://docs.hazelcast.org/docs/rn/index.html#4-0[IMDG Release Notes].
-The most obvious change most is that many classes that used to be in the
+The most obvious change is that many classes that used to be in the
 general `com.hazelcast.core` package are now in specific packages like
 `com.hazelcast.map` or `com.hazelcast.collection`.
 
@@ -399,8 +399,8 @@ include::{javasource}/migration/Migration.java[tag=serviceFactory2]
 accommodate the improved `EntryProcessor`, which has become more
 lambda-friendly in IMDG (see the
 https://docs.hazelcast.org/docs/latest/manual/html-single/#introducing-lambda-friendly-interfaces[relevant section]
-in the IMDG Migration Guide). The return type of the `EntryProcessor` is
-now an explicit parameter in ``mapWithEntryProcessor``'s method signature.
+in the IMDG Migration Guide). The return type of `EntryProcessor` is now
+an explicit parameter in ``mapWithEntryProcessor``'s method signature.
 +
 [source]
 ----
