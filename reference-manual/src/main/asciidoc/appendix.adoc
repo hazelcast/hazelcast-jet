@@ -286,129 +286,156 @@ http://phonehome.hazelcast.com/ping
 [appendix]
 = Migration Guides
 
-This appendix provides guidelines for upgrading to a new Hazelcast Jet version.
-See also the link:https://docs.hazelcast.org/docs/jet/release-notes/index.html[Release Notes] document
-for the changes for each Hazelcast Jet release.
+This appendix provides guidelines for upgrading to a new Hazelcast Jet
+version. See also the
+link:https://docs.hazelcast.org/docs/jet/release-notes/index.html[Release Notes]
+document for the changes for each Hazelcast Jet release.
 
 == Upgrading to Hazelcast Jet 4.0
 
-Jet 4.0 is a major version release. Major releases allow us to break compatibility in the API, as well as
-to remove previously deprecated parts of the API.
+Jet 4.0 is a major version release. Major releases allow us to break
+compatibility in the API, as well as to remove previously deprecated
+parts of the API.
 
 === Jet on IMDG 4.0
 
-Jet 4.0 uses IMDG 4.0, which is also a major release with its own breaking changes. For details see
-link:https://docs.hazelcast.org/docs/rn/index.html[IMDG Release Notes] and
+Jet 4.0 uses IMDG 4.0, which is also a major release with its own
+breaking changes. For details see
+link:https://docs.hazelcast.org/docs/rn/index.html[IMDG Release Notes]
+and
 link:https://docs.hazelcast.org/docs/latest/manual/html-single/#migration-guides[IMDG Migration Guides].
 
 The most important changes that have affected Jet are as follows:
 
-* Many packages have been renamed, or classes moved from one package to another and these changes have been followed in
-Jet. For details see link:https://docs.hazelcast.org/docs/rn/index.html#4-0[IMDG Release Notes]. The change most obvious
-in Jet is that many classes have been moved from the generic `com.hazelcast.core` package to more specific packages,
-like `com.hazelcast.map` or `com.hazelcast.collection`.
+* Many packages have been renamed, or classes moved from one package to
+another and these changes have been followed in Jet. For details see
+link:https://docs.hazelcast.org/docs/rn/index.html#4-0[IMDG Release Notes].
+The change most obvious in Jet is that many classes have been moved from
+the generic `com.hazelcast.core` package to more specific packages, like
+`com.hazelcast.map` or `com.hazelcast.collection`.
 
-* Serializable variants of `java.util.function` interfaces have been moved from Jet (`com.hazelcast.jet.function` package)
-to IMDG (`com.hazelcast.function` package): `BiConsumerEx`,`BiFunctionEx`, `BinaryOperatorEx`, `BiPredicateEx`,
-`ComparatorEx`, `ComparatorsEx`, `ConsumerEx`, `FunctionEx`,`Functions`, `PredicateEx`, `SupplierEx`,
+* Serializable variants of `java.util.function` interfaces have been
+moved from Jet (`com.hazelcast.jet.function` package) to IMDG
+(`com.hazelcast.function` package): `BiConsumerEx`,`BiFunctionEx`,
+`BinaryOperatorEx`, `BiPredicateEx`,`ComparatorEx`, `ComparatorsEx`,
+`ConsumerEx`, `FunctionEx`,`Functions`, `PredicateEx`, `SupplierEx`,
 `ToDoubleFunctionEx`, `ToIntFunctionEx`, `ToLongFunctionEx`.
 
-* Generic parameters on several methods and classes have been updated/fixed (i.e. `EntryProcessor`) (see
+* Generic parameters on several methods and classes have been updated/fixed
+(i.e. `EntryProcessor`) (see
 link:https://docs.hazelcast.org/docs/latest/manual/html-single/#introducing-lambda-friendly-interfaces[relevant section]
 in IMDG Migration Guide). These changes have been adopted in Jet.
 
-* "Group name" config option is now called "cluster name". See next code snippet. These changes have been adapted to the
-Jet Command Line too(`-g/--groupName` replaced by `-n/--cluster-name` option).
+* "Group name" config option is now called "cluster name". See next code
+snippet. These changes have been adapted to the Jet Command Line too
+(`-g/--groupName` replaced by `-n/--cluster-name` option).
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=config1]
 ----
 
-* `EventJournalConfig` has been moved from top level `Config` class to data-structure specific configs (`MapConfig`,
-`CacheConfig`).
+* `EventJournalConfig` has been moved from top level `Config` class to
+data-structure specific configs (`MapConfig`,`CacheConfig`).
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=config2]
 ----
 
-* Async methods in IMDG return `CompletionStage` now rather than the old `ICompletableFuture` (see
-link:https://docs.hazelcast.org/docs/latest/manual/html-single/#removal-of-icompletablefuture[relevant section] in
-IMDG Migration Guide) and these have been adopted in Jet.
+* Async methods in IMDG return `CompletionStage` now rather than the old
+`ICompletableFuture` (see
+link:https://docs.hazelcast.org/docs/latest/manual/html-single/#removal-of-icompletablefuture[relevant section]
+in IMDG Migration Guide) and these have been adopted in Jet.
 
 === Jet API Changes
 Jet 4.0 makes multiple breaking changes in its own APIs:
 
-* `IMapJet`, `ICacheJet` and `IListJet` interfaces have been removed and have been replaced with IMDG's `IMap`, `ICache`
-and `IList`.
+* `IMapJet`, `ICacheJet` and `IListJet` interfaces have been removed and
+have been replaced with IMDG's `IMap`, `ICache` and `IList`.
 
-* `Pipeline.drawFrom` has been renamed to `Pipeline.readFrom` and `GeneralStage.drainTo` has been renamed to `GeneralStage.writeTo`.
+* `Pipeline.drawFrom` has been renamed to `Pipeline.readFrom` and
+`GeneralStage.drainTo` has been renamed to `GeneralStage.writeTo`.
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=pipeline1]
 ----
 
-* ``ContextFactory`` has been renamed to `ServiceFactory` and support for instance-wide initialization has been added
-to it. It takes `ProcessorSupplier.Context` instead of just `JetInstance` and the convenience methods from `ServiceFactories`
-should be used for initialization.
+* ``ContextFactory`` has been renamed to `ServiceFactory` and support for
+instance-wide initialization has been added to it. It takes
+`ProcessorSupplier.Context` instead of just `JetInstance` and the
+convenience methods from `ServiceFactories` should be used for
+initialization.
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=serviceFactory1]
 ----
 
-* `map/filter/flatMapUsingContext` has been renamed to `map/filter/flatMapUsingService`.
+* `map/filter/flatMapUsingContext` has been renamed to
+`map/filter/flatMapUsingService`.
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=pipeline2]
 ----
 
-* `withMaxPendingCallsPerProcessor(int)` and `withUnorderedAsyncResponses()` methods have been removed from `ServiceFactory`.
-They have been properties relevant in the context of asynchronous operations, so have been used in conjunction with
-`GeneralStage.mapUsingServiceAsync(...)` calls. In Jet 4.0 the `GeneralStage.mapUsingServiceAsync(...)` method has a
-new variant with explicit parameters for the above settings.
+* `withMaxPendingCallsPerProcessor(int)` and
+`withUnorderedAsyncResponses()` methods have been removed from
+`ServiceFactory`. They have been properties relevant in the context of
+asynchronous operations, so have been used in conjunction with
+`GeneralStage.mapUsingServiceAsync(...)` calls. In Jet 4.0 the
+`GeneralStage.mapUsingServiceAsync(...)` method has a new variant with
+explicit parameters for the above settings.
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=serviceFactory2]
 ----
 
-* Signature of `com.hazelcast.jet.pipeline.Sinks#mapWithEntryProcessor` method has changed, in order to reflect the
-way in which `EntryProcessor` has been made more lambda-friendly in IMDG (see
+* Signature of `com.hazelcast.jet.pipeline.Sinks#mapWithEntryProcessor`
+method has changed, in order to reflect the way in which `EntryProcessor`
+has been made more lambda-friendly in IMDG (see
 link:https://docs.hazelcast.org/docs/latest/manual/html-single/#introducing-lambda-friendly-interfaces[relevant section]
-in IMDG Migration Guide). The return type of the `EntryProcessor` is now an explicit parameter in ``mapWithEntryProcessor``'s
-method signature.
+in IMDG Migration Guide). The return type of the `EntryProcessor` is now
+an explicit parameter in ``mapWithEntryProcessor``'s method signature.
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=entryProcessor1]
 ----
 
-* HDFS source and sink have been renamed to `Hadoop.inputFormat` and `Hadoop.outputFormat`.
+* HDFS source and sink have been renamed to `Hadoop.inputFormat` and
+ `Hadoop.outputFormat`.
 
-* `MetricsConfig` is no longer part of `JetConfig`, but resides in the IMDG `Config` class.
+* `MetricsConfig` is no longer part of `JetConfig`, but resides in the
+IMDG `Config` class.
 +
 [source]
 ----
 include::{javasource}/migration/Migration.java[tag=config3]
 ----
 
-* Generic wildcard parameters in `Traverser` class have been tweaked slightly. Change shouldn't affect anything in
+* Generic wildcard parameters in `Traverser` class have been tweaked
+slightly. Change shouldn't affect anything in
 practice.
 
-* Lambdas have been moved to become last parameter, where applicable, for sources and sinks.
+* Lambdas have been moved to become last parameter, where applicable,
+for sources and sinks.
 
-* `JetBootstrap.getInstance()` has been moved to `Jet.bootstrappedInstance()` which automatically creates an isolated
-instance when not running through `jet submit`. If used from `jet submit`, the behaviour remains as it has been.
+* `JetBootstrap.getInstance()` has been moved to
+`Jet.bootstrappedInstance()` which automatically creates an isolated
+instance when not running through `jet submit`. If used from
+`jet submit`, the behaviour remains as it has been.
 
-* `JobConfig.addResource(...)` methods have been renamed to `addClasspathResource(...)`.
+* `JobConfig.addResource(...)` methods have been renamed to
+`addClasspathResource(...)`.
 
-* `ResourceType.REGULAR_FILE` has been renamed to `ResourceType.FILE`, but at the same time `ResourceType`,
-`ResourceConfig` and `JobConfig.getResourceConfigs()` have become private API, so we discourage their usage as much as
-possible.
+* `ResourceType.REGULAR_FILE` has been renamed to `ResourceType.FILE`,
+but at the same time `ResourceType`,`ResourceConfig` and
+`JobConfig.getResourceConfigs()` have become private API, so we
+discourage their usage as much as possible.
 
 [appendix]
 = FAQ
