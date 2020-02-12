@@ -23,9 +23,9 @@ $JDK_OPTS \
 $JAVA_OPTS \
 )
 
-LICENSING_OPTS_ARRAY=(\
-$LICENSING_OPTS \
-)
+if [ "$JET_LICENSE_KEY" ]; then
+    LICENSING_OPTS_ARRAY=("-Dhazelcast.enterprise.license.key=${JET_LICENSE_KEY}")
+fi
 
 echo "########################################"
 echo "# JAVA=$JAVA"
