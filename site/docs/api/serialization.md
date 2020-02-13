@@ -11,8 +11,8 @@ fetch an object state over a wire or read it from a persistent storage
 one has to deserialize it from raw bytes first. As Hazelcast Jet is a 
 distributed system by nature (de)serialization is integral part of it. 
 Understanding, when it is involved, how does it support the pipelines 
-and knowing differences between each of supported strategies is 
-crucial to efficient Jet usage.
+and knowing differences between each of the strategies is  crucial to 
+efficient Jet usage.
 
 Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of 
 its features to Jet users. In particular, one can use IMDG data 
@@ -26,9 +26,10 @@ parts of a `DAG` can reside on separate cluster members. To catch
 (de)serialization issues early on, we recommend using a 2-member local 
 Jet cluster for development and testing.
 
-Currently, Hazelcast Jet offers 5 ways to (de)serialize objects:
+Currently, Hazelcast Jet offers 6 ways to (de)serialize objects:
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
+- [com.hazelcast.nio.serialization.DataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/DataSerializable.html)
 - [com.hazelcast.nio.serialization.IdentifiedDataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/IdentifiedDataSerializable.html)
 - [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
 - [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
@@ -55,10 +56,24 @@ counting the total throughput, yields following results:
 # Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
 # VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
-Benchmark                                 Mode  Cnt        Score   Error  Units
-SerializationBenchmark.serializable      thrpt    2   179323.545          ops/s
-SerializationBenchmark.externalizable    thrpt    2   334753.811          ops/s
-SerializationBenchmark.dataSerializable  thrpt    2  1626386.988          ops/s
-SerializationBenchmark.portable          thrpt    2  1073038.895          ops/s
-SerializationBenchmark.streamSerializer  thrpt    2  2119776.478          ops/s
+Benchmark                                           Mode  Cnt        Score   Error  Units
+SerializationBenchmark.serializable                thrpt    2   193630.237          ops/s
+SerializationBenchmark.externalizable              thrpt    2   355309.791          ops/s
+SerializationBenchmark.dataSerializable            thrpt    2  1114083.649          ops/s
+SerializationBenchmark.identifiedDataSerializable  thrpt    2  1566470.849          ops/s
+SerializationBenchmark.portable                    thrpt    2  1240457.594          ops/s
+SerializationBenchmark.streamSerializer            thrpt    2  2125503.943          ops/s
+
+```
+
+The very same object instantiated with sample data will also be encoded 
+with different number of bytes depending on used strategy:
+```
+Strategy                                                   Number of Bytes   Overhead %
+java.io.Serializable                                                   141          540
+java.io.Externalizable                                                  80          263
+com.hazelcast.nio.serialization.DataSerializable                        71          222
+com.hazelcast.nio.serialization.IdentifiedDataSerializable              35           59
+com.hazelcast.nio.serialization.Portable                               108          390
+com.hazelcast.nio.serialization.StreamSerializer                        22            0
 ```
