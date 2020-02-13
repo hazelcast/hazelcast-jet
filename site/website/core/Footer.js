@@ -63,7 +63,7 @@ class Footer extends React.Component {
             <h5>Latest From the Blog</h5>
             {
               Blog.slice(0,5).map( blog => {
-              return <a href={`${this.props.config.baseUrl}blog/${getPath(blog.path,this.props.config.cleanUrl)}`}>{blog.title}</a>
+              return <a key={blog.id} href={`${this.props.config.baseUrl}blog/${getPath(blog.path,this.props.config.cleanUrl)}`}>{blog.title}</a>
               })
             }
           </div>

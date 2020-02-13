@@ -79,30 +79,19 @@ Hazelcast Jet in Docker environment.
 Use the following command to start the node:
 
 ```bash
-docker run  hazelcast/hazelcast-jet
+docker run hazelcast/hazelcast-jet
 ```
 
-After seeing it started a new Hazelcast Jet node in a Docker container,
-switch to a different terminal window and repeat the same command. 
-
-```bash
-docker run  hazelcast/hazelcast-jet
-```
-
-A second Hazelcast Jet node in a Docker container should start and they
-should form a cluster using multicast discovery with a log line
-similar to the below: 
+After seeing it started a new Hazelcast Jet node in a Docker container
+with a log line similar to the below: 
 
 ```
-INFO: [172.17.0.2]:5701 [jet] [3.2.2] 
-
-Members {size:2, ver:2} [
-	Member [172.17.0.2]:5701 - 3048be69-dd2f-482b-bc71-ff72e3274569 this
-	Member [172.17.0.3]:5701 - 4e6cc14a-6d4c-4fa9-8f38-be0eb2b01e9e
+Members {size:1, ver:1} [
+	Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
 ]
 ```
 
-Please note one of the IP address of the Docker images, we'll use it 
+Please note the IP address of the Docker container, we'll use it 
 as a parameter to the command-line interface later on.
 
 We will submit an example application which is included with the
@@ -117,8 +106,8 @@ cd <jet_install_directory>
 docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
 ```
 
-The command basically mounts the local examples directory from the 
-distribution package to the container and uses Hazelcast Jet command-line 
+The command basically mounts the local `examples` directory from the 
+`<jet_install_directory>` to the container and uses Hazelcast Jet command-line 
 tool to submit the example JAR file to the cluster. 
 
 After the job is submitted you should see this in the log output:
