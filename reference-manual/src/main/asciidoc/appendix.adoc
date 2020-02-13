@@ -385,6 +385,23 @@ include::{javasource}/migration/Migration.java[tag=serviceFactory1]
 include::{javasource}/migration/Migration.java[tag=pipeline2]
 ----
 
+* `filterUsingServiceAsync` has been removed. Usages can be replaced with
+`mapUsingServiceAsync`, which behaves like a filter if it returns a `null`
+future or the returned future contains a `null` result:
++
+[source]
+----
+include::{javasource}/migration/Migration.java[tag=async2]
+----
+
+* `flatMapUsingServiceAsync` has been removed. Usages can be replaced with
+`mapUsingServiceAsync` followed by non-async `flatMap`:
++
+[source]
+----
+include::{javasource}/migration/Migration.java[tag=async1]
+----
+
 * The methods `withMaxPendingCallsPerProcessor(int)` and
 `withUnorderedAsyncResponses()` were removed from `ServiceFactory`. These
 properties are relevant only in the context of asynchronous operations and

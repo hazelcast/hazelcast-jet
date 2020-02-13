@@ -22,11 +22,15 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
 import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
+import com.hazelcast.jet.pipeline.StreamStage;
+import com.hazelcast.jet.pipeline.test.SimpleEvent;
 import com.hazelcast.jet.pipeline.test.TestSources;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
@@ -36,6 +40,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static com.hazelcast.jet.Traversers.traverseItems;
 
 class Migration {
 
@@ -137,6 +143,50 @@ class Migration {
         );
         */
         //end::serviceFactory2[]
+    }
+
+    static void async() {
+        Pipeline p = Pipeline.create();
+        ServiceFactory<?, ExecutorService> serviceFactory = ServiceFactories.sharedService(ctx -> Executors.newFixedThreadPool(8));
+
+        StreamStage<Long> stage = p.readFrom(TestSources.itemStream(3))
+                .withoutTimestamps()
+                .map(SimpleEvent::sequence);
+
+        //tag::async1[]
+        stage.mapUsingServiceAsync(serviceFactory,
+                (executor, item) -> {
+                    CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
+                    executor.submit(() -> f.complete(traverseItems(item + "-1", item + "-2", item + "-3")));
+                    return f;
+                })
+                .flatMap(FunctionEx.identity());
+        /*
+        stage.flatMapUsingServiceAsync(serviceFactory,
+                (executor, item) -> {
+                    CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
+                    executor.submit(() -> f.complete(traverseItems(item + "-1", item + "-2", item + "-3")));
+                    return f;
+                })
+        */
+        //end::async1[]
+
+        //tag::async2[]
+        stage.mapUsingServiceAsync(serviceFactory,
+                (executor, item) -> {
+                    CompletableFuture<Long> f = new CompletableFuture<>();
+                    executor.submit(() -> f.complete(item % 2 == 0 ? item : null));
+                    return f;
+                });
+        /*
+        stage.filterUsingServiceAsync(serviceFactory,
+                (executor, item) -> {
+                    CompletableFuture<Boolean> f = new CompletableFuture<>();
+                    executor.submit(() -> f.complete(item % 2 == 0));
+                    return f;
+                });
+        */
+        //end::async2[]
     }
 
 }
