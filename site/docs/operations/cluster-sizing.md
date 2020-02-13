@@ -113,7 +113,7 @@ We want to size the cluster to be able to process 50k trade events per second wi
 
 We benchmarked this job on a cluster of 3, 5 and 9 nodes to see how it affects the processing latency. We started with a 3-member cluster as that is a minimal setup for fault-tolerant operations.  For each topology, we benchmarked a setup with 1, 10, 20 and 40 jobs running in the cluster.
 
-The processing latency was evaluated as ```RESULT_PUBLISHED_TS - ALL_TRADES_RECIEVED_TS``` ([learn more](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)). You can use this metric or design that fits to requirements of your application. Our example shows maximum and average latency for each setup. Consider measuring the result distribution, as the application KPIs are frequently expressed using it  (e.g. app processes 99.999% of data under 200 milliseconds).
+The processing latency was evaluated as ```RESULT_PUBLISHED_TS - ALL_TRADES_RECIEVED_TS``` ([learn more](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)). You can use this approach or design a metric that fits your application KPIs. Moreover, our example records the maximum and average latency. Consider measuring the result distribution, as the application KPIs are frequently expressed using it  (e.g. app processes 99.999% of data under 200 milliseconds).
 
 Cluster machines were of the recommended minimal configuration: c5.2xlarge, each 8 CPU, 16 GB RAM, 10 Gbps network.
 
