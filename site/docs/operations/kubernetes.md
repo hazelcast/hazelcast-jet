@@ -102,7 +102,7 @@ kubectly apply -f rbac.yaml
 
 ## ConfigMap
 
-Then we need to configure Hazelcast Jet to use Kubernetes Discovery to  
+Then we need to configure Hazelcast Jet to use Kubernetes Discovery to
 form the cluster. Create a file named `hazelcast-jet-config.yaml` with
 following content and apply it. This will create a ConfigMap object.
 
@@ -205,5 +205,172 @@ spec:
 kubectl apply -f hazelcast-jet.yaml
 ```
 
+# Deploy Jobs
 
+There are two different ways to submit a job to a Hazelcast Jet cluster:
 
+- Package Job as a Docker container then let it submit itself.
+- Submit Job as a JAR file from a shared `PersistentVolume` which is
+  attached to a pod.
+
+For both options you need to create a `ConfigMap` object for the client
+(`hazelcast-jet-client-config.yaml`) and apply it. Make sure that the
+service-name is pointing to the service-name of the cluster we have
+created above.
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hazelcast-jet-client-configuration
+data:
+  hazelcast-client.yaml: |-
+    hazelcast-client:
+      cluster-name: jet
+      network:
+        kubernetes:
+          enabled: true
+          namespace: default
+          service-name: hazelcast-jet-service
+```
+
+```bash
+kubectl apply -f hazelcast-jet-client-config.yaml
+```
+
+## Package the Job as a Docker Container
+
+There are several tools to containerize your job, for example
+[Jib](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin).
+Jib builds Docker and OCI images for Java applications. It is available
+as plugins for Maven and Gradle and as a Java library. You can find a
+[sample-project](https://github.com/hazelcast/hazelcast-jet-docker/tree/master/examples/kubernetes#steps-to-package-the-job-as-a-docker-container)
+using Jib to containerize the Hazelcast Jet rolling-aggregate job.
+
+After creating the image, we create a Kubernetes Job using the image and
+client ConfigMap object. The client config is stored in a volume,
+mounted to the container and passed as an argument to the `jet submit`
+script along with the name of the JAR containing the Jet job.
+
+```yaml
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rolling-aggregation
+spec:
+  template:
+    spec:
+      containers:
+      - name: rolling-aggregation
+        image: rolling-aggregation:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh"]
+        args: ["-c", "jet -v -f /config/hazelcast-jet/hazelcast-client.yaml submit /rolling-aggregation-jar-with-dependencies.jar"]
+        volumeMounts:
+          - mountPath: "/config/hazelcast-jet/"
+            name: hazelcast-jet-config-storage
+      volumes:
+      - name: hazelcast-jet-config-storage
+        configMap:
+          name: hazelcast-jet-client-configuration
+          items:
+            - key: hazelcast-client.yaml
+              path: hazelcast-client.yaml
+      restartPolicy: OnFailure
+```
+
+## Submit the Job from a Shared Persistent Volume
+
+We will need a persistent volume attached to the pods. The persistent
+storage will contain job JAR files to be submitted to the cluster. There
+are many different ways you can define and map volumes in Kubernetes. We
+will create `hostPath` persistent volume, which mounts a file or directory
+from the host node’s filesystem into the pod. See
+[official documentation](https://kubernetes.io/docs/concepts/storage/volumes/)
+for other types of volumes.
+
+Create a file named `persistent-volume.yaml` and apply it:
+
+```yaml
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: rolling-aggregation-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/docker/jars-pv"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: rolling-aggregation-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+This will create a persistent volume which will use the
+`/home/docker/jars-pv` directory as persistent volume on the kubernetes
+node. We will mount the volume to the pods later. So we need to put the
+job JAR inside this directory.
+
+For `minikube` below commands will create the directory and copy the job
+JAR into it.
+
+```bash
+ssh docker@$(minikube ip) -i $(minikube ssh-key) 'mkdir -p ~/jars-pv'
+scp -i $(minikube ssh-key) rolling-aggregation-jar-with-dependencies.jar docker@$(minikube ip):~/jars-pv/
+```
+
+Now we can create the Kubernetes Job using Hazelcast Jet image and
+client ConfigMap object. The client config and the copied job JAR is
+stored in respective volumes, mounted to the container and passed as an
+argument to the `jet submit` script.
+
+```yaml
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rolling-aggregation
+spec:
+  template:
+    spec:
+      containers:
+      - name: rolling-aggregation
+        image: hazelcast/hazelcast-jet:latest-snapshot
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh"]
+        args: ["-c", "jet.sh -v -f /data/hazelcast-jet/hazelcast-client.yaml submit /job-jars/rolling-aggregation-jar-with-dependencies.jar"]
+        volumeMounts:
+          - mountPath: "/job-jars"
+            name: rolling-aggregation-pv-storage
+          - mountPath: "/data/hazelcast-jet/"
+            name: hazelcast-jet-config-storage
+      volumes:
+      - name: rolling-aggregation-pv-storage
+        persistentVolumeClaim:
+          claimName: rolling-aggregation-pv-claim
+      - name: hazelcast-jet-config-storage
+        configMap:
+          name: hazelcast-jet-client-configuration
+          items:
+            - key: hazelcast-client.yaml
+              path: hazelcast-client.yaml
+      restartPolicy: OnFailure
+  backoffLimit: 4
+```
