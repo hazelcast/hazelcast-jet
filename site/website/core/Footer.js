@@ -1,5 +1,6 @@
 const React = require('react');
 const Blog = require('docusaurus/lib/core/MetadataBlog');
+const {getPath} = require('docusaurus/lib/core/utils.js');
 
 class Footer extends React.Component {
   docUrl(doc, language) {
@@ -62,7 +63,7 @@ class Footer extends React.Component {
             <h5>Latest From the Blog</h5>
             {
               Blog.slice(0,5).map( blog => {
-              return <a href={`${this.props.config.baseUrl}blog/${blog.path}`}>{blog.title}</a>
+              return <a href={`${this.props.config.baseUrl}blog/${getPath(blog.path,this.props.config.cleanUrl)}`}>{blog.title}</a>
               })
             }
           </div>
