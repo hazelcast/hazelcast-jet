@@ -64,7 +64,7 @@ public final class SourceBuilder<C> {
      * The buffer object that the {@code fillBufferFn} gets on each call. Used
      * in sources that emit items without a timestamp.
      * <p>
-     * The class isn't thread-safe.
+     * This class isn't thread-safe.
      *
      * @param <T> type of the emitted item
      */
@@ -96,7 +96,7 @@ public final class SourceBuilder<C> {
      * The buffer object that the {@code fillBufferFn} gets on each call. Used
      * in sources that emit timestamped items.
      * <p>
-     * The class isn't thread-safe.
+     * This class isn't thread-safe.
      *
      * @param <T> type of the emitted item
      */
