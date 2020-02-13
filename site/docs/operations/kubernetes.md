@@ -10,14 +10,14 @@ Center**. Hazelcast Jet also provides Kubernetes-ready **Docker** images,
 these images use the **Hazelcast Kubernetes Plugin** to discover other
 Hazelcast Jet members by interacting with the Kubernetes API.
 
-# Install Hazelcast Jet using Helm
+## Install Hazelcast Jet using Helm
 
-## Prerequisites
+### Prerequisites
 
 - Kubernetes 1.9+
 - Helm CLI
 
-## Installing the Chart
+### Installing the Chart
 
 You can install the latest version with default configuration values
 using below command:
@@ -42,7 +42,7 @@ configuration options. This file may contain custom `hazelcast` and
 helm install my-cluster -f values.yaml stable/hazelcast-jet
 ```
 
-## Uninstalling the Chart
+### Uninstalling the Chart
 
 To uninstall/delete the `my-release` deployment:
 
@@ -53,7 +53,7 @@ helm uninstall my-release
 The command removes all the Kubernetes components associated with the
 chart and deletes the release.
 
-## Configuration
+### Configuration
 
 The following table lists some of the configurable parameters of the
 Hazelcast Jet chart and their default values.
@@ -72,9 +72,9 @@ See
 [stable charts repository](https://github.com/helm/charts/tree/master/stable/hazelcast-jet)
 for more information and configuration options.
 
-# Install Hazelcast Jet without Helm
+## Install Hazelcast Jet without Helm
 
-## Role Based Access Control
+### Role Based Access Control
 
 Hazelcast Jet provides Kubernetes-ready Docker images, these images use
 the Hazelcast Kubernetes plugin to discover other Hazelcast Jet members
@@ -100,7 +100,7 @@ subjects:
 kubectly apply -f rbac.yaml
 ```
 
-## ConfigMap
+### ConfigMap
 
 Then we need to configure Hazelcast Jet to use Kubernetes Discovery to
 form the cluster. Create a file named `hazelcast-jet-config.yaml` with
@@ -128,7 +128,7 @@ data:
 kubectl apply -f hazelcast-jet-config.yaml
 ```
 
-## StatefulSet and Service
+### StatefulSet and Service
 
 Now we need to create a StatefulSet and a Service which defines the
 container spec. You can configure the environment options and the
@@ -205,7 +205,7 @@ spec:
 kubectl apply -f hazelcast-jet.yaml
 ```
 
-# Deploy Jobs
+## Deploy Jobs
 
 There are two different ways to submit a job to a Hazelcast Jet cluster:
 
@@ -239,7 +239,7 @@ data:
 kubectl apply -f hazelcast-jet-client-config.yaml
 ```
 
-## Package the Job as a Docker Container
+### Package the Job as a Docker Container
 
 There are several tools to containerize your job, for example
 [Jib](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin).
@@ -281,7 +281,7 @@ spec:
       restartPolicy: OnFailure
 ```
 
-## Submit the Job from a Shared Persistent Volume
+### Submit the Job from a Shared Persistent Volume
 
 We will need a persistent volume attached to the pods. The persistent
 storage will contain job JAR files to be submitted to the cluster. There
