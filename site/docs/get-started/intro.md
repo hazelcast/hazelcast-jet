@@ -3,20 +3,45 @@ title: Introduction
 id: intro
 ---
 
-Jet is a distributed data processing engine that treats the data as a
-stream. It can process both static datasets (i.e. _batch jobs_) and
-live event streams. It can compute aggregate functions over infinite
-data streams by using the concept of windowing: dividing the stream into
-a sequence of subsets (windows) and applying the aggregate function over
-each window.
+Welcome to Hazelcast Jet!
 
-With unbounded event streams there arises the issue of failures in the
-cluster. Jet can tolerate failures of individual
-members without loss, offering the _exactly-once_ processing guarantee.
+In a nutshell, Jet allows you to write modern, lambda-oriented Java code
+that focuses purely on data transformation while Jet does all the heavy
+lifting of getting the data flowing and computation running on all the
+hardware you allocate to it. The data flows can be both bounded (batch
+jobs) or unbounded (streaming jobs).
 
-You deploy Jet to a cluster of machines and then submit your processing
-jobs to it. Jet will automatically make all the cluster members
-participate in processing your data. It can connect to a distributed
-data source such as Kafka, Hadoop Distributed File System, or a Hazelcast
-cluster. Each member of the Jet cluster will consume a slice of the
-distributed data, which makes it easy to scale up to any level of throughput.
+These are some of the concerns Jet handles well:
+
+- parallelizing across all CPU cores
+- distributing across all cluster nodes
+- load-balancing
+- auto-scaling to newly added nodes
+- auto-recovering from nodes that left or failed
+- exactly-once processing guarantee in the face of node failures
+
+Jet's core execution engine was designed for high throughput with low
+system overhead. It uses a fixed-size thread pool to run any number of
+parallel tasks. The foundational concept is a coroutine-like _tasklet_
+that implements suspendable computation, allowing many of them to run
+concurrently on a single thread.
+
+Jet can connect to many popular data sources:
+
+- Kafka
+- Hadoop Distributed File System
+- JDBC sources
+- JMS queues
+- Hazelcast IMDG structures like `IMap` and `IList`
+
+On the data processing side, a key feature of Jet is _windowed
+aggregation_, especially when combined with _event time-based
+processing_. For example, if your data is GPS location reports, you
+can find a smoothened velocity vector by using a _sliding window_ and
+linear regression, and this takes just two lines of code.
+
+Jet takes care of the difficult problem of reordered data (reports with
+an older timestamp can lag and come in after newer ones) and it's able
+to produce an uninterrupted stream of results (no time points skipped)
+even while some cluster nodes fail or get added.
+
