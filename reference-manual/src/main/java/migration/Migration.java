@@ -22,7 +22,7 @@ import com.hazelcast.function.ConsumerEx;
 import com.hazelcast.function.FunctionEx;
 import com.hazelcast.jet.Jet;
 import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.Traverser;
+import com.hazelcast.jet.Traversers;
 import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
@@ -36,12 +36,12 @@ import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.IMap;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static com.hazelcast.jet.Traversers.traverseItems;
 
 class Migration {
 
@@ -156,11 +156,11 @@ class Migration {
         //tag::async1[]
         stage.mapUsingServiceAsync(serviceFactory,
                 (executor, item) -> {
-                    CompletableFuture<Traverser<String>> f = new CompletableFuture<>();
-                    executor.submit(() -> f.complete(traverseItems(item + "-1", item + "-2", item + "-3")));
+                    CompletableFuture<List<String>> f = new CompletableFuture<>();
+                    executor.submit(() -> f.complete(Arrays.asList(item + "-1", item + "-2", item + "-3")));
                     return f;
                 })
-                .flatMap(FunctionEx.identity());
+                .flatMap(Traversers::traverseIterable);
         /*
         stage.flatMapUsingServiceAsync(serviceFactory,
                 (executor, item) -> {
