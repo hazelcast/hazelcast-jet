@@ -253,6 +253,8 @@ client ConfigMap object. The client config is stored in a volume,
 mounted to the container and passed as an argument to the `jet submit`
 script along with the name of the JAR containing the Jet job.
 
+Create a file named `rolling-aggregation-via-docker.yaml` and apply it.
+
 ```yaml
 ---
 apiVersion: batch/v1
@@ -279,6 +281,10 @@ spec:
             - key: hazelcast-client.yaml
               path: hazelcast-client.yaml
       restartPolicy: OnFailure
+```
+
+```bash
+kubectl apply -f rolling-aggregation-via-docker.yaml
 ```
 
 ### Submit the Job from a Shared Persistent Volume
@@ -341,6 +347,8 @@ client ConfigMap object. The client config and the copied job JAR is
 stored in respective volumes, mounted to the container and passed as an
 argument to the `jet submit` script.
 
+Create a file named `rolling-aggregation.yaml` and apply it.
+
 ```yaml
 ---
 apiVersion: batch/v1
@@ -373,4 +381,8 @@ spec:
               path: hazelcast-client.yaml
       restartPolicy: OnFailure
   backoffLimit: 4
+```
+
+```bash
+kubectl apply -f rolling-aggregation.yaml
 ```
