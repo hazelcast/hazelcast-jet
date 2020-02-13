@@ -40,6 +40,8 @@ To tolerate the failure of one member, we recommend to size your cluster to oper
 
 You can use Hazelcast [IMap Event Journal](https://docs.hazelcast.org/docs/jet/latest/manual/#connector-imdg-journal) to ingest the streaming data. Journal is an in-memory structure with a fixed capacity. If the jobs consuming the journal can't keep up there is a risk of data loss.  The pace of the data producers and the capacity of the Journal therefore determine the lenght of an error window of your application. If you can't afford losing data, consider increasing the journal size or ingest streaming data using a persistent storage such as [Apache Kafka](https://docs.hazelcast.org/docs/jet/latest/manual/#kafka) or Apache Pulsar.
 
+Another approach to increase the fault-tolerance is splitting the Jet jobs and the data storage. Streaming data can be stored in another Jet cluster to isolate failures and performance spikes.
+
 ## Balancing cluster size with job count
 
 The jobs running in one cluster share the resources to maximise the HW utilization. This is efficient for setups without a risk of noisy neighbours such as:
@@ -103,19 +105,20 @@ Consider using more performant disks when:
 
 ### Requirements
 
-The sample application analyses a stream of trades. Every second, we count the trades done in the previous minute for each trading symbol. Jet is used to ingest and buffer the stream of trades, e.g. trading applications write trade events to an IMap data structure in Jet cluster. The analytical job reads the IMap Event Journal and writes processed results to a rolling file.
+The sample application is a [real-time trade analyser](https://github.com/hazelcast/big-data-benchmark/tree/master/trade-monitor/jet-trade-monitor). Every second, it counts the trades completed over previous minute for each trading symbol. Jet is also used to ingest and buffer the stream of trades. So, the remote trading applications write trade events to an IMap data structure in Jet cluster. The analytical job reads the IMap Event Journal and writes processed results to a rolling file.
 
-The job is configured to be fault-tolerant with exactly-once processing guarantee.
+The job is configured to be [fault-tolerant](concepts/fault-tolerance.md) with exactly-once processing guarantee.
+
+The cluster is expected to process 50k trade events per second with 10k trade symbols (distinct keys).
+
 
 ### Cluster size and performance
 
-We want to size the cluster to be able to process 50k trade events per second with 10k trade symbols (distinct keys).
+We benchmarked this job on a cluster of 3, 5 and 9 nodes to see how the cluster size affects the processing latency. We started with a 3-member cluster as that is a minimal setup for fault-tolerant operations.  For each topology, we benchmarked a setup with 1, 10, 20 and 40 jobs running in the cluster.
 
-We benchmarked this job on a cluster of 3, 5 and 9 nodes to see how it affects the processing latency. We started with a 3-member cluster as that is a minimal setup for fault-tolerant operations.  For each topology, we benchmarked a setup with 1, 10, 20 and 40 jobs running in the cluster.
+The metric we measured was latency evaluated as ```RESULT_PUBLISHED_TS - ALL_TRADES_RECIEVED_TS``` ([learn more](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)). You can use this approach or design a metric that fits your application SLAs. Moreover, our example records the maximum and average latency. Consider measuring the result distribution, as the application SLAs are frequently expressed using it  (e.g. app processes 99.999% of data under 200 milliseconds).
 
-The processing latency was evaluated as ```RESULT_PUBLISHED_TS - ALL_TRADES_RECIEVED_TS``` ([learn more](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)). You can use this approach or design a metric that fits your application KPIs. Moreover, our example records the maximum and average latency. Consider measuring the result distribution, as the application KPIs are frequently expressed using it  (e.g. app processes 99.999% of data under 200 milliseconds).
-
-Cluster machines were of the recommended minimal configuration: c5.2xlarge, each 8 CPU, 16 GB RAM, 10 Gbps network.
+Cluster machines were of the recommended minimal configuration: each 8 CPU, 16 GB RAM, 10 Gbps network.
 
 **1 job in the cluster**
 
@@ -151,3 +154,12 @@ Cluster machines were of the recommended minimal configuration: c5.2xlarge, each
 | 3            | 4382 | 3948 |
 | 5            | 3719 | 3207 |
 | 9            | 2605 | 2085 |
+
+
+### Fault-Tolerance
+
+The [Event Journal](https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#event-journal) capacity was set to 1.5 million items. With a input data production rate of 50k events each second, the data are kept for 30 seconds before being overwritten. The job snapshot frequency was set to 1 second. 
+
+The job is restarted from last snapshot if a cluster member fails. In our test, the cluster restarted the processing in under 3 seconds (failure detection, clustering changes, job restart using last snaphot) giving the job enough time to reprocess the 3 seconds (~ 150k events) of data it missed.
+
+More aggresive [failure detector](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#failure-detector-configuration) and a larger event journal can be used to stretch the error window.
