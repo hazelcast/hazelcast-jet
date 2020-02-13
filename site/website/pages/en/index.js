@@ -91,38 +91,38 @@ class Index extends React.Component {
             title: 'Simple',
             image: `${baseUrl}img/undraw_relaxation.svg`,
             imageAlign: 'top',
-            content: 'Jet is simple to set up. The nodes automatically discover each other to form a cluster. ' +
-            'You can do the same locally, even on the same machine (your laptop, for example). This is great for quick testing, ' +
-            'fast deployment, and easier ongoing maintenance.',
+            content: 'Jet is simple to set up. The nodes automatically discover each other to form a cluster.' +
+            ' You can run Jet on your laptop and if you start it twice, you have a cluster. This is great' +
+            ' for quick testing and also simplifies deployment and maintenance.',
           },
           {
             title: 'Runs everywhere',
             image: `${baseUrl}img/undraw_superhero.svg`,
             imageAlign: 'top',
-            content: 'Jet is delivered as a single JAR without dependencies. It’s lightweight to run on small devices, ' + 
-            'and it’s cloud-native with Docker images and Kubernetes support. It can be embedded into an application for ' +
-            'simpler packaging or deployed as a standalone cluster.'
+            content: 'Jet is a single JAR without dependencies. It’s lightweight enough to run on small devices,' +
+            ' and it’s cloud-native with Docker images and Kubernetes support. You can embed it into your' +
+            ' application as just another dependency or deploy it as a standalone cluster.'
           },
           {
             title: 'Low latency',
             image: `${baseUrl}img/undraw_finish_line.svg`,
             imageAlign: 'top',
-            content: 'Jet uses a combination of a directed acyclic graph (DAG) computation model,' +
-          ' in-memory processing, data locality, partition mapping affinity, SP/SC queues, and green threads to' +
-          ' achieve high throughput with predictable latency.'
+            content: 'Jet uses the directed acyclic graph (DAG) computation model, in-memory processing, data locality,' +
+            ' partition affinity, non-blocking SP/SC queues and green threads to achieve high throughput with' +
+            ' predictable latency.'
           },
           {
             title: 'Resilient and Elastic',
             image: `${baseUrl}img/undraw_working_out.svg`,
             imageAlign: 'top',
-            content: 'With Jet, it\'s easy to build fault-tolerant and elastic data processing pipelines. ' +
-          'Jet keeps processing data without loss even when a node fails, and you can add more nodes that immediately ' +
-          'start sharing the computation load.'
+            content: 'With Jet it\'s easy to build fault-tolerant and elastic data processing pipelines.' +
+          ' Jet keeps processing data without loss even when a node fails, and as soon as you add another node,' +
+          ' it starts sharing the computation load.'
           }
         ]}
       </Block>
     );
-  
+
     return (
       <div>
         <HomeSplash siteConfig={siteConfig} language={language} />
