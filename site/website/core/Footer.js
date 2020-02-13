@@ -1,4 +1,5 @@
 const React = require('react');
+const Blog = require('docusaurus/lib/core/MetadataBlog');
 
 class Footer extends React.Component {
   docUrl(doc, language) {
@@ -56,11 +57,18 @@ class Footer extends React.Component {
               Stack Overflow
             </a>
             <a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a>
-
-      </div>
+          </div>
+          <div>
+            <h5>Latest From the Blog</h5>
+            {
+              Blog.slice(0,5).map( blog => {
+              return <a href={`${this.props.config.baseUrl}blog/${blog.path}`}>{blog.title}</a>
+              })
+            }
+          </div>
           <div>
             <h5>More</h5>
-            <a href={`${this.props.config.baseUrl}blog`}>Blog</a>
+            {/* <a href={`${this.props.config.baseUrl}blog`}>Blog</a> */}
             <a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a>
             <a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a>
             <a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a>
@@ -76,7 +84,6 @@ class Footer extends React.Component {
             </a>
           </div>
         </section>
-
         <section className="copyright">{this.props.config.copyright}</section>
       </footer>
     );
