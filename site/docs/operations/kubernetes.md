@@ -72,5 +72,138 @@ See
 [stable charts repository](https://github.com/helm/charts/tree/master/stable/hazelcast-jet)
 for more information and configuration options.
 
+# Install Hazelcast Jet without Helm
+
+## Role Based Access Control
+
+Hazelcast Jet provides Kubernetes-ready Docker images, these images use
+the Hazelcast Kubernetes plugin to discover other Hazelcast Jet members
+by interacting with the Kubernetes API. Therefore we need to create Role
+Based Access Control definition, (`rbac.yaml`), with the following
+content and apply it:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: default-cluster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default
+```
+```bash
+kubectly apply -f rbac.yaml
+```
+
+## ConfigMap
+
+Then we need to configure Hazelcast Jet to use Kubernetes Discovery to  
+form the cluster. Create a file named `hazelcast-jet-config.yaml` with
+following content and apply it. This will create a ConfigMap object.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hazelcast-jet-configuration
+data:
+  hazelcast.yaml: |-
+    hazelcast:
+      network:
+        join:
+          multicast:
+            enabled: false
+          kubernetes:
+            enabled: true
+            namespace: default
+            service-name: hazelcast-jet-service
+```
+
+```bash
+kubectl apply -f hazelcast-jet-config.yaml
+```
+
+## StatefulSet and Service
+
+Now we need to create a StatefulSet and a Service which defines the
+container spec. You can configure the environment options and the
+cluster size here. Create a file named `hazelcast-jet.yaml` with
+following content and apply it.
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hazelcast-jet
+  labels:
+    app: hazelcast-jet
+spec:
+  replicas: 2
+  serviceName: hazelcast-jet-service
+  selector:
+    matchLabels:
+      app: hazelcast-jet
+  template:
+    metadata:
+      labels:
+        app: hazelcast-jet
+    spec:
+      containers:
+      - name: hazelcast-jet
+        image: hazelcast/hazelcast-jet:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: hazelcast-jet
+          containerPort: 5701
+        livenessProbe:
+          httpGet:
+            path: /hazelcast/health/node-state
+            port: 5701
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /hazelcast/health/node-state
+            port: 5701
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 1
+        volumeMounts:
+        - name: hazelcast-jet-storage
+          mountPath: /data/hazelcast-jet
+        env:
+        - name: JAVA_OPTS
+          value: "-Dhazelcast.config=/data/hazelcast-jet/hazelcast.yaml"
+      volumes:
+      - name: hazelcast-jet-storage
+        configMap:
+          name: hazelcast-jet-configuration
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hazelcast-jet-service
+spec:
+  selector:
+    app: hazelcast-jet
+  ports:
+  - protocol: TCP
+    port: 5701
+```
+
+```bash
+kubectl apply -f hazelcast-jet.yaml
+```
+
 
 
