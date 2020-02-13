@@ -99,12 +99,55 @@ Consider using more performant disks when:
 * You use the cluster filesystem as a source or sink - faster disks improve the performance
 * Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
 
-## Benchmarking and Sizing Examples
+## Benchmarking and Sizing Example
 
-### Setup
+### Requirements
+
+The sample application analyses a stream of trades. Every second, we count the trades done in the previous minute for each trading symbol. Jet is used to ingest and buffer the stream of trades, e.g. trading applications write trade events to an IMap data structure in Jet cluster. The analytical job reads the IMap Event Journal and writes processed results to a rolling file.
+
+The job is configured to be fault-tolerant with exactly-once processing guarantee.
 
 ### Cluster size and performance
 
-### Memory sizing
+We want to size the cluster to be able to process 50k trade events per second with 10k trade symbols (distinct keys).
+
+We benchmarked this job on a cluster of 3, 5 and 9 nodes to see how it affects the processing latency. We started with a 3-member cluster as that is a minimal setup for fault-tolerant operations.  For each topology, we benchmarked a setup with 1, 10, 20 and 40 jobs running in the cluster.
+
+The processing latency was evaluated as ```RESULT_PUBLISHED_TS - ALL_TRADES_RECIEVED_TS``` ([learn more](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)). You can use this metric or design that fits to requirements of your application. Our example shows maximum and average latency for each setup. Consider measuring the result distribution, as the application KPIs are frequently expressed using it  (e.g. app processes 99.999% of data under 200 milliseconds).
+
+Cluster machines were of the recommended minimal configuration: c5.2xlarge, each 8 CPU, 16 GB RAM, 10 Gbps network.
+
+**1 job in the cluster**
+
+| Cluster size | Max | Avg |
+| ------------ | --- | --- |
+| 3            | 182 | 150 |
+| 5            | 172 | 152 |
+| 9            | 215 | 134 |
 
 
+**10 jobs in the cluster**
+
+| Cluster size | Max | Avg |
+| ------------ | --- | --- |
+| 3            | 986 | 877 |
+| 5            | 808 | 719 |
+| 9            | 735 | 557 |
+
+
+**20 jobs in the cluster**
+
+| Cluster size | Max  | Avg  |
+| ------------ | ---- | ---- |
+| 3            | 1990 | 1784 |
+| 5            | 1593 | 1470 |
+| 9            | 1170 | 1046 |
+
+
+**40 jobs in the cluster**
+
+| Cluster size | Max  | Avg  |
+| ------------ | ---- | ---- |
+| 3            | 4382 | 3948 |
+| 5            | 3719 | 3207 |
+| 9            | 2605 | 2085 |
