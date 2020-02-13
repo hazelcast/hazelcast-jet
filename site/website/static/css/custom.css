@@ -11,6 +11,13 @@ body{
     font-weight: lighter;
 }
 
+.blog .wrapper {
+    max-width: 1400px;
+}
+.blog .post {
+    max-width: 780px;
+}
+
 /* header navigation */
 .fixedHeaderContainer {
     background-color: whitesmoke;
