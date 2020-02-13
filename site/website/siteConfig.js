@@ -63,8 +63,7 @@ const siteConfig = {
     },
 
     stylesheets: [
-        'https://fonts.googleapis.com/css?family=Ubuntu:300,400,500',
-        '/css/code-block-buttons.css'
+        'https://fonts.googleapis.com/css?family=Ubuntu:300,400,500'
     ],
 
     /* Custom fonts for website */
