@@ -211,7 +211,8 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
 
     private void assertJobStats(int submitted, int executionsStarted, int executionsTerminated,
                                 int completedSuccessfully, int completedWithFailure) throws Exception {
-        assertJobStatsOnMember(jetInstances[0], submitted, executionsStarted, executionsTerminated, completedSuccessfully, completedWithFailure);
+        assertJobStatsOnMember(jetInstances[0], submitted, executionsStarted, executionsTerminated,
+                completedSuccessfully, completedWithFailure);
         for (int i = 1; i < jetInstances.length; i++) {
             assertJobStatsOnMember(jetInstances[i], 0, executionsStarted, executionsTerminated, 0, 0);
         }
