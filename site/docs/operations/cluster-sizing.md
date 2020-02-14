@@ -9,7 +9,7 @@ cluster remains a complex task that requires a knowledge of the Jet
 architecture and concepts. We will introduce a basic guideline that will 
 help you size your cluster. 
 
-We recommend to always benchmark your setup before deploying it to 
+We recommend always benchmark your setup before deploying it to 
 production. See a sample cluster sizing with benchmark that can be used 
 as a reference.
 
@@ -37,17 +37,17 @@ distribution and , size of the dataset)
 
 Even a single Jet instance can host and run hundreds of jobs at a time. 
 The clustered setup improves the performance (throughput and latency) of 
-hosted jobs and increases the resillience.
+hosted jobs and increases the resilience.
 
 A cluster with 3 members is a minimum count for fault tolerant 
 operations. Generally, you need ```n+1``` cluster members to tolerate 
-`n` member failures with next higher odd number choosen for a split 
+`n` member failures with the next higher odd number chosen for a split 
 brain detection.
 
 Jet can utilise hundreds of CPU cores efficiently by exploiting data and
 task parallelism. Adding more members to the cluster therefore helps
 with scaling the CPU-bound computations. Better performance is achieved
-by distributing the data partitions accros the cluster to process them
+by distributing the data partitions across the cluster to process them
 in parallel. 
 
 Benchmark your jobs in a clustered setup to see the differences in
@@ -57,7 +57,7 @@ performance, see the Sizing Example.
 
 Jet cluster is elastic to deal with failures and performance spikes.
 Mostly down-scales temporarily reduce the available resources and
-increase the stress on remaining members. The overal memory and CPU
+increase the stress on remaining members. The overall memory and CPU
 available in the cluster reduces. The data previously owned by the newly
 offline member is distributed among the remaining members. The cluster
 must catch up the missed data in the stream and keep up with the head of
@@ -71,7 +71,7 @@ Journal](https://docs.hazelcast.org/docs/jet/latest/manual/#connector-imdg-journ
 to ingest the streaming data. Journal is an in-memory structure with a
 fixed capacity. If the jobs consuming the journal can't keep up there is
 a risk of data loss.  The pace of the data producers and the capacity of
-the Journal therefore determine the lenght of an error window of your
+the Journal therefore determine the length of an error window of your
 application. If you can't afford losing data, consider increasing the
 journal size or ingest streaming data using a persistent storage such as
 [Apache Kafka](https://docs.hazelcast.org/docs/jet/latest/manual/#kafka)
@@ -103,12 +103,12 @@ of the whole cluster.
 
 ### Minimal Configuration
 
-Jet is a lightweight framework and is reported to run on a devices such
-as Rapsberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
+Jet is a lightweight framework and is reported to run on devices such
+as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
 
 ### Recommended Configuration
 
-As a starting point for a data-intensive oprerations consider machines
+As a starting point for a data-intensive operations consider machines
 with: 
 
 * 8 CPU cores
@@ -123,14 +123,14 @@ CPU-bound computations. Read about the [Execution
 model](architecture/execution-engine.md) to understand how Jet makes the
 computation parallel and design your pipelines according to it. 
 
-Don't rely just on a CPU usage when benchmarking your cluster. Simulate
+Don't rely just on CPU usage when benchmarking your cluster. Simulate
 production workload and measure the throughput and latency instead. The
 task manager of Jet can be configured to use the CPU aggressively as
 shown in [this
 benchmark](](https://hazelcast.com/blog/idle-green-threads-in-jet/)):
-the CPU usage was close to 20% with just 1000 event/s. At 1m items/s the
-CPU usage was 100% even though Jet still could push around 5m items/s on
-that machine.
+the CPU usage was close to 20% with just 1000 events/s. At 1m items/s 
+the CPU usage was 100% even though Jet still could push around 5m 
+items/s on that machine.
 
 ### Memory
 
@@ -150,7 +150,7 @@ your pipeline and by the data being processed. Most of the memory is
 consumed by operations that aggregate and buffer data. Typically the 
 state also scales with the number of distinct keys seen within the time 
 window. Learn how the operations in the pipeline store its state. 
-Operators comming with Jet provide this information in the javadoc.
+Operators coming with Jet provide this information in the javadoc.
 * **State back-up:** For jobs configured as fault-tolerant, the state of
  the running jobs is regularly snapshotted and saved in the cluster. 
  Cluster keeps two consecutive snapshots at a time (old one is kept 
@@ -169,14 +169,14 @@ cluster. Notably the IMap Journal to store the streaming data. See the
 
 Jet uses the network internally to shuffle data and to replicate the
 back-ups. Network is also used to read input data from and to write
-results to remote systems or to do RPC calls when enriching. In fact,
+results to remote systems or to do RPC calls when enriching. In fact, a 
 lot of Jet Jobs are network bound. Using a 10 Gigabit or higher network
 can improve application performance.
 
 Consider colocating Jet cluster with the data source and sink to avoid
 moving data back and forth over the wire. Co-locate Jet with source
-rather than a sink if you have to choose. Processed results are are
-often aggregated, so the size is reduced. 
+rather than a sink if you have to choose. Processed results are often 
+aggregated, so the size is reduced. 
 
 Jet cluster is designed to run in a single LAN. Deploying Jet cluster to
 a network with high or varying latencies leads to unpredictable
@@ -190,7 +190,7 @@ performance.
 
 Consider using more performant disks when:
 
-* You use the cluster filesystem as a source or sink - faster disks 
+* You use the cluster file system as a source or sink - faster disks 
 improve the performance
 * Using disk persistence for 
 [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
@@ -201,11 +201,11 @@ improve the performance
 
 The sample application is a [real-time trade
 analyser](https://github.com/hazelcast/big-data-benchmark/tree/master/trade-monitor/jet-trade-monitor).
-Every second, it counts the trades completed over previous minute for
-each trading symbol. Jet is also used to ingest and buffer the stream of
-trades. So, the remote trading applications write trade events to an
-IMap data structure in Jet cluster. The analytical job reads the IMap
-Event Journal and writes processed results to a rolling file.
+Every second, it counts the trades completed over the previous minute 
+for each trading symbol. Jet is also used to ingest and buffer the
+stream of trades. So, the remote trading applications write trade events
+to an IMap data structure in Jet cluster. The analytical job reads the
+IMap Event Journal and writes processed results to a rolling file.
 
 The job is configured to be
 [fault-tolerant](concepts/fault-tolerance.md) with exactly-once
@@ -279,12 +279,12 @@ capacity was set to 1.5 million items. With a input data production rate
 of 50k events each second, the data are kept for 30 seconds before being
 overwritten. The job snapshot frequency was set to 1 second. 
 
-The job is restarted from last snapshot if a cluster member fails. In
-our test, the cluster restarted the processing in under 3 seconds
-(failure detection, clustering changes, job restart using last snaphot)
-giving the job enough time to reprocess the 3 seconds (~ 150k events) of
-data it missed.
+The job is restarted from the last snapshot if a cluster member fails.
+In our test, the cluster restarted the processing in under 3 seconds
+(failure detection, clustering changes, job restart using the last
+snapshot) giving the job enough time to reprocess the 3 seconds (~ 150k
+events) of data it missed.
 
-More aggresive [failure
+More aggressive [failure
 detector](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#failure-detector-configuration)
 and a larger event journal can be used to stretch the error window.
