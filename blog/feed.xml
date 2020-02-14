@@ -9,7 +9,7 @@
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
             <title>Hazelcast Jet Blog</title>
-            <url>https://jet-start.sh/img/logo.png</url>
+            <url>https://jet-start.sh/img/logo-dark.svg</url>
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
