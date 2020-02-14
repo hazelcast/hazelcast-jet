@@ -246,5 +246,4 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
                     expectedAttribute.getValue().longValue(), actualAttribute);
         }
     }
-
 }
