@@ -11,7 +11,7 @@ fetch an object state over a wire or read it from a persistent storage
 one has to deserialize it from raw bytes first. As Hazelcast Jet is a 
 distributed system by nature (de)serialization is integral part of it. 
 Understanding, when it is involved, how does it support the pipelines 
-and knowing differences between each of the strategies is  crucial to 
+and knowing differences between each of the strategies is crucial to 
 efficient Jet usage.
 
 Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of 
@@ -26,22 +26,29 @@ parts of a `DAG` can reside on separate cluster members. To catch
 (de)serialization issues early on, we recommend using a 2-member local 
 Jet cluster for development and testing.
 
-Currently, Hazelcast Jet offers 6 ways to (de)serialize objects:
+Currently, Hazelcast Jet supports 6 interfaces to (de)serialize objects:
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
 - [com.hazelcast.nio.serialization.DataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/DataSerializable.html)
 - [com.hazelcast.nio.serialization.IdentifiedDataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/IdentifiedDataSerializable.html)
 - [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) &
+  [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
 
-each having its cons and pros. You can refer to 
-[Hazelcast IMDG](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#serialization) 
-for implementation details and in depth analysis. Here, for comparison 
-sake we are just going to present some rough performance numbers one 
-can expect when employing each of those strategies.
+The following table provides a comparison between them to help you in 
+deciding which interface to use in your applications.
+|      Serialization interface      |                                                                      Advantages                                                                      |                                               Drawbacks                                              |
+|:---------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------:|
+|            Serializable           | <ul><li>Easy to start with, requires no implementation</li></ul>                                                                                     | <ul><li>CPU intensive</li><li>Space inefficient</li></ul>                                            |
+|           Externalizable          | <ul><li>Faster and more space efficient than Serializable</li></ul>                                                                                  | <ul><li>CPU intensive</li><li>Space inefficient</li><li>Requires implementation</li></ul>            |
+|          DataSerializable         | <ul><li>Faster and more space efficient than java standard interfaces</li></ul>                                                                      | <ul><li>Requires implementation</li></ul>                                                            |
+|     IdentifiedDataSerializable    | <ul><li>Relatively fast and space efficient</li></ul>                                                                                                | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
+|              Portable             | <ul><li>Faster and more space efficient than java standard interfaces</li><li>Supports versioning</li><li>Supports partial deserialization</li></ul> | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
+| [Stream&#124;ByteArray]Serializer | <ul><li>The fastest and lightest out of supported interfaces</li></ul>                                                                               | <ul><li>Requires implementation</li><li>Requires registration during cluster setup</li></ul>         |
 
-A straightforward benchmark which continuously serializes and then 
-deserializes very simple object
+Below you can find rough performance numbers one can expect when 
+employing each of those strategies. A straightforward benchmark which continuously serializes and then 
+deserializes very simple object:
 ```
 class Person {
     private String firstName;
@@ -77,3 +84,6 @@ com.hazelcast.nio.serialization.IdentifiedDataSerializable              35      
 com.hazelcast.nio.serialization.Portable                               108          390
 com.hazelcast.nio.serialization.StreamSerializer                        22            0
 ```
+
+For more details on (de)serialization topic, you can refer to
+[Hazelcast IMDG](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#serialization). 
