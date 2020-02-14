@@ -130,7 +130,7 @@ kubectl apply -f hazelcast-jet-config.yaml
 
 ### StatefulSet and Service
 
-Now we need to create a StatefulSet and a Service which defines the
+Now we need to create a *StatefulSet* and a *Service* which defines the
 container spec. You can configure the environment options and the
 cluster size here. Create a file named `hazelcast-jet.yaml` with
 following content and apply it.
@@ -248,8 +248,8 @@ as plugins for Maven and Gradle and as a Java library. You can find a
 [sample-project](https://github.com/hazelcast/hazelcast-jet-docker/tree/master/examples/kubernetes#steps-to-package-the-job-as-a-docker-container)
 using Jib to containerize the Hazelcast Jet rolling-aggregate job.
 
-After creating the image, we create a Kubernetes Job using the image and
-client ConfigMap object. The client config is stored in a volume,
+After creating the image, we create a *Kubernetes Job* using the image
+and client ConfigMap object. The client config is stored in a volume,
 mounted to the container and passed as an argument to the `jet submit`
 script along with the name of the JAR containing the Jet job.
 
@@ -342,7 +342,7 @@ ssh docker@$(minikube ip) -i $(minikube ssh-key) 'mkdir -p ~/jars-pv'
 scp -i $(minikube ssh-key) rolling-aggregation-jar-with-dependencies.jar docker@$(minikube ip):~/jars-pv/
 ```
 
-Now we can create the Kubernetes Job using Hazelcast Jet image and
+Now we can create the *Kubernetes Job* using Hazelcast Jet image and
 client ConfigMap object. The client config and the copied job JAR is
 stored in respective volumes, mounted to the container and passed as an
 argument to the `jet submit` script.
@@ -386,3 +386,114 @@ spec:
 ```bash
 kubectl apply -f rolling-aggregation.yaml
 ```
+
+## Inspect Jobs
+
+### With Kubernetes Dashboard
+
+After you've run the job, you can open up Kubernetes Dashboard to see
+it's status. To open Kubernetes Dashboard on `minikube` run the
+following command:
+
+```bash
+minikube dashboard
+```
+
+This will open a browser window with the Kubernetes Dashboard. Then
+navigate to *Jobs* section on left menu. You should be able to see your
+job running/completed successfully like below and inspect the logs if
+you like.
+
+
+### With Hazelcast Jet Management Center
+
+Hazelcast Jet Management Center enables you to monitor and manage your
+cluster members running Hazelcast Jet. In addition to monitoring the
+overall state of your clusters, you can also analyze and browse your
+jobs in detail.
+
+You can check
+[Hazelcast Jet Documentation](http://docs.hazelcast.org/docs/jet/latest/manual)
+and
+[Hazelcast Jet Management Center Documentation](https://docs.hazelcast.org/docs/jet-management-center/latest/manual)
+for more information.
+
+#### Create a Secret with Enterprise Key
+
+Hazelcast Jet Management Center requires a license key. Free trial is
+limited to a single node, you can apply for a trial license key from
+[here](https://hazelcast.com/hazelcast-enterprise-download). Store your
+license key as a **Kubernetes Secret** with the following command.
+
+```bash
+kubectl create secret generic management-center-license --from-literal=key=MANAGEMENT-CENTER-LICENSE-KEY-HERE
+```
+
+#### Start Hazelcast Jet Management Center
+
+We need to create a *Deployment* and a *Service* which defines container
+spec. See that the secret we've created above passed to the container as
+an environment variable and the client config is stored in a volume,
+mounted to the container and passed as an argument to the java options.
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hazelcast-jet-management-center
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hazelcast-jet-management-center
+  template:
+    metadata:
+      labels:
+        app: hazelcast-jet-management-center
+    spec:
+      containers:
+      - name: hazelcast-jet-management-center
+        image: hazelcast/hazelcast-jet-management-center:latest-snapshot
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: hazelcast-jet-management-center-storage
+          mountPath: /hazelcast-jet-config
+        env:
+        - name: JAVA_OPTS
+          value: "-Djet.clientConfig=/hazelcast-jet-config/hazelcast-client.yaml"
+        - name: MC_LICENSE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: management-center-license
+              key: key
+      volumes:
+      - name: hazelcast-jet-management-center-storage
+        configMap:
+          name: hazelcast-jet-configuration
+          items:
+            - key: hazelcast-client.yaml
+              path: hazelcast-client.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hazelcast-jet-management-center 
+spec:
+  type: LoadBalancer
+  selector:
+    app: hazelcast-jet-management-center
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+```
+
+You can obtain the accessible URL of the Hazelcast Jet Management Center
+application like below.
+
+```bash
+minikube service hazelcast-jet-management-center --url
+```
+
+
