@@ -49,16 +49,31 @@ in `MANIFEST.MF`.
 From the Jet home folder, now execute the command to submit the job to the
 cluster:
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Standalone-->
 ```bash
-bin/jet submit <path_to_JAR_file>
+$ bin/jet submit <path_to_JAR_file>
 ```
+<!--Docker-->
+```bash
+$ docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /jars/<name_of_the_JAR_file>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 
 If you didn't specify a main class, you can use the `-c` option to specify
 the class name:
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Standalone-->
 ```bash
-bin/jet submit -c <main_class_name> <path_to_JAR_file>
+$ bin/jet submit -c <main_class_name> <path_to_JAR_file>
 ```
+<!--Docker-->
+```bash
+$ docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -a 172.17.0.2 submit -c <main_class_name> /jars/<name_of_the_JAR_file>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 You will now notice on the server logs that a new job has been submitted
 and it's running on the cluster. The output of the job, now appears on
@@ -69,12 +84,20 @@ which we will delve into later on.
 You should now see the job as running and printing output on the server.
 You can also see a list of running jobs as follows:
 
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Standalone-->
 ```bash
 $ bin/jet list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 03de-e38d-3480-0001 RUNNING            2020-02-09T16:30:26.843 N/A
-
 ```
+<!--Docker-->
+```bash
+$ docker run -it hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
+ID                  STATUS             SUBMISSION TIME         NAME
+03e3-b8f6-5340-0001 RUNNING            2020-02-13T09:36:46.898 N/A
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 Notice that even if you kill the client application, the job is still running
 on the server. For streaming jobs, a job will run indefinitely until explicitly
