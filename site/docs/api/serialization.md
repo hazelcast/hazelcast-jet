@@ -29,9 +29,9 @@ Jet cluster for development and testing.
 Currently, Hazelcast Jet supports 6 interfaces to (de)serialize objects:
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
+- [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
 - [com.hazelcast.nio.serialization.DataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/DataSerializable.html)
 - [com.hazelcast.nio.serialization.IdentifiedDataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/IdentifiedDataSerializable.html)
-- [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
 - [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) &
   [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
 
@@ -41,14 +41,14 @@ deciding which interface to use in your applications.
 |:---------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------:|
 |            Serializable           | <ul><li>Easy to start with, requires no implementation</li></ul>                                                                                     | <ul><li>CPU intensive</li><li>Space inefficient</li></ul>                                            |
 |           Externalizable          | <ul><li>Faster and more space efficient than Serializable</li></ul>                                                                                  | <ul><li>CPU intensive</li><li>Space inefficient</li><li>Requires implementation</li></ul>            |
+|              Portable             | <ul><li>Faster and more space efficient than java standard interfaces</li><li>Supports versioning</li><li>Supports partial deserialization</li></ul> | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
 |          DataSerializable         | <ul><li>Faster and more space efficient than java standard interfaces</li></ul>                                                                      | <ul><li>Requires implementation</li></ul>                                                            |
 |     IdentifiedDataSerializable    | <ul><li>Relatively fast and space efficient</li></ul>                                                                                                | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
-|              Portable             | <ul><li>Faster and more space efficient than java standard interfaces</li><li>Supports versioning</li><li>Supports partial deserialization</li></ul> | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
 | [Stream&#124;ByteArray]Serializer | <ul><li>The fastest and lightest out of supported interfaces</li></ul>                                                                               | <ul><li>Requires implementation</li><li>Requires registration during cluster setup</li></ul>         |
 
 Below you can find rough performance numbers one can expect when 
-employing each of those strategies. A straightforward benchmark which continuously serializes and then 
-deserializes very simple object:
+employing each of those strategies. A straightforward [benchmark](https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java) 
+which continuously serializes and then deserializes very simple object:
 ```
 class Person {
     private String firstName;
@@ -64,25 +64,24 @@ counting the total throughput, yields following results:
 # VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
 Benchmark                                           Mode  Cnt        Score   Error  Units
-SerializationBenchmark.serializable                thrpt    2   193630.237          ops/s
-SerializationBenchmark.externalizable              thrpt    2   355309.791          ops/s
-SerializationBenchmark.dataSerializable            thrpt    2  1114083.649          ops/s
-SerializationBenchmark.identifiedDataSerializable  thrpt    2  1566470.849          ops/s
-SerializationBenchmark.portable                    thrpt    2  1240457.594          ops/s
-SerializationBenchmark.streamSerializer            thrpt    2  2125503.943          ops/s
-
+SerializationBenchmark.serializable                thrpt    2   236398.984          ops/s
+SerializationBenchmark.externalizable              thrpt    2   651959.024          ops/s
+SerializationBenchmark.portable                    thrpt    2   821097.835          ops/s
+SerializationBenchmark.dataSerializable            thrpt    2  1365082.289          ops/s
+SerializationBenchmark.identifiedDataSerializable  thrpt    2  1693094.657          ops/s
+SerializationBenchmark.stream                      thrpt    2  1798280.394          ops/s
 ```
 
 The very same object instantiated with sample data will also be encoded 
 with different number of bytes depending on used strategy:
 ```
 Strategy                                                   Number of Bytes   Overhead %
-java.io.Serializable                                                   141          540
-java.io.Externalizable                                                  80          263
-com.hazelcast.nio.serialization.DataSerializable                        71          222
-com.hazelcast.nio.serialization.IdentifiedDataSerializable              35           59
-com.hazelcast.nio.serialization.Portable                               108          390
-com.hazelcast.nio.serialization.StreamSerializer                        22            0
+java.io.Serializable                                                   162          523
+java.io.Externalizable                                                  87          234
+com.hazelcast.nio.serialization.Portable                               104          300
+com.hazelcast.nio.serialization.DataSerializable                        88          238
+com.hazelcast.nio.serialization.IdentifiedDataSerializable              35           34
+com.hazelcast.nio.serialization.StreamSerializer                        26            0
 ```
 
 For more details on (de)serialization topic, you can refer to
