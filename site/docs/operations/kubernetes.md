@@ -404,6 +404,8 @@ navigate to *Jobs* section on left menu. You should be able to see your
 job running/completed successfully like below and inspect the logs if
 you like.
 
+![minikube-dashboard](../assets/minikube-dashboard.png)
+
 
 ### With Hazelcast Jet Management Center
 
@@ -490,10 +492,12 @@ spec:
 ```
 
 You can obtain the accessible URL of the Hazelcast Jet Management Center
-application like below.
+application like below. Navigating to that URL should welcome you to the
+Hazelcast Jet Management Center.
 
 ```bash
 minikube service hazelcast-jet-management-center --url
 ```
 
+![management-center-dashboard](../assets/management-center-dashboard.png)
 
