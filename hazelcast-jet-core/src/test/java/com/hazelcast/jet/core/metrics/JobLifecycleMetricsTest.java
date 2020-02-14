@@ -146,6 +146,9 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
         Job job = jetInstances[0].newJob(streamingPipeline());
         assertJobStatusEventually(job, RUNNING);
 
+        assertTrueEventually(() -> assertJobStats(1, 1, 0, 0, 0));
+        assertTrueAllTheTime(() -> assertJobStats(1, 1, 0, 0, 0), 1);
+
         //when
         job.restart();
         assertJobStatusEventually(job, RUNNING);
@@ -159,6 +162,9 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
         //init
         Job job = jetInstances[0].newJob(streamingPipeline());
         assertJobStatusEventually(job, RUNNING);
+
+        assertTrueEventually(() -> assertJobStats(1, 1, 0, 0, 0));
+        assertTrueAllTheTime(() -> assertJobStats(1, 1, 0, 0, 0), 1);
 
         //when
         job.cancel();
