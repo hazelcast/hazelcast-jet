@@ -68,6 +68,9 @@
       "operations/cluster-topology": {
         "title": "Cluster Topology"
       },
+      "operations/cluster-sizing": {
+        "title": "Cluster Sizing"
+      },
       "operations/configuration": {
         "title": "Configuration"
       },
