@@ -1,5 +1,5 @@
 ---
-title: Write and Run Your First Jet Program
+title: Your First Jet Program
 id: first-job
 ---
 
