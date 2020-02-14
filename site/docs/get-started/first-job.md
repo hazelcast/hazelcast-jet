@@ -1,5 +1,5 @@
 ---
-title: Write and run your first job
+title: Write and Run Your First Jet Program
 id: first-job
 ---
 
@@ -7,10 +7,9 @@ Let's write some data processing code and have Jet run it for us.
 
 ### Start a Java Project
 
-By now you should have some version of Java installed (at least 8) and
-your build tool of preference, Maven or Gradle.
-
-The first step is to add the Jet JAR to your build:
+By now you should have some version of Java (at least 8) installed.
+Create a new project targetting your build tool of preference, Maven or
+Gradle, and add the Jet JAR to your build:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
@@ -39,8 +38,7 @@ starts moving the data through the pipeline.
 
 With this in mind let's start writing code. Instead of connecting to
 actual systems we'll start simple, using generated data as the source
-and your screen as the sink. This works well with a locally started Jet
-instance:
+and your screen as the sink:
 
 ```java
 public static void main(String[] args) {
@@ -54,8 +52,8 @@ public static void main(String[] args) {
 ```
 
 `itemStream()` emits `SimpleEvent`s that have a _sequence_ and a
-_timestamp_. In this case we're only interested in the sequence numbers
-and we keep only the even-numbered events.
+_timestamp_. The pipeline we wrote will discard every other event and
+keep those with an even sequence number.
 
 ### Start Embedded Jet and Run the Pipeline
 

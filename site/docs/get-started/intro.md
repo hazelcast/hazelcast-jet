@@ -9,7 +9,7 @@ Hazelcast Jet allows you to write modern, lambda-oriented Java code
 that focuses purely on data transformation while it does all the heavy
 lifting of getting the data flowing and computation running on all the
 hardware you allocate to it. The flows can be both bounded (batch jobs)
-or unbounded (streaming jobs).
+and unbounded (streaming jobs).
 
 These are some of the concerns Jet handles well:
 
@@ -34,7 +34,7 @@ a source and sink:
 - Amazon S3
 - Relational databases (or any other system with a JDBC driver)
 - Stream changes from a database, through Change Data Capcture
-- Messages Queues
+- Message Queues
 - Apache Avro files
 - Hazelcast in memory data-structures like `IMap`, `ReplicatedMap`
 and `IList`
@@ -43,7 +43,7 @@ On the data processing side, a key feature of Jet is _windowed
 aggregation_, especially when combined with _event time-based
 processing_. For example, if your data is GPS location reports, you
 can find a smoothened velocity vector by using a _sliding window_ and
-linear regression, and this takes just two lines of code.
+linear regression, and this takes just a few lines of code.
 
 Jet takes care of the problem of reordered data (reports with an older
 timestamp can lag and come in after newer ones) and it's able to produce

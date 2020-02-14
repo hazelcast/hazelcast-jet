@@ -1,40 +1,42 @@
 ---
-title: Install the cluster
+title: Install the Cluster
 id: installation
 ---
 
-Now that you have submitted a job to an embedded node, the next step is
-to setup an actual Jet cluster. After setting up the cluster, we'll 
-submit the pipeline we previously created to it.
+Now that you've succeeded in running your first Jet program, it's time
+to productionize it and run it on an actual cluster. Before involving
+remote machines we can take the initial step of running a cluster on
+your local machine. This will already be very close to the real thing
+because all the communication happens over network interfaces and the
+nodes just happen to reside on the same physical machine.
 
-There are two main recommended ways to set up a Hazelcast Jet cluster:
+There are two main approaches to setting up a Hazelcast Jet cluster: as
+a classic Java process and as a Docker instance. In both cases you'll
+need the Hazelcast Jet distribution package and a local JDK installation
+to interact with the cluster as a client. Download Jet from
+[here](https://jet.hazelcast.org/download) and unzip it to a directory
+we'll refer to as `<jet_home>`.
 
-## Install as a Standalone Server
+As for the JDK, you can get it from the [OpenJDK](https://openjdk.java.net/)
+site and the minimum version is 8.
 
-When setting up Jet as a standalone server, you need to download the
-[distribution package](https://jet.hazelcast.org/download) of Hazelcast
-Jet.
 
-After downloading, unzip the distribution and use the following command
-to start the node:
+## Run as a Java Process
+
+The distribution package contains everything you need to run Jet except
+the JDK. From the `<jet_home>` directory issue this command:
 
 ```bash
-cd <jet_install_directory>
-bin/start-jet
+$ bin/start-jet
 ```
 
-Note: Installing Jet this way requires at mininum JDK 8 runtime. You can
-download the latest JDK from [OpenJDK](https://openjdk.java.net/).
+This will start a Jet node in the foreground so you have to keep the
+terminal window open. It is convenient because you can easily terminate
+Jet with Ctrl-C or closing the window. In a production setting you can
+use the `-d` option to start it in daemon mode.
 
-```bash
-bin/jet-start
-```
-
-This will start a Jet node in the foreground, you can use the `-d` option
-to start it in daemon mode.
-
-You can check the cluster state using the following command, which will
-list the cluster status and all the active nodes:
+The main entry point to interacting with the Jet cluster is the `jet`
+command. For example, let's check the cluster state:
 
 ```bash
 $ bin/jet cluster
@@ -42,20 +44,19 @@ State: ACTIVE
 Version: 4.0-SNAPSHOT
 Size: 1
 
-ADDRESS                  UUID               
+ADDRESS                  UUID
 [192.168.0.2]:5701       27a73154-f4bb-477a-aef2-27ffa6f03a2d
 ```
 
 The distribution package also contains a pre-packaged Jet job in a JAR
-that you can use to run to verify the installation test. After opening a
-new terminal window, you can submit this job to the cluster using the
-following command:
+that you can use to quickly verify the installation. You can submit it
+like this:
 
 ```bash
-bin/jet submit examples/hello-world.jar
+$ bin/jet submit examples/hello-world.jar
 ```
 
-After the job is submitted you should see this in the log output:
+You should see output like this:
 
 ```text
 Top 10 random numbers in the latest window:
@@ -71,19 +72,17 @@ Top 10 random numbers in the latest window:
     10. 7,681,774,251,691,230,162
 ```
 
-## Install using Docker
+## Run as a Docker Instance
 
-The official Docker images for Hazelcast Jet can be used to install 
-Hazelcast Jet in Docker environment. 
-
-Use the following command to start the node:
+Hazelcast Jet maintains its official, self-contained Docker image. To
+start a node, write this:
 
 ```bash
-docker run hazelcast/hazelcast-jet
+$ docker run hazelcast/hazelcast-jet
 ```
 
-After seeing it started a new Hazelcast Jet node in a Docker container
-with a log line similar to the below: 
+This should start a Hazelcast Jet node in a Docker container. Inspect
+the log output for a line like this:
 
 ```text
 Members {size:1, ver:1} [
@@ -91,24 +90,18 @@ Members {size:1, ver:1} [
 ]
 ```
 
-Please note the IP address of the Docker container, we'll use it 
-as a parameter to the command-line interface later on.
-
-We will submit an example application which is included with the
-[distribution package](https://jet.hazelcast.org/download) of Hazelcast
-Jet.
-
-After downloading, unzip the distribution and use the following commands
-to submit the example job to the cluster running inside Docker. 
+Note the IP address of the Docker container and use it in the commands
+below instead of our example's `172.17.0.2`. Let's submit the hello world
+application from the distribution package:
 
 ```bash
-cd <jet_install_directory>
-docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+$ cd <jet_home>
+$ docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 $ submit /examples/hello-world.jar
 ```
 
-The command basically mounts the local `examples` directory from the 
-`<jet_install_directory>` to the container and uses Hazelcast Jet command-line 
-tool to submit the example JAR file to the cluster. 
+The command mounts the local `examples` directory from `<jet_home>` to
+the container and uses Hazelcast Jet command-line tool to submit the
+example JAR file to the cluster.
 
 After the job is submitted you should see this in the log output:
 
