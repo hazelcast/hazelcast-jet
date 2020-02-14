@@ -59,8 +59,7 @@ import static org.junit.Assert.fail;
 
 public class JobLifecycleMetricsTest extends JetTestSupport {
 
-    private static final int MEMBER_COUNT = 1;
-    //TODO: need to test on multiple members, some metrics get set only on master
+    private static final int MEMBER_COUNT = 2;
 
     private static final String PREFIX = "com.hazelcast.jet";
 
@@ -68,7 +67,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
 
     private MBeanServer platformMBeanServer;
 
-    private JetInstance jetInstance;
+    private JetInstance[] jetInstances;
 
     @Before
     public void before() throws Exception {
@@ -78,7 +77,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
         config.setProperty("hazelcast.jmx", "true");
         config.configureHazelcast(hzConfig -> hzConfig.getMetricsConfig().setCollectionFrequencySeconds(1));
 
-        jetInstance = createJetMember(config);
+        jetInstances = createJetMembers(config, MEMBER_COUNT);
 
         platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
         objectNameWithModule = new ObjectName(PREFIX + ":*");
@@ -92,7 +91,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     @Test
     public void multipleJobsSubmittedAndCompleted() {
         //when
-        Job job1 = jetInstance.newJob(batchPipeline());
+        Job job1 = jetInstances[0].newJob(batchPipeline());
         job1.join();
         job1.cancel();
 
@@ -108,7 +107,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
         dag.edge(between(source, process));
 
         //when
-        Job job2 = jetInstance.newJob(dag);
+        Job job2 = jetInstances[0].newJob(dag);
         try {
             job2.join();
             fail("Expected exception not thrown!");
@@ -123,7 +122,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     @Test
     public void jobSuspendedThenResumed() {
         //init
-        Job job = jetInstance.newJob(streamingPipeline());
+        Job job = jetInstances[0].newJob(streamingPipeline());
         assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
 
         //when
@@ -144,7 +143,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     @Test
     public void jobRestarted() {
         //init
-        Job job = jetInstance.newJob(streamingPipeline());
+        Job job = jetInstances[0].newJob(streamingPipeline());
         assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
 
         //when
@@ -158,7 +157,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     @Test
     public void jobCancelled() {
         //init
-        Job job = jetInstance.newJob(streamingPipeline());
+        Job job = jetInstances[0].newJob(streamingPipeline());
         assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
 
         //when
@@ -170,7 +169,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
 
     @Test
     public void executionRelatedMetrics() {
-        Job job1 = jetInstance.newJob(batchPipeline(), new JobConfig().setStoreMetricsAfterJobCompletion(true));
+        Job job1 = jetInstances[0].newJob(batchPipeline(), new JobConfig().setStoreMetricsAfterJobCompletion(true));
         job1.join();
         JobMetrics metrics = job1.getMetrics();
 
@@ -206,6 +205,14 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
 
     private void assertJobStats(int submitted, int executionsStarted, int executionsTerminated,
                                 int completedSuccessfully, int completedWithFailure) throws Exception {
+        assertJobStatsOnMember(jetInstances[0], submitted, executionsStarted, executionsTerminated, completedSuccessfully, completedWithFailure);
+        for (int i = 1; i < jetInstances.length; i++) {
+            assertJobStatsOnMember(jetInstances[i], 0, executionsStarted, executionsTerminated, 0, 0);
+        }
+    }
+
+    private void assertJobStatsOnMember(JetInstance jetInstance, int submitted, int executionsStarted,
+                                   int executionsTerminated, int completedSuccessfully, int completedWithFailure) {
         try {
             assertMBeans(
                     PREFIX + ":type=Metrics,instance=" + jetInstance.getName(),
@@ -214,8 +221,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
                             entry(MetricNames.JOB_EXECUTIONS_STARTED, executionsStarted),
                             entry(MetricNames.JOB_EXECUTIONS_COMPLETED, executionsTerminated),
                             entry(MetricNames.JOBS_COMPLETED_SUCCESSFULLY, completedSuccessfully),
-                            entry(MetricNames.JOBS_COMPLETED_WITH_FAILURE, completedWithFailure))
-            );
+                            entry(MetricNames.JOBS_COMPLETED_WITH_FAILURE, completedWithFailure)));
         } catch (AssertionError ae) {
             throw ae;
         } catch (Exception e) {
