@@ -12,7 +12,7 @@ one has to deserialize it from raw bytes first. As Hazelcast Jet is a
 distributed system by nature (de)serialization is integral part of it. 
 Understanding, when it is involved, how does it support the pipelines 
 and knowing differences between each of the strategies is crucial to 
-efficient Jet usage.
+efficient usage of Hazelcast Jet.
 
 Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of 
 its features to Jet users. In particular, one can use IMDG data 
@@ -22,7 +22,7 @@ stored in those have to be (de)serializable.
 Another case which might require (de)serializable objects is sending 
 computation results between remote vertices. Hazelcast Jet tries to 
 minimize network traffic as much as possible, nonetheless different 
-parts of a `DAG` can reside on separate cluster members. To catch 
+parts of a [DAG](concepts/dag.md) can reside on separate cluster members. To catch 
 (de)serialization issues early on, we recommend using a 2-member local 
 Jet cluster for development and testing.
 
