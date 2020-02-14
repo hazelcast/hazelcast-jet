@@ -52,14 +52,14 @@ const siteConfig = {
     // users,
 
     /* path to images for header/footer */
-    headerIcon: 'img/logo.png',
-    footerIcon: 'img/logo-light.png',
+    headerIcon: 'img/logo-dark.svg',
+    footerIcon: 'img/logo-light.svg',
     favicon: 'img/favicon.png',
 
     /* Colors for website */
     colors: {
-        primaryColor: '#ff5f00',
-        secondaryColor: '#f4f4f4',
+        primaryColor: '#268bd2',
+        secondaryColor: 'whitesmoke',
     },
 
     stylesheets: [
