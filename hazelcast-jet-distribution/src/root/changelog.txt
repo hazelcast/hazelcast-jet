@@ -4,29 +4,24 @@
   with it a revamped metrics system, a new client protocol and the
   removal of many interfaces which are present in IMDG 4.0 and don't
   need to be redefined in Jet any longer.
-* Calling Python functions from Jet Pipelines is possible now.
-* Snapshotting offers support for two phase commit (2PC), used to offer
-  transaction/exactly-once support in sources and sinks.
-* Clients can collect the results of jobs they have submitted via RX
-  type Observers (return results to caller).
-* Jet clients have a new version capable of failover, called blue/green
-  client.
-* Users can add custom metrics to their Pipelines.
-* The distribution has been improved and made more dev-ops friendly.
+* Calling Python user-definned functions from Jet Pipelines is possible
+  now.
+* Added two-phase commit (2PC) support to snapshot mechanism for
+  end-to-end exactly once processing.
+* Clients can collect the results of jobs they have submitted through
+  observables.
+* [Jet Enterprise] Jet clients have a new version capable of fail-over,
+  called blue/green client.
+* Users can define custom metrics in their Pipelines.
 * Snapshotting statistics can be tracked via built-in metrics now (keys
   & bytes saved).
-* Job lifecycle-statistis (no. of jobs submitted, terminated and so on)
+* Job lifecycle-statistics (no. of jobs submitted, terminated and so on)
   can be tracked via built-in metrics now.
-* Async mapping using service is possible on keyed stages too.
-* Frequently used file formats ((CSV, JSON, Parquet, Avro) have been
-  made much more convenient to use.
-* Jet can process CDC data from databases now, functionality enabled by
-  using Debizium. As a buyproduct of the implementation we also got a
-  generic Kafka Connect source.
+* Debezium connector has been added for Change Data Capture (CDC).
+  As a by-product of the implementation we also got a generic Kafka
+  Connect source.
 * It is now possible to specify the main class when submitting jobs from
   CLI.
-* Deployment and Operations Guide has been added to the documentation.
-* Migration Guide has been added to the Reference Manual.
 
 ** Hazelcast Jet 3.2 **
 
