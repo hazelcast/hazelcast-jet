@@ -18,7 +18,7 @@
             <link>https://jet-start.sh/blog/2020/01/28/new-website.html</link>
             <guid>https://jet-start.sh/blog/2020/01/28/new-website.html</guid>
             <pubDate>Tue, 28 Jan 2020 06:00:00 GMT</pubDate>
-            <description><![CDATA[<p>We are excited to tell you that we've just launched a new website for Hazelcast Jet, where we share technical content regarding the project includeing how-to-guides and technical design documents.</p> <p>We'll keep this website frequently updated. Stay tune...</p>]]></description>
+            <description><![CDATA[<p>We are excited to tell you that we've just launched a new website for Hazelcast Jet, where we share technical content regarding the project including how-to-guides and technical design documents.</p> <p>We'll keep this website frequently updated. Stay tuned...</p>]]></description>
         </item>
         <item>
             <title><![CDATA[Stream Deduplication with Hazelcast Jet]]></title>
