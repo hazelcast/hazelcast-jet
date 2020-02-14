@@ -123,18 +123,18 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     public void jobSuspendedThenResumed() {
         //init
         Job job = jetInstances[0].newJob(streamingPipeline());
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
+        assertJobStatusEventually(job, RUNNING);
 
         //when
         job.suspend();
-        assertTrueEventually(() -> assertEquals(SUSPENDED, job.getStatus()));
+        assertJobStatusEventually(job, SUSPENDED);
 
         //then
         assertTrueEventually(() -> assertJobStats(1, 1, 1, 0, 0));
 
         //when
         job.resume();
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
+        assertJobStatusEventually(job, RUNNING);
 
         //then
         assertTrueEventually(() -> assertJobStats(1, 2, 1, 0, 0));
@@ -144,11 +144,11 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     public void jobRestarted() {
         //init
         Job job = jetInstances[0].newJob(streamingPipeline());
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
+        assertJobStatusEventually(job, RUNNING);
 
         //when
         job.restart();
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
+        assertJobStatusEventually(job, RUNNING);
 
         //then
         assertTrueEventually(() -> assertJobStats(1, 2, 1, 0, 0));
@@ -158,7 +158,7 @@ public class JobLifecycleMetricsTest extends JetTestSupport {
     public void jobCancelled() {
         //init
         Job job = jetInstances[0].newJob(streamingPipeline());
-        assertTrueEventually(() -> assertEquals(RUNNING, job.getStatus()));
+        assertJobStatusEventually(job, RUNNING);
 
         //when
         job.cancel();
