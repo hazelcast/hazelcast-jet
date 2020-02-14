@@ -1,34 +1,16 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
- 
-/* your custom css */
-body{
+body {
     font-family: Ubuntu, sans-serif;
-    font-weight: lighter;
+    /* font-weight: lighter; */
+    /* background-color: #002b36; */
+    color: #073642;
 }
 
-.blog .wrapper {
-    max-width: 1400px;
-}
-.blog .post {
-    max-width: 780px;
-}
-
-/* header navigation */
 .fixedHeaderContainer {
-    background-color: whitesmoke;
-}
-
-.headerTitleWithLogo {
-    color: #ff5f00;
+    background-color: #fdf6e3;
 }
 
 .projectTitle {
-    color:#24292e;
+    color: #073642;
     font-size: 325%
 }
 
@@ -37,15 +19,15 @@ a.button {
 }
 
 .navigationSlider .slidingNav ul li a {
-    color: #ff5f00;
+    color: #268bd2;
 }
 
 .navigationSlider .slidingNav ul li.siteNavGroupActive a,
 .navigationSlider .slidingNav ul li.siteNavItemActive a,
 .navigationSlider .slidingNav ul li a:focus,
 .navigationSlider .slidingNav ul li a:hover {
-    background: #ff5f00;
-    color: white;
+    /* background: #ff5f00; */
+    color: #fdf6e3;
 }
 
 .imageAlignTop .blockImage {
@@ -54,8 +36,11 @@ a.button {
 }
 
 .navigationSlider .slidingNav ul li.siteNavItemActive a {
-    background: whitesmoke;
-    color: #ff5f00;
+    color: #fdf6e3;
+}
+
+.nav-footer {
+    background-color: #002b36;
 }
 
 .nav-footer .sitemap .nav-home {
@@ -66,6 +51,13 @@ a.button {
     width: 200px;
 }
 
+
+.blog .wrapper {
+    max-width: 1400px;
+}
+.blog .post {
+    max-width: 780px;
+}
 
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
 }

@@ -3,16 +3,16 @@ title: Scale your job
 id: scale-job
 ---
 
-Now that we have managed to submit our first job to the cluster successfuly,
-let's make things a little more interesting.
+Now that we have a running job on the cluster, we can see some
+non-trivial features of Hazelcast Jet in action.
 
-One of the main features of Jet is that it allows you to dynamically
-scale a job up or down. Jet keeps processing data without loss even when
-a node fails, and you can add more nodes that immediately start sharing
-the computation load.
+One of the main advantages of using a distributed streaming engine like
+Jet the ability to dynamically scale a job up or down. Jet keeps
+processing data without loss even when a node fails, and you can add
+more nodes that immediately start sharing the computation load.
 
-First, let's make sure that the job that you submitted earlier in the previous section 
-is still running:
+First, let's make sure that the job from the previous section is still
+running:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Standalone-->
@@ -31,8 +31,7 @@ ID                  STATUS             SUBMISSION TIME         NAME
 
 ## Start a second Jet node
 
-Now, let's open another terminal window in the Jet installation folder and
-start another Jet node, and see what happens:
+Now let's open another terminal window and start another Jet node:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Standalone-->
@@ -45,8 +44,10 @@ $ docker run hazelcast/hazelcast-jet
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-
-After a little time, you should some output similar to below:
+You can observe in the logs of the original Jet instance that it
+discovered the new node, formed a cluster with it, and then went on to
+restart the job so it runs on both cluster members. You should notice
+log lines similar to these:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Standalone-->
@@ -65,36 +66,35 @@ Members {size:2, ver:2} [
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Congratulations, now you have created a cluster of two nodes! 
+Congratulations, you have created a cluster of two nodes!
 
 >If for some reason your nodes didn't find each other, this is likely
->because multicast is turned off or not working correctly in your
->environment. In this case, please see the
->[Configuration](../operations/configuration) section as this will
->require you to use another cluster discovery mechanism than the
->default, which is multicast.
+because multicast is turned off or not working correctly in your
+environment. In this case, please see the
+[Configuration](../operations/configuration) section as this will
+require you to use another cluster discovery mechanism than the
+default, which is IP multicast.
 
-You will now see that the job is running both nodes automatically,
-although you will still only see output on one of the nodes. This is
-because the test data source is non-distributed, and we don't have any
-steps in the pipeline which require data re-partionining. We will
-explain this later in detail in the
-[distributed computing](../concepts/distributed-computing) section.
+The job is now running on both nodes, but the log output is still
+appearing on just one of them. This is because the test data source is
+non-distributed, and we don't have any steps in the pipeline which
+require data rebalancing. We will explain this later in detail in
+the [distributed computing](../concepts/distributed-computing) section.
 
-Another thing you'll notice here is that the sequence numbers that are
-outputted will have reset, this is because the test source we are using
-is not fault-tolerant. This is explained in detail in the [fault
+Another thing you may notice here is that the sequence numbers were
+reset to zero, this is because the test source we're using is not
+fault-tolerant. This is explained in detail in the [fault
 tolerance](concepts/fault-tolerance) section.
 
 ## Terminate one of the nodes
 
-We can also the reverse, just terminate one of the nodes by kill the
-processes and the job will restart automatically and keep running on the
-remaining nodes.
+We can also do the reverse: simply kill one of the nodes with Ctrl-C or
+closing its terminal window. The job will restart automatically and keep
+running on the remaining nodes.
 
 ## Next Steps
 
-You've now successfully deployed and scaled your first distributed data
-pipeline. The next step is getting a deeper understanding of the
+You have now successfully deployed and scaled your first distributed
+data pipeline. The next step is getting a deeper understanding of the
 [Pipeline API](../reference) which will allow you to write more complex
 data transforms.

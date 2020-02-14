@@ -1,6 +1,4 @@
 const React = require('react');
-const Blog = require('docusaurus/lib/core/MetadataBlog');
-const {getPath} = require('docusaurus/lib/core/utils.js');
 
 class Footer extends React.Component {
   docUrl(doc, language) {
@@ -17,6 +15,8 @@ class Footer extends React.Component {
   }
 
   render() {
+    const Blog = require('docusaurus/lib/core/MetadataBlog.js');
+    const {getPath} = require('docusaurus/lib/core/utils.js');
     return (
       <footer className="nav-footer" id="footer">
         <section className="sitemap">
