@@ -14,11 +14,11 @@ body {
 }
 
 .fixedHeaderContainer {
-    background-color: whitesmoke;
+    background-color: #fdf6e3;
 }
 
 .projectTitle {
-    color: #24292e;
+    color: #073642;
     font-size: 325%
 }
 
@@ -35,7 +35,7 @@ a.button {
 .navigationSlider .slidingNav ul li a:focus,
 .navigationSlider .slidingNav ul li a:hover {
     /* background: #ff5f00; */
-    color: white;
+    color: #fdf6e3;
 }
 
 .imageAlignTop .blockImage {
@@ -44,7 +44,11 @@ a.button {
 }
 
 .navigationSlider .slidingNav ul li.siteNavItemActive a {
-    color: white;
+    color: #fdf6e3;
+}
+
+.nav-footer {
+    background-color: #002b36;
 }
 
 .nav-footer .sitemap .nav-home {
@@ -54,6 +58,7 @@ a.button {
     transition: opacity 0.15s ease-in-out;
     width: 200px;
 }
+
 
 .blog .wrapper {
     max-width: 1400px;
