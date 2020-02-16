@@ -3,11 +3,11 @@ title: Jet on Kubernetes
 id: kubernetes
 ---
 
-The easiest way to install **Hazelcast Jet** to **Kubernetes** is using
-**Helm** charts, Hazelcast Jet provides stable Helm charts for
-open-source and enterprise versions also for **Hazelcast Jet Management
-Center**. Hazelcast Jet also provides Kubernetes-ready **Docker** images,
-these images use the **Hazelcast Kubernetes Plugin** to discover other
+The easiest way to install Hazelcast Jet on Kubernetes is using
+Helm* charts, Hazelcast Jet provides stable Helm charts for
+open-source and enterprise versions also for Hazelcast Jet Management
+Center. Hazelcast Jet also provides Kubernetes-ready Docker images,
+these images use the Hazelcast Kubernetes Plugin to discover other
 Hazelcast Jet members by interacting with the Kubernetes API.
 
 ## Install Hazelcast Jet using Helm

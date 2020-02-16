@@ -83,6 +83,11 @@ working directory, but you can control the name of the files using the
 relevant system properties, `hazelcast.jet.config` and
 `hazelcast.config`, respectively.
 
+## Job-specific Configuration
+
+Each Jet job also has job-specific configuration options. These are covered
+in detail under [Job Management](job-management)
+
 ## List of configuration options
 
 TODO, do we want to maintain a duplicate list here? or link to them?
