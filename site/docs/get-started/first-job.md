@@ -1,24 +1,15 @@
 ---
-title: Write and run your first job
+title: Your First Jet Program
 id: first-job
 ---
 
-We will start building a distributed pipeline to illustrate some of the
-major features of Jet.
+Let's write some data processing code and have Jet run it for us.
 
-## Requirements
+### Start a Java Project
 
-Hazelcast Jet is distributed as a single JAR with no other dependencies. 
-It requires Java version 8 or higher to run.
-
-### Add Jet as a Java depedency
-
-The easiest way to get started with Hazelcast Jet is to add it as a
-dependency to a Java application. Jet is packaged as just a single Jet
-JAR with no other dependencies that contains everything you need to get
-started.
-
-Below are the Maven and Gradle snippets you can use:
+By now you should have some version of Java (at least 8) installed.
+Create a new project targetting your build tool of preference, Maven or
+Gradle, and add the Jet JAR to your build:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
@@ -37,13 +28,17 @@ compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Write your pipeline
+### Write Your Data Pipeline
 
-In order to run a Jet job, you must first define a data pipeline which
-defines what data will be processed. To create a data pipeline, you need
-a data source and a data sink. The easiest way to get started is to use
-the provided the test sources within Jet. These sources emit a mock
-stream at a fixed rate and can be used for writing test pipelines.
+Unlike some other paradigms you may have met, in the world of
+distributed stream processing we specify not just the processing steps
+but also where to pull the data from and where to deliver the results.
+This means that as soon as you deploy your code, it takes action and
+starts moving the data through the pipeline.
+
+With this in mind let's start writing code. Instead of connecting to
+actual systems we'll start simple, using generated data as the source
+and your screen as the sink:
 
 ```java
 public static void main(String[] args) {
@@ -56,43 +51,35 @@ public static void main(String[] args) {
 }
 ```
 
-Each test item emitted has a _sequence_ and a _timestamp_. In this case,
-we're only interested in the event numbers and we will filter the odd
-numbers out.
+`itemStream()` emits `SimpleEvent`s that have a _sequence_ and a
+_timestamp_. The pipeline we wrote will discard every other event and
+keep those with an even sequence number.
 
-### Create an embedded Jet node, and run the pipeline
+### Start Embedded Jet and Run the Pipeline
 
-Now that we have defined our pipeline, we will create a Jet node to
-submit the pipeline to. You can create a Jet node which lives inside
-your application, which is generally referred to as an "embedded node".
-An embedded is a fully functional Jet node, running inside the same JVM
-and has the same performance as a standalone node. In general, it's
-useful for testing because you don't need to setup complex
-infrastructure and can have a fully functioning node with just a line of
-code.
-
-You can create a single Jet node and submit the job to it using the
-following syntax:
+To create a single Jet node and submit the job to it, add this code to
+the bottom of the `main` method:
 
 ```java
-public static void main(String[] args) {
-  Pipeline p = Pipeline.create();
-  ..
-
-  JetInstance jet = Jet.newJetInstance();
-  Job job = jet.newJob(p).join();
-}
+JetInstance jet = Jet.newJetInstance();
+Job job = jet.newJob(p).join();
 ```
 
-A `JetInstance` refers to either a client connected to a Jet cluster, or
-an embedded Jet node. It's the main interface for interacting with Jet.
+It will start a full-featured Jet node right there in the JVM where you
+call it and submit your pipeline to it. If you were submitting the code
+to an external Jet cluster, the syntax would be the same because
+`JetInstance` can represent both an embedded instance or a remote one
+via a local proxy object. You'd just call a different method to create
+the client instance.
 
-Note that submitting a job is asnychronous, so we must also call `join()`
-afterwards to make sure that we wait for the job to proceed. When you run
-the application, you should output like the following, indicating that the
-odd numbers have been filtering out:
+Once you submit a job, it has a life of its own. It is not coupled to
+the client that submitted it, so the client can disconnect without
+affecting the job. In our simple code we call `job.join()` so we keep
+the JVM alive while the job lasts.
 
-```bash
+The output should look like this:
+
+```log
 11:28:24.039 [INFO] [loggerSink#0] (timestamp=11:28:24.000, sequence=0)
 11:28:24.246 [INFO] [loggerSink#0] (timestamp=11:28:24.200, sequence=2)
 11:28:24.443 [INFO] [loggerSink#0] (timestamp=11:28:24.400, sequence=4)

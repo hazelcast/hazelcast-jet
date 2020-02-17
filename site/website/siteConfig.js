@@ -52,14 +52,14 @@ const siteConfig = {
     // users,
 
     /* path to images for header/footer */
-    headerIcon: 'img/logo.png',
-    footerIcon: 'img/logo-light.png',
+    headerIcon: 'img/logo-dark.svg',
+    footerIcon: 'img/logo-light.svg',
     favicon: 'img/favicon.png',
 
     /* Colors for website */
     colors: {
-        primaryColor: '#ff5f00',
-        secondaryColor: '#f4f4f4',
+        primaryColor: '#268bd2',
+        secondaryColor: '#eee8d5',
     },
 
     stylesheets: [
@@ -82,7 +82,10 @@ const siteConfig = {
     },
 
     // Add custom scripts here that would be placed in <script> tags.
-    scripts: ['https://buttons.github.io/buttons.js'],
+    scripts: ['https://buttons.github.io/buttons.js', 
+    'https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js',
+    '/js/code-block-buttons.js',
+    ],
 
     // On page navigation for the current documentation page.
     onPageNav: 'separate',
@@ -106,6 +109,7 @@ const siteConfig = {
     // You may provide arbitrary config keys to be used as needed by your
     // template. For example, if you need your repo's URL...
     repoUrl: 'https://github.com/hazelcast/hazelcast-jet',
+    gaTrackingId: 'UA-158279495-1'
 };
 
 module.exports = siteConfig;
