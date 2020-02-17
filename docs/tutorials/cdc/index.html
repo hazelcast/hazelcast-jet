@@ -63,15 +63,16 @@
               }
             });
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Change Data Capture</h1></header><article><div><span><p><strong>Change data capture</strong> refers to the process of <strong>observing changes
-made to a database</strong> and extracting them in a form usable by other systems,
-for the purposes of replication, analysis and many many more.</p>
-<p>Change Data Capture is especially important to Jet, because it allows for
-the <strong>integration with legacy systems</strong>. Database changes form a stream
-of events which can be efficiently processed by Jet.</p>
+made to a database</strong> and extracting them in a form usable by other
+systems, for the purposes of replication, analysis and many many more.</p>
+<p>Change Data Capture is especially important to Jet, because it allows
+for the <strong>integration with legacy systems</strong>. Database changes form a
+stream of events which can be efficiently processed by Jet.</p>
 <p>Implementation of CDC in Jet is based <a href="https://debezium.io/">Debezium</a>,
-which is an open source distributed platform for change data capture. It
-provides Kafka Connect compatible CDC connectors for a
-<a href="https://debezium.io/documentation/reference/0.10/connectors/index.html">variety of popular databases</a>.</p>
+which is an open source distributed platform for change data capture.
+It provides Kafka Connect compatible CDC connectors for a
+<a href="https://debezium.io/documentation/reference/0.10/connectors/index.html">variety of popular databases</a>
+.</p>
 <p>The <a href="http://kafka.apache.org/documentation.html#connect">Kafka Connect API</a>
 is an interface developed for Kafka, that simplifies and automates the
 integration of a new data source (or sink) with your Kafka cluster.
@@ -86,8 +87,8 @@ configuration:</p>
 <p>Since we are instantiating external Kafka Connect Connectors on the Jet
 runtime, we need to be able to access those classes. Connectors are
 usually <strong>shipped as a ZIP file</strong>. The JAR files from inside the ZIP
-archive can be uploaded to the Jet classpath via the <code>addJarsInZip</code> method
-of the <code>JobConfig</code> class.</p>
+archive can be uploaded to the Jet classpath via the <code>addJarsInZip</code>
+method of the <code>JobConfig</code> class.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/observables"><span class="arrow-prev">← </span><span>Reactive Streams</span></a><a class="docs-next button" href="/docs/tutorials/stream-imap"><span>Stream changes from IMap</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {

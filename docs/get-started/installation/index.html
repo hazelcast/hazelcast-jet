@@ -76,8 +76,8 @@ unzip it to a directory we'll refer to as <code>&lt;jet_home&gt;</code>.</p>
 <p>The distribution package contains everything you need to run Jet except
 the JDK. You can get it from the <a href="https://openjdk.java.net/">OpenJDK</a>
 site and the minimum version is 8. Type this:</p>
-<pre><code class="hljs css language-bash">$ <span class="hljs-built_in">cd</span> &lt;jet_home&gt;
-$ bin/start-jet
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> &lt;jet_home&gt;
+bin/start-jet
 </code></pre>
 <p>This will start a Jet node in the foreground so you have to keep the
 terminal window open and start another one to interact with it. It is
@@ -97,7 +97,7 @@ ADDRESS                  UUID
 <p>The distribution package also contains a pre-packaged Jet job in a JAR
 that you can use to quickly verify the installation. You can submit it
 like this:</p>
-<pre><code class="hljs css language-bash">$ bin/jet submit examples/hello-world.jar
+<pre><code class="hljs css language-bash">bin/jet submit examples/hello-world.jar
 </code></pre>
 <p>You should see output like this:</p>
 <pre><code class="hljs css language-text">Top 10 random numbers in the latest window:
@@ -115,7 +115,7 @@ like this:</p>
 <h2><a class="anchor" aria-hidden="true" id="as-a-docker-instance"></a><a href="#as-a-docker-instance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>As a Docker Instance</h2>
 <p>Hazelcast maintains an official Docker image for Hazelcast Jet. To start
 a node, write this:</p>
-<pre><code class="hljs css language-bash">$ docker run hazelcast/hazelcast-jet
+<pre><code class="hljs css language-bash">docker run hazelcast/hazelcast-jet
 </code></pre>
 <p>This should start a Hazelcast Jet node in a Docker container. Inspect
 the log output for a line like this:</p>
@@ -126,8 +126,8 @@ the log output for a line like this:</p>
 <p>Note the IP address of the Docker container and use it in the commands
 below instead of our example's <code>172.17.0.2</code>. Let's submit the Hello
 World application from the distribution package:</p>
-<pre><code class="hljs css language-bash">$ <span class="hljs-built_in">cd</span> &lt;jet_home&gt;
-$ docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+<pre><code class="hljs css language-bash"><span class="hljs-built_in">cd</span> &lt;jet_home&gt;
+docker run -it -v <span class="hljs-string">"<span class="hljs-variable">$(pwd)</span>"</span>/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
 </code></pre>
 <p>The command mounts the local <code>examples</code> directory from <code>&lt;jet_home&gt;</code> to
 the container and uses <code>jet submit</code> to submit the example JAR. While the

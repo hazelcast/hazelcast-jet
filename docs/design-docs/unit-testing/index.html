@@ -69,13 +69,15 @@ the built-in sources (file, sink, map etc) which, while somewhat
 convenient for batch they are quite inconvenient for streaming and
 are not completely foolproof. We also want to improve the experience
 so that you can write tests to assert the output of a pipeline without
-having to write boilerplate code (i.e. writing the results to an IList and then retrieve it to verify it later).</p>
+having to write boilerplate code (i.e. writing the results to an IList
+and then retrieve it to verify it later).</p>
 <p>The functionality is implemented as two parts:</p>
 <h2><a class="anchor" aria-hidden="true" id="test-sources"></a><a href="#test-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Test Sources</h2>
 <p>There are now new sources which can be used to generate some data for
 writing a test pipeline:</p>
 <h3><a class="anchor" aria-hidden="true" id="batch-sources"></a><a href="#batch-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Batch Sources</h3>
-<p>These sources create a fixed amount of data. These sources are non-distributed.</p>
+<p>These sources create a fixed amount of data. These sources are
+non-distributed.</p>
 <pre><code class="hljs css language-java">BatchStage&lt;Integer&gt; source = pipeline.drawFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>));
 </code></pre>
 <pre><code class="hljs css language-java">List&lt;Integer&gt; list = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
@@ -85,67 +87,101 @@ list.add(<span class="hljs-number">2</span>);
 BatchStage&lt;Integer&gt; source = pipeline.drawFrom(TestSources.items(list));
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="streaming-sources"></a><a href="#streaming-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Streaming Sources</h3>
-<p>Streaming sources create an infinite stream of data. The generated events have
-timestamps and like the batch source, this source is also non-distributed.</p>
+<p>Streaming sources create an infinite stream of data. The generated
+events have timestamps and like the batch source, this source is also
+non-distributed.</p>
 <pre><code class="hljs css language-java"><span class="hljs-keyword">int</span> itemsPerSecond = <span class="hljs-number">10</span>;
 pipeline.drawFrom(TestSources.itemStream(itemsPerSecond))
         .withNativeTimestamp(<span class="hljs-number">0</span>);
 </code></pre>
 <p>The source above will emit data as follows:</p>
-<pre><code class="hljs"><span class="hljs-number">12</span>:<span class="hljs-number">19</span>:<span class="hljs-number">59</span>,<span class="hljs-number">757</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">19</span>:<span class="hljs-number">59.700</span>, sequence=<span class="hljs-number">0</span>)
-<span class="hljs-number">12</span>:<span class="hljs-number">19</span>:<span class="hljs-number">59</span>,<span class="hljs-number">850</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">19</span>:<span class="hljs-number">59.800</span>, sequence=<span class="hljs-number">1</span>)
-<span class="hljs-number">12</span>:<span class="hljs-number">19</span>:<span class="hljs-number">59</span>,<span class="hljs-number">955</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">19</span>:<span class="hljs-number">59.900</span>, sequence=<span class="hljs-number">2</span>)
-<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00</span>,<span class="hljs-number">058</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00.000</span>, sequence=<span class="hljs-number">3</span>)
-<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00</span>,<span class="hljs-number">157</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00.100</span>, sequence=<span class="hljs-number">4</span>)
-<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00</span>,<span class="hljs-number">250</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00.200</span>, sequence=<span class="hljs-number">5</span>)
-<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00</span>,<span class="hljs-number">349</span>  INFO || - [loggerSink#<span class="hljs-number">0</span>] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#<span class="hljs-number">0</span>} - [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> [jet] [<span class="hljs-number">3.2</span>-SNAPSHOT] (timestamp=<span class="hljs-number">12</span>:<span class="hljs-number">20</span>:<span class="hljs-number">00.300</span>, sequence=<span class="hljs-number">6</span>)
+<pre><code class="hljs css language-text">12:19:59,757  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:19:59.700, sequence=0)
+12:19:59,850  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:19:59.800, sequence=1)
+12:19:59,955  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:19:59.900, sequence=2)
+12:20:00,058  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:20:00.000, sequence=3)
+12:20:00,157  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:20:00.100, sequence=4)
+12:20:00,250  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:20:00.200, sequence=5)
+12:20:00,349  INFO || - [loggerSink#0] hz._hzInstance_2_jet.jet.blocking.ProcessorTasklet{loggerSink#0} - [127.0.0.1]:5702 [jet] [3.2-SNAPSHOT] (timestamp=12:20:00.300, sequence=6)
 </code></pre>
-<p>Each item has a sequence number and a timestamp, which can also be used to map
-to the desired item type:</p>
+<p>Each item has a sequence number and a timestamp, which can also be used
+to map to the desired item type:</p>
 <pre><code class="hljs css language-java"><span class="hljs-keyword">int</span> itemsPerSecond = <span class="hljs-number">10</span>;
  
 pipeline.drawFrom(TestSources.itemStream(itemsPerSecond, (timestamp, sequence) -&gt; <span class="hljs-keyword">new</span> Trade(timestamp, ..)
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="assertions"></a><a href="#assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Assertions</h2>
-<p>Currently to make sure that a pipeline is outputting things correctly programmatically you have to write the results to either an IMap or IList and then assert the values there. This can be tedious and error-prone as for example IList doesn't implement equals(). You also have to move the assertion itself out of the pipeline, which is not always desired.</p>
-<p>Several new sinks have been added to support asserting directly in the pipeline. Further, there's additional convenience to have the assertions done inline with the sink without having to terminate the pipeline, using the new apply operator. This is the preferred usage.</p>
+<p>Currently to make sure that a pipeline is outputting things correctly
+programmatically you have to write the results to either an IMap or
+IList and then assert the values there. This can be tedious and
+error-prone as for example IList doesn't implement equals(). You also
+have to move the assertion itself out of the pipeline, which is not
+always desired.</p>
+<p>Several new sinks have been added to support asserting directly in the
+pipeline. Further, there's additional convenience to have the assertions
+done inline with the sink without having to terminate the pipeline,
+using the new apply operator. This is the preferred usage.</p>
 <h3><a class="anchor" aria-hidden="true" id="batch-assertions"></a><a href="#batch-assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Batch Assertions</h3>
-<p>Batch assertions collect all incoming items, and perform assertions on the collected list after all the items are received. If the assertion passes, then no exception is thrown. If the assertion fails, then the job will fail with an AssertionError.</p>
+<p>Batch assertions collect all incoming items, and perform assertions on
+the collected list after all the items are received. If the assertion
+passes, then no exception is thrown. If the assertion fails, then the
+job will fail with an AssertionError.</p>
 <h4><a class="anchor" aria-hidden="true" id="ordered-assertion"></a><a href="#ordered-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ordered Assertion</h4>
-<p>This asserts that items have been received in a certain order and no other items have been received. Only applicable to batch jobs.</p>
+<p>This asserts that items have been received in a certain order and no
+other items have been received. Only applicable to batch jobs.</p>
 <pre><code class="hljs css language-java">pipline.drawFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>))
        .apply(Assertions.assertOrdered(<span class="hljs-string">"unexpected values"</span>, Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>)))
        .drainTo(Sinks.logger())
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="unordered-assertion"></a><a href="#unordered-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unordered Assertion</h4>
-<p>Asserts that items have been received in any order and no other items have been received. Only applicable to batch stages.</p>
+<p>Asserts that items have been received in any order and no other items
+have been received. Only applicable to batch stages.</p>
 <pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">4</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">1</span>)
  .apply(Assertions.assertAnyOrder(<span class="hljs-string">"unexpected values"</span>, Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>)))
  .drainTo(Sinks.logger())
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="contains-assertions"></a><a href="#contains-assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contains Assertions</h4>
-<p>Assert that the given items have been received in any order; receiving other, unrelated items does not affect this assertion. Only applicable to batch stages.</p>
+<p>Assert that the given items have been received in any order; receiving
+other, unrelated items does not affect this assertion. Only applicable
+to batch stages.</p>
 <pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">4</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">1</span>))
         .apply(Assertions.assertContains(Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">3</span>)))
         .drainTo(Sinks.logger())
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="collected-assertion"></a><a href="#collected-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Collected Assertion</h4>
-<p>This is a more flexible assertion which is only responsible for collecting the received items, and passes the asserting responsibility to the user. It is a building block for the other assertions. Only applicable to batch stages.</p>
+<p>This is a more flexible assertion which is only responsible for
+collecting the received items, and passes the asserting responsibility
+to the user. It is a building block for the other assertions. Only
+applicable to batch stages.</p>
 <pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>))
         .apply(Assertions.assertCollected(items -&gt; assertTrue(<span class="hljs-string">"expected minimum of 4 items"</span>, items.size &gt;= <span class="hljs-number">4</span>)))
         .drainTo(Sinks.logger())
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="streaming-assertions"></a><a href="#streaming-assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Streaming Assertions</h3>
-<p>For streaming assertions, it's not possible to assert after all items have been received, as the stream never terminates. Instead, we periodically assert and throw if the assertion is not valid after a given period of time. However even if the assertion passes, we don't want to the job to continue running forever. Instead a special exception <code>AssertionCompletedException</code> is thrown to signal the assertion has passed successfully.</p>
+<p>For streaming assertions, it's not possible to assert after all items
+have been received, as the stream never terminates. Instead, we
+periodically assert and throw if the assertion is not valid after a
+given period of time. However even if the assertion passes, we don't
+want to the job to continue running forever. Instead a special
+exception <code>AssertionCompletedException</code> is thrown to signal the
+assertion has passed successfully.</p>
 <h4><a class="anchor" aria-hidden="true" id="collected-eventually-assertion"></a><a href="#collected-eventually-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Collected Eventually Assertion</h4>
-<p>This assertion collects incoming items and runs the given assertion function repeatedly on the received item set. If the assertion passes at any point, the job will be completed with an AssertionCompletedException. If the assertion fails after the given timeout period, the job will fail with an <code>AssertionError</code>.</p>
+<p>This assertion collects incoming items and runs the given assertion
+function repeatedly on the received item set. If the assertion passes at
+any point, the job will be completed with an
+<code>AssertionCompletedException</code>. If the assertion fails after the given
+timeout period, the job will fail with an <code>AssertionError</code>.</p>
 <pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.itemStream(<span class="hljs-number">10</span>))
  .withoutTimestamps()
  .apply(assertCollectedEventually(<span class="hljs-number">5</span>, c -&gt; assertTrue(<span class="hljs-string">"did not receive at least 20 items"</span>, c.size() &gt; <span class="hljs-number">20</span>)))
 </code></pre>
-<p>The pipeline above with fail with an <code>AssertionError</code> if 20 items are not received after 5 seconds. The job will complete with an <code>AssertionCompletedException</code> as soon as 20 items or more are received.</p>
+<p>The pipeline above with fail with an <code>AssertionError</code> if 20 items are
+not received after 5 seconds. The job will complete with an <code>AssertionCompletedException</code>
+as soon as 20 items or more are received.</p>
 <h3><a class="anchor" aria-hidden="true" id="assertion-sink-builder"></a><a href="#assertion-sink-builder" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Assertion Sink Builder</h3>
-<p>Both the batch and streaming assertions use an assertion sink builder for building the assertions. Although a lower-level API, this is also public and can be used to build other, more complex assertions if desired:</p>
+<p>Both the batch and streaming assertions use an assertion sink builder
+for building the assertions. Although a lower-level API, this is also
+public and can be used to build other, more complex assertions if
+desired:</p>
 <pre><code class="hljs css language-java"><span class="hljs-comment">/**
  * Returns a builder object that offers a step-by-step fluent API to build
  * an assertion {<span class="hljs-doctag">@link</span> Sink} for the Pipeline API. An assertion sink is
@@ -194,7 +230,10 @@ pipeline.drawFrom(TestSources.itemStream(itemsPerSecond, (timestamp, sequence) -
 }
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="future-improvements"></a><a href="#future-improvements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Future Improvements</h2>
-<p>In the future we may also consider adding fault tolerant sources to test fault tolerance. This would require a more complex source which is able to replay already emitted messages (using exact timestamp and sequence).</p>
+<p>In the future we may also consider adding fault tolerant sources to test
+fault tolerance. This would require a more complex source which is able
+to replay already emitted messages (using exact timestamp and
+sequence).</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/architecture/event-time"><span class="arrow-prev">← </span><span>Event Time Processing</span></a><a class="docs-next button" href="/docs/design-docs/kafka-connect"><span>Kafka Connect Source</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#background">Background</a></li><li><a href="#test-sources">Test Sources</a><ul class="toc-headings"><li><a href="#batch-sources">Batch Sources</a></li><li><a href="#streaming-sources">Streaming Sources</a></li></ul></li><li><a href="#assertions">Assertions</a><ul class="toc-headings"><li><a href="#batch-assertions">Batch Assertions</a></li><li><a href="#streaming-assertions">Streaming Assertions</a></li><li><a href="#assertion-sink-builder">Assertion Sink Builder</a></li></ul></li><li><a href="#future-improvements">Future Improvements</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {

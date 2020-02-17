@@ -78,9 +78,9 @@ stored in those have to be (de)serializable.</p>
 <p>Another case which might require (de)serializable objects is sending
 computation results between remote vertices. Hazelcast Jet tries to
 minimize network traffic as much as possible, nonetheless different
-parts of a <a href="/docs/concepts/dag">DAG</a> can reside on separate cluster members. To catch
-(de)serialization issues early on, we recommend using a 2-member local
-Jet cluster for development and testing.</p>
+parts of a <a href="/docs/concepts/dag">DAG</a> can reside on separate cluster members.
+To catch (de)serialization issues early on, we recommend using a
+2-member local Jet cluster for development and testing.</p>
 <p>Currently, Hazelcast Jet supports 6 interfaces to (de)serialize objects:</p>
 <ul>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html">java.io.Serializable</a></li>
@@ -88,8 +88,8 @@ Jet cluster for development and testing.</p>
 <li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html">com.hazelcast.nio.serialization.Portable</a></li>
 <li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/DataSerializable.html">com.hazelcast.nio.serialization.DataSerializable</a></li>
 <li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/IdentifiedDataSerializable.html">com.hazelcast.nio.serialization.IdentifiedDataSerializable</a></li>
-<li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a> &amp;
-<a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html">com.hazelcast.nio.serialization.ByteArraySerializer</a></li>
+<li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>
+&amp; <a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html">com.hazelcast.nio.serialization.ByteArraySerializer</a></li>
 </ul>
 <p>The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.</p>
@@ -107,39 +107,41 @@ deciding which interface to use in your applications.</p>
 </tbody>
 </table>
 <p>Below you can find rough performance numbers one can expect when
-employing each of those strategies. A straightforward <a href="https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java">benchmark</a>
+employing each of those strategies. A straightforward
+<a href="https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java">benchmark</a>
 which continuously serializes and then deserializes very simple object:</p>
-<pre><code class="hljs"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Person</span> {</span>
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">String</span> firstName;
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">String</span> lastName;
+<pre><code class="hljs css language-java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Person</span> </span>{
+    <span class="hljs-keyword">private</span> String firstName;
+    <span class="hljs-keyword">private</span> String lastName;
     <span class="hljs-keyword">private</span> <span class="hljs-keyword">int</span> age;
-    <span class="hljs-keyword">private</span> <span class="hljs-keyword">float</span> <span class="hljs-built_in">height</span>;
+    <span class="hljs-keyword">private</span> <span class="hljs-keyword">float</span> height;
 }
 </code></pre>
 <p>counting the total throughput, yields following results:</p>
-<pre><code class="hljs"># Processor: Intel(R) Core(TM) i7<span class="hljs-number">-4700</span>HQ CPU @ <span class="hljs-number">2.40</span>GHz
-# VM version: JDK <span class="hljs-number">13</span>, OpenJDK <span class="hljs-number">64</span>-Bit Server VM, <span class="hljs-number">13</span>+<span class="hljs-number">33</span>
+<pre><code class="hljs css language-text"># Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
+# VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
 Benchmark                                           Mode  Cnt        Score   Error  Units
-SerializationBenchmark.serializable                thrpt    <span class="hljs-number">2</span>   <span class="hljs-number">236398.984</span>          ops/s
-SerializationBenchmark.externalizable              thrpt    <span class="hljs-number">2</span>   <span class="hljs-number">651959.024</span>          ops/s
-SerializationBenchmark.portable                    thrpt    <span class="hljs-number">2</span>   <span class="hljs-number">821097.835</span>          ops/s
-SerializationBenchmark.dataSerializable            thrpt    <span class="hljs-number">2</span>  <span class="hljs-number">1365082.289</span>          ops/s
-SerializationBenchmark.identifiedDataSerializable  thrpt    <span class="hljs-number">2</span>  <span class="hljs-number">1693094.657</span>          ops/s
-SerializationBenchmark.stream                      thrpt    <span class="hljs-number">2</span>  <span class="hljs-number">1798280.394</span>          ops/s
+SerializationBenchmark.serializable                thrpt    2   236398.984          ops/s
+SerializationBenchmark.externalizable              thrpt    2   651959.024          ops/s
+SerializationBenchmark.portable                    thrpt    2   821097.835          ops/s
+SerializationBenchmark.dataSerializable            thrpt    2  1365082.289          ops/s
+SerializationBenchmark.identifiedDataSerializable  thrpt    2  1693094.657          ops/s
+SerializationBenchmark.stream                      thrpt    2  1798280.394          ops/s
 </code></pre>
 <p>The very same object instantiated with sample data will also be encoded
 with different number of bytes depending on used strategy:</p>
-<pre><code class="hljs"><span class="hljs-selector-tag">Strategy</span>                                                   <span class="hljs-selector-tag">Number</span> <span class="hljs-selector-tag">of</span> <span class="hljs-selector-tag">Bytes</span>   <span class="hljs-selector-tag">Overhead</span> %
-<span class="hljs-selector-tag">java</span><span class="hljs-selector-class">.io</span><span class="hljs-selector-class">.Serializable</span>                                                   162          523
-<span class="hljs-selector-tag">java</span><span class="hljs-selector-class">.io</span><span class="hljs-selector-class">.Externalizable</span>                                                  87          234
-<span class="hljs-selector-tag">com</span><span class="hljs-selector-class">.hazelcast</span><span class="hljs-selector-class">.nio</span><span class="hljs-selector-class">.serialization</span><span class="hljs-selector-class">.Portable</span>                               104          300
-<span class="hljs-selector-tag">com</span><span class="hljs-selector-class">.hazelcast</span><span class="hljs-selector-class">.nio</span><span class="hljs-selector-class">.serialization</span><span class="hljs-selector-class">.DataSerializable</span>                        88          238
-<span class="hljs-selector-tag">com</span><span class="hljs-selector-class">.hazelcast</span><span class="hljs-selector-class">.nio</span><span class="hljs-selector-class">.serialization</span><span class="hljs-selector-class">.IdentifiedDataSerializable</span>              35           34
-<span class="hljs-selector-tag">com</span><span class="hljs-selector-class">.hazelcast</span><span class="hljs-selector-class">.nio</span><span class="hljs-selector-class">.serialization</span><span class="hljs-selector-class">.StreamSerializer</span>                        26            0
+<pre><code class="hljs css language-text">Strategy                                                   Number of Bytes   Overhead %
+java.io.Serializable                                                   162          523
+java.io.Externalizable                                                  87          234
+com.hazelcast.nio.serialization.Portable                               104          300
+com.hazelcast.nio.serialization.DataSerializable                        88          238
+com.hazelcast.nio.serialization.IdentifiedDataSerializable              35           34
+com.hazelcast.nio.serialization.StreamSerializer                        26            0
 </code></pre>
 <p>For more details on (de)serialization topic, you can refer to
-<a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#serialization">Hazelcast IMDG</a>.</p>
+<a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#serialization">Hazelcast IMDG</a>
+.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/reference"><span class="arrow-prev">← </span><span>API Reference</span></a><a class="docs-next button" href="/docs/api/testing"><span>Testing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#deserialization-in-jet">(De)Serialization in Jet</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
