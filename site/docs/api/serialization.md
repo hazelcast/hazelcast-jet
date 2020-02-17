@@ -3,7 +3,7 @@ title: Serialization
 id: serialization
 ---
 
-## (De)Serialization in Jet
+## Supported (de)serialization strategies
 
 To be able to send object state over a network or store it in a file 
 one has to first serialize it into raw bytes. Similarly, to be able to 
@@ -26,24 +26,20 @@ parts of a [DAG](concepts/dag.md) can reside on separate cluster members. To cat
 (de)serialization issues early on, we recommend using a 2-member local 
 Jet cluster for development and testing.
 
-Currently, Hazelcast Jet supports 6 interfaces to (de)serialize objects:
+Currently, Hazelcast Jet supports 4 interfaces to (de)serialize objects:
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
 - [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.DataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/DataSerializable.html)
-- [com.hazelcast.nio.serialization.IdentifiedDataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/IdentifiedDataSerializable.html)
 - [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) &
   [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
 
 The following table provides a comparison between them to help you in 
 deciding which interface to use in your applications.
-|      Serialization interface      |                                                                      Advantages                                                                      |                                               Drawbacks                                              |
-|:---------------------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------------:|
+|      Serialization interface      |                                                              <center>Advantages</center>                                                             |                                       <center>Drawbacks</center>                                     |
+|:---------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
 |            Serializable           | <ul><li>Easy to start with, requires no implementation</li></ul>                                                                                     | <ul><li>CPU intensive</li><li>Space inefficient</li></ul>                                            |
 |           Externalizable          | <ul><li>Faster and more space efficient than Serializable</li></ul>                                                                                  | <ul><li>CPU intensive</li><li>Space inefficient</li><li>Requires implementation</li></ul>            |
 |              Portable             | <ul><li>Faster and more space efficient than java standard interfaces</li><li>Supports versioning</li><li>Supports partial deserialization</li></ul> | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
-|          DataSerializable         | <ul><li>Faster and more space efficient than java standard interfaces</li></ul>                                                                      | <ul><li>Requires implementation</li></ul>                                                            |
-|     IdentifiedDataSerializable    | <ul><li>Relatively fast and space efficient</li></ul>                                                                                                | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
 | [Stream&#124;ByteArray]Serializer | <ul><li>The fastest and lightest out of supported interfaces</li></ul>                                                                               | <ul><li>Requires implementation</li><li>Requires registration during cluster setup</li></ul>         |
 
 Below you can find rough performance numbers one can expect when 
@@ -63,13 +59,11 @@ counting the total throughput, yields following results:
 # Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
 # VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
-Benchmark                                           Mode  Cnt        Score   Error  Units
-SerializationBenchmark.serializable                thrpt    2   236398.984          ops/s
-SerializationBenchmark.externalizable              thrpt    2   651959.024          ops/s
-SerializationBenchmark.portable                    thrpt    2   821097.835          ops/s
-SerializationBenchmark.dataSerializable            thrpt    2  1365082.289          ops/s
-SerializationBenchmark.identifiedDataSerializable  thrpt    2  1693094.657          ops/s
-SerializationBenchmark.stream                      thrpt    2  1798280.394          ops/s
+Benchmark                                           Mode  Cnt  Score   Error   Units
+SerializationBenchmark.serializable                thrpt    3  0.259 ± 0.087  ops/us
+SerializationBenchmark.externalizable              thrpt    3  0.846 ± 0.057  ops/us
+SerializationBenchmark.portable                    thrpt    3  1.171 ± 0.539  ops/us
+SerializationBenchmark.stream                      thrpt    3  4.828 ± 1.227  ops/us
 ```
 
 The very same object instantiated with sample data will also be encoded 
@@ -79,9 +73,51 @@ Strategy                                                   Number of Bytes   Ove
 java.io.Serializable                                                   162          523
 java.io.Externalizable                                                  87          234
 com.hazelcast.nio.serialization.Portable                               104          300
-com.hazelcast.nio.serialization.DataSerializable                        88          238
-com.hazelcast.nio.serialization.IdentifiedDataSerializable              35           34
 com.hazelcast.nio.serialization.StreamSerializer                        26            0
+```
+
+## Sample implementation
+
+For best performance we recommend using 
+[com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) or
+[com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html).
+Below you can find a sample implementation of `StreamSerializer` for 
+`Person` (mind the type id which should be unique across all stream serializers):
+```
+class PersonSerializer implements StreamSerializer<Person> {
+
+        private static final int TYPE_ID = 1;
+
+        @Override
+        public int getTypeId() {
+            return TYPE_ID;
+        }
+
+        @Override
+        public void write(ObjectDataOutput out, Person person) throws IOException {
+            out.writeUTF(person.firstName);
+            out.writeUTF(person.lastName);
+            out.writeInt(person.age);
+            out.writeFloat(person.height);
+        }
+
+        @Override
+        public Person read(ObjectDataInput in) throws IOException {
+            return new Person(in.readUTF(), in.readUTF(), in.readInt(), in.readFloat());
+        }
+
+        @Override
+        public void destroy() {
+        }
+    }
+```
+
+Then the serializer should be registered with Jet on cluster startup:
+```
+JetConfig config = new JetConfig();
+config.getHazelcastConfig().getSerializationConfig()
+    .addSerializerConfig(new SerializerConfig().setTypeClass(Person.class).setClass(PersonSerializer.class));
+JetInstance jet = Jet.newJetInstance(config);
 ```
 
 For more details on (de)serialization topic, you can refer to
