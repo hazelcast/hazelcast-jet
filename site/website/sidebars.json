@@ -13,7 +13,7 @@
       "get-started/scale-job"
     ],
     "Programming Guide": [
-      "api/reference-manual",
+      "api/reference",
       "api/serialization",
       "api/testing"
     ],
@@ -37,6 +37,7 @@
       "operations/configuration",
       "operations/cluster-sizing",
       "operations/cluster-topology",
+      "operations/job-management",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/spring"
