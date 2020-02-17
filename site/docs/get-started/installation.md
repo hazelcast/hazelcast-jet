@@ -23,8 +23,8 @@ the JDK. You can get it from the [OpenJDK](https://openjdk.java.net/)
 site and the minimum version is 8. Type this:
 
 ```bash
-$ cd <jet_home>
-$ bin/start-jet
+cd <jet_home>
+bin/start-jet
 ```
 
 This will start a Jet node in the foreground so you have to keep the
@@ -51,7 +51,7 @@ that you can use to quickly verify the installation. You can submit it
 like this:
 
 ```bash
-$ bin/jet submit examples/hello-world.jar
+bin/jet submit examples/hello-world.jar
 ```
 
 You should see output like this:
@@ -76,7 +76,7 @@ Hazelcast maintains an official Docker image for Hazelcast Jet. To start
 a node, write this:
 
 ```bash
-$ docker run hazelcast/hazelcast-jet
+docker run hazelcast/hazelcast-jet
 ```
 
 This should start a Hazelcast Jet node in a Docker container. Inspect
@@ -93,8 +93,8 @@ below instead of our example's `172.17.0.2`. Let's submit the Hello
 World application from the distribution package:
 
 ```bash
-$ cd <jet_home>
-$ docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+cd <jet_home>
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
 ```
 
 The command mounts the local `examples` directory from `<jet_home>` to

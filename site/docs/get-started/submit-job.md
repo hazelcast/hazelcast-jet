@@ -3,7 +3,7 @@ title: Submit a Job to the Cluster
 id: submit-job
 ---
 
-At this point you saw how to create a simple Jet program (a _job_) that
+At this point you saw how to create a simple Jet program (a *job*) that
 starts its own Jet instance to run on, and how to create a standalone
 Jet cluster. Now it's time to combine the two and run the program on the
 cluster.
@@ -12,7 +12,7 @@ cluster.
 
 Originally we used `Jet.newJetInstance()` to create an embedded Jet node
 and noted that this line will change once you have an outside cluster.
-Jet uses the concept of a _bootstrapped instance_ which acts differently
+Jet uses the concept of a *bootstrapped instance* which acts differently
 depending on context. Change the line
 
 ```java
@@ -43,26 +43,34 @@ From the Jet home folder execute the command:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Standalone-->
+
 ```bash
-$ bin/jet submit <path_to_JAR_file>
+bin/jet submit <path_to_JAR_file>
 ```
+
 <!--Docker-->
+
 ```bash
-$ docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /jars/<name_of_the_JAR_file>
+docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /jars/<name_of_the_JAR_file>
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 If you didn't specify the main class in the JAR, you must use `-c`:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Standalone-->
+
 ```bash
-$ bin/jet submit -c <main_class_name> <path_to_JAR_file>
+bin/jet submit -c <main_class_name> <path_to_JAR_file>
 ```
+
 <!--Docker-->
+
 ```bash
-$ docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -a 172.17.0.2 submit -c <main_class_name> /jars/<name_of_the_JAR_file>
+docker run -it -v <path_to_JAR_file>:/jars hazelcast/hazelcast-jet jet -a 172.17.0.2 submit -c <main_class_name> /jars/<name_of_the_JAR_file>
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 You can notice in the server logs that a new job has been submitted and
@@ -73,17 +81,21 @@ You can also see a list of running jobs as follows:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Standalone-->
+
 ```bash
 $ bin/jet list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 03de-e38d-3480-0001 RUNNING            2020-02-09T16:30:26.843 N/A
 ```
+
 <!--Docker-->
+
 ```bash
 $ docker run -it hazelcast/hazelcast-jet jet -a 172.17.0.2 list-jobs
 ID                  STATUS             SUBMISSION TIME         NAME
 03e3-b8f6-5340-0001 RUNNING            2020-02-13T09:36:46.898 N/A
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 As we noted earlier, whether or not you kill the client application, the

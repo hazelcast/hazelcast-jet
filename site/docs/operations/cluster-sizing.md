@@ -6,7 +6,7 @@ id: cluster-sizing
 Jet cluster performance depends on multiple factors including the 
 pipeline design and user defined functions. Therefore, planning the Jet 
 cluster remains a complex task that requires a knowledge of the Jet 
-architecture and concepts. We will introduce a basic guideline that will 
+architecture and concepts. We will introduce a basic guideline that will
 help you size your cluster. 
 
 We recommend always benchmark your setup before deploying it to 
@@ -14,7 +14,7 @@ production. See a sample cluster sizing with benchmark that can be used
 as a reference.
 
 Please read the Hazelcast IMDG Deployment and Operations Guide when 
-storing the data [inside Jet cluster](concepts/in-memory-storage.md#relationship-with-hazelcast-imdg) 
+storing the data [inside Jet cluster](concepts/in-memory-storage.md#relationship-with-hazelcast-imdg)
 setup. Your Jet cluster will run both data processing and data storage 
 workloads so you should plan for it.
 
@@ -23,20 +23,20 @@ workloads so you should plan for it.
 To size the cluster for your use case, you must first be able to answer 
 the following questions:
 
-* What are the throughput and latency requirements?
-* How many concurrent Jobs shall the cluster run?
-* Fault tolerance requirements
-* Characteristics of the data (number of input partitions, key 
-distribution and , size of the dataset)
-* Shape of the pipelines (operations used, external systems involved)
-* Source and sink capacity
-* Network throughput 
-* How long is the error window?
+- What are the throughput and latency requirements?
+- How many concurrent Jobs shall the cluster run?
+- Fault tolerance requirements
+- Characteristics of the data (number of input partitions, key 
+ distribution and , size of the dataset)
+- Shape of the pipelines (operations used, external systems involved)
+- Source and sink capacity
+- Network throughput 
+- How long is the error window?
 
 ## Determining cluster size
 
 Even a single Jet instance can host and run hundreds of jobs at a time. 
-The clustered setup improves the performance (throughput and latency) of 
+The clustered setup improves the performance (throughput and latency) of
 hosted jobs and increases the resilience.
 
 A cluster with 3 members is a minimum count for fault tolerant 
@@ -66,8 +66,7 @@ the stream with less CPU.
 To tolerate the failure of one member, we recommend to size your cluster
 to operate with ```n-1``` members setup.
 
-You can use Hazelcast [IMap Event
-Journal](https://docs.hazelcast.org/docs/jet/latest/manual/#connector-imdg-journal)
+You can use Hazelcast [IMap Event Journal](https://docs.hazelcast.org/docs/jet/latest/manual/#connector-imdg-journal)
 to ingest the streaming data. Journal is an in-memory structure with a
 fixed capacity. If the jobs consuming the journal can't keep up there is
 a risk of data loss.  The pace of the data producers and the capacity of
@@ -86,9 +85,10 @@ cluster to isolate failures and performance spikes.
 The jobs running in one cluster share the resources to maximise the HW 
 utilization. This is efficient for setups without a risk of noisy 
 neighbours such as:
-* Clusters hosting many short-living jobs
-* Clusters hosting jobs with a predictable performance 
-* Jobs with relaxed SLAs
+
+- Clusters hosting many short-living jobs
+- Clusters hosting jobs with a predictable performance 
+- Jobs with relaxed SLAs
 
 For stronger resource isolation (multi-tenant environments, strict
 SLAs), consider starting multiple smaller clusters with resources (CPU,
@@ -111,9 +111,9 @@ as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
 As a starting point for a data-intensive operations consider machines
 with: 
 
-* 8 CPU cores
-* 16 GB RAM
-* 10 Gbps network
+- 8 CPU cores
+- 16 GB RAM
+- 10 Gbps network
 
 ### CPU
 
@@ -143,15 +143,15 @@ survive the failure. See [Sizing for failures](#sizing-for-failures).
 
 Memory consumption is affected by:
 
-* **Resources deployed with your job:** Considerable when attaching big 
-files such as models for ML inference pipelines.
-* **State of the running jobs:** Varies as it's affected by the shape of 
-your pipeline and by the data being processed. Most of the memory is 
-consumed by operations that aggregate and buffer data. Typically the 
-state also scales with the number of distinct keys seen within the time 
-window. Learn how the operations in the pipeline store its state. 
-Operators coming with Jet provide this information in the javadoc.
-* **State back-up:** For jobs configured as fault-tolerant, the state of
+- **Resources deployed with your job:** Considerable when attaching big
+ files such as models for ML inference pipelines.
+- **State of the running jobs:** Varies as it's affected by the shape of
+ your pipeline and by the data being processed. Most of the memory is 
+ consumed by operations that aggregate and buffer data. Typically the 
+ state also scales with the number of distinct keys seen within the time
+ window. Learn how the operations in the pipeline store its state. 
+ Operators coming with Jet provide this information in the javadoc.
+- **State back-up:** For jobs configured as fault-tolerant, the state of
  the running jobs is regularly snapshotted and saved in the cluster. 
  Cluster keeps two consecutive snapshots at a time (old one is kept 
  until the new one is successfully created). Both current and previous 
@@ -161,9 +161,10 @@ Operators coming with Jet provide this information in the javadoc.
  snapshot size is displayed in the Management Center. You might want to 
  keep some state snapshots residing in the cluster as points of 
  recovery, so plan the memory requirements accordingly.
-* **Data stored inside Jet cluster**: Any data hosted in the Jet 
-cluster. Notably the IMap Journal to store the streaming data. See the 
-[Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/).
+- **Data stored inside Jet cluster**: Any data hosted in the Jet 
+ cluster. Notably the IMap Journal to store the streaming data. See the 
+ [Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/)
+.
 
 ### Network
 
@@ -190,10 +191,9 @@ performance.
 
 Consider using more performant disks when:
 
-* You use the cluster file system as a source or sink - faster disks 
-improve the performance
-* Using disk persistence for 
-[Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
+- You use the cluster file system as a source or sink - faster disks 
+ improve the performance
+- Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
 
 ## Benchmarking and Sizing Example
 

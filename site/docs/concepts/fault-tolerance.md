@@ -24,9 +24,9 @@ from the snapshot and tell the source to start sending data from the
 last "`committed`" position (where the snapshot was taken). The data
 source must have built-in support to replay the data from the given
 checkpoint. The sink must either support transactions or be
-_idempotent_, tolerating duplicate submission of data.
+*idempotent*, tolerating duplicate submission of data.
 
-In a Jet cluster, one member is the _coordinator_. It tells other
+In a Jet cluster, one member is the *coordinator*. It tells other
 members what to do and they report to it any status changes. The
 coordinator may fail and the cluster will automatically re-elect another
 one. If any other member fails, the coordinator restarts the job on the
