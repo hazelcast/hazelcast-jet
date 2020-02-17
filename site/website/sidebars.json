@@ -35,6 +35,7 @@
     ],
     "Operations Guide": [
       "operations/configuration",
+      "operations/cluster-sizing",
       "operations/cluster-topology",
       "operations/kubernetes",
       "operations/monitoring",
