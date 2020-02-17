@@ -19,12 +19,11 @@ unzip it to a directory we'll refer to as `<jet_home>`.
 ## As a Java Process
 
 The distribution package contains everything you need to run Jet except
-the JDK. You can get it from the [OpenJDK](https://openjdk.java.net/)
-site and the minimum version is 8. Type this:
+the JDK. Type this:
 
 ```bash
-cd <jet_home>
-bin/start-jet
+$ cd <jet_home>
+$ bin/jet-start
 ```
 
 This will start a Jet node in the foreground so you have to keep the

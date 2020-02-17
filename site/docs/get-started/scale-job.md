@@ -101,7 +101,7 @@ tolerance](concepts/fault-tolerance) section.
 ## Terminate one of the nodes
 
 We can also do the reverse: simply kill one of the nodes with Ctrl-C or
-closing its terminal window. The job will restart automatically and keep
+close its terminal window. The job will restart automatically and keep
 running on the remaining nodes.
 
 ## Next Steps

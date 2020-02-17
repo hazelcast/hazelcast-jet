@@ -35,7 +35,8 @@ client proxy that talks to the cluster.
 If you're using Maven, `mvn package` will generate a JAR file ready to
 be submitted to the cluster. `gradle build` does the same. You should
 also set the `Main-Class` attribute in `MANIFEST.MF` to avoid the need
-to specify the main class in `jet submit`.
+to specify the main class in `jet submit`. Both Maven and Gradle can be
+configured to do this, refer to their docs.
 
 ## Submit to the Cluster
 
