@@ -105,10 +105,6 @@ class PersonSerializer implements StreamSerializer<Person> {
         public Person read(ObjectDataInput in) throws IOException {
             return new Person(in.readUTF(), in.readUTF(), in.readInt(), in.readFloat());
         }
-
-        @Override
-        public void destroy() {
-        }
     }
 ```
 
