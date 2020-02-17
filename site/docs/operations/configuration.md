@@ -20,7 +20,7 @@ config/hazelcast-client.yaml
 `hazelcast-jet.yaml` is used for configuring Jet specific configuration
 and `hazelcast.yaml` refers to Hazelcast configuration.
 
-Each Jet node is also a Hazelcast node, and `hazelcast.yaml` includes 
+Each Jet node is also a Hazelcast node, and `hazelcast.yaml` includes
 the configuration specific to clustering, discovery and so forth.
 
 `hazelcast-client.yaml` refers to a Jet client configuration. This config

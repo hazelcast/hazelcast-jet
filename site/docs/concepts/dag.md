@@ -70,6 +70,7 @@ p.readFrom(textSource())
 
 In this form we can clearly identify individual steps taken by the
 computation:
+
 1. read lines from the text source
 2. flat-map lines into words
 3. filter out empty words

@@ -39,7 +39,6 @@ a source and sink:
 - Hazelcast in memory data-structures like `IMap`, `ReplicatedMap`
  and `IList`
 
-
 On the data processing side, a key feature of Jet is *windowed
 aggregation*, especially when combined with *event time-based
 processing*. For example, if your data is GPS location reports, you
@@ -50,4 +49,3 @@ Jet takes care of the problem of reordered data (reports with an older
 timestamp can lag and come in after newer ones) and it's able to produce
 an uninterrupted stream of results (no time points skipped) even while
 some cluster nodes fail or get added.
-
