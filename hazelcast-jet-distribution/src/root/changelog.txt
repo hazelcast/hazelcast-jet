@@ -1,27 +1,29 @@
 ** Hazelcast Jet 4.0 **
 
-* Updated Hazelcast IMDG version to 4.0, a major change, which brought
-  with it a revamped metrics system, a new client protocol and the
-  removal of many interfaces which are present in IMDG 4.0 and don't
-  need to be redefined in Jet any longer.
-* Calling Python user-definned functions from Jet Pipelines is possible
-  now.
-* Added two-phase commit (2PC) support to snapshot mechanism for
-  end-to-end exactly once processing.
-* Clients can collect the results of jobs they have submitted through
-  observables.
-* [Jet Enterprise] Jet clients have a new version capable of fail-over,
-  called blue/green client.
-* Users can define custom metrics in their Pipelines.
-* Snapshotting statistics can be tracked via built-in metrics now (keys
-  & bytes saved).
-* Job lifecycle-statistics (no. of jobs submitted, terminated and so on)
-  can be tracked via built-in metrics now.
-* Debezium connector has been added for Change Data Capture (CDC).
-  As a by-product of the implementation we also got a generic Kafka
-  Connect source.
+* Updated Hazelcast IMDG version to 4.0, which brings many new features
+  such as a revamped metrics system, improved performance.
+* Jet now supports calling user-defined Python function from within a
+  pipeline using the mapUsingPython transform.
+* Snapshots now offer support for distributed two-phase commit (2PC),
+  which enables end-to-end exactly-once processing support for sinks and
+  sources such as JMS and files.
+* Clients can now collect the results of jobs they have submitted via
+  Rx-style Observables.
+* Users can now add custom metrics to their Pipelines.
+* The distribution has been improved with support for daemon mode and
+  rolling file based logging.
+* Snapshot statistics (keys & bytes saved) and job lifecycle-statistics
+  (no. of jobs submitted, terminated and so on) can be tracked via
+  metrics now.
+* Debezium-Jet connector is now available in hazelcast-jet-contrib. The
+  connector makes it possible to stream changes from a database into Jet,
+  also known as Change Data Capture (CDC).
+* A Kafka Connect adapter is added which enables using any Kafka Connect
+  source inside Jet.
 * It is now possible to specify the main class when submitting jobs from
   CLI.
+* [Jet Enterprise] Jet clients have improved support for failover
+  through the use of a blue/green client.
 
 ** Hazelcast Jet 3.2 **
 
