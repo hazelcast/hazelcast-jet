@@ -96,6 +96,7 @@ subjects:
   name: default
   namespace: default
 ```
+
 ```bash
 kubectly apply -f rbac.yaml
 ```

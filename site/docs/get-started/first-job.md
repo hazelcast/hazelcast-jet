@@ -13,6 +13,7 @@ Gradle, and add the Jet JAR to your build:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
+
 ```xml
 <dependencies>
   <dependency>
@@ -22,10 +23,13 @@ Gradle, and add the Jet JAR to your build:
   </dependency>
 </dependencies>
 ```
+
 <!--Gradle-->
-```
+
+```bash
 compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Write Your Data Pipeline
@@ -51,8 +55,8 @@ public static void main(String[] args) {
 }
 ```
 
-`itemStream()` emits `SimpleEvent`s that have a _sequence_ and a
-_timestamp_. The pipeline we wrote will discard every other event and
+`itemStream()` emits `SimpleEvent`s that have a *sequence* and a
+*timestamp*. The pipeline we wrote will discard every other event and
 keep those with an even sequence number.
 
 ### Start Embedded Jet and Run the Pipeline

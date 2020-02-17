@@ -22,7 +22,7 @@ These are some of the concerns Jet handles well:
 
 Jet's core execution engine was designed for high throughput with low
 system overhead. It uses a fixed-size thread pool to run any number of
-parallel tasks. The foundational concept is a coroutine-like _tasklet_
+parallel tasks. The foundational concept is a coroutine-like *tasklet*
 that implements suspendable computation, allowing many of them to run
 concurrently on a single thread.
 
@@ -37,12 +37,13 @@ a source and sink:
 - Message Queues
 - Apache Avro files
 - Hazelcast in memory data-structures like `IMap`, `ReplicatedMap`
-and `IList`
+ and `IList`
 
-On the data processing side, a key feature of Jet is _windowed
-aggregation_, especially when combined with _event time-based
-processing_. For example, if your data is GPS location reports, you
-can find a smoothened velocity vector by using a _sliding window_ and
+
+On the data processing side, a key feature of Jet is *windowed
+aggregation*, especially when combined with *event time-based
+processing*. For example, if your data is GPS location reports, you
+can find a smoothened velocity vector by using a *sliding window* and
 linear regression, and this takes just a few lines of code.
 
 Jet takes care of the problem of reordered data (reports with an older

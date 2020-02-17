@@ -4,19 +4,20 @@ id: cdc
 ---
 
 **Change data capture** refers to the process of **observing changes 
-made to a database** and extracting them in a form usable by other systems,
-for the purposes of replication, analysis and many many more.
+made to a database** and extracting them in a form usable by other 
+systems, for the purposes of replication, analysis and many many more.
 
-Change Data Capture is especially important to Jet, because it allows for
-the **integration with legacy systems**. Database changes form a stream 
-of events which can be efficiently processed by Jet.
+Change Data Capture is especially important to Jet, because it allows 
+for the **integration with legacy systems**. Database changes form a 
+stream of events which can be efficiently processed by Jet.
 
 Implementation of CDC in Jet is based [Debezium](https://debezium.io/),
-which is an open source distributed platform for change data capture. It 
-provides Kafka Connect compatible CDC connectors for a 
-[variety of popular databases](https://debezium.io/documentation/reference/0.10/connectors/index.html).
+which is an open source distributed platform for change data capture. 
+It provides Kafka Connect compatible CDC connectors for a 
+[variety of popular databases](https://debezium.io/documentation/reference/0.10/connectors/index.html)
+.
 
-The [Kafka Connect API](http://kafka.apache.org/documentation.html#connect) 
+The [Kafka Connect API](http://kafka.apache.org/documentation.html#connect)
 is an interface developed for Kafka, that simplifies and automates the 
 integration of a new data source (or sink) with your Kafka cluster. 
 Since version 4.0 Jet includes a generic Kafka Connect Source, thus 
@@ -25,6 +26,7 @@ configuration:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--MongoDB-->
+
 ```java
 Configuration configuration = Configuration
         .create()
@@ -58,6 +60,7 @@ job.join();
 ```
 
 <!--MySQL-->
+
 ```java
 Configuration configuration = Configuration
         .create()
@@ -91,6 +94,7 @@ job.join();
 ```
 
 <!--MySQL-->
+
 ```java
 Configuration configuration = Configuration
         .create()
@@ -123,11 +127,13 @@ JetInstance jet = createJetMember();
 Job job = jet.newJob(pipeline, jobConfig);
 job.join();
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Uploading Connectors to the Job Classpath
+
 Since we are instantiating external Kafka Connect Connectors on the Jet 
 runtime, we need to be able to access those classes. Connectors are 
 usually **shipped as a ZIP file**. The JAR files from inside the ZIP 
-archive can be uploaded to the Jet classpath via the `addJarsInZip` method
-of the `JobConfig` class.
+archive can be uploaded to the Jet classpath via the `addJarsInZip`
+ method of the `JobConfig` class.

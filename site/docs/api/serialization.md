@@ -22,18 +22,19 @@ stored in those have to be (de)serializable.
 Another case which might require (de)serializable objects is sending 
 computation results between remote vertices. Hazelcast Jet tries to 
 minimize network traffic as much as possible, nonetheless different 
-parts of a [DAG](concepts/dag.md) can reside on separate cluster members. To catch 
-(de)serialization issues early on, we recommend using a 2-member local 
-Jet cluster for development and testing.
+parts of a [DAG](concepts/dag.md) can reside on separate cluster members.
+To catch (de)serialization issues early on, we recommend using a 
+2-member local Jet cluster for development and testing.
 
 Currently, Hazelcast Jet supports 6 interfaces to (de)serialize objects:
+
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
 - [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
 - [com.hazelcast.nio.serialization.DataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/DataSerializable.html)
 - [com.hazelcast.nio.serialization.IdentifiedDataSerializable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/IdentifiedDataSerializable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) &
-  [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
+- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+ & [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
 
 The following table provides a comparison between them to help you in 
 deciding which interface to use in your applications.
@@ -47,9 +48,11 @@ deciding which interface to use in your applications.
 | [Stream&#124;ByteArray]Serializer | <ul><li>The fastest and lightest out of supported interfaces</li></ul>                                                                               | <ul><li>Requires implementation</li><li>Requires registration during cluster setup</li></ul>         |
 
 Below you can find rough performance numbers one can expect when 
-employing each of those strategies. A straightforward [benchmark](https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java) 
+employing each of those strategies. A straightforward 
+[benchmark](https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java)
 which continuously serializes and then deserializes very simple object:
-```
+
+```java
 class Person {
     private String firstName;
     private String lastName;
@@ -59,7 +62,8 @@ class Person {
 ```
 
 counting the total throughput, yields following results: 
-```
+
+```text
 # Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
 # VM version: JDK 13, OpenJDK 64-Bit Server VM, 13+33
 
@@ -74,7 +78,8 @@ SerializationBenchmark.stream                      thrpt    2  1798280.394      
 
 The very same object instantiated with sample data will also be encoded 
 with different number of bytes depending on used strategy:
-```
+
+```text
 Strategy                                                   Number of Bytes   Overhead %
 java.io.Serializable                                                   162          523
 java.io.Externalizable                                                  87          234
@@ -85,4 +90,5 @@ com.hazelcast.nio.serialization.StreamSerializer                        26      
 ```
 
 For more details on (de)serialization topic, you can refer to
-[Hazelcast IMDG](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#serialization). 
+[Hazelcast IMDG](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#serialization)
+. 
