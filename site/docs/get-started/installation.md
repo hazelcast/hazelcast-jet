@@ -112,3 +112,38 @@ Top 10 random numbers in the latest window:
     9. 7,804,055,086,912,769,625
     10. 7,681,774,251,691,230,162
 ```
+
+## As a Kubernetes Deployment
+
+The easiest way to install Hazelcast Jet on Kubernetes is using
+*Helm* charts, Hazelcast Jet provides stable Helm charts for
+open-source and enterprise versions also for Hazelcast Jet Management
+Center. Hazelcast Jet also provides Kubernetes-ready Docker images,
+these images use the Hazelcast Kubernetes Plugin to discover other
+Hazelcast Jet members by interacting with the Kubernetes API.
+
+You can install the latest version with default configuration values
+using below command:
+
+```bash
+helm install my-cluster stable/hazelcast-jet
+```
+
+This will create a cluster with the name `my-cluster` and with default
+configuration values. To change various configuration options you can
+use `–set key=value`:
+
+```bash
+helm install my-cluster --set cluster.memberCount=3 stable/hazelcast-jet
+```
+
+Or you can create a `values.yaml` file which contains custom
+configuration options. This file may contain custom `hazelcast` and
+`hazelcast-jet` yaml files in it too.
+
+```bash
+helm install my-cluster -f values.yaml stable/hazelcast-jet
+```
+
+For more information please refer to
+[Jet on Kubernetes](../operations/kubernetes.md) operation guide.
