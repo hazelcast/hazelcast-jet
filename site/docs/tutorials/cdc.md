@@ -161,15 +161,17 @@ archive can be uploaded to the Jet classpath via the `addJarsInZip`
 
 To find the connector archives:
 
+* figure out what version of Debezium the Jet's debezium library
+  depends on; at the time of writing version 0.1 of the library
+  depends on [Debezium 1.0](https://mvnrepository.com/artifact/io.debezium/debezium-core/1.0.0.Final)
+  , but this information can be simply checked at any time by looking at
+   the Jet debezium library's
+  [transitive dependencies on Maven](https://mvnrepository.com/artifact/com.hazelcast.jet.contrib/debezium/0.1)
 * go to the [Releases section](https://debezium.io/releases/) on the
   Debezium website
-* find the version you need (for example [1.0](https://debezium.io/releases/1.0/))
+* find the version you need, currently [1.0](https://debezium.io/releases/1.0/)
 * go to [Maven artifacts](https://search.maven.org/search?q=g:io.debezium%20and%20v:1.0.0.Final*)
 * download "plugin.zip" for the connector you need
-
-The above sample code assumes that you have downloaded the connector
-archives, removed the version number from their names and placed them
-in the "resources" folder of your project.
 
 ### Events
 
