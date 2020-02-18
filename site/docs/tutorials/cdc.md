@@ -11,10 +11,11 @@ Change Data Capture is especially important to Jet, because it allows
 for the **integration with legacy systems**. Database changes form a
 stream of events which can be efficiently processed by Jet.
 
-Implementation of CDC in Jet is based [Debezium](https://debezium.io/),
-which is an open source distributed platform for change data capture.
-It provides Kafka Connect compatible CDC connectors for a
-[variety of popular databases](https://debezium.io/documentation/reference/0.10/connectors/index.html)
+Implementation of CDC in Jet is based on
+[Debezium](https://debezium.io/), which is an open source distributed
+platform for change data capture. It provides Kafka Connect compatible
+CDC connectors for a
+[variety of popular databases](https://debezium.io/documentation/reference/1.0/connectors/index.html)
 .
 
 The [Kafka Connect API](http://kafka.apache.org/documentation.html#connect)
@@ -72,7 +73,7 @@ Configuration configuration = Configuration
         .with("database.server.id", "184054")
         .with("database.server.name", "dbserver1")
         .with("database.whitelist", "inventory")
-        .with("database.history.hazelcast.list-name", "test")
+        .with("database.history.hazelcast.list.name", "test")
         .build();
 
 Pipeline pipeline = Pipeline.create();
@@ -135,14 +136,9 @@ Jet (latest versions available at the time of writing):
 ```xml
 <dependencies>
   <dependency>
-      <groupId>io.debezium</groupId>
-      <artifactId>debezium-core</artifactId>
-      <version>1.0.1.Final</version>
-  </dependency>
-  <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>connect-api</artifactId>
-      <version>2.4.0</version>
+      <groupId>com.hazelcast.jet.contrib</groupId>
+      <artifactId>debezium</artifactId>
+      <version>0.1</version>
   </dependency>
 </dependencies>
 ```
@@ -150,8 +146,7 @@ Jet (latest versions available at the time of writing):
 <!--Gradle-->
 
 ```bash
-compile 'io.debezium:debezium-core:1.0.1.Final'
-compile 'org.apache.kafka:connect-api:2.4.0'
+compile 'com.hazelcast.jet.contrib:debezium:0.1'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
