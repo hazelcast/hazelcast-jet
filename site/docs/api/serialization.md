@@ -263,8 +263,8 @@ class PersonSerializerHook implements SerializerHook<Value> {
 }
 ```
 
-and file called "com.hazelcast.SerializerHook", placed in 
-"META-INF/services" with the following content:
+and file "META-INF/services/com.hazelcast.SerializerHook" with the 
+following content:
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
 ``` 
