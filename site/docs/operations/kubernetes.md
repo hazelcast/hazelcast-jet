@@ -46,6 +46,10 @@ modes: *Kubernetes API* and *DNS Lookup*
 | Pros        | Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul> | No additional configuration required, resolving DNS does not require granting any permissions           |
 | Cons        | Requires setting up RoleBinding (to allow access to Kubernetes API)                                                                                                            | <ul><li>Limited to **headless Cluster IP** service</li><li>Limited to **cluster per service**</li></ul> |
 
+See
+[Hazelcast Discovery Plugin for Kubernetes](https://github.com/hazelcast/hazelcast-kubernetes)
+for more information about the plugin.
+
 ## Install Hazelcast Jet using Helm
 
 The easiest way to install Hazelcast Jet on Kubernetes is using Helm
