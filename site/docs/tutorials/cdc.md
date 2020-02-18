@@ -52,7 +52,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
 JobConfig jobConfig = new JobConfig();
 jobConfig.addJarsInZip(this.getClass()
                            .getClassLoader()
-                           .getResource("debezium-connector-mysql.zip"));
+                           .getResource("debezium-connector-mongodb.zip"));
 
 JetInstance jet = createJetMember();
 Job job = jet.newJob(pipeline, jobConfig);
@@ -93,7 +93,7 @@ Job job = jet.newJob(pipeline, jobConfig);
 job.join();
 ```
 
-<!--MySQL-->
+<!--PostgreSQL-->
 
 ```java
 Configuration configuration = Configuration
@@ -121,7 +121,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
 JobConfig jobConfig = new JobConfig();
 jobConfig.addJarsInZip(this.getClass()
                            .getClassLoader()
-                           .getResource("debezium-connector-mysql.zip"));
+                           .getResource("debezium-connector-postgres.zip"));
 
 JetInstance jet = createJetMember();
 Job job = jet.newJob(pipeline, jobConfig);
@@ -130,6 +130,14 @@ job.join();
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+### Dependencies
+
+To run the above sample code you will need following libraries external to
+Jet (links point to the latest versions available at the time of writing):
+
+* [Debezium Core](https://mvnrepository.com/artifact/io.debezium/debezium-core/1.0.1.Final)
+* [Apache Kafka Connect API](https://mvnrepository.com/artifact/org.apache.kafka/connect-api/2.4.0)
+
 ### Uploading Connectors to the Job Classpath
 
 Since we are instantiating external Kafka Connect Connectors on the Jet
@@ -137,3 +145,15 @@ runtime, we need to be able to access those classes. Connectors are
 usually **shipped as a ZIP file**. The JAR files from inside the ZIP
 archive can be uploaded to the Jet classpath via the `addJarsInZip`
  method of the `JobConfig` class.
+
+To find the connector archives:
+
+* go to the [Releases section](https://debezium.io/releases/) on the
+  Debezium website
+* find the version you need (for example [1.0](https://debezium.io/releases/1.0/))
+* go to [Maven artifacts](https://search.maven.org/search?q=g:io.debezium%20and%20v:1.0.0.Final*)
+* download "plugin.zip" for the connector you need
+
+The above sample code assumes that you have downloaded the connector
+archives, removed the version number from their names and placed them
+in the "resources" folder of your project.
