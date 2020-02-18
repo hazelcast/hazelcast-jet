@@ -25,8 +25,8 @@ See [Role Based Access Control](#role-based-access-control) section for
 a sample file.
 
 Hazelcast Kubernetes Discovery requires creating a service to PODs where
-Hazelcast is running. In case of using Kubernetes API mode, the service
-can be of any type.
+Hazelcast Jet is running. In case of using Kubernetes API mode, the
+service can be of any type.
 
 ### DNS Lookup
 
@@ -557,8 +557,8 @@ If you configure `smart-routing: false` for your client, you don't need
 any plugin. It's enough to expose your Hazelcast Jet cluster with a
 LoadBalancer (or NodePort) service and set its IP/port as the TCP/IP
 Hazelcast Jet Client configuration. Remember that if smart-routing is
-disabled then all all the communication happens against a single
-Hazelcast Jet member.
+disabled then all the communication happens against a single Hazelcast
+Jet member.
 
 ### Smart Routing Enabled
 
@@ -574,10 +574,9 @@ perform the following steps:
   `list` permissions to the following resources: `endpoints`, `pods`,
   `nodes`, `services`
 - Use credentials from the created ServiceAccount in the Hazelcast Jet
-  Client configuration (credentials can be fetched with:  
-  `kubectl get secret <sevice-account-secret> -o jsonpath={.data.token}
-  | base64 --decode` and  
-  `kubectl get secret <sevice-account-secret> -o
+  Client configuration (credentials can be fetched with: `kubectl get
+  secret <sevice-account-secret> -o jsonpath={.data.token} | base64
+  --decode` and `kubectl get secret <sevice-account-secret> -o
   jsonpath={.data.ca\\.crt} | base64 --decode`)
 
 ```yaml
