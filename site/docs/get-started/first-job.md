@@ -8,6 +8,7 @@ Let's write some data processing code and have Jet run it for us.
 ### Start a Java Project
 
 By now you should have some version of Java (at least 8) installed.
+You can get it from the [OpenJDK](https://openjdk.java.net/) website.
 Create a new project targetting your build tool of preference, Maven or
 Gradle, and add the Jet JAR to your build:
 
@@ -66,7 +67,7 @@ the bottom of the `main` method:
 
 ```java
 JetInstance jet = Jet.newJetInstance();
-Job job = jet.newJob(p).join();
+jet.newJob(p).join();
 ```
 
 It will start a full-featured Jet node right there in the JVM where you

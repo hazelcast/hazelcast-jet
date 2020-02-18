@@ -17,11 +17,17 @@ This website was created with [Docusaurus](https://docusaurus.io/).
 $ yarn
 ```
 
-2. Run your dev server:
+1. Run your dev server:
 
 ```sh
 # Start the site
 $ yarn start
+```
+
+1. Run Markdown linter
+
+```sh
+npm run lint:markdown
 ```
 
 ## Directory Structure

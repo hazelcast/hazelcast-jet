@@ -1,5 +1,5 @@
 ---
-title: Windowed Aggregations
+title: Windowed Aggregation
 id: windowing
 ---
 

@@ -3,52 +3,52 @@ title: Cluster Sizing
 id: cluster-sizing
 ---
 
-Jet cluster performance depends on multiple factors including the 
-pipeline design and user defined functions. Therefore, planning the Jet 
-cluster remains a complex task that requires a knowledge of the Jet 
+Jet cluster performance depends on multiple factors including the
+pipeline design and user defined functions. Therefore, planning the Jet
+cluster remains a complex task that requires a knowledge of the Jet
 architecture and concepts. We will introduce a basic guideline that will
-help you size your cluster. 
+help you size your cluster.
 
-We recommend always benchmark your setup before deploying it to 
-production. See a sample cluster sizing with benchmark that can be used 
+We recommend always benchmark your setup before deploying it to
+production. See a sample cluster sizing with benchmark that can be used
 as a reference.
 
-Please read the Hazelcast IMDG Deployment and Operations Guide when 
+Please read the Hazelcast IMDG Deployment and Operations Guide when
 storing the data [inside Jet cluster](concepts/in-memory-storage.md#relationship-with-hazelcast-imdg)
-setup. Your Jet cluster will run both data processing and data storage 
+setup. Your Jet cluster will run both data processing and data storage
 workloads so you should plan for it.
 
 ## Sizing considerations
 
-To size the cluster for your use case, you must first be able to answer 
+To size the cluster for your use case, you must first be able to answer
 the following questions:
 
 - What are the throughput and latency requirements?
 - How many concurrent Jobs shall the cluster run?
 - Fault tolerance requirements
-- Characteristics of the data (number of input partitions, key 
+- Characteristics of the data (number of input partitions, key
  distribution and , size of the dataset)
 - Shape of the pipelines (operations used, external systems involved)
 - Source and sink capacity
-- Network throughput 
+- Network throughput
 - How long is the error window?
 
 ## Determining cluster size
 
-Even a single Jet instance can host and run hundreds of jobs at a time. 
+Even a single Jet instance can host and run hundreds of jobs at a time.
 The clustered setup improves the performance (throughput and latency) of
 hosted jobs and increases the resilience.
 
-A cluster with 3 members is a minimum count for fault tolerant 
-operations. Generally, you need ```n+1``` cluster members to tolerate 
-`n` member failures with the next higher odd number chosen for a split 
+A cluster with 3 members is a minimum count for fault tolerant
+operations. Generally, you need ```n+1``` cluster members to tolerate
+`n` member failures with the next higher odd number chosen for a split
 brain detection.
 
 Jet can utilise hundreds of CPU cores efficiently by exploiting data and
 task parallelism. Adding more members to the cluster therefore helps
 with scaling the CPU-bound computations. Better performance is achieved
 by distributing the data partitions across the cluster to process them
-in parallel. 
+in parallel.
 
 Benchmark your jobs in a clustered setup to see the differences in
 performance, see the Sizing Example.
@@ -82,12 +82,12 @@ cluster to isolate failures and performance spikes.
 
 ## Balancing cluster size with job count
 
-The jobs running in one cluster share the resources to maximise the HW 
-utilization. This is efficient for setups without a risk of noisy 
+The jobs running in one cluster share the resources to maximise the HW
+utilization. This is efficient for setups without a risk of noisy
 neighbours such as:
 
 - Clusters hosting many short-living jobs
-- Clusters hosting jobs with a predictable performance 
+- Clusters hosting jobs with a predictable performance
 - Jobs with relaxed SLAs
 
 For stronger resource isolation (multi-tenant environments, strict
@@ -109,7 +109,7 @@ as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
 ### Recommended Configuration
 
 As a starting point for a data-intensive operations consider machines
-with: 
+with:
 
 - 8 CPU cores
 - 16 GB RAM
@@ -121,15 +121,15 @@ Jet can utilise hundreds of CPU cores efficiently by exploiting data and
 task parallelism. Adding more CPU can therefore help with scaling the
 CPU-bound computations. Read about the [Execution
 model](architecture/execution-engine.md) to understand how Jet makes the
-computation parallel and design your pipelines according to it. 
+computation parallel and design your pipelines according to it.
 
 Don't rely just on CPU usage when benchmarking your cluster. Simulate
 production workload and measure the throughput and latency instead. The
 task manager of Jet can be configured to use the CPU aggressively as
 shown in [this
 benchmark](](https://hazelcast.com/blog/idle-green-threads-in-jet/)):
-the CPU usage was close to 20% with just 1000 events/s. At 1m items/s 
-the CPU usage was 100% even though Jet still could push around 5m 
+the CPU usage was close to 20% with just 1000 events/s. At 1m items/s
+the CPU usage was 100% even though Jet still could push around 5m
 items/s on that machine.
 
 ### Memory
@@ -146,23 +146,23 @@ Memory consumption is affected by:
 - **Resources deployed with your job:** Considerable when attaching big
  files such as models for ML inference pipelines.
 - **State of the running jobs:** Varies as it's affected by the shape of
- your pipeline and by the data being processed. Most of the memory is 
- consumed by operations that aggregate and buffer data. Typically the 
+ your pipeline and by the data being processed. Most of the memory is
+ consumed by operations that aggregate and buffer data. Typically the
  state also scales with the number of distinct keys seen within the time
- window. Learn how the operations in the pipeline store its state. 
+ window. Learn how the operations in the pipeline store its state.
  Operators coming with Jet provide this information in the javadoc.
 - **State back-up:** For jobs configured as fault-tolerant, the state of
- the running jobs is regularly snapshotted and saved in the cluster. 
- Cluster keeps two consecutive snapshots at a time (old one is kept 
- until the new one is successfully created). Both current and previous 
+ the running jobs is regularly snapshotted and saved in the cluster.
+ Cluster keeps two consecutive snapshots at a time (old one is kept
+ until the new one is successfully created). Both current and previous
  snapshot can be saved in multiple replicas to increase data safety. The
-  memory required for state back-up can be calculated as ```(Snapshot 
- size * 2 * Number of replicas) / Cluster member count```. The 
- snapshot size is displayed in the Management Center. You might want to 
- keep some state snapshots residing in the cluster as points of 
+  memory required for state back-up can be calculated as ```(Snapshot
+ size * 2 * Number of replicas) / Cluster member count```. The
+ snapshot size is displayed in the Management Center. You might want to
+ keep some state snapshots residing in the cluster as points of
  recovery, so plan the memory requirements accordingly.
-- **Data stored inside Jet cluster**: Any data hosted in the Jet 
- cluster. Notably the IMap Journal to store the streaming data. See the 
+- **Data stored inside Jet cluster**: Any data hosted in the Jet
+ cluster. Notably the IMap Journal to store the streaming data. See the
  [Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/)
 .
 
@@ -170,14 +170,14 @@ Memory consumption is affected by:
 
 Jet uses the network internally to shuffle data and to replicate the
 back-ups. Network is also used to read input data from and to write
-results to remote systems or to do RPC calls when enriching. In fact, a 
+results to remote systems or to do RPC calls when enriching. In fact, a
 lot of Jet Jobs are network bound. Using a 10 Gigabit or higher network
 can improve application performance.
 
 Consider colocating Jet cluster with the data source and sink to avoid
 moving data back and forth over the wire. Co-locate Jet with source
-rather than a sink if you have to choose. Processed results are often 
-aggregated, so the size is reduced. 
+rather than a sink if you have to choose. Processed results are often
+aggregated, so the size is reduced.
 
 Jet cluster is designed to run in a single LAN. Deploying Jet cluster to
 a network with high or varying latencies leads to unpredictable
@@ -187,11 +187,11 @@ performance.
 
 Jet is an in-memory framework. Cluster disks aren't involved in regular
 operations except for logging and thus are not critical for the cluster
-performance. 
+performance.
 
 Consider using more performant disks when:
 
-- You use the cluster file system as a source or sink - faster disks 
+- You use the cluster file system as a source or sink - faster disks
  improve the performance
 - Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
 
@@ -201,7 +201,7 @@ Consider using more performant disks when:
 
 The sample application is a [real-time trade
 analyser](https://github.com/hazelcast/big-data-benchmark/tree/master/trade-monitor/jet-trade-monitor).
-Every second, it counts the trades completed over the previous minute 
+Every second, it counts the trades completed over the previous minute
 for each trading symbol. Jet is also used to ingest and buffer the
 stream of trades. So, the remote trading applications write trade events
 to an IMap data structure in Jet cluster. The analytical job reads the
@@ -213,7 +213,6 @@ processing guarantee.
 
 The cluster is expected to process 50k trade events per second with 10k
 trade symbols (distinct keys).
-
 
 ### Cluster size and performance
 
@@ -235,7 +234,7 @@ frequently expressed using it  (e.g. app processes 99.999% of data under
 Cluster machines were of the recommended minimal configuration: each 8
 CPU, 16 GB RAM, 10 Gbps network.
 
-**1 job in the cluster**
+#### 1 job in the cluster
 
 | Cluster size | Max | Avg |
 | ------------ | --- | --- |
@@ -243,8 +242,7 @@ CPU, 16 GB RAM, 10 Gbps network.
 | 5            | 172 | 152 |
 | 9            | 215 | 134 |
 
-
-**10 jobs in the cluster**
+#### 10 jobs in the cluster
 
 | Cluster size | Max | Avg |
 | ------------ | --- | --- |
@@ -252,8 +250,7 @@ CPU, 16 GB RAM, 10 Gbps network.
 | 5            | 808 | 719 |
 | 9            | 735 | 557 |
 
-
-**20 jobs in the cluster**
+#### 20 jobs in the cluster
 
 | Cluster size | Max  | Avg  |
 | ------------ | ---- | ---- |
@@ -261,8 +258,7 @@ CPU, 16 GB RAM, 10 Gbps network.
 | 5            | 1593 | 1470 |
 | 9            | 1170 | 1046 |
 
-
-**40 jobs in the cluster**
+#### 40 jobs in the cluster
 
 | Cluster size | Max  | Avg  |
 | ------------ | ---- | ---- |
@@ -270,14 +266,13 @@ CPU, 16 GB RAM, 10 Gbps network.
 | 5            | 3719 | 3207 |
 | 9            | 2605 | 2085 |
 
-
 ### Fault-Tolerance
 
 The [Event
 Journal](https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#event-journal)
 capacity was set to 1.5 million items. With a input data production rate
 of 50k events each second, the data are kept for 30 seconds before being
-overwritten. The job snapshot frequency was set to 1 second. 
+overwritten. The job snapshot frequency was set to 1 second.
 
 The job is restarted from the last snapshot if a cluster member fails.
 In our test, the cluster restarted the processing in under 3 seconds

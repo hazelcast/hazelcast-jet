@@ -15,16 +15,14 @@ tutorial, in both cases you'll need the Hazelcast Jet distribution
 package. Download it from [here](https://jet.hazelcast.org/download) and
 unzip it to a directory we'll refer to as `<jet_home>`.
 
-
 ## As a Java Process
 
 The distribution package contains everything you need to run Jet except
-the JDK. You can get it from the [OpenJDK](https://openjdk.java.net/)
-site and the minimum version is 8. Type this:
+the JDK. Type this:
 
 ```bash
 cd <jet_home>
-bin/start-jet
+bin/jet-start
 ```
 
 This will start a Jet node in the foreground so you have to keep the
@@ -84,7 +82,7 @@ the log output for a line like this:
 
 ```text
 Members {size:1, ver:1} [
-	Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
+ Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
 ]
 ```
 

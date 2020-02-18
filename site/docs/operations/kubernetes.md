@@ -67,7 +67,6 @@ Hazelcast Jet chart and their default values.
 | `jet.yaml.hazelcast`       | Hazelcast IMDG Configuration (`hazelcast.yaml` embedded into `values.yaml`)    | `{DEFAULT_HAZELCAST_YAML}` |
 | `managementcenter.enabled` | Turn on and off Hazelcast Jet Management Center application                    | `true`                     |
 
-
 See
 [stable charts repository](https://github.com/helm/charts/tree/master/stable/hazelcast-jet)
 for more information and configuration options.
@@ -407,7 +406,6 @@ you like.
 
 ![minikube-dashboard](../assets/minikube-dashboard.png)
 
-
 ### With Hazelcast Jet Management Center
 
 Hazelcast Jet Management Center enables you to monitor and manage your
@@ -481,7 +479,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: hazelcast-jet-management-center 
+  name: hazelcast-jet-management-center
 spec:
   type: LoadBalancer
   selector:
@@ -501,4 +499,3 @@ minikube service hazelcast-jet-management-center --url
 ```
 
 ![management-center-dashboard](../assets/management-center-dashboard.png)
-
