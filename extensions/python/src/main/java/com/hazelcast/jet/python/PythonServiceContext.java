@@ -93,6 +93,11 @@ class PythonServiceContext {
                         .start();
                 Thread stdoutLoggingThread = logStdOut(logger, initProcess, "python-init");
                 initProcess.waitFor();
+                if (initProcess.exitValue() != 0) {
+                    throw new Exception(
+                            "Initialization script finished with non-zero return code: " + initProcess.exitValue()
+                    );
+                }
                 stdoutLoggingThread.join();
             }
             makeFilesReadOnly(runtimeBaseDir);
