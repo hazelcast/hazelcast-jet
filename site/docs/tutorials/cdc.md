@@ -50,9 +50,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
         .writeTo(Sinks.logger());
 
 JobConfig jobConfig = new JobConfig();
-jobConfig.addJarsInZip(this.getClass()
-                           .getClassLoader()
-                           .getResource("debezium-connector-mongodb.zip"));
+jobConfig.addJarsInZip("/path/to/debezium-connector-mongodb.zip");
 
 JetInstance jet = createJetMember();
 Job job = jet.newJob(pipeline, jobConfig);
@@ -84,9 +82,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
         .writeTo(Sinks.logger());
 
 JobConfig jobConfig = new JobConfig();
-jobConfig.addJarsInZip(this.getClass()
-                           .getClassLoader()
-                           .getResource("debezium-connector-mysql.zip"));
+jobConfig.addJarsInZip("/path/to/debezium-connector-mysql.zip");
 
 JetInstance jet = createJetMember();
 Job job = jet.newJob(pipeline, jobConfig);
@@ -119,9 +115,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
         .writeTo(Sinks.logger());
 
 JobConfig jobConfig = new JobConfig();
-jobConfig.addJarsInZip(this.getClass()
-                           .getClassLoader()
-                           .getResource("debezium-connector-postgres.zip"));
+jobConfig.addJarsInZip("/path/to/debezium-connector-postgres.zip");
 
 JetInstance jet = createJetMember();
 Job job = jet.newJob(pipeline, jobConfig);
@@ -133,10 +127,34 @@ job.join();
 ### Dependencies
 
 To run the above sample code you will need following libraries external to
-Jet (links point to the latest versions available at the time of writing):
+Jet (latest versions available at the time of writing):
 
-* [Debezium Core](https://mvnrepository.com/artifact/io.debezium/debezium-core/1.0.1.Final)
-* [Apache Kafka Connect API](https://mvnrepository.com/artifact/org.apache.kafka/connect-api/2.4.0)
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Maven-->
+
+```xml
+<dependencies>
+  <dependency>
+      <groupId>io.debezium</groupId>
+      <artifactId>debezium-core</artifactId>
+      <version>1.0.1.Final</version>
+  </dependency>
+  <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>connect-api</artifactId>
+      <version>2.4.0</version>
+  </dependency>
+</dependencies>
+```
+
+<!--Gradle-->
+
+```bash
+compile 'io.debezium:debezium-core:1.0.1.Final'
+compile 'org.apache.kafka:connect-api:2.4.0'
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Uploading Connectors to the Job Classpath
 
@@ -157,3 +175,22 @@ To find the connector archives:
 The above sample code assumes that you have downloaded the connector
 archives, removed the version number from their names and placed them
 in the "resources" folder of your project.
+
+### Events
+
+When a database client queries a database, it uses the database’s current
+schema. However, the database schema can be changed at any time, which
+means that the connector must know what the schema looked like at the
+time each insert, update, or delete operation is recorded. For this
+reason the events coming out of the Debezium connectors are
+**self-contained**.
+
+Each event has a **key** and a **value**. Every message key and value
+has two parts: a **schema** and **payload**. The schema describes the
+structure of the payload, while the payload contains the actual data.
+
+Furthermore each connector emits events in a different schema so there
+is no single format shared among connectors. The specifics of working
+with each connector's data can be found in their respective
+[documentation](https://debezium.io/documentation/reference/1.0/connectors/index.html)
+(latest stable version available at the time of writing).
