@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Jet on Kubernetes · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="The easiest way to install Hazelcast Jet on Kubernetes is using"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Jet on Kubernetes · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="The easiest way to install Hazelcast Jet on Kubernetes is using"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Jet on Kubernetes · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="## Hazelcast Discovery Plugin for Kubernetes"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Jet on Kubernetes · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="## Hazelcast Discovery Plugin for Kubernetes"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -62,13 +62,48 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Jet on Kubernetes</h1></header><article><div><span><p>The easiest way to install Hazelcast Jet on Kubernetes is using
-Helm* charts, Hazelcast Jet provides stable Helm charts for
-open-source and enterprise versions also for Hazelcast Jet Management
-Center. Hazelcast Jet also provides Kubernetes-ready Docker images,
-these images use the Hazelcast Kubernetes Plugin to discover other
-Hazelcast Jet members by interacting with the Kubernetes API.</p>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Jet on Kubernetes</h1></header><article><div><span><h2><a class="anchor" aria-hidden="true" id="hazelcast-discovery-plugin-for-kubernetes"></a><a href="#hazelcast-discovery-plugin-for-kubernetes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hazelcast Discovery Plugin for Kubernetes</h2>
+<p>The plugin provides the automatic member discovery in the Kubernetes
+environment. It is included in Hazelcast Jet docker images and Hazelcast
+Jet Helm charts.</p>
+<p>This plugin supports two different options of how Hazelcast Jet members
+discover each others:</p>
+<ul>
+<li>Kubernetes API</li>
+<li>DNS Lookup</li>
+</ul>
+<h3><a class="anchor" aria-hidden="true" id="kubernetes-api"></a><a href="#kubernetes-api" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Kubernetes API</h3>
+<p><em>Kubernetes API</em> mode means that each node makes a REST call to
+Kubernetes Master in order to discover IPs of PODs (with Hazelcast Jet
+members). Using Kubernetes API requires granting certain permissions.
+Therefore, you may need to create a <em>Role Based Access Control</em> file.
+See <a href="#role-based-access-control">Role Based Access Control</a> section for
+a sample file.</p>
+<p>Hazelcast Kubernetes Discovery requires creating a service to PODs where
+Hazelcast is running. In case of using Kubernetes API mode, the service
+can be of any type.</p>
+<h3><a class="anchor" aria-hidden="true" id="dns-lookup"></a><a href="#dns-lookup" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>DNS Lookup</h3>
+<p><em>DNS Lookup</em> mode uses a feature of Kubernetes that <strong>headless</strong>
+(without cluster IP) services are assigned a DNS record which resolves
+to the set of IPs of related PODs.</p>
+<p>Headless service is a service of type <em>ClusterIP</em> with the <code>clusterIP</code>
+property set to <code>None</code>.</p>
+<p>The following table summarizes the differences between the discovery
+modes: <em>Kubernetes API</em> and <em>DNS Lookup</em></p>
+<table>
+<thead>
+<tr><th style="text-align:left"></th><th style="text-align:left">Kubernetes API</th><th style="text-align:left">DNS Lookup</th></tr>
+</thead>
+<tbody>
+<tr><td style="text-align:left">Description</td><td style="text-align:left">Uses REST calls to Kubernetes Master to fetch IPs of PODs</td><td style="text-align:left">Uses DNS to resolve IPs of PODs related to the given service</td></tr>
+<tr><td style="text-align:left">Pros</td><td style="text-align:left">Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul></td><td style="text-align:left">No additional configuration required, resolving DNS does not require granting any permissions</td></tr>
+<tr><td style="text-align:left">Cons</td><td style="text-align:left">Requires setting up RoleBinding (to allow access to Kubernetes API)</td><td style="text-align:left"><ul><li>Limited to <strong>headless Cluster IP</strong> service</li><li>Limited to <strong>cluster per service</strong></li></ul></td></tr>
+</tbody>
+</table>
 <h2><a class="anchor" aria-hidden="true" id="install-hazelcast-jet-using-helm"></a><a href="#install-hazelcast-jet-using-helm" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Install Hazelcast Jet using Helm</h2>
+<p>The easiest way to install Hazelcast Jet on Kubernetes is using Helm
+charts, Hazelcast Jet provides stable Helm charts for open-source and
+enterprise versions also for Hazelcast Jet Management Center.</p>
 <h3><a class="anchor" aria-hidden="true" id="prerequisites"></a><a href="#prerequisites" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Prerequisites</h3>
 <ul>
 <li>Kubernetes 1.9+</li>
@@ -473,7 +508,78 @@ Hazelcast Jet Management Center.</p>
 <pre><code class="hljs css language-bash">minikube service hazelcast-jet-management-center --url
 </code></pre>
 <p><img src="../assets/management-center-dashboard.png" alt="management-center-dashboard"></p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/job-management"><span class="arrow-prev">← </span><span>Job Management</span></a><a class="docs-next button" href="/docs/operations/monitoring"><span>Monitoring and Metrics</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#install-hazelcast-jet-using-helm">Install Hazelcast Jet using Helm</a><ul class="toc-headings"><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#installing-the-chart">Installing the Chart</a></li><li><a href="#uninstalling-the-chart">Uninstalling the Chart</a></li><li><a href="#configuration">Configuration</a></li></ul></li><li><a href="#install-hazelcast-jet-without-helm">Install Hazelcast Jet without Helm</a><ul class="toc-headings"><li><a href="#role-based-access-control">Role Based Access Control</a></li><li><a href="#configmap">ConfigMap</a></li><li><a href="#statefulset-and-service">StatefulSet and Service</a></li></ul></li><li><a href="#deploy-jobs">Deploy Jobs</a><ul class="toc-headings"><li><a href="#package-the-job-as-a-docker-container">Package the Job as a Docker Container</a></li><li><a href="#submit-the-job-from-a-shared-persistent-volume">Submit the Job from a Shared Persistent Volume</a></li></ul></li><li><a href="#inspect-jobs">Inspect Jobs</a><ul class="toc-headings"><li><a href="#with-kubernetes-dashboard">With Kubernetes Dashboard</a></li><li><a href="#with-hazelcast-jet-management-center">With Hazelcast Jet Management Center</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+<h2><a class="anchor" aria-hidden="true" id="access-from-outside-the-kubernetes"></a><a href="#access-from-outside-the-kubernetes" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Access From Outside The Kubernetes</h2>
+<p>While it is straightforward to access the Hazelcast Jet cluster inside
+the Kubernetes (see <a href="#deploy-jobs">Deploy Jobs</a> for a sample client
+config), it is only possible with the public Internet network if you are
+accessing the cluster from outside.</p>
+<h3><a class="anchor" aria-hidden="true" id="smart-routing-disabled"></a><a href="#smart-routing-disabled" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Smart Routing Disabled</h3>
+<p>If you configure <code>smart-routing: false</code> for your client, you don't need
+any plugin. It's enough to expose your Hazelcast Jet cluster with a
+LoadBalancer (or NodePort) service and set its IP/port as the TCP/IP
+Hazelcast Jet Client configuration. Remember that if smart-routing is
+disabled then all all the communication happens against a single
+Hazelcast Jet member.</p>
+<h3><a class="anchor" aria-hidden="true" id="smart-routing-enabled"></a><a href="#smart-routing-enabled" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Smart Routing Enabled</h3>
+<p>To access a Hazelcast Jet cluster with a <em>smart</em> client you need to
+perform the following steps:</p>
+<ul>
+<li>Expose each Hazelcast Jet Member POD with a separate LoadBalancer or
+NodePort service (the simplest way to do it is to install
+<a href="https://metacontroller.app/">Metacontroller</a> and
+<a href="https://github.com/GoogleCloudPlatform/metacontroller/tree/master/examples/service-per-pod">service-per-pod</a>
+Decorator Controller)</li>
+<li>Configure ServiceAccount with ClusterRole having at least <code>get</code> and
+<code>list</code> permissions to the following resources: <code>endpoints</code>, <code>pods</code>,
+<code>nodes</code>, <code>services</code></li>
+<li>Use credentials from the created ServiceAccount in the Hazelcast Jet
+Client configuration (credentials can be fetched with:<br>
+<code>kubectl get secret &lt;sevice-account-secret&gt; -o jsonpath={.data.token} | base64 --decode</code> and<br>
+<code>kubectl get secret &lt;sevice-account-secret&gt; -o jsonpath={.data.ca\\.crt} | base64 --decode</code>)</li>
+</ul>
+<pre><code class="hljs css language-yaml"><span class="hljs-attr">hazelcast-client:</span>
+  <span class="hljs-attr">network:</span>
+    <span class="hljs-attr">kubernetes:</span>
+      <span class="hljs-attr">enabled:</span> <span class="hljs-literal">true</span>
+      <span class="hljs-attr">namespace:</span> <span class="hljs-string">MY-KUBERNETES-NAMESPACE</span>
+      <span class="hljs-attr">service-name:</span> <span class="hljs-string">MY-SERVICE-NAME</span>
+      <span class="hljs-attr">use-public-ip:</span> <span class="hljs-literal">true</span>
+      <span class="hljs-attr">kubernetes-master:</span> <span class="hljs-string">https://35.226.182.228</span>
+      <span class="hljs-attr">api-token:</span> <span class="hljs-string">THE-API-TOKEN</span>
+      <span class="hljs-attr">ca-certificate:</span> <span class="hljs-string">|
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+</span></code></pre>
+<p><strong>Note</strong>: Hazelcast Jet Client outside Kubernetes cluster works only in
+the <em>Kubernetes API</em> mode.</p>
+<h2><a class="anchor" aria-hidden="true" id="rolling-upgrade-and-scaling"></a><a href="#rolling-upgrade-and-scaling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Rolling Upgrade and Scaling</h2>
+<p>Hazelcast Jet cluster is easily scalable within Kubernetes. You can use
+the standard <code>kubectl scale</code> command to change the cluster size. The
+same applies the rolling upgrade procedure, you can depend on the
+standard Kubernetes behavior and just update the new version to your
+<code>Deployment/StatefulSet</code> configurations.</p>
+<p>Note however that, by default, Hazelcast Jet does not shutdown
+gracefully. It means that if you suddenly terminate more than your
+backup-count property (1 by default), you may lose the cluster data. To
+prevent that from happening, set the following properties:</p>
+<ul>
+<li><code>terminationGracePeriodSeconds</code>: In your <code>StatefulSet/Deployment</code>
+configuration; the value should be high enough to cover the data
+migration process</li>
+<li><code>-Dhazelcast.shutdownhook.policy=GRACEFUL</code>: In the JVM parameters</li>
+<li><code>-Dhazelcast.graceful.shutdown.max.wait</code>: In the JVM parameters; the
+value should be high enough to cover the data migration process</li>
+</ul>
+<p>Additionally if you use Deployment (not StatefulSet), you need to set
+your strategy to
+<a href="https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment">RollingUpdate</a>
+and ensure Pods are updated one by one.</p>
+<p>All these features are already included in Hazelcast Jet Helm Charts.
+See
+<a href="#install-hazelcast-jet-using-helm">Install Hazelcast Jet using Helm</a>
+for more information.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/job-management"><span class="arrow-prev">← </span><span>Job Management</span></a><a class="docs-next button" href="/docs/operations/monitoring"><span>Monitoring and Metrics</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#hazelcast-discovery-plugin-for-kubernetes">Hazelcast Discovery Plugin for Kubernetes</a><ul class="toc-headings"><li><a href="#kubernetes-api">Kubernetes API</a></li><li><a href="#dns-lookup">DNS Lookup</a></li></ul></li><li><a href="#install-hazelcast-jet-using-helm">Install Hazelcast Jet using Helm</a><ul class="toc-headings"><li><a href="#prerequisites">Prerequisites</a></li><li><a href="#installing-the-chart">Installing the Chart</a></li><li><a href="#uninstalling-the-chart">Uninstalling the Chart</a></li><li><a href="#configuration">Configuration</a></li></ul></li><li><a href="#install-hazelcast-jet-without-helm">Install Hazelcast Jet without Helm</a><ul class="toc-headings"><li><a href="#role-based-access-control">Role Based Access Control</a></li><li><a href="#configmap">ConfigMap</a></li><li><a href="#statefulset-and-service">StatefulSet and Service</a></li></ul></li><li><a href="#deploy-jobs">Deploy Jobs</a><ul class="toc-headings"><li><a href="#package-the-job-as-a-docker-container">Package the Job as a Docker Container</a></li><li><a href="#submit-the-job-from-a-shared-persistent-volume">Submit the Job from a Shared Persistent Volume</a></li></ul></li><li><a href="#inspect-jobs">Inspect Jobs</a><ul class="toc-headings"><li><a href="#with-kubernetes-dashboard">With Kubernetes Dashboard</a></li><li><a href="#with-hazelcast-jet-management-center">With Hazelcast Jet Management Center</a></li></ul></li><li><a href="#access-from-outside-the-kubernetes">Access From Outside The Kubernetes</a><ul class="toc-headings"><li><a href="#smart-routing-disabled">Smart Routing Disabled</a></li><li><a href="#smart-routing-enabled">Smart Routing Enabled</a></li></ul></li><li><a href="#rolling-upgrade-and-scaling">Rolling Upgrade and Scaling</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
