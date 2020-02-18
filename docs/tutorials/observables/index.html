@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Reactive Streams · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Jet implements reactive streams to allow observation of a job&#x27;s output"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Reactive Streams · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Jet implements reactive streams to allow observation of a job&#x27;s output"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Reactive Streams · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Usually Jet jobs make use of distributed data Sinks to output results,"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Reactive Streams · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Usually Jet jobs make use of distributed data Sinks to output results,"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -62,9 +62,63 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Reactive Streams</h1></header><article><div><span><p>Jet implements reactive streams to allow observation of a job's output
-from the caller.</p>
-<p>TODO</p>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Reactive Streams</h1></header><article><div><span><p>Usually Jet jobs make use of distributed data Sinks to output results,
+in order to not bottleneck the process for massive datasets. While this
+is efficient, it's not always convenient.</p>
+<p>For certain jobs, especially batch ones, which produce a reasonably
+small amount of output, some clients would prefer to get results
+directly, at the point where they have submitted the job.</p>
+<p>In order to make this happen Jet implements reactive style <code>Observables</code>
+, which can be used in the following way:</p>
+<pre><code class="hljs css language-java">JetInstance jet = Jet.bootstrappedInstance();
+Observable&lt;Long&gt; observable = jet.newObservable();
+observable.addObserver(System.out::println);
+
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(TestSources.items(<span class="hljs-number">0L</span>, <span class="hljs-number">1L</span>, <span class="hljs-number">2L</span>, <span class="hljs-number">3L</span>, <span class="hljs-number">4L</span>))
+        .writeTo(Sinks.observable(observable));
+
+jet.newJob(pipeline).join();
+
+observable.destroy();
+</code></pre>
+<p>As we can see Observables can be obtained from any Jet member or
+client. An Observable can be observed by registering <code>Observers</code> on it
+, which are basically callbacks for handling <strong>results</strong>, <strong>errors</strong> and
+<strong>completion</strong> events. Handling errors and completion is optional. In
+order to make sure that no results are lost it is recommended that the
+Observers are registered with their Observables before Job submission.</p>
+<p>Due to their reactive nature Observers and Observables work both in
+batch and streaming jobs, but for batch jobs they have even more
+convenient ways to be used.</p>
+<p>They can for example be iterated over, without needing to register any
+explicit Observers up-front. They can even be converted into a <code>Future</code>
+form, with a build in transformation function for the results. For
+example just counting the results and printing the count is as simple
+as:</p>
+<pre><code class="hljs css language-java">JetInstance jet = Jet.newJetInstance();
+Observable&lt;Long&gt; observable = jet.getObservable(<span class="hljs-string">"results"</span>);
+
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(TestSources.items(<span class="hljs-number">0L</span>, <span class="hljs-number">1L</span>, <span class="hljs-number">2L</span>, <span class="hljs-number">3L</span>, <span class="hljs-number">4L</span>))
+        .writeTo(Sinks.observable(<span class="hljs-string">"results"</span>));
+
+observable.toFuture(Stream::count).thenAccept(System.out::println);
+jet.newJob(pipeline).join();
+
+observable.destroy();
+</code></pre>
+<h3><a class="anchor" aria-hidden="true" id="clean-up"></a><a href="#clean-up" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Clean-up</h3>
+<p>Observables are backed by
+<a href="https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/ringbuffer/Ringbuffer.html">Ringbuffers</a>
+stored in the cluster which should be cleaned up by the client, once
+they are no longer necessary. They have a <code>destroy()</code> method which does
+just that. If the Observable isn’t destroyed, its memory will be leaked
+in the cluster forever.</p>
+<p>In case the client crashes, or looses track of its Observables for any
+reason it’s still possible to identify all live instances, by using
+<code>JetInstance.getObservables()</code> and then the ones no longer needed can be
+cleaned-up via their destroy methods.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/kafka"><span class="arrow-prev">← </span><span>Work with Apache Kafka</span></a><a class="docs-next button" href="/docs/tutorials/cdc"><span>Change Data Capture</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
