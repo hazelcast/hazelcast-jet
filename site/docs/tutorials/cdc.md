@@ -277,3 +277,20 @@ private static final class Customer implements Serializable {
     }
 }
 ```
+
+### Snapshots
+
+When a connector gets started up and not all database change-logs still
+exist (typically the case when the database has been running for some
+time), an initial snapshot of the database’s current state can be taken.
+
+Debezium connectors will do so, if configured accordingly, and will
+provide the contents of the snapshot in the form of events. Then they
+will transition to providing the normal, log based events. This will be
+done in a consistent way, no changes happening during the serving of the
+snapshot will be lost.
+
+Unfortunately the specifics of snapshotting differ from connector to
+connector so their individual
+[documentation](https://debezium.io/documentation/reference/1.0/connectors/index.html)
+needs to be consulted.
