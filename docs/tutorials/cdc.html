@@ -125,6 +125,85 @@ is no single format shared among connectors. The specifics of working
 with each connector's data can be found in their respective
 <a href="https://debezium.io/documentation/reference/1.0/connectors/index.html">documentation</a>
 (latest stable version available at the time of writing).</p>
+<h3><a class="anchor" aria-hidden="true" id="interpreting-events"></a><a href="#interpreting-events" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Interpreting Events</h3>
+<p>Even though events are connector specific and working with them is not
+always straightforward, Debezium offers some assistance with
+<a href="https://debezium.io/documentation/reference/1.0/configuration/serdes.html">deserializing them</a>
+.</p>
+<p>Below you can see an example Jet Pipeline, which:</p>
+<ul>
+<li>takes CDC data from a MySQL database (same configuration as
+previous example)</li>
+<li>filters out all events except ones from the &quot;customers&quot; table (same
+effect could be achieved by whitelisting the table in the connector
+config)</li>
+<li>formats them into JSON strings</li>
+<li>deserializes the JSON strings into <code>Customer</code> objects (simple POJOs)</li>
+<li>stores the latest <code>Customer</code> object for each customer ID in an
+<a href="https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/map/IMap.html">IMap</a></li>
+</ul>
+<pre><code class="hljs css language-java">Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(DebeziumSources.cdc(configuration))
+        .withoutTimestamps()
+        .filter(r -&gt; r.topic().equals(<span class="hljs-string">"dbserver1.inventory.customers"</span>))
+        .map(record -&gt; Values.convertToString(record.valueSchema(), record.value()))
+        .mapUsingService(
+                ServiceFactories.nonSharedService(cntx -&gt; {
+                    Serde&lt;Customer&gt; serde = DebeziumSerdes.payloadJson(Customer<span class="hljs-class">.<span class="hljs-keyword">class</span>)</span>;
+                    serde.configure(Collections.singletonMap(<span class="hljs-string">"from.field"</span>, <span class="hljs-string">"after"</span>), <span class="hljs-keyword">false</span>);
+                    <span class="hljs-keyword">return</span> serde;
+                }),
+                (serde, json) -&gt; {
+                    Customer customer = serde.deserializer()
+                                .deserialize(<span class="hljs-string">"topic"</span>, json.getBytes());
+                    <span class="hljs-keyword">return</span> entry(customer.id, customer);
+                })
+        .writeTo(Sinks.map(<span class="hljs-string">"customers"</span>));
+</code></pre>
+<p>The <strong>Customers</strong> class used to build the deserializer is quite simple:</p>
+<pre><code class="hljs css language-java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Customer</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Serializable</span> </span>{
+    <span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> id;
+
+    <span class="hljs-meta">@JsonProperty</span>(<span class="hljs-string">"first_name"</span>)
+    <span class="hljs-keyword">public</span> String firstName;
+
+    <span class="hljs-meta">@JsonProperty</span>(<span class="hljs-string">"last_name"</span>)
+    <span class="hljs-keyword">public</span> String lastName;
+
+    <span class="hljs-keyword">public</span> String email;
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">Customer</span><span class="hljs-params">()</span> </span>{
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">Customer</span><span class="hljs-params">(<span class="hljs-keyword">int</span> id, String firstName, String lastName, String email)</span> </span>{
+        <span class="hljs-keyword">super</span>();
+        <span class="hljs-keyword">this</span>.id = id;
+        <span class="hljs-keyword">this</span>.firstName = firstName;
+        <span class="hljs-keyword">this</span>.lastName = lastName;
+        <span class="hljs-keyword">this</span>.email = email;
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> <span class="hljs-title">hashCode</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> Objects.hash(email, firstName, id, lastName);
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">equals</span><span class="hljs-params">(Object obj)</span> </span>{
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span> == obj) {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+        }
+        <span class="hljs-keyword">if</span> (obj == <span class="hljs-keyword">null</span> || getClass() != obj.getClass()) {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+        }
+        Customer other = (Customer) obj;
+        <span class="hljs-keyword">return</span> id == other.id
+                &amp;&amp; Objects.equals(firstName, other.firstName)
+                &amp;&amp; Objects.equals(lastName, other.lastName)
+                &amp;&amp; Objects.equals(email, other.email);
+    }
+}
+</code></pre>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/observables"><span class="arrow-prev">← </span><span>Reactive Streams</span></a><a class="docs-next button" href="/docs/tutorials/stream-imap"><span>Stream changes from IMap</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
