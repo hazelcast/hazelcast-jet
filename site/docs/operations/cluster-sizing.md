@@ -25,10 +25,10 @@ the following questions:
 
 * What are the throughput and latency requirements?
 * How many concurrent Jobs shall the cluster run?
-* Fault tolerance requirements 
+* Fault tolerance requirements
 * How long is the error window?
 * Shape of the pipelines (operations used, external systems involved)
-* Characteristics of the data to be processed such as partitioning, key 
+* Characteristics of the data to be processed such as partitioning, key
 distribution and record size
 * Source and sink capacity
 
@@ -59,11 +59,11 @@ performance, see the [Sizing Example](#benchmarking-and-sizing-example).
 Jet cluster is elastic to deal with failures and performance spikes.
 
 Elasticity is very useful feature to prevent overprovisioning. Cluster
-can be upscaled when resource consumption reaches a watermark (autoscale
+can be up-scaled when resource consumption reaches a watermark (autoscale
 isn't built in, connect Jet metrics to the resource manager) or before
 expected usage spike. Up-scales however temporarily increase the stress
 on the cluster as the cluster has regroup and [replay missed
-data](concepts/fault-tolerance.md). 
+data](concepts/fault-tolerance.md).
 
 The failures reduce the cluster resources and increase the stress on
 remaining members until the failed member is fixed.  The data previously
@@ -85,24 +85,24 @@ journal size or ingest streaming data using a persistent storage such as
 [Apache Kafka](https://docs.hazelcast.org/docs/jet/latest/manual/#kafka)
 or Apache Pulsar.
 
-Another approach increasing the fault-tolerance is to split the Jet jobs
-and the data storage between two clusters. Streaming data can be stored
-in another Jet cluster to isolate failures and performance spikes.
+Another approach to increase the fault-tolerance is splitting the Jet
+jobs and the data storage. Streaming data can be stored in another Jet
+cluster to isolate failures and performance spikes.
 
 ## Balancing cluster size with job count
 
 The jobs running in one cluster share the resources to maximise the HW 
-utilization. This is efficient for setups without a risk of [noisy 
+utilisation. This is efficient for setups without a risk of [noisy
 neighbours](https://searchcloudcomputing.techtarget.com/definition/noisy-neighbor-cloud-computing-performance)
-such as:
+ such as:
 
 * Clusters hosting many short-living jobs
 * Clusters hosting jobs with a predictable performance 
 * Jobs with relaxed SLAs
 
 For stronger resource isolation (multi-tenant environments, strict
-SLAs), consider starting multiple smaller clusters with resources 
-allocated on an OS level or using a resource manager such as 
+SLAs), consider starting multiple smaller clusters with resources
+allocated on an OS level or using a resource manager such as
 [Kubernetes](operations/kubernetes.md).
 
 ## Hardware Planning
@@ -120,7 +120,7 @@ as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
 ### Recommended Configuration
 
 As a starting point for a data-intensive operations consider machines
-such as [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/) 
+such as [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/)
 with: 
 
 * 8 CPU cores
@@ -185,7 +185,7 @@ Operators coming with Jet provide this information in the javadoc.
  keep some state snapshots residing in the cluster as points of 
  recovery, so plan the memory requirements accordingly.
 * **Data stored inside Jet cluster**: Any data hosted in the Jet 
-cluster. Notably the IMap and ICache Journal to store the streaming data. See the 
+cluster. Notably the IMap and ICache Journal to store the streaming data. See the
 [Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/).
 
 ### Network
@@ -202,8 +202,8 @@ moving data back and forth over the wire. Co-locate Jet with source
 rather than a sink if you have to choose. Processed results are often 
 aggregated, so the size is reduced. 
 
-Jet cluster is designed to run in a single LAN. Deploying Jet cluster 
-to a network with high or varying latencies leads to unpredictable
+Jet cluster is designed to run in a single LAN. Deploying Jet cluster to
+a network with high or varying latencies leads to unpredictable
 performance.
 
 ### Disk
@@ -222,7 +222,7 @@ improve the performance
 ## Data flow
 
 Consider the capacity of data sources and sinks when planning the Jet
-cluster. 
+cluster.
 
 Each Jet job participates in a larger data pipeline: it continuously
 reads the data from the sources and writes the results to the sinks. The
@@ -234,8 +234,8 @@ processing and source data consumption. The data sources should be
 designed to participate by reducing the pace of data production or by
 buffering the data.
 
-On the other hand, if the data source can't produce or transmit the 
-data fast enough, adding more resources to the Jet cluster won't bring 
+On the other hand, if the data source can't produce or transmit the
+data fast enough, adding more resources to the Jet cluster won't bring
 any performance benefits.
 
 ## Processed Data
@@ -246,18 +246,18 @@ production data, notably:
 * Partitioning of the input data
 * Key distribution and count
 
-Jet splits the data across the cluster to process it in parallel. It 
-builds on the prerequisite of balanced partitions to perform well. 
-Imbalanced partitions may create a hotspot in your cluster. The 
-partitioning is determined by the data source and by the grouping 
+Jet splits the data across the cluster to process it in parallel. It
+builds on the prerequisite of balanced partitions to perform well.
+Imbalanced partitions may create a hotspot in your cluster. The
+partitioning is determined by the data source and by the grouping
 keys used in the Jet application.
 
 A frequent source of the partition imbalance are special cases: in a
 payment processing application, there might be a small number of
 accounts with very high  activity. Imagine a retail company account with
 thousands of payments per  minute vs personal accounts with just few
-payments in a day. Using account as a grouping key would lead to 
-imbalanced partitions. Consider special cases when designing your 
+payments in a day. Using account as a grouping key would lead to
+imbalanced partitions. Consider special cases when designing your
 pipelines and the testing data.
 
 ## Benchmarking and Sizing Example
@@ -301,8 +301,8 @@ Consider measuring the result distribution, as the application SLAs are
 frequently expressed using it  (e.g. app processes 99.999% of data under
 200 milliseconds).
 
-Cluster machines were of the recommended minimal configuration: 
-AWS [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/) 
+Cluster machines were of the recommended minimal configuration:
+AWS [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/)
 machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 
 **1 job in the cluster**
