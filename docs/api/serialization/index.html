@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Serialization · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="To be able to send object state over a network or store it in a file "/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Serialization · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="To be able to send object state over a network or store it in a file "/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Serialization · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="To be able to send object state over a network or store it in a file"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Serialization · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="To be able to send object state over a network or store it in a file"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -97,9 +97,9 @@ entire class will be serialized. For example, this will fail because
     <span class="hljs-function">Pipeline <span class="hljs-title">buildPipeline</span><span class="hljs-params">()</span> </span>{
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list(<span class="hljs-string">"input"</span>))
-        <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`, but `JetJob1` is not </span>
+        <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`, but `JetJob1` is not</span>
         <span class="hljs-comment">// `Serializable` so this call will fail.</span>
-        .filter(item -&gt; item.equals(instanceVar)); 
+        .filter(item -&gt; item.equals(instanceVar));
         <span class="hljs-keyword">return</span> p;
     }
 }
@@ -109,14 +109,14 @@ workaround here. However, consider something just a bit different:</p>
 <pre><code class="hljs css language-java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">JetJob2</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Serializable</span> </span>{
     <span class="hljs-keyword">private</span> String instanceVar;
     <span class="hljs-comment">// A non-serializable field.</span>
-    <span class="hljs-keyword">private</span> OutputStream fileOut; 
+    <span class="hljs-keyword">private</span> OutputStream fileOut;
 
     <span class="hljs-function">Pipeline <span class="hljs-title">buildPipeline</span><span class="hljs-params">()</span> </span>{
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list(<span class="hljs-string">"input"</span>))
-        <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`. `JetJob2` is declared </span>
+        <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`. `JetJob2` is declared</span>
         <span class="hljs-comment">// as `Serializable`, but has a non-serializable field and this fails.</span>
-        .filter(item -&gt; item.equals(instanceVar)); 
+        .filter(item -&gt; item.equals(instanceVar));
         <span class="hljs-keyword">return</span> p;
     }
 }
@@ -132,11 +132,11 @@ variable, then referring to that variable inside the lambda:</p>
     <span class="hljs-function">Pipeline <span class="hljs-title">buildPipeline</span><span class="hljs-params">()</span> </span>{
         Pipeline p = Pipeline.create();
         <span class="hljs-comment">// Declare a local variable that loads the value of the instance field.</span>
-        String findMe = instanceVar; 
+        String findMe = instanceVar;
         p.readFrom(Sources.list(<span class="hljs-string">"input"</span>))
-        <span class="hljs-comment">// By referring to the local variable `findMe` we avoid </span>
-        <span class="hljs-comment">// capturing `this` and the job runs fine.</span>
-        .filter(item -&gt; item.equals(findMe)); 
+         <span class="hljs-comment">// By referring to the local variable `findMe` we avoid</span>
+         <span class="hljs-comment">// capturing `this` and the job runs fine.</span>
+         .filter(item -&gt; item.equals(findMe));
         <span class="hljs-keyword">return</span> p;
     }
 }
@@ -149,14 +149,14 @@ or a similar non-serializable class:</p>
 Pipeline p = Pipeline.create();
 BatchStage&lt;Long&gt; src = p.readFrom(Sources.list(<span class="hljs-string">"input"</span>));
 <span class="hljs-comment">// Captures the non-serializable formatter, so this fails.</span>
-src.map((Long tstamp) -&gt; formatter.format(Instant.ofEpochMilli(tstamp))); 
+src.map((Long tstamp) -&gt; formatter.format(Instant.ofEpochMilli(tstamp)));
 </code></pre>
 <p>Sometimes we can get away by using one of the preconfigured formatters
 available in the JDK:</p>
-<pre><code class="hljs css language-java"><span class="hljs-comment">// Accesses the static final field `ISO_LOCAL_TIME`. Static fields are </span>
-<span class="hljs-comment">// not subject to lambda capture, they are dereferenced when the code </span>
+<pre><code class="hljs css language-java"><span class="hljs-comment">// Accesses the static final field `ISO_LOCAL_TIME`. Static fields are</span>
+<span class="hljs-comment">// not subject to lambda capture, they are dereferenced when the code</span>
 <span class="hljs-comment">// runs on the target machine.</span>
-src.map((Long tstamp) -&gt; DateTimeFormatter.ISO_LOCAL_TIME 
+src.map((Long tstamp) -&gt; DateTimeFormatter.ISO_LOCAL_TIME
         .format(Instant.ofEpochMilli(tstamp).atZone(ZoneId.systemDefault())));
 </code></pre>
 <p>This refers to a <code>static final</code> field in the JDK, so the instance is
@@ -167,11 +167,11 @@ that Jet will ask to create an object on the target member. The object
 it returns does not have to be serializable. Here’s an example of that:</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 BatchStage&lt;Long&gt; src = p.readFrom(Sources.list(<span class="hljs-string">"input"</span>));
-ServiceFactory&lt;?, DateTimeFormatter&gt; serviceFactory = nonSharedService( 
+ServiceFactory&lt;?, DateTimeFormatter&gt; serviceFactory = nonSharedService(
         pctx -&gt; DateTimeFormatter.ofPattern(<span class="hljs-string">"HH:mm:ss.SSS"</span>)
                               .withZone(ZoneId.systemDefault()));
-src.mapUsingService(serviceFactory, 
-        (formatter, tstamp) -&gt; formatter.format(Instant.ofEpochMilli(tstamp))); 
+src.mapUsingService(serviceFactory,
+        (formatter, tstamp) -&gt; formatter.format(Instant.ofEpochMilli(tstamp)));
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="custom-types"></a><a href="#custom-types" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Custom types</h2>
 <p>Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
@@ -190,7 +190,8 @@ types:</p>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html">java.io.Serializable</a></li>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html">java.io.Externalizable</a></li>
 <li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html">com.hazelcast.nio.serialization.Portable</a></li>
-<li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a> &amp;
+<li><a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>
+&amp;
 <a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html">com.hazelcast.nio.serialization.ByteArraySerializer</a></li>
 </ul>
 <p>The following table provides a comparison between them to help you in
@@ -237,7 +238,8 @@ com.hazelcast.nio.serialization.StreamSerializer                        26      
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="sample-deserializer-implementation"></a><a href="#sample-deserializer-implementation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sample (de)serializer implementation</h3>
 <p>For best performance we recommend using
-<a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a> or
+<a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>
+or
 <a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html">com.hazelcast.nio.serialization.ByteArraySerializer</a>.
 Below you can find a sample implementation of <code>StreamSerializer</code> for
 <code>Person</code> (mind the type id which should be unique across all serializers):</p>
