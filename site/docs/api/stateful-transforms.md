@@ -13,8 +13,10 @@ id: stateful-transforms
 
 ## mapStateful
 
-## filterStateful
-
-## flatMapStateful
-
 ## window
+
+### tumblingWindow
+
+### slidingWindow
+
+### sessionWindow

@@ -20,7 +20,7 @@
       "api/data-structures",
       "api/serialization",
       "api/testing",
-      "api/javadocs"
+      "api/javadoc"
     ],
     "Concepts": [
       "concepts/dag",
