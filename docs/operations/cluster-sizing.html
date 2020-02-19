@@ -81,17 +81,17 @@ the following questions:</p>
 <li>What are the throughput and latency requirements?</li>
 <li>How many concurrent Jobs shall the cluster run?</li>
 <li>Fault tolerance requirements</li>
-<li>Characteristics of the data (number of input partitions, key
-distribution and , size of the dataset)</li>
-<li>Shape of the pipelines (operations used, external systems involved)</li>
-<li>Source and sink capacity</li>
-<li>Network throughput</li>
 <li>How long is the error window?</li>
+<li>Shape of the pipelines (operations used, external systems involved)</li>
+<li>Characteristics of the data to be processed such as partitioning, key
+distribution and record size</li>
+<li>Source and sink capacity</li>
 </ul>
 <h2><a class="anchor" aria-hidden="true" id="determining-cluster-size"></a><a href="#determining-cluster-size" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Determining cluster size</h2>
-<p>Even a single Jet instance can host and run hundreds of jobs at a time.
-The clustered setup improves the performance (throughput and latency) of
-hosted jobs and increases the resilience.</p>
+<p>Even a single Jet instance running on a <a href="#recommended-configuration">recommended
+server</a> can host hundreds of jobs at a time.
+The clustered setup improves the  performance (throughput and latency)
+of hosted jobs and increases the  resilience.</p>
 <p>A cluster with 3 members is a minimum count for fault tolerant
 operations. Generally, you need <code>n+1</code> cluster members to tolerate
 <code>n</code> member failures with the next higher odd number chosen for a split
@@ -102,19 +102,25 @@ with scaling the CPU-bound computations. Better performance is achieved
 by distributing the data partitions across the cluster to process them
 in parallel.</p>
 <p>Benchmark your jobs in a clustered setup to see the differences in
-performance, see the Sizing Example.</p>
+performance, see the <a href="#benchmarking-and-sizing-example">Sizing Example</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="sizing-for-failures"></a><a href="#sizing-for-failures" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sizing for failures</h2>
-<p>Jet cluster is elastic to deal with failures and performance spikes.
-Mostly down-scales temporarily reduce the available resources and
-increase the stress on remaining members. The overall memory and CPU
-available in the cluster reduces. The data previously owned by the newly
-offline member is distributed among the remaining members. The cluster
-must catch up the missed data in the stream and keep up with the head of
-the stream with less CPU.</p>
+<p>Jet cluster is elastic to deal with failures and performance spikes.</p>
+<p>Elasticity is very useful feature to prevent overprovisioning. Cluster
+can be up-scaled when resource consumption reaches a watermark
+(autoscale isn't built in, connect Jet metrics to the resource manager)
+or before expected usage spike. Up-scales however temporarily increase
+the stress on the cluster as the cluster has regroup and <a href="/docs/concepts/fault-tolerance">replay missed
+data</a>.</p>
+<p>The failures reduce the cluster resources and increase the stress on
+remaining members until the failed member is fixed.  The data previously
+owned by the newly offline member is distributed among the remaining
+members. The cluster must catch up the missed data in the stream and
+keep up with the head of the stream with less CPU.</p>
 <p>To tolerate the failure of one member, we recommend to size your cluster
 to operate with <code>n-1</code> members setup.</p>
-<p>You can use Hazelcast <a href="https://docs.hazelcast.org/docs/jet/latest/manual/#connector-imdg-journal">IMap Event Journal</a>
-to ingest the streaming data. Journal is an in-memory structure with a
+<p>You can use Hazelcast <a href="https://docs.hazelcast.org/docs/jet/latest/manual/#connector-imdg-journal">IMap and ICache Event
+Journal</a></p>
+<p>to ingest the streaming data. Journal is an in-memory structure with a
 fixed capacity. If the jobs consuming the journal can't keep up there is
 a risk of data loss.  The pace of the data producers and the capacity of
 the Journal therefore determine the length of an error window of your
@@ -127,16 +133,18 @@ jobs and the data storage. Streaming data can be stored in another Jet
 cluster to isolate failures and performance spikes.</p>
 <h2><a class="anchor" aria-hidden="true" id="balancing-cluster-size-with-job-count"></a><a href="#balancing-cluster-size-with-job-count" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Balancing cluster size with job count</h2>
 <p>The jobs running in one cluster share the resources to maximise the HW
-utilization. This is efficient for setups without a risk of noisy
-neighbours such as:</p>
+utilisation. This is efficient for setups without a risk of <a href="https://searchcloudcomputing.techtarget.com/definition/noisy-neighbor-cloud-computing-performance">noisy
+neighbours</a>
+such as:</p>
 <ul>
 <li>Clusters hosting many short-living jobs</li>
 <li>Clusters hosting jobs with a predictable performance</li>
 <li>Jobs with relaxed SLAs</li>
 </ul>
 <p>For stronger resource isolation (multi-tenant environments, strict
-SLAs), consider starting multiple smaller clusters with resources (CPU,
-memory, network) allocated on an OS level or a resource manager level.</p>
+SLAs), consider starting multiple smaller clusters with resources
+allocated on an OS level or using a resource manager such as
+<a href="/docs/operations/kubernetes">Kubernetes</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="hardware-planning"></a><a href="#hardware-planning" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hardware Planning</h2>
 <p>Jet is designed to run efficiently on homogeneous clusters. All JVM
 processes that participate in the cluster should have equal CPU, memory
@@ -147,6 +155,7 @@ of the whole cluster.</p>
 as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).</p>
 <h3><a class="anchor" aria-hidden="true" id="recommended-configuration"></a><a href="#recommended-configuration" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Recommended Configuration</h3>
 <p>As a starting point for a data-intensive operations consider machines
+such as <a href="https://aws.amazon.com/ec2/instance-types/c5/">c5.2xlarge</a>
 with:</p>
 <ul>
 <li>8 CPU cores</li>
@@ -159,6 +168,9 @@ task parallelism. Adding more CPU can therefore help with scaling the
 CPU-bound computations. Read about the <a href="/docs/architecture/execution-engine">Execution
 model</a> to understand how Jet makes the
 computation parallel and design your pipelines according to it.</p>
+<p>By default, Jet uses all available CPU. Starting two Jet
+instances on one machine therefore doesn't bring any performance benefit
+as the instances would compete for the same CPU resources.</p>
 <p>Don't rely just on CPU usage when benchmarking your cluster. Simulate
 production workload and measure the throughput and latency instead. The
 task manager of Jet can be configured to use the CPU aggressively as
@@ -174,6 +186,13 @@ enough RAM not to run out of memory. Estimate the memory requirements
 and plan with a headroom of 25% for normal memory fragmentation. For
 fault-tolerant operations, we recommend reserving an extra memory to
 survive the failure. See <a href="#sizing-for-failures">Sizing for failures</a>.</p>
+<p>If your computation is memory-bound, consider:</p>
+<ul>
+<li>Moving data out of Jet cluster, e.g. don't use the distributed data
+structures of the Jet cluster and use the remote Hazelcast cluster
+instead.</li>
+<li>Scaling out, e.g. adding more members to the cluster.</li>
+</ul>
 <p>Memory consumption is affected by:</p>
 <ul>
 <li><strong>Resources deployed with your job:</strong> Considerable when attaching big
@@ -194,16 +213,16 @@ snapshot size is displayed in the Management Center. You might want to
 keep some state snapshots residing in the cluster as points of
 recovery, so plan the memory requirements accordingly.</li>
 <li><strong>Data stored inside Jet cluster</strong>: Any data hosted in the Jet
-cluster. Notably the IMap Journal to store the streaming data. See the
-<a href="https://hazelcast.com/resources/hazelcast-deployment-operations-guide/">Hazelcast IMDG Deployment and Operations Guide</a>
-.</li>
+cluster. Notably the IMap and ICache Journal to store the streaming data. See the
+<a href="https://hazelcast.com/resources/hazelcast-deployment-operations-guide/">Hazelcast IMDG Deployment and Operations Guide</a>.</li>
 </ul>
 <h3><a class="anchor" aria-hidden="true" id="network"></a><a href="#network" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Network</h3>
 <p>Jet uses the network internally to shuffle data and to replicate the
 back-ups. Network is also used to read input data from and to write
 results to remote systems or to do RPC calls when enriching. In fact, a
 lot of Jet Jobs are network bound. Using a 10 Gigabit or higher network
-can improve application performance.</p>
+can improve application performance. Also consider scaling the cluster
+out (adding more members to the cluster) to distribute the load.</p>
 <p>Consider colocating Jet cluster with the data source and sink to avoid
 moving data back and forth over the wire. Co-locate Jet with source
 rather than a sink if you have to choose. Processed results are often
@@ -221,6 +240,39 @@ performance.</p>
 improve the performance</li>
 <li>Using disk persistence for <a href="https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only">Lossless Cluster Restart</a></li>
 </ul>
+<h2><a class="anchor" aria-hidden="true" id="data-flow"></a><a href="#data-flow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Data flow</h2>
+<p>Consider the capacity of data sources and sinks when planning the Jet
+cluster.</p>
+<p>Each Jet job participates in a larger data pipeline: it continuously
+reads the data from the sources and writes the results to the sinks. The
+capacity of all components of the data pipeline must be balanced to
+avoid bottlenecks.</p>
+<p>For slow sinks, Jet applies the back pressure and slows down the
+processing and source data consumption. The data sources should be
+designed to participate by reducing the pace of data production or by
+buffering the data.</p>
+<p>On the other hand, if the data source can't produce or transmit the
+data fast enough, adding more resources to the Jet cluster won't bring
+any performance benefits.</p>
+<h2><a class="anchor" aria-hidden="true" id="processed-data"></a><a href="#processed-data" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Processed Data</h2>
+<p>Test your setup on a dataset that represents the characteristics of the
+production data, notably:</p>
+<ul>
+<li>Partitioning of the input data</li>
+<li>Key distribution and count</li>
+</ul>
+<p>Jet splits the data across the cluster to process it in parallel. It
+builds on the prerequisite of balanced partitions to perform well.
+Imbalanced partitions may create a hotspot in your cluster. The
+partitioning is determined by the data source and by the grouping
+keys used in the Jet application.</p>
+<p>A frequent source of the partition imbalance are special cases: in a
+payment processing application, there might be a small number of
+accounts with very high  activity. Imagine a retail company account with
+thousands of payments per  minute vs personal accounts with just few
+payments in a day. Using account as a grouping key would lead to
+imbalanced partitions. Consider special cases when designing your
+pipelines and the testing data.</p>
 <h2><a class="anchor" aria-hidden="true" id="benchmarking-and-sizing-example"></a><a href="#benchmarking-and-sizing-example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Benchmarking and Sizing Example</h2>
 <h3><a class="anchor" aria-hidden="true" id="requirements"></a><a href="#requirements" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Requirements</h3>
 <p>The sample application is a <a href="https://github.com/hazelcast/big-data-benchmark/tree/master/trade-monitor/jet-trade-monitor">real-time trade
@@ -236,11 +288,14 @@ processing guarantee.</p>
 <p>The cluster is expected to process 50k trade events per second with 10k
 trade symbols (distinct keys).</p>
 <h3><a class="anchor" aria-hidden="true" id="cluster-size-and-performance"></a><a href="#cluster-size-and-performance" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Cluster size and performance</h3>
-<p>We benchmarked this job on a cluster of 3, 5 and 9 nodes to see how the
-cluster size affects the processing latency. We started with a 3-member
-cluster as that is a minimal setup for fault-tolerant operations.  For
-each topology, we benchmarked a setup with 1, 10, 20 and 40 jobs running
-in the cluster.</p>
+<p>The
+<a href="https://hazelcast.com/resources/jet-3-0-streaming-benchmark/">benchmark</a>
+generates the expected data stream (50k events / second,  10k distinct
+keys) and measures how the cluster size affects the processing latency.</p>
+<p>We benchmarked this job on a cluster of 3, 5 and 9 nodes. We started
+with a 3-member cluster as that is a minimal setup for fault-tolerant
+operations.  For each topology, we benchmarked a setup with 1, 10, 20
+and 40 jobs running in the cluster.</p>
 <p>The metric we measured was latency evaluated as <code>RESULT_PUBLISHED_TS - ALL_TRADES_RECIEVED_TS</code> (<a href="https://hazelcast.com/resources/jet-3-0-streaming-benchmark/">learn
 more</a>).
 You can use this approach or design a metric that fits your application
@@ -248,12 +303,13 @@ SLAs. Moreover, our example records the maximum and average latency.
 Consider measuring the result distribution, as the application SLAs are
 frequently expressed using it  (e.g. app processes 99.999% of data under
 200 milliseconds).</p>
-<p>Cluster machines were of the recommended minimal configuration: each 8
-CPU, 16 GB RAM, 10 Gbps network.</p>
+<p>Cluster machines were of the recommended minimal configuration:
+AWS <a href="https://aws.amazon.com/ec2/instance-types/c5/">c5.2xlarge</a>
+machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.</p>
 <h4><a class="anchor" aria-hidden="true" id="1-job-in-the-cluster"></a><a href="#1-job-in-the-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>1 job in the cluster</h4>
 <table>
 <thead>
-<tr><th>Cluster size</th><th>Max</th><th>Avg</th></tr>
+<tr><th>Cluster size</th><th>Max (ms)</th><th>Avg (ms)</th></tr>
 </thead>
 <tbody>
 <tr><td>3</td><td>182</td><td>150</td></tr>
@@ -264,7 +320,7 @@ CPU, 16 GB RAM, 10 Gbps network.</p>
 <h4><a class="anchor" aria-hidden="true" id="10-jobs-in-the-cluster"></a><a href="#10-jobs-in-the-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>10 jobs in the cluster</h4>
 <table>
 <thead>
-<tr><th>Cluster size</th><th>Max</th><th>Avg</th></tr>
+<tr><th>Cluster size</th><th>Max (ms)</th><th>Avg (ms)</th></tr>
 </thead>
 <tbody>
 <tr><td>3</td><td>986</td><td>877</td></tr>
@@ -275,7 +331,7 @@ CPU, 16 GB RAM, 10 Gbps network.</p>
 <h4><a class="anchor" aria-hidden="true" id="20-jobs-in-the-cluster"></a><a href="#20-jobs-in-the-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>20 jobs in the cluster</h4>
 <table>
 <thead>
-<tr><th>Cluster size</th><th>Max</th><th>Avg</th></tr>
+<tr><th>Cluster size</th><th>Max (ms)</th><th>Avg (ms)</th></tr>
 </thead>
 <tbody>
 <tr><td>3</td><td>1990</td><td>1784</td></tr>
@@ -286,7 +342,7 @@ CPU, 16 GB RAM, 10 Gbps network.</p>
 <h4><a class="anchor" aria-hidden="true" id="40-jobs-in-the-cluster"></a><a href="#40-jobs-in-the-cluster" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>40 jobs in the cluster</h4>
 <table>
 <thead>
-<tr><th>Cluster size</th><th>Max</th><th>Avg</th></tr>
+<tr><th>Cluster size</th><th>Max (ms)</th><th>Avg (ms)</th></tr>
 </thead>
 <tbody>
 <tr><td>3</td><td>4382</td><td>3948</td></tr>
@@ -308,7 +364,7 @@ events) of data it missed.</p>
 <p>More aggressive <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#failure-detector-configuration">failure
 detector</a>
 and a larger event journal can be used to stretch the error window.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/configuration"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/operations/cluster-topology"><span>Cluster Topology</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#sizing-considerations">Sizing considerations</a></li><li><a href="#determining-cluster-size">Determining cluster size</a></li><li><a href="#sizing-for-failures">Sizing for failures</a></li><li><a href="#balancing-cluster-size-with-job-count">Balancing cluster size with job count</a></li><li><a href="#hardware-planning">Hardware Planning</a><ul class="toc-headings"><li><a href="#minimal-configuration">Minimal Configuration</a></li><li><a href="#recommended-configuration">Recommended Configuration</a></li><li><a href="#cpu">CPU</a></li><li><a href="#memory">Memory</a></li><li><a href="#network">Network</a></li><li><a href="#disk">Disk</a></li></ul></li><li><a href="#benchmarking-and-sizing-example">Benchmarking and Sizing Example</a><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#cluster-size-and-performance">Cluster size and performance</a></li><li><a href="#fault-tolerance">Fault-Tolerance</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/configuration"><span class="arrow-prev">← </span><span>Configuration</span></a><a class="docs-next button" href="/docs/operations/cluster-topology"><span>Cluster Topology</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#sizing-considerations">Sizing considerations</a></li><li><a href="#determining-cluster-size">Determining cluster size</a></li><li><a href="#sizing-for-failures">Sizing for failures</a></li><li><a href="#balancing-cluster-size-with-job-count">Balancing cluster size with job count</a></li><li><a href="#hardware-planning">Hardware Planning</a><ul class="toc-headings"><li><a href="#minimal-configuration">Minimal Configuration</a></li><li><a href="#recommended-configuration">Recommended Configuration</a></li><li><a href="#cpu">CPU</a></li><li><a href="#memory">Memory</a></li><li><a href="#network">Network</a></li><li><a href="#disk">Disk</a></li></ul></li><li><a href="#data-flow">Data flow</a></li><li><a href="#processed-data">Processed Data</a></li><li><a href="#benchmarking-and-sizing-example">Benchmarking and Sizing Example</a><ul class="toc-headings"><li><a href="#requirements">Requirements</a></li><li><a href="#cluster-size-and-performance">Cluster size and performance</a></li><li><a href="#fault-tolerance">Fault-Tolerance</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
