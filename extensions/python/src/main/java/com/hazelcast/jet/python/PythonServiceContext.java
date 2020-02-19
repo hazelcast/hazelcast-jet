@@ -95,7 +95,7 @@ class PythonServiceContext {
                 initProcess.waitFor();
                 if (initProcess.exitValue() != 0) {
                     throw new Exception(
-                            "Initialization script finished with non-zero return code: " + initProcess.exitValue()
+                            "Initialization script finished with non-zero exit code: " + initProcess.exitValue()
                     );
                 }
                 stdoutLoggingThread.join();
@@ -120,6 +120,9 @@ class PythonServiceContext {
                         .start();
                 logStdOut(logger, cleanupProcess, "python-cleanup-" + cleanupProcess);
                 cleanupProcess.waitFor();
+                if (cleanupProcess.exitValue() != 0) {
+                    logger.warning("Cleanup script finished with non-zero exit code: " + cleanupProcess.exitValue());
+                }
             }
         } catch (Exception e) {
             throw new JetException("PythonService cleanup failed: " + e, e);
