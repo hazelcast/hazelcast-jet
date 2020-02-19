@@ -259,20 +259,86 @@ annotating the method with <code>@Bean</code>.</p>
 
     <span class="hljs-meta">@Bean</span>
     <span class="hljs-function"><span class="hljs-keyword">public</span> JetInstance <span class="hljs-title">instance</span><span class="hljs-params">()</span> </span>{
-        <span class="hljs-comment">// You can configure Hazelcast Jet isntance programmatically</span>
-        JetConfig jetConfig = <span class="hljs-keyword">new</span> JetConfig();
+        <span class="hljs-comment">// You can configure Hazelcast Jet instance programmatically</span>
+        JetConfig jetConfig = <span class="hljs-keyword">new</span> JetConfig()
+                <span class="hljs-comment">// configure SpringManagedContext for @SpringAware</span>
+                .configureHazelcast(hzConfig -&gt; hzConfig.setManagedContext(<span class="hljs-keyword">new</span> SpringManagedContext()));
         <span class="hljs-keyword">return</span> Jet.newJetInstance(jetConfig);
     }
 
     <span class="hljs-meta">@Bean</span>
     <span class="hljs-function"><span class="hljs-keyword">public</span> JetInstance <span class="hljs-title">client</span><span class="hljs-params">()</span> </span>{
         <span class="hljs-comment">// You can configure Hazelcast Jet client programmatically</span>
-        ClientConfig clientConfig = <span class="hljs-keyword">new</span> ClientConfig();
+        ClientConfig clientConfig = <span class="hljs-keyword">new</span> ClientConfig()
+                <span class="hljs-comment">// configure SpringManagedContext for @SpringAware</span>
+                .setManagedContext(<span class="hljs-keyword">new</span> SpringManagedContext());
         <span class="hljs-keyword">return</span> Jet.newJetClient(clientConfig);
     }
 }
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/monitoring"><span class="arrow-prev">← </span><span>Monitoring and Metrics</span></a><a class="docs-next button" href="/docs/architecture/distributed-computing"><span>Distributed Execution</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#declarative-configuration">Declarative Configuration</a><ul class="toc-headings"><li><a href="#using-default-beans-namespace">Using Default Beans Namespace</a></li><li><a href="#using-jet-beans-namespace">Using Jet Beans Namespace</a></li></ul></li><li><a href="#annotation-based-configuration">Annotation-Based Configuration</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+<h2><a class="anchor" aria-hidden="true" id="enabling-springaware-objects"></a><a href="#enabling-springaware-objects" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Enabling SpringAware Objects</h2>
+<p>Hazelcast IMDG has a special annotation, <code>@SpringAware</code>, which enables
+you to initialize the object with spring context.</p>
+<p>When a job is submitted to the cluster, processors are created by
+Hazelcast Jet on each member. By marking your processor with
+<code>@SpringAware</code>, you make spring context accessible to your processor
+which gives you the ability:</p>
+<ul>
+<li>to apply bean properties</li>
+<li>to apply factory callbacks such as <code>ApplicationContextAware</code>,
+<code>BeanNameAware</code></li>
+<li>to apply bean post-processing annotations such as <code>InitializingBean</code>,
+<code>@PostConstruct</code></li>
+</ul>
+<p>Here is a custom processor which an <code>IList</code> is injected as a resource.</p>
+<pre><code class="hljs css language-java"><span class="hljs-meta">@SpringAware</span>
+<span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">CustomProcessor</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">AbstractProcessor</span> </span>{
+
+    <span class="hljs-meta">@Resource</span>(name = <span class="hljs-string">"my-list-bean"</span>)
+    <span class="hljs-keyword">private</span> IList list;
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">(@Nonnull Context context)</span> </span>{
+    }
+
+    <span class="hljs-meta">@Override</span>
+    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">complete</span><span class="hljs-params">()</span> </span>{
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>;
+    }
+}
+</code></pre>
+<p>You can use <code>@SpringAware</code> annotation while creating custom sources and
+sinks (with <code>SourceBuilder</code> and <code>SinkBuilder</code> respectively). Both
+builders expects you to pass a function which creates a <code>context</code>
+object. By marking that object with <code>@SpringAware</code> annotation you can
+make spring context accessible to the source/sink.</p>
+<pre><code class="hljs css language-java"><span class="hljs-meta">@SpringAware</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SourceContext</span> </span>{
+
+    <span class="hljs-meta">@Resource</span>(name = <span class="hljs-string">"my-source-map"</span>)
+    IMap&lt;String, String&gt; sourceMap;
+}
+
+<span class="hljs-meta">@SpringAware</span>
+<span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SinkContext</span> </span>{
+
+    <span class="hljs-meta">@Resource</span>(name = <span class="hljs-string">"my-sink-map"</span>)
+    IMap&lt;String, String&gt; sinkMap;
+}
+</code></pre>
+<p>You can also use <code>@SpringAware</code> annotation while enriching your data via
+lookup from an external system. Again you need to mark the <code>context</code>
+object of <code>ServiceFactory</code> with <code>@SpringAware</code>. Hazelcast Jet also
+provides utility methods (see <code>JetSpringServiceFactories</code>) to use Spring
+beans as a <code>context</code> object for the <code>ServiceFactory</code>.</p>
+<pre><code class="hljs css language-java">Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(Sources.list(<span class="hljs-string">"list"</span>))
+        .mapUsingService(JetSpringServiceFactories.bean(<span class="hljs-string">"my-bean"</span>), (myBean, item) -&gt; myBean.enrich(item))
+        .writeTo(Sinks.logger());
+</code></pre>
+<p>You need to configure Hazelcast Jet with <code>&lt;hz:spring-aware/&gt;</code> tag or set
+<code>SpringManagedContext</code> programmatically to enable spring-aware objects.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/operations/monitoring"><span class="arrow-prev">← </span><span>Monitoring and Metrics</span></a><a class="docs-next button" href="/docs/architecture/distributed-computing"><span>Distributed Execution</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#declarative-configuration">Declarative Configuration</a><ul class="toc-headings"><li><a href="#using-default-beans-namespace">Using Default Beans Namespace</a></li><li><a href="#using-jet-beans-namespace">Using Jet Beans Namespace</a></li></ul></li><li><a href="#annotation-based-configuration">Annotation-Based Configuration</a></li><li><a href="#enabling-springaware-objects">Enabling SpringAware Objects</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
