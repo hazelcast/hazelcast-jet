@@ -191,3 +191,89 @@ is no single format shared among connectors. The specifics of working
 with each connector's data can be found in their respective
 [documentation](https://debezium.io/documentation/reference/1.0/connectors/index.html)
 (latest stable version available at the time of writing).
+
+### Interpreting Events
+
+Even though events are connector specific and working with them is not
+always straightforward, Debezium offers some assistance with
+[deserializing them](https://debezium.io/documentation/reference/1.0/configuration/serdes.html)
+.
+
+Below you can see an example Jet Pipeline, which:
+
+* takes CDC data from a MySQL database (same configuration as
+  previous example)
+* filters out all events except ones from the "customers" table (same
+  effect could be achieved by whitelisting the table in the connector
+  config)
+* formats them into JSON strings
+* deserializes the JSON strings into `Customer` objects (simple POJOs)
+* stores the latest `Customer` object for each customer ID in an
+  [IMap](https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/map/IMap.html)
+
+```java
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(DebeziumSources.cdc(configuration))
+        .withoutTimestamps()
+        .filter(r -> r.topic().equals("dbserver1.inventory.customers"))
+        .map(record -> Values.convertToString(record.valueSchema(), record.value()))
+        .mapUsingService(
+                ServiceFactories.nonSharedService(cntx -> {
+                    Serde<Customer> serde = DebeziumSerdes.payloadJson(Customer.class);
+                    serde.configure(Collections.singletonMap("from.field", "after"), false);
+                    return serde;
+                }),
+                (serde, json) -> {
+                    Customer customer = serde.deserializer()
+                                .deserialize("topic", json.getBytes());
+                    return entry(customer.id, customer);
+                })
+        .writeTo(Sinks.map("customers"));
+```
+
+The **Customers** class used to build the deserializer is quite simple:
+
+```java
+private static final class Customer implements Serializable {
+    public int id;
+
+    @JsonProperty("first_name")
+    public String firstName;
+
+    @JsonProperty("last_name")
+    public String lastName;
+
+    public String email;
+
+    public Customer() {
+    }
+
+    public Customer(int id, String firstName, String lastName, String email) {
+        super();
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(email, firstName, id, lastName);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        Customer other = (Customer) obj;
+        return id == other.id
+                && Objects.equals(firstName, other.firstName)
+                && Objects.equals(lastName, other.lastName)
+                && Objects.equals(email, other.email);
+    }
+}
+```
