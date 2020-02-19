@@ -231,16 +231,94 @@ public class AppConfig {
 
     @Bean
     public JetInstance instance() {
-        // You can configure Hazelcast Jet isntance programmatically
-        JetConfig jetConfig = new JetConfig();
+        // You can configure Hazelcast Jet instance programmatically
+        JetConfig jetConfig = new JetConfig()
+                // configure SpringManagedContext for @SpringAware
+                .configureHazelcast(hzConfig -> hzConfig.setManagedContext(new SpringManagedContext()));
         return Jet.newJetInstance(jetConfig);
     }
 
     @Bean
     public JetInstance client() {
         // You can configure Hazelcast Jet client programmatically
-        ClientConfig clientConfig = new ClientConfig();
+        ClientConfig clientConfig = new ClientConfig()
+                // configure SpringManagedContext for @SpringAware
+                .setManagedContext(new SpringManagedContext());
         return Jet.newJetClient(clientConfig);
     }
 }
 ```
+
+## Enabling SpringAware Objects
+
+Hazelcast IMDG has a special annotation, `@SpringAware`, which enables
+you to initialize the object with spring context.
+
+When a job is submitted to the cluster, processors are created by
+Hazelcast Jet on each member. By marking your processor with
+`@SpringAware`, you make spring context accessible to your processor
+which gives you the ability:
+
+- to apply bean properties
+- to apply factory callbacks such as `ApplicationContextAware`,
+  `BeanNameAware`
+- to apply bean post-processing annotations such as `InitializingBean`,
+  `@PostConstruct`
+
+Here is a custom processor which an `IList` is injected as a resource.
+
+```java
+@SpringAware
+private class CustomProcessor extends AbstractProcessor {
+
+    @Resource(name = "my-list-bean")
+    private IList list;
+
+    @Override
+    protected void init(@Nonnull Context context) {
+    }
+
+    @Override
+    public boolean complete() {
+        return false;
+    }
+}
+```
+
+You can use `@SpringAware` annotation while creating custom sources and
+sinks (with `SourceBuilder` and `SinkBuilder` respectively). Both
+builders expects you to pass a function which creates a `context`
+object. By marking that object with `@SpringAware` annotation you can
+make spring context accessible to the source/sink.
+
+```java
+@SpringAware
+public class SourceContext {
+
+    @Resource(name = "my-source-map")
+    IMap<String, String> sourceMap;
+}
+
+@SpringAware
+public class SinkContext {
+
+    @Resource(name = "my-sink-map")
+    IMap<String, String> sinkMap;
+}
+```
+
+You can also use `@SpringAware` annotation while enriching your data via
+lookup from an external system. Again you need to mark the `context`
+object of `ServiceFactory` with `@SpringAware`. Hazelcast Jet also
+provides utility methods (see `JetSpringServiceFactories`) to use Spring
+beans as a `context` object for the `ServiceFactory`.
+
+```java
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(Sources.list("list"))
+        .mapUsingService(JetSpringServiceFactories.bean("my-bean"), (myBean, item) -> myBean.enrich(item))
+        .writeTo(Sinks.logger());
+```
+
+You need to configure Hazelcast Jet with `<hz:spring-aware/>` tag or set
+`SpringManagedContext` programmatically to enable spring-aware objects.
