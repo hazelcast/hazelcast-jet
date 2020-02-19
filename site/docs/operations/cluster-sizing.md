@@ -29,7 +29,7 @@ the following questions:
 * How long is the error window?
 * Shape of the pipelines (operations used, external systems involved)
 * Characteristics of the data to be processed such as partitioning, key
-distribution and record size
+  distribution and record size
 * Source and sink capacity
 
 ## Determining cluster size
@@ -91,13 +91,13 @@ cluster to isolate failures and performance spikes.
 
 ## Balancing cluster size with job count
 
-The jobs running in one cluster share the resources to maximise the HW 
+The jobs running in one cluster share the resources to maximise the HW
 utilisation. This is efficient for setups without a risk of [noisy
 neighbours](https://searchcloudcomputing.techtarget.com/definition/noisy-neighbor-cloud-computing-performance)
  such as:
 
 * Clusters hosting many short-living jobs
-* Clusters hosting jobs with a predictable performance 
+* Clusters hosting jobs with a predictable performance
 * Jobs with relaxed SLAs
 
 For stronger resource isolation (multi-tenant environments, strict
@@ -121,11 +121,11 @@ as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
 
 As a starting point for a data-intensive operations consider machines
 such as [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/)
-with: 
+with:
 
-- 8 CPU cores
-- 16 GB RAM
-- 10 Gbps network
+* 8 CPU cores
+* 16 GB RAM
+* 10 Gbps network
 
 ### CPU
 
@@ -160,33 +160,34 @@ survive the failure. See [Sizing for failures](#sizing-for-failures).
 If your computation is memory-bound, consider:
 
 * Moving data out of Jet cluster, e.g. don't use the distributed data
-structures of the Jet cluster and use the remote Hazelcast cluster
-instead.
+  structures of the Jet cluster and use the remote Hazelcast cluster
+  instead.
 * Scaling out, e.g. adding more members to the cluster.
 
 Memory consumption is affected by:
 
-- **Resources deployed with your job:** Considerable when attaching big
- files such as models for ML inference pipelines.
-- **State of the running jobs:** Varies as it's affected by the shape of
- your pipeline and by the data being processed. Most of the memory is
- consumed by operations that aggregate and buffer data. Typically the
- state also scales with the number of distinct keys seen within the time
- window. Learn how the operations in the pipeline store its state.
- Operators coming with Jet provide this information in the javadoc.
-- **State back-up:** For jobs configured as fault-tolerant, the state of
- the running jobs is regularly snapshotted and saved in the cluster.
- Cluster keeps two consecutive snapshots at a time (old one is kept
- until the new one is successfully created). Both current and previous
- snapshot can be saved in multiple replicas to increase data safety. The
-  memory required for state back-up can be calculated as ```(Snapshot
- size * 2 * Number of replicas) / Cluster member count```. The
- snapshot size is displayed in the Management Center. You might want to
- keep some state snapshots residing in the cluster as points of
- recovery, so plan the memory requirements accordingly.
-- **Data stored inside Jet cluster**: Any data hosted in the Jet 
-cluster. Notably the IMap and ICache Journal to store the streaming data. See the
-[Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/).
+* **Resources deployed with your job:** Considerable when attaching big
+  files such as models for ML inference pipelines.
+* **State of the running jobs:** Varies as it's affected by the shape of
+  your pipeline and by the data being processed. Most of the memory is
+  consumed by operations that aggregate and buffer data. Typically the
+  state also scales with the number of distinct keys seen within the
+  time window. Learn how the operations in the pipeline store its state.
+  Operators coming with Jet provide this information in the javadoc.
+* **State back-up:** For jobs configured as fault-tolerant, the state of
+  the running jobs is regularly snapshotted and saved in the cluster.
+  Cluster keeps two consecutive snapshots at a time (old one is kept
+  until the new one is successfully created). Both current and previous
+  snapshot can be saved in multiple replicas to increase data safety.
+  The memory required for state back-up can be calculated as
+  `(Snapshot size * 2 * Number of replicas) / Cluster member count`.
+  The snapshot size is displayed in the Management Center. You might
+  want to keep some state snapshots residing in the cluster as points of
+  recovery, so plan the memory requirements accordingly.
+* **Data stored inside Jet cluster**: Any data hosted in the Jet
+  cluster. Notably the IMap and ICache Journal to store the streaming
+  data. See the [Hazelcast IMDG Deployment and Operations Guide](https://hazelcast.com/resources/hazelcast-deployment-operations-guide/)
+  .
 
 ### Network
 
@@ -214,9 +215,9 @@ performance.
 
 Consider using more performant disks when:
 
-- You use the cluster file system as a source or sink - faster disks
+* You use the cluster file system as a source or sink - faster disks
  improve the performance
-- Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
+* Using disk persistence for [Lossless Cluster Restart](https://docs.hazelcast.org/docs/jet/latest/manual/#configure-lossless-cluster-restart-enterprise-only)
 
 ## Data flow
 

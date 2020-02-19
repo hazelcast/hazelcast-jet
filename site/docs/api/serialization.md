@@ -3,40 +3,41 @@ title: Serialization
 id: serialization
 ---
 
-To be able to send object state over a network or store it in a file 
-one has to first serialize it into raw bytes. Similarly, to be able to 
-fetch an object state over a wire or read it from a persistent storage 
-one has to deserialize it from raw bytes first. As Hazelcast Jet is a 
-distributed system by nature (de)serialization is integral part of it. 
-Understanding, when it is involved, how does it support the pipelines 
-and knowing differences between supported strategies is crucial to 
+To be able to send object state over a network or store it in a file
+one has to first serialize it into raw bytes. Similarly, to be able to
+fetch an object state over a wire or read it from a persistent storage
+one has to deserialize it from raw bytes first. As Hazelcast Jet is a
+distributed system by nature (de)serialization is integral part of it.
+Understanding, when it is involved, how does it support the pipelines
+and knowing differences between supported strategies is crucial to
 efficient usage of Hazelcast Jet.
 
 ## Pipeline
 
-A typical Jet pipeline involves lambda expressions. Since the whole 
-pipeline definition must be serialized to be sent to the cluster, the 
-lambda expressions must be serializable as well. The Java standard 
-provides an essential building block: if the static type of the lambda 
-is a subtype of `Serializable` you will automatically get a lambda 
+A typical Jet pipeline involves lambda expressions. Since the whole
+pipeline definition must be serialized to be sent to the cluster, the
+lambda expressions must be serializable as well. The Java standard
+provides an essential building block: if the static type of the lambda
+is a subtype of `Serializable` you will automatically get a lambda
 instance that can serialize itself.
 
-None of the functional interfaces in the JDK extend `Serializable` so 
-we had to mirror the entire `java.util.function` package in our own 
-`com.hazelcast.function` with all the interfaces subtyped and made 
-`Serializable`. Each subtype has the name of the original with `Ex` 
-appended. For example, a `FunctionEx` is just like `Function` but 
-implements `Serializable`. We use these types everywhere in the 
+None of the functional interfaces in the JDK extend `Serializable` so
+we had to mirror the entire `java.util.function` package in our own
+`com.hazelcast.function` with all the interfaces subtyped and made
+`Serializable`. Each subtype has the name of the original with `Ex`
+appended. For example, a `FunctionEx` is just like `Function` but
+implements `Serializable`. We use these types everywhere in the
 Pipeline API.
 
-As always with this kind of magic, auto-serializability of lambdas has 
+As always with this kind of magic, auto-serializability of lambdas has
 its flipside: it is easy to overlook what’s going on.
 
-If the lambda references a variable in the outer scope, the variable is 
-captured and must also be serializable. If it references an instance 
-variable of the enclosing class, it implicitly captures this so the 
-entire class will be serialized. For example, this will fail because 
+If the lambda references a variable in the outer scope, the variable is
+captured and must also be serializable. If it references an instance
+variable of the enclosing class, it implicitly captures this so the
+entire class will be serialized. For example, this will fail because
 `JetJob1` does not implement `Serializable`:
+
 ```java
 class JetJob1 {
     private String instanceVar;
@@ -44,37 +45,38 @@ class JetJob1 {
     Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list("input"))
-        // Refers to `instanceVar`, capturing `this`, but `JetJob1` is not 
+        // Refers to `instanceVar`, capturing `this`, but `JetJob1` is not
         // `Serializable` so this call will fail.
-        .filter(item -> item.equals(instanceVar)); 
+        .filter(item -> item.equals(instanceVar));
         return p;
     }
 }
 ```
 
-Just implementing `Serializable` for `JetJob1` would be a viable 
+Just implementing `Serializable` for `JetJob1` would be a viable
 workaround here. However, consider something just a bit different:
+
 ```java
 class JetJob2 implements Serializable {
     private String instanceVar;
     // A non-serializable field.
-    private OutputStream fileOut; 
+    private OutputStream fileOut;
 
     Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list("input"))
-        // Refers to `instanceVar`, capturing `this`. `JetJob2` is declared 
+        // Refers to `instanceVar`, capturing `this`. `JetJob2` is declared
         // as `Serializable`, but has a non-serializable field and this fails.
-        .filter(item -> item.equals(instanceVar)); 
+        .filter(item -> item.equals(instanceVar));
         return p;
     }
 }
 ```
 
-Even though we never refer to `fileOut`, we are still capturing the 
-entire `JetJob2` instance. We might mark `fileOut` as transient, but 
-the sane approach is to avoid referring to instance variables of the 
-surrounding class. We can simply achieve this by assigning to a local 
+Even though we never refer to `fileOut`, we are still capturing the
+entire `JetJob2` instance. We might mark `fileOut` as transient, but
+the sane approach is to avoid referring to instance variables of the
+surrounding class. We can simply achieve this by assigning to a local
 variable, then referring to that variable inside the lambda:
 
 ```java
@@ -84,18 +86,19 @@ class JetJob3 {
     Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         // Declare a local variable that loads the value of the instance field.
-        String findMe = instanceVar; 
+        String findMe = instanceVar;
         p.readFrom(Sources.list("input"))
-        // By referring to the local variable `findMe` we avoid 
-        // capturing `this` and the job runs fine.
-        .filter(item -> item.equals(findMe)); 
+         // By referring to the local variable `findMe` we avoid
+         // capturing `this` and the job runs fine.
+         .filter(item -> item.equals(findMe));
         return p;
     }
 }
 ```
 
-Another common pitfall is capturing an instance of `DateTimeFormatter` 
+Another common pitfall is capturing an instance of `DateTimeFormatter`
 or a similar non-serializable class:
+
 ```java
 DateTimeFormatter formatter = DateTimeFormatter
         .ofPattern("HH:mm:ss.SSS")
@@ -103,58 +106,62 @@ DateTimeFormatter formatter = DateTimeFormatter
 Pipeline p = Pipeline.create();
 BatchStage<Long> src = p.readFrom(Sources.list("input"));
 // Captures the non-serializable formatter, so this fails.
-src.map((Long tstamp) -> formatter.format(Instant.ofEpochMilli(tstamp))); 
+src.map((Long tstamp) -> formatter.format(Instant.ofEpochMilli(tstamp)));
 ```
 
-Sometimes we can get away by using one of the preconfigured formatters 
+Sometimes we can get away by using one of the preconfigured formatters
 available in the JDK:
+
 ```java
-// Accesses the static final field `ISO_LOCAL_TIME`. Static fields are 
-// not subject to lambda capture, they are dereferenced when the code 
+// Accesses the static final field `ISO_LOCAL_TIME`. Static fields are
+// not subject to lambda capture, they are dereferenced when the code
 // runs on the target machine.
-src.map((Long tstamp) -> DateTimeFormatter.ISO_LOCAL_TIME 
+src.map((Long tstamp) -> DateTimeFormatter.ISO_LOCAL_TIME
         .format(Instant.ofEpochMilli(tstamp).atZone(ZoneId.systemDefault())));
 ```
 
-This refers to a `static final` field in the JDK, so the instance is 
-available on any JVM. If this is not available, you may create a 
-`static final` field in your own class, but you can also use 
-`mapUsingService()`. In this case you provide a serializable factory 
-that Jet will ask to create an object on the target member. The object 
+This refers to a `static final` field in the JDK, so the instance is
+available on any JVM. If this is not available, you may create a
+`static final` field in your own class, but you can also use
+`mapUsingService()`. In this case you provide a serializable factory
+that Jet will ask to create an object on the target member. The object
 it returns does not have to be serializable. Here’s an example of that:
+
 ```java
 Pipeline p = Pipeline.create();
 BatchStage<Long> src = p.readFrom(Sources.list("input"));
-ServiceFactory<?, DateTimeFormatter> serviceFactory = nonSharedService( 
+ServiceFactory<?, DateTimeFormatter> serviceFactory = nonSharedService(
         pctx -> DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
                               .withZone(ZoneId.systemDefault()));
-src.mapUsingService(serviceFactory, 
-        (formatter, tstamp) -> formatter.format(Instant.ofEpochMilli(tstamp))); 
+src.mapUsingService(serviceFactory,
+        (formatter, tstamp) -> formatter.format(Instant.ofEpochMilli(tstamp)));
 ```
 
 ## Custom types
 
-Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of 
-its features to Jet users. In particular, one can use IMDG data 
-structure as Jet `Source` and/or `Sink`. Objects retrieved from and 
+Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
+its features to Jet users. In particular, one can use IMDG data
+structure as Jet `Source` and/or `Sink`. Objects retrieved from and
 stored in those have to be (de)serializable.
 
-Another case which might require (de)serializable objects is sending 
-computation results between remote vertices. Hazelcast Jet tries to 
-minimize network traffic as much as possible, nonetheless different 
+Another case which might require (de)serializable objects is sending
+computation results between remote vertices. Hazelcast Jet tries to
+minimize network traffic as much as possible, nonetheless different
 parts of a [DAG](concepts/dag.md) can reside on separate cluster members.
-To catch (de)serialization issues early on, we recommend using a 
+To catch (de)serialization issues early on, we recommend using a
 2-member local Jet cluster for development and testing.
 
-Currently, Hazelcast Jet supports 4 interfaces to (de)serialize custom 
+Currently, Hazelcast Jet supports 4 interfaces to (de)serialize custom
 types:
+
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
 - [java.io.Externalizable](https://docs.oracle.com/javase/8/docs/api/java/io/Externalizable.html)
 - [com.hazelcast.nio.serialization.Portable](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/Portable.html)
-- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) &
+- [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+  &
   [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html)
 
-The following table provides a comparison between them to help you in 
+The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.
 |      Serialization interface      |                                                              <center>Advantages</center>                                                             |                                       <center>Drawbacks</center>                                     |
 |:---------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
@@ -163,8 +170,8 @@ deciding which interface to use in your applications.
 |              Portable             | <ul><li>Faster and more space efficient than java standard interfaces</li><li>Supports versioning</li><li>Supports partial deserialization</li></ul> | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
 | [Stream&#124;ByteArray]Serializer | <ul><li>The fastest and lightest out of supported interfaces</li></ul>                                                                               | <ul><li>Requires implementation</li><li>Requires registration during cluster setup</li></ul>         |
 
-Below you can find rough performance numbers one can expect when 
-employing each of those strategies. A straightforward 
+Below you can find rough performance numbers one can expect when
+employing each of those strategies. A straightforward
 [benchmark](https://github.com/hazelcast/hazelcast/blob/master/hazelcast/src/test/java/com/hazelcast/serialization/SerializationBenchmark.java)
 which continuously serializes and then deserializes very simple object:
 
@@ -177,7 +184,7 @@ class Person {
 }
 ```
 
-counting the total throughput, yields following results: 
+counting the total throughput, yields following results:
 
 ```text
 # Processor: Intel(R) Core(TM) i7-4700HQ CPU @ 2.40GHz
@@ -190,7 +197,7 @@ SerializationBenchmark.portable                    thrpt    3  1.171 ± 0.539  o
 SerializationBenchmark.stream                      thrpt    3  4.828 ± 1.227  ops/us
 ```
 
-The very same object instantiated with sample data will also be encoded 
+The very same object instantiated with sample data will also be encoded
 with different number of bytes depending on used strategy:
 
 ```text
@@ -203,11 +210,13 @@ com.hazelcast.nio.serialization.StreamSerializer                        26      
 
 ### Sample (de)serializer implementation
 
-For best performance we recommend using 
-[com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html) or
+For best performance we recommend using
+[com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
+or
 [com.hazelcast.nio.serialization.ByteArraySerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/ByteArraySerializer.html).
-Below you can find a sample implementation of `StreamSerializer` for 
+Below you can find a sample implementation of `StreamSerializer` for
 `Person` (mind the type id which should be unique across all serializers):
+
 ```java
 class PersonSerializer implements StreamSerializer<Person> {
 
@@ -235,6 +244,7 @@ class PersonSerializer implements StreamSerializer<Person> {
 
 Then the serializer should be registered with Jet on cluster startup,
 either programmatically:
+
 ```java
 JetConfig config = new JetConfig();
 config.getHazelcastConfig().getSerializationConfig()
@@ -243,6 +253,7 @@ JetInstance jet = Jet.newJetInstance(config);
 ```
 
 or it can be auto discovered with a help of `SerializerHook`:
+
 ```java
 class PersonSerializerHook implements SerializerHook<Value> {
 
@@ -263,8 +274,9 @@ class PersonSerializerHook implements SerializerHook<Value> {
 }
 ```
 
-and file "META-INF/services/com.hazelcast.SerializerHook" with the 
+and file "META-INF/services/com.hazelcast.SerializerHook" with the
 following content:
+
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
-``` 
+```
