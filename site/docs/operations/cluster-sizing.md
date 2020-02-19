@@ -32,7 +32,6 @@ the following questions:
 distribution and record size
 * Source and sink capacity
 
-
 ## Determining cluster size
 
 Even a single Jet instance running on a [recommended
@@ -59,10 +58,10 @@ performance, see the [Sizing Example](#benchmarking-and-sizing-example).
 Jet cluster is elastic to deal with failures and performance spikes.
 
 Elasticity is very useful feature to prevent overprovisioning. Cluster
-can be up-scaled when resource consumption reaches a watermark (autoscale
-isn't built in, connect Jet metrics to the resource manager) or before
-expected usage spike. Up-scales however temporarily increase the stress
-on the cluster as the cluster has regroup and [replay missed
+can be up-scaled when resource consumption reaches a watermark
+(autoscale isn't built in, connect Jet metrics to the resource manager)
+or before expected usage spike. Up-scales however temporarily increase
+the stress on the cluster as the cluster has regroup and [replay missed
 data](concepts/fault-tolerance.md).
 
 The failures reduce the cluster resources and increase the stress on
@@ -279,7 +278,6 @@ processing guarantee.
 The cluster is expected to process 50k trade events per second with 10k
 trade symbols (distinct keys).
 
-
 ### Cluster size and performance
 
 The
@@ -305,7 +303,7 @@ Cluster machines were of the recommended minimal configuration:
 AWS [c5.2xlarge](https://aws.amazon.com/ec2/instance-types/c5/)
 machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 
-**1 job in the cluster**
+#### 1 job in the cluster
 
 | Cluster size | Max (ms) | Avg (ms) |
 | ------------ | --- | --- |
@@ -314,7 +312,7 @@ machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 | 9            | 215 | 134 |
 
 
-**10 jobs in the cluster**
+#### 10 jobs in the cluster
 
 | Cluster size | Max (ms) | Avg (ms) |
 | ------------ | --- | --- |
@@ -323,7 +321,7 @@ machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 | 9            | 735 | 557 |
 
 
-**20 jobs in the cluster**
+#### 20 jobs in the cluster
 
 | Cluster size | Max (ms) | Avg (ms) |
 | ------------ | ---- | ---- |
@@ -332,7 +330,7 @@ machines, each of 8 CPU, 16 GB RAM, 10 Gbps network.
 | 9            | 1170 | 1046 |
 
 
-**40 jobs in the cluster**
+#### 40 jobs in the cluster
 
 | Cluster size | Max (ms) | Avg (ms) |
 | ------------ | ---- | ---- |
