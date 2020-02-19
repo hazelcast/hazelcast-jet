@@ -18,13 +18,13 @@ discover each others:
 ### Kubernetes API
 
 *Kubernetes API* mode means that each node makes a REST call to
-Kubernetes Master in order to discover IPs of PODs (with Hazelcast Jet
+Kubernetes Master in order to discover IPs of Pods (with Hazelcast Jet
 members). Using Kubernetes API requires granting certain permissions.
 Therefore, you may need to create a *Role Based Access Control* file.
 See [Role Based Access Control](#role-based-access-control) section for
 a sample file.
 
-Hazelcast Kubernetes Discovery requires creating a service to PODs where
+Hazelcast Kubernetes Discovery requires creating a service to Pods where
 Hazelcast Jet is running. In case of using Kubernetes API mode, the
 service can be of any type.
 
@@ -32,7 +32,7 @@ service can be of any type.
 
 *DNS Lookup* mode uses a feature of Kubernetes that **headless**
 (without cluster IP) services are assigned a DNS record which resolves
-to the set of IPs of related PODs.
+to the set of IPs of related Pods.
 
 Headless service is a service of type *ClusterIP* with the `clusterIP`
 property set to `None`.
@@ -42,7 +42,7 @@ modes: *Kubernetes API* and *DNS Lookup*
 
 |             | Kubernetes API                                                                                                                                                                 | DNS Lookup                                                                                              |
 |:------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|
-| Description | Uses REST calls to Kubernetes Master to fetch IPs of PODs                                                                                                                      | Uses DNS to resolve IPs of PODs related to the given service                                            |
+| Description | Uses REST calls to Kubernetes Master to fetch IPs of Pods                                                                                                                      | Uses DNS to resolve IPs of Pods related to the given service                                            |
 | Pros        | Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul> | No additional configuration required, resolving DNS does not require granting any permissions           |
 | Cons        | Requires setting up RoleBinding (to allow access to Kubernetes API)                                                                                                            | <ul><li>Limited to **headless Cluster IP** service</li><li>Limited to **cluster per service**</li></ul> |
 
@@ -255,7 +255,7 @@ There are two different ways to submit a job to a Hazelcast Jet cluster:
 
 - Package Job as a Docker container then let it submit itself.
 - Submit Job as a JAR file from a shared `PersistentVolume` which is
-  attached to a pod.
+  attached to a Pod.
 
 For both options you need to create a `ConfigMap` object for the client
 (`hazelcast-jet-client-config.yaml`) and apply it. Make sure that the
@@ -333,11 +333,11 @@ kubectl apply -f rolling-aggregation-via-docker.yaml
 
 ### Submit the Job from a Shared Persistent Volume
 
-We will need a persistent volume attached to the pods. The persistent
+We will need a persistent volume attached to the Pods. The persistent
 storage will contain job JAR files to be submitted to the cluster. There
 are many different ways you can define and map volumes in Kubernetes. We
 will create `hostPath` persistent volume, which mounts a file or directory
-from the host node’s filesystem into the pod. See
+from the host node’s filesystem into the Pod. See
 [official documentation](https://kubernetes.io/docs/concepts/storage/volumes/)
 for other types of volumes.
 
@@ -375,7 +375,7 @@ spec:
 
 This will create a persistent volume which will use the
 `/home/docker/jars-pv` directory as persistent volume on the kubernetes
-node. We will mount the volume to the pods later. So we need to put the
+node. We will mount the volume to the Pods later. So we need to put the
 job JAR inside this directory.
 
 For `minikube` below commands will create the directory and copy the job
@@ -565,7 +565,7 @@ Jet member.
 To access a Hazelcast Jet cluster with a *smart* client you need to
 perform the following steps:
 
-- Expose each Hazelcast Jet Member POD with a separate LoadBalancer or
+- Expose each Hazelcast Jet Member Pod with a separate LoadBalancer or
   NodePort service (the simplest way to do it is to install
   [Metacontroller](https://metacontroller.app/) and
   [service-per-pod](https://github.com/GoogleCloudPlatform/metacontroller/tree/master/examples/service-per-pod)
