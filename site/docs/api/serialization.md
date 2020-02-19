@@ -252,19 +252,16 @@ config.getHazelcastConfig().getSerializationConfig()
 JetInstance jet = Jet.newJetInstance(config);
 ```
 
-via a hazelcast.xml/hazelcast.yaml:
+via hazelcast.yaml:
 
-```xml
-<hazelcast>
-    ...
-    <serialization>
-        <serializers>
-            <serializer type-class="com.hazelcast.jet.examples.Person"
-                class-name="com.hazelcast.jet.examples.PersonSerializer" />
-        </serializers>
-    </serialization>
-    ...
-</hazelcast>
+```yaml
+hazelcast:
+  ...
+  serialization:
+    serializers:
+      serializer:
+        "type-class": "com.hazelcast.jet.examples.Person"
+        "class-name": "com.hazelcast.jet.examples.PersonSerializer"
 ```
 
 or it can be auto discovered with a help of `SerializerHook`:
@@ -295,3 +292,7 @@ following content:
 ```text
 com.hazelcast.jet.examples.PersonSerializerHook
 ```
+
+All the classes - data types, serializers & hooks - should be present
+on the server classpath, ideally in server's lib directory packaged as
+a jar file.
