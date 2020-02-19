@@ -13,9 +13,21 @@
       "get-started/scale-job"
     ],
     "Programming Guide": [
-      "api/reference",
+      "api/pipeline",
+      "api/stateless-transforms",
+      "api/stateful-transforms",
+      "api/sources-sinks",
+      "api/data-structures",
       "api/serialization",
-      "api/testing"
+      "api/testing",
+      "api/javadocs"
+    ],
+    "Concepts": [
+      "concepts/dag",
+      "concepts/distributed-computing",
+      "concepts/stream-processing",
+      "concepts/in-memory-storage",
+      "concepts/fault-tolerance"
     ],
     "Tutorials" : [
       "tutorials/map-join",
@@ -25,13 +37,6 @@
       "tutorials/stream-imap",
       "tutorials/python",
       "tutorials/windowing"
-    ],
-    "Concepts": [
-      "concepts/dag",
-      "concepts/distributed-computing",
-      "concepts/stream-processing",
-      "concepts/in-memory-storage",
-      "concepts/fault-tolerance"
     ],
     "Operations Guide": [
       "operations/configuration",

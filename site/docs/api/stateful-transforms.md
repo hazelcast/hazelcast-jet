@@ -1,0 +1,20 @@
+---
+title: Stateful Transforms
+id: stateful-transforms
+---
+
+## aggregate
+
+### co-group
+
+## distinct
+
+## rollingAggregate
+
+## mapStateful
+
+## filterStateful
+
+## flatMapStateful
+
+## window
