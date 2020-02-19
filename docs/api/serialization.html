@@ -97,9 +97,9 @@ entire class will be serialized. For example, this will fail because
     <span class="hljs-function">Pipeline <span class="hljs-title">buildPipeline</span><span class="hljs-params">()</span> </span>{
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list(<span class="hljs-string">"input"</span>))
-        <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`, but `JetJob1` is not</span>
-        <span class="hljs-comment">// `Serializable` so this call will fail.</span>
-        .filter(item -&gt; item.equals(instanceVar));
+          <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`, but `JetJob1` is not</span>
+          <span class="hljs-comment">// `Serializable` so this call will fail.</span>
+          .filter(item -&gt; item.equals(instanceVar));
         <span class="hljs-keyword">return</span> p;
     }
 }
@@ -114,9 +114,9 @@ workaround here. However, consider something just a bit different:</p>
     <span class="hljs-function">Pipeline <span class="hljs-title">buildPipeline</span><span class="hljs-params">()</span> </span>{
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list(<span class="hljs-string">"input"</span>))
-        <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`. `JetJob2` is declared</span>
-        <span class="hljs-comment">// as `Serializable`, but has a non-serializable field and this fails.</span>
-        .filter(item -&gt; item.equals(instanceVar));
+         <span class="hljs-comment">// Refers to `instanceVar`, capturing `this`. `JetJob2` is declared</span>
+         <span class="hljs-comment">// as `Serializable`, but has a non-serializable field and this fails.</span>
+         .filter(item -&gt; item.equals(instanceVar));
         <span class="hljs-keyword">return</span> p;
     }
 }
@@ -173,18 +173,18 @@ ServiceFactory&lt;?, DateTimeFormatter&gt; serviceFactory = nonSharedService(
 src.mapUsingService(serviceFactory,
         (formatter, tstamp) -&gt; formatter.format(Instant.ofEpochMilli(tstamp)));
 </code></pre>
-<h2><a class="anchor" aria-hidden="true" id="custom-types"></a><a href="#custom-types" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Custom types</h2>
+<h2><a class="anchor" aria-hidden="true" id="data-types"></a><a href="#data-types" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Data types</h2>
 <p>Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
 its features to Jet users. In particular, one can use IMDG data
 structure as Jet <code>Source</code> and/or <code>Sink</code>. Objects retrieved from and
-stored in those have to be (de)serializable.</p>
-<p>Another case which might require (de)serializable objects is sending
+stored in those have to be serializable.</p>
+<p>Another case which might require serializable objects is sending
 computation results between remote vertices. Hazelcast Jet tries to
 minimize network traffic as much as possible, nonetheless different
 parts of a <a href="/docs/concepts/dag">DAG</a> can reside on separate cluster members.
-To catch (de)serialization issues early on, we recommend using a
+To catch serialization issues early on, we recommend using a
 2-member local Jet cluster for development and testing.</p>
-<p>Currently, Hazelcast Jet supports 4 interfaces to (de)serialize custom
+<p>Currently, Hazelcast Jet supports 4 interfaces to serialize custom
 types:</p>
 <ul>
 <li><a href="https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html">java.io.Serializable</a></li>
@@ -236,7 +236,7 @@ java.io.Externalizable                                                  87      
 com.hazelcast.nio.serialization.Portable                               104          300
 com.hazelcast.nio.serialization.StreamSerializer                        26            0
 </code></pre>
-<h3><a class="anchor" aria-hidden="true" id="sample-deserializer-implementation"></a><a href="#sample-deserializer-implementation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sample (de)serializer implementation</h3>
+<h3><a class="anchor" aria-hidden="true" id="sample-serializer-implementation"></a><a href="#sample-serializer-implementation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sample serializer implementation</h3>
 <p>For best performance we recommend using
 <a href="https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html">com.hazelcast.nio.serialization.StreamSerializer</a>
 or
@@ -266,12 +266,24 @@ Below you can find a sample implementation of <code>StreamSerializer</code> for
         }
     }
 </code></pre>
-<p>Then the serializer should be registered with Jet on cluster startup,
-either programmatically:</p>
+<p>Then the serializer should be registered with Jet up front on cluster
+startup, either programmatically:</p>
 <pre><code class="hljs css language-java">JetConfig config = <span class="hljs-keyword">new</span> JetConfig();
 config.getHazelcastConfig().getSerializationConfig()
     .addSerializerConfig(<span class="hljs-keyword">new</span> SerializerConfig().setTypeClass(Person<span class="hljs-class">.<span class="hljs-keyword">class</span>).<span class="hljs-title">setClass</span>(<span class="hljs-title">PersonSerializer</span>.<span class="hljs-title">class</span>))</span>;
 JetInstance jet = Jet.newJetInstance(config);
+</code></pre>
+<p>via a hazelcast.xml/hazelcast.yaml:</p>
+<pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">hazelcast</span>&gt;</span>
+    ...
+    <span class="hljs-tag">&lt;<span class="hljs-name">serialization</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">serializers</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">serializer</span> <span class="hljs-attr">type-class</span>=<span class="hljs-string">"com.hazelcast.jet.examples.Person"</span>
+                <span class="hljs-attr">class-name</span>=<span class="hljs-string">"com.hazelcast.jet.examples.PersonSerializer"</span> /&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">serializers</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">serialization</span>&gt;</span>
+    ...
+<span class="hljs-tag">&lt;/<span class="hljs-name">hazelcast</span>&gt;</span>
 </code></pre>
 <p>or it can be auto discovered with a help of <code>SerializerHook</code>:</p>
 <pre><code class="hljs css language-java"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">PersonSerializerHook</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">SerializerHook</span>&lt;<span class="hljs-title">Value</span>&gt; </span>{
@@ -296,7 +308,7 @@ JetInstance jet = Jet.newJetInstance(config);
 following content:</p>
 <pre><code class="hljs css language-text">com.hazelcast.jet.examples.PersonSerializerHook
 </code></pre>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/reference"><span class="arrow-prev">← </span><span>API Reference</span></a><a class="docs-next button" href="/docs/api/testing"><span>Testing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#pipeline">Pipeline</a></li><li><a href="#custom-types">Custom types</a><ul class="toc-headings"><li><a href="#sample-deserializer-implementation">Sample (de)serializer implementation</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/reference"><span class="arrow-prev">← </span><span>API Reference</span></a><a class="docs-next button" href="/docs/api/testing"><span>Testing</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#pipeline">Pipeline</a></li><li><a href="#data-types">Data types</a><ul class="toc-headings"><li><a href="#sample-serializer-implementation">Sample serializer implementation</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
