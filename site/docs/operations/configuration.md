@@ -20,7 +20,7 @@ config/hazelcast-client.yaml
 `hazelcast-jet.yaml` is used for configuring Jet specific configuration
 and `hazelcast.yaml` refers to Hazelcast configuration.
 
-Each Jet node is also a Hazelcast node, and `hazelcast.yaml` includes 
+Each Jet node is also a Hazelcast node, and `hazelcast.yaml` includes
 the configuration specific to clustering, discovery and so forth.
 
 `hazelcast-client.yaml` refers to a Jet client configuration. This config
@@ -82,6 +82,11 @@ classpath or working directory. By default it will search for
 working directory, but you can control the name of the files using the
 relevant system properties, `hazelcast.jet.config` and
 `hazelcast.config`, respectively.
+
+## Job-specific Configuration
+
+Each Jet job also has job-specific configuration options. These are covered
+in detail under [Job Management](job-management)
 
 ## List of configuration options
 

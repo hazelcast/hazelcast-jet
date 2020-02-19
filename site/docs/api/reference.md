@@ -1,6 +1,6 @@
 ---
 title: API Reference
-id: reference-manual
+id: reference
 ---
 
 ## Pipeline API

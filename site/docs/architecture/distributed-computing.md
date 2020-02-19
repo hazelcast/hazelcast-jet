@@ -10,7 +10,7 @@ actually works in Jet makes a big difference when diagnosing your
 pipeline and improving its performance.
 
 Jet performs high performance in-memory data processing by modeling the
-computation as a _Directed Acyclic Graph (DAG)_, where vertices
+computation as a *Directed Acyclic Graph (DAG)*, where vertices
 represent computation and edges represent data flows. A vertex receives
 data from its inbound edges, performs a step in the computation, and
 emits data to its outbound edges. Both the edge and the vertex are
@@ -21,12 +21,12 @@ many data connections, both within a member (concurrent SPSC queues) and
 between members (Hazelcast network connections).
 
 One of the major reasons to divide the full computation task into
-several vertices is _data partitioning_: the ability to split the data
+several vertices is *data partitioning*: the ability to split the data
 stream into slices which can be processed in parallel, independently of
 each other. This is how Jet can parallelize and distribute the
-_group-and-aggregate_ stream transformation, the major workhorse in
+*group-and-aggregate* stream transformation, the major workhorse in
 distributed computing. To make this work, there must be a function which
-computes the _partitioning key_ for each item and makes all related
+computes the *partitioning key* for each item and makes all related
 items map to the same key. Jet can then route all such items to the same
 processor instance, but has the freedom to route items with different
 keys to different processors.

@@ -45,7 +45,7 @@ Job job = createJetMember().newJob(pipeline, jobConfig);
 job.join();
 ```
 
-Kafka Connect RabbitMQ Connector output in Jet Pipeline: 
+Kafka Connect RabbitMQ Connector output in Jet Pipeline:
 
 ```java
 INFO: [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] Output to ordinal 0:
@@ -61,7 +61,7 @@ INFO: [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] Output to ordinal 0:
       "contentType":"text/plain",
       "contentEncoding":"UTF-8",
       "headers":{
- 
+
       },
       "deliveryMode":null,
       "priority":null,
@@ -85,17 +85,17 @@ Since we are instantiating external Kafka Connect Connectors on the Jet
 runtime, we need to be able to access those classes. Connectors are
 usually shipped as a ZIP files. When using connectors with Kafka, they
 need to be extracted to a certain path and that path needs to be
-provided to the Kafka using `plugin.path` property. 
+provided to the Kafka using `plugin.path` property.
 
 When used with Jet, we added a convenience to upload the ZIP file to Jet
 classpath. One can use `addJarsInZip` method on JobConfig class. The JAR
 files inside the ZIP file will be added to the classpath of the running
 job. There is no standard structure inside the ZIP file as long as it
-contains the JARs for connector implementation and it's dependencies, 
+contains the JARs for connector implementation and it's dependencies,
 
 Sample Job Configuration with Connector ZIP Upload:
 
-```java 
+```java
 JobConfig jobConfig = new JobConfig();
 jobConfig.addJarsInZip("/path/to/kafka-connect-rabbitmq-0.0.2-SNAPSHOT.zip");
 
@@ -135,7 +135,7 @@ one of it's defined tasks which are the actual work horses for Kafka
 Connect API. Then we are repeatedly calling the `poll()` method on the
 task. Each `SourceRecord` returned from the `poll()` has been emitted to
 the downstream. The record's metadata has been collected to a local map
-which later on plugged into the snapshotting mechanism. 
+which later on plugged into the snapshotting mechanism.
 
 ### Fault-Tolerance
 

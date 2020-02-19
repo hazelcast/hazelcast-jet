@@ -15,16 +15,14 @@ tutorial, in both cases you'll need the Hazelcast Jet distribution
 package. Download it from [here](https://jet.hazelcast.org/download) and
 unzip it to a directory we'll refer to as `<jet_home>`.
 
-
 ## As a Java Process
 
 The distribution package contains everything you need to run Jet except
-the JDK. You can get it from the [OpenJDK](https://openjdk.java.net/)
-site and the minimum version is 8. Type this:
+the JDK. Type this:
 
 ```bash
-$ cd <jet_home>
-$ bin/start-jet
+cd <jet_home>
+bin/jet-start
 ```
 
 This will start a Jet node in the foreground so you have to keep the
@@ -51,7 +49,7 @@ that you can use to quickly verify the installation. You can submit it
 like this:
 
 ```bash
-$ bin/jet submit examples/hello-world.jar
+bin/jet submit examples/hello-world.jar
 ```
 
 You should see output like this:
@@ -76,7 +74,7 @@ Hazelcast maintains an official Docker image for Hazelcast Jet. To start
 a node, write this:
 
 ```bash
-$ docker run hazelcast/hazelcast-jet
+docker run hazelcast/hazelcast-jet
 ```
 
 This should start a Hazelcast Jet node in a Docker container. Inspect
@@ -84,7 +82,7 @@ the log output for a line like this:
 
 ```text
 Members {size:1, ver:1} [
-	Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
+ Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
 ]
 ```
 
@@ -93,8 +91,8 @@ below instead of our example's `172.17.0.2`. Let's submit the Hello
 World application from the distribution package:
 
 ```bash
-$ cd <jet_home>
-$ docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
+cd <jet_home>
+docker run -it -v "$(pwd)"/examples:/examples hazelcast/hazelcast-jet jet -a 172.17.0.2 submit /examples/hello-world.jar
 ```
 
 The command mounts the local `examples` directory from `<jet_home>` to
@@ -114,3 +112,38 @@ Top 10 random numbers in the latest window:
     9. 7,804,055,086,912,769,625
     10. 7,681,774,251,691,230,162
 ```
+
+## As a Kubernetes Deployment
+
+The easiest way to install Hazelcast Jet on Kubernetes is using
+*Helm* charts, Hazelcast Jet provides stable Helm charts for
+open-source and enterprise versions also for Hazelcast Jet Management
+Center. Hazelcast Jet also provides Kubernetes-ready Docker images,
+these images use the Hazelcast Kubernetes Plugin to discover other
+Hazelcast Jet members by interacting with the Kubernetes API.
+
+You can install the latest version with default configuration values
+using below command:
+
+```bash
+helm install my-cluster stable/hazelcast-jet
+```
+
+This will create a cluster with the name `my-cluster` and with default
+configuration values. To change various configuration options you can
+use `–set key=value`:
+
+```bash
+helm install my-cluster --set cluster.memberCount=3 stable/hazelcast-jet
+```
+
+Or you can create a `values.yaml` file which contains custom
+configuration options. This file may contain custom `hazelcast` and
+`hazelcast-jet` yaml files in it too.
+
+```bash
+helm install my-cluster -f values.yaml stable/hazelcast-jet
+```
+
+For more information please refer to
+[Jet on Kubernetes](../operations/kubernetes.md) operation guide.

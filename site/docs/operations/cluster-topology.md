@@ -4,7 +4,7 @@ id: cluster-topology
 ---
 
 Hazelcast Jet is a distributed system, where each Hazelcast Jet node is
-referred to as a _member_. Each member is a Java application, running in
+referred to as a *member*. Each member is a Java application, running in
 a JVM.
 
 Broadly speaking, Hazelcast Jet can be used in one of two ways:
@@ -62,8 +62,8 @@ cluster's classpath so that they're not re-submitted with each job.
 ## Embedded Jet
 
 Hazelcast Jet cluster member can be embedded and run inside the same JVM
-with any other JVM based application. The code snipped below is all that is 
-needed to create a Jet node:
+with any other JVM based application. The code snipped below is all that
+ is needed to create a Jet node:
 
 ```java
 JetInstance jet = Jet.newJetInstance();
@@ -104,12 +104,12 @@ performance).
 
 Use dedicated mode for:
 
-* Mixed workloads that can scale independenly of the client applications
-* Getting the best throughput for performance critical applications
+- Mixed workloads that can scale independenly of the client applications
+- Getting the best throughput for performance critical applications
 
 Use embedded mode for:
 
-* Development and testing
-* Running on application servers or on restricted environments
-* OEMs
-* Simple, non-distributed pipelines (i.e. single node)
+- Development and testing
+- Running on application servers or on restricted environments
+- OEMs
+- Simple, non-distributed pipelines (i.e. single node)

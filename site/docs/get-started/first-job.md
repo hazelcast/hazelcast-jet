@@ -8,11 +8,13 @@ Let's write some data processing code and have Jet run it for us.
 ### Start a Java Project
 
 By now you should have some version of Java (at least 8) installed.
+You can get it from the [OpenJDK](https://openjdk.java.net/) website.
 Create a new project targetting your build tool of preference, Maven or
 Gradle, and add the Jet JAR to your build:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
+
 ```xml
 <dependencies>
   <dependency>
@@ -22,10 +24,13 @@ Gradle, and add the Jet JAR to your build:
   </dependency>
 </dependencies>
 ```
+
 <!--Gradle-->
-```
+
+```bash
 compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 ```
+
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ### Write Your Data Pipeline
@@ -51,8 +56,8 @@ public static void main(String[] args) {
 }
 ```
 
-`itemStream()` emits `SimpleEvent`s that have a _sequence_ and a
-_timestamp_. The pipeline we wrote will discard every other event and
+`itemStream()` emits `SimpleEvent`s that have a *sequence* and a
+*timestamp*. The pipeline we wrote will discard every other event and
 keep those with an even sequence number.
 
 ### Start Embedded Jet and Run the Pipeline
@@ -62,7 +67,7 @@ the bottom of the `main` method:
 
 ```java
 JetInstance jet = Jet.newJetInstance();
-Job job = jet.newJob(p).join();
+jet.newJob(p).join();
 ```
 
 It will start a full-featured Jet node right there in the JVM where you

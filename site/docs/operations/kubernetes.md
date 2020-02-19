@@ -3,14 +3,58 @@ title: Jet on Kubernetes
 id: kubernetes
 ---
 
-The easiest way to install **Hazelcast Jet** to **Kubernetes** is using
-**Helm** charts, Hazelcast Jet provides stable Helm charts for
-open-source and enterprise versions also for **Hazelcast Jet Management
-Center**. Hazelcast Jet also provides Kubernetes-ready **Docker** images,
-these images use the **Hazelcast Kubernetes Plugin** to discover other
-Hazelcast Jet members by interacting with the Kubernetes API.
+## Hazelcast Discovery Plugin for Kubernetes
+
+The plugin provides the automatic member discovery in the Kubernetes
+environment. It is included in Hazelcast Jet docker images and Hazelcast
+Jet Helm charts.
+
+This plugin supports two different options of how Hazelcast Jet members
+discover each others:
+
+- Kubernetes API
+- DNS Lookup
+
+### Kubernetes API
+
+*Kubernetes API* mode means that each node makes a REST call to
+Kubernetes Master in order to discover IPs of PODs (with Hazelcast Jet
+members). Using Kubernetes API requires granting certain permissions.
+Therefore, you may need to create a *Role Based Access Control* file.
+See [Role Based Access Control](#role-based-access-control) section for
+a sample file.
+
+Hazelcast Kubernetes Discovery requires creating a service to PODs where
+Hazelcast Jet is running. In case of using Kubernetes API mode, the
+service can be of any type.
+
+### DNS Lookup
+
+*DNS Lookup* mode uses a feature of Kubernetes that **headless**
+(without cluster IP) services are assigned a DNS record which resolves
+to the set of IPs of related PODs.
+
+Headless service is a service of type *ClusterIP* with the `clusterIP`
+property set to `None`.
+
+The following table summarizes the differences between the discovery
+modes: *Kubernetes API* and *DNS Lookup*
+
+|             | Kubernetes API                                                                                                                                                                 | DNS Lookup                                                                                              |
+|:------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------|
+| Description | Uses REST calls to Kubernetes Master to fetch IPs of PODs                                                                                                                      | Uses DNS to resolve IPs of PODs related to the given service                                            |
+| Pros        | Flexible, supports 3 different options:    <ul><li>Cluster per service</li><li>Cluster per multiple services (distinguished by labels)</li><li>Cluster per namespace</li></ul> | No additional configuration required, resolving DNS does not require granting any permissions           |
+| Cons        | Requires setting up RoleBinding (to allow access to Kubernetes API)                                                                                                            | <ul><li>Limited to **headless Cluster IP** service</li><li>Limited to **cluster per service**</li></ul> |
+
+See
+[Hazelcast Discovery Plugin for Kubernetes](https://github.com/hazelcast/hazelcast-kubernetes)
+for more information about the plugin.
 
 ## Install Hazelcast Jet using Helm
+
+The easiest way to install Hazelcast Jet on Kubernetes is using Helm
+charts, Hazelcast Jet provides stable Helm charts for open-source and
+enterprise versions also for Hazelcast Jet Management Center.
 
 ### Prerequisites
 
@@ -67,7 +111,6 @@ Hazelcast Jet chart and their default values.
 | `jet.yaml.hazelcast`       | Hazelcast IMDG Configuration (`hazelcast.yaml` embedded into `values.yaml`)    | `{DEFAULT_HAZELCAST_YAML}` |
 | `managementcenter.enabled` | Turn on and off Hazelcast Jet Management Center application                    | `true`                     |
 
-
 See
 [stable charts repository](https://github.com/helm/charts/tree/master/stable/hazelcast-jet)
 for more information and configuration options.
@@ -96,6 +139,7 @@ subjects:
   name: default
   namespace: default
 ```
+
 ```bash
 kubectly apply -f rbac.yaml
 ```
@@ -406,7 +450,6 @@ you like.
 
 ![minikube-dashboard](../assets/minikube-dashboard.png)
 
-
 ### With Hazelcast Jet Management Center
 
 Hazelcast Jet Management Center enables you to monitor and manage your
@@ -480,7 +523,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: hazelcast-jet-management-center 
+  name: hazelcast-jet-management-center
 spec:
   type: LoadBalancer
   selector:
@@ -501,3 +544,86 @@ minikube service hazelcast-jet-management-center --url
 
 ![management-center-dashboard](../assets/management-center-dashboard.png)
 
+## Access From Outside The Kubernetes
+
+While it is straightforward to access the Hazelcast Jet cluster inside
+the Kubernetes (see [Deploy Jobs](#deploy-jobs) for a sample client
+config), it is only possible with the public Internet network if you are
+accessing the cluster from outside.
+
+### Smart Routing Disabled
+
+If you configure `smart-routing: false` for your client, you don't need
+any plugin. It's enough to expose your Hazelcast Jet cluster with a
+LoadBalancer (or NodePort) service and set its IP/port as the TCP/IP
+Hazelcast Jet Client configuration. Remember that if smart-routing is
+disabled then all the communication happens against a single Hazelcast
+Jet member.
+
+### Smart Routing Enabled
+
+To access a Hazelcast Jet cluster with a *smart* client you need to
+perform the following steps:
+
+- Expose each Hazelcast Jet Member POD with a separate LoadBalancer or
+  NodePort service (the simplest way to do it is to install
+  [Metacontroller](https://metacontroller.app/) and
+  [service-per-pod](https://github.com/GoogleCloudPlatform/metacontroller/tree/master/examples/service-per-pod)
+  Decorator Controller)
+- Configure ServiceAccount with ClusterRole having at least `get` and
+  `list` permissions to the following resources: `endpoints`, `pods`,
+  `nodes`, `services`
+- Use credentials from the created ServiceAccount in the Hazelcast Jet
+  Client configuration (credentials can be fetched with: `kubectl get
+  secret <sevice-account-secret> -o jsonpath={.data.token} | base64
+  --decode` and `kubectl get secret <sevice-account-secret> -o
+  jsonpath={.data.ca\\.crt} | base64 --decode`)
+
+```yaml
+hazelcast-client:
+  network:
+    kubernetes:
+      enabled: true
+      namespace: MY-KUBERNETES-NAMESPACE
+      service-name: MY-SERVICE-NAME
+      use-public-ip: true
+      kubernetes-master: https://35.226.182.228
+      api-token: THE-API-TOKEN
+      ca-certificate: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+```
+
+**Note**: Hazelcast Jet Client outside Kubernetes cluster works only in
+the *Kubernetes API* mode.
+
+## Rolling Upgrade and Scaling
+
+Hazelcast Jet cluster is easily scalable within Kubernetes. You can use
+the standard `kubectl scale` command to change the cluster size. The
+same applies the rolling upgrade procedure, you can depend on the
+standard Kubernetes behavior and just update the new version to your
+`Deployment/StatefulSet` configurations.
+
+Note however that, by default, Hazelcast Jet does not shutdown
+gracefully. It means that if you suddenly terminate more than your
+backup-count property (1 by default), you may lose the cluster data. To
+prevent that from happening, set the following properties:
+
+- `terminationGracePeriodSeconds`: In your `StatefulSet/Deployment`
+  configuration; the value should be high enough to cover the data
+  migration process
+- `-Dhazelcast.shutdownhook.policy=GRACEFUL`: In the JVM parameters
+- `-Dhazelcast.graceful.shutdown.max.wait`: In the JVM parameters; the
+  value should be high enough to cover the data migration process
+
+Additionally if you use Deployment (not StatefulSet), you need to set
+your strategy to
+[RollingUpdate](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#updating-a-deployment)
+and ensure Pods are updated one by one.
+
+All these features are already included in Hazelcast Jet Helm Charts.
+See
+[Install Hazelcast Jet using Helm](#install-hazelcast-jet-using-helm)
+for more information.
