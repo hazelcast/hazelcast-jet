@@ -45,9 +45,9 @@ class JetJob1 {
     Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list("input"))
-        // Refers to `instanceVar`, capturing `this`, but `JetJob1` is not
-        // `Serializable` so this call will fail.
-        .filter(item -> item.equals(instanceVar));
+          // Refers to `instanceVar`, capturing `this`, but `JetJob1` is not
+          // `Serializable` so this call will fail.
+          .filter(item -> item.equals(instanceVar));
         return p;
     }
 }
@@ -65,9 +65,9 @@ class JetJob2 implements Serializable {
     Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
         p.readFrom(Sources.list("input"))
-        // Refers to `instanceVar`, capturing `this`. `JetJob2` is declared
-        // as `Serializable`, but has a non-serializable field and this fails.
-        .filter(item -> item.equals(instanceVar));
+         // Refers to `instanceVar`, capturing `this`. `JetJob2` is declared
+         // as `Serializable`, but has a non-serializable field and this fails.
+         .filter(item -> item.equals(instanceVar));
         return p;
     }
 }
@@ -137,21 +137,21 @@ src.mapUsingService(serviceFactory,
         (formatter, tstamp) -> formatter.format(Instant.ofEpochMilli(tstamp)));
 ```
 
-## Custom types
+## Data types
 
 Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
 its features to Jet users. In particular, one can use IMDG data
 structure as Jet `Source` and/or `Sink`. Objects retrieved from and
-stored in those have to be (de)serializable.
+stored in those have to be serializable.
 
-Another case which might require (de)serializable objects is sending
+Another case which might require serializable objects is sending
 computation results between remote vertices. Hazelcast Jet tries to
 minimize network traffic as much as possible, nonetheless different
 parts of a [DAG](concepts/dag.md) can reside on separate cluster members.
-To catch (de)serialization issues early on, we recommend using a
+To catch serialization issues early on, we recommend using a
 2-member local Jet cluster for development and testing.
 
-Currently, Hazelcast Jet supports 4 interfaces to (de)serialize custom
+Currently, Hazelcast Jet supports 4 interfaces to serialize custom
 types:
 
 - [java.io.Serializable](https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html)
@@ -208,7 +208,7 @@ com.hazelcast.nio.serialization.Portable                               104      
 com.hazelcast.nio.serialization.StreamSerializer                        26            0
 ```
 
-### Sample (de)serializer implementation
+### Sample serializer implementation
 
 For best performance we recommend using
 [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
@@ -242,14 +242,29 @@ class PersonSerializer implements StreamSerializer<Person> {
     }
 ```
 
-Then the serializer should be registered with Jet on cluster startup,
-either programmatically:
+Then the serializer should be registered with Jet up front on cluster
+startup, either programmatically:
 
 ```java
 JetConfig config = new JetConfig();
 config.getHazelcastConfig().getSerializationConfig()
     .addSerializerConfig(new SerializerConfig().setTypeClass(Person.class).setClass(PersonSerializer.class));
 JetInstance jet = Jet.newJetInstance(config);
+```
+
+via a hazelcast.xml/hazelcast.yaml:
+
+```xml
+<hazelcast>
+    ...
+    <serialization>
+        <serializers>
+            <serializer type-class="com.hazelcast.jet.examples.Person"
+                class-name="com.hazelcast.jet.examples.PersonSerializer" />
+        </serializers>
+    </serialization>
+    ...
+</hazelcast>
 ```
 
 or it can be auto discovered with a help of `SerializerHook`:
