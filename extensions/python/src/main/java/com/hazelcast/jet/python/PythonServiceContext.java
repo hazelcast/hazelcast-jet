@@ -94,6 +94,11 @@ class PythonServiceContext {
                 Thread stdoutLoggingThread = logStdOut(logger, initProcess, "python-init");
                 initProcess.waitFor();
                 if (initProcess.exitValue() != 0) {
+                    try {
+                        destroy();
+                    } catch (Exception e) {
+                        logger.warning("Cleanup failed with exception", e);
+                    }
                     throw new Exception(
                             "Initialization script finished with non-zero exit code: " + initProcess.exitValue()
                     );
