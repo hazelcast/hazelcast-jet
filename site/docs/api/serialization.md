@@ -7,12 +7,12 @@ To be able to send object state over a network or store it in a file
 one has to first serialize it into raw bytes. Similarly, to be able to
 fetch an object state over a wire or read it from a persistent storage
 one has to deserialize it from raw bytes first. As Hazelcast Jet is a
-distributed system by nature (de)serialization is integral part of it.
+distributed system by nature serialization is integral part of it.
 Understanding, when it is involved, how does it support the pipelines
 and knowing differences between supported strategies is crucial to
 efficient usage of Hazelcast Jet.
 
-## Pipeline
+## Serialization of Pipelines
 
 A typical Jet pipeline involves lambda expressions. Since the whole
 pipeline definition must be serialized to be sent to the cluster, the
@@ -137,7 +137,7 @@ src.mapUsingService(serviceFactory,
         (formatter, tstamp) -> formatter.format(Instant.ofEpochMilli(tstamp)));
 ```
 
-## Data types
+## Serialization of Data Types
 
 Hazelcast Jet closely integrates with Hazelcast IMDG exposing many of
 its features to Jet users. In particular, one can use IMDG data
@@ -145,11 +145,12 @@ structure as Jet `Source` and/or `Sink`. Objects retrieved from and
 stored in those have to be serializable.
 
 Another case which might require serializable objects is sending
-computation results between remote vertices. Hazelcast Jet tries to
-minimize network traffic as much as possible, nonetheless different
-parts of a [DAG](concepts/dag.md) can reside on separate cluster members.
-To catch serialization issues early on, we recommend using a
-2-member local Jet cluster for development and testing.
+computation results between nodes such as in a grouping operation.
+Hazelcast Jet tries to minimize network traffic as much as possible,
+nonetheless different parts of a [DAG](concepts/dag.md) can reside on
+separate cluster members. To catch serialization issues early on, we
+recommend using a 2-member local Jet cluster for development and
+testing.
 
 Currently, Hazelcast Jet supports 4 interfaces to serialize custom
 types:
@@ -163,12 +164,12 @@ types:
 
 The following table provides a comparison between them to help you in
 deciding which interface to use in your applications.
-|      Serialization interface      |                                                              <center>Advantages</center>                                                             |                                       <center>Drawbacks</center>                                     |
-|:---------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------|
-|            Serializable           | <ul><li>Easy to start with, requires no implementation</li></ul>                                                                                     | <ul><li>CPU intensive</li><li>Space inefficient</li></ul>                                            |
-|           Externalizable          | <ul><li>Faster and more space efficient than Serializable</li></ul>                                                                                  | <ul><li>CPU intensive</li><li>Space inefficient</li><li>Requires implementation</li></ul>            |
-|              Portable             | <ul><li>Faster and more space efficient than java standard interfaces</li><li>Supports versioning</li><li>Supports partial deserialization</li></ul> | <ul><li>Requires implementation</li><li>Requires factory registration during cluster setup</li></ul> |
-| [Stream&#124;ByteArray]Serializer | <ul><li>The fastest and lightest out of supported interfaces</li></ul>                                                                               | <ul><li>Requires implementation</li><li>Requires registration during cluster setup</li></ul>         |
+|Serialization interface|Advantages|Drawbacks|
+|:---------------------:|:---------|:--------|
+|Serializable|Easy to start with, requires no implementation or registration|CPU intensive and space inefficient|
+|Externalizable|Faster and more space efficient than Serializable, but no registration required|CPU intensive, space inefficient and requires implementation|
+|Portable|Faster and more space efficient than java standard interfaces. Supports versioningSupports partial deserialization|Requires implementation and factory registration during cluster setup|
+|StreamSerializer|The fastest and lightest out of supported interfaces|Requires implementation and registration during cluster setup|
 
 Below you can find rough performance numbers one can expect when
 employing each of those strategies. A straightforward
@@ -208,7 +209,12 @@ com.hazelcast.nio.serialization.Portable                               104      
 com.hazelcast.nio.serialization.StreamSerializer                        26            0
 ```
 
-### Sample serializer implementation
+You can see that using plain `Serializable` can easily become a
+bottleneck in your application, as even with this simple data type it's
+more than an order of magnitude slower than other serialization options,
+not to mention very wasteful of memory usage.
+
+### Sample Serializer implementation
 
 For best performance we recommend using
 [com.hazelcast.nio.serialization.StreamSerializer](https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/nio/serialization/StreamSerializer.html)
@@ -286,7 +292,7 @@ class PersonSerializerHook implements SerializerHook<Value> {
 }
 ```
 
-and file "META-INF/services/com.hazelcast.SerializerHook" with the
+and file `META-INF/services/com.hazelcast.SerializerHook` with the
 following content:
 
 ```text

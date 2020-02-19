@@ -90,4 +90,53 @@ in detail under [Job Management](job-management)
 
 ## List of configuration options
 
-TODO, do we want to maintain a duplicate list here? or link to them?
+The files `config/examples/hazelcast-jet-full-example.yaml`  and
+`config/examples/hazelcast-full-example.yaml` include  a description of
+all configuration options. Jet specific configuration options are listed
+below:
+
+|Option|Default|Description|
+|------|:------|:----|
+|instance/cooperativeThreadCount|number of cores|The number of threads Jet creates in its cooperative multithreading pool. |
+|instance/setFlowControlPeriodMs|100|Jet uses a flow control mechanism between cluster members to prevent a slower vertex from getting overflowed with data from a faster upstream vertex. Each receiver regularly reports to each sender how much more data it may send over a given DAG edge. This method sets the duration (in milliseconds) of the interval between flow-control packets.|
+|instance/setBackupCount|1|The number of synchronous backups to configure on the IMap that Jet needs internally to store job metadata and snapshots. The maximum allowed value is 6.|
+|instance/setScaleUpDelayMillis|10,000|The delay after which the auto-scaled jobs restart if a new member joins the cluster. It has no effect on jobs with auto scaling disabled.|
+|instance/setLosslessRestartEnabled|false|Specifies whether the Lossless Cluster Restart feature is enabled. With this feature, you can restart the whole cluster without losing the jobs and their state. It is implemented on top of Hazelcast IMDG's Hot Restart Persistence feature, which persists the data to disk. You need to have the Hazelcast Jet Enterprise edition and configure Hazelcast IMDG's Hot Restart Persistence to use this feature. The default value is `false`, i.e., disabled.|
+
+## List of configuration properties
+
+Configuration properties can either be configured through Java system
+properties (specified using the standard `-Dproperty=value`) syntax
+before application startup or under the `properties:` inside the yaml
+file:
+
+```yaml
+hazelcast-jet:
+  properties:
+    jet.idle.cooperative.min.microseconds: 50
+    jet.idle.cooperative.max.microseconds: 500
+    jet.idle.noncooperative.min.microseconds: 50
+    jet.idle.noncooperative.max.microseconds: 1000
+```
+
+You can also configure Jet before starting as follows:
+
+```bash
+JAVA_OPTS=-D<property>=<value> bin/jet-start
+```
+
+The full list of Jet-speciic properties can be found inside the
+`com.hazelcast.jet.core.JetProperties` class and the rest of properties
+are located inside `com.hazelcast.spi.properties.ClusterProperty` class.
+The most important properties are listed here:
+
+|Option|Default|Description|
+|------|:------|----------|
+|hazelcast.partition.count|271|Total number of partitions in the cluster.|
+|hazelcast.logging.type|jdk|What logger should be used by Jet. Valid options are `log4j`, `log4j2`, `slf4j` and `none`|
+|jet.idle.cooperative.min.microseconds|25|The minimum time in microseconds the cooperative worker threads will sleep if none of the tasklets made any progress. Lower values increase idle CPU usage but may result in decreased latency. Higher values will increase latency and very high values (>10000µs) will also limit throughput.|
+|jet.idle.cooperative.max.microseconds`|500|The maximum time in microseconds the cooperative worker threads will sleep if none of the tasklets made any progress. Lower values increase idle CPU usage but may result in decreased latency. Higher values will increase latency and very high values (>10000µs) will also limit throughput.|
+|jet.idle.noncooperative.min.microseconds|25|The minimum time in microseconds the non-cooperative worker threads will sleep if none of the tasklets made any progress. Lower values increase idle CPU usage but may result in decreased latency. Higher values will increase latency and very high values (>10000µs) will also limit throughput.|
+|jet.idle.noncooperative.max.microseconds|5000|The maximum time in microseconds the non-cooperative worker threads will sleep if none of the tasklets made any progress. Lower values increase idle CPU usage but may result in decreased latency. Higher values will increase latency and very high values (>10000µs) will also limit throughput.|
+|jet.job.results.max.size|1000|Maximum number of job results to keep in the cluster, the oldest results will be automatically deleted after this size is reached.|
+|jet.job.results.ttl.seconds|604800|Maximum number of time in seconds the job results will be kept in the cluster. They will be automatically deleted after this period is reached.|

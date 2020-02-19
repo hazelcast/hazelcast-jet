@@ -1,5 +1,5 @@
 ---
-title: Scale your job
+title: Scale Your Job
 id: scale-job
 ---
 
