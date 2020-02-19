@@ -294,4 +294,5 @@ com.hazelcast.jet.examples.PersonSerializerHook
 ```
 
 All the classes - data types, serializers & hooks - should be present
-on the server classpath.
+on the server classpath, ideally in server's lib directory packaged as
+a jar file.
