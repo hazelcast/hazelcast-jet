@@ -132,7 +132,7 @@ final class PythonService {
         public void onError(Throwable e) {
             try {
                 if (e instanceof StatusException || e instanceof StatusRuntimeException) {
-                    // not seriazliable exceptions
+                    // not serializable exceptions
                     e = new JetException(ExceptionUtil.stackTraceToString(e));
                 }
 

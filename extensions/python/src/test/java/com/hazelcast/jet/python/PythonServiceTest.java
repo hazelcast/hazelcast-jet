@@ -49,12 +49,11 @@ public class PythonServiceTest extends SimpleTestInClusterSupport {
     private static final int ITEM_COUNT = 10_000;
     private static final String ECHO_HANDLER_FUNCTION =
             "def handle(input_list):\n" +
- "    return ['echo-%s' % i for i in input_list]\n";
+            "    return ['echo-%s' % i for i in input_list]\n";
 
     private static final String FAILING_FUNCTION
             = "def handle(input_list):\n"
-            + "    assert 1 == 2\n"
-            + "    return ['echo-%s' % i for i in input_list]\n";
+            + "    assert 1 == 2\n";
 
     private File baseDir;
 
