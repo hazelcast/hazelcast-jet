@@ -10,9 +10,9 @@ pattern. For example,
 
 ```java
 Pipeline p = Pipeline.create();
-p.drawFrom(TestSources.items("the", "quick", "brown", "fox"))
+p.readFrom(TestSources.items("the", "quick", "brown", "fox"))
  .map(item -> item.toUpperCase())
- .drainTo(Sinks.logger());
+ .writeTo(Sinks.logger());
 ```
 
 In each step, such as `readFrom` or `writeTo`, you create a pipeline
@@ -25,9 +25,9 @@ called _compute stages_ and expect you to attach further stages to them.
 The API differentiates between batch (bounded) and stream (unbounded)
 sources and this is reflected in the naming: there is a `BatchStage` and
 a `StreamStage`, each offering the operations appropriate to its kind.
-Depending on source, your pipeline will end up starting with a batch or
-streaming stage. It's possible to convert a batch stage by adding
-timestamps to it, but not the other way around.
+Depending on the data source, your pipeline will end up starting with a
+batch or streaming stage. It's possible to convert a batch stage by
+adding timestamps to it, but not the other way around.
 
 In this section we'll mostly use batch stages, for simplicity, but the
 API of operations common to both kinds is identical. Jet internally
@@ -64,11 +64,11 @@ than one destination:
 
 ```java
 Pipeline p = Pipeline.create();
-BatchStage<String> src = p.drawFrom(TestSources.items("the", "quick", "brown", "fox"));
+BatchStage<String> src = p.readFrom(TestSources.items("the", "quick", "brown", "fox"));
 src.map(String::toUpperCase)
-   .drainTo(Sinks.files("uppercase"));
+   .writeTo(Sinks.files("uppercase"));
 src.map(String::toLowerCase)
-   .drainTo(Sinks.files("lowercase"));
+   .writeTo(Sinks.files("lowercase"));
 ```
 
 ## Pipeline lifecycle
