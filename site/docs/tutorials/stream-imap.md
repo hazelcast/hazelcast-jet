@@ -15,37 +15,13 @@ a stream of events which then can be processed further.
 
 ### Event Journal
 
-In order to use an `IMap` as change event stream source the first thing
-that needs to be done is enabling its "event journal".
+In order to use an `IMap` as a change event stream source the first
+thing that needs to be done is enabling its "event journal".
 
-This is a matter of configuration and can be achieved in a number of
-ways, depending how Jet is being used.
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Embedded-->
-
-When using Jet in the embedded mode the simplest way is to use
-programmatic configuration, like this:
-
-```java
-JetConfig cfg = new JetConfig();
-cfg.getHazelcastConfig()
-   .getMapEventJournalConfig("name_of_map")
-   .setEnabled(true)
-   .setCapacity(1000)         // how many events to keep before evicting
-   .setTimeToLiveSeconds(10); // evict events older than this
-JetInstance jet = Jet.newJetInstance(cfg);
-```
-
-<!--Cluster-->
-
-When your job needs to run on an actual cluster, then the configuration
-change needs to be done properly, through config files (see also
+This is a matter of configuration (see also
 [full guide](https://jet-start.sh/docs/operations/configuration) on
-configuration).  
-
-Add this to your Jet member config, in your distribution
+configuration), add following to your Jet member config, in your
+ distribution
 (`config/hazelcast.yaml` by default):
 
 ```yaml
@@ -57,13 +33,11 @@ name_of_map:
     time-to-live-seconds: 10
 ```
 
-Then obtain your Jet instance in code like this:
+Take care to obtain your Jet instance in code like this:
 
 ```java
 JetInstance jet = Jet.bootstrappedInstance();
 ```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
 
 Specifying the _capacity_ is optional, defaults to _10,000_. Its
 meaning is: the number of events the `IMap` will track before starting
@@ -75,6 +49,24 @@ The _time-to-live_ is also optional, defaults to _0_ (meaning
 the oldest ones start to be overwritten). A non-zero TTL means that
 events will be evicted after that amount of seconds, even if there is
 still available capacity for tracking them.
+
+<details>
+  <summary>There is also a simpler solution for embedded mode!</summary>
+
+  When using Jet in the embedded mode the same effect can be achieved
+  more simply, via programmatic configuration:
+
+  ```java
+  JetConfig cfg = new JetConfig();
+  cfg.getHazelcastConfig()
+     .getMapEventJournalConfig("name_of_map")
+     .setEnabled(true)
+     .setCapacity(1000)         // how many events to keep before evicting
+     .setTimeToLiveSeconds(10); // evict events older than this
+  JetInstance jet = Jet.newJetInstance(cfg);
+  ```
+
+</details>
 
 ### Source
 
