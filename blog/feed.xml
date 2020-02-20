@@ -4,7 +4,7 @@
         <title>Hazelcast Jet Blog</title>
         <link>https://jet-start.sh/blog</link>
         <description>The best place to stay up-to-date with the latest Hazelcast Jet news and events.</description>
-        <lastBuildDate>Tue, 28 Jan 2020 06:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Thu, 20 Feb 2020 06:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <image>
@@ -13,6 +13,13 @@
             <link>https://jet-start.sh/blog</link>
         </image>
         <copyright>Copyright © 2020 Hazelcast Inc.</copyright>
+        <item>
+            <title><![CDATA[Transactional connectors in Hazelcast Jet]]></title>
+            <link>https://jet-start.sh/blog/2020/02/20/transactional-processors.html</link>
+            <guid>https://jet-start.sh/blog/2020/02/20/transactional-processors.html</guid>
+            <pubDate>Thu, 20 Feb 2020 06:00:00 GMT</pubDate>
+            <description><![CDATA[<p>Hazelcast Jet is a distributed stream processing engine which supports exactly-once semantics even in the presence of cluster member failures. This is achieved by snapshotting the internal state of the processors at regular intervals into a reliable ...</p>]]></description>
+        </item>
         <item>
             <title><![CDATA[Announcing New Documentation Website]]></title>
             <link>https://jet-start.sh/blog/2020/01/28/new-website.html</link>
