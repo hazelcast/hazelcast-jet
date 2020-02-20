@@ -89,7 +89,8 @@ p.readFrom(TestSources.items(0, 1, 2, 3, 4, 5))
 ```
 
 Grouping is critical for aggregating massive data sets in distributed
-computing - otherwise you are not able to make use of parallelization.
+computing - otherwise you would not able to make use of parallelization
+as effectively.
 
 ## rollingAggregate
 
