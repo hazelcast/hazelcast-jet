@@ -31,7 +31,7 @@ transactions. The basic algorithm is simple:
 1. The coordinator asks all participants to prepare for commit
 
 2. If all participants were successful, the coordinator asks them to
-commit. Otherwise it asks all of them to roll back
+   commit. Otherwise it asks all of them to roll back
 
 For correct functionality it is required that if a participant reported
 success in the first phase, it must be able to commit when requested.
@@ -59,22 +59,22 @@ processors must be able to commit the transactions after the job
 restart. To do so, they store transaction IDs to the snapshot. This is
 the basic process:
 
-1. When a processor starts, it opens transaction `T0`. It writes incoming
-items, but doesn't commit.
+1. When a processor starts, it opens transaction `T0`. It writes
+   incoming items, but doesn't commit.
 
 2. Later the processor is asked to do the 1st phase of the snapshot (the
-`snapshotCommitPrepare()` method). The processor prepares `T0`, stores
-its ID to the snapshot and starts `T1`.
+   `snapshotCommitPrepare()` method). The processor prepares `T0`,
+   stores its ID to the snapshot and starts `T1`.
 
 3. Items that arrive until the 2nd phase occurs are handled using `T1`.
 
 4. When a coordinator member receives responses from all processors that
-they successfully did 1st phase, it marks the snapshot as successful and
-initiates the phase-2.
+   they successfully did 1st phase, it marks the snapshot as successful
+   and initiates the phase-2.
 
 5. Some time later the processor is asked to do the 2nd phase (the
-`snapshotCommitFinish()` method). The processor now commits `T0` and
-continues to use `T1` until the next snapshot.
+   `snapshotCommitFinish()` method). The processor now commits `T0` and
+   continues to use `T1` until the next snapshot.
 
 6. The process repeats with incremented transaction ID.
 
@@ -107,7 +107,7 @@ their state and external processors prepare and switch their
 transactions is the same. Therefore you can combine exactly-once stages
 of any type in the pipeline and it will work seamlessly.
 
-## Do we need transactions for sources?
+## Transactions are needed for sources too
 
 It might seem that since sources are designed to be read, we don’t need
 anything to store. But, for example, some message systems use
