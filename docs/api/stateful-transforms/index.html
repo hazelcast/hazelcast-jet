@@ -252,10 +252,10 @@ minutes of inactivity:</p>
  .writeTo(Sinks.logger());
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="distinct"></a><a href="#distinct" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>distinct</h2>
-<p>Suppresses duplicate items from a stream. If you apply a grouping key, two
-items mapping to the same key will be duplicates. This operation applies
-primarily to batch streams, but also works on a windowed unbounded
-stream.</p>
+<p>Suppresses duplicate items from a stream. If you apply a grouping key,
+two items mapping to the same key will be duplicates. This operation
+applies primarily to batch streams, but also works on a windowed
+unbounded stream.</p>
 <p>This example takes some input of integers and outputs only the distinct
 values:</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
@@ -270,11 +270,100 @@ p.readFrom(TestSources.items(<span class="hljs-string">"joe"</span>, <span class
  .groupingKey(s -&gt; s.substring(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)
  .distinct();
 </code></pre>
-<p>The <code>distinct</code> operator can be used for batch and streaming pipelines, but
-requires a window to be applied in a streaming pipeline.</p>
+<p>The <code>distinct</code> operator can be used for batch and streaming pipelines,
+but requires a window to be applied in a streaming pipeline.</p>
 <h2><a class="anchor" aria-hidden="true" id="mapstateful"></a><a href="#mapstateful" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>mapStateful</h2>
-<h2><a class="anchor" aria-hidden="true" id="co-group"></a><a href="#co-group" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>co-group</h2>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/stateless-transforms"><span class="arrow-prev">← </span><span>Stateless Transforms</span></a><a class="docs-next button" href="/docs/api/sources-sinks"><span>Sources and Sinks</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#aggregate">aggregate</a><ul class="toc-headings"><li><a href="#groupingkey">groupingKey</a></li></ul></li><li><a href="#rollingaggregate">rollingAggregate</a></li><li><a href="#window">window</a><ul class="toc-headings"><li><a href="#tumblingwindow">tumblingWindow</a></li><li><a href="#slidingwindow">slidingWindow</a></li><li><a href="#sessionwindow">sessionWindow</a></li></ul></li><li><a href="#distinct">distinct</a></li><li><a href="#mapstateful">mapStateful</a></li><li><a href="#co-group">co-group</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+<p>mapStateful is an extension of the simple <a href="stateless-transforms#map">map</a>
+transform and adds the capability to optionally retain mutable state.</p>
+<p>The major use case of stateful mapping is recognizing a pattern in the
+event stream, such as matching start-transaction with end-transaction
+events based on an event correlation ID. More generally, you can
+implement any kind of state machine and detect patterns in the input of
+any complexity.</p>
+<p>As with other stateful operations, you can also use a <code>groupingKey</code> to
+have a unique state per key.</p>
+<p>For example, consider a pipeline that matches incoming
+<code>TRANSACTION_START</code> events to <code>TRANSACTION_END</code> events which can arrive
+unordered and when both are received outputs how long the transaction
+took.</p>
+<p>This would be difficult to express in terms of a <code>slidingWindow</code>,
+because we can't know how long a transaction would take in advance, and
+if it would span multiple windows. It can't be expressed using
+<code>sessionWindow</code> either, because we don't want to wait until the window
+times out before emitting the results.</p>
+<p>Let's say we have the following class:</p>
+<pre><code class="hljs css language-java"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TransactionEvent</span> </span>{
+    <span class="hljs-function"><span class="hljs-keyword">long</span> <span class="hljs-title">timestamp</span><span class="hljs-params">()</span></span>;
+    <span class="hljs-function">String <span class="hljs-title">transactionId</span><span class="hljs-params">()</span></span>;
+    <span class="hljs-function">EventType <span class="hljs-title">type</span><span class="hljs-params">()</span></span>;
+}
+
+<span class="hljs-keyword">public</span> <span class="hljs-keyword">enum</span> EventType {
+    TRANSACTION_START,
+    TRANSACTION_END
+}
+</code></pre>
+<p>We can then use the following <code>mapStateful</code> transform to match start
+and events:</p>
+<pre><code class="hljs css language-java">p.readFrom(KafkaSources.kafka(<span class="hljs-string">"transaction-events"</span>, ..))
+ .withNativeTimestamps(<span class="hljs-number">0</span>)
+ .groupingKey(event -&gt; event.transactionId())
+ .mapStateful(MINUTES.toMillis(<span class="hljs-number">10</span>),
+   () -&gt; <span class="hljs-keyword">new</span> TransactionEvent[<span class="hljs-number">2</span>],
+   (state, id, event) -&gt; {
+        <span class="hljs-keyword">if</span> (event.type() == TRANSACTION_START) {
+            state[<span class="hljs-number">0</span>] = event;
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (event.type() == TRANSACTION_END)
+            state[<span class="hljs-number">1</span>] = event;
+        }
+        <span class="hljs-keyword">if</span> (state[<span class="hljs-number">0</span>] != <span class="hljs-keyword">null</span> &amp;&amp; state[<span class="hljs-number">1</span>] != <span class="hljs-keyword">null</span>) {
+            <span class="hljs-comment">// we have both start and end events</span>
+            entry(transactionId, state[<span class="hljs-number">1</span>].timestamp() - state[<span class="hljs-number">0</span>].timestamp())
+        }
+        <span class="hljs-comment">// we have only one event, do nothing for now.</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
+    },
+    (state, id, currentWatermark) -&gt;
+        <span class="hljs-comment">// if we have not received both events after 10 minutes, we will emit a timeout entry</span>
+        (state[<span class="hljs-number">0</span>] == <span class="hljs-keyword">null</span> || state[<span class="hljs-number">1</span>] == <span class="hljs-keyword">null</span>)
+            ? entry(id, TIMED_OUT)
+            : <span class="hljs-keyword">null</span>
+ ).writeTo(Sinks.logger());
+</code></pre>
+<p>You will note that we also had to set an expiry time on the events,
+otherwise would eventually run out of memory as we accumulate more and
+more transactions.</p>
+<h2><a class="anchor" aria-hidden="true" id="co-group--join"></a><a href="#co-group--join" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>co-group / join</h2>
+<p>Co-grouping allows to join any number of inputs on a common key, which
+can be anything you can calculate from the input item. This makes it
+possible to correlate data from two or more diferrent sources. In the
+same transform you are able to apply an aggregate function to all the
+grouped items.</p>
+<p>As an example, we can use a sequence of events that would be typical on
+a e-commerce website: <code>PageVisit</code> and <code>AddToCart</code>. We want to find how
+many visits were required before an item was added to the cart. For
+simplicity, let's say we're working with historical data and we are
+processing this data from a set of logs.</p>
+<pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
+BatchStageWithKey&lt;PageVisit, Integer&gt; pageVisit =
+    p.readFrom(Sources.files(<span class="hljs-string">"visit-events.log"</span>, ..))
+    .groupingKey(event -&gt; event.userId());
+BatchStageWithKey&lt;AddToCart, Integer&gt; addToCart =
+    p.readFrom(Sources.files(<span class="hljs-string">"cart-events.log"</span>, ..))
+     .groupingKey(event -&gt; event.userId());
+</code></pre>
+<p>After getting the two keyed streams, now we can join them:</p>
+<pre><code class="hljs css language-java">BatchStage&lt;Entry&lt;Integer, Tuple2&lt;Long, Long&gt;&gt;&gt; coGrouped = pageVisit
+        .aggregate2(counting(), addToCart, counting());
+</code></pre>
+<p>This gives an item which contains the counts for both events for the
+same user id. From this, it's easy to calculate the ratio of visits vs
+add to cart events.</p>
+<p>Co-grouping can also be applied to windowed streams, and works exactly
+the same as <code>aggregate</code> option. An important consideration is that the
+timestamps from both streams would be considered, so it's important that
+the two streams don't have widely different timestamps.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/stateless-transforms"><span class="arrow-prev">← </span><span>Stateless Transforms</span></a><a class="docs-next button" href="/docs/api/sources-sinks"><span>Sources and Sinks</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#aggregate">aggregate</a><ul class="toc-headings"><li><a href="#groupingkey">groupingKey</a></li></ul></li><li><a href="#rollingaggregate">rollingAggregate</a></li><li><a href="#window">window</a><ul class="toc-headings"><li><a href="#tumblingwindow">tumblingWindow</a></li><li><a href="#slidingwindow">slidingWindow</a></li><li><a href="#sessionwindow">sessionWindow</a></li></ul></li><li><a href="#distinct">distinct</a></li><li><a href="#mapstateful">mapStateful</a></li><li><a href="#co-group--join">co-group / join</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
