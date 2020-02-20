@@ -27,14 +27,12 @@ sources and this is reflected in the naming: there is a `BatchStage` and
 a `StreamStage`, each offering the operations appropriate to its kind.
 Depending on source, your pipeline will end up starting with a batch or
 streaming stage. It's possible to convert a batch stage by adding
-timestamps to it, but not the other way around. Bulk of the operators
-are available to both stages and Jet internally treats everything as a
-stream.
+timestamps to it, but not the other way around.
 
-In this section we'll mostly use batch stages, for simplicity,
-but the API of operations common to both kinds is identical. We'll
-explain later on how to apply windowing, which is necessary to aggregate
-over unbounded streams.
+In this section we'll mostly use batch stages, for simplicity, but the
+API of operations common to both kinds is identical. Jet internally
+treats batches as a bounded stream. We'll explain later on how to apply
+windowing, which is necessary to aggregate over unbounded streams.
 
 ## Multiple Inputs
 
