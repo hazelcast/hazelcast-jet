@@ -25,12 +25,11 @@ import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.operationservice.ExceptionAction;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.peel;
+import static com.hazelcast.jet.impl.util.ExceptionUtil.stackTraceToString;
 import static com.hazelcast.jet.impl.util.ExceptionUtil.withTryCatch;
 import static com.hazelcast.spi.impl.operationservice.ExceptionAction.THROW_EXCEPTION;
 
@@ -83,9 +82,7 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
                 Throwable ex = peel(e);
                 if (value instanceof Throwable && ex instanceof HazelcastSerializationException) {
                     // we got a non-serializable exception here
-                    StringWriter caughtStr = new StringWriter();
-                    ((Throwable) value).printStackTrace(new PrintWriter(caughtStr));
-                    sendResponse(new JetException(caughtStr.toString()));
+                    sendResponse(new JetException(stackTraceToString(ex)));
                 } else {
                     throw e;
                 }
