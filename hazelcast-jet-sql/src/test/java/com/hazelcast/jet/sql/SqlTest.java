@@ -22,6 +22,6 @@ public class SqlTest {
     @Test
     public void test() {
         JetSql jet = new JetSql();
-        jet.parse("SELECT * FROM foo");
+        jet.parse("SELECT win_end, count(*) FROM HOP(\"foo\") bla");
     }
 }
