@@ -1,5 +1,5 @@
 ---
-title: Directed Acylic Graphs (DAG)
+title: Directed Acyclic Graphs (DAG)
 id: dag
 ---
 

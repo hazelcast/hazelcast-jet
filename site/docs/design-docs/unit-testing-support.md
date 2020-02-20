@@ -98,7 +98,7 @@ This asserts that items have been received in a certain order and no
 other items have been received. Only applicable to batch jobs.
 
 ```java
-pipline.drawFrom(TestSources.items(1, 2, 3, 4))
+pipeline.drawFrom(TestSources.items(1, 2, 3, 4))
        .apply(Assertions.assertOrdered("unexpected values", Arrays.asList(1, 2, 3, 4)))
        .drainTo(Sinks.logger())
 ```

@@ -125,7 +125,7 @@ You can also configure Jet before starting as follows:
 JAVA_OPTS=-D<property>=<value> bin/jet-start
 ```
 
-The full list of Jet-speciic properties can be found inside the
+The full list of Jet-specific properties can be found inside the
 `com.hazelcast.jet.core.JetProperties` class and the rest of properties
 are located inside `com.hazelcast.spi.properties.ClusterProperty` class.
 The most important properties are listed here:

@@ -57,7 +57,7 @@ performance, see the [Sizing Example](#benchmarking-and-sizing-example).
 
 Jet cluster is elastic to deal with failures and performance spikes.
 
-Elasticity is very useful feature to prevent overprovisioning. Cluster
+Elasticity is very useful feature to prevent over-provisioning. Cluster
 can be up-scaled when resource consumption reaches a watermark
 (autoscale isn't built in, connect Jet metrics to the resource manager)
 or before expected usage spike. Up-scales however temporarily increase
@@ -115,7 +115,7 @@ of the whole cluster.
 ### Minimal Configuration
 
 Jet is a lightweight framework and is reported to run on devices such
-as Raspberry Pi Zerro (1GHz single-core CPU, 512MB RAM).
+as Raspberry Pi Zero (1GHz single-core CPU, 512MB RAM).
 
 ### Recommended Configuration
 
@@ -193,12 +193,12 @@ Memory consumption is affected by:
 
 Jet uses the network internally to shuffle data and to replicate the
 back-ups. Network is also used to read input data from and to write
-results to remote systems or to do RPC calls when enriching. In fact, a
-lot of Jet Jobs are network bound. Using a 10 Gigabit or higher network
+results to remote systems or to do RPC calls when enriching. In fact a
+lot of Jet jobs are network-bound. Using a 10 Gbit or faster network
 can improve application performance. Also consider scaling the cluster
 out (adding more members to the cluster) to distribute the load.
 
-Consider colocating Jet cluster with the data source and sink to avoid
+Consider collocating Jet cluster with the data source and sink to avoid
 moving data back and forth over the wire. Co-locate Jet with source
 rather than a sink if you have to choose. Processed results are often
 aggregated, so the size is reduced.
@@ -248,7 +248,7 @@ production data, notably:
 
 Jet splits the data across the cluster to process it in parallel. It
 builds on the prerequisite of balanced partitions to perform well.
-Imbalanced partitions may create a hotspot in your cluster. The
+Imbalanced partitions may create a hot spot in your cluster. The
 partitioning is determined by the data source and by the grouping
 keys used in the Jet application.
 
@@ -292,7 +292,7 @@ operations.  For each topology, we benchmarked a setup with 1, 10, 20
 and 40 jobs running in the cluster.
 
 The metric we measured was latency evaluated as ```RESULT_PUBLISHED_TS -
-ALL_TRADES_RECIEVED_TS``` ([learn
+ALL_TRADES_RECEIVED_TS``` ([learn
 more](https://hazelcast.com/resources/jet-3-0-streaming-benchmark/)).
 You can use this approach or design a metric that fits your application
 SLAs. Moreover, our example records the maximum and average latency.

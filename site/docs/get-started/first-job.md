@@ -9,7 +9,7 @@ Let's write some data processing code and have Jet run it for us.
 
 By now you should have some version of Java (at least 8) installed.
 You can get it from the [OpenJDK](https://openjdk.java.net/) website.
-Create a new project targetting your build tool of preference, Maven or
+Create a new project targeting your build tool of preference, Maven or
 Gradle, and add the Jet JAR to your build:
 
 <!--DOCUSAURUS_CODE_TABS-->

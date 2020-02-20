@@ -101,7 +101,7 @@ StreamStage<OrderDetails> details = orders.mapUsingReplicatedMap("products",
 
 ## mapUsingService
 
-This tranforms takes and input, and performs a mapping using a _service_
+This transform takes an input, and performs a mapping using a _service_
 object. The service object could represent an external HTTP-based
 service, or some library which is loaded and initialized during runtime
 (such as a machine learning model).
@@ -136,7 +136,7 @@ We can then perform a lookup on this service for each incoming order:
 ```java
 StreamStage<OrderDetails> details = orders.mapUsingService(productService,
   (service, order) -> {
-      ProductDetails details = ProductDetaiservice.getDetails(order.getProductId);
+      ProductDetails details = ProductDetailService.getDetails(order.getProductId);
       return new OrderDetails(order, details);
   }
 );

@@ -33,7 +33,7 @@ a source and sink:
 - Hadoop Distributed File System (and any Hadoop-compatible storage)
 - Amazon S3
 - Relational databases (or any other system with a JDBC driver)
-- Stream changes from a database, through Change Data Capcture
+- Stream changes from a database, through Change Data Capture
 - Message Queues
 - Apache Avro files
 - Hazelcast in memory data-structures like `IMap`, `ReplicatedMap`
@@ -42,7 +42,7 @@ a source and sink:
 On the data processing side, a key feature of Jet is *windowed
 aggregation*, especially when combined with *event time-based
 processing*. For example, if your data is GPS location reports, you
-can find a smoothened velocity vector by using a *sliding window* and
+can find a smoothed velocity vector by using a *sliding window* and
 linear regression, and this takes just a few lines of code.
 
 Jet takes care of the problem of reordered data (reports with an older
