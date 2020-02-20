@@ -1,6 +1,6 @@
 ---
-title: Stream Processing
-id: stream-processing
+title: Event Time and Stream Processing
+id: event-time
 ---
 
 ## The Importance of "`Right Now`"

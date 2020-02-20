@@ -50,8 +50,8 @@ left-hand stage. The items from both sides will be interleaved in
 arbitrary order.
 
 ```java
-StreamStage<Trade> tradesNewYork = tradeStream("new-york");
-StreamStage<Trade> tradesTokyo = tradeStream("tokyo");
+StreamStage<Trade> tradesNewYork = Sources.kafka("nyc", ..).withoutTimestamps();
+StreamStage<Trade> tradesTokyo = Sources.kafka("nyc", ..).withoutTimestamps();
 StreamStage<Trade> tradesNyAndTokyo = tradesNewYork.merge(tradesTokyo);
 ```
 
@@ -62,7 +62,7 @@ This transform looks up each incoming item from the corresponding
 the input item.
 
 ```java
-StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..));
+StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..)).withoutTimestamps();
 StreamStage<OrderDetails> details = orders.mapUsingIMap("products",
   order -> order.getProductId(),
   (order, product) -> new OrderDetails(order, product));
@@ -89,7 +89,7 @@ only difference that a [ReplicatedMap](data-structures) is used instead
 of an `IMap`.
 
 ```java
-StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..));
+StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..)).withoutTimestamps();
 StreamStage<OrderDetails> details = orders.mapUsingReplicatedMap("products",
   order -> order.getProductId(),
   (order, product) -> new OrderDetails(order, product));
@@ -124,7 +124,7 @@ interface ProductService {
 We can then create a shared service_ factory as follows:
 
 ```java
-StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..));
+StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..)).withoutTimestamps();
 ServiceFactory<?, ProductService> productService = ServiceFactories.sharedService(ctx -> new ProductService(url));
 ```
 
@@ -163,7 +163,7 @@ interface ProductService {
 We still create the shared service factory as before:
 
 ```java
-StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..));
+StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..)).withoutTimestamps();
 ServiceFactory<?, ProductService> productService = ServiceFactories.sharedService(ctx -> new ProductService(url));
 ```
 
@@ -233,7 +233,7 @@ are joined to the primary input, which can be either a batch or
 streaming stage. The side inputs must be batch stages.
 
 ```java
-StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..));
+StreamStage<Order> orders = p.readFrom(Sources.kafka("orders", ..)).withoutTimestamps();
 BatchStage<ProductDetails>> productDetails = p.readFrom(files("products"));
 StreamStage<OrderDetails> joined = orders.hashJoin(productDetails,
         onKeys(order -> order.productId, product -> product.productId),

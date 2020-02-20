@@ -25,7 +25,7 @@
     "Concepts": [
       "concepts/dag",
       "concepts/distributed-computing",
-      "concepts/stream-processing",
+      "concepts/event-time",
       "concepts/in-memory-storage",
       "concepts/fault-tolerance"
     ],

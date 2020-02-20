@@ -123,13 +123,162 @@ instead:
 
 ## window
 
+The process of data aggregation takes a finite batch of data and
+produces a result. We can make it work with an infinite stream if we
+break up the stream into finite chunks. This is called windowing and
+it’s almost always defined in terms of a range of event timestamps (a
+time window).
+
+Window transforms requires a stream which is annotated with
+_timestamps_, that is each input item has a timestamp associated to
+it. Timestamps are given in milliseconds and are general represented in
+_epoch_ format as a simple `long`.
+
+For a more in-depth look at Jet's event time model, please refer to the
+[Event Time](../concepts/event-time) section.
+
+The general way to assign windows a stream works as follows:
+
 ### tumblingWindow
+
+Tumbling windows are the most basic window type - a window of constant
+size that "tumbles" along the time axis. If you use a window size of 1
+second, Jet will group together all events that occur within the same
+second and you’ll get window results for intervals [0-1) seconds, then
+[1-2) seconds, and so on.
+
+A simple example is given below:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.itemStream(100)) // will emit 100 items per second
+ .withIngestionTimestamps()
+ .window(WindowDefinition.tumbling(TimeUnit.SECONDS.toMillis(1)))
+ .aggregate(AggregateOperations.counting())
+ .writeTo(Sinks.logger());
+```
+
+When you run this pipeline, you should see the following output, where
+each output window is marked with start and end timestamps:
+
+```text
+14:26:28.007 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:27.000, end=14:26:28.000, value='100', isEarly=false}
+14:26:29.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:28.000, end=14:26:29.000, value='100', isEarly=false}
+14:26:30.004 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:29.000, end=14:26:30.000, value='100', isEarly=false}
+14:26:31.008 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:30.000, end=14:26:31.000, value='100', isEarly=false}
+```
+
+As with a normal aggregation, it's also possible to apply a grouping to
+a windowed operation:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.itemStream(100)) // will emit 100 items per second
+ .withIngestionTimestamps()
+ .groupingKey(i -> i.sequence() % 2 == 0 ? "even" : "odd")
+ .window(WindowDefinition.tumbling(TimeUnit.SECONDS.toMillis(1)))
+ .aggregate(AggregateOperations.counting())
+ .writeTo(Sinks.logger());
+```
+
+In this mode, the output would be keyed:
+
+```text
+15:09:24.017 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:23.000, end=15:09:24.000, key='odd', value='50', isEarly=false}
+15:09:24.018 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:23.000, end=15:09:24.000, key='even', value='50', isEarly=false}
+15:09:25.014 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:24.000, end=15:09:25.000, key='odd', value='50', isEarly=false}
+15:09:25.015 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:24.000, end=15:09:25.000, key='even', value='50', isEarly=false}
+15:09:26.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:25.000, end=15:09:26.000, key='odd', value='50', isEarly=false}
+15:09:26.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:25.000, end=15:09:26.000, key='even', value='50', isEarly=false}
+15:09:27.013 [ INFO] [c.h.j.i.c.W.loggerSink#0] KeyedWindowResult{start=15:09:26.000, end=15:09:27.000, key='odd', value='50', isEarly=false}
+```
 
 ### slidingWindow
 
+Sliding window is like a tumbling window that instead of hopping from
+one time range to another, slides along instead. It slides in discrete
+steps that are a fraction of the window’s length. If you use a window of
+size 1 second sliding by 100 milliseconds, Jet will output window
+results for intervals [0.00-1.00) seconds, then [0.10-1.1) seconds, and
+so on.
+
+We can modify the tumbling window example as below:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.itemStream(100)) // will emit 100 items per second
+ .withIngestionTimestamps()
+ .window(WindowDefinition.sliding(TimeUnit.SECONDS.toMillis(1), 100))
+ .aggregate(AggregateOperations.counting())
+ .writeTo(Sinks.logger());
+```
+
+When you run this pipeline, you should see the following output where
+you can see that the start and end timestamps of the windows are overlapping.
+
+```text
+15:07:38.108 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.100, end=15:07:38.100, value='100', isEarly=false}
+15:07:38.209 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.200, end=15:07:38.200, value='100', isEarly=false}
+15:07:38.313 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.300, end=15:07:38.300, value='100', isEarly=false}
+15:07:38.408 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.400, end=15:07:38.400, value='100', isEarly=false}
+15:07:38.505 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.500, end=15:07:38.500, value='100', isEarly=false}
+```
+
 ### sessionWindow
 
+Session window captures periods of activity followed by periods of
+inactivity. You define the "session timeout", i.e., the length of the
+inactive period that causes the window to close. An example of a
+session window is for example a specific user's activity on a website.
+Typically this would be followed by bursts of activity (while the user
+is browsing website) followed by rather long periods of inactivity.
+
+As with other aggregate transforms, if you define a grouping key, there
+is a separate, independent session window for each key.
+
+In the example below, we want to find out how many different events each
+user had during a web session. The data source is a stream events read
+from Kafka and we assume that the user session is closed after 15
+minutes of inactivity:
+
+```java
+p.readFrom(KafkaSources.kafka("website-events", ..))
+ .withIngestionTimestamps()
+ .groupingKey(event -> event.getUserId())
+ .window(WindowDefinition.session(TimeUnit.MINUTES.toMillis(15)))
+ .aggregate(AggregateOperations.counting())
+ .writeTo(Sinks.logger());
+```
+
 ## distinct
+
+Suppresses duplicate items from a stream. If you apply a grouping key, two
+items mapping to the same key will be duplicates. This operation applies
+primarily to batch streams, but also works on a windowed unbounded
+stream.
+
+This example takes some input of integers and outputs only the distinct
+values:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.items(0, 1, 1, 2, 3, 4, 5, 6))
+ .distinct()
+ .writeTo(Sinks.logger());
+```
+
+We can also use `distinct` with grouping, for example the following will
+only string which have different first letters:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.items("joe", "john", "jenny", "maria"))
+ .groupingKey(s -> s.substring(0, 1)
+ .distinct();
+```
+
+The `distinct` operator can be used for batch and streaming pipelines, but
+requires a window to be applied in a streaming pipeline.
 
 ## mapStateful
 
