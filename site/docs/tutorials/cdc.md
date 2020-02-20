@@ -53,7 +53,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
 JobConfig jobConfig = new JobConfig();
 jobConfig.addJarsInZip("/path/to/debezium-connector-mongodb.zip");
 
-JetInstance jet = createJetMember();
+JetInstance jet = Jet.bootstrappedInstance();
 Job job = jet.newJob(pipeline, jobConfig);
 job.join();
 ```
@@ -85,7 +85,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
 JobConfig jobConfig = new JobConfig();
 jobConfig.addJarsInZip("/path/to/debezium-connector-mysql.zip");
 
-JetInstance jet = createJetMember();
+JetInstance jet = Jet.bootstrappedInstance();
 Job job = jet.newJob(pipeline, jobConfig);
 job.join();
 ```
@@ -118,7 +118,7 @@ pipeline.readFrom(DebeziumSources.cdc(configuration))
 JobConfig jobConfig = new JobConfig();
 jobConfig.addJarsInZip("/path/to/debezium-connector-postgres.zip");
 
-JetInstance jet = createJetMember();
+JetInstance jet = Jet.bootstrappedInstance();
 Job job = jet.newJob(pipeline, jobConfig);
 job.join();
 ```

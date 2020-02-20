@@ -46,7 +46,7 @@ example just counting the results and printing the count is as simple
 as:
 
 ```java
-JetInstance jet = Jet.newJetInstance();
+JetInstance jet = Jet.bootstrappedInstance();
 Observable<Long> observable = jet.getObservable("results");
 
 Pipeline pipeline = Pipeline.create();
