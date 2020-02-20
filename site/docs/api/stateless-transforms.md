@@ -144,7 +144,84 @@ StreamStage<OrderDetails> details = orders.mapUsingService(productService,
 
 ## mapUsingServiceAsync
 
-TODO
+This transform is identical to [mapUsingService](#mapUsingService) with
+one important distinction: The service in this case supports
+asynchronous calls which means that we can have multiple requests in
+flight at the same time to maximize throughput. Instead of the mapped
+value, it expects the user to supply a `CompletableFuture<T>` as the
+return value, which will be completed at some later time.
+
+For example, if we extend the previous `ProductService` as follows:
+
+```java
+interface ProductService {
+    ProductDetails getDetails(int productId);
+    CompletableFuture<ProductDetails> getDetailsAsync(int productId);
+}
+```
+
+We still create the shared service factory as before:
+
+```java
+StreamStage<Order> orders = p.drawFrom(Sources.kafka("orders", ..));
+ServiceFactory<?, ProductService> productService = ServiceFactories.sharedService(ctx -> new ProductService(url));
+```
+
+The lookup instead becomes async, and note that the transform also expects
+you to return
+
+```java
+StreamStage<OrderDetails> details = orders.mapUsingServiceAsync(productService,
+  (service, order) -> {
+      CompletableFuture<ProductDetails> f = ProductDetaiservice.getDetailsAsync(order.getProductId);
+      return f.thenApply(details -> new OrderDetails(order, details));
+  }
+);
+```
+
+The main advantage of using asnyc communication is that we can have
+many invocations to the service in-flight at the same time which will
+result in better throughput.
+
+### mapUsingServiceAsyncBatched
+
+This variant is very similar to the previous one, but instead of sending
+one request at a time, we can send in so-called "smart batches" (for a
+more in-depth look at the internals of Jet, see the [Execution
+Engine](../architecture/execution-engine) section). Jet will
+automatically group items as they come, and allows to send requests in
+batches. This can be very efficient for example for a remote service,
+where instead of one roundtrip per request, you can send them in groups
+to maximize throughput. If we would extend our `ProductService` as follows:
+
+```java
+interface ProductService {
+    ProductDetails getDetails(int productId);
+    CompletableFuture<ProductDetails> getDetailsAsync(int productId);
+    CompletableFuture<List<ProductDetails>> getAllDetailsAsync(List<Integer> productIds);
+}
+```
+
+We can then rewrite the transform as:
+
+```java
+StreamStage<OrderDetails> details = orders.mapUsingServiceAsyncBatched(productService,
+    (service, orderList) -> {
+        List<Integer> productIds = orderList.stream().map(o -> o.getProductId()).collect(Collectors.toList())
+        CompletableFuture<List<ProductDetails>> f = ProductDetaiservice.getDetailsAsync(order.getProductId);
+        return f.thenApply(productDetailsList -> {
+            List<OrderDetails> orderDetailsList = new ArrayList<>();
+            for (int i = 0; i < orderList; i++) {
+                new OrderDetails(order.get(i), productDetailsList.get(i)))
+          }
+      };
+  });
+);
+```
+
+As you can see, there is some more code to write to combine the results
+back, but this should give better throughput given the service is able to
+efficient batching.
 
 ## hashJoin
 
