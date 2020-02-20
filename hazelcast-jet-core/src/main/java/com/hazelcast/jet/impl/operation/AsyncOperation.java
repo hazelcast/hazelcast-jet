@@ -16,13 +16,17 @@
 
 package com.hazelcast.jet.impl.operation;
 
+import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.impl.JetService;
 import com.hazelcast.jet.impl.JobCoordinationService;
 import com.hazelcast.jet.impl.execution.init.JetInitDataSerializerHook;
+import com.hazelcast.nio.serialization.HazelcastSerializationException;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.spi.impl.operationservice.ExceptionAction;
 import com.hazelcast.spi.impl.operationservice.Operation;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.concurrent.CompletableFuture;
 
 import static com.hazelcast.jet.impl.util.ExceptionUtil.isRestartableException;
@@ -73,7 +77,19 @@ public abstract class AsyncOperation extends Operation implements IdentifiedData
             final JetService service = getService();
             service.getLiveOperationRegistry().deregister(this);
         } finally {
-            sendResponse(value);
+            try {
+                sendResponse(value);
+            } catch (Exception e) {
+                Throwable ex = peel(e);
+                if (value instanceof Throwable && ex instanceof HazelcastSerializationException) {
+                    // we got a non-serializable exception here
+                    StringWriter caughtStr = new StringWriter();
+                    ((Throwable) value).printStackTrace(new PrintWriter(caughtStr));
+                    sendResponse(new JetException(caughtStr.toString()));
+                } else {
+                    throw e;
+                }
+            }
         }
     }
 
