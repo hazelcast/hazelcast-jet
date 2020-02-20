@@ -52,9 +52,10 @@ class HomeSplash extends React.Component {
     );
 
     return (
+      
       <SplashContainer>
-        <Logo img_src={`${baseUrl}img/logo-icon-dark.svg`} />
         <div className="inner">
+        <Logo img_src={`${baseUrl}img/logo-icon-dark.svg`} />
           <ProjectTitle tagline={siteConfig.tagline} title={siteConfig.title} />
           <PromoSection>
             <Button href={docUrl('get-started/intro')}>Get Started</Button>
@@ -85,36 +86,39 @@ class Index extends React.Component {
     );
 
     const Features = () => (
-      <Block layout="fourColumn">
+      <Block layout="oneColumn">
         {[
           {
-            title: 'Simple',
+            title: 'Create a Cluster within Seconds',
             image: `${baseUrl}img/undraw_relaxation_blue.svg`,
-            imageAlign: 'top',
+            imageAlign: 'left',
             content: 'Jet is simple to set up. The nodes automatically discover each other to form a cluster.' +
             ' You can run Jet on your laptop and if you start it twice, you have a cluster. This is great' +
             ' for quick testing and also simplifies deployment and maintenance.',
           },
           {
-            title: 'Runs everywhere',
-            image: `${baseUrl}img/undraw_superhero_orange.svg`,
-            imageAlign: 'top',
-            content: 'Jet is a single JAR without dependencies. It’s lightweight enough to run on small devices,' +
-            ' and it’s cloud-native with Docker images and Kubernetes support. You can embed it into your' +
-            ' application as just another dependency or deploy it as a standalone cluster.'
+            title: 'Massively Parallel',
+            image: `${baseUrl}img/undraw_finish_line_blue.svg`,
+            imageAlign: 'right',
+            content: 'Jet\'s core execution engine was designed for high throughput with low ' +
+            'system overhead. It uses a fixed-size thread pool to run any number of' +
+            'parallel tasks. The engine is based on coroutines' +
+            'that implements suspendable computation, allowing many of them to run' +
+            'concurrently on a single thread.'
           },
           {
-            title: 'Low latency',
-            image: `${baseUrl}img/undraw_finish_line_blue.svg`,
-            imageAlign: 'top',
-            content: 'Jet uses the directed acyclic graph (DAG) computation model, in-memory processing, data locality,' +
-            ' partition affinity, non-blocking SP/SC queues and green threads to achieve high throughput with' +
-            ' predictable latency.'
+            title: 'Single Binary',
+            image: `${baseUrl}img/undraw_superhero_orange.svg`,
+            imageAlign: 'left',
+            content: 'Jet is a single 10MB file. It’s lightweight enough to run on small devices,' +
+            ' You can embed it into your application as just another dependency or deploy it as a' +
+            ' standalone cluster.'
           },
+          
           {
             title: 'Resilient and Elastic',
             image: `${baseUrl}img/undraw_working_out_orange.svg`,
-            imageAlign: 'top',
+            imageAlign: 'right',
             content: 'With Jet it\'s easy to build fault-tolerant and elastic data processing pipelines.' +
           ' Jet keeps processing data without loss even when a node fails, and as soon as you add another node,' +
           ' it starts sharing the computation load.'
@@ -127,7 +131,58 @@ class Index extends React.Component {
       <div>
         <HomeSplash siteConfig={siteConfig} language={language} />
         <div className="mainContainer">
-          <Features />
+          {/* <Features /> */}
+          <Block background="light">
+          {[
+            {
+              title: 'Create a cluster within seconds',
+              image: `${baseUrl}img/undraw_relaxation_blue.svg`,
+              imageAlign: 'left',
+              content: 'It\'s easy to get started with Jet. The nodes automatically discover each other to form a cluster.' +
+              ' You can run Jet on your laptop and if you start it twice, you have a cluster. This is great' +
+              ' for quick testing and also simplifies deployment and maintenance.',
+            },
+          ]}
+          </Block>
+          <Block background="">
+          {[
+            {
+              title: 'Build fault-tolerant data pipelines that scale',
+              image: `${baseUrl}img/undraw_working_out_orange.svg`,
+              imageAlign: 'right',
+              content: 'Process your data using a rich library of transforms such as windowing, joins and aggregations. ' +
+              'Jet keeps processing data without loss even when a node fails, and as soon as you add another node,' +
+             'it start sharing the computation load. First-class support for Apache Kafka, Hadoop, Hazelcast and many ' + 
+             'other data sources and sinks.'
+            }
+          ]}
+        </Block>
+        <Block background="light">
+          {[
+            {
+              title: 'Run massively parallel computations with predictable latency',
+              image: `${baseUrl}img/undraw_finish_line_blue.svg`,
+              imageAlign: 'left',
+              content: 'Jet\'s core execution engine was designed for high throughput with low ' +
+              'system overhead and latency. It uses a fixed-size thread pool to run any number of ' +
+              'parallel tasks. The engine is based on coroutines ' +
+              'that implement suspendable computation, allowing many of them to run ' +
+              'concurrently on a single thread.'
+            }
+          ]}
+        </Block>
+        <Block background="">
+          {[
+            {
+              title: 'Embed into your app, or run as a dedicated cluster',
+              image: `${baseUrl}img/undraw_superhero_orange.svg`,
+              imageAlign: 'right',
+              content: 'Jet is a single 10MB file. It’s lightweight enough to run on small devices,' +
+              ' You can embed it into your application as just another dependency or deploy it as a' +
+              ' standalone cluster. First-class support for Kubernetes is included.'
+            }
+          ]}
+        </Block>
         </div>
       </div>
     );
