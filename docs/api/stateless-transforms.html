@@ -101,7 +101,7 @@ StreamStage&lt;Trade&gt; tradesNyAndTokyo = tradesNewYork.merge(tradesTokyo);
 <p>This transform looks up each incoming item from the corresponding
 <a href="data-structures">IMap</a> and the result of the lookup is combined with
 the input item.</p>
-<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.drawFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
+<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.readFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
 StreamStage&lt;OrderDetails&gt; details = orders.mapUsingIMap(<span class="hljs-string">"products"</span>,
   order -&gt; order.getProductId(),
   (order, product) -&gt; <span class="hljs-keyword">new</span> OrderDetails(order, product));
@@ -120,7 +120,7 @@ tutorial using this operator.</p>
 <p>This transform is equivalent to <a href="#mapUsingImap">mapUsingIMap</a> with the
 only difference that a <a href="data-structures">ReplicatedMap</a> is used instead
 of an <code>IMap</code>.</p>
-<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.drawFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
+<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.readFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
 StreamStage&lt;OrderDetails&gt; details = orders.mapUsingReplicatedMap(<span class="hljs-string">"products"</span>,
   order -&gt; order.getProductId(),
   (order, product) -&gt; <span class="hljs-keyword">new</span> OrderDetails(order, product));
@@ -147,7 +147,7 @@ we have wrapped this service in a <code>ProductService</code> class:</p>
 }
 </code></pre>
 <p>We can then create a shared service_ factory as follows:</p>
-<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.drawFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
+<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.readFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
 ServiceFactory&lt;?, ProductService&gt; productService = ServiceFactories.sharedService(ctx -&gt; <span class="hljs-keyword">new</span> ProductService(url));
 </code></pre>
 <p>Shared simply means that the factory is thread-safe, and can be called from
@@ -174,7 +174,7 @@ return value, which will be completed at some later time.</p>
 }
 </code></pre>
 <p>We still create the shared service factory as before:</p>
-<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.drawFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
+<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.readFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
 ServiceFactory&lt;?, ProductService&gt; productService = ServiceFactories.sharedService(ctx -&gt; <span class="hljs-keyword">new</span> ProductService(url));
 </code></pre>
 <p>The lookup instead becomes async, and note that the transform also expects
@@ -228,8 +228,8 @@ consider a <em>primary</em> input which is accompanied by one or more
 <em>side inputs</em> which are small enough to fit in memory. The side inputs
 are joined to the primary input, which can be either a batch or
 streaming stage. The side inputs must be batch stages.</p>
-<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.drawFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
-BatchStage&lt;ProductDetails&gt;&gt; productDetails = p.drawFrom(files(<span class="hljs-string">"products"</span>));
+<pre><code class="hljs css language-java">StreamStage&lt;Order&gt; orders = p.readFrom(Sources.kafka(<span class="hljs-string">"orders"</span>, ..));
+BatchStage&lt;ProductDetails&gt;&gt; productDetails = p.readFrom(files(<span class="hljs-string">"products"</span>));
 StreamStage&lt;OrderDetails&gt; joined = orders.hashJoin(productDetails,
         onKeys(order -&gt; order.productId, product -&gt; product.productId),
         (order, product) -&gt; <span class="hljs-keyword">new</span> OrderDetails(order, product)

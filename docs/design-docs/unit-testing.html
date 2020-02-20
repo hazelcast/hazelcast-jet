@@ -78,20 +78,20 @@ writing a test pipeline:</p>
 <h3><a class="anchor" aria-hidden="true" id="batch-sources"></a><a href="#batch-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Batch Sources</h3>
 <p>These sources create a fixed amount of data. These sources are
 non-distributed.</p>
-<pre><code class="hljs css language-java">BatchStage&lt;Integer&gt; source = pipeline.drawFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>));
+<pre><code class="hljs css language-java">BatchStage&lt;Integer&gt; source = pipeline.readFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>));
 </code></pre>
 <pre><code class="hljs css language-java">List&lt;Integer&gt; list = <span class="hljs-keyword">new</span> ArrayList&lt;&gt;();
 list.add(<span class="hljs-number">1</span>);
 list.add(<span class="hljs-number">2</span>);
 
-BatchStage&lt;Integer&gt; source = pipeline.drawFrom(TestSources.items(list));
+BatchStage&lt;Integer&gt; source = pipeline.readFrom(TestSources.items(list));
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="streaming-sources"></a><a href="#streaming-sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Streaming Sources</h3>
 <p>Streaming sources create an infinite stream of data. The generated
 events have timestamps and like the batch source, this source is also
 non-distributed.</p>
 <pre><code class="hljs css language-java"><span class="hljs-keyword">int</span> itemsPerSecond = <span class="hljs-number">10</span>;
-pipeline.drawFrom(TestSources.itemStream(itemsPerSecond))
+pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
         .withNativeTimestamp(<span class="hljs-number">0</span>);
 </code></pre>
 <p>The source above will emit data as follows:</p>
@@ -107,7 +107,7 @@ pipeline.drawFrom(TestSources.itemStream(itemsPerSecond))
 to map to the desired item type:</p>
 <pre><code class="hljs css language-java"><span class="hljs-keyword">int</span> itemsPerSecond = <span class="hljs-number">10</span>;
 
-pipeline.drawFrom(TestSources.itemStream(itemsPerSecond, (timestamp, sequence) -&gt; <span class="hljs-keyword">new</span> Trade(timestamp, ..)
+pipeline.readFrom(TestSources.itemStream(itemsPerSecond, (timestamp, sequence) -&gt; <span class="hljs-keyword">new</span> Trade(timestamp, ..)
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="assertions"></a><a href="#assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Assertions</h2>
 <p>Currently to make sure that a pipeline is outputting things correctly
@@ -128,33 +128,33 @@ job will fail with an AssertionError.</p>
 <h4><a class="anchor" aria-hidden="true" id="ordered-assertion"></a><a href="#ordered-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Ordered Assertion</h4>
 <p>This asserts that items have been received in a certain order and no
 other items have been received. Only applicable to batch jobs.</p>
-<pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>))
+<pre><code class="hljs css language-java">pipeline.readFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>))
        .apply(Assertions.assertOrdered(<span class="hljs-string">"unexpected values"</span>, Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>)))
-       .drainTo(Sinks.logger())
+       .writeTo(Sinks.logger())
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="unordered-assertion"></a><a href="#unordered-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unordered Assertion</h4>
 <p>Asserts that items have been received in any order and no other items
 have been received. Only applicable to batch stages.</p>
-<pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">4</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">1</span>)
+<pre><code class="hljs css language-java">pipeline.readFrom(TestSources.items(<span class="hljs-number">4</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">1</span>)
  .apply(Assertions.assertAnyOrder(<span class="hljs-string">"unexpected values"</span>, Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>)))
- .drainTo(Sinks.logger())
+ .writeTo(Sinks.logger())
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="contains-assertions"></a><a href="#contains-assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Contains Assertions</h4>
 <p>Assert that the given items have been received in any order; receiving
 other, unrelated items does not affect this assertion. Only applicable
 to batch stages.</p>
-<pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">4</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">1</span>))
+<pre><code class="hljs css language-java">pipeline.readFrom(TestSources.items(<span class="hljs-number">4</span>, <span class="hljs-number">3</span>, <span class="hljs-number">2</span>, <span class="hljs-number">1</span>))
         .apply(Assertions.assertContains(Arrays.asList(<span class="hljs-number">1</span>, <span class="hljs-number">3</span>)))
-        .drainTo(Sinks.logger())
+        .writeTo(Sinks.logger())
 </code></pre>
 <h4><a class="anchor" aria-hidden="true" id="collected-assertion"></a><a href="#collected-assertion" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Collected Assertion</h4>
 <p>This is a more flexible assertion which is only responsible for
 collecting the received items, and passes the asserting responsibility
 to the user. It is a building block for the other assertions. Only
 applicable to batch stages.</p>
-<pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>))
+<pre><code class="hljs css language-java">pipeline.readFrom(TestSources.items(<span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>))
         .apply(Assertions.assertCollected(items -&gt; assertTrue(<span class="hljs-string">"expected minimum of 4 items"</span>, items.size &gt;= <span class="hljs-number">4</span>)))
-        .drainTo(Sinks.logger())
+        .writeTo(Sinks.logger())
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="streaming-assertions"></a><a href="#streaming-assertions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Streaming Assertions</h3>
 <p>For streaming assertions, it's not possible to assert after all items
@@ -170,7 +170,7 @@ function repeatedly on the received item set. If the assertion passes at
 any point, the job will be completed with an
 <code>AssertionCompletedException</code>. If the assertion fails after the given
 timeout period, the job will fail with an <code>AssertionError</code>.</p>
-<pre><code class="hljs css language-java">pipeline.drawFrom(TestSources.itemStream(<span class="hljs-number">10</span>))
+<pre><code class="hljs css language-java">pipeline.readFrom(TestSources.itemStream(<span class="hljs-number">10</span>))
  .withoutTimestamps()
  .apply(assertCollectedEventually(<span class="hljs-number">5</span>, c -&gt; assertTrue(<span class="hljs-string">"did not receive at least 20 items"</span>, c.size() &gt; <span class="hljs-number">20</span>)))
 </code></pre>
