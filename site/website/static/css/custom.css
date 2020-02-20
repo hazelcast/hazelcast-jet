@@ -29,14 +29,14 @@ a.button {
     color: #fdf6e3;
 }
 
-.imageAlignLeft .blockImage {
-    max-height: 300px;
-    max-width: 300px;
+.imageAlignTop .blockImage {
+    height: 160px;
+    max-width:160px;
 }
 
 .imageAlignRight .blockImage {
-    max-height: 300px;
-    max-width: 300px;
+    max-height: 200px;
+    max-width: 200px;
 }
 
 
