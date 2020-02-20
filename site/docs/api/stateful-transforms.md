@@ -252,10 +252,10 @@ p.readFrom(KafkaSources.kafka("website-events", ..))
 
 ## distinct
 
-Suppresses duplicate items from a stream. If you apply a grouping key, two
-items mapping to the same key will be duplicates. This operation applies
-primarily to batch streams, but also works on a windowed unbounded
-stream.
+Suppresses duplicate items from a stream. If you apply a grouping key,
+two items mapping to the same key will be duplicates. This operation
+applies primarily to batch streams, but also works on a windowed
+unbounded stream.
 
 This example takes some input of integers and outputs only the distinct
 values:
@@ -277,9 +277,119 @@ p.readFrom(TestSources.items("joe", "john", "jenny", "maria"))
  .distinct();
 ```
 
-The `distinct` operator can be used for batch and streaming pipelines, but
-requires a window to be applied in a streaming pipeline.
+The `distinct` operator can be used for batch and streaming pipelines,
+but requires a window to be applied in a streaming pipeline.
 
 ## mapStateful
 
-## co-group
+mapStateful is an extension of the simple [map](stateless-transforms#map)
+transform and adds the capability to optionally retain mutable state.
+
+The major use case of stateful mapping is recognizing a pattern in the
+event stream, such as matching start-transaction with end-transaction
+events based on an event correlation ID. More generally, you can
+implement any kind of state machine and detect patterns in the input of
+any complexity.
+
+As with other stateful operations, you can also use a `groupingKey` to
+have a unique state per key.
+
+For example, consider a pipeline that matches incoming
+`TRANSACTION_START` events to `TRANSACTION_END` events which can arrive
+unordered and when both are received outputs how long the transaction
+took.
+
+This would be difficult to express in terms of a `slidingWindow`,
+because we can't know how long a transaction would take in advance, and
+if it would span multiple windows. It can't be expressed using
+`sessionWindow` either, because we don't want to wait until the window
+times out before emitting the results.
+
+Let's say we have the following class:
+
+```java
+public class TransactionEvent {
+    long timestamp();
+    String transactionId();
+    EventType type();
+}
+
+public enum EventType {
+    TRANSACTION_START,
+    TRANSACTION_END
+}
+```
+
+We can then use the following `mapStateful` transform to match start
+and events:
+
+```java
+p.readFrom(KafkaSources.kafka("transaction-events", ..))
+ .withNativeTimestamps(0)
+ .groupingKey(event -> event.transactionId())
+ .mapStateful(MINUTES.toMillis(10),
+   () -> new TransactionEvent[2],
+   (state, id, event) -> {
+        if (event.type() == TRANSACTION_START) {
+            state[0] = event;
+        } else if (event.type() == TRANSACTION_END)
+            state[1] = event;
+        }
+        if (state[0] != null && state[1] != null) {
+            // we have both start and end events
+            entry(transactionId, state[1].timestamp() - state[0].timestamp())
+        }
+        // we have only one event, do nothing for now.
+        return null;
+    },
+    (state, id, currentWatermark) ->
+        // if we have not received both events after 10 minutes, we will emit a timeout entry
+        (state[0] == null || state[1] == null)
+            ? entry(id, TIMED_OUT)
+            : null
+ ).writeTo(Sinks.logger());
+```
+
+You will note that we also had to set an expiry time on the events,
+otherwise would eventually run out of memory as we accumulate more and
+more transactions.
+
+## co-group / join
+
+Co-grouping allows to join any number of inputs on a common key, which
+can be anything you can calculate from the input item. This makes it
+possible to correlate data from two or more diferrent sources. In the
+same transform you are able to apply an aggregate function to all the
+grouped items.
+
+As an example, we can use a sequence of events that would be typical on
+a e-commerce website: `PageVisit` and `AddToCart`. We want to find how
+many visits were required before an item was added to the cart. For
+simplicity, let's say we're working with historical data and we are
+processing this data from a set of logs.
+
+```java
+Pipeline p = Pipeline.create();
+BatchStageWithKey<PageVisit, Integer> pageVisit =
+    p.readFrom(Sources.files("visit-events.log", ..))
+    .groupingKey(event -> event.userId());
+BatchStageWithKey<AddToCart, Integer> addToCart =
+    p.readFrom(Sources.files("cart-events.log", ..))
+     .groupingKey(event -> event.userId());
+```
+
+After getting the two keyed streams, now we can join them:
+
+```java
+BatchStage<Entry<Integer, Tuple2<Long, Long>>> coGrouped = pageVisit
+        .aggregate2(counting(), addToCart, counting());
+```
+
+This gives an item which contains the counts for both events for the
+same user id. From this, it's easy to calculate the ratio of visits vs
+add to cart events.
+
+Co-grouping can also be applied to windowed streams, and works exactly
+the same as `aggregate` option. An important consideration is that the
+timestamps from both streams would be considered, so it's important that
+the two streams don't have widely different timestamps.
