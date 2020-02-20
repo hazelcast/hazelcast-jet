@@ -96,7 +96,7 @@ explicit Observers up-front. They can even be converted into a <code>Future</cod
 form, with a build in transformation function for the results. For
 example just counting the results and printing the count is as simple
 as:</p>
-<pre><code class="hljs css language-java">JetInstance jet = Jet.newJetInstance();
+<pre><code class="hljs css language-java">JetInstance jet = Jet.bootstrappedInstance();
 Observable&lt;Long&gt; observable = jet.getObservable(<span class="hljs-string">"results"</span>);
 
 Pipeline pipeline = Pipeline.create();
