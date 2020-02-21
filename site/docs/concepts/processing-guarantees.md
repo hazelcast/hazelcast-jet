@@ -1,6 +1,6 @@
 ---
-title: Fault Tolerance
-id: fault-tolerance
+title: Processing Guarantees
+id: processing-guarantees
 ---
 
 ## Fault Tolerance and Processing Guarantees
