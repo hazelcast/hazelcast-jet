@@ -24,7 +24,7 @@
     <parent>
         <groupId>com.hazelcast.jet</groupId>
         <artifactId>hazelcast-jet-extensions</artifactId>
-        <version>4.0-SNAPSHOT</version>
+        <version>4.1-SNAPSHOT</version>
     </parent>
 
     <build>
@@ -137,12 +137,6 @@
     </profiles>
 
     <dependencies>
-        <dependency>
-            <groupId>com.hazelcast.jet</groupId>
-            <artifactId>hazelcast-jet-core</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>provided</scope>
-        </dependency>
         <!-- Generated gRPC code uses an annotation which was renamed in Java 11 -->
         <dependency>
             <groupId>javax.annotation</groupId>
