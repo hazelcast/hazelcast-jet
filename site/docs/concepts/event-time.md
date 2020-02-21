@@ -15,8 +15,9 @@ With unbounded streams you need a policy that selects bounded chunks
 whose aggregate results you are interested in. This is called
 *windowing*. You can imagine the window as a time interval laid over the
 time axis. A given window contains only the events that belong to that
-interval. Probably the most natural kind is the *sliding window*: it
-slides along the time axis, trailing behind the current time.
+interval. Probably the most natural kind of window is the *sliding
+window*: it slides along the time axis, trailing just behind the current
+time.
 
 Sliding window aggregation is a great tool to discover the dynamic
 properties of your event stream. Quick example: say your event stream
@@ -29,8 +30,8 @@ second time will give you acceleration vectors, and so on.
 ## Event Time Disorder
 
 If you want to treat time properly, every event must carry a timestamp.
-You can't rely on the current time when processing an event because it
-may be some arbitrarily later point in time. Also, you may easily end up
+You can't rely on the current time when processing an event because that
+is just some arbitrary later point in time. Also, you may easily end up
 observing the events out of their true order of occurrence.
 
 Processing events out of order is a challenge. Hazelcast Jet handles

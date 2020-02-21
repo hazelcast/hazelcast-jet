@@ -3,31 +3,19 @@ title: Processing Guarantees
 id: processing-guarantees
 ---
 
-## Fault Tolerance and Processing Guarantees
+With unbounded stream processing comes the challenge of forever
+maintaining the continuity of the output, even in the face of changing
+cluster topology. A Jet node may leave the cluster due to an internal
+error, loss of networking, or deliberate shutdown for maintenance. In
+this case Jet must suspend the computation, re-plan it for the smaller
+cluster, and then resume in such a way that the state of computation
+remains intact. For example, if you have a `counting` aggregation step,
+for the count to remain correct the aggregating task must see each item
+exactly once. The technical term for this is the *exactly-once
+processing guarantee* and Jet supports it, however it requires support
+from all the participants in the computation, including data sources,
+sinks, and side-inputs.
 
-One less-than-obvious consequence of stepping up from finite to infinite
-streams is the difficulty of forever maintaining the continuity of the
-output, even in the face of changing cluster topology. A Jet node may
-leave the cluster due to an internal error, loss of networking, or
-deliberate shutdown for maintenance. This will cause the computation job
-to be suspended. Except for the obvious problem of new data pouring in
-while we're down, we have a much more fiddly issue of restarting the
-computation in a differently laid-out cluster exactly where it left off
-and neither miss anything nor process it twice. The technical term for
-this is the "exactly-once processing guarantee".
-
-Jet achieves fault tolerance in streaming jobs by making a snapshot of
-the internal processing state at regular intervals. If a member of the
-cluster fails while a job is running, Jet will detect this and restart
-the job on the new cluster topology. It will restore its internal state
-from the snapshot and tell the source to start sending data from the
-last "`committed`" position (where the snapshot was taken). The data
-source must have built-in support to replay the data from the given
-checkpoint. The sink must either support transactions or be
-*idempotent*, tolerating duplicate submission of data.
-
-In a Jet cluster, one member is the *coordinator*. It tells other
-members what to do and they report to it any status changes. The
-coordinator may fail and the cluster will automatically re-elect another
-one. If any other member fails, the coordinator restarts the job on the
-remaining members.
+Hazelcast Jet also supports a lesser guarantee, *at-least-once*, in
+which an item can be observed more than once. It allows more performance
+for those pipelines that can gracefully deal with duplicates.
