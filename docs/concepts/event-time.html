@@ -73,8 +73,9 @@ the computation itself must deal with time explicitly.</p>
 whose aggregate results you are interested in. This is called
 <em>windowing</em>. You can imagine the window as a time interval laid over the
 time axis. A given window contains only the events that belong to that
-interval. Probably the most natural kind is the <em>sliding window</em>: it
-slides along the time axis, trailing behind the current time.</p>
+interval. Probably the most natural kind of window is the <em>sliding
+window</em>: it slides along the time axis, trailing just behind the current
+time.</p>
 <p>Sliding window aggregation is a great tool to discover the dynamic
 properties of your event stream. Quick example: say your event stream
 contains GPS location reports from millions of mobile users. With a few
@@ -84,8 +85,8 @@ velocity vector of each user. Applying the same kind of window the
 second time will give you acceleration vectors, and so on.</p>
 <h2><a class="anchor" aria-hidden="true" id="event-time-disorder"></a><a href="#event-time-disorder" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Event Time Disorder</h2>
 <p>If you want to treat time properly, every event must carry a timestamp.
-You can't rely on the current time when processing an event because it
-may be some arbitrarily later point in time. Also, you may easily end up
+You can't rely on the current time when processing an event because that
+is just some arbitrary later point in time. Also, you may easily end up
 observing the events out of their true order of occurrence.</p>
 <p>Processing events out of order is a challenge. Hazelcast Jet handles
 most of the concerns internally, but there is one decision it can't make
