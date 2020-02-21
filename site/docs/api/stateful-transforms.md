@@ -30,7 +30,7 @@ When used without a defined [window](#window), `aggregate` applies a
 one-time aggregation over the whole of the input which is only possible
 in a bounded input (using `BatchStage`).
 
-For example, a very simple aggregation will look as follows:
+For example, a very simple aggregation will look like this:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -46,10 +46,8 @@ This will output only one result, which is the count of all the items:
 ```
 
 The definition of the aggregate operation hides behind the
-`AggregateOperations.counting()` method call. This is a static method in
-our AggregateOperations utility class, which provides you with some
-predefined aggregate operations. Jet provides several built in
-aggregations such as:
+`AggregateOperations.counting()` method call. Jet provides several built
+in aggregations, such as:
 
 |operation|description|
 |---------|:----------|
@@ -62,14 +60,17 @@ aggregations such as:
 |`linearTrend`|Computes a trend line over the given items, for example the velocity given GPS coordinates|
 |`allOf`|Combine multiple aggregations into one aggregation (for example, if you want both sum and average)|
 
-For a complete list, please refer to the `AggregateOperations` class.
-You can also implement your own aggregate operations using the builder
-in `AggregateOperation`.
+For a complete list, please refer to the
+[AggregateOperations](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/aggregate/AggregateOperations.html)
+class. You can also implement your own aggregate operations using the
+builder in
+[AggregateOperation](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/aggregate/AggregateOperation.html)
+.
 
 ### groupingKey
 
 Typically you don’t want to aggregate all the items together, but
-classify them by some key and then aggregate over each group separately.
+group them by some key and then aggregate over each group separately.
 This is achieved by using the `groupingKey` transform and then applying
 an aggregation on it afterwards.
 
@@ -90,17 +91,17 @@ p.readFrom(TestSources.items(0, 1, 2, 3, 4, 5))
 ```
 
 Grouping is critical for aggregating massive data sets in distributed
-computing - otherwise you would not able to make use of parallelization
-as effectively.
+computing - otherwise you would not be able to make use of
+parallelization as effectively.
 
 ## rollingAggregate
 
-Rolling aggregation is similar to aggregate but instead of waiting to
-output until all items are received, it outputs _one item per input
-item_. Because of this, it's possible to use it in a streaming pipeline
-as well as the aggregation is applied in a continous way. The same
-pipeline from [aggregate](#aggregate), can be rewritten to use a
-`rollingAggregate` transform instead:
+Rolling aggregation is similar to [aggregate](#aggregate) but instead of
+waiting to output until all items are received, it produces an _output
+item for each input item_. Because of this, it's possible to use it in a
+streaming pipeline as well, as the aggregation is applied in a
+continuous way. The same pipeline from [aggregate](#aggregate), can be
+rewritten to use a `rollingAggregate` transform instead:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -131,14 +132,14 @@ it’s almost always defined in terms of a range of event timestamps (a
 time window).
 
 Window transforms requires a stream which is annotated with
-_timestamps_, that is each input item has a timestamp associated to
-it. Timestamps are given in milliseconds and are general represented in
-_epoch_ format as a simple `long`.
+_timestamps_, that is each input item has a timestamp associated with
+it. Timestamps are given in milliseconds and are generally represented
+in _epoch_ format, as a simple `long`.
 
 For a more in-depth look at Jet's event time model, please refer to the
-[Event Time](../concepts/event-time) section.
+[Event Time](concepts/event-time.md) section.
 
-The general way to assign windows a stream works as follows:
+The general way to assign windows to a stream works as follows:
 
 ### tumblingWindow
 
@@ -159,8 +160,8 @@ p.readFrom(TestSources.itemStream(100)) // will emit 100 items per second
  .writeTo(Sinks.logger());
 ```
 
-When you run this pipeline, you should see the following output, where
-each output window is marked with start and end timestamps:
+When you run this pipeline, you will see output like this, where each
+output window is marked with start and end timestamps:
 
 ```text
 14:26:28.007 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:27.000, end=14:26:28.000, value='100', isEarly=false}
@@ -214,8 +215,9 @@ p.readFrom(TestSources.itemStream(100)) // will emit 100 items per second
  .writeTo(Sinks.logger());
 ```
 
-When you run this pipeline, you should see the following output where
-you can see that the start and end timestamps of the windows are overlapping.
+When you run this pipeline, you will see output like the following,
+where you can see that the start and end timestamps of the windows are
+overlapping.
 
 ```text
 15:07:38.108 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.100, end=15:07:38.100, value='100', isEarly=false}
@@ -229,21 +231,21 @@ you can see that the start and end timestamps of the windows are overlapping.
 
 Session window captures periods of activity followed by periods of
 inactivity. You define the "session timeout", i.e., the length of the
-inactive period that causes the window to close. An example of a
-session window is for example a specific user's activity on a website.
-Typically this would be followed by bursts of activity (while the user
-is browsing website) followed by rather long periods of inactivity.
+inactive period that causes the window to close. The typical example
+of a session window is a user's activity on a website (hence the name).
+There are bursts of activity (while the user is browsing website
+) followed by rather long periods of inactivity.
 
 As with other aggregate transforms, if you define a grouping key, there
-is a separate, independent session window for each key.
+will be a separate, independent session window for each key.
 
 In the example below, we want to find out how many different events each
-user had during a web session. The data source is a stream events read
-from Kafka and we assume that the user session is closed after 15
+user had during a web session. The data source is a stream of events
+read from Kafka and we assume that the user session is closed after 15
 minutes of inactivity:
 
 ```java
-p.readFrom(KafkaSources.kafka("website-events", ..))
+p.readFrom(KafkaSources.kafka(.., "website-events"))
  .withIngestionTimestamps()
  .groupingKey(event -> event.getUserId())
  .window(WindowDefinition.session(TimeUnit.MINUTES.toMillis(15)))
@@ -253,8 +255,7 @@ p.readFrom(KafkaSources.kafka("website-events", ..))
 
 ## distinct
 
-Suppresses duplicate items from a stream. If you apply a grouping key,
-two items mapping to the same key will be duplicates. This operation
+Suppresses duplicate items from a stream. This operation
 applies primarily to batch streams, but also works on a windowed
 unbounded stream.
 
@@ -268,28 +269,35 @@ p.readFrom(TestSources.items(0, 1, 1, 2, 3, 4, 5, 6))
  .writeTo(Sinks.logger());
 ```
 
-We can also use `distinct` with grouping, for example the following will
-only string which have different first letters:
+We can also use `distinct` with grouping, but then two items mapping to
+the same key will be duplicates. For example the following will
+print only strings that have different first letters:
 
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(TestSources.items("joe", "john", "jenny", "maria"))
- .groupingKey(s -> s.substring(0, 1)
- .distinct();
+ .groupingKey(s -> s.substring(0, 1))
+ .distinct()
+ .writeTo(Sinks.logger());
 ```
 
-The `distinct` operator can be used for batch and streaming pipelines,
-but requires a window to be applied in a streaming pipeline.
+The output will be something like this (although it's undefined which of
+the names starting with "j" ends up being output):
+
+```text
+14:05:29.382 [ INFO] [c.h.j.i.c.W.loggerSink#0] joe
+14:05:29.383 [ INFO] [c.h.j.i.c.W.loggerSink#0] maria
+```
 
 ## mapStateful
 
-mapStateful is an extension of the simple [map](stateless-transforms#map)
-transform and adds the capability to optionally retain mutable state.
+mapStateful is an extension of the simple [map](stateless-transforms.md#map)
+transform. It adds the capability to optionally retain mutable state.
 
 The major use case of stateful mapping is recognizing a pattern in the
 event stream, such as matching start-transaction with end-transaction
 events based on an event correlation ID. More generally, you can
-implement any kind of state machine and detect patterns in the input of
+implement any kind of state machine and detect patterns in an input of
 any complexity.
 
 As with other stateful operations, you can also use a `groupingKey` to
@@ -322,38 +330,41 @@ public enum EventType {
 ```
 
 We can then use the following `mapStateful` transform to match start
-and events:
+and end events:
 
 ```java
-p.readFrom(KafkaSources.kafka("transaction-events", ..))
+p.readFrom(KafkaSources.kafka(.., "transaction-events"))
  .withNativeTimestamps(0)
- .groupingKey(event -> event.transactionId())
+ .groupingKey(TransactionEvent::transactionId)
  .mapStateful(MINUTES.toMillis(10),
    () -> new TransactionEvent[2],
    (state, id, event) -> {
         if (event.type() == TRANSACTION_START) {
             state[0] = event;
-        } else if (event.type() == TRANSACTION_END)
+        } else if (event.type() == TRANSACTION_END) {
             state[1] = event;
         }
         if (state[0] != null && state[1] != null) {
             // we have both start and end events
-            entry(transactionId, state[1].timestamp() - state[0].timestamp())
+            long duration = state[1].timestamp() - state[0].timestamp();
+            return MapUtil.entry(event.transactionId(), duration);
         }
-        // we have only one event, do nothing for now.
+        // we don't have both events, do nothing for now.
         return null;
     },
     (state, id, currentWatermark) ->
-        // if we have not received both events after 10 minutes, we will emit a timeout entry
+        // if we have not received both events after 10 minutes,
+        // we will emit a timeout entry
         (state[0] == null || state[1] == null)
-            ? entry(id, TIMED_OUT)
+            ? MapUtil.entry(id, TIMED_OUT)
             : null
  ).writeTo(Sinks.logger());
 ```
 
-You will note that we also had to set an expiry time on the events,
-otherwise would eventually run out of memory as we accumulate more and
-more transactions.
+You will note that we also had to set an expiry time on the states
+(first parameter of the `mapStateful` method), otherwise would
+eventually run out of memory as we accumulate more and more
+transactions.
 
 ## co-group / join
 
@@ -372,10 +383,10 @@ processing this data from a set of logs.
 ```java
 Pipeline p = Pipeline.create();
 BatchStageWithKey<PageVisit, Integer> pageVisit =
-    p.readFrom(Sources.files("visit-events.log", ..))
-    .groupingKey(event -> event.userId());
+    p.readFrom(Sources.files("visit-events.log"))
+     .groupingKey(event -> event.userId());
 BatchStageWithKey<AddToCart, Integer> addToCart =
-    p.readFrom(Sources.files("cart-events.log", ..))
+    p.readFrom(Sources.files("cart-events.log"))
      .groupingKey(event -> event.userId());
 ```
 
@@ -391,6 +402,6 @@ same user id. From this, it's easy to calculate the ratio of visits vs
 add to cart events.
 
 Co-grouping can also be applied to windowed streams, and works exactly
-the same as `aggregate` option. An important consideration is that the
-timestamps from both streams would be considered, so it's important that
-the two streams don't have widely different timestamps.
+the same way as [aggregate](#aggregate). An important consideration is
+that the timestamps from both streams would be considered, so it's
+important that the two streams don't have widely different timestamps.
