@@ -7,12 +7,36 @@ id: sources-sinks
 
 ## Files
 
-## Socket
+### Local Disk
 
-## JDBC
+### Amazon S3
 
-## JMS
+### Apache Avro
 
-## Kafka
+### Hadoop Input Format
 
-## Amazon S3
+## Apache Kafka
+
+## Relational Databases
+
+## Message Queues
+
+## Sockets
+
+## Custom Sources and Sinks
+
+### SourceBuilder
+
+### SinkBuilder
+
+## Under incubation
+
+### ElasticSearch
+
+### InfluxDB
+
+### MongoDB
+
+### Twitter
+
+### Redis

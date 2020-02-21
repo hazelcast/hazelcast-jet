@@ -47,7 +47,7 @@ const siteConfig = {
     ],
     disableHeaderTitle: true,
     cleanUrl: true,
-    noIndex: true, // do not crawl website
+    noIndex: false, // do not crawl website
 
     // If you have users set above, you add it here:
     // users,
