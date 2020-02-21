@@ -41,16 +41,16 @@
     "Operations Guide": [
       "operations/configuration",
       "operations/cluster-sizing",
-      "operations/cluster-topology",
       "operations/job-management",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/spring"
     ],
     "Architecture": [
+      "architecture/cluster-topology",
       "architecture/distributed-computing",
       "architecture/execution-engine",
-      "architecture/snapshots",
+      "architecture/fault-tolerance",
       "architecture/event-time"
     ],
     "Design Documents": [
