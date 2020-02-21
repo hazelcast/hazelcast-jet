@@ -141,7 +141,7 @@ subjects:
 ```
 
 ```bash
-kubectly apply -f rbac.yaml
+kubectl apply -f rbac.yaml
 ```
 
 ### ConfigMap
@@ -575,8 +575,8 @@ perform the following steps:
   `nodes`, `services`
 - Use credentials from the created ServiceAccount in the Hazelcast Jet
   Client configuration (credentials can be fetched with: `kubectl get
-  secret <sevice-account-secret> -o jsonpath={.data.token} | base64
-  --decode` and `kubectl get secret <sevice-account-secret> -o
+  secret <service-account-secret> -o jsonpath={.data.token} | base64
+  --decode` and `kubectl get secret <service-account-secret> -o
   jsonpath={.data.ca\\.crt} | base64 --decode`)
 
 ```yaml

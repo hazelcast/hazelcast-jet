@@ -35,9 +35,9 @@ major differences in terms of deployment and operations.
 
 The standard way to deploy Hazelcast Jet is to run it in a dedicated
 cluster. The cluster is deployed in one of the many
-supported ways (using bare instances, Docker, Kubernets, etc) and the
+supported ways (using bare instances, Docker, Kubernetes, etc) and the
 clients interact with the cluster using the Hazelcast Jet Client API. A
-single cluster is able to scale to several concurrenct jobs, from
+single cluster is able to scale to several concurrent jobs, from
 hundreds to thousands depending on the pipelines.
 
 In this mode, clients are able to deploy jobs along with the classes
@@ -84,7 +84,7 @@ a single JVM from an IDE for development purposes, without having to set
 up complex infrastructure or dependencies. Each Jet node has a full Jet
 execution engine which is not crippled or simulated in any way compared
 to a dedicated cluster. This is one of the main benefits of Jet compared
-to other simliar systems.
+to other similar systems.
 
 In this mode, the user doesn't need to worry about adding required
 classes to the cluster, since everything is run as part of a single
@@ -105,7 +105,7 @@ If you're deploying Jet in a restricted or limited runtime environment
 where you don't have full control of the host processes (such as in an
 app server) then this mode might be suitable.
 
-If you're interested in OEM'in Jet as part of another service, using
+If you're interested in OEM-ing Jet as part of another service, using
 this mode is also a good choice (but with the above caveats regarding
 performance).
 
@@ -113,7 +113,7 @@ performance).
 
 Use dedicated mode for:
 
-- Mixed workloads that can scale independenly of the client applications
+- Mixed workloads that can scale independently of the client applications
 - Getting the best throughput for performance critical applications
 
 Use embedded mode for:

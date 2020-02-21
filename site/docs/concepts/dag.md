@@ -1,43 +1,21 @@
 ---
-title: Directed Acylic Graphs (DAG)
+title: Directed Acylic Graph (DAG)
 id: dag
 ---
 
-Jet performs high performance in-memory data processing by modeling the
-computation as a _Directed Acyclic Graph_ (DAG), where vertices
-represent computation and edges represent data flows. A vertex receives
-data from its inbound edges, performs a step in the computation, and
-emits data to its outbound edges. Both the edge and the vertex are
-distributed entities: there are many parallel instances of the
-`Processor` type that perform a single vertex's computation work on
-each cluster member. An edge between two vertices is implemented with
-many data connections, both within a member (concurrent SPSC queues) and
-between members (Hazelcast network connections).
+Hazelcast Jet models computation as a network of tasks connected with
+data pipes. The pipes are one-way: results of one task are the input of
+the next task. Since the dataflow must not go in circles, the structure
+of the network corresponds to the notion of a Directed Acyclic Graph
+&ndash; DAG.
 
-One of the major reasons to divide the full computation task into
-several vertices is _data partitioning_: the ability to split the data
-stream into slices which can be processed in parallel, independently of
-each other. This is how Jet can parallelize and distribute the
-_group-and-aggregate_ stream transformation, the major workhorse in
-distributed computing. To make this work, there must be a function which
-computes the _partitioning key_ for each item and makes all related
-items map to the same key. Jet can then route all such items to the same
-processor instance, but has the freedom to route items with different
-keys to different processors.
+## The Word Count DAG
 
-Typically your computation job consists of a _mapping_ vertex, where you
-pre-process the input data into a form that's ready to be partitioned,
-followed by the grouping-and-aggregating vertex. The edge between them
-contains the partitioning logic.
-
-## Modeling the Computation as a DAG
-
-We'll take one specific problem, the Word Count, dissect it and explain
-how it gets computed in a Jet cluster. The goal is to analyze the input
-consisting of lines of text and derive a histogram of word frequencies.
-Let's start from the single-threaded Java code that solves the problem
-for a basic data structure such as an
-`ArrayList`.:
+Let's take one specific problem, the Word Count, and explain how to
+model it as a DAG. In this task we analyze the input consisting of lines
+of text and derive a histogram of word frequencies. Let's start from the
+single-threaded Java code that solves the problem for a basic data
+structure such as an `ArrayList`:
 
 ```java
 List<String> lines = someExistingList();
@@ -79,7 +57,7 @@ computation:
 
 Now Jet can set up several concurrent tasks, each receiving the data
 from the previous task and emitting the results to the next one, and
-apply your lambda functions as plug-ins:
+apply our lambda functions as plug-ins:
 
 ```java
 // Source task
@@ -125,6 +103,10 @@ for (Entry<String, Long> e: receive()) {
     sink.write(e);
 }
 ```
+
+The tasks are connected into a cascade, forming the following DAG:
+
+![Word Count DAG](assets/dag.png)
 
 With the computation in this shape, Jet can now easily parallelize it by
 starting more than one parallel task for a given step. It can also

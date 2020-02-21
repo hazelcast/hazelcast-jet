@@ -7,7 +7,7 @@
   "docs": {
     "Get Started": [
       "get-started/intro",
-      "get-started/first-job",      
+      "get-started/first-job",
       "get-started/installation",
       "get-started/submit-job",
       "get-started/scale-job"
@@ -22,13 +22,6 @@
       "api/testing",
       "api/javadoc"
     ],
-    "Concepts": [
-      "concepts/dag",
-      "concepts/distributed-computing",
-      "concepts/stream-processing",
-      "concepts/in-memory-storage",
-      "concepts/fault-tolerance"
-    ],
     "Tutorials" : [
       "tutorials/map-join",
       "tutorials/kafka",
@@ -37,6 +30,11 @@
       "tutorials/stream-imap",
       "tutorials/python",
       "tutorials/windowing"
+    ],
+    "Concepts": [
+      "concepts/dag",
+      "concepts/event-time",
+      "concepts/processing-guarantees"
     ],
     "Operations Guide": [
       "operations/configuration",

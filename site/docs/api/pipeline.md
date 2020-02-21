@@ -10,9 +10,9 @@ pattern. For example,
 
 ```java
 Pipeline p = Pipeline.create();
-p.drawFrom(TestSources.items("the", "quick", "brown", "fox"))
+p.readFrom(TestSources.items("the", "quick", "brown", "fox"))
  .map(item -> item.toUpperCase())
- .drainTo(Sinks.logger());
+ .writeTo(Sinks.logger());
 ```
 
 In each step, such as `readFrom` or `writeTo`, you create a pipeline
@@ -23,25 +23,29 @@ called _compute stages_ and expect you to attach further stages to them.
 ## Batch vs Stream
 
 The API differentiates between batch (bounded) and stream (unbounded)
-sources and this is reflected in the naming: there is a `BatchStage` and
-a `StreamStage`, each offering the operations appropriate to its kind.
-Depending on source, your pipeline will end up starting with a batch or
-streaming stage. It's possible to convert a batch stage by adding
-timestamps to it, but not the other way around. Bulk of the operators
-are available to both stages and Jet internally treats everything as a
-stream.
+sources and this is reflected in the naming: there is a
+[BatchStage](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/BatchStage.html)
+and a
+[StreamStage](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StreamStage.html)
+, each offering the operations appropriate to its kind.
+Depending on the data source, your pipeline will end up starting with a
+batch or streaming stage. It's possible to convert a batch stage by
+adding timestamps to it, but not the other way around.
 
-In this section we'll mostly use batch stages, for simplicity,
-but the API of operations common to both kinds is identical. We'll
-explain later on how to apply windowing, which is necessary to aggregate
-over unbounded streams.
+In this section we'll mostly use batch stages, for simplicity, but the
+API of operations common to both kinds is identical. Jet internally
+treats batches as a bounded stream. We'll explain later on how to apply
+windowing, which is necessary to aggregate over unbounded streams.
 
 ## Multiple Inputs
 
 Your pipeline can consist of multiple sources, each starting its own
 pipeline branch, and you are allowed to mix both kinds of stages in the
 same pipeline. You can merge the branches with joining transforms such
-as hash-join, co-group or merge.
+as [hash-join](stateless-transforms.md#hashjoin),
+[co-group](stateful-transforms.md#co-group--join) or
+[merge](stateless-transforms.md#merge)
+.
 
 As an example, you can merge two stages into one by using the `merge`
 operator:
@@ -66,11 +70,11 @@ than one destination:
 
 ```java
 Pipeline p = Pipeline.create();
-BatchStage<String> src = p.drawFrom(TestSources.items("the", "quick", "brown", "fox"));
+BatchStage<String> src = p.readFrom(TestSources.items("the", "quick", "brown", "fox"));
 src.map(String::toUpperCase)
-   .drainTo(Sinks.files("uppercase"));
+   .writeTo(Sinks.files("uppercase"));
 src.map(String::toLowerCase)
-   .drainTo(Sinks.files("lowercase"));
+   .writeTo(Sinks.files("lowercase"));
 ```
 
 ## Pipeline lifecycle
@@ -93,12 +97,19 @@ following steps:
 Besides sources and sinks, Jet offers several transforms which can be used
 to process data. We can divide these into roughly the following categories:
 
-1. Stateless transforms: These transforms do not have any notion of
-   _state_ meaning that all items must be processed independently of any
-   previous items. Examples: `map`, `filter`, `flatMap`.
-1. Stateful transforms: These transforms accumulate data and the output
-   depends on previously encountered items. Examples: `aggregate`,
-   `rollingAggregate`, `distinct`, `window`, `hashJoin`
+1. [Stateless transforms](stateless-transforms.md): These transforms do
+ not have any notion of _state_ meaning that all items must be processed
+ independently of any previous items. Examples:
+ [map](stateless-transforms.md#map),
+ [filter](stateless-transforms.md#filter),
+ [flatMap](stateless-transforms.md#flatmap),
+ [hashJoin](stateful-transforms.md#)
+1. [Stateful transforms](stateful-transforms.md): These transforms
+ accumulate data and the output depends on previously encountered items.
+ Examples: [aggregate](stateful-transforms.md#aggregate),
+ [rollingAggregate](stateful-transforms.md#rollingaggregate),
+ [distinct](stateful-transforms.md#distinct),
+ [window](stateful-transforms.md#window)
 
 This distinction is important because any stateful computation requires
 the state to be saved for fault-tolerance and this has big implications

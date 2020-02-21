@@ -27,7 +27,7 @@ These sources create a fixed amount of data. These sources are
 non-distributed.
 
 ```java
-BatchStage<Integer> source = pipeline.drawFrom(TestSources.items(1, 2, 3, 4));
+BatchStage<Integer> source = pipeline.readFrom(TestSources.items(1, 2, 3, 4));
 ```
 
 ```java
@@ -35,7 +35,7 @@ List<Integer> list = new ArrayList<>();
 list.add(1);
 list.add(2);
 
-BatchStage<Integer> source = pipeline.drawFrom(TestSources.items(list));
+BatchStage<Integer> source = pipeline.readFrom(TestSources.items(list));
 ```
 
 ### Streaming Sources
@@ -46,7 +46,7 @@ non-distributed.
 
 ```java
 int itemsPerSecond = 10;
-pipeline.drawFrom(TestSources.itemStream(itemsPerSecond))
+pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
         .withNativeTimestamp(0);
 ```
 
@@ -68,7 +68,7 @@ to map to the desired item type:
 ```java
 int itemsPerSecond = 10;
 
-pipeline.drawFrom(TestSources.itemStream(itemsPerSecond, (timestamp, sequence) -> new Trade(timestamp, ..)
+pipeline.readFrom(TestSources.itemStream(itemsPerSecond, (timestamp, sequence) -> new Trade(timestamp, ..)
 ```
 
 ## Assertions
@@ -98,9 +98,9 @@ This asserts that items have been received in a certain order and no
 other items have been received. Only applicable to batch jobs.
 
 ```java
-pipline.drawFrom(TestSources.items(1, 2, 3, 4))
+pipeline.readFrom(TestSources.items(1, 2, 3, 4))
        .apply(Assertions.assertOrdered("unexpected values", Arrays.asList(1, 2, 3, 4)))
-       .drainTo(Sinks.logger())
+       .writeTo(Sinks.logger())
 ```
 
 #### Unordered Assertion
@@ -109,9 +109,9 @@ Asserts that items have been received in any order and no other items
 have been received. Only applicable to batch stages.
 
 ```java
-pipeline.drawFrom(TestSources.items(4, 3, 2, 1)
+pipeline.readFrom(TestSources.items(4, 3, 2, 1)
  .apply(Assertions.assertAnyOrder("unexpected values", Arrays.asList(1, 2, 3, 4)))
- .drainTo(Sinks.logger())
+ .writeTo(Sinks.logger())
 ```
 
 #### Contains Assertions
@@ -121,9 +121,9 @@ other, unrelated items does not affect this assertion. Only applicable
 to batch stages.
 
 ```java
-pipeline.drawFrom(TestSources.items(4, 3, 2, 1))
+pipeline.readFrom(TestSources.items(4, 3, 2, 1))
         .apply(Assertions.assertContains(Arrays.asList(1, 3)))
-        .drainTo(Sinks.logger())
+        .writeTo(Sinks.logger())
 ```
 
 #### Collected Assertion
@@ -134,9 +134,9 @@ to the user. It is a building block for the other assertions. Only
 applicable to batch stages.
 
 ```java
-pipeline.drawFrom(TestSources.items(1, 2, 3, 4))
+pipeline.readFrom(TestSources.items(1, 2, 3, 4))
         .apply(Assertions.assertCollected(items -> assertTrue("expected minimum of 4 items", items.size >= 4)))
-        .drainTo(Sinks.logger())
+        .writeTo(Sinks.logger())
 ```
 
 ### Streaming Assertions
@@ -158,7 +158,7 @@ any point, the job will be completed with an
 timeout period, the job will fail with an `AssertionError`.
 
 ```java
-pipeline.drawFrom(TestSources.itemStream(10))
+pipeline.readFrom(TestSources.itemStream(10))
  .withoutTimestamps()
  .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)))
 ```

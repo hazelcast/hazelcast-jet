@@ -129,7 +129,7 @@ format for the emitted records.
 ### Implementation
 
 Hazelcast Jet drives the Kafka Connect connectors using the Kafka
-Connect API with the SourceBuilder API. Connector classname is read from
+Connect API with the SourceBuilder API. Connector class name is read from
 the provided properties, an instance of it will be created and retrieved
 one of it's defined tasks which are the actual work horses for Kafka
 Connect API. Then we are repeatedly calling the `poll()` method on the

@@ -22,7 +22,7 @@ const users = [
 
 const siteConfig = {
     title: 'Hazelcast Jet', // Title for your website.
-    tagline: 'Distributed Stream and Batch Processing',
+    tagline: 'Open-Source Distributed Stream Processing',
     url: 'https://jet-start.sh', // Your website URL
     baseUrl: '/', // Base URL for your project */
     // For github.io type URLs, you would set the url and baseUrl like:
@@ -38,15 +38,16 @@ const siteConfig = {
 
     // For no header links in the top nav bar -> headerLinks: [],
     headerLinks: [
-        {doc: 'get-started/intro', label: 'Documentation'},
+        {page: 'docs', label: 'Documentation'},
         // {doc: 'connectors/imap', label: 'Connectors'},
-        {href: 'https://github.com/hazelcast/hazelcast-jet/releases', label: "Releases"},
+        {href: 'https://github.com/hazelcast/hazelcast-jet/releases', label: "Download"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "View on GitHub"},
         {blog: true, label: 'Blog'},
         {search: true},
     ],
     disableHeaderTitle: true,
     cleanUrl: true,
+    noIndex: false, // do not crawl website
 
     // If you have users set above, you add it here:
     // users,

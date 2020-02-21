@@ -11,7 +11,6 @@ body {
 
 .projectTitle {
     color: #073642;
-    font-size: 325%
 }
 
 a.button {
@@ -31,9 +30,15 @@ a.button {
 }
 
 .imageAlignTop .blockImage {
-    height: 120px;
-    max-width: 120px;
+    height: 160px;
+    max-width:160px;
 }
+
+.imageAlignRight .blockImage {
+    max-height: 200px;
+    max-width: 200px;
+}
+
 
 .navigationSlider .slidingNav ul li.siteNavItemActive a {
     color: #fdf6e3;
