@@ -38,7 +38,7 @@ const siteConfig = {
 
     // For no header links in the top nav bar -> headerLinks: [],
     headerLinks: [
-        {doc: 'get-started/intro', label: 'Documentation'},
+        {page: 'docs', label: 'Documentation'},
         // {doc: 'connectors/imap', label: 'Connectors'},
         {href: 'https://github.com/hazelcast/hazelcast-jet/releases', label: "Download"},
         {href: 'https://github.com/hazelcast/hazelcast-jet', label: "View on GitHub"},
