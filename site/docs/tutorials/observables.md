@@ -59,7 +59,7 @@ jet.newJob(pipeline).join();
 observable.destroy();
 ```
 
-### Clean-up
+## Clean-up
 
 Observables are backed by
 [Ringbuffers](https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/ringbuffer/Ringbuffer.html)

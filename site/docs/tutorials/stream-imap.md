@@ -13,7 +13,7 @@ of time. However Jet can make use of an `IMap` in a more advanced way,
 treating all changes done to it (adding/updating/deleting entries) as
 a stream of events which then can be processed further.
 
-### Event Journal
+## Event Journal
 
 In order to use an `IMap` as a change event stream source the first
 thing that needs to be done is enabling its "event journal".
@@ -68,7 +68,7 @@ still available capacity for tracking them.
 
 </details>
 
-### Source
+## Source
 
 Once the event journal has been configured the source can be set up like
 this:

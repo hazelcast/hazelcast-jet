@@ -125,7 +125,7 @@ job.join();
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Dependencies
+## Dependencies
 
 To run the above sample code you will need following libraries external to
 Jet (latest versions available at the time of writing):
@@ -151,7 +151,7 @@ compile 'com.hazelcast.jet.contrib:debezium:0.1'
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-### Uploading Connectors to the Job Classpath
+## Uploading Connectors to the Job Classpath
 
 Since we are instantiating external Kafka Connect Connectors on the Jet
 runtime, we need to be able to access those classes. Connectors are
@@ -173,7 +173,7 @@ To find the connector archives:
 * go to [Maven artifacts](https://search.maven.org/search?q=g:io.debezium%20and%20v:1.0.0.Final*)
 * download "plugin.zip" for the connector you need
 
-### Events
+## Events
 
 When a database client queries a database, it uses the database’s current
 schema. However, the database schema can be changed at any time, which
@@ -192,7 +192,7 @@ with each connector's data can be found in their respective
 [documentation](https://debezium.io/documentation/reference/1.0/connectors/index.html)
 (latest stable version available at the time of writing).
 
-### Interpreting Events
+## Interpreting Events
 
 Even though events are connector specific and working with them is not
 always straightforward, Debezium offers some assistance with
@@ -278,7 +278,7 @@ private static final class Customer implements Serializable {
 }
 ```
 
-### Snapshots
+## Snapshots
 
 When a connector gets started up and not all database change-logs still
 exist (typically the case when the database has been running for some
