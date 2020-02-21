@@ -83,7 +83,7 @@ the data items.</p>
 <p>When used without a defined <a href="#window">window</a>, <code>aggregate</code> applies a
 one-time aggregation over the whole of the input which is only possible
 in a bounded input (using <code>BatchStage</code>).</p>
-<p>For example, a very simple aggregation will look as follows:</p>
+<p>For example, a very simple aggregation will look like this:</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 p.readFrom(TestSources.items(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>))
  .aggregate(AggregateOperations.counting())
@@ -93,10 +93,8 @@ p.readFrom(TestSources.items(<span class="hljs-number">0</span>, <span class="hl
 <pre><code class="hljs css language-text">11:49:12.435 [ INFO] [c.h.j.i.c.W.loggerSink#0] 6
 </code></pre>
 <p>The definition of the aggregate operation hides behind the
-<code>AggregateOperations.counting()</code> method call. This is a static method in
-our AggregateOperations utility class, which provides you with some
-predefined aggregate operations. Jet provides several built in
-aggregations such as:</p>
+<code>AggregateOperations.counting()</code> method call. Jet provides several built
+in aggregations, such as:</p>
 <table>
 <thead>
 <tr><th>operation</th><th style="text-align:left">description</th></tr>
@@ -112,12 +110,15 @@ aggregations such as:</p>
 <tr><td><code>allOf</code></td><td style="text-align:left">Combine multiple aggregations into one aggregation (for example, if you want both sum and average)</td></tr>
 </tbody>
 </table>
-<p>For a complete list, please refer to the <code>AggregateOperations</code> class.
-You can also implement your own aggregate operations using the builder
-in <code>AggregateOperation</code>.</p>
+<p>For a complete list, please refer to the
+<a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/aggregate/AggregateOperations.html">AggregateOperations</a>
+class. You can also implement your own aggregate operations using the
+builder in
+<a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/aggregate/AggregateOperation.html">AggregateOperation</a>
+.</p>
 <h3><a class="anchor" aria-hidden="true" id="groupingkey"></a><a href="#groupingkey" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>groupingKey</h3>
 <p>Typically you don’t want to aggregate all the items together, but
-classify them by some key and then aggregate over each group separately.
+group them by some key and then aggregate over each group separately.
 This is achieved by using the <code>groupingKey</code> transform and then applying
 an aggregation on it afterwards.</p>
 <p>We can extend the previous example to group odd and even values
@@ -132,15 +133,15 @@ p.readFrom(TestSources.items(<span class="hljs-number">0</span>, <span class="hl
 11:51:46.723 [ INFO] [c.h.j.i.c.W.loggerSink#0] evens=3
 </code></pre>
 <p>Grouping is critical for aggregating massive data sets in distributed
-computing - otherwise you would not able to make use of parallelization
-as effectively.</p>
+computing - otherwise you would not be able to make use of
+parallelization as effectively.</p>
 <h2><a class="anchor" aria-hidden="true" id="rollingaggregate"></a><a href="#rollingaggregate" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>rollingAggregate</h2>
-<p>Rolling aggregation is similar to aggregate but instead of waiting to
-output until all items are received, it outputs <em>one item per input
-item</em>. Because of this, it's possible to use it in a streaming pipeline
-as well as the aggregation is applied in a continous way. The same
-pipeline from <a href="#aggregate">aggregate</a>, can be rewritten to use a
-<code>rollingAggregate</code> transform instead:</p>
+<p>Rolling aggregation is similar to <a href="#aggregate">aggregate</a> but instead of
+waiting to output until all items are received, it produces an <em>output
+item for each input item</em>. Because of this, it's possible to use it in a
+streaming pipeline as well, as the aggregation is applied in a
+continuous way. The same pipeline from <a href="#aggregate">aggregate</a>, can be
+rewritten to use a <code>rollingAggregate</code> transform instead:</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 p.readFrom(TestSources.items(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, <span class="hljs-number">2</span>, <span class="hljs-number">3</span>, <span class="hljs-number">4</span>, <span class="hljs-number">5</span>))
  .groupingKey(i -&gt; i % <span class="hljs-number">2</span> == <span class="hljs-number">0</span> ? <span class="hljs-string">"odds"</span> : <span class="hljs-string">"evens"</span>)
@@ -163,12 +164,12 @@ break up the stream into finite chunks. This is called windowing and
 it’s almost always defined in terms of a range of event timestamps (a
 time window).</p>
 <p>Window transforms requires a stream which is annotated with
-<em>timestamps</em>, that is each input item has a timestamp associated to
-it. Timestamps are given in milliseconds and are general represented in
-<em>epoch</em> format as a simple <code>long</code>.</p>
+<em>timestamps</em>, that is each input item has a timestamp associated with
+it. Timestamps are given in milliseconds and are generally represented
+in <em>epoch</em> format, as a simple <code>long</code>.</p>
 <p>For a more in-depth look at Jet's event time model, please refer to the
-<a href="../concepts/event-time">Event Time</a> section.</p>
-<p>The general way to assign windows a stream works as follows:</p>
+<a href="/docs/concepts/event-time">Event Time</a> section.</p>
+<p>The general way to assign windows to a stream works as follows:</p>
 <h3><a class="anchor" aria-hidden="true" id="tumblingwindow"></a><a href="#tumblingwindow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>tumblingWindow</h3>
 <p>Tumbling windows are the most basic window type - a window of constant
 size that &quot;tumbles&quot; along the time axis. If you use a window size of 1
@@ -183,8 +184,8 @@ p.readFrom(TestSources.itemStream(<span class="hljs-number">100</span>)) <span c
  .aggregate(AggregateOperations.counting())
  .writeTo(Sinks.logger());
 </code></pre>
-<p>When you run this pipeline, you should see the following output, where
-each output window is marked with start and end timestamps:</p>
+<p>When you run this pipeline, you will see output like this, where each
+output window is marked with start and end timestamps:</p>
 <pre><code class="hljs css language-text">14:26:28.007 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:27.000, end=14:26:28.000, value='100', isEarly=false}
 14:26:29.009 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:28.000, end=14:26:29.000, value='100', isEarly=false}
 14:26:30.004 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=14:26:29.000, end=14:26:30.000, value='100', isEarly=false}
@@ -224,8 +225,9 @@ p.readFrom(TestSources.itemStream(<span class="hljs-number">100</span>)) <span c
  .aggregate(AggregateOperations.counting())
  .writeTo(Sinks.logger());
 </code></pre>
-<p>When you run this pipeline, you should see the following output where
-you can see that the start and end timestamps of the windows are overlapping.</p>
+<p>When you run this pipeline, you will see output like the following,
+where you can see that the start and end timestamps of the windows are
+overlapping.</p>
 <pre><code class="hljs css language-text">15:07:38.108 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.100, end=15:07:38.100, value='100', isEarly=false}
 15:07:38.209 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.200, end=15:07:38.200, value='100', isEarly=false}
 15:07:38.313 [ INFO] [c.h.j.i.c.W.loggerSink#0] WindowResult{start=15:07:37.300, end=15:07:38.300, value='100', isEarly=false}
@@ -235,17 +237,17 @@ you can see that the start and end timestamps of the windows are overlapping.</p
 <h3><a class="anchor" aria-hidden="true" id="sessionwindow"></a><a href="#sessionwindow" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>sessionWindow</h3>
 <p>Session window captures periods of activity followed by periods of
 inactivity. You define the &quot;session timeout&quot;, i.e., the length of the
-inactive period that causes the window to close. An example of a
-session window is for example a specific user's activity on a website.
-Typically this would be followed by bursts of activity (while the user
-is browsing website) followed by rather long periods of inactivity.</p>
+inactive period that causes the window to close. The typical example
+of a session window is a user's activity on a website (hence the name).
+There are bursts of activity (while the user is browsing website
+) followed by rather long periods of inactivity.</p>
 <p>As with other aggregate transforms, if you define a grouping key, there
-is a separate, independent session window for each key.</p>
+will be a separate, independent session window for each key.</p>
 <p>In the example below, we want to find out how many different events each
-user had during a web session. The data source is a stream events read
-from Kafka and we assume that the user session is closed after 15
+user had during a web session. The data source is a stream of events
+read from Kafka and we assume that the user session is closed after 15
 minutes of inactivity:</p>
-<pre><code class="hljs css language-java">p.readFrom(KafkaSources.kafka(<span class="hljs-string">"website-events"</span>, ..))
+<pre><code class="hljs css language-java">p.readFrom(KafkaSources.kafka(.., <span class="hljs-string">"website-events"</span>))
  .withIngestionTimestamps()
  .groupingKey(event -&gt; event.getUserId())
  .window(WindowDefinition.session(TimeUnit.MINUTES.toMillis(<span class="hljs-number">15</span>)))
@@ -253,8 +255,7 @@ minutes of inactivity:</p>
  .writeTo(Sinks.logger());
 </code></pre>
 <h2><a class="anchor" aria-hidden="true" id="distinct"></a><a href="#distinct" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>distinct</h2>
-<p>Suppresses duplicate items from a stream. If you apply a grouping key,
-two items mapping to the same key will be duplicates. This operation
+<p>Suppresses duplicate items from a stream. This operation
 applies primarily to batch streams, but also works on a windowed
 unbounded stream.</p>
 <p>This example takes some input of integers and outputs only the distinct
@@ -264,22 +265,27 @@ p.readFrom(TestSources.items(<span class="hljs-number">0</span>, <span class="hl
  .distinct()
  .writeTo(Sinks.logger());
 </code></pre>
-<p>We can also use <code>distinct</code> with grouping, for example the following will
-only string which have different first letters:</p>
+<p>We can also use <code>distinct</code> with grouping, but then two items mapping to
+the same key will be duplicates. For example the following will
+print only strings that have different first letters:</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 p.readFrom(TestSources.items(<span class="hljs-string">"joe"</span>, <span class="hljs-string">"john"</span>, <span class="hljs-string">"jenny"</span>, <span class="hljs-string">"maria"</span>))
- .groupingKey(s -&gt; s.substring(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)
- .distinct();
+ .groupingKey(s -&gt; s.substring(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>))
+ .distinct()
+ .writeTo(Sinks.logger());
 </code></pre>
-<p>The <code>distinct</code> operator can be used for batch and streaming pipelines,
-but requires a window to be applied in a streaming pipeline.</p>
+<p>The output will be something like this (although it's undefined which of
+the names starting with &quot;j&quot; ends up being output):</p>
+<pre><code class="hljs css language-text">14:05:29.382 [ INFO] [c.h.j.i.c.W.loggerSink#0] joe
+14:05:29.383 [ INFO] [c.h.j.i.c.W.loggerSink#0] maria
+</code></pre>
 <h2><a class="anchor" aria-hidden="true" id="mapstateful"></a><a href="#mapstateful" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>mapStateful</h2>
-<p>mapStateful is an extension of the simple <a href="stateless-transforms#map">map</a>
-transform and adds the capability to optionally retain mutable state.</p>
+<p>mapStateful is an extension of the simple <a href="/docs/api/stateless-transforms#map">map</a>
+transform. It adds the capability to optionally retain mutable state.</p>
 <p>The major use case of stateful mapping is recognizing a pattern in the
 event stream, such as matching start-transaction with end-transaction
 events based on an event correlation ID. More generally, you can
-implement any kind of state machine and detect patterns in the input of
+implement any kind of state machine and detect patterns in an input of
 any complexity.</p>
 <p>As with other stateful operations, you can also use a <code>groupingKey</code> to
 have a unique state per key.</p>
@@ -305,35 +311,38 @@ times out before emitting the results.</p>
 }
 </code></pre>
 <p>We can then use the following <code>mapStateful</code> transform to match start
-and events:</p>
-<pre><code class="hljs css language-java">p.readFrom(KafkaSources.kafka(<span class="hljs-string">"transaction-events"</span>, ..))
+and end events:</p>
+<pre><code class="hljs css language-java">p.readFrom(KafkaSources.kafka(.., <span class="hljs-string">"transaction-events"</span>))
  .withNativeTimestamps(<span class="hljs-number">0</span>)
- .groupingKey(event -&gt; event.transactionId())
+ .groupingKey(TransactionEvent::transactionId)
  .mapStateful(MINUTES.toMillis(<span class="hljs-number">10</span>),
    () -&gt; <span class="hljs-keyword">new</span> TransactionEvent[<span class="hljs-number">2</span>],
    (state, id, event) -&gt; {
         <span class="hljs-keyword">if</span> (event.type() == TRANSACTION_START) {
             state[<span class="hljs-number">0</span>] = event;
-        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (event.type() == TRANSACTION_END)
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (event.type() == TRANSACTION_END) {
             state[<span class="hljs-number">1</span>] = event;
         }
         <span class="hljs-keyword">if</span> (state[<span class="hljs-number">0</span>] != <span class="hljs-keyword">null</span> &amp;&amp; state[<span class="hljs-number">1</span>] != <span class="hljs-keyword">null</span>) {
             <span class="hljs-comment">// we have both start and end events</span>
-            entry(transactionId, state[<span class="hljs-number">1</span>].timestamp() - state[<span class="hljs-number">0</span>].timestamp())
+            <span class="hljs-keyword">long</span> duration = state[<span class="hljs-number">1</span>].timestamp() - state[<span class="hljs-number">0</span>].timestamp();
+            <span class="hljs-keyword">return</span> MapUtil.entry(event.transactionId(), duration);
         }
-        <span class="hljs-comment">// we have only one event, do nothing for now.</span>
+        <span class="hljs-comment">// we don't have both events, do nothing for now.</span>
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;
     },
     (state, id, currentWatermark) -&gt;
-        <span class="hljs-comment">// if we have not received both events after 10 minutes, we will emit a timeout entry</span>
+        <span class="hljs-comment">// if we have not received both events after 10 minutes,</span>
+        <span class="hljs-comment">// we will emit a timeout entry</span>
         (state[<span class="hljs-number">0</span>] == <span class="hljs-keyword">null</span> || state[<span class="hljs-number">1</span>] == <span class="hljs-keyword">null</span>)
-            ? entry(id, TIMED_OUT)
+            ? MapUtil.entry(id, TIMED_OUT)
             : <span class="hljs-keyword">null</span>
  ).writeTo(Sinks.logger());
 </code></pre>
-<p>You will note that we also had to set an expiry time on the events,
-otherwise would eventually run out of memory as we accumulate more and
-more transactions.</p>
+<p>You will note that we also had to set an expiry time on the states
+(first parameter of the <code>mapStateful</code> method), otherwise would
+eventually run out of memory as we accumulate more and more
+transactions.</p>
 <h2><a class="anchor" aria-hidden="true" id="co-group--join"></a><a href="#co-group--join" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>co-group / join</h2>
 <p>Co-grouping allows to join any number of inputs on a common key, which
 can be anything you can calculate from the input item. This makes it
@@ -347,10 +356,10 @@ simplicity, let's say we're working with historical data and we are
 processing this data from a set of logs.</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 BatchStageWithKey&lt;PageVisit, Integer&gt; pageVisit =
-    p.readFrom(Sources.files(<span class="hljs-string">"visit-events.log"</span>, ..))
-    .groupingKey(event -&gt; event.userId());
+    p.readFrom(Sources.files(<span class="hljs-string">"visit-events.log"</span>))
+     .groupingKey(event -&gt; event.userId());
 BatchStageWithKey&lt;AddToCart, Integer&gt; addToCart =
-    p.readFrom(Sources.files(<span class="hljs-string">"cart-events.log"</span>, ..))
+    p.readFrom(Sources.files(<span class="hljs-string">"cart-events.log"</span>))
      .groupingKey(event -&gt; event.userId());
 </code></pre>
 <p>After getting the two keyed streams, now we can join them:</p>
@@ -361,9 +370,9 @@ BatchStageWithKey&lt;AddToCart, Integer&gt; addToCart =
 same user id. From this, it's easy to calculate the ratio of visits vs
 add to cart events.</p>
 <p>Co-grouping can also be applied to windowed streams, and works exactly
-the same as <code>aggregate</code> option. An important consideration is that the
-timestamps from both streams would be considered, so it's important that
-the two streams don't have widely different timestamps.</p>
+the same way as <a href="#aggregate">aggregate</a>. An important consideration is
+that the timestamps from both streams would be considered, so it's
+important that the two streams don't have widely different timestamps.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/stateless-transforms"><span class="arrow-prev">← </span><span>Stateless Transforms</span></a><a class="docs-next button" href="/docs/api/sources-sinks"><span>Sources and Sinks</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#aggregate">aggregate</a><ul class="toc-headings"><li><a href="#groupingkey">groupingKey</a></li></ul></li><li><a href="#rollingaggregate">rollingAggregate</a></li><li><a href="#window">window</a><ul class="toc-headings"><li><a href="#tumblingwindow">tumblingWindow</a></li><li><a href="#slidingwindow">slidingWindow</a></li><li><a href="#sessionwindow">sessionWindow</a></li></ul></li><li><a href="#distinct">distinct</a></li><li><a href="#mapstateful">mapStateful</a></li><li><a href="#co-group--join">co-group / join</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
