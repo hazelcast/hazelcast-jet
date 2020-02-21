@@ -7,11 +7,12 @@ Stateful transforms refer to those computations which typically
 accumulate some data and emit results depending on what was encountered
 before.
 
-For example, we want to counti how many items are encountered so far in
-a stream, and emit the current count with every new item. This is quite
-distinct from the mapping transforms explored in the previous section
-because after each item, we need to maintain a current _state_ of the
-number of total items encountered so far.
+For example, we want to count how many items are encountered so far in
+a stream and emit the current count with every new item. This is quite
+distinct from the mapping transforms explored in the
+[previous section](stateless-transforms.md), because after each item
+we need to maintain a current _state_ of the number of total items
+encountered so far.
 
 When it comes to maintaining state, there is also a big distinction
 between streaming and batch pipelines. Windowing only
