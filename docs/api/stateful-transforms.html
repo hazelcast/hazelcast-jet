@@ -65,11 +65,12 @@
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Stateful Transforms</h1></header><article><div><span><p>Stateful transforms refer to those computations which typically
 accumulate some data and emit results depending on what was encountered
 before.</p>
-<p>For example, we want to counti how many items are encountered so far in
-a stream, and emit the current count with every new item. This is quite
-distinct from the mapping transforms explored in the previous section
-because after each item, we need to maintain a current <em>state</em> of the
-number of total items encountered so far.</p>
+<p>For example, we want to count how many items are encountered so far in
+a stream and emit the current count with every new item. This is quite
+distinct from the mapping transforms explored in the
+<a href="/docs/api/stateless-transforms">previous section</a>, because after each item
+we need to maintain a current <em>state</em> of the number of total items
+encountered so far.</p>
 <p>When it comes to maintaining state, there is also a big distinction
 between streaming and batch pipelines. Windowing only
 applies to streaming pipelines where an element of time is present and
