@@ -39,17 +39,18 @@
     "Operations Guide": [
       "operations/configuration",
       "operations/cluster-sizing",
-      "operations/cluster-topology",
       "operations/job-management",
       "operations/kubernetes",
       "operations/monitoring",
       "operations/spring"
     ],
     "Architecture": [
+      "architecture/cluster-topology",
       "architecture/distributed-computing",
       "architecture/execution-engine",
-      "architecture/snapshots",
-      "architecture/event-time"
+      "architecture/fault-tolerance",
+      "architecture/in-memory-storage",
+	  "architecture/event-time"
     ],
     "Design Documents": [
       "design-docs/unit-testing",

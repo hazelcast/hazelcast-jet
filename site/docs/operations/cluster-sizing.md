@@ -14,7 +14,7 @@ production. See a sample cluster sizing with benchmark that can be used
 as a reference.
 
 Please read the Hazelcast IMDG Deployment and Operations Guide when
-storing the data [inside Jet cluster](concepts/in-memory-storage.md#relationship-with-hazelcast-imdg)
+storing the data [inside Jet cluster](architecture/in-memory-storage.md#relationship-with-hazelcast-imdg)
 setup. Your Jet cluster will run both data processing and data storage
 workloads so you should plan for it.
 
@@ -62,7 +62,7 @@ can be up-scaled when resource consumption reaches a watermark
 (autoscale isn't built in, connect Jet metrics to the resource manager)
 or before expected usage spike. Up-scales however temporarily increase
 the stress on the cluster as the cluster has regroup and [replay missed
-data](concepts/fault-tolerance.md).
+data](concepts/processing-guarantees.md).
 
 The failures reduce the cluster resources and increase the stress on
 remaining members until the failed member is fixed.  The data previously
@@ -273,7 +273,7 @@ to an IMap data structure in Jet cluster. The analytical job reads the
 IMap Event Journal and writes processed results to a rolling file.
 
 The job is configured to be
-[fault-tolerant](concepts/fault-tolerance.md) with exactly-once
+[fault-tolerant](concepts/processing-guarantees.md) with exactly-once
 processing guarantee.
 
 The cluster is expected to process 50k trade events per second with 10k

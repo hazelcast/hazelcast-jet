@@ -7,6 +7,15 @@ Hazelcast Jet is a distributed system, where each Hazelcast Jet node is
 referred to as a *member*. Each member is a Java application, running in
 a JVM.
 
+The members automatically join together to form a cluster. There are
+[various discovery
+mechanisms](https://docs.hazelcast.org/docs/latest/manual/html-single/index.html#discovery-mechanisms)
+Jet supports. The Jet cluster automatically elects one member as the
+coordinator. It tells other members what to do and they report to it any
+status changes. The coordinator may fail and the cluster will
+automatically re-elect another one. If any other member fails, the
+coordinator restarts the job on the remaining members.
+
 Broadly speaking, Hazelcast Jet can be used in one of two ways:
 
 1. **Dedicated**: Hazelcast Jet runs on a dedicated cluster,
