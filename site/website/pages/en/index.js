@@ -52,7 +52,7 @@ class HomeSplash extends React.Component {
     );
 
     return (
-      
+
       <SplashContainer>
         <div className="inner">
         <Logo img_src={`${baseUrl}img/logo-icon-dark.svg`} />
@@ -89,39 +89,40 @@ class Index extends React.Component {
       <Block layout="twoColumn">
         {[
           {
-            title: 'Create a cluster within seconds',
+            title: 'Create a Cluster within Seconds',
             image: `${baseUrl}img/undraw_relaxation_blue.svg`,
             imageAlign: 'top',
-            content: 'It\'s easy to get started with Jet. The nodes automatically discover each other to form a cluster.' +
-            ' You can run Jet on your laptop and if you start it twice, you have a cluster. This is great' +
-            ' for quick testing and also simplifies deployment and maintenance.',
+            content: 'It\'s easy to get started with Jet. The nodes automatically discover each' +
+                     ' other to form a cluster, both in a cloud environment and on your laptop.' +
+                     ' This is great for quick testing and simplifies deployment and maintenance.',
           },
           {
-            title: 'Build fault-tolerant data pipelines that scale',
+            title: 'Build Fault-Tolerant Data Pipelines that Scale',
             image: `${baseUrl}img/undraw_working_out_orange.svg`,
             imageAlign: 'top',
-            content: 'Process your data using a rich library of transforms such as windowing, joins and aggregations. ' +
-            'Jet keeps processing data without loss even when a node fails, and as soon as you add another node,' +
-           'it start sharing the computation load. First-class support for Apache Kafka, Hadoop, Hazelcast and many ' + 
-           'other data sources and sinks.'
+            content: 'Process your data using a rich library of transforms such as windowing,' +
+                     ' joins and aggregations. Jet keeps processing data without loss even' +
+                     ' when a node fails, and as soon as you add another node, it starts' +
+                     ' sharing the computation load. First-class support for Apache Kafka,' +
+                     ' Hadoop, Hazelcast and many other data sources and sinks.'
           },
           {
-            title: 'Massively parallel with predictable latency',
+            title: 'Massively Parallel with Predictable Latency',
             image: `${baseUrl}img/undraw_finish_line_blue.svg`,
             imageAlign: 'top',
-            content: 'Jet\'s core execution engine was designed for high throughput with low ' +
-            'system overhead and latency. It uses a fixed-size thread pool to run any number of ' +
-            'parallel tasks. The engine is based on coroutines ' +
-            'that implement suspendable computation, allowing many of them to run ' +
-            'concurrently on a single thread.'
+            content: 'Jet\'s core execution engine was designed for high throughput with low' +
+            ' system overhead and latency. It uses a fixed-size thread pool to run any number of' +
+            ' parallel tasks. The engine is based on coroutines that implement suspendable' +
+            ' computation, allowing many of them to run concurrently on a single thread.'
           },
           {
-            title: 'Single binary',
+            title: 'Single Java Binary',
             image: `${baseUrl}img/undraw_superhero_orange.svg`,
             imageAlign: 'top',
-            content: 'Jet is a single 10MB file. It’s lightweight enough to run on small devices,' +
-            ' You can embed it into your application as just another dependency or deploy it as a' +
-            ' standalone cluster. First-class support for Kubernetes is included.'
+            content: 'Jet is a single 12 MB Java archive (JAR). It’s lightweight enough to run' +
+                     ' on small devices, you can embed it into your application as just another' +
+                     ' dependency or deploy it as a standalone cluster. First-class support for' +
+                     ' Kubernetes is included.'
           },
         ]}
       </Block>
