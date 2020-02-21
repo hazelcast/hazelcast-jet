@@ -27,3 +27,16 @@ velocity vector of each user. Applying the same kind of window the
 second time will give you acceleration vectors, and so on.
 
 ## Event Time Disorder
+
+If you want to treat time properly, every event must carry a timestamp.
+You can't rely on the current time when processing an event because it
+may be some arbitrarily later point in time. Also, you may easily end up
+observing the events out of their true order of occurrence.
+
+Processing events out of order is a challenge. Hazelcast Jet handles
+most of the concerns internally, but there is one decision it can't make
+for you: how much to wait for lagging events. Jet can't emit the result
+of a windowed aggregation until it has received all the events belonging
+to the window, but the longer it waits, the later you'll see the results.
+So you must strike a balance and choose how much to wait. This parameter
+is called the *allowed event lag*.
