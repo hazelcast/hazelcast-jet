@@ -13,7 +13,8 @@
         <id>https://jet-start.sh/blog/2020/02/20/transactional-processors.html</id>
         <link href="https://jet-start.sh/blog/2020/02/20/transactional-processors.html"/>
         <updated>2020-02-20T06:00:00.000Z</updated>
-        <summary type="html"><![CDATA[<p><img src="/blog/assets/2020-02-20-transactional-processors-featured-img.png" alt></p> <p>Hazelcast Jet is a distributed stream processing engine which supports exactly-once semantics even in the presence of cluster member failures. This is achieved by snapshotting the internal state of the processors at regular intervals into a reliable...</p>]]></summary>
+        <summary type="html"><![CDATA[<p><img src="/blog/assets/2020-02-20-transactional-processors-featured-img.png" alt="Transaction Processors Featured
+Image"></p> <p>Hazelcast Jet is a distributed stream processing engine which supports exactly-once semantics even in the presence of cluster member failures. This is achieved by snapshotting the internal state of the processors at regular intervals into a reliable...</p>]]></summary>
         <author>
             <name>Viliam Ďurina</name>
             <email/>
