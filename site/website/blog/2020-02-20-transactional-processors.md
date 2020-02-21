@@ -4,6 +4,8 @@ author: Viliam Ďurina
 authorImageURL: https://en.gravatar.com/userimage/154381144/a68feb9e86a976869d646e7cf7669510.jpg
 ---
 
+![](assets/2020-02-20-transactional-processors-featured-img.png)
+
 Hazelcast Jet is a distributed stream processing engine which supports
 exactly-once semantics even in the presence of cluster member failures.
 This is achieved by snapshotting the internal state of the processors at
