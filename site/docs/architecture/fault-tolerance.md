@@ -35,7 +35,7 @@ snapshot.
 ### In-Memory Snapshot Storage
 
 Hazelcast Jet stores the snapshots in an
-[IMap](concepts/in-memory-storage.md) and does not have any external
+[IMap](architecture/in-memory-storage.md) and does not have any external
 dependency to an outside system. Data residing in the IMap are
 replicated across the cluster to tolerate member failures. If a cluster
 member fails, Jet uses the backup of the data that the member owned. Jet
