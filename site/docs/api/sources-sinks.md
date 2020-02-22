@@ -3,40 +3,62 @@ title: Sources and Sinks
 id: sources-sinks
 ---
 
-## Test Sources
-
 ## Files
 
 ### Local Disk
 
-### Amazon S3
-
 ### Apache Avro
 
-### Hadoop Input Format
+### Amazon S3
 
-## Apache Kafka
+### Hadoop Input/OutputFormat
 
-## Relational Databases
+## Messaging Systems
 
-## Message Queues
+### Apache Kafka
 
-## Sockets
+### JMS
+
+### Apache Pulsar
+
+>This connector is under incubation.
+
+## In-memory data structures
+
+### IMap
+
+### IList
+
+### Redis
+
+>This connector is under incubation.
+
+## Databases
+
+### JDBC
+
+### MongoDB
+
+>This connector is under incubation.
+
+### InfluxDB
+
+>This connector is under incubation.
+
+### Debezium
+
+>This connector is under incubation.
+
+## Miscellaneous
+
+### Test Sources
+
+### Twitter
+
+>This connector is under incubation.
 
 ## Custom Sources and Sinks
 
 ### SourceBuilder
 
 ### SinkBuilder
-
-## Under incubation
-
-### ElasticSearch
-
-### InfluxDB
-
-### MongoDB
-
-### Twitter
-
-### Redis
