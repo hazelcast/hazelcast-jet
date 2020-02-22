@@ -86,6 +86,31 @@ which is schema based. The connectors are similar to the local file
 connectors, but works with binary files stored in _Avro Object Container
 File_ format.
 
+To use the Avro connector, you need to add the `hazelcast-jet-avro`
+module to the `lib` folder and the following dependency to your
+application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Maven-->
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.hazelcast.jet</groupId>
+    <artifactId>hazelcast-jet-avro</artifactId>
+    <version>$jet.version</version>
+  </dependency>
+</dependencies>
+```
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-avro:$jet.version'
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 With Avro sources, you can use either the `SpecificReader` or
 `DatumReader` depending on the data type:
 
@@ -169,6 +194,31 @@ registering the hook.
 
 #### Hadoop Classpath
 
+To use the Hadoop connector, you need to add the `hazelcast-jet-hadoop`
+module to the `lib` folder and the following dependency to your
+application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Maven-->
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.hazelcast.jet</groupId>
+    <artifactId>hazelcast-jet-hadoop</artifactId>
+    <version>$jet.version</version>
+  </dependency>
+</dependencies>
+```
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-hadoop:$jet.version'
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 When submitting Jet jobs using Hadoop, sending Hadoop JARs should be
 avoided and instead the Hadoop classpath should be used. Hadoop JARs
 contain some JVM hooks and can keep lingering references inside the JVM
@@ -222,9 +272,139 @@ The multi-part upload is completed when the job completes and makes the
 objects available on the S3. Since a streaming jobs never complete, S3
 sink is not currently applicable to streaming jobs.
 
+To use the S3 connector, you need to add the `hazelcast-jet-s3`
+module to the `lib` folder and the following dependency to your
+application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Maven-->
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.hazelcast.jet</groupId>
+    <artifactId>hazelcast-jet-s3</artifactId>
+    <version>$jet.version</version>
+  </dependency>
+</dependencies>
+```
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-s3:$jet.version'
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 ## Messaging Systems
 
-### Apache Kafka
+Messaging systems allow multiple application to communicate
+asynchronously without a direct link between them. These types of
+systems are a great fit for a stream processing engine like Jet since
+Jet is able to consume messages from these systems and process them in
+real time.
+
+### Apache Kafka
+
+Apache Kafka is a popular distributed, persistent log store which is a
+great fit for stream processing systems. Data in Kafka is structured
+as _topics_ and each topic consists of 1 or partitions, stored in the Kafka
+cluster.
+
+To read from Kafka, the only requirements are to provide deserializers
+and a topic name:
+
+```java
+Properties props = new Properties();
+props.setProperty("bootstrap.servers", "localhost:9092");
+props.setProperty("key.deserializer", StringDeserializer.class.getCanonicalName());
+props.setProperty("value.deserializer", StringDeserializer.class.getCanonicalName());
+props.setProperty("auto.offset.reset", "earliest");
+
+Pipeline p = Pipeline.create();
+p.readFrom(KafkaSources.kafka(props, "topic"))
+ .withNativeTimestamps(0)
+ .writeTo(Sinks.logger());
+```
+
+The topics and partitions are distributed across the Jet cluster, so
+that each node is responsible for reading a subset of the data.
+
+When used as a sink, then the only requirements are the serializers:
+
+```java
+Properties props = new Properties();
+props.setProperty("bootstrap.servers", "localhost:9092");
+props.setProperty("key.serializer", StringSerializer.class.getCanonicalName());
+props.setProperty("value.serializer", StringSerializer.class.getCanonicalName());
+
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.files("home/logs"))
+ .map(line -> LogParser.parse(line))
+ .map(log -> entry(log.service(), log.message()))
+ .writeTo(KafkaSinks.kafka(props, "topic"));
+```
+
+To use the Kafka connector, you need to add the `hazelcast-jet-kafka`
+module to the `lib` folder and the following dependency to your
+application:
+
+<!--DOCUSAURUS_CODE_TABS-->
+<!--Maven-->
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>com.hazelcast.jet</groupId>
+    <artifactId>hazelcast-jet-kafka</artifactId>
+    <version>$jet.version</version>
+  </dependency>
+</dependencies>
+```
+
+<!--Gradle-->
+
+```groovy
+
+compile 'com.hazelcast.jet:hazelcast-jet-kafka:$jet.version'
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Fault-tolerance
+
+One of the most important features of using Kafka as a source is that
+it's possible to replay data - which enables fault-tolerance. If the job
+has a processing guarantee configured, then Jet will periodically save
+the current offsets internally and then replay from the saved offset
+when the job is restarted. In this mode, Jet will manually track and
+commit offsets, without interacting with consumer groups feature of Kafka.
+
+If processing guarantee is disabled, the source will start reading from
+default offsets (based on the `auto.offset.reset property`). You can
+enable offset committing by assigning a `group.id`, enabling auto offset
+committing using `enable.auto.commit` and configuring
+`auto.commit.interval.ms` in the given properties. Refer to Kafka
+documentation for the descriptions of these properties.
+
+#### Transactional guarantees
+
+As a sink, it provides exactly-once guarantees at the cost of using
+Kafka transactions: Jet commits the produced records after each snapshot
+is completed. This greatly increases the latency because consumers see
+the records only after they are committed.
+
+If you use at-least-once guarantee, records are visible immediately, but
+in the case of a failure some records could be duplicated. You
+can also have the job in exactly-once mode and decrease the guarantee
+just for a particular Kafka sink.
+
+#### Compatibility
+
+The Kafka sink and source are based on version 2.2.0, this means Kafka
+connector will work with any client and broker having version equal to
+or greater than 1.0.0.
 
 ### JMS
 
@@ -271,6 +451,29 @@ sink is not currently applicable to streaming jobs.
 ### Twitter
 
 >This connector is under incubation.
+
+## Summary
+
+### Sources
+
+|source|module|batch or stream|guarantee|
+|:-----|:---- |:-----------|:--------|
+|`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
+|`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
+|`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
+|`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
+|`Sources.files`|`hazelcast-jet`|batch|N/A|
+|`Sources.fileWatcher`|`hazelcast-jet`|stream|N/A|
+
+### Sinks
+
+|sink|module|batch or stream|guarantee|
+|:---|:-----|:--------------|:-------------------|
+|`AvroSinks.files`|`hazelcast-jet-avro`|batch|N/A|
+|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
+|`KafkaSinks.kafka`|`hazelcast-jet-kafka`|batch/stream|exactly-once|
+|`S3Sinks.s3`|`hazelcast-jet-s3`|batch|N/A|
+|`Sinks.files`|`hazelcast-jet`|both|exactly-once|
 
 ## Custom Sources and Sinks
 
