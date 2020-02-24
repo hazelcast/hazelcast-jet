@@ -34,16 +34,23 @@ import java.util.StringJoiner;
  * same size, with a one-to-one mapping between input and output elements.
  * Here's a simple example of a function that transforms every input
  * string by prepending {@code "echo-"} to it:
- * <pre>
+ * <pre>{@code
  * def transform_list(input_list):
  *     return ["echo-%s" % i for i in input_list]
- * </pre>
- * You tell Jet the location of your project {@linkplain #setBaseDir
- * directory} and the name of the Python {@linkplain #setHandlerModule
- * module} containing {@code transform_list()}. If you have a very simple
- * setup with everything in a single Python file, you can use {@link
- * #setHandlerFile} instead of {@link #setBaseDir}. This file is assumed to
- * be the Python module that contains {@code transform_list()}. You can
+ * }</pre>
+ * If you have a very simple setup with everything in a single Python file,
+ * you can use {@link #setHandlerFile}. Let's say you saved the above
+ * Python code to a file named {@code echo.py}. You can use it from Jet
+ * like this:
+ * <pre>{@code
+ * StreamStage<String> inputStage = createInputStage();
+ * StreamStage<String> outputStage = inputStage.apply(
+ *         mapUsingPython(new PythonServiceConfig()
+ *                 .setHandlerFile("path/to/echo.py")));
+ * }</pre>
+ * In more complex setups you can tell Jet the location of your project
+ * {@linkplain #setBaseDir directory} and the name of the Python {@linkplain
+ * #setHandlerModule module} containing {@code transform_list()}. You can
  * also use a {@linkplain #setHandlerFunction different name} for the
  * function.
  * <p>
@@ -86,6 +93,7 @@ import java.util.StringJoiner;
  * under the {@code com.hazelcast.jet.python} log category. This includes
  * all the output from launched subprocesses.
  *
+ * @since 4.0
  */
 public class PythonServiceConfig implements Serializable {
     private static final String HANDLER_FUNCTION_DEFAULT = "transform_list";
@@ -135,6 +143,7 @@ public class PythonServiceConfig implements Serializable {
      * If all you need to deploy to Jet is in a single file, you can call {@link
      * #setHandlerFile} instead.
      */
+    @Nonnull
     public PythonServiceConfig setBaseDir(@Nonnull String baseDir) {
         if (handlerFile != null) {
             throw new IllegalArgumentException(
@@ -167,6 +176,7 @@ public class PythonServiceConfig implements Serializable {
      * #setHandlerFunction handler function}. If your Python work is in more
      * than one file, call {@link #setBaseDir} instead.
      */
+    @Nonnull
     public PythonServiceConfig setHandlerFile(@Nonnull String handlerFile) {
         if (baseDir != null) {
             throw new IllegalStateException(
@@ -197,6 +207,7 @@ public class PythonServiceConfig implements Serializable {
     /**
      * Returns the {@linkplain #setHandlerModule handler module} name.
      * */
+    @Nullable
     public String handlerModule() {
         return handlerModule;
     }
@@ -205,6 +216,7 @@ public class PythonServiceConfig implements Serializable {
      * Sets the name of the Python module that has the function that
      * transforms Jet pipeline data.
      */
+    @Nonnull
     public PythonServiceConfig setHandlerModule(@Nonnull String handlerModule) {
         if (handlerFile != null) {
             throw new IllegalStateException(
@@ -218,6 +230,7 @@ public class PythonServiceConfig implements Serializable {
      * Returns the name of the {@linkplain #setHandlerFunction handler
      * function}. The default value is {@code transform_list}.
      */
+    @Nonnull
     public String handlerFunction() {
         return handlerFunction;
     }
@@ -231,6 +244,7 @@ public class PythonServiceConfig implements Serializable {
      * transforming each item in the input list. There must be a strict
      * one-to-one match between the input and output lists.
      */
+    @Nonnull
     public PythonServiceConfig setHandlerFunction(@Nonnull String handlerFunction) {
         this.handlerFunction = requireNonBlank(handlerFunction, "handlerFunction");
         return this;
