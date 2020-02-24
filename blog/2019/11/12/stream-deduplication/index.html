@@ -6,7 +6,7 @@
 
               ga('create', 'UA-158279495-1', 'auto');
               ga('send', 'pageview');
-            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs" target="_self">Documentation</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet/releases" target="_self">Download</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">View on GitHub</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul class=""><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
+            </script><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500"/><script type="text/javascript" src="https://buttons.github.io/buttons.js"></script><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script><script type="text/javascript" src="/js/code-block-buttons.js"></script><script src="/js/scrollSpy.js"></script><link rel="stylesheet" href="/css/prism.css"/><link rel="stylesheet" href="/css/main.css"/><script src="/js/codetabs.js"></script></head><body class="sideNavVisible separateOnPageNav"><div class="fixedHeaderContainer"><div class="headerWrapper wrapper"><header><a href="/"><img class="logo" src="/img/logo-dark.svg" alt="Hazelcast Jet"/></a><div class="navigationWrapper navigationSlider"><nav class="slidingNav"><ul class="nav-site nav-site-internal"><li class=""><a href="/docs" target="_self">Documentation</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet/releases" target="_self">Download</a></li><li class=""><a href="https://github.com/hazelcast/hazelcast-jet" target="_self">View on GitHub</a></li><li class="siteNavGroupActive"><a href="/blog/" target="_self">Blog</a></li><li class="navSearchWrapper reactNavSearchWrapper"><input type="text" id="search_input_react" placeholder="Search" title="Search"/></li></ul></nav></div></header></div></div><div class="navPusher"><div class="docMainWrapper wrapper"><div class="docsNavContainer" id="docsNav"><nav class="toc"><div class="toggleNav"><section class="navWrapper wrapper"><div class="navBreadcrumb wrapper"><div class="navToggle" id="navToggler"><div class="hamburger-menu"><div class="line1"></div><div class="line2"></div><div class="line3"></div></div></div><h2><i>›</i><span>Recent Posts</span></h2><div class="tocToggler" id="tocToggler"><i class="icon-toc"></i></div></div><div class="navGroups"><div class="navGroup"><h3 class="navGroupCategoryTitle">Recent Posts</h3><ul class=""><li class="navListItem"><a class="navItem" href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a></li><li class="navListItem"><a class="navItem" href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a></li><li class="navListItem navListItemActive"><a class="navItem" href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></li></ul></div></div></section></div><script>
             var coll = document.getElementsByClassName('collapsible');
             var checkActiveCategory = true;
             for (var i = 0; i < coll.length; i++) {
@@ -96,24 +96,24 @@ expires.</p>
 <p>Let’s say I am running a discussion forum and I have a microservice that
 sends a new message whenever a user posts a new comment. The message
 looks like this:</p>
-<pre><code class="hljs css language-java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">final</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">AddNewComment</span> <span class="hljs-keyword">implements</span> <span class="hljs-title">Serializable</span> </span>{
-  <span class="hljs-keyword">private</span> UUID uuid;
-  <span class="hljs-keyword">private</span> String comment;
-  <span class="hljs-keyword">private</span> <span class="hljs-keyword">long</span> authorId;
-}
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">final</span> <span class="token keyword">class</span> <span class="token class-name">AddNewComment</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{</span>
+  <span class="token keyword">private</span> <span class="token class-name">UUID</span> uuid<span class="token punctuation">;</span>
+  <span class="token keyword">private</span> <span class="token class-name">String</span> comment<span class="token punctuation">;</span>
+  <span class="token keyword">private</span> <span class="token keyword">long</span> authorId<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>The UUID field is unique for each message posted. My consumer is a
 Hazelcast Jet application, and I want a processing pipeline to discard
 all messages with a UUID already processed in the past. It turns out to
 be really trivial:</p>
-<pre><code class="hljs css language-java">stage.groupingKey(AddNewComment::getUuid)
-  .filterStateful(<span class="hljs-number">10_000</span>, () -&gt; <span class="hljs-keyword">new</span> <span class="hljs-keyword">boolean</span>[<span class="hljs-number">1</span>],
-    (s, i) -&gt; {
-        <span class="hljs-keyword">boolean</span> res = s[<span class="hljs-number">0</span>];
-        s[<span class="hljs-number">0</span>] = <span class="hljs-keyword">true</span>;
-        <span class="hljs-keyword">return</span> !res;
-  }
-);
+<pre><code class="hljs css language-java">stage<span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span><span class="token class-name">AddNewComment</span><span class="token operator">::</span><span class="token function">getUuid</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token function">filterStateful</span><span class="token punctuation">(</span><span class="token number">10_000</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token keyword">boolean</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span>s<span class="token punctuation">,</span> i<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+        <span class="token keyword">boolean</span> res <span class="token operator">=</span> s<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        s<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">!</span>res<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>How does it work? In the first step, we group a stream of incoming
 comments by UUID. In the next step, we apply a filter with an array of
@@ -136,21 +136,21 @@ duplicated elements.</p>
 applied to an arbitrary pipeline. We are going to use the <code>apply()</code>
 method to transform a pipeline. A utility class with this method is all
 that’s needed:</p>
-<pre><code class="hljs css language-java"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> &lt;T&gt; FunctionEx&lt;StreamStage&lt;T&gt;, StreamStage&lt;T&gt;&gt;
-deduplicationWindow(<span class="hljs-keyword">long</span> window, FunctionEx&lt;T, ?&gt; extractor) {
-    <span class="hljs-keyword">return</span> stage -&gt; stage.groupingKey(extractor)
-                         .filterStateful(window, () -&gt; <span class="hljs-keyword">new</span> <span class="hljs-keyword">boolean</span>[<span class="hljs-number">1</span>], (s, i) -&gt; {
-                             <span class="hljs-keyword">boolean</span> res = s[<span class="hljs-number">0</span>];
-                             s[<span class="hljs-number">0</span>] = <span class="hljs-keyword">true</span>;
-                             <span class="hljs-keyword">return</span> !res;
-                         });
-}
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token class-name">FunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">StreamStage</span><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">,</span> <span class="token class-name">StreamStage</span><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span><span class="token punctuation">></span></span>
+<span class="token function">deduplicationWindow</span><span class="token punctuation">(</span><span class="token keyword">long</span> window<span class="token punctuation">,</span> <span class="token class-name">FunctionEx</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">></span></span> extractor<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> stage <span class="token operator">-></span> stage<span class="token punctuation">.</span><span class="token function">groupingKey</span><span class="token punctuation">(</span>extractor<span class="token punctuation">)</span>
+                         <span class="token punctuation">.</span><span class="token function">filterStateful</span><span class="token punctuation">(</span>window<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token keyword">boolean</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>s<span class="token punctuation">,</span> i<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
+                             <span class="token keyword">boolean</span> res <span class="token operator">=</span> s<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+                             s<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+                             <span class="token keyword">return</span> <span class="token operator">!</span>res<span class="token punctuation">;</span>
+                         <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
 </code></pre>
 <p>Whenever you need to add deduplication into a pipeline, you can simply call:</p>
-<pre><code class="hljs css language-java">pipelineStage.apply(
-    StreamUtils.deduplicationWindow(WINDOW_LENGTH, ID_EXTRACTOR_FUNCTION)
-)
-[...]
+<pre><code class="hljs css language-java">pipelineStage<span class="token punctuation">.</span><span class="token function">apply</span><span class="token punctuation">(</span>
+    <span class="token class-name">StreamUtils</span><span class="token punctuation">.</span><span class="token function">deduplicationWindow</span><span class="token punctuation">(</span>WINDOW_LENGTH<span class="token punctuation">,</span> ID_EXTRACTOR_FUNCTION<span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
 </code></pre>
 <p>This makes the deduplication logic independent from your business logic
 and you can reuse the same deduplication utility across all your
