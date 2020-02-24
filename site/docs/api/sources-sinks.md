@@ -8,17 +8,17 @@ that you can work with, that are also referred to as _connectors_.
 
 ## Files
 
-File sources generally involve reading a batch of files from either a
-local/network disk or a distributed file system such as Amazon S3 or
-Hadoop. Most file sources and sinks are batch oriented, but the sinks
-that support _rolling_ capability can also be used as sinks in streaming
-jobs.
+File sources generally involve reading a set of (as in "multiple") files
+from either a local/network disk or a distributed file system such as
+Amazon S3 or Hadoop. Most file sources and sinks are batch oriented, but
+the sinks that support _rolling_ capability can also be used as sinks in
+streaming jobs.
 
 ### Local Disk
 
-The simplest file source is designed to work with a local and network
-file systems. This source is text-oriented and reads the file line by
-line and emits a record per line:
+The simplest file source is designed to work with both local and network
+file systems. This source is text-oriented and reads the files line by
+line and emits a record per line.
 
 ```java
 Pipeline p = Pipeline.create();
@@ -48,7 +48,7 @@ will read a part of the files.
 The file sink, like the source works with text and creates a line of
 output for each record. When the rolling option is used it will roll the
 filename to a new one once the criteria is met. It supports rolling by
-size or date. The following will roll to a new file for every hour:
+size or date. The following will roll to a new file every hour:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -83,7 +83,7 @@ p.readFrom(Sources.fileWatcher("/home/data"))
 
 [Apache Avro](https://avro.apache.org/) is a binary data storage format
 which is schema based. The connectors are similar to the local file
-connectors, but works with binary files stored in _Avro Object Container
+connectors, but work with binary files stored in _Avro Object Container
 File_ format.
 
 To use the Avro connector, you need to add the `hazelcast-jet-avro`
@@ -131,7 +131,7 @@ p.writeTo(AvroSinks.files(DIRECTORY_NAME, Person.getClassSchema()), Person.class
 
 You can use Hadoop connector to read/write files from/to Hadoop
 Distributed File System (HDFS), local file system, or any other system
-which has Hadoop connectors including various cloud storages. Jet was
+which has Hadoop connectors, including various cloud storages. Jet was
 tested with:
 
 * Amazon S3
@@ -150,6 +150,14 @@ For example, to do a canonical word count on a Hadoop data source,
 we can use the following pipeline:
 
 ```java
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+// ...
+
 Job job = Job.getInstance();
 job.setInputFormatClass(TextInputFormat.class);
 job.setOutputFormatClass(TextOutputFormat.class);
@@ -159,7 +167,7 @@ Configuration configuration = job.getConfiguration();
 
 Pipeline p = Pipeline.create();
 p.readFrom(HadoopSources.inputFormat(configuration, (k, v) -> v.toString()))
- .flatMap(line -> traverseArray(line.toLowerCase().split("\\W+"))))
+ .flatMap(line -> traverseArray(line.toLowerCase().split("\\W+")))
  .groupingKey(word -> word)
  .aggregate(AggregateOperations.counting())
  .writeTo(HadoopSinks.outputFormat(configuration));
@@ -233,10 +241,10 @@ starting Jet.
 The Amazon S3 connectors are text-based connectors that can read and
 write files to Amazon S3 storage.
 
-The connectors expect the user to provide either an S3Client client
-instance or credentials (or using the default ones) to create the
-client. The source and sink assume the data is in the form of plain text
-and emit/receive data items which represent individual lines of text.
+The connectors expect the user to provide either an `S3Client` instance
+or credentials (or using the default ones) to create the client. The
+source and sink assume the data is in the form of plain text and
+emit/receive data items which represent individual lines of text.
 
 ```java
 AwsBasicCredentials credentials = AwsBasicCredentials.create("accessKeyId", "accessKeySecret");
@@ -261,16 +269,16 @@ p.readFrom(TestSources.items("the", "brown", "fox"))
 ```
 
 The sink creates an object in the bucket for each processor instance.
-Name of the file will include a user provided prefix (if defined) and
-followed by the processor’s global index, for example the processor
+Name of the file will include a user provided prefix (if defined),
+followed by the processor’s global index. For example the processor
 having the index `2` with prefix `my-object-` will create the object
 `my-object-2`.
 
-S3 sink uses multi-part upload feature of S3 SDK. The sink buffers the
-items to parts and uploads them after buffer reaches to the threshold.
-The multi-part upload is completed when the job completes and makes the
-objects available on the S3. Since a streaming jobs never complete, S3
-sink is not currently applicable to streaming jobs.
+S3 sink uses the multi-part upload feature of S3 SDK. The sink buffers
+the items to parts and uploads them after buffer reaches to the
+threshold. The multi-part upload is completed when the job completes and
+makes the objects available on the S3. Since a streaming jobs never
+complete, S3 sink is not currently applicable to streaming jobs.
 
 To use the S3 connector, you need to add the `hazelcast-jet-s3`
 module to the `lib` folder and the following dependency to your
@@ -309,8 +317,8 @@ real time.
 
 Apache Kafka is a popular distributed, persistent log store which is a
 great fit for stream processing systems. Data in Kafka is structured
-as _topics_ and each topic consists of 1 or partitions, stored in the Kafka
-cluster.
+as _topics_ and each topic consists of one or more partitions, stored in
+the Kafka cluster.
 
 To read from Kafka, the only requirements are to provide deserializers
 and a topic name:
@@ -379,14 +387,16 @@ it's possible to replay data - which enables fault-tolerance. If the job
 has a processing guarantee configured, then Jet will periodically save
 the current offsets internally and then replay from the saved offset
 when the job is restarted. In this mode, Jet will manually track and
-commit offsets, without interacting with consumer groups feature of Kafka.
+commit offsets, without interacting with the consumer groups feature of
+Kafka.
 
 If processing guarantee is disabled, the source will start reading from
 default offsets (based on the `auto.offset.reset property`). You can
 enable offset committing by assigning a `group.id`, enabling auto offset
 committing using `enable.auto.commit` and configuring
-`auto.commit.interval.ms` in the given properties. Refer to Kafka
-documentation for the descriptions of these properties.
+`auto.commit.interval.ms` in the given properties. Refer to
+[Kafka documentation](https://kafka.apache.org/22/documentation.html)
+for the descriptions of these properties.
 
 #### Transactional guarantees
 

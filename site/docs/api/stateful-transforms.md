@@ -335,7 +335,7 @@ and end events:
 ```java
 p.readFrom(KafkaSources.kafka(.., "transaction-events"))
  .withNativeTimestamps(0)
- .groupingKey(TransactionEvent::transactionId)
+ .groupingKey(event -> event.getTransactionId())
  .mapStateful(MINUTES.toMillis(10),
    () -> new TransactionEvent[2],
    (state, id, event) -> {
