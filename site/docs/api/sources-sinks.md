@@ -585,6 +585,8 @@ to listen for all events by adding additional parameters to the source.
 The event journal is fault tolerant and supports exactly-once
 processing.
 
+For a full example, please see the [Stream Changes From IMap tutorial.](../tutorials/stream-imap)
+
 #### Map Sink
 
 By default, map sink expects items of type `Entry<Key, Value>` and will
@@ -729,7 +731,7 @@ the other cluster.
 
 ```java
 ClientConfig cfg = new ClientConfig();
-cfg.setClusterName("myGroup");
+cfg.setClusterName("cluster-name");
 cfg.getNetworkConfig().addAddress("node1.mydomain.com", "node2.mydomain.com");
 
 Pipeline p = Pipeline.create();

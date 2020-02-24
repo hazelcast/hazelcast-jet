@@ -1,5 +1,5 @@
 ---
-title: Stream changes from IMap
+title: Stream Changes from IMap
 id: stream-imap
 ---
 
