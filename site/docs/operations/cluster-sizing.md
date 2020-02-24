@@ -143,7 +143,7 @@ Don't rely just on CPU usage when benchmarking your cluster. Simulate
 production workload and measure the throughput and latency instead. The
 task manager of Jet can be configured to use the CPU aggressively as
 shown in [this
-benchmark](](https://hazelcast.com/blog/idle-green-threads-in-jet/)):
+benchmark](https://hazelcast.com/blog/idle-green-threads-in-jet/):
 the CPU usage was close to 20% with just 1000 events/s. At 1m items/s
 the CPU usage was 100% even though Jet still could push around 5m
 items/s on that machine.

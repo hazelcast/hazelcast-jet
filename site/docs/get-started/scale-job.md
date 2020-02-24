@@ -90,13 +90,13 @@ default, which is IP multicast.
 The job is now running on both nodes, but the log output is still
 appearing on just one of them. This is because the test data source is
 non-distributed, and we don't have any steps in the pipeline which
-require data rebalancing. We will explain this later in detail in
-the [distributed computing](../concepts/distributed-computing) section.
+require data rebalancing. We will explain this later in detail in the
+[distributed execution](../architecture/distributed-computing) section.
 
 Another thing you may notice here is that the sequence numbers were
 reset to zero, this is because the test source we're using is not
 fault-tolerant. This is explained in detail in the [fault
-tolerance](concepts/fault-tolerance) section.
+tolerance](../concepts/processing-guarantees) section.
 
 ## Terminate one of the nodes
 
@@ -108,5 +108,5 @@ running on the remaining nodes.
 
 You have now successfully deployed and scaled your first distributed
 data pipeline. The next step is getting a deeper understanding of the
-[Pipeline API](../reference) which will allow you to write more complex
+[Pipeline API](../api/pipeline) which will allow you to write more complex
 data transforms.
