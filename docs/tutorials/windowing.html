@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Windowed Aggregation · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="TODO"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Windowed Aggregation · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="TODO"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Windowed Aggregation · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="As we&#x27;ve seen in the guide for"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Windowed Aggregation · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="As we&#x27;ve seen in the guide for"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -62,8 +62,119 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/tutorials/windowing.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Windowed Aggregation</h1></header><article><div><span><p>TODO</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/python"><span class="arrow-prev">← </span><span>Apply Transforms using Python</span></a><a class="docs-next button" href="/docs/concepts/dag"><span>Directed Acylic Graph (DAG)</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/tutorials/windowing.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Windowed Aggregation</h1></header><article><div><span><p>As we've seen in the guide for
+<a href="/docs/api/stateful-transforms#aggregate">Stateful Transformations</a>
+aggregation is the cornerstone of distributed stream processing. Most of
+the useful things we can achieve with stream processing need one or the
+other form of aggregation.</p>
+<p>By definition aggregation takes a <strong>finite</strong> set of data and produces
+a result from it. In order to make it work with infinite streams, we
+need some way to break up the stream into finite chunks. This is what
+<strong>windowing</strong> does.</p>
+<p>The criteria based on which windowing separates the chunks out of the
+data is <strong>time</strong>, more accurately the timestamp of the input events (
+most of the windows we will going to meet are actually &quot;time windows&quot;).</p>
+<p>For details on what timestamps are usually being used see the
+<a href="/docs/concepts/event-time">Streaming and Event Time</a> section.</p>
+<h2><a class="anchor" aria-hidden="true" id="add-timestamps-to-the-stream"></a><a href="#add-timestamps-to-the-stream" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Add Timestamps to the Stream</h2>
+<p>According to what we have discussed so far, in order to use aggregation
+in an infinite stream, the first thing you need to do in Jet is to make
+sure that your stream has timestamps.</p>
+<p>As we have seen in the <a href="/docs/api/pipeline">Building Pipelines</a> section
+you can obtain a
+<a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html">SourceStreamStage</a>
+with a call like <code>pipeline.drawFrom(someStreamSource)</code>.</p>
+<p><code>SourceStreamStage</code> in turn offers various methods to assign
+timestamps to your events. To just name a few:</p>
+<ul>
+<li><p><code>withNativeTimestamps()</code> declares that the stream will use the
+source's native timestamps. This typically refers to the timestamps
+that the external source system sets on each event. Keep in mind
+that not all types of sources are capable to provide such native
+timestamps.</p></li>
+<li><p><code>withIngestionTimestamp()</code> declares that the source will assign the
+time of observing the event, so the &quot;processing time&quot;, as the event's
+timestamp.</p></li>
+</ul>
+<p>We also have the option of not using timestamps at all (if we don't
+intend to do any aggregation), or to use any arbitrary function to
+extract a timestamp from the events. We can also specify an
+&quot;allowed lag&quot; after which late events will be discarded. For further
+details consult the
+<a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StreamSourceStage.html">javadoc</a>
+.</p>
+<h2><a class="anchor" aria-hidden="true" id="specify-the-window"></a><a href="#specify-the-window" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Specify the Window</h2>
+<p>Let's illustrate how windows are set in Jet, via an example. Let's say
+we want to analyse word frequencies in a bunch of tweets. First we need
+a source stage:</p>
+<pre><code class="hljs css language-java">StreamStage&lt;Tweet&gt; tweets = p.drawFrom(twitterStream())
+      .withTimestamps(Tweet::timestamp, SECONDS.toMillis(<span class="hljs-number">5</span>));
+</code></pre>
+<p>We have specified two things: how to extract the timestamp and how much
+event &quot;lateness&quot; we want to tolerate. We said that any event we receive
+can be at most five seconds behind the highest timestamp we have
+already received. If it’s older than that, we’ll ignore it. On the flip
+side, this means that we’ll have to wait for an event that has occurred
+five seconds after the given window’s end before we can assume we have
+all the data to emit that result. More about that in the
+<a href="#get-early-results">section about early results</a>.</p>
+<p>Now that we have the timestamps we can go ahead and specify the window:</p>
+<pre><code class="hljs css language-java">StageWithWindow&lt;Twee&gt; windowedTweets = tweets
+      .window(sliding(MINUTES.toMillis(<span class="hljs-number">1</span>), SECONDS.toMillis(<span class="hljs-number">1</span>)))
+</code></pre>
+<p>We have just told Jet to do our processing on events that have occurred
+within the last minute and update the result every second. More about
+available types of windows in <a href="#types-of-windows">following sections</a>.</p>
+<h2><a class="anchor" aria-hidden="true" id="apply-the-aggregation"></a><a href="#apply-the-aggregation" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Apply the Aggregation</h2>
+<p>Having assigned timestamps to events and defined windows we can now add
+the rest of our processing logic, including aggregations:</p>
+<pre><code class="hljs css language-java">windowedTweets
+      .flatMap(tweet -&gt; traverseArray(tweet.text().toLowerCase().split(<span class="hljs-string">"\\W+"</span>)))
+      .filter(word -&gt; !word.isEmpty())
+      .groupingKey(wholeItem())
+      .aggregate(counting())
+      .drainTo(Sinks.logger());
+</code></pre>
+<p>The <code>aggregate</code> operation we have called here is in fact the one defined
+in
+<a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/StageWithKeyAndWindow.html#aggregate-com.hazelcast.jet.aggregate.AggregateOperation1-">StageWithKeyAndWindow</a>
+. As windows become completed it emits <code>KeyedWindowResult</code> objects
+containing the result of the aggregate operation (on the input items
+that belong to the particular window) and the timestamp denoting the
+window's ending time.</p>
+<h2><a class="anchor" aria-hidden="true" id="types-of-windows"></a><a href="#types-of-windows" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Types of Windows</h2>
+<p>Jet supports following types of windows:</p>
+<ul>
+<li><a href="/docs/api/stateful-transforms#tumblingwindow">tumbling window</a></li>
+<li><a href="/docs/api/stateful-transforms#slidingwindow">sliding window</a></li>
+<li><a href="/docs/api/stateful-transforms#sessionwindow">session window</a></li>
+</ul>
+<h2><a class="anchor" aria-hidden="true" id="get-early-results"></a><a href="#get-early-results" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Get Early Results</h2>
+<p>Results for windows are emitted when Jet considers the window closed.
+This decision is made based on the &quot;watermark&quot;. It is a timestamped item
+Jet inserts into the stream that says &quot;from this point on there will be
+no more items with timestamp less than this&quot;.</p>
+<p>The watermark could be as simple as &quot;the most recent timestamp observed
+in any event&quot;. Depending on the source it could be something more
+sophisticated too, but in essence it is related to the &quot;current value&quot;
+of (event) time.</p>
+<p>Completion of a window being dependent on the watermark, window lengths
+being potentially large, allowing for significantly late events can all
+add up to long delays until we get some results. We may want to track
+the progress of a window while it's still accumulating events.</p>
+<p>You can tell Jet to give you, at regular intervals, the current status
+on all the windows it has some data for, but aren’t yet complete. For
+our example of trending words the window definition would need to change
+like this:</p>
+<pre><code class="hljs css language-java">StageWithWindow&lt;Twee&gt; windowedTweets = tweets
+    .window(sliding(MINUTES.toMillis(<span class="hljs-number">1</span>), SECONDS.toMillis(<span class="hljs-number">1</span>))
+        .setEarlyResultsPeriod(SECONDS.toMillis(<span class="hljs-number">1</span>)))
+</code></pre>
+<p>The <code>KeyedWindowResult</code> objects we will get also have an
+<a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/datamodel/WindowResult.html#isEarly--">isEarly()</a>
+property which can be used to distinguish between early and final
+results.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/python"><span class="arrow-prev">← </span><span>Apply Transforms using Python</span></a><a class="docs-next button" href="/docs/concepts/dag"><span>Directed Acylic Graph (DAG)</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#add-timestamps-to-the-stream">Add Timestamps to the Stream</a></li><li><a href="#specify-the-window">Specify the Window</a></li><li><a href="#apply-the-aggregation">Apply the Aggregation</a></li><li><a href="#types-of-windows">Types of Windows</a></li><li><a href="#get-early-results">Get Early Results</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/distributed-computing">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
