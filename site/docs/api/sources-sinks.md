@@ -511,7 +511,7 @@ If you have no processing guarantee enabled, the processor will consume
 the messages in `DUPS_OK_ACKNOWLEDGE` mode, and otherwise will only
 acknowledge messages in transactions in the 2nd phase of the snapshot,
 that is after all downstream stages (including any sinks) fully
-processed the messages. Additionally, if the exactly-pnce processing
+processed the messages. Additionally, if the exactly-once processing
 guarantee is used, the processor will store message IDs of the
 unacknowledged messages to the snapshot and should the job fail after
 the snapshot was successful, but before Jet managed to acknowledge the
@@ -526,15 +526,223 @@ otherwise.
 
 >This connector is under incubation.
 
-## In-memory data structures
+## In-memory Data Structures
+
+Jet comes out of the box with some [in-memory distributed data
+structures](data-structures) which can be used as a data source or a
+sink. These sources are useful for caching sources or results to be used
+for further processing, or acting as a glue between different data
+pipelines.
 
 ### IMap
 
-### IList
+[IMap](data-structures) is a distributed in-memory key-value data
+structure with a rich set of features such as indexes, querying and
+persistence. With Jet, it can be used as both a batch or streaming data
+source.
+
+As a batch data source, it's very easy to use without the need for any other
+configuration:
+
+```java
+IMap<String, User> userCache = jet.getMap("usersCache")
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.map(userCache));
+ .writeTo(Sinks.logger()));
+```
+
+#### Event Journal
+
+The map can also be used as a streaming data source by utilizing its so
+called _event journal_. The journal for a map is by default not enabled,
+but can be explicitly enabled with a configuration option in
+`hazelcast.yaml`:
+
+```yaml
+hazelcast:
+  map:
+    name_of_map:
+      event-journal:
+        enabled: true
+        capacity: 100000
+        time-to-live-seconds: 10
+```
+
+We can then modify the previous pipeline to instead stream the changes:
+
+```java
+IMap<String, User> userCache = jet.getMap("usersCache")
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.mapJournal(userCache, START_FROM_OLDEST))
+ .withIngestionTimestamps()
+ .writeTo(Sinks.logger()));
+```
+
+By default, the source will only emit `ADDED` or `UPDATED` events and
+the emitted object will have the key and the new value. You can change
+to listen for all events by adding additional parameters to the source.
+
+The event journal is fault tolerant and supports exactly-once
+processing.
+
+#### Map Sink
+
+By default, map sink expects items of type `Entry<Key, Value>` and will
+simply replace the previous entries, if any. However there's variants of
+this that allow you to do atomic updates to existing entries in the map
+by making use `EntryProcessor` objects.
+
+The updating sinks come in three variants:
+
+1. `mapWithMerging`, where you provide a function that computes the map
+   value from the stream item and a merging function that gets called
+   only if a value already exists in the map. This is similar to the way
+   standard `Map.merge` method behaves. Here’s an example that
+   concatenates String values:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.<String, User>map("userCache"))
+ .map(user -> entry(user.country(), user))
+ .writeTo(Sinks.mapWithMerging("usersByCountry",
+                e -> e.getKey(),
+                e -> e.getValue().name(),
+                (oldValue, newValue) -> oldValue + ", " + newValue)
+        );
+```
+
+2. `mapWithUpdating`, where you provide a single updating function that
+   always gets called. It will be called on the stream item and the
+   existing value, if any. This can be used to add details to an
+   existing object for example. This is similar to the way standard
+   `Map.compute` method behaves. Here's an example that only updates a
+   field:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.<String, User>map("userCacheDetails"))
+ .writeTo(Sinks.mapWithUpdating("userCache",
+        e -> e.getKey(),
+        (oldValue, entry) -> (oldValue != null ? oldValue.setDetails(entry.getValue) : null)
+    );
+```
+
+3. `mapWithEntryProcessor`, where you provide a function that returns a
+   full-blown `EntryProcessor` instance that will be submitted to the
+   map. This is the most general variant. This example takes the
+   values of the map and submits an entry processor that increments the
+   values by 5:
+
+```java
+Pipeline pipeline = Pipeline.create();
+pipeline.readFrom(Sources.<String, Integer>map("input"))
+        .writeTo(Sinks.mapWithEntryProcessor("output",
+                Entry::getKey,
+                entry -> new IncrementEntryProcessor(5)
+        ));
+
+static class IncrementEntryProcessor implements EntryProcessor<String, Integer, Integer> {
+
+    private int incrementBy;
+
+    public IncrementEntryProcessor(int incrementBy) {
+        this.incrementBy = incrementBy;
+    }
+
+    @Override
+    public Integer process(Entry<String, Integer> entry) {
+        return entry.setValue(entry.getValue() + incrementBy);
+    }
+}
+```
+
+#### Predicates and Projections
+
+If your use case calls for some filtering and/or transformation of the
+data you retrieve, you can optimize the pipeline by providing a
+filtering predicate and an arbitrary transformation function to the
+source connector itself and they’ll get applied before the data is
+processed by Jet. This can be advantageous especially in the cases when
+the data source is in another cluster. See the example below:
+
+```java
+IMap<String, Person> personCache = jet.getMap("personCache");
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.map(personCache,
+        Predicates.greaterEqual("age", 21),
+        Projections.singleAttribute("name"))
+);
+```
 
 ### ICache
 
+ICache is mostly equivalent to IMap, the main difference being that it's
+compliant with the JCache standard API. As a sink, since `ICache`
+doesn't support entry processors, only the default variant is available.
+
+### IList
+
+`IList` is a simple data structure which is ordered, and not
+partitioned. All the contents of the `IList` will reside only on one
+member.
+
+The API for it is very limited, but is useful for simple prototyping:
+
+```java
+IList<Integer> inputList = jet.getList("inputList");
+for (int i = 0; i < 10; i++) {
+    inputList.add(i);
+}
+
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.list(inputList))
+ .map(i -> "item-" + i)
+ .writeTo(Sinks.list("resultList"));
+```
+
+List isn't suitable to use as a streaming sink because items are always
+appended and eventually the member will run out of memory.
+
 ### Reliable Topic
+
+Reliable Topic provides a simple pub/sub messaging API which can be
+used as a data sink within Jet.
+
+```java
+jet.getReliableTopic("topic")
+    .addMessageListener(message -> System.out.println(message));
+
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.itemStream(100))
+  .withIngestionTimestamps()
+  .writeTo(Sinks.reliableTopic("topic"));
+```
+
+A simple example is supplied above. For a more advanced version, also
+see [Observables](#observable)
+
+### Local vs Remote
+
+It's possible to use the data structures that are part of the same Jet
+cluster, and share the same memory and computation resources with
+running jobs. For a more in-depth discussion on this topic, please see
+the [In-memory Storage](../architecture/in-memory-storage) section.
+
+Alternatively, Jet can also read from or write to data structures from
+other Hazelcast or Jet clusters, using the _remote_ sinks and sources.
+When reading or writing to remote sources, Jet internally creates a
+client using the supplied configuration and will create connections to
+the other cluster.
+
+```java
+ClientConfig cfg = new ClientConfig();
+cfg.setClusterName("myGroup");
+cfg.getNetworkConfig().addAddress("node1.mydomain.com", "node2.mydomain.com");
+
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.remoteMap("inputMap", cfg));
+...
+```
 
 ## Databases
 
@@ -588,9 +796,14 @@ otherwise.
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
 |`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
 |`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
+|`Sources.cache`|`hazelcast-jet`|batch|N/A|
+|`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
 |`Sources.fileWatcher`|`hazelcast-jet`|stream|none|
 |`Sources.jmsQueue`|`hazelcast-jet`|stream|exactly-once|
+|`Sources.list`|`hazelcast-jet`|batch|N/A|
+|`Sources.map`|`hazelcast-jet`|batch|N/A|
+|`Sources.mapJournal`|`hazelcast-jet`|stream|exactly-once|
 
 ### Sinks
 
@@ -600,8 +813,12 @@ otherwise.
 |`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
 |`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
 |`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
+|`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
 |`Sinks.jmsQueue`|`hazelcast-jet`|yes|at-least-once|
+|`Sinks.list`|`hazelcast-jet`|no|N/A|
+|`Sinks.map`|`hazelcast-jet`|yes|at-least-once|
+|`Sinks.reliableTopic`|`hazelcast-jet`|yes|at-least-once|
 
 ## Custom Sources and Sinks
 

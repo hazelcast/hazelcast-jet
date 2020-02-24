@@ -25,12 +25,13 @@ configuration), add following to your Jet member config, in your
 (`config/hazelcast.yaml` by default):
 
 ```yaml
-map:
-name_of_map:
-  event-journal:
-    enabled: true
-    capacity: 1000
-    time-to-live-seconds: 10
+hazelcast:
+  map:
+    name_of_map:
+      event-journal:
+        enabled: true
+        capacity: 100000
+        time-to-live-seconds: 10
 ```
 
 Take care to obtain your Jet instance in code like this:
