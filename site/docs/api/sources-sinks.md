@@ -605,10 +605,10 @@ Pipeline p = Pipeline.create();
 p.readFrom(Sources.<String, User>map("userCache"))
  .map(user -> entry(user.country(), user))
  .writeTo(Sinks.mapWithMerging("usersByCountry",
-                e -> e.getKey(),
-                e -> e.getValue().name(),
-                (oldValue, newValue) -> oldValue + ", " + newValue)
-        );
+    e -> e.getKey(),
+    e -> e.getValue().name(),
+    (oldValue, newValue) -> oldValue + ", " + newValue)
+  );
 ```
 
 2. `mapWithUpdating`, where you provide a single updating function that
@@ -622,9 +622,9 @@ p.readFrom(Sources.<String, User>map("userCache"))
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.<String, User>map("userCacheDetails"))
  .writeTo(Sinks.mapWithUpdating("userCache",
-        e -> e.getKey(),
-        (oldValue, entry) -> (oldValue != null ? oldValue.setDetails(entry.getValue) : null)
-    );
+    e -> e.getKey(),
+    (oldValue, entry) -> (oldValue != null ? oldValue.setDetails(entry.getValue) : null)
+  );
 ```
 
 3. `mapWithEntryProcessor`, where you provide a function that returns a
@@ -634,24 +634,17 @@ p.readFrom(Sources.<String, User>map("userCacheDetails"))
    values by 5:
 
 ```java
-Pipeline pipeline = Pipeline.create();
-pipeline.readFrom(Sources.<String, Integer>map("input"))
-        .writeTo(Sinks.mapWithEntryProcessor("output",
-                Entry::getKey,
-                entry -> new IncrementEntryProcessor(5)
-        ));
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.<String, Integer>map("input"))
+ .writeTo(Sinks.mapWithEntryProcessor("output",
+    entry -> entry.getKey(),
+    entry -> new IncrementEntryProcessor())
+  );
 
 static class IncrementEntryProcessor implements EntryProcessor<String, Integer, Integer> {
-
-    private int incrementBy;
-
-    public IncrementEntryProcessor(int incrementBy) {
-        this.incrementBy = incrementBy;
-    }
-
     @Override
     public Integer process(Entry<String, Integer> entry) {
-        return entry.setValue(entry.getValue() + incrementBy);
+        return entry.setValue(entry.getValue() + 5);
     }
 }
 ```
@@ -669,8 +662,8 @@ the data source is in another cluster. See the example below:
 IMap<String, Person> personCache = jet.getMap("personCache");
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.map(personCache,
-        Predicates.greaterEqual("age", 21),
-        Projections.singleAttribute("name"))
+    Predicates.greaterEqual("age", 21),
+    Projections.singleAttribute("name"))
 );
 ```
 
