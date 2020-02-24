@@ -124,9 +124,9 @@
      color: #a9b7c6;
  }
 
- .token.punctuation {
+ /* .token.punctuation {
     color: #e8bf6a;
-}
+} */
 
  
  .token.generics > .token.class-name {
