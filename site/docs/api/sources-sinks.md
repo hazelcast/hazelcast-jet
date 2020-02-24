@@ -458,13 +458,12 @@ p.readFrom(Sources.jmsTopicBuilder(() ->
  .writeTo(Sinks.logger());
 ```
 
-The JMS topic, if not consumed by a shared consumer, is a
-non-distributed source. If messages are consumed by multiple consumers,
-all of them will get the same messages. Therefore the source operates
-on a single member with local parallelism of 1. If you create a shared
-consumer in the `consumerFn`, you should call `sharedConsumer(true)` on
-the builder, as in the sample code above. For a queue we always assume
-a shared consumer.
+It is recommended to use the JMS topic with a shared consumer so that
+multiple Jet nodes can read in parallel, otherwise a global parallelism
+of 1 will be used, meaning only a single node will receive all the
+messages. When you create a shared consumer in the `consumerFn`, you
+should also call `sharedConsumer(true)` on the builder, as in the sample
+code above. For a queue we always assume a shared consumer.
 
 #### Using as a sink
 
@@ -570,6 +569,8 @@ otherwise.
 
 ### Test Sources
 
+### Observables
+
 ### Socket
 
 ### Twitter
@@ -588,7 +589,7 @@ otherwise.
 |`KafkaSources.kafka`|`hazelcast-jet-kafka`|stream|exactly-once|
 |`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
-|`Sources.fileWatcher`|`hazelcast-jet`|stream|N/A|
+|`Sources.fileWatcher`|`hazelcast-jet`|stream|none|
 |`Sources.jmsQueue`|`hazelcast-jet`|stream|exactly-once|
 
 ### Sinks
