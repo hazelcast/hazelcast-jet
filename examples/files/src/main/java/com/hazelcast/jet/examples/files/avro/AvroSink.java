@@ -48,9 +48,10 @@ public class AvroSink {
     private static Pipeline buildPipeline() {
         Pipeline p = Pipeline.create();
 
+        Schema schema = schemaForUser();
         p.readFrom(Sources.<String, User>map(MAP_NAME))
          .map(Map.Entry::getValue)
-         .writeTo(AvroSinks.files(DIRECTORY_NAME, AvroSink::schemaForUser, User.class));
+         .writeTo(AvroSinks.files(DIRECTORY_NAME, User.class, schema));
 
         return p;
     }
@@ -69,8 +70,7 @@ public class AvroSink {
     }
 
     private void setup() {
-        jet = Jet.newJetInstance();
-        Jet.newJetInstance();
+        jet = Jet.bootstrappedInstance();
 
         IMap<String, User> map = jet.getMap(MAP_NAME);
         for (int i = 0; i < 100; i++) {

@@ -16,9 +16,9 @@
 package com.hazelcast.jet.python;
 
 import com.hazelcast.function.FunctionEx;
+import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.StreamStage;
-import com.hazelcast.spi.annotation.Beta;
 
 import javax.annotation.Nonnull;
 
@@ -32,7 +32,7 @@ import javax.annotation.Nonnull;
  *
  * @since 4.0
  */
-@Beta
+@EvolvingApi
 public final class PythonTransforms {
 
     private PythonTransforms() {
@@ -85,7 +85,7 @@ public final class PythonTransforms {
     ) {
         return s -> s
                 .mapUsingServiceAsyncBatched(PythonService.factory(cfg), Integer.MAX_VALUE, PythonService::sendRequest)
-                .setName("mapUsingPython");
+                .setName("mapUsingPythonBatch");
     }
 
     /**
@@ -107,6 +107,6 @@ public final class PythonTransforms {
         return s -> s
                 .groupingKey(keyFn)
                 .mapUsingServiceAsyncBatched(PythonService.factory(cfg), Integer.MAX_VALUE, PythonService::sendRequest)
-                .setName("mapUsingPython");
+                .setName("mapUsingPythonBatch");
     }
 }
