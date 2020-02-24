@@ -30,6 +30,12 @@ $ yarn start
 npm run lint:markdown
 ```
 
+1. Run Link Checker
+
+```sh
+npm run link-checker
+```
+
 ## Directory Structure
 
 Your project file structure should look something like this

@@ -3,7 +3,7 @@
     "examples": "docusaurus-examples",
     "start": "docusaurus-start",
     "build": "docusaurus-build",
-    "link-check": "blc http://localhost:3000 -ro",
+    "link-check": "concurrently --names 'SERVER,LINK_CHECKER' --prefix-colors 'yellow,red' --kill-others 'docusaurus-start' 'wait-on http://localhost:3000 && blc http://localhost:3000 -ro'",
     "publish-gh-pages": "docusaurus-publish",
     "write-translations": "docusaurus-write-translations",
     "version": "docusaurus-version",
@@ -27,6 +27,10 @@
     "lint-staged": "^8.1.0",
     "markdownlint": "^0.11.0",
     "markdownlint-cli": "^0.13.0",
-    "markdownlint-rule-emphasis-style": "^1.0.0"
+    "markdownlint-rule-emphasis-style": "^1.0.0",
+    "wait-on": "^4.0.0"
+  },
+  "dependencies": {
+    "concurrently": "^5.1.0"
   }
 }
