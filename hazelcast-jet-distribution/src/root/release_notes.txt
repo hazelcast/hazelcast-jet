@@ -79,6 +79,7 @@ The label in the brackets refer to the respective module.
 [core] Avoid nested wildcards in flatMap [#1736]
 [core] Use Context object instead of writer in SinkBuilder [#1785]
 [core] Some options from JMS source and sink are removed to support ex-once processing [#1804]
+[avro] AvroSink should take simple Schema instead of Supplier<Schema> [#2005]
 [hadoop] Hadoop source/sink now named as HadoopSources.inputFormat/outputFormat()
 [licensing] Move connectors and plugins to the Hazelcast Community License [#1892]
 
