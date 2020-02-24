@@ -107,7 +107,7 @@ details consult the
 <p>Let's illustrate how windows are set in Jet, via an example. Let's say
 we want to analyse word frequencies in a bunch of tweets. First we need
 a source stage:</p>
-<pre><code class="hljs css language-java">StreamStage&lt;Tweet&gt; tweets = p.drawFrom(twitterStream())
+<pre><code class="hljs css language-java">StreamStage&lt;Tweet&gt; tweets = p.readFrom(twitterStream())
       .withTimestamps(Tweet::timestamp, SECONDS.toMillis(<span class="hljs-number">5</span>));
 </code></pre>
 <p>We have specified two things: how to extract the timestamp and how much
