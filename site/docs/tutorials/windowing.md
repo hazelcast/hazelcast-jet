@@ -76,7 +76,7 @@ all the data to emit that result. More about that in the
 Now that we have the timestamps we can go ahead and specify the window:
 
 ```java
-StageWithWindow<Twee> windowedTweets = tweets
+StageWithWindow<Tweet> windowedTweets = tweets
       .window(sliding(MINUTES.toMillis(1), SECONDS.toMillis(1)))
 ```
 
@@ -137,7 +137,7 @@ our example of trending words the window definition would need to change
 like this:
 
 ```java
-StageWithWindow<Twee> windowedTweets = tweets
+StageWithWindow<Tweet> windowedTweets = tweets
     .window(sliding(MINUTES.toMillis(1), SECONDS.toMillis(1))
         .setEarlyResultsPeriod(SECONDS.toMillis(1)))
 ```
