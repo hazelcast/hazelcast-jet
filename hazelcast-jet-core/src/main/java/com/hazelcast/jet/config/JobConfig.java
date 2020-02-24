@@ -258,6 +258,11 @@ public class JobConfig implements IdentifiedDataSerializable {
      * <p>
      * See also {@link #addJar} and {@link #addClasspathResource}.
      *
+     * @implNote Backing storage for this method is an {@link IMap} with a
+     * default backup count of 1. When adding big files as a resource, size
+     * the cluster accordingly in terms of memory, since each file will hav
+     * copies inside the cluster(primary + backup replica).
+     *
      * @return {@code this} instance for fluent API
      */
     @Nonnull
