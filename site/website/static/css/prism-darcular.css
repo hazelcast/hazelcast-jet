@@ -123,7 +123,16 @@
  .token.function {
      color: #a9b7c6;
  }
+
+ .token.punctuation {
+    color: #e8bf6a;
+}
+
  
+ .token.generics > .token.class-name {
+    color: darkkhaki;
+}
+
  .token.regex {
      background: #364135;
  }
