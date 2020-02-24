@@ -314,7 +314,7 @@ times out before emitting the results.</p>
 and end events:</p>
 <pre><code class="hljs css language-java">p.readFrom(KafkaSources.kafka(.., <span class="hljs-string">"transaction-events"</span>))
  .withNativeTimestamps(<span class="hljs-number">0</span>)
- .groupingKey(TransactionEvent::transactionId)
+ .groupingKey(event -&gt; event.getTransactionId())
  .mapStateful(MINUTES.toMillis(<span class="hljs-number">10</span>),
    () -&gt; <span class="hljs-keyword">new</span> TransactionEvent[<span class="hljs-number">2</span>],
    (state, id, event) -&gt; {

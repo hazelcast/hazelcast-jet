@@ -65,15 +65,15 @@
         </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><h1 id="__docusaurus" class="postHeaderTitle">Sources and Sinks</h1></header><article><div><span><p>Hazelcast Jet comes out of the box with many different sources and sinks
 that you can work with, that are also referred to as <em>connectors</em>.</p>
 <h2><a class="anchor" aria-hidden="true" id="files"></a><a href="#files" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Files</h2>
-<p>File sources generally involve reading a batch of files from either a
-local/network disk or a distributed file system such as Amazon S3 or
-Hadoop. Most file sources and sinks are batch oriented, but the sinks
-that support <em>rolling</em> capability can also be used as sinks in streaming
-jobs.</p>
+<p>File sources generally involve reading a set of (as in &quot;multiple&quot;) files
+from either a local/network disk or a distributed file system such as
+Amazon S3 or Hadoop. Most file sources and sinks are batch oriented, but
+the sinks that support <em>rolling</em> capability can also be used as sinks in
+streaming jobs.</p>
 <h3><a class="anchor" aria-hidden="true" id="local-disk"></a><a href="#local-disk" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Local Disk</h3>
-<p>The simplest file source is designed to work with a local and network
-file systems. This source is text-oriented and reads the file line by
-line and emits a record per line:</p>
+<p>The simplest file source is designed to work with both local and network
+file systems. This source is text-oriented and reads the files line by
+line and emits a record per line.</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 p.readFrom(Sources.files(<span class="hljs-string">"/home/data/web-logs"</span>))
  .map(line -&gt; LogParser.parse(line))
@@ -95,7 +95,7 @@ will read a part of the files.</p>
 <p>The file sink, like the source works with text and creates a line of
 output for each record. When the rolling option is used it will roll the
 filename to a new one once the criteria is met. It supports rolling by
-size or date. The following will roll to a new file for every hour:</p>
+size or date. The following will roll to a new file every hour:</p>
 <pre><code class="hljs css language-java">Pipeline p = Pipeline.create();
 p.readFrom(TestSources.itemStream(<span class="hljs-number">100</span>))
  .withoutTimestamps()
@@ -120,7 +120,7 @@ p.readFrom(Sources.fileWatcher(<span class="hljs-string">"/home/data"</span>))
 <h3><a class="anchor" aria-hidden="true" id="apache-avro"></a><a href="#apache-avro" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Apache Avro</h3>
 <p><a href="https://avro.apache.org/">Apache Avro</a> is a binary data storage format
 which is schema based. The connectors are similar to the local file
-connectors, but works with binary files stored in <em>Avro Object Container
+connectors, but work with binary files stored in <em>Avro Object Container
 File</em> format.</p>
 <p>To use the Avro connector, you need to add the <code>hazelcast-jet-avro</code>
 module to the <code>lib</code> folder and the following dependency to your
@@ -141,7 +141,7 @@ p.readFrom(AvroSources.files(<span class="hljs-string">"/home/data"</span>, Pers
 <h3><a class="anchor" aria-hidden="true" id="hadoop-inputformatoutputformat"></a><a href="#hadoop-inputformatoutputformat" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Hadoop InputFormat/OutputFormat</h3>
 <p>You can use Hadoop connector to read/write files from/to Hadoop
 Distributed File System (HDFS), local file system, or any other system
-which has Hadoop connectors including various cloud storages. Jet was
+which has Hadoop connectors, including various cloud storages. Jet was
 tested with:</p>
 <ul>
 <li>Amazon S3</li>
@@ -157,7 +157,15 @@ the required inputs and outputs. You can share the same <code>Configuration</cod
 instance between several source/sink instances.</p>
 <p>For example, to do a canonical word count on a Hadoop data source,
 we can use the following pipeline:</p>
-<pre><code class="hljs css language-java">Job job = Job.getInstance();
+<pre><code class="hljs css language-java"><span class="hljs-keyword">import</span> org.apache.hadoop.fs.Path;
+<span class="hljs-keyword">import</span> org.apache.hadoop.conf.Configuration;
+<span class="hljs-keyword">import</span> org.apache.hadoop.mapreduce.Job;
+<span class="hljs-keyword">import</span> org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+<span class="hljs-keyword">import</span> org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+<span class="hljs-comment">// ...</span>
+
+Job job = Job.getInstance();
 job.setInputFormatClass(TextInputFormat<span class="hljs-class">.<span class="hljs-keyword">class</span>)</span>;
 job.setOutputFormatClass(TextOutputFormat<span class="hljs-class">.<span class="hljs-keyword">class</span>)</span>;
 TextInputFormat.addInputPath(job, <span class="hljs-keyword">new</span> Path(<span class="hljs-string">"input-path"</span>));
@@ -166,7 +174,7 @@ Configuration configuration = job.getConfiguration();
 
 Pipeline p = Pipeline.create();
 p.readFrom(HadoopSources.inputFormat(configuration, (k, v) -&gt; v.toString()))
- .flatMap(line -&gt; traverseArray(line.toLowerCase().split(<span class="hljs-string">"\\W+"</span>))))
+ .flatMap(line -&gt; traverseArray(line.toLowerCase().split(<span class="hljs-string">"\\W+"</span>)))
  .groupingKey(word -&gt; word)
  .aggregate(AggregateOperations.counting())
  .writeTo(HadoopSinks.outputFormat(configuration));
@@ -209,10 +217,10 @@ starting Jet.</p>
 <h3><a class="anchor" aria-hidden="true" id="amazon-s3"></a><a href="#amazon-s3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Amazon S3</h3>
 <p>The Amazon S3 connectors are text-based connectors that can read and
 write files to Amazon S3 storage.</p>
-<p>The connectors expect the user to provide either an S3Client client
-instance or credentials (or using the default ones) to create the
-client. The source and sink assume the data is in the form of plain text
-and emit/receive data items which represent individual lines of text.</p>
+<p>The connectors expect the user to provide either an <code>S3Client</code> instance
+or credentials (or using the default ones) to create the client. The
+source and sink assume the data is in the form of plain text and
+emit/receive data items which represent individual lines of text.</p>
 <pre><code class="hljs css language-java">AwsBasicCredentials credentials = AwsBasicCredentials.create(<span class="hljs-string">"accessKeyId"</span>, <span class="hljs-string">"accessKeySecret"</span>);
 S3Client s3 = S3Client.builder()
     .credentialsProvider(StaticCredentialsProvider.create(credentials))
@@ -231,15 +239,15 @@ p.readFrom(TestSources.items(<span class="hljs-string">"the"</span>, <span class
  .writeTo(S3Sinks.s3(<span class="hljs-string">"output-bucket"</span>, () -&gt; S3Client.create()));
 </code></pre>
 <p>The sink creates an object in the bucket for each processor instance.
-Name of the file will include a user provided prefix (if defined) and
-followed by the processor’s global index, for example the processor
+Name of the file will include a user provided prefix (if defined),
+followed by the processor’s global index. For example the processor
 having the index <code>2</code> with prefix <code>my-object-</code> will create the object
 <code>my-object-2</code>.</p>
-<p>S3 sink uses multi-part upload feature of S3 SDK. The sink buffers the
-items to parts and uploads them after buffer reaches to the threshold.
-The multi-part upload is completed when the job completes and makes the
-objects available on the S3. Since a streaming jobs never complete, S3
-sink is not currently applicable to streaming jobs.</p>
+<p>S3 sink uses the multi-part upload feature of S3 SDK. The sink buffers
+the items to parts and uploads them after buffer reaches to the
+threshold. The multi-part upload is completed when the job completes and
+makes the objects available on the S3. Since a streaming jobs never
+complete, S3 sink is not currently applicable to streaming jobs.</p>
 <p>To use the S3 connector, you need to add the <code>hazelcast-jet-s3</code>
 module to the <code>lib</code> folder and the following dependency to your
 application:</p>
@@ -255,8 +263,8 @@ real time.</p>
 <h3><a class="anchor" aria-hidden="true" id="apache-kafka"></a><a href="#apache-kafka" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Apache Kafka</h3>
 <p>Apache Kafka is a popular distributed, persistent log store which is a
 great fit for stream processing systems. Data in Kafka is structured
-as <em>topics</em> and each topic consists of 1 or partitions, stored in the Kafka
-cluster.</p>
+as <em>topics</em> and each topic consists of one or more partitions, stored in
+the Kafka cluster.</p>
 <p>To read from Kafka, the only requirements are to provide deserializers
 and a topic name:</p>
 <pre><code class="hljs css language-java">Properties props = <span class="hljs-keyword">new</span> Properties();
@@ -296,13 +304,15 @@ it's possible to replay data - which enables fault-tolerance. If the job
 has a processing guarantee configured, then Jet will periodically save
 the current offsets internally and then replay from the saved offset
 when the job is restarted. In this mode, Jet will manually track and
-commit offsets, without interacting with consumer groups feature of Kafka.</p>
+commit offsets, without interacting with the consumer groups feature of
+Kafka.</p>
 <p>If processing guarantee is disabled, the source will start reading from
 default offsets (based on the <code>auto.offset.reset property</code>). You can
 enable offset committing by assigning a <code>group.id</code>, enabling auto offset
 committing using <code>enable.auto.commit</code> and configuring
-<code>auto.commit.interval.ms</code> in the given properties. Refer to Kafka
-documentation for the descriptions of these properties.</p>
+<code>auto.commit.interval.ms</code> in the given properties. Refer to
+<a href="https://kafka.apache.org/22/documentation.html">Kafka documentation</a>
+for the descriptions of these properties.</p>
 <h4><a class="anchor" aria-hidden="true" id="transactional-guarantees"></a><a href="#transactional-guarantees" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Transactional guarantees</h4>
 <p>As a sink, it provides exactly-once guarantees at the cost of using
 Kafka transactions: Jet commits the produced records after each snapshot
