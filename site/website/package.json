@@ -3,6 +3,7 @@
     "examples": "docusaurus-examples",
     "start": "docusaurus-start",
     "build": "docusaurus-build",
+    "link-check": "blc http://localhost:3000 -ro",
     "publish-gh-pages": "docusaurus-publish",
     "write-translations": "docusaurus-write-translations",
     "version": "docusaurus-version",
@@ -13,18 +14,19 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  },  
+  },
   "lint-staged": {
     "../**/*.md": [
       "npm run lint:markdown"
     ]
   },
   "devDependencies": {
+    "broken-link-checker": "^0.7.8",
     "docusaurus": "^1.14.4",
+    "husky": "^1.0.0-rc.8",
+    "lint-staged": "^8.1.0",
     "markdownlint": "^0.11.0",
     "markdownlint-cli": "^0.13.0",
-    "lint-staged": "^8.1.0",
-    "markdownlint-rule-emphasis-style": "^1.0.0",
-    "husky": "^1.0.0-rc.8"
+    "markdownlint-rule-emphasis-style": "^1.0.0"
   }
 }
