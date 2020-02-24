@@ -478,14 +478,16 @@ using ActiveMQ JMS Client.
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.list("inputList"))
  .writeTo(Sinks.jmsQueue("queue",
-         () -> new ActiveMQConnectionFactory("tcp://localhost:61616")));
+         () -> new ActiveMQConnectionFactory("tcp://localhost:61616"))
+ );
 ```
 
 ```java
 Pipeline p = Pipeline.create();
 p.readFrom(Sources.list("inputList"))
  .writeTo(Sinks.jmsTopic("topic",
-        () -> new ActiveMQConnectionFactory("tcp://localhost:61616")));
+        () -> new ActiveMQConnectionFactory("tcp://localhost:61616"))
+ );
 ```
 
 #### Connection Handling
@@ -705,7 +707,7 @@ used as a data sink within Jet.
 
 ```java
 jet.getReliableTopic("topic")
-    .addMessageListener(message -> System.out.println(message));
+   .addMessageListener(message -> System.out.println(message));
 
 Pipeline p = Pipeline.create();
 p.readFrom(TestSources.itemStream(100))
@@ -716,7 +718,7 @@ p.readFrom(TestSources.itemStream(100))
 A simple example is supplied above. For a more advanced version, also
 see [Observables](#observable)
 
-### Local vs Remote
+### Same vs. Different Cluster
 
 It's possible to use the data structures that are part of the same Jet
 cluster, and share the same memory and computation resources with
@@ -741,7 +743,80 @@ p.readFrom(Sources.remoteMap("inputMap", cfg));
 
 ## Databases
 
+Jet supports a wide variety of relational and NoSQL databases as a data
+source or sink. While most traditional databases are batch oriented,
+there's emerging techniques that allow to bridge the gap to streaming
+which we will explore.
+
 ### JDBC
+
+JDBC is a very well established database API supported by every major
+relational (and many non-relational) database implementation out there
+including Oracle, MySQL, PostgreSQL, Microsoft SQL Server. The libraries
+are typically referred to as _drivers_ and every major database vendor will
+have this driver available for either download or on a package repository
+such as maven.
+
+Jet is able to utilize these drivers both for sources and sinks and the
+only step required is to add the driver to the `lib` folder of Jet or
+submit the driver JAR along with the job.
+
+In the simplest form, to read from a database you simply need to pass
+a query:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.jdbc("jdbc:mysql://localhost:3306/mysql",
+    "SELECT * FROM person",
+    resultSet -> new Person(resultSet.getInt(1), resultSet.getString(2))
+)).writeTo(Sinks.logger());
+```
+
+Jet is also able to distribute a query across multiple nodes by
+customizing a different query per node:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.jdbc(
+    () -> DriverManager.getConnection("jdbc:mysql://localhost:3306/mysql"),
+    (con, parallelism, index) -> {
+        PreparedStatement stmt = con.prepareStatement("SELECT * FROM person WHERE MOD(id, ?) = ?)");
+        stmt.setInt(1, parallelism);
+        stmt.setInt(2, index);
+        return stmt.executeQuery();
+    },
+    resultSet -> new Person(resultSet.getInt(1), resultSet.getString(2))
+)).writeTo(Sinks.logger());
+```
+
+The JDBC source only works in batching mode, meaning the query is only
+executed once, for streaming changes from the database you can follow the
+[Change Data Capture tutorial](../tutorials/cdc.md).
+
+#### Data Sink
+
+Jet is also able to output the results of a job to a database using the
+JDBC driver by using an update query.
+
+The supplied update query should be a parameterized query where the
+parameters are modified for each item:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.<Person>list("inputList"))
+ .writeTo(Sinks.jdbc(
+         "REPLACE INTO PERSON (id, name) values(?, ?)",
+         DB_CONNECTION_URL,
+         (stmt, item) -> {
+             stmt.setInt(1, item.id);
+             stmt.setString(2, item.name);
+         }));
+```
+
+JDBC sink will automatically try to reconnect during database
+connectivity issues and is suitable for use in streaming jobs. If you
+want to avoid duplicate writes to the database, then a suitable
+_insert-or-update_ statement should be used instead of `INSERT`.
 
 ### MongoDB
 
