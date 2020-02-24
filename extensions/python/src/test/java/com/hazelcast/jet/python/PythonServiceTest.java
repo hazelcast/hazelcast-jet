@@ -18,6 +18,7 @@ package com.hazelcast.jet.python;
 import com.hazelcast.jet.SimpleTestInClusterSupport;
 import com.hazelcast.jet.pipeline.BatchStage;
 import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.StreamStage;
 import com.hazelcast.jet.pipeline.test.AssertionSinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
@@ -32,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.stream.IntStream;
 
 import static com.hazelcast.jet.python.PythonTransforms.mapUsingPython;
@@ -40,6 +42,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class PythonServiceTest extends SimpleTestInClusterSupport {
 
@@ -47,6 +50,10 @@ public class PythonServiceTest extends SimpleTestInClusterSupport {
     private static final String ECHO_HANDLER_FUNCTION =
             "def handle(input_list):\n" +
             "    return ['echo-%s' % i for i in input_list]\n";
+
+    private static final String FAILING_FUNCTION
+            = "def handle(input_list):\n"
+            + "    assert 1 == 2\n";
 
     private File baseDir;
 
@@ -226,6 +233,100 @@ public class PythonServiceTest extends SimpleTestInClusterSupport {
         ));
         instance().newJob(p).join();
         assertTrue("Cleanup script didn't run", new File(baseDir, outcomeFilename).isFile());
+    }
+
+    @Test
+    public void batchStage_mapUsingPythonFailure() {
+        // Given
+        PythonServiceConfig cfg = new PythonServiceConfig()
+                .setBaseDir(baseDir.toString())
+                .setHandlerModule("echo")
+                .setHandlerFunction("notExistsFunction");
+        Pipeline p = Pipeline.create();
+        BatchStage<String> stage = p.readFrom(TestSources.items("1"));
+
+        // When
+        stage.apply(mapUsingPythonBatch(cfg)).setLocalParallelism(2)
+                .writeTo(Sinks.logger());
+
+        // Then
+        try {
+            instance().newJob(p).join();
+            fail();
+        } catch (CompletionException ex) {
+            // expected
+        }
+    }
+
+    @Test
+    public void streamStage_mapUsingPythonFailure() {
+        // Given
+        PythonServiceConfig cfg = new PythonServiceConfig()
+                .setBaseDir(baseDir.toString())
+                .setHandlerModule("echo")
+                .setHandlerFunction("notExistsFunction");
+        Pipeline p = Pipeline.create();
+        StreamStage<String> stage = p.readFrom(TestSources.items("1")).addTimestamps(x -> 0, 0);
+
+        // When
+        stage.apply(mapUsingPython(cfg)).setLocalParallelism(2)
+                .writeTo(Sinks.logger());
+
+        // Then
+        try {
+            instance().newJob(p).join();
+            fail();
+        } catch (CompletionException ex) {
+            // expected
+        }
+    }
+
+    @Test
+    public void batchStage_mapUsingPythonException() throws IOException {
+        // Given
+        installFileToBaseDir(FAILING_FUNCTION, "failing.py");
+        PythonServiceConfig cfg = new PythonServiceConfig()
+                .setBaseDir(baseDir.toString())
+                .setHandlerModule("failing")
+                .setHandlerFunction("handle");
+        Pipeline p = Pipeline.create();
+        BatchStage<String> stage = p.readFrom(TestSources.items("1"));
+
+        // When
+        stage.apply(mapUsingPythonBatch(cfg)).setLocalParallelism(2)
+                .writeTo(Sinks.logger());
+
+        // Then
+        try {
+            instance().newJob(p).join();
+            fail();
+        } catch (CompletionException ex) {
+            // expected
+        }
+    }
+
+    @Test
+    public void streamStage_mapUsingPythonException() throws IOException {
+        // Given
+        installFileToBaseDir(FAILING_FUNCTION, "failing.py");
+        PythonServiceConfig cfg = new PythonServiceConfig()
+                .setBaseDir(baseDir.toString())
+                .setHandlerModule("failing")
+                .setHandlerFunction("handle");
+        Pipeline p = Pipeline.create();
+        StreamStage<String> stage = p.readFrom(TestSources.items("1")).addTimestamps(x -> 0, 0);
+
+        // When
+        stage.apply(mapUsingPython(cfg)).setLocalParallelism(2)
+                .writeTo(Sinks.logger());
+
+        // Then
+        try {
+            instance().newJob(p).join();
+            fail();
+        } catch (CompletionException ex) {
+            // expected
+        }
     }
 
     private void installFileToBaseDir(String contents, String filename) throws IOException {
