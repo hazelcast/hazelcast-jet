@@ -60,7 +60,7 @@ we want to analyse word frequencies in a bunch of tweets. First we need
 a source stage:
 
 ```java
-StreamStage<Tweet> tweets = p.drawFrom(twitterStream())
+StreamStage<Tweet> tweets = p.readFrom(twitterStream())
       .withTimestamps(Tweet::timestamp, SECONDS.toMillis(5));
 ```
 
