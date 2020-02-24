@@ -86,9 +86,9 @@ which is schema based. The connectors are similar to the local file
 connectors, but work with binary files stored in _Avro Object Container
 File_ format.
 
-To use the Avro connector, you need to add the `hazelcast-jet-avro`
-module to the `lib` folder and the following dependency to your
-application:
+To use the Avro connector, you need to copy the `hazelcast-jet-avro`
+module from the `opt` folder to the `lib` folder and add the following
+dependency to your application:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
@@ -150,14 +150,6 @@ For example, to do a canonical word count on a Hadoop data source,
 we can use the following pipeline:
 
 ```java
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-
-// ...
-
 Job job = Job.getInstance();
 job.setInputFormatClass(TextInputFormat.class);
 job.setOutputFormatClass(TextOutputFormat.class);
@@ -202,9 +194,9 @@ registering the hook.
 
 #### Hadoop Classpath
 
-To use the Hadoop connector, you need to add the `hazelcast-jet-hadoop`
-module to the `lib` folder and the following dependency to your
-application:
+To use the Hadoop connector, you need to copy the `hazelcast-jet-hadoop`
+module from the `opt` folder to the `lib` folder and add the following
+dependency to your application:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
@@ -354,9 +346,9 @@ p.readFrom(Sources.files("home/logs"))
  .writeTo(KafkaSinks.kafka(props, "topic"));
 ```
 
-To use the Kafka connector, you need to add the `hazelcast-jet-kafka`
-module to the `lib` folder and the following dependency to your
-application:
+To use the Kafka connector, you need to copy the `hazelcast-jet-kafka`
+module from the `opt` folder to the `lib` folder and add the following
+dependency to your application:
 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--Maven-->
@@ -410,13 +402,126 @@ in the case of a failure some records could be duplicated. You
 can also have the job in exactly-once mode and decrease the guarantee
 just for a particular Kafka sink.
 
-#### Compatibility
+#### Version Compatibility
 
 The Kafka sink and source are based on version 2.2.0, this means Kafka
 connector will work with any client and broker having version equal to
 or greater than 1.0.0.
 
 ### JMS
+
+JMS (Java Message Service) is a standard API for communicating with
+various message brokers using the publish-subscribe patterns.
+
+There are several brokers that implement the JMS standard, including:
+
+* Apache ActiveMQ and ActiveMQ Artemis
+* Amazon SQS
+* IBM MQ
+* RabbitMQ
+* Solace
+
+Jet is able to utilize these brokers both as a source and sink through
+the use of the JMS API.
+
+To use a JMS broker, such as ActiveMQ, you'll need the client libraries
+either on the classpath (by putting them on the `lib` folder) of the
+node or submit them with the job. The Jet JMS connector is part of the
+`hazelcast-jet` module, so requires no other dependencies than the
+client jar.
+
+A very simple pipeline which consumes messages from a given ActiveMQ
+and then logs them is given below:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.jmsQueue(() -> new ActiveMQConnectionFactory(
+        "tcp://localhost:61616"), "queue"))
+ .withoutTimestamps()
+ .writeTo(Sinks.logger());
+```
+
+For the topic, we recommend using a durable consumer where possible
+so that you are able to make use of fault-tolerance features of Jet:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.jmsTopicBuilder(() ->
+    new ActiveMQConnectionFactory("tcp://localhost:61616")
+        .sharedConsumer(true)
+        .consumerFn(session -> {
+            Topic topic = session.createTopic("topic");
+            return session.createSharedDurableConsumer(topic, "consumer-name");
+        })
+        .build())
+ .withoutTimestamps()
+ .writeTo(Sinks.logger());
+```
+
+The JMS topic, if not consumed by a shared consumer, is a
+non-distributed source. If messages are consumed by multiple consumers,
+all of them will get the same messages. Therefore the source operates
+on a single member with local parallelism of 1. If you create a shared
+consumer in the `consumerFn`, you should call `sharedConsumer(true)` on
+the builder, as in the sample code above. For a queue we always assume
+a shared consumer.
+
+#### Using as a sink
+
+The JMS sink uses the supplied function to create a Message object for
+each input item. After a batch of messages is sent, sink commits the
+session.
+
+The following code snippets show writing to a JMS queue and a JMS topic
+using ActiveMQ JMS Client.
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.list("inputList"))
+ .writeTo(Sinks.jmsQueue("queue",
+         () -> new ActiveMQConnectionFactory("tcp://localhost:61616")));
+```
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.list("inputList"))
+ .writeTo(Sinks.jmsTopic("topic",
+        () -> new ActiveMQConnectionFactory("tcp://localhost:61616")));
+```
+
+#### Connection Handling
+
+The JMS connectors opens one connection to the JMS server for each
+member. Then each underlying worker of the source creates a session and
+a message consumer using that connection. The user supplies necessary
+functions to create the connection, session and message consumer.
+
+IO failures are generally handled by the JMS Client and do not cause the
+connector to fail. Most of the clients offer a configuration parameter
+to enable auto-reconnection, refer to the specific client documentation
+for details.
+
+#### Fault Tolerance
+
+JMS for Jet is a transactional source, and supports both at-least-once
+and exactly-once processing. The sink currently supports at-least-once
+and will be extended to have exactly-once guarantee through the use XA
+transactions in the future.
+
+If you have no processing guarantee enabled, the processor will consume
+the messages in `DUPS_OK_ACKNOWLEDGE` mode, and otherwise will only
+acknowledge messages in transactions in the 2nd phase of the snapshot,
+that is after all downstream stages (including any sinks) fully
+processed the messages. Additionally, if the exactly-pnce processing
+guarantee is used, the processor will store message IDs of the
+unacknowledged messages to the snapshot and should the job fail after
+the snapshot was successful, but before Jet managed to acknowledge the
+messages, the stored IDs will be used to filter out the re-delivered
+messages to avoid duplication.
+
+The exactly-once guarantee for JMS topic requires the use of a durable
+topic consumer, since the broker doesn't store and can't replay messages
+otherwise.
 
 ### Apache Pulsar
 
@@ -438,19 +543,28 @@ or greater than 1.0.0.
 
 ### MongoDB
 
->This connector is under incubation.
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/mongodb).
 
 ### InfluxDB
 
->This connector is under incubation.
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb).
+
+### Elasticsearch
+
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch).
 
 ### Debezium
 
->This connector is under incubation.
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/debezium).
 
 ### Redis
 
->This connector is under incubation.
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/redis).
 
 ## Miscellaneous
 
@@ -458,15 +572,16 @@ or greater than 1.0.0.
 
 ### Socket
 
-### Twitter
+### Twitter
 
->This connector is under incubation.
+>This connector is currently under incubation. For more
+>information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/twitter).
 
 ## Summary
 
 ### Sources
 
-|source|module|batch or stream|guarantee|
+|source|module|batch/stream|guarantee|
 |:-----|:---- |:-----------|:--------|
 |`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
 |`HadoopSources.inputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
@@ -474,16 +589,18 @@ or greater than 1.0.0.
 |`S3Sources.s3`|`hazelcast-jet-s3`|batch|N/A|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
 |`Sources.fileWatcher`|`hazelcast-jet`|stream|N/A|
+|`Sources.jmsQueue`|`hazelcast-jet`|stream|exactly-once|
 
 ### Sinks
 
-|sink|module|batch or stream|guarantee|
+|sink|module|streaming support|guarantee|
 |:---|:-----|:--------------|:-------------------|
-|`AvroSinks.files`|`hazelcast-jet-avro`|batch|N/A|
-|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|batch|N/A|
-|`KafkaSinks.kafka`|`hazelcast-jet-kafka`|batch/stream|exactly-once|
-|`S3Sinks.s3`|`hazelcast-jet-s3`|batch|N/A|
-|`Sinks.files`|`hazelcast-jet`|both|exactly-once|
+|`AvroSinks.files`|`hazelcast-jet-avro`|no|N/A|
+|`HadoopSinks.outputFormat`|`hazelcast-jet-hadoop`|no|N/A|
+|`KafkaSinks.kafka`|`hazelcast-jet-kafka`|yes|exactly-once|
+|`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
+|`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
+|`Sinks.jmsQueue`|`hazelcast-jet`|yes|at-least-once|
 
 ## Custom Sources and Sinks
 

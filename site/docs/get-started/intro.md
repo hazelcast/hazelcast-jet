@@ -13,7 +13,7 @@ supports working with both bounded (batch) and unbounded data
 
 These are some of the concerns Jet handles well:
 
-* **Distributed**: Parallize a computation across all CPU cores and
+* **Distributed**: Parallelize a computation across all CPU cores and
   cluster nodes
 * **Scaling**: Scale up to newly added nodes and recover from nodes that
   left or failed
@@ -25,7 +25,7 @@ such as *Apache Kafka*, *Hadoop*, *relational databases*, *message
 queues* and many more.
 
 Jet supports a rich set of data transformations, such as
-[windowed aggregations](tutorials/windowing.md). For example, if your
+windowed aggregations. For example, if your
 data is GPS location reports, you can find the velocity by using a
 *sliding window* with just a few lines of code.
 
