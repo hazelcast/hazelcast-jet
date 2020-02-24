@@ -104,8 +104,8 @@ public interface Processor {
      * in a dedicated Java thread.
      * <p>
      * There are specific requirements that all <em>processing methods</em> of
-     * a cooperative processor must follow:<ul>
-     *
+     * a cooperative processor must follow:
+     * <ul>
      *     <li>each call must take a reasonably small amount of time (up to a
      *     millisecond). Violations will manifest as increased latency due to
      *     slower switching of processors.
