@@ -133,8 +133,32 @@ connections between the parallel tasks.
 ## Group-and-Aggregate Transform Needs Data Partitioning
 
 When you split the stream by, for example, user ID and aggregate every
-user's events independently, you should send all the events with the
-same user ID to the same task, the one holding that user's state. Otherwise
-the same
+user's events independently, you should send all the e;vents with the
+same user ID to the same task, the one holding that user's state.
+Otherwise all the tasks will end up with storage for all the IDs and no
+task will have the full picture. The technique to achieve this
+separation is _data partitioning_: Jet uses a function that maps any
+user ID to an integer from a predefined range and then assigns the
+integers to tasks:
+
+![Data Partitioning](assets/dag-partitioning.png)
+
+This brings us to the following picture of the DAG instantiated on two
+cluster members:
 
 ![Word Count DAG &mdash; exploded view](assets/dag-exploded.png)
+
+Note that the data can flow mostly within the same machine, except when
+it reaches the partitioned edge. Jet additionally optimizes for
+throughput by splitting the `aggregate` vertex into two, called
+`accumulate` and `combine`:
+
+![Two-Stage Aggregation](assets/dag-twostage-aggregation.png)
+
+Here the edge coming into `accumulate` is also partitioned, but only
+locally: every cluster member has all the partitions, but the
+aggregation results are only partial. Once the `accumulate` step has
+seen all the items, it sends its partial result to `combine` which
+combines the partial results from all cluster members. Since there is
+much less data after aggregation than before it, this reduces the amount
+of data exchanged between servers a the cost of using more RAM.
