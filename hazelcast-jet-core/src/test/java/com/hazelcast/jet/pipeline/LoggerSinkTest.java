@@ -29,7 +29,6 @@ import org.junit.experimental.categories.Category;
 @Category(SerialTest.class)
 public class LoggerSinkTest extends JetTestSupport {
 
-
     private String prevLoggingType;
 
     @Before
@@ -69,7 +68,6 @@ public class LoggerSinkTest extends JetTestSupport {
     public void after() {
         System.clearProperty("hazelcast.logging.class");
         System.setProperty("hazelcast.logging.type", prevLoggingType);
-
     }
 
 }
