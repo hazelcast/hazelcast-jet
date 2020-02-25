@@ -67,7 +67,7 @@ data pipes. The pipes are one-way: results of one task are the input of
 the next task. Since the dataflow must not go in circles, the structure
 of the network corresponds to the notion of a Directed Acyclic Graph
 – DAG.</p>
-<h2><a class="anchor" aria-hidden="true" id="the-word-count-dag"></a><a href="#the-word-count-dag" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Word Count DAG</h2>
+<h2><a class="anchor" aria-hidden="true" id="the-word-count-task"></a><a href="#the-word-count-task" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>The Word Count Task</h2>
 <p>Let's take one specific problem, the Word Count, and explain how to
 model it as a DAG. In this task we analyze the input consisting of lines
 of text and derive a histogram of word frequencies. Let's start from the
@@ -83,6 +83,7 @@ structure such as an <code>ArrayList</code>:</p>
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
+<h2><a class="anchor" aria-hidden="true" id="separate-the-steps"></a><a href="#separate-the-steps" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Separate the Steps</h2>
 <p>Basically, this code does everything in one nested loop. This works for
 the local <code>ArrayList</code>, very efficiently so, but in this form it is not
 amenable to auto-parallelization. We need a <em>reactive</em> coding style that
@@ -106,6 +107,7 @@ computation:</p>
 <li>group by word, aggregate by counting</li>
 <li>write to the sink</li>
 </ol>
+<h2><a class="anchor" aria-hidden="true" id="each-step-becomes-a-concurrent-task"></a><a href="#each-step-becomes-a-concurrent-task" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Each Step Becomes a Concurrent Task</h2>
 <p>Now Jet can set up several concurrent tasks, each receiving the data
 from the previous task and emitting the results to the next one, and
 apply our lambda functions as plug-ins:</p>
@@ -144,14 +146,48 @@ apply our lambda functions as plug-ins:</p>
     sink<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>The tasks are connected into a cascade, forming the following DAG:</p>
+<h2><a class="anchor" aria-hidden="true" id="tasks-are-connected-into-a-dag"></a><a href="#tasks-are-connected-into-a-dag" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Tasks are Connected Into a DAG</h2>
+<p>The tasks are connected into a cascade, forming the following DAG
+(<code>flatMap</code> and <code>filter</code> steps get automatically fused into a single
+task):</p>
 <p><img src="/docs/assets/dag.png" alt="Word Count DAG"></p>
 <p>With the computation in this shape, Jet can now easily parallelize it by
 starting more than one parallel task for a given step. It can also
 introduce a network connection between tasks, sending the data from one
 cluster node to the other. This is the basic principle behind Jet's
 auto-parallelization and distribution.</p>
-</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/windowing"><span class="arrow-prev">← </span><span>Windowed Aggregation</span></a><a class="docs-next button" href="/docs/concepts/event-time"><span>Streaming and Event Time</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#the-word-count-dag">The Word Count DAG</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/dag">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
+<h2><a class="anchor" aria-hidden="true" id="jet-replicates-the-dag-on-each-cluster-member"></a><a href="#jet-replicates-the-dag-on-each-cluster-member" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Jet Replicates the DAG on Each Cluster Member</h2>
+<p>When you run a job on the Jet cluster, every cluster instantiates the
+same DAG. Therefore every DAG vertex runs on every cluster member. Also,
+every vertex expands to several parallel tasks, one for each CPU core by
+default. That means an edge in the DAG represents many point-to-point
+connections between the parallel tasks.</p>
+<h2><a class="anchor" aria-hidden="true" id="group-and-aggregate-transform-needs-data-partitioning"></a><a href="#group-and-aggregate-transform-needs-data-partitioning" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Group-and-Aggregate Transform Needs Data Partitioning</h2>
+<p>When you split the stream by, for example, user ID and aggregate every
+user's events independently, you should send all the e;vents with the
+same user ID to the same task, the one holding that user's state.
+Otherwise all the tasks will end up with storage for all the IDs and no
+task will have the full picture. The technique to achieve this
+separation is <em>data partitioning</em>: Jet uses a function that maps any
+user ID to an integer from a predefined range and then assigns the
+integers to tasks:</p>
+<p><img src="/docs/assets/dag-partitioning.png" alt="Data Partitioning"></p>
+<p>This brings us to the following picture of the DAG instantiated on two
+cluster members:</p>
+<p><img src="/docs/assets/dag-exploded.png" alt="Word Count DAG — exploded view"></p>
+<p>Note that the data can flow mostly within the same machine, except when
+it reaches the partitioned edge. Jet additionally optimizes for
+throughput by splitting the <code>aggregate</code> vertex into two, called
+<code>accumulate</code> and <code>combine</code>:</p>
+<p><img src="/docs/assets/dag-twostage-aggregation.png" alt="Two-Stage Aggregation"></p>
+<p>Here the edge coming into <code>accumulate</code> is also partitioned, but only
+locally: every cluster member has all the partitions, but the
+aggregation results are only partial. Once the <code>accumulate</code> step has
+seen all the items, it sends its partial result to <code>combine</code> which
+combines the partial results from all cluster members. Since there is
+much less data after aggregation than before it, this reduces the amount
+of data exchanged between servers a the cost of using more RAM.</p>
+</span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/windowing"><span class="arrow-prev">← </span><span>Windowed Aggregation</span></a><a class="docs-next button" href="/docs/concepts/event-time"><span>Streaming and Event Time</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#the-word-count-task">The Word Count Task</a></li><li><a href="#separate-the-steps">Separate the Steps</a></li><li><a href="#each-step-becomes-a-concurrent-task">Each Step Becomes a Concurrent Task</a></li><li><a href="#tasks-are-connected-into-a-dag">Tasks are Connected Into a DAG</a></li><li><a href="#jet-replicates-the-dag-on-each-cluster-member">Jet Replicates the DAG on Each Cluster Member</a></li><li><a href="#group-and-aggregate-transform-needs-data-partitioning">Group-and-Aggregate Transform Needs Data Partitioning</a></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a><a href="/docs/concepts/dag">Concepts and Architecture</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
                     return;
