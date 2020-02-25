@@ -58,6 +58,7 @@
         <module>sliding-windows</module>
         <module>spring</module>
         <module>tf-idf</module>
+        <module>trade-source</module>
         <module>wordcount</module>
     </modules>
 

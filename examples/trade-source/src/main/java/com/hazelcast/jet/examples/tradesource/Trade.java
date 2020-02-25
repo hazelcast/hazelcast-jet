@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.examples.slidingwindow;
+package com.hazelcast.jet.examples.tradesource;
 
 import java.io.Serializable;
 
@@ -29,7 +29,7 @@ public class Trade implements Serializable {
     private final int quantity;
     private final int price; // in cents
 
-    Trade(long time, String ticker, int quantity, int price) {
+    public Trade(long time, String ticker, int quantity, int price) {
         this.time = time;
         this.ticker = ticker;
         this.quantity = quantity;
