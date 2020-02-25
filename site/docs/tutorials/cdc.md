@@ -163,10 +163,10 @@ To find the connector archives:
 
 * figure out what version of Debezium the Jet's debezium library
   depends on; at the time of writing version 0.1 of the library
-  depends on [Debezium 1.0](https://mvnrepository.com/artifact/io.debezium/debezium-core/1.0.0.Final)
+  depends on [Debezium 1.0](https://search.maven.org/artifact/io.debezium/debezium-core/1.0.0.Final/jar)
   , but this information can be simply checked at any time by looking at
    the Jet debezium library's
-  [transitive dependencies on Maven](https://mvnrepository.com/artifact/com.hazelcast.jet.contrib/debezium/0.1)
+  [transitive dependencies on Maven](https://search.maven.org/artifact/com.hazelcast.jet.contrib/debezium/0.1/jar)
 * go to the [Releases section](https://debezium.io/releases/) on the
   Debezium website
 * find the version you need, currently [1.0](https://debezium.io/releases/1.0/)
