@@ -34,6 +34,7 @@ public class LoggerSinkTest extends JetTestSupport {
     @Before
     public void setup() {
         prevLoggingType = System.getProperty("hazelcast.logging.type");
+        assert prevLoggingType != null : "hazelcast.logging.type is null";
         System.clearProperty("hazelcast.logging.type");
         System.setProperty("hazelcast.logging.class", MockLoggingFactory.class.getCanonicalName());
     }
