@@ -240,7 +240,6 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     @SuppressWarnings("rawtypes")
     public JobConfig addClass(@Nonnull Class... classes) {
-        checkNotNull(classes, "Classes cannot be null");
         ReflectionUtils.nestedClassesOf(classes).forEach(clazz -> {
             ResourceConfig cfg = new ResourceConfig(clazz);
             resourceConfigs.put(cfg.getId(), cfg);

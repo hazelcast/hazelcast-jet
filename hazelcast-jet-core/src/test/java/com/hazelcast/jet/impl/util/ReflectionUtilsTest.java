@@ -64,7 +64,7 @@ public class ReflectionUtilsTest {
     }
 
     @Test
-    public void shouldDiscoverAllNestedClasses() throws ClassNotFoundException {
+    public void when_nestedClassesOf_then_returnsAllNestedClasses() throws ClassNotFoundException {
         // When
         Collection<Class<?>> classes = ReflectionUtils.nestedClassesOf(OuterClass.class);
 
@@ -78,7 +78,7 @@ public class ReflectionUtilsTest {
     }
 
     @Test
-    public void shouldDiscoverAllClassesAndResourcesInAPackage() {
+    public void when_resourcesOf_then_returnsAllResources() {
         // When
         Resources resources = ReflectionUtils.resourcesOf(OuterClass.class.getPackage().getName());
 
