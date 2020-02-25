@@ -18,50 +18,92 @@ package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggingEvent;
+import com.hazelcast.jet.test.SerialTest;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.List;
 
-import static org.mockito.Mockito.atMost;
+import static org.junit.Assert.assertFalse;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
+@Category(SerialTest.class)
+@RunWith(MockitoJUnitRunner.StrictStubs.class)
 public class LoggerSinkTest extends JetTestSupport {
 
-    @Mock AppenderSkeleton appender;
-    @Captor ArgumentCaptor<LoggingEvent> logCaptor;
+    @Mock
+    Appender appender;
+
+    @Captor
+    ArgumentCaptor<LogEvent> logCaptor;
+
+    @Before
+    public void setup() {
+        when(appender.getName()).thenReturn("mock");
+        when(appender.isStarted()).thenReturn(true);
+
+        LoggerContext ctx = LoggerContext.getContext();
+        Configuration cfg = ctx.getConfiguration();
+        cfg.addAppender(appender);
+
+        Logger logger = ctx.getRootLogger();
+
+        assert logger.isInfoEnabled() : "info is enabled";
+
+        logger.addAppender(appender);
+
+        ctx.updateLoggers();
+    }
 
     @Test
+//    @Ignore("currently fails only on Jenkins")
     public void loggerSink() {
         // Given
         JetInstance jet = createJetMember();
         String srcName = randomName();
-        Logger.getRootLogger().addAppender(appender);
+
         jet.getList(srcName).add(0);
+
         Pipeline p = Pipeline.create();
 
         // When
         p.readFrom(Sources.<Integer>list(srcName))
          .map(i -> i + "-shouldBeSeenOnTheSystemOutput")
          .writeTo(Sinks.logger());
+
         jet.newJob(p).join();
-        verify(appender, atMost(1000)).doAppend(logCaptor.capture());
 
         // Then
-        List<LoggingEvent> allValues = logCaptor.getAllValues();
+        verify(appender, atLeast(1)).append(logCaptor.capture());
+
+        assertFalse(logCaptor.getAllValues().isEmpty());
+        List<LogEvent> allValues = logCaptor.getAllValues();
         boolean match = allValues
                 .stream()
-                .map(LoggingEvent::getRenderedMessage)
-                .anyMatch(message -> message.contains("0-shouldBeSeenOnTheSystemOutput"));
+                .map(LogEvent::getMessage)
+                .anyMatch(message -> message.getFormattedMessage().contains("0-shouldBeSeenOnTheSystemOutput"));
         Assert.assertTrue(match);
+    }
+
+    @After
+    public void teardown() {
+        LoggerContext ctx = LoggerContext.getContext();
+        ctx.getRootLogger().removeAppender(appender);
+        ctx.updateLoggers();
     }
 }
