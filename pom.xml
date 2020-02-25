@@ -330,6 +330,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                    <runOrder>failedfirst</runOrder>
+                    <trimStackTrace>false</trimStackTrace>
+                    <argLine>
+                        ${argLine}
+                    </argLine>
+                </configuration>
                 <executions>
                     <execution>
                         <id>serial-tests</id>
@@ -353,6 +361,7 @@
                             <goal>test</goal>
                         </goals>
                         <configuration>
+                            <argLine>${argLine}</argLine>
                             <skip>${maven.test.skip}</skip>
                             <forkCount>4</forkCount>
                             <includes>
@@ -365,14 +374,6 @@
                         </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <skip>true</skip>
-                    <runOrder>failedfirst</runOrder>
-                    <trimStackTrace>false</trimStackTrace>
-                    <argLine>
-                        ${argLine}
-                    </argLine>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
