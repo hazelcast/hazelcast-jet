@@ -78,7 +78,7 @@ public class ReflectionUtilsTest {
     }
 
     @Test
-    public void when_resourcesOf_then_returnsAllResources() {
+    public void when_resourcesOf_then_returnsAllResources() throws ClassNotFoundException {
         // When
         Resources resources = ReflectionUtils.resourcesOf(OuterClass.class.getPackage().getName());
 
@@ -86,6 +86,8 @@ public class ReflectionUtilsTest {
         Collection<Class<?>> classes = resources.classes().collect(toList());
         assertThat(classes, hasSize(greaterThan(3)));
         assertThat(classes, hasItem(OuterClass.class));
+        assertThat(classes, hasItem(OuterClass.NestedClass.class));
+        assertThat(classes, hasItem(Class.forName("com.hazelcast.jet.impl.util.ReflectionUtilsTest$OuterClass$1")));
 
         List<URL> nonClasses = resources.nonClasses().collect(toList());
         assertThat(nonClasses, hasSize(1));
