@@ -9,7 +9,7 @@ the next task. Since the dataflow must not go in circles, the structure
 of the network corresponds to the notion of a Directed Acyclic Graph
 &ndash; DAG.
 
-## The Word Count DAG
+## The Word Count Task
 
 Let's take one specific problem, the Word Count, and explain how to
 model it as a DAG. In this task we analyze the input consisting of lines
@@ -28,6 +28,8 @@ for (String line : lines) {
     }
 }
 ```
+
+## Separate the Steps
 
 Basically, this code does everything in one nested loop. This works for
 the local `ArrayList`, very efficiently so, but in this form it is not
@@ -54,6 +56,8 @@ computation:
 3. filter out empty words
 4. group by word, aggregate by counting
 5. write to the sink
+
+## Each Step Becomes a Concurrent Task
 
 Now Jet can set up several concurrent tasks, each receiving the data
 from the previous task and emitting the results to the next one, and
@@ -104,7 +108,11 @@ for (Entry<String, Long> e: receive()) {
 }
 ```
 
-The tasks are connected into a cascade, forming the following DAG:
+## Tasks are Connected Into a DAG
+
+The tasks are connected into a cascade, forming the following DAG
+(`flatMap` and `filter` steps get automatically fused into a single
+task):
 
 ![Word Count DAG](assets/dag.png)
 
@@ -113,3 +121,20 @@ starting more than one parallel task for a given step. It can also
 introduce a network connection between tasks, sending the data from one
 cluster node to the other. This is the basic principle behind Jet's
 auto-parallelization and distribution.
+
+## Jet Replicates the DAG on Each Cluster Member
+
+When you run a job on the Jet cluster, every cluster instantiates the
+same DAG. Therefore every DAG vertex runs on every cluster member. Also,
+every vertex expands to several parallel tasks, one for each CPU core by
+default. That means an edge in the DAG represents many point-to-point
+connections between the parallel tasks.
+
+## Group-and-Aggregate Transform Needs Data Partitioning
+
+When you split the stream by, for example, user ID and aggregate every
+user's events independently, you should send all the events with the
+same user ID to the same task, the one holding that user's state. Otherwise
+the same
+
+![Word Count DAG &mdash; exploded view](assets/dag-exploded.png)
