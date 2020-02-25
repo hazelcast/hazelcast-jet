@@ -803,14 +803,15 @@ parameters are modified for each item:
 
 ```java
 Pipeline p = Pipeline.create();
-p.readFrom(Sources.<Person>list("inputList"))
+p.readFrom(KafkaSources.<Person>kafka(.., "people"))
  .writeTo(Sinks.jdbc(
          "REPLACE INTO PERSON (id, name) values(?, ?)",
          DB_CONNECTION_URL,
          (stmt, item) -> {
              stmt.setInt(1, item.id);
              stmt.setString(2, item.name);
-         }));
+         }
+));
 ```
 
 JDBC sink will automatically try to reconnect during database
@@ -870,6 +871,7 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 |`Sources.cacheJournal`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.files`|`hazelcast-jet`|batch|N/A|
 |`Sources.fileWatcher`|`hazelcast-jet`|stream|none|
+|`Sources.jdbc`|`hazelcast-jet`|batch|N/A|
 |`Sources.jmsQueue`|`hazelcast-jet`|stream|exactly-once|
 |`Sources.list`|`hazelcast-jet`|batch|N/A|
 |`Sources.map`|`hazelcast-jet`|batch|N/A|
@@ -885,6 +887,7 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 |`S3Sinks.s3`|`hazelcast-jet-s3`|no|N/A|
 |`Sinks.cache`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.files`|`hazelcast-jet`|yes|exactly-once|
+|`Sinks.jdbc`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.jmsQueue`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.list`|`hazelcast-jet`|no|N/A|
 |`Sinks.map`|`hazelcast-jet`|yes|at-least-once|
