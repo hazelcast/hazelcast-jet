@@ -17,64 +17,33 @@
 package com.hazelcast.jet.pipeline;
 
 import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.config.JetConfig;
 import com.hazelcast.jet.core.JetTestSupport;
 import com.hazelcast.jet.test.SerialTest;
-import org.apache.logging.log4j.core.Appender;
-import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.Logger;
-import org.apache.logging.log4j.core.LoggerContext;
-import org.apache.logging.log4j.core.config.Configuration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
-
-import java.util.List;
-
-import static org.junit.Assert.assertFalse;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @Category(SerialTest.class)
-@RunWith(MockitoJUnitRunner.StrictStubs.class)
 public class LoggerSinkTest extends JetTestSupport {
 
-    @Mock
-    Appender appender;
 
-    @Captor
-    ArgumentCaptor<LogEvent> logCaptor;
+    private String prevLoggingType;
 
     @Before
     public void setup() {
-        when(appender.getName()).thenReturn("mock");
-        when(appender.isStarted()).thenReturn(true);
-
-        LoggerContext ctx = LoggerContext.getContext();
-        Configuration cfg = ctx.getConfiguration();
-        cfg.addAppender(appender);
-
-        Logger logger = ctx.getRootLogger();
-
-        assert logger.isInfoEnabled() : "info is enabled";
-
-        logger.addAppender(appender);
-
-        ctx.updateLoggers();
+        prevLoggingType = System.getProperty("hazelcast.logging.type");
+        System.clearProperty("hazelcast.logging.type");
+        System.setProperty("hazelcast.logging.class", MockLoggingFactory.class.getCanonicalName());
     }
 
     @Test
-//    @Ignore("currently fails only on Jenkins")
     public void loggerSink() {
         // Given
-        JetInstance jet = createJetMember();
+        JetConfig jetConfig = new JetConfig();
+        JetInstance jet = createJetMember(jetConfig);
         String srcName = randomName();
 
         jet.getList(srcName).add(0);
@@ -89,21 +58,18 @@ public class LoggerSinkTest extends JetTestSupport {
         jet.newJob(p).join();
 
         // Then
-        verify(appender, atLeast(1)).append(logCaptor.capture());
-
-        assertFalse(logCaptor.getAllValues().isEmpty());
-        List<LogEvent> allValues = logCaptor.getAllValues();
-        boolean match = allValues
-                .stream()
-                .map(LogEvent::getMessage)
-                .anyMatch(message -> message.getFormattedMessage().contains("0-shouldBeSeenOnTheSystemOutput"));
-        Assert.assertTrue(match);
+        Assert.assertTrue("no message containing '0-shouldBeSeenOnTheSystemOutput' was found",
+                MockLoggingFactory.capturedMessages
+                        .stream()
+                        .anyMatch(message -> message.contains("0-shouldBeSeenOnTheSystemOutput"))
+        );
     }
 
     @After
-    public void teardown() {
-        LoggerContext ctx = LoggerContext.getContext();
-        ctx.getRootLogger().removeAppender(appender);
-        ctx.updateLoggers();
+    public void after() {
+        System.clearProperty("hazelcast.logging.class");
+        System.setProperty("hazelcast.logging.type", prevLoggingType);
+
     }
+
 }
