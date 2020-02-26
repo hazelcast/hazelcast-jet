@@ -163,11 +163,11 @@ write meaningful test.
 
 ## Integration Tests
 
-For integration testing, there might be a need the real instances
+For integration testing, there might be a need to create real instances
 without the mock network. For those cases one can create real instances
 with `Jet.newJetInstance()` method.
 
-### Using random cluster names
+## Using random cluster names
 
 If multiple tests are running in parallel there is chance that the
 clusters in each test can discover others, intefere the test
@@ -191,7 +191,7 @@ public class ClusteringTest extends JetTestSupport {
         String clusterName = randomName();
         JetConfig jetConfig = new JetConfig();
         jetConfig.getHazelcastConfig().setClusterName(clusterName);
-        JetInstance[] instances = createJetMembers(2);
+        JetInstance[] instances = createJetMembers(jetConfig, 2);
 
         JetClientConfig clientConfig = new JetClientConfig();
         clientConfig.setClusterName(clusterName);
@@ -211,7 +211,7 @@ In the example above `randomName()` utility method has been used to
 generate a random string from `com.hazelcast.jet.core.JetTestSupport`
 class.
 
-### Cleaning up the resources
+## Cleaning up the resources
 
 Mock instances created from the factory of `com.hazelcast.jet.core.JetTestSupport`
 are cleaned-up automatically after the test execution has been finished.
@@ -236,21 +236,101 @@ nature of the product.
 
 TODO
 
-## Serial and Parallel Class Runners
+## Class Runners
+
+There are multiple JUnit test class runners shipped with the tests
+package which gives various abilities.
+
+Let's have a look at them in detail:
+
+### Serial Class Runner
 
 TODO
 
-## Repetitive Test Execution
+### Parallel Class Runner
 
 TODO
+
+### Repetitive Test Execution
+
+While dealing with intermittently failing tests, it is helpful to run
+the test multiple times in series to increase the chances to make it
+fail. In those cases `com.hazelcast.test.annotation.Repeat` annotation
+can be used to run the test repeatadly. `@Repeat` annotation can be
+used on both the class and method level. On the class level it repeats the
+whole class execution specified tiems. On the method level it only
+repeats particular test method.
+
+Follwing is an example test which repeats the test method execution
+5 times:
+
+```java
+@RunWith(HazelcastSerialClassRunner.class)
+public class RepetitiveTest extends JetTestSupport {
+
+    @Repeat(5)
+    @Test
+    public void test() {
+        System.out.println("Test method to be implemented!");
+    }
+}
+```
+
+When run, it logs like the following:
+
+```log
+Started Running Test: test
+---> Repeating test [RepetitiveTest:test], run count [1]
+Test method to be implemented!
+---> Repeating test [RepetitiveTest:test], run count [2]
+Test method to be implemented!
+---> Repeating test [RepetitiveTest:test], run count [3]
+Test method to be implemented!
+---> Repeating test [RepetitiveTest:test], run count [4]
+Test method to be implemented!
+---> Repeating test [RepetitiveTest:test], run count [5]
+Test method to be implemented!
+Finished Running Test: test in 0.009 seconds.
+```
+
+> Note: `@Repeat` annotation only works with Hazelcast Class runners.
 
 ## Testing Hazelcast Jet Pipelines
 
 TODO
 
-## Waiting for job to be in `RUNNING` state
+## Waiting for job to be in desired state
 
-TODO
+On some use cases, one needs to make the job is submitted and running
+on the cluster before generating any events on the controlled source
+to observe results. To achieve that following assertion could be used
+to validate job is in the desired state.
+
+```java
+
+public class DesiredStateTest extends JetTestSupport {
+
+    @Test
+    public void given_singeNodeJet_when_jobIsRunning__then...() {
+        // given
+        JetInstance jet = createJetMember();
+
+        // when
+        Pipeline p = buildPipeline();
+        Job job = jet.newJob(p);
+        assertJobStatusEventually(job, JobStatus.RUNNING);
+
+        // then
+        ...
+        ...
+    }
+...
+}
+```
+
+In the example above `assertJobStatusEventually(Job, JobStatus)`
+utility method has been used to validate the job is in the desired
+state from the `com.hazelcast.jet.core.JetTestSupport` class.
 
 ## Test Sources and Sinks
 
