@@ -37,7 +37,7 @@ import static java.util.stream.Collectors.toMap;
 public final class TradeGenerator {
     private static final int LOT = 100;
     private static final int PRICE_UNITS_PER_CENT = 100;
-    public static final int NO_TIMEOUT = 0;
+    private static final int NO_TIMEOUT = 0;
 
     private final List<String> tickers;
     private final long emitPeriodNanos;
@@ -45,7 +45,7 @@ public final class TradeGenerator {
     private final long startTimeNanos;
     private final long endTimeNanos;
     private final int maxLag;
-    private final Map<String, LongLongAccumulator> pricesAndTrends; //(last price in 100ths of a cent, last price delta in 100ths of cent)
+    private final Map<String, LongLongAccumulator> pricesAndTrends;
 
     private long scheduledTimeNanos;
 
