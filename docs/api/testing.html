@@ -241,14 +241,37 @@ nature of the product.</p>
 <h2><a class="anchor" aria-hidden="true" id="class-runners"></a><a href="#class-runners" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Class Runners</h2>
 <p>There are multiple JUnit test class runners shipped with the tests
 package which gives various abilities.</p>
+<p>The common features are:</p>
+<ul>
+<li>Ability to print a thread dump in case of a test failure, configured
+via <code>hazelcast.test.threadDumpOnFailure</code> property</li>
+<li>Supports repetitive test execution</li>
+<li>Uses mock networking, unless configured to use real networking via <code>hazelscast.test.use.network</code>
+property</li>
+<li>Disabled phone-home feature, configured via <code>hazelcast.phone.home.enabled</code>
+property</li>
+<li>Have shorter(1 sec) wait time before joining than default(5 secs).
+This leads to faster cluster formation and test execution, configured
+via <code>hazelcast.wait.seconds.before.join</code> property.</li>
+<li>Uses loopback address, configured via <code>hazelcast.local.localAddress</code>
+property</li>
+<li>Uses IPv4 stack, configured via <code>java.net.preferIPv4Stack</code>
+property</li>
+<li>Prints out test execution duration after they finish execution</li>
+</ul>
 <p>Let's have a look at them in detail:</p>
 <h3><a class="anchor" aria-hidden="true" id="serial-class-runner"></a><a href="#serial-class-runner" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Serial Class Runner</h3>
-<p>TODO</p>
+<p><code>com.hazelcast.test.HazelcastSerialClassRunner</code> is a JUnit test class
+runner which runs the tests in series. Nothing fancy, it just executes
+the tests with the features listed above.</p>
 <h3><a class="anchor" aria-hidden="true" id="parallel-class-runner"></a><a href="#parallel-class-runner" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parallel Class Runner</h3>
-<p>TODO</p>
+<p><code>com.hazelcast.test.HazelcastParallelClassRunner</code> is a JUnit test class
+runner which runs the tests in parallel with multiple threads. If the
+test methods within the test class does not share any resources this
+yields a faster execution compared to it's serial counterpart.</p>
 <h3><a class="anchor" aria-hidden="true" id="repetitive-test-execution"></a><a href="#repetitive-test-execution" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Repetitive Test Execution</h3>
 <p>While dealing with intermittently failing tests, it is helpful to run
-the test multiple times in series to increase the chances to make it
+the test multiple times in series to increase chances to make it
 fail. In those cases <code>com.hazelcast.test.annotation.Repeat</code> annotation
 can be used to run the test repeatadly. <code>@Repeat</code> annotation can be
 used on both the class and method level. On the class level it repeats the
