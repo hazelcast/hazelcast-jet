@@ -99,24 +99,34 @@ public interface Processor {
 
     /**
      * Tells whether this processor is able to participate in cooperative
-     * multithreading. This means that each invocation of a <em>processing
-     * method</em> in this class will take a reasonably small amount of time
-     * (up to a millisecond). Violations will manifest themselves as increased
-     * latency due to slower switching of processors.
+     * multithreading. If this processor declares itself cooperative, it will
+     * share a thread with other cooperative processors. Otherwise it will run
+     * in a dedicated Java thread.
      * <p>
-     * A cooperative processor should also not attempt any blocking operations,
-     * such as I/O operations, waiting for locks/semaphores or sleep
-     * operations. Violations of this rule will manifest as less than 100% CPU
-     * usage under maximum load (note that this is possible for other reasons too,
-     * for example if the network is the bottleneck or if {@linkplain
-     * JetProperties#JET_IDLE_COOPERATIVE_MAX_MICROSECONDS parking time} is too high).
-     * The processor must also return as soon as the outbox rejects an item
-     * (that is when the {@link Outbox#offer(Object) offer()} method returns
-     * {@code false}).
-     * <p>
-     * If this processor declares itself cooperative, it will share a thread
-     * with other cooperative processors. Otherwise it will run in a dedicated
-     * Java thread.
+     * There are specific requirements that all <em>processing methods</em> of
+     * a cooperative processor must follow:
+     * <ul>
+     *     <li>each call must take a reasonably small amount of time (up to a
+     *     millisecond). Violations will manifest as increased latency due to
+     *     slower switching of processors.
+     *
+     *     <li>should also not attempt any blocking operations, such as I/O
+     *     operations, waiting for locks/semaphores or sleep operations.
+     *     Violations of this rule will manifest as less than 100% CPU usage
+     *     under maximum load (note that this is possible for other reasons
+     *     too, for example if the network is the bottleneck or if {@linkplain
+     *     JetProperties#JET_IDLE_COOPERATIVE_MAX_MICROSECONDS parking time} is
+     *     too high). The processor must also return as soon as the outbox
+     *     rejects an item (that is when the {@link Outbox#offer(Object)
+     *     offer()} method returns {@code false}).
+     * </ul>
+     *
+     * Non-cooperative processors are allowed to block, but still must return
+     * at least once per second (that is, they should not block
+     * indeterminately). If they block longer, snapshots will take longer to
+     * complete and job will respond more slowly to termination: Jet doesn't
+     * interrupt the dedicated threads if it wants them to cancel, it waits for
+     * them to return.
      * <p>
      * Jet prefers cooperative processors because they result in a greater
      * overall throughput. A processor should be non-cooperative only if it
@@ -204,7 +214,9 @@ public interface Processor {
     /**
      * This method will be called periodically and only when the current batch
      * of items in the inbox has been exhausted. It can be used to produce
-     * output in the absence of input or to do general maintenance work.
+     * output in the absence of input or to do general maintenance work. If the
+     * job restores state from a snapshot, this method is called for the first
+     * time after {@link #finishSnapshotRestore()}.
      * <p>
      * If the call returns {@code false}, it will be called again before
      * proceeding to call any other <em>processing method</em>. Default
