@@ -64,10 +64,8 @@ public final class ReflectionUtils {
         ClassGraph classGraph = new ClassGraph()
                 .enableClassInfo()
                 .ignoreClassVisibility();
-        stream(classes).distinct().forEach(clazz -> {
-            classGraph.addClassLoader(clazz.getClassLoader());
-            classGraph.whitelistPackages(toPackageName(clazz));
-        });
+        stream(classes).map(Class::getClassLoader).distinct().forEach(classGraph::addClassLoader);
+        stream(classes).map(ReflectionUtils::toPackageName).distinct().forEach(classGraph::whitelistPackages);
         try (ScanResult scanResult = classGraph.scan()) {
             Set<String> classNames = stream(classes).map(Class::getName).collect(toSet());
             return concat(
