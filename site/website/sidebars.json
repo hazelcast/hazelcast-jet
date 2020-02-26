@@ -12,11 +12,6 @@
       "get-started/submit-job",
       "get-started/scale-job"
     ],
-    "Concepts": [
-      "concepts/dag",
-      "concepts/event-time",
-      "concepts/processing-guarantees"
-    ],
     "Programming Guide": [
       "api/pipeline",
       "api/stateless-transforms",
@@ -26,6 +21,11 @@
       "api/serialization",
       "api/testing",
       "api/javadoc"
+    ],
+    "Concepts": [
+      "concepts/dag",
+      "concepts/event-time",
+      "concepts/processing-guarantees"
     ],
     "Tutorials" : [
       "tutorials/map-join",
