@@ -34,7 +34,7 @@ public class LoggerSinkTest extends JetTestSupport {
     @Before
     public void setup() {
         System.out.println("System properties:");
-        System.getProperties().forEach((k,v) -> System.out.println(k + ":" + v));
+        System.getProperties().forEach((k, v) -> System.out.println(k + ":" + v));
         prevLoggingType = System.getProperty("hazelcast.logging.type");
         assert prevLoggingType != null : "hazelcast.logging.type is null";
         System.clearProperty("hazelcast.logging.type");
