@@ -29,16 +29,19 @@ import org.junit.experimental.categories.Category;
 @Category(SerialTest.class)
 public class LoggerSinkTest extends JetTestSupport {
 
+    private static final String HAZELCAST_LOGGING_TYPE = "hazelcast.logging.type";
+    private static final String HAZELCAST_LOGGING_CLASS = "hazelcast.logging.class";
+
     private String prevLoggingType;
+    private String prevLoggingClass;
 
     @Before
     public void setup() {
-        System.out.println("System properties:");
-        System.getProperties().forEach((k, v) -> System.out.println(k + ":" + v));
-        prevLoggingType = System.getProperty("hazelcast.logging.type");
-        assert prevLoggingType != null : "hazelcast.logging.type is null";
-        System.clearProperty("hazelcast.logging.type");
-        System.setProperty("hazelcast.logging.class", MockLoggingFactory.class.getCanonicalName());
+        prevLoggingType = System.getProperty(HAZELCAST_LOGGING_TYPE);
+        prevLoggingClass = System.getProperty(HAZELCAST_LOGGING_CLASS);
+
+        System.clearProperty(HAZELCAST_LOGGING_TYPE);
+        System.setProperty(HAZELCAST_LOGGING_CLASS, MockLoggingFactory.class.getCanonicalName());
     }
 
     @Test
@@ -69,8 +72,16 @@ public class LoggerSinkTest extends JetTestSupport {
 
     @After
     public void after() {
-        System.clearProperty("hazelcast.logging.class");
-        System.setProperty("hazelcast.logging.type", prevLoggingType);
+        if (prevLoggingType == null) {
+            System.clearProperty(HAZELCAST_LOGGING_TYPE);
+        } else {
+            System.setProperty(HAZELCAST_LOGGING_TYPE, prevLoggingType);
+        }
+        if (prevLoggingClass == null) {
+            System.clearProperty(HAZELCAST_LOGGING_CLASS);
+        } else {
+            System.setProperty(HAZELCAST_LOGGING_CLASS, prevLoggingClass);
+        }
     }
 
 }
