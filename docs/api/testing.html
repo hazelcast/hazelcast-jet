@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Testing · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="TODO"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Testing · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="TODO"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
+<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><title>Testing · Hazelcast Jet</title><meta name="viewport" content="width=device-width"/><meta name="generator" content="Docusaurus"/><meta name="description" content="Hazelcast Jet project uses JUnit testing framework to test"/><meta name="docsearch:language" content="en"/><meta property="og:title" content="Testing · Hazelcast Jet"/><meta property="og:type" content="website"/><meta property="og:url" content="https://jet-start.sh/"/><meta property="og:description" content="Hazelcast Jet project uses JUnit testing framework to test"/><meta property="og:image" content="https://jet-start.sh/img/undraw_online.svg"/><meta name="twitter:card" content="summary"/><meta name="twitter:image" content="https://jet-start.sh/img/undraw_tweetstorm.svg"/><link rel="shortcut icon" href="/img/favicon.png"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css"/><link rel="alternate" type="application/atom+xml" href="https://jet-start.sh/blog/atom.xml" title="Hazelcast Jet Blog ATOM Feed"/><link rel="alternate" type="application/rss+xml" href="https://jet-start.sh/blog/feed.xml" title="Hazelcast Jet Blog RSS Feed"/><script>
               (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
               (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
               m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -62,7 +62,192 @@
                 };
               }
             });
-        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/api/testing.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Testing</h1></header><article><div><span><p>TODO</p>
+        </script></nav></div><div class="container mainContainer docsContainer"><div class="wrapper"><div class="post"><header class="postHeader"><a class="edit-page-link button" href="https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/api/testing.md" target="_blank" rel="noreferrer noopener">Edit</a><h1 id="__docusaurus" class="postHeaderTitle">Testing</h1></header><article><div><span><p>Hazelcast Jet project uses JUnit testing framework to test
+itself in various scenarios. Over the years there has been some
+repetition within the test implementations and it led us to come up
+with our own set of convenience methods for testing.</p>
+<p>Hazelcast Jet provides test support classes to verify correctness of
+your pipelines. Those support classes and the test sources are published
+to the Maven central repository for each version with the <code>tests</code>
+classifier.</p>
+<p>To start using them, please add following dependency to your
+project:</p>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-13-tab-14" class="nav-link active" data-group="group_13" data-tab="tab-group-13-content-14">Maven</div><div id="tab-group-13-tab-15" class="nav-link" data-group="group_13" data-tab="tab-group-13-content-15">Gradle</div></div><div class="tab-content"><div id="tab-group-13-content-14" class="tab-pane active" data-group="group_13" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependencies</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.hazelcast.jet<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>hazelcast-jet-core<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>4.0<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br />    <span class="hljs-tag">&lt;<span class="hljs-name">classifier</span>&gt;</span>tests<span class="hljs-tag">&lt;/<span class="hljs-name">classifier</span>&gt;</span><br />  <span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependencies</span>&gt;</span><br /></code></pre>
+</span></div></div><div id="tab-group-13-content-15" class="tab-pane" data-group="group_13" tabindex="-1"><div><span><pre><code class="hljs css language-bash">compile <span class="hljs-string">'com.hazelcast.jet:hazelcast-jet-core:4.0:tests'</span><br /></code></pre>
+</span></div></div></div></div>
+<p>After adding the dependency to your project, the test classes should be
+available to your project.</p>
+<p>== Creating Hazelcast Jet instances with Mock Network</p>
+<p>Test utilities contains factory methods to create Hazelcast Jet
+instances with the mock network stack. Those Hazelcast Jet nodes
+communicate with each other using intra-process communication methods.
+This means we can create multiple lightweight Hazelcast Jet instances
+in our tests without using any networking resources.</p>
+<p>To create Hazelcast Jet instances with mock network(along with a lot
+of convenience methods), one needs to extend <code>com.hazelcast.jet.core.JetTestSupport</code>
+class.</p>
+<p>Here is a simple test harness which creates 2 node Hazelcast Jet cluster
+with mock network:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ClusteringTest</span> <span class="token keyword">extends</span> <span class="token class-name">JetTestSupport</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> given_2nodeCluster_when<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>_then<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// given</span>
+        <span class="token class-name">JetInstance</span> instance1 <span class="token operator">=</span> <span class="token function">createJetMember</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">JetInstance</span> instance2 <span class="token operator">=</span> <span class="token function">createJetMember</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// Alternatively</span>
+        <span class="token comment">// JetInstance[] instances = createJetMembers(2);</span>
+
+        <span class="token comment">// when</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token comment">// then</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>If needed, a <code>JetConfig</code> object can be passed to the factory methods
+like below:</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ClusteringTest</span> <span class="token keyword">extends</span> <span class="token class-name">JetTestSupport</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> given_2nodeClusterWith16CooperativeThreads_when<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>_then<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// given</span>
+        <span class="token class-name">JetConfig</span> config <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        config<span class="token punctuation">.</span><span class="token function">getInstanceConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setCooperativeThreadCount</span><span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">JetInstance</span><span class="token punctuation">[</span><span class="token punctuation">]</span> instances <span class="token operator">=</span> <span class="token function">createJetMembers</span><span class="token punctuation">(</span>config<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// when</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token comment">// then</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Similar to the Hazelcast Jet nodes, one can create Hazelcast Jet clients
+with the same factories. There is no need to provide any network
+configuration for clients to discover nodes since they are using the
+same factory. The discovery will work out of the box.</p>
+<pre><code class="hljs css language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ClusteringTest</span> <span class="token keyword">extends</span> <span class="token class-name">JetTestSupport</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> given_2nodeClusterAndClient_when<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>_then<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// given</span>
+        <span class="token class-name">JetInstance</span><span class="token punctuation">[</span><span class="token punctuation">]</span> instances <span class="token operator">=</span> <span class="token function">createJetMembers</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">JetInstance</span> client <span class="token operator">=</span> <span class="token function">createJetClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// when</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token comment">// then</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>When the above test run it should create 2 Hazelcast Jet nodes and a
+Hazelcast Jet client connected to them. When run, it can be verified
+that they form the cluster from the logs and client connected to them.</p>
+<pre><code class="hljs css language-log"><span class="hljs-number">10</span>:<span class="hljs-number">45</span>:<span class="hljs-number">03.927</span> [ INFO] [c.h.i.c.ClusterService]
+....
+Members {size:<span class="hljs-number">2</span>, ver:<span class="hljs-number">2</span>} [
+ Member [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5701</span> - <span class="hljs-number">93328</span>d97<span class="hljs-number">-0975</span><span class="hljs-number">-4</span>dfa-bf56<span class="hljs-number">-4</span>d46e8a469a1 <span class="hljs-keyword">this</span>
+ Member [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> - <span class="hljs-number">920</span>d1b0c<span class="hljs-number">-0898</span><span class="hljs-number">-4</span>b6e<span class="hljs-number">-9009</span><span class="hljs-number">-8f</span>29889d6a77
+]
+
+<span class="hljs-number">10</span>:<span class="hljs-number">45</span>:<span class="hljs-number">03.933</span> [ INFO] [c.h.i.c.ClusterService]
+
+Members {size:<span class="hljs-number">2</span>, ver:<span class="hljs-number">2</span>} [
+ Member [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5701</span> - <span class="hljs-number">93328</span>d97<span class="hljs-number">-0975</span><span class="hljs-number">-4</span>dfa-bf56<span class="hljs-number">-4</span>d46e8a469a1
+ Member [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> - <span class="hljs-number">920</span>d1b0c<span class="hljs-number">-0898</span><span class="hljs-number">-4</span>b6e<span class="hljs-number">-9009</span><span class="hljs-number">-8f</span>29889d6a77 <span class="hljs-keyword">this</span>
+]
+....
+<span class="hljs-number">10</span>:<span class="hljs-number">45</span>:<span class="hljs-number">04.890</span> [ INFO] [c.h.c.i.s.ClientClusterService] [<span class="hljs-number">4.0</span>]
+
+Members [<span class="hljs-number">2</span>] {
+ Member [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5701</span> - <span class="hljs-number">93328</span>d97<span class="hljs-number">-0975</span><span class="hljs-number">-4</span>dfa-bf56<span class="hljs-number">-4</span>d46e8a469a1
+ Member [<span class="hljs-number">127.0</span><span class="hljs-number">.0</span><span class="hljs-number">.1</span>]:<span class="hljs-number">5702</span> - <span class="hljs-number">920</span>d1b0c<span class="hljs-number">-0898</span><span class="hljs-number">-4</span>b6e<span class="hljs-number">-9009</span><span class="hljs-number">-8f</span>29889d6a77
+}
+</code></pre>
+<p>First two blocks are the member list printed from each member's point
+of view and the last one is the cluster from the client's point of view.</p>
+<p>So far, we've seen how to create any number of Hazelcast Jet clusters
+and clients using factory methods provided within the <code>com.hazelcast.jet.core.JetTestSupport</code>
+class to create the test environments. Let's explore other utilities to
+write meaningful test.</p>
+<p>== Integration Tests</p>
+<p>For integration testing, there might be a need the real instances
+without the mock network. For those cases one can create real instances
+with <code>Jet.newJetInstance()</code> method.</p>
+<p>=== Using random cluster names</p>
+<p>If multiple tests are running in parallel there is chance that the
+clusters in each test can discover others, intefere the test
+execution and most of the time causing both of them to fail.</p>
+<p>To avoid such scenarios, one needs to isolate the clusters in each test
+execution by giving them unique cluster names. This way, they won't
+try to connect each other since the nodes will only try to connect to
+other members with the same cluster name property.</p>
+<p>Random cluster name for each test execution can be generated like
+below:</p>
+<pre><code class="hljs css language-java">
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ClusteringTest</span> <span class="token keyword">extends</span> <span class="token class-name">JetTestSupport</span> <span class="token punctuation">{</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> given_2nodeClusterAndClient_when<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>_then<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// given</span>
+        <span class="token class-name">String</span> clusterName <span class="token operator">=</span> <span class="token function">randomName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">JetConfig</span> jetConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        jetConfig<span class="token punctuation">.</span><span class="token function">getHazelcastConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span>clusterName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">JetInstance</span><span class="token punctuation">[</span><span class="token punctuation">]</span> instances <span class="token operator">=</span> <span class="token function">createJetMembers</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">JetClientConfig</span> clientConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetClientConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        clientConfig<span class="token punctuation">.</span><span class="token function">setClusterName</span><span class="token punctuation">(</span>clusterName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">JetInstance</span> client <span class="token operator">=</span> <span class="token function">createJetClient</span><span class="token punctuation">(</span>clientConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// when</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token comment">// then</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+        <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>In the example above <code>randomName()</code> utility method has been used to
+generate a random string from <code>com.hazelcast.jet.core.JetTestSupport</code>
+class.</p>
+<p>=== Cleaning up the resources</p>
+<p>Mock instances created from the factory of <code>com.hazelcast.jet.core.JetTestSupport</code>
+are cleaned-up automatically after the test execution has been finished.</p>
+<p>If the test contains real instances, then they either needs to be
+tracked individually and shut down when the test finished or one can
+write a teardown method like below to shut down all instances created.</p>
+<pre><code class="hljs css language-java">    <span class="token annotation punctuation">@After</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">after</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">shutdownAll</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre>
+<p>Either way one has to shut down Hazelcast Jet instances after the test
+has been finished to reclaim resources and not to leave a room for
+interference with the next test execution due to distributed
+nature of the product.</p>
+<p>=== Assertions</p>
+<p>TODO</p>
+<p>=== Serial and Parallel Class Runners</p>
+<p>TODO</p>
+<p>=== Repetitive Test Execution</p>
+<p>TODO</p>
+<p>== Testing Hazelcast Jet Pipelines</p>
+<p>TODO</p>
+<p>=== Waiting for job to be in <code>RUNNING</code> state</p>
+<p>TODO</p>
+<p>=== Test Sources and Sinks</p>
+<p>TODO</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/api/serialization"><span class="arrow-prev">← </span><span>Serialization</span></a><a class="docs-next button" href="/docs/api/javadoc"><span>Javadoc</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
