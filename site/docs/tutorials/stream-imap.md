@@ -60,7 +60,8 @@ still available capacity for tracking them.
   ```java
   JetConfig cfg = new JetConfig();
   cfg.getHazelcastConfig()
-     .getMapEventJournalConfig("name_of_map")
+     .getMapConfig("name_of_map")
+     .getEventJournalConfig()
      .setEnabled(true)
      .setCapacity(1000)         // how many events to keep before evicting
      .setTimeToLiveSeconds(10); // evict events older than this
@@ -69,18 +70,56 @@ still available capacity for tracking them.
 
 </details>
 
-## Source
+## Example
 
-Once the event journal has been configured the source can be set up like
-this:
+Once the event journal has been configured setting up a source becomes
+very simple. Let's see an example. A jet job which prints how many times
+each key of an `IMap` has been updated in the past second.
+
+Besides the job monitoring the map for changes (let's call it "the
+consumer"), we will also run a second job actually doing the changes
+to the map (let's call it "the producer").  
 
 ```java
-Pipeline p = Pipeline.create();
-p.readFrom(Sources.mapJournal("name_of_map", JournalInitialPosition.START_FROM_OLDEST));
+Pipeline producerPipeline = Pipeline.create();
+producerPipeline.readFrom(TestSources.itemStream(100,
+                        (ts, seq) -> ThreadLocalRandom.current().nextLong(0, 1000)))
+                .withoutTimestamps()
+                .map(l -> entry(l % 5, l))
+                .writeTo(Sinks.map("myMap"));
+
+Pipeline consumerPipeline = Pipeline.create();
+consumerPipeline.readFrom(Sources.<Long, Long>mapJournal("myMap",
+                        JournalInitialPosition.START_FROM_CURRENT))
+                .withIngestionTimestamps()
+                .window(WindowDefinition.tumbling(SECONDS.toMillis(1)))
+                .groupingKey(Map.Entry::getKey)
+                .aggregate(AggregateOperations.counting())
+                .map(r -> String.format("Key %d had %d updates", r.getKey(), r.getValue()))
+                .writeTo(Sinks.logger());
+
+
+Job producerJob = jet.newJob(producerPipeline);
+Job consumerJob = jet.newJob(consumerPipeline);
+
+consumerJob.join();
 ```
 
-What we get is a stream of `Map.Entry` elements, which get updated
-whenever there are additions or updates in the underlying `IMap`.
+The output produced is something like this (once per second):
+
+```text
+13:07:26.038 [ INFO] [c.h.j.i.c.W.loggerSink#0] Key 0 had 16 updates
+13:07:26.038 [ INFO] [c.h.j.i.c.W.loggerSink#0] Key 1 had 25 updates
+13:07:26.038 [ INFO] [c.h.j.i.c.W.loggerSink#0] Key 2 had 12 updates
+13:07:26.039 [ INFO] [c.h.j.i.c.W.loggerSink#0] Key 3 had 15 updates
+13:07:26.038 [ INFO] [c.h.j.i.c.W.loggerSink#0] Key 4 had 21 updates
+```
+
+## Considerations
+
+As we see in this example, what we get from the map journal sorce is a
+stream of `Map.Entry` elements , which get updated whenever there are
+additions or updates in the underlying `IMap`.
 
 If we care about deletions too, or we want to differentiate between
 updates and additions, then there are further variants of this
