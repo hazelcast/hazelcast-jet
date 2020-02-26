@@ -89,10 +89,24 @@ network congestion, shared resource limitations and many more. This
 results in what we call *event disorder*: observing the events out of
 their true order of occurrence.
 
-Processing events out of order is a challenge. Hazelcast Jet handles
-most of the concerns internally, but there is one decision it can't make
-for you: how much to wait for lagging events. Jet can't emit the result
+Here's what an ordered event stream looks like:
+
+![Ordered Events](assets/eventtime-order.png)
+
+Notice that latency not only exists, but is variable. This has no major
+impact on stream processing.
+
+And here's what event disorder looks like:
+
+![Disordered Events](assets/eventtime-disorder.png)
+
+Latency is all over the place now and it has disordered the events.
+After receiving the second event Jet has no idea how much longer to wait
+expecting events older than it. This is where you as the user are
+expected to provide the *maximum event lag*. Jet can't emit the result
 of a windowed aggregation until it has received all the events belonging
 to the window, but the longer it waits, the later you'll see the
-results. So you must strike a balance and choose how much to wait. This
-parameter is called the *allowed event lag*.
+results. So you must strike a balance and choose how much to wait.
+Notice that by "wait" we mean event time, not processing time: when we
+get an event with timestamp `t_a`, we are no longer waiting for events
+with timestamp `t_b <= t_a - maxLag`.
