@@ -29,7 +29,7 @@ public class Trade implements Serializable {
     private final int quantity;
     private final int price; // in cents
 
-    public Trade(long time, String ticker, int quantity, int price) {
+    Trade(long time, String ticker, int quantity, int price) {
         this.time = time;
         this.ticker = ticker;
         this.quantity = quantity;
