@@ -41,7 +41,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-core:4.0:tests'
 After adding the dependency to your project, the test classes should be
 available to your project.
 
-== Creating Hazelcast Jet instances with Mock Network
+## Creating Hazelcast Jet instances with Mock Network
 
 Test utilities contains factory methods to create Hazelcast Jet
 instances with the mock network stack. Those Hazelcast Jet nodes
@@ -161,13 +161,13 @@ and clients using factory methods provided within the `com.hazelcast.jet.core.Je
 class to create the test environments. Let's explore other utilities to
 write meaningful test.
 
-== Integration Tests
+## Integration Tests
 
 For integration testing, there might be a need the real instances
 without the mock network. For those cases one can create real instances
 with `Jet.newJetInstance()` method.
 
-=== Using random cluster names
+### Using random cluster names
 
 If multiple tests are running in parallel there is chance that the
 clusters in each test can discover others, intefere the test
@@ -211,7 +211,7 @@ In the example above `randomName()` utility method has been used to
 generate a random string from `com.hazelcast.jet.core.JetTestSupport`
 class.
 
-=== Cleaning up the resources
+### Cleaning up the resources
 
 Mock instances created from the factory of `com.hazelcast.jet.core.JetTestSupport`
 are cleaned-up automatically after the test execution has been finished.
@@ -232,26 +232,26 @@ has been finished to reclaim resources and not to leave a room for
 interference with the next test execution due to distributed
 nature of the product.
 
-=== Assertions
+## Assertions
 
 TODO
 
-=== Serial and Parallel Class Runners
+## Serial and Parallel Class Runners
 
 TODO
 
-=== Repetitive Test Execution
+## Repetitive Test Execution
 
 TODO
 
-== Testing Hazelcast Jet Pipelines
+## Testing Hazelcast Jet Pipelines
 
 TODO
 
-=== Waiting for job to be in `RUNNING` state
+## Waiting for job to be in `RUNNING` state
 
 TODO
 
-=== Test Sources and Sinks
+## Test Sources and Sinks
 
 TODO
