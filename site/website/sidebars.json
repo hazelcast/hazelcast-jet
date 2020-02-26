@@ -12,6 +12,11 @@
       "get-started/submit-job",
       "get-started/scale-job"
     ],
+    "Concepts": [
+      "concepts/dag",
+      "concepts/event-time",
+      "concepts/processing-guarantees"
+    ],
     "Programming Guide": [
       "api/pipeline",
       "api/stateless-transforms",
@@ -30,11 +35,6 @@
       "tutorials/stream-imap",
       "tutorials/python",
       "tutorials/windowing"
-    ],
-    "Concepts": [
-      "concepts/dag",
-      "concepts/event-time",
-      "concepts/processing-guarantees"
     ],
     "Operations Guide": [
       "operations/configuration",
