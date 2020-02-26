@@ -74,8 +74,8 @@ public class ReflectionUtilsTest {
                 OuterClass.class,
                 OuterClass.NestedClass.class,
                 OuterClass.NestedClass.DeeplyNestedClass.class,
-                Class.forName("com.hazelcast.jet.impl.util.ReflectionUtilsTest$OuterClass$1"),
-                Class.forName("com.hazelcast.jet.impl.util.ReflectionUtilsTest$OuterClass$NestedClass$DeeplyNestedClass$1")
+                Class.forName(OuterClass.class.getName() + "$1"),
+                Class.forName(OuterClass.NestedClass.DeeplyNestedClass.class.getName() + "$1")
         ));
     }
 
@@ -89,7 +89,9 @@ public class ReflectionUtilsTest {
         assertThat(classes, hasSize(greaterThan(3)));
         assertThat(classes, hasItem(OuterClass.class));
         assertThat(classes, hasItem(OuterClass.NestedClass.class));
-        assertThat(classes, hasItem(Class.forName("com.hazelcast.jet.impl.util.ReflectionUtilsTest$OuterClass$1")));
+        assertThat(classes, hasItem(OuterClass.NestedClass.DeeplyNestedClass.class));
+        assertThat(classes, hasItem(Class.forName(OuterClass.class.getName() + "$1")));
+        assertThat(classes, hasItem(Class.forName(OuterClass.NestedClass.DeeplyNestedClass.class.getName() + "$1")));
 
         List<URL> nonClasses = resources.nonClasses().collect(toList());
         assertThat(nonClasses, contains(hasToString(containsString("package.properties"))));
