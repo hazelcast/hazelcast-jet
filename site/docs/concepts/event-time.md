@@ -30,6 +30,8 @@ computation. This brings us to these two concepts:
 * **Processing time**: the current time at the moment of processing an
   event
 
+![Event Time Vs. Processing Time](assets/eventtime-processingtime.png)
+
 The difference between these two ways to account for time comes up often
 in the design of distributed streaming systems and to some extent the
 user must deal with it directly.
@@ -40,9 +42,15 @@ With unbounded streams you need a policy that selects bounded chunks
 whose aggregate results you are interested in. This is called
 *windowing*. You can imagine the window as a time interval laid over the
 time axis. A given window contains only the events that belong to that
-interval. Probably the most natural kind of window is the *sliding
-window*: it slides along the time axis, trailing just behind the current
-time.
+interval.
+
+### Sliding Window
+
+![Sliding Window](assets/eventtime-sliding.png)
+
+Sliding window is probably the most natural kind of window: it slides
+along the time axis, trailing just behind the current time. In Hazelcast
+Jet, the window doesn't actually slide smoothly but in configured steps.
 
 Sliding window aggregation is a great tool to discover the dynamic
 properties of your event stream. Quick example: say your event stream
@@ -51,6 +59,25 @@ lines of code you can split the stream into groups by user ID and apply
 a sliding window with linear regression to retrieve a smoothened
 velocity vector of each user. Applying the same kind of window the
 second time will give you acceleration vectors, and so on.
+
+### Tumbling Window
+
+![Tumbling Window](assets/eventtime-tumbling.png)
+
+A tumbling window is basically a special case of the sliding window.
+Since the sliding step is configurable, you can set it equal to the
+window itself. You can imagine the window tumbling over from one
+position to the next.
+
+### Session Window
+
+![Session Window](assets/eventtime-session.png)
+
+While sliding and tumbling windows have a fixed, predetermined length,
+the session window adapts to the data itself. When two consecutive
+events are separated by more than the configured timeout, that gap
+marks the boundary between the two windows. If there is no data, there
+is no session window, either.
 
 ## Event Disorder
 
