@@ -133,7 +133,7 @@ connections between the parallel tasks.
 ## Group-and-Aggregate Transform Needs Data Partitioning
 
 When you split the stream by, for example, user ID and aggregate every
-user's events independently, you should send all the e;vents with the
+user's events independently, you should send all the events with the
 same user ID to the same task, the one holding that user's state.
 Otherwise all the tasks will end up with storage for all the IDs and no
 task will have the full picture. The technique to achieve this
@@ -161,4 +161,4 @@ aggregation results are only partial. Once the `accumulate` step has
 seen all the items, it sends its partial result to `combine` which
 combines the partial results from all cluster members. Since there is
 much less data after aggregation than before it, this reduces the amount
-of data exchanged between servers a the cost of using more RAM.
+of data exchanged between servers at the cost of using more RAM.

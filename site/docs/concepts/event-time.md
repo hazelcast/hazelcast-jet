@@ -7,23 +7,32 @@ In an unbounded stream of events, the dimension of time is always there.
 To appreciate this, consider a bounded stream: it may represent a
 dataset labeled "Wednesday", but the computation itself doesn't have to
 know this. Its results will be understood from the outside to be "about
-Wednesday". An endless stream, on the other hand, delivers information
+Wednesday".
+
+![Batch Processing](assets/eventtime-batch.png)
+
+An endless stream, on the other hand, delivers information
 about the reality as it is unfolding, in near-real time, and the
 computation itself must deal with time explicitly.
 
+![Stream Processing](assets/eventtime-streaming.png)
+
 ## Event Time Vs. Processing Time
 
-Since our reality unfolds in a sequence of *events*, the data in our
-stream always represents events. Most importantly, every data item has a
-*timestamp* that tells us when the event occurred. All the processing
-logic must rely on these timestamps and not whatever the current time
-happens to be when running the computation. This brings us to these two
-concepts, often discussed when talking about streaming computation:
+We represent the reality in digital form as a stream of *events*. Most
+importantly, every data item has a *timestamp* that tells us when the
+event occurred. All the processing logic must rely on these timestamps
+and not whatever the current time happens to be when running the
+computation. This brings us to these two concepts:
 
 * **Event time**: determined by the event's timestamp
 
 * **Processing time**: the current time at the moment of processing an
   event
+
+The difference between these two ways to account for time comes up often
+in the design of distributed streaming systems and to some extent the
+user must deal with it directly.
 
 ## Time Windowing
 
@@ -46,8 +55,8 @@ second time will give you acceleration vectors, and so on.
 ## Event Disorder
 
 In an ideal world, event time and processing time would be the same and
-events would be processed immediately. In reality this is almost never
-the case, there can be a significant difference between the two. The
+events would be processed immediately. In reality this is far from true
+and there can be a significant difference between the two. The
 difference is also highly variable and is affected by factors like
 network congestion, shared resource limitations and many more. This
 results in what we call *event disorder*: observing the events out of
