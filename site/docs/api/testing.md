@@ -241,20 +241,43 @@ TODO
 There are multiple JUnit test class runners shipped with the tests
 package which gives various abilities.
 
+The common features are:
+
+- Ability to print a thread dump in case of a test failure, configured
+ via `hazelcast.test.threadDumpOnFailure` property
+- Supports repetitive test execution
+- Uses mock networking, unless configured to use real networking via `hazelscast.test.use.network`
+ property
+- Disabled phone-home feature, configured via `hazelcast.phone.home.enabled`
+ property
+- Have shorter(1 sec) wait time before joining than default(5 secs).
+ This leads to faster cluster formation and test execution, configured
+ via `hazelcast.wait.seconds.before.join` property.
+- Uses loopback address, configured via `hazelcast.local.localAddress`
+ property
+- Uses IPv4 stack, configured via `java.net.preferIPv4Stack`
+ property
+- Prints out test execution duration after they finish execution
+
 Let's have a look at them in detail:
 
 ### Serial Class Runner
 
-TODO
+`com.hazelcast.test.HazelcastSerialClassRunner` is a JUnit test class
+runner which runs the tests in series. Nothing fancy, it just executes
+the tests with the features listed above.
 
 ### Parallel Class Runner
 
-TODO
+`com.hazelcast.test.HazelcastParallelClassRunner` is a JUnit test class
+runner which runs the tests in parallel with multiple threads. If the
+test methods within the test class does not share any resources this
+yields a faster execution compared to it's serial counterpart.
 
 ### Repetitive Test Execution
 
 While dealing with intermittently failing tests, it is helpful to run
-the test multiple times in series to increase the chances to make it
+the test multiple times in series to increase chances to make it
 fail. In those cases `com.hazelcast.test.annotation.Repeat` annotation
 can be used to run the test repeatadly. `@Repeat` annotation can be
 used on both the class and method level. On the class level it repeats the
