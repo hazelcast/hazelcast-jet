@@ -80,7 +80,7 @@ public final class ReflectionUtils {
     }
 
     private static String toPackageName(Class<?> clazz) {
-        return Optional.ofNullable(clazz.getPackage().getName()).orElse("");
+        return Optional.ofNullable(clazz.getPackage()).map(Package::getName).orElse("");
     }
 
     @Nonnull

@@ -33,7 +33,8 @@ public class NestedClassIsLoaded extends AbstractProcessor {
         try {
             Class<?> clazz = cl.loadClass("com.sample.lambda.Worker$InnerWorker");
             Method method = clazz.getMethod("map", String.class);
-            // We invoke the method so that the lambda inside of it is executed. We check the lambda is loaded with the outer class.
+            // We invoke the method so that the lambda inside of it is executed.
+            // We check the lambda is loaded with the outer class.
             assertEquals(method.invoke(clazz.getDeclaredConstructor().newInstance(), "some-string"), "some-string");
         } catch (Exception e) {
             fail(e.getMessage());
