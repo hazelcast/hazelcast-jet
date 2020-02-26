@@ -17,17 +17,18 @@
 package com.hazelcast.jet.impl;
 
 import com.hazelcast.cluster.Address;
-import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.nio.BufferObjectDataOutput;
 import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
+import com.hazelcast.jet.impl.serialization.DataInput;
+import com.hazelcast.jet.impl.serialization.DataInputFactory;
+import com.hazelcast.jet.impl.serialization.DataOutput;
+import com.hazelcast.jet.impl.serialization.DataOutputFactory;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ScheduledFuture;
@@ -35,15 +36,16 @@ import java.util.concurrent.ScheduledFuture;
 import static com.hazelcast.internal.nio.Packet.FLAG_JET_FLOW_CONTROL;
 import static com.hazelcast.internal.nio.Packet.FLAG_URGENT;
 import static com.hazelcast.jet.Util.idToString;
-import static com.hazelcast.jet.impl.util.ExceptionUtil.sneakyThrow;
-import static com.hazelcast.jet.impl.util.ImdgUtil.createObjectDataInput;
-import static com.hazelcast.jet.impl.util.ImdgUtil.createObjectDataOutput;
 import static com.hazelcast.jet.impl.util.ImdgUtil.getMemberConnection;
 import static com.hazelcast.jet.impl.util.ImdgUtil.getRemoteMembers;
 import static com.hazelcast.jet.impl.util.Util.uncheckRun;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class Networking {
+
+    private static final int PACKET_HEADER_SIZE = 16;
+    private static final int FLOW_PACKET_INITIAL_SIZE = 128; // TODO:
+
     private static final byte[] EMPTY_BYTES = new byte[0];
 
     private final NodeEngineImpl nodeEngine;
@@ -63,7 +65,7 @@ public class Networking {
         flowControlSender.cancel(false);
     }
 
-    void handle(Packet packet) throws IOException {
+    void handle(Packet packet) {
         if (!packet.isFlagRaised(FLAG_JET_FLOW_CONTROL)) {
             handleStreamPacket(packet);
             return;
@@ -71,25 +73,21 @@ public class Networking {
         handleFlowControlPacket(packet.getConn().getEndPoint(), packet.toByteArray());
     }
 
-    private void handleStreamPacket(Packet packet) throws IOException {
-        BufferObjectDataInput in = createObjectDataInput(nodeEngine, packet.toByteArray());
-        long executionId = in.readLong();
-        int vertexId = in.readInt();
-        int ordinal = in.readInt();
+    private void handleStreamPacket(Packet packet) {
+        DataInput input = DataInputFactory.from(packet.toByteArray());
+        long executionId = input.readLong();
+        int vertexId = input.readInt();
+        int ordinal = input.readInt();
         ExecutionContext executionContext = jobExecutionService.getExecutionContext(executionId);
-        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), in);
+        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), input);
     }
 
-    public static byte[] createStreamPacketHeader(NodeEngine nodeEngine, long executionId,
-                                                  int destinationVertexId, int ordinal) {
-        try (BufferObjectDataOutput out = createObjectDataOutput(nodeEngine)) {
-            out.writeLong(executionId);
-            out.writeInt(destinationVertexId);
-            out.writeInt(ordinal);
-            return out.toByteArray();
-        } catch (IOException e) {
-            throw sneakyThrow(e);
-        }
+    public static byte[] createStreamPacketHeader(long executionId, int destinationVertexId, int ordinal) {
+        DataOutput output = DataOutputFactory.create(PACKET_HEADER_SIZE);
+        output.writeLong(executionId);
+        output.writeInt(destinationVertexId);
+        output.writeInt(ordinal);
+        return output.toByteArray();
     }
 
     private void broadcastFlowControlPacket() {
@@ -111,53 +109,51 @@ public class Networking {
         }
     }
 
-    private byte[] createFlowControlPacket(Address member) throws IOException {
-        try (BufferObjectDataOutput out = createObjectDataOutput(nodeEngine)) {
-            final boolean[] hasData = {false};
-            Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
-            out.writeInt(executionContexts.size());
-            executionContexts.forEach((execId, exeCtx) -> uncheckRun(() -> {
-                out.writeLong(execId);
-                out.writeInt(exeCtx.receiverMap().values().stream().mapToInt(Map::size).sum());
-                exeCtx.receiverMap().forEach((vertexId, ordinalToSenderToTasklet) ->
-                        ordinalToSenderToTasklet.forEach((ordinal, senderToTasklet) -> uncheckRun(() -> {
-                            out.writeInt(vertexId);
-                            out.writeInt(ordinal);
-                            out.writeInt(senderToTasklet.get(member).updateAndGetSendSeqLimitCompressed());
-                            hasData[0] = true;
-                        })));
-            }));
-            return hasData[0] ? out.toByteArray() : EMPTY_BYTES;
-        }
+    private byte[] createFlowControlPacket(Address member) {
+        DataOutput output = DataOutputFactory.create(FLOW_PACKET_INITIAL_SIZE);
+        final boolean[] hasData = {false};
+        Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
+        output.writeInt(executionContexts.size());
+        executionContexts.forEach((execId, exeCtx) -> uncheckRun(() -> {
+            output.writeLong(execId);
+            output.writeInt(exeCtx.receiverMap().values().stream().mapToInt(Map::size).sum());
+            exeCtx.receiverMap().forEach((vertexId, ordinalToSenderToTasklet) ->
+                    ordinalToSenderToTasklet.forEach((ordinal, senderToTasklet) -> uncheckRun(() -> {
+                        output.writeInt(vertexId);
+                        output.writeInt(ordinal);
+                        output.writeInt(senderToTasklet.get(member).updateAndGetSendSeqLimitCompressed());
+                        hasData[0] = true;
+                    })));
+        }));
+        return hasData[0] ? output.toByteArray() : EMPTY_BYTES;
     }
 
-    private void handleFlowControlPacket(Address fromAddr, byte[] packet) throws IOException {
-        try (BufferObjectDataInput in = createObjectDataInput(nodeEngine, packet)) {
-            final int executionCtxCount = in.readInt();
-            for (int j = 0; j < executionCtxCount; j++) {
-                final long executionId = in.readLong();
-                final Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap
-                        = jobExecutionService.getSenderMap(executionId);
+    private void handleFlowControlPacket(Address fromAddr, byte[] packet) {
+        DataInput input = DataInputFactory.from(packet);
+        final int executionCtxCount = input.readInt();
+        for (int j = 0; j < executionCtxCount; j++) {
+            final long executionId = input.readLong();
+            final Map<Integer, Map<Integer, Map<Address, SenderTasklet>>> senderMap
+                    = jobExecutionService.getSenderMap(executionId);
 
-                if (senderMap == null) {
-                    logMissingExeCtx(executionId);
-                    continue;
+            if (senderMap == null) {
+                logMissingExeCtx(executionId);
+                continue;
+            }
+            final int flowCtlMsgCount = input.readInt();
+            for (int k = 0; k < flowCtlMsgCount; k++) {
+                int destVertexId = input.readInt();
+                int destOrdinal = input.readInt();
+                int sendSeqLimitCompressed = input.readInt();
+                final SenderTasklet t = Optional.ofNullable(senderMap.get(destVertexId))
+                                                .map(ordinalMap -> ordinalMap.get(destOrdinal))
+                                                .map(addrMap -> addrMap.get(fromAddr))
+                                                .orElse(null);
+                if (t == null) {
+                    logMissingSenderTasklet(destVertexId, destOrdinal);
+                    return;
                 }
-                final int flowCtlMsgCount = in.readInt();
-                for (int k = 0; k < flowCtlMsgCount; k++) {
-                    int destVertexId = in.readInt();
-                    int destOrdinal = in.readInt();
-                    int sendSeqLimitCompressed = in.readInt();
-                    final SenderTasklet t = Optional.ofNullable(senderMap.get(destVertexId))
-                                                    .map(ordinalMap -> ordinalMap.get(destOrdinal))
-                                                    .map(addrMap -> addrMap.get(fromAddr))
-                                                    .orElse(null);
-                    if (t == null) {
-                        logMissingSenderTasklet(destVertexId, destOrdinal);
-                        return;
-                    }
-                    t.setSendSeqLimitCompressed(sendSeqLimitCompressed);
-                }
+                t.setSendSeqLimitCompressed(sendSeqLimitCompressed);
             }
         }
     }
@@ -176,5 +172,4 @@ public class Networking {
                     destVertexId, destOrdinal));
         }
     }
-
 }
