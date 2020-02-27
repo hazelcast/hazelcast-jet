@@ -1,16 +1,20 @@
 body {
-    font-family: Ubuntu, sans-serif;
+    font-family: Source Sans Pro, Ubuntu, sans-serif;
     /* font-weight: lighter; */
-    background-color: #fffdfa;
+    /* background-color: #fffcf5; */
     color: #073642;
 }
 
 .fixedHeaderContainer {
-    background-color: #fff6e0;
+    background-color: #f7f7f7;
 }
 
 .projectTitle {
     color: #073642;
+}
+
+.projectLogo {
+    height: 90%;
 }
 
 a.button {
@@ -18,7 +22,9 @@ a.button {
 }
 
 .navigationSlider .slidingNav ul li a {
-    color: #268bd2;
+    color: #707482;
+    font-weight: bold;
+    /* letter-spacing: 0.45px; */
 }
 
 .navigationSlider .slidingNav ul li.siteNavGroupActive a,
@@ -45,7 +51,7 @@ a.button {
 }
 
 .nav-footer {
-    background-color: #002b36;
+    background-color: #041a3b;
 }
 
 .nav-footer .sitemap .nav-home {
@@ -62,6 +68,10 @@ a.button {
 }
 .blog .post {
     max-width: 780px;
+}
+
+.mainContainer .container {
+
 }
 
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {

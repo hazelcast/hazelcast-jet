@@ -59,18 +59,20 @@ const siteConfig = {
 
     /* Colors for website */
     colors: {
-        primaryColor: '#268bd2',
+        primaryColor: '#2d7de4',
         secondaryColor: '#eee8d5',
     },
 
     stylesheets: [
-        'https://fonts.googleapis.com/css?family=Ubuntu:300,400,500'
+        'https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600',
+        'https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600'
     ],
 
     /* Custom fonts for website */
     fonts: {
         myFont: [
             'Ubuntu',
+            'Source Sans Pro'
         ],
     },
 
