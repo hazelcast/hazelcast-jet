@@ -150,7 +150,7 @@ apply our lambda functions as plug-ins:</p>
 <p>The tasks are connected into a cascade, forming the following DAG
 (<code>flatMap</code> and <code>filter</code> steps get automatically fused into a single
 task):</p>
-<p><img src="/docs/assets/dag.png" alt="Word Count DAG"></p>
+<p><img src="/docs/assets/dag.svg" alt="Word Count DAG"></p>
 <p>With the computation in this shape, Jet can now easily parallelize it by
 starting more than one parallel task for a given step. It can also
 introduce a network connection between tasks, sending the data from one
@@ -171,15 +171,15 @@ task will have the full picture. The technique to achieve this
 separation is <em>data partitioning</em>: Jet uses a function that maps any
 user ID to an integer from a predefined range and then assigns the
 integers to tasks:</p>
-<p><img src="/docs/assets/dag-partitioning.png" alt="Data Partitioning"></p>
+<p><img src="/docs/assets/dag-partitioning.svg" alt="Data Partitioning"></p>
 <p>This brings us to the following picture of the DAG instantiated on two
 cluster members:</p>
-<p><img src="/docs/assets/dag-exploded.png" alt="Word Count DAG — exploded view"></p>
+<p><img src="/docs/assets/dag-exploded.svg" alt="Word Count DAG — exploded view"></p>
 <p>Note that the data can flow mostly within the same machine, except when
 it reaches the partitioned edge. Jet additionally optimizes for
 throughput by splitting the <code>aggregate</code> vertex into two, called
 <code>accumulate</code> and <code>combine</code>:</p>
-<p><img src="/docs/assets/dag-twostage-aggregation.png" alt="Two-Stage Aggregation"></p>
+<p><img src="/docs/assets/dag-twostage-aggregation.svg" alt="Two-Stage Aggregation"></p>
 <p>Here the edge coming into <code>accumulate</code> is also partitioned, but only
 locally: every cluster member has all the partitions, but the
 aggregation results are only partial. Once the <code>accumulate</code> step has

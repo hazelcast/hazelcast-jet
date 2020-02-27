@@ -70,16 +70,16 @@ supports working with both bounded (batch) and unbounded data
 (streaming).</p>
 <p>These are some of the concerns Jet handles well:</p>
 <ul>
-<li><strong>Distributed</strong>: Parallelize a computation across all CPU cores and
-cluster nodes</li>
-<li><strong>Scaling</strong>: Scale up to newly added nodes and recover from nodes that
-left or failed</li>
-<li><strong>Correctness guarantees</strong>: at-least-once and exactly-once processing
-in the face of node failures</li>
+<li><strong>Scale Up and Out</strong>: Parallelize a computation across all CPU cores
+and cluster nodes</li>
+<li><strong>Auto-Rescale</strong>: Scale out to newly added nodes and recover from
+nodes that left or failed</li>
+<li><strong>Correctness Guarantee</strong>: <em>at-least-once</em> and <em>exactly-once</em>
+processing in the face of node failures</li>
 </ul>
 <p>Jet integrates out of the box with many popular data storage systems
-such as <em>Apache Kafka</em>, <em>Hadoop</em>, <em>relational databases</em>, <em>message
-queues</em> and many more.</p>
+such as Apache Kafka, Hadoop, relational databases, message
+queues and many more.</p>
 <p>Jet supports a rich set of data transformations, such as
 windowed aggregations. For example, if your
 data is GPS location reports, you can find the velocity by using a
