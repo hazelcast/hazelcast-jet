@@ -14,23 +14,29 @@ same procedure in order to start using it.
 
 ## Stateless vs. Stateful Computation
 
-A given computation step can be either stateless or stateful. Basic
-examples of the former are `map`, `filter` and `flatMap`. Jet doesn't
-have to take any special measures to make stateless transforms work in a
+A given computation step can be either
+[stateless](../api/stateless-transforms.md) or
+[stateful](../api/stateful-transforms.md). Basic
+examples of the former are
+[`map`](../api/stateless-transforms.md#map),
+[`filter`](../api/stateless-transforms.md#filter) and
+[`flatMap`](../api/stateless-transforms.md#flatmap). Jet doesn't have to
+take any special measures to make stateless transforms work in a
 fault-tolerant data pipeline because they are pure functions and always
 give the same output for the same input.
 
 The challenges come with stateful computation, and most real-world
 pipelines contain at least one such transform. For example, if you have
-a `counting` windowed aggregation step, for the count to remain correct
-the aggregating task must see each item exactly once. The technical term
-for this is the *exactly-once processing guarantee* and Jet supports it.
-It also supports a lesser guarantee, *at-least-once*, in which an item
-can be observed more than once. It allows more performance for those
-pipelines that can gracefully deal with duplicates.
+a `counting` [windowed aggregation](../tutorials/windowing.md) step, for
+the count to remain correct the aggregating task must see each item
+exactly once. The technical term for this is the **exactly-once
+processing guarantee** and Jet supports it. It also supports a lesser
+guarantee, **at-least-once**, in which an item can be observed more than
+once. It allows more performance for those pipelines that can gracefully
+deal with duplicates.
 
 To appreciate the challenges involved, here are some of the techniques
-Hazelcast Jet employs to optimize the througphut and latency of a
+Hazelcast Jet employs to optimize the throughput and latency of a
 processing pipeline:
 
 - **Batching.** Jet takes a batch of items at once from a data source.
@@ -38,7 +44,9 @@ processing pipeline:
   concurrently. That means that, while the first stage works on batch
   *N*, later stages are still working on batches *N - 1*, *N - 2* etc.
 - **Volatile State.** Jet stores aggregation state in plain `HashMap`s
-  and only occasionally backs them up to the resilient `IMap` storage.
+  and only occasionally backs them up to the resilient
+  [`IMap`](https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/map/IMap.html)
+  storage.
 - **Load Balancing.** Jet often reshapes batches to better match the
   capacity of each stage.
 
