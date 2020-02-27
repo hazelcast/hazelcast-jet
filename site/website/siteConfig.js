@@ -60,12 +60,12 @@ const siteConfig = {
     /* Colors for website */
     colors: {
         primaryColor: '#2d7de4',
-        secondaryColor: '#eee8d5',
+        secondaryColor: '#e5e5e5',
     },
 
     stylesheets: [
         'https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,600',
-        'https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600'
+        'https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,500,600,700,800'
     ],
 
     /* Custom fonts for website */
@@ -106,8 +106,8 @@ const siteConfig = {
     editUrl: 'https://github.com/hazelcast/hazelcast-jet/edit/docs/site/docs/',
 
     // Open Graph and Twitter card images.
-    ogImage: 'img/undraw_online.svg',
-    twitterImage: 'img/undraw_tweetstorm.svg',
+    // ogImage: 'img/undraw_online.svg',
+    // twitterImage: 'img/undraw_tweetstorm.svg',
 
     // For sites with a sizable amount of content, set collapsible to true.
     // Expand/collapse the links and subcategories under categories.

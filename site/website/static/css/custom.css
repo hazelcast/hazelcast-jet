@@ -11,11 +11,13 @@ body {
 
 .projectTitle {
     color: #073642;
+    font-weight: 800;
 }
 
 .projectLogo {
-    height: 90%;
+    height: 85%;
 }
+
 
 a.button {
     font-weight: bold;
@@ -23,7 +25,7 @@ a.button {
 
 .navigationSlider .slidingNav ul li a {
     color: #707482;
-    font-weight: bold;
+    font-weight: 600;
     /* letter-spacing: 0.45px; */
 }
 
@@ -51,12 +53,12 @@ a.button {
 }
 
 .nav-footer {
-    background-color: #041a3b;
+    background-color: #002b36;
 }
 
 .nav-footer .sitemap .nav-home {
     height: 34px;
-    opacity: 0.7;
+    opacity: 0.8;
     padding: 10px;
     transition: opacity 0.15s ease-in-out;
     width: 200px;
@@ -71,7 +73,7 @@ a.button {
 }
 
 .mainContainer .container {
-
+    
 }
 
 @media only screen and (min-device-width: 360px) and (max-device-width: 736px) {
