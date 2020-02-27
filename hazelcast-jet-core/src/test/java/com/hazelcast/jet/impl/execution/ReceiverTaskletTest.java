@@ -38,15 +38,14 @@ import static org.mockito.Mockito.mock;
 public class ReceiverTaskletTest {
 
     private ReceiverTasklet t;
-    private InternalSerializationService serService;
     private MockOutboundCollector collector;
+    private InternalSerializationService serService;
 
     @Before
     public void before() {
         collector = new MockOutboundCollector(2);
         serService = new DefaultSerializationServiceBuilder().build();
-        t = new ReceiverTasklet(collector, (AbstractSerializationService) serService, 3, 100,
-                mock(LoggingService.class), new Address(), 0, "");
+        t = new ReceiverTasklet(collector, serService, 3, 100, mock(LoggingService.class), new Address(), 0, "");
     }
 
     @Test

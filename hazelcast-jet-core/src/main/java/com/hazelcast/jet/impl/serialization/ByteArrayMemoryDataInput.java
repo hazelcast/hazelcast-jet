@@ -22,7 +22,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 
 public class ByteArrayMemoryDataInput implements MemoryDataInput {
 
-    private byte[] buffer;
+    private final byte[] buffer;
     private int position;
 
     ByteArrayMemoryDataInput(byte[] buffer) {
