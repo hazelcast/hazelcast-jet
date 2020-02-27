@@ -3,6 +3,7 @@ body {
     /* font-weight: lighter; */
     background-color: #fffdfa;
     color: #073642;
+    font-size: 1.05em;
 }
 
 .fixedHeaderContainer {
@@ -37,27 +38,20 @@ a.button {
     font-weight: 600;
     letter-spacing: 0.35px;
     font-size: 16px;
+    border-bottom: 3px solid transparent;
+    margin-left: 6px;
+    margin-right: 10px;
+    padding-left: 0;
+    padding-right: 0;
 }
 
-.navigationSlider .slidingNav ul li.siteNavGroupActive,
-.navigationSlider .slidingNav ul li.siteNavItemActive,
-.navigationSlider .slidingNav ul li:focus,
-.navigationSlider .slidingNav ul li:hover {
-    border-style: solid;
-    border-color: #17e2fc;
-    border-bottom-width: 2px;
-}
 .navigationSlider .slidingNav ul li.siteNavGroupActive a,
 .navigationSlider .slidingNav ul li.siteNavItemActive a,
 .navigationSlider .slidingNav ul li a:focus,
 .navigationSlider .slidingNav ul li a:hover {
-    /* background: #17e2fc; */
     color: #707482 !important;
-    /* color: #f7f7f7; */
-   
-    /* border-bottom: 2px; */
+    border-bottom: 3px solid #17e2fc;
     background: none;
-
 }
 
 .imageAlignTop .blockImage {
@@ -68,11 +62,6 @@ a.button {
 .imageAlignRight .blockImage {
     max-height: 200px;
     max-width: 200px;
-}
-
-
-.navigationSlider .slidingNav ul li.siteNavItemActive a {
-    color: #fdf6e3;
 }
 
 .nav-footer {
