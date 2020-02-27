@@ -95,7 +95,7 @@ dependency to your application:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-avro:$jet.version'
+compile 'com.hazelcast.jet:hazelcast-jet-avro:4.0'
 ```
 
 <!--Maven-->
@@ -104,7 +104,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-avro:$jet.version'
 <dependency>
   <groupId>com.hazelcast.jet</groupId>
   <artifactId>hazelcast-jet-avro</artifactId>
-  <version>$jet.version</version>
+  <version>4.0</version>
 </dependency>
 ```
 
@@ -202,7 +202,7 @@ dependency to your application:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-hadoop:$jet.version'
+compile 'com.hazelcast.jet:hazelcast-jet-hadoop:4.0'
 ```
 
 <!--Maven-->
@@ -211,7 +211,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-hadoop:$jet.version'
 <dependency>
   <groupId>com.hazelcast.jet</groupId>
   <artifactId>hazelcast-jet-hadoop</artifactId>
-  <version>$jet.version</version>
+  <version>4.0</version>
 </dependency>
 ```
 
@@ -279,7 +279,7 @@ application:
 <!--Gradle-->
 
 ```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-s3:$jet.version'
+compile 'com.hazelcast.jet:hazelcast-jet-s3:4.0'
 ```
 
 <!--Maven-->
@@ -288,7 +288,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-s3:$jet.version'
 <dependency>
   <groupId>com.hazelcast.jet</groupId>
   <artifactId>hazelcast-jet-s3</artifactId>
-  <version>$jet.version</version>
+  <version>4.0</version>
 </dependency>
 ```
 
@@ -353,7 +353,7 @@ dependency to your application:
 
 ```groovy
 
-compile 'com.hazelcast.jet:hazelcast-jet-kafka:$jet.version'
+compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.0'
 ```
 
 <!--Maven-->
@@ -362,7 +362,7 @@ compile 'com.hazelcast.jet:hazelcast-jet-kafka:$jet.version'
 <dependency>
   <groupId>com.hazelcast.jet</groupId>
   <artifactId>hazelcast-jet-kafka</artifactId>
-  <version>$jet.version</version>
+  <version>4.0</version>
 </dependency>
 ```
 
