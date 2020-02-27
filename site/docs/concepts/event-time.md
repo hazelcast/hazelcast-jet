@@ -64,20 +64,23 @@ second time will give you acceleration vectors, and so on.
 
 ![Tumbling Window](assets/eventtime-tumbling.svg)
 
-A tumbling window is basically a special case of the sliding window.
-Since the sliding step is configurable, you can set it equal to the
-window itself. You can imagine the window tumbling over from one
-position to the next.
+In Jet, the tumbling window is just a special case of the sliding
+window. Since the sliding step is configurable, you can set it equal to
+the window itself. You can imagine the window tumbling over from one
+position to the next. Since Jet has an optimized computation scheme for
+the sliding window, there is little reason not to use a sliding step
+finer than the size of the window. A rule of thumb is 10-100 steps per
+window.
 
 ### Session Window
 
 ![Session Window](assets/eventtime-session.svg)
 
-While sliding and tumbling windows have a fixed, predetermined length,
-the session window adapts to the data itself. When two consecutive
-events are separated by more than the configured timeout, that gap
-marks the boundary between the two windows. If there is no data, there
-is no session window, either.
+While the sliding window has a fixed, predetermined length, the session
+window adapts to the data itself. When two consecutive events are
+separated by more than the configured timeout, that gap marks the
+boundary between the two windows. If there is no data, there is no
+session window, either.
 
 ## Event Disorder
 
