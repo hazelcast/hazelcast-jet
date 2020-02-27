@@ -75,6 +75,19 @@
                             <include>io.github.classgraph:classgraph</include>
                         </includes>
                     </artifactSet>
+                    <!-- remove when copied classes are no longer needed -->
+                    <filters>
+                        <filter>
+                            <artifact>com.hazelcast:hazelcast</artifact>
+                            <excludes>
+                                <exclude>com.hazelcast.internal.serialization.InputOutputFactory</exclude>
+                                <exclude>com.hazelcast.internal.serialization.InternalSerializationService</exclude>
+                                <exclude>com.hazelcast.internal.serialization.impl.AbstractSerializationService</exclude>
+                                <exclude>com.hazelcast.internal.serialization.impl.ByteArrayInputOutputFactory</exclude>
+                                <exclude>com.hazelcast.internal.serialization.impl.UnsafeInputOutputFactory</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                     <relocations>
                         <relocation>
                             <pattern>picocli.</pattern>
