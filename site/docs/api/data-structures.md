@@ -116,7 +116,43 @@ increasing the memory usage on those nodes.
 A `ConcurrentMap` supports atomic updates through the use of methods
 such as `ConcurrentMap.compute`. An `EntryProcessor` is the equivalent
 feature in `IMap`, where you can make atomic updates to the map without
-having to retrieve the entry,
+having to retrieve the entry, update the value and put it back. For example,
+imagine the following code:
+
+```java
+IMap<String, User> userCache = jet.getMap("users");
+User user = userCache.get("user-id");
+user.setAccessCount(user.getAccessCount() + 1);
+userCache.put("user-id", user);
+```
+
+While this code looks innocent, it has two problems:
+
+1. You have to do two round-trips to retrieve the entry and then to
+   update it.
+2. It is not atomic. What if some other client also updated the same
+   entry at the same time? One of the increments may be lost.
+   This is typically known as a _race condition_.
+
+To avoid these problems, you can use an `EntryProcessor` instead:
+
+```java
+static class IncrementEntryProcessor implements EntryProcessor<String, User, User> {
+    @Override
+    public User process(Entry<String, User> entry) {
+        User value = entry.getValue();
+        value.setAccessCount(value.getAccessCount() + 1);
+        return entry.setValue(value);
+    }
+}
+
+IMap<String, User> userCache = jet.getMap("users");
+userCache.executeOnEntry("user-id", new IncrementEntryProcessor());
+```
+
+>Note that the `EntryProcessor` must be on the classpath of the node or
+>loaded in some other way. See the [classloading](classloading) section
+>for more details.
 
 ### Querying
 
