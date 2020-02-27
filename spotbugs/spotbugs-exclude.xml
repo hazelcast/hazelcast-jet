@@ -32,10 +32,4 @@
         <Class name="com.hazelcast.jet.impl.connector.StreamFilesP" />
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
     </Match>
-
-    <!-- Suppress the check for IMDG copied classes - remove when they are gone -->
-    <Match>
-        <Package name="~com\.hazelcast\.internal\.serialization[.a-zA-Z0-9]*\.*"/>
-        <Bug pattern="UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD"/>
-    </Match>
 </FindBugsFilter>

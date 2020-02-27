@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.CustomInputOutputFactory;
 
 import javax.annotation.Nonnull;
 import java.io.DataInput;
@@ -100,5 +100,5 @@ public interface MemoryDataInput extends DataInput {
         throw new UnsupportedOperationException();
     }
 
-    BufferObjectDataInput toObjectInput(InternalSerializationService serializationService);
+    BufferObjectDataInput toObjectInput(CustomInputOutputFactory factory);
 }

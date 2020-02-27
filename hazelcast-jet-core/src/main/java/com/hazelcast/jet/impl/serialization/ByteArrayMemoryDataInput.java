@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.CustomInputOutputFactory;
 
 public class ByteArrayMemoryDataInput implements MemoryDataInput {
 
@@ -53,7 +53,7 @@ public class ByteArrayMemoryDataInput implements MemoryDataInput {
     }
 
     @Override
-    public BufferObjectDataInput toObjectInput(InternalSerializationService serializationService) {
-        return serializationService.createObjectDataInput(buffer, position);
+    public BufferObjectDataInput toObjectInput(CustomInputOutputFactory factory) {
+        return factory.createInput(buffer, position);
     }
 }
