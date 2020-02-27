@@ -290,7 +290,7 @@ The source above will emit data as follows:
 ```
 
 For more detailed information regarding test sources and sinks
-please see the [design document](../design-docs/unit-testing-support.md).
+please see the [design document](design-docs/unit-testing-support.md).
 
 ## Assertions
 
