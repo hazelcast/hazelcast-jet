@@ -33,6 +33,7 @@
       "tutorials/kafka",
       "tutorials/observables",
       "tutorials/cdc",
+      "tutorials/source-and-sink-builder",
       "tutorials/stream-imap",
       "tutorials/python",
       "tutorials/windowing"

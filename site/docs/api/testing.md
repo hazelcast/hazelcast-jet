@@ -20,20 +20,18 @@ project:
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-core</artifactId>
-    <version>4.0</version>
-    <classifier>tests</classifier>
-  </dependency>
-  <dependency>
-    <groupId>com.hazelcast</groupId>
-    <artifactId>hazelcast</artifactId>
-    <version>4.0</version>
-    <classifier>tests</classifier>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-core</artifactId>
+  <version>4.0</version>
+  <classifier>tests</classifier>
+</dependency>
+<dependency>
+  <groupId>com.hazelcast</groupId>
+  <artifactId>hazelcast</artifactId>
+  <version>4.0</version>
+  <classifier>tests</classifier>
+</dependency>
 ```
 
 <!--Gradle-->

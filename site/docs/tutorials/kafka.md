@@ -233,13 +233,11 @@ module.
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-      <groupId>com.hazelcast.jet</groupId>
-      <artifactId>hazelcast-jet-kafka</artifactId>
-      <version>4.0</version>
-  </dependency>
-</dependencies>
+<dependency>
+    <groupId>com.hazelcast.jet</groupId>
+    <artifactId>hazelcast-jet-kafka</artifactId>
+    <version>4.0</version>
+</dependency>
 ```
 
 <!--Gradle-->

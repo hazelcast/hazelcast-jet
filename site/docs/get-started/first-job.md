@@ -16,13 +16,11 @@ Gradle, and add the Jet JAR to your build:
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet</artifactId>
-    <version>4.0</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet</artifactId>
+  <version>4.0</version>
+</dependency>
 ```
 
 <!--Gradle-->

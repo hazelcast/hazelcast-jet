@@ -94,13 +94,11 @@ dependency to your application:
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-avro</artifactId>
-    <version>$jet.version</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-avro</artifactId>
+  <version>$jet.version</version>
+</dependency>
 ```
 
 <!--Gradle-->
@@ -202,13 +200,11 @@ dependency to your application:
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-hadoop</artifactId>
-    <version>$jet.version</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-hadoop</artifactId>
+  <version>$jet.version</version>
+</dependency>
 ```
 
 <!--Gradle-->
@@ -280,13 +276,11 @@ application:
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-s3</artifactId>
-    <version>$jet.version</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-s3</artifactId>
+  <version>$jet.version</version>
+</dependency>
 ```
 
 <!--Gradle-->
@@ -354,13 +348,11 @@ dependency to your application:
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.hazelcast.jet</groupId>
-    <artifactId>hazelcast-jet-kafka</artifactId>
-    <version>$jet.version</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.hazelcast.jet</groupId>
+  <artifactId>hazelcast-jet-kafka</artifactId>
+  <version>$jet.version</version>
+</dependency>
 ```
 
 <!--Gradle-->
@@ -895,6 +887,74 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 
 ## Custom Sources and Sinks
 
+If Jet doesn’t natively support the data source/sink you need, you can
+build a connector for it yourself by using the
+[SourceBuilder](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/SourceBuilder.html)
+and
+[SinkBuilder](https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/pipeline/SinkBuilder.html)
+.
+
 ### SourceBuilder
 
+To make a custom source connector you need two basic ingredients:
+
+* a _context_ object that holds all the resources and state you need
+  to keep track of
+* a stateless function, _`fillBufferFn`_, taking two parameters: the
+  state object and a buffer object provided by Jet
+
+Jet repeatedly calls `fillBufferFn` whenever it needs more data items.
+Optimally, the function will fill the buffer with the items it can
+acquire without blocking. A hundred items at a time is enough to
+eliminate any per-call overheads within Jet. The function is allowed to
+block as well, but taking longer than a second to complete can have
+negative effects on the overall performance of the processing pipeline.
+
+In the following examples we build a simple batch source that emits
+the lines of a file:
+
+```java
+BatchSource<String> fileSource = SourceBuilder
+    .batch("file-source", x -> new BufferedReader(new FileReader("input.txt")))
+    .<String>fillBufferFn((in, buf) -> {
+        String line = in.readLine();
+        if (line != null) {
+            buf.add(line);
+        } else {
+            buf.close();
+        }
+    })
+    .destroyFn(BufferedReader::close)
+    .build();
+```
+
+For a more involved example (which reads data in _batches_ for
+efficiency, deals with _unbounded_ data, emits _timestamps_, is
+_distributed_ and _fault tolerant_ see the
+[Custom Sources](../tutorials/source-and-sink-builder.md#source)
+tutorial).
+
 ### SinkBuilder
+
+To make your custom sink connector you need two basic ingredients:
+
+* a _context_ object that holds all the resources and state you need
+  to keep track of
+* a stateless function, _`receiveFn`_, taking two parameters: the state
+  object and a data item sent to the sink
+
+In the following example we build a simple sink which writes the
+`toString()` form of `Object`s to a file:
+
+```java
+Sink<Object> sink = sinkBuilder(
+    "file-sink", x -> new PrintWriter(new FileWriter("output.txt")))
+    .receiveFn((out, item) -> out.println(item.toString()))
+    .destroyFn(PrintWriter::close)
+    .build();
+```
+
+For a more involved example, covering issues like _batching_,
+_distributiveness_ and _fault tolerance_, see the
+[Custom Sinks](../tutorials/source-and-sink-builder.md#sink)
+tutorial).

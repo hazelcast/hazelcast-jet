@@ -134,13 +134,11 @@ Jet (latest versions available at the time of writing):
 <!--Maven-->
 
 ```xml
-<dependencies>
-  <dependency>
-      <groupId>com.hazelcast.jet.contrib</groupId>
-      <artifactId>debezium</artifactId>
-      <version>0.1</version>
-  </dependency>
-</dependencies>
+<dependency>
+    <groupId>com.hazelcast.jet.contrib</groupId>
+    <artifactId>debezium</artifactId>
+    <version>0.1</version>
+</dependency>
 ```
 
 <!--Gradle-->
