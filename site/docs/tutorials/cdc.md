@@ -131,6 +131,13 @@ To run the above sample code you will need following libraries external to
 Jet (latest versions available at the time of writing):
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+compile 'com.hazelcast.jet.contrib:debezium:0.1'
+```
+
 <!--Maven-->
 
 ```xml
@@ -139,12 +146,6 @@ Jet (latest versions available at the time of writing):
     <artifactId>debezium</artifactId>
     <version>0.1</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```bash
-compile 'com.hazelcast.jet.contrib:debezium:0.1'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->

@@ -17,6 +17,14 @@ To start using them, please add following dependencies to your
 project:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+compile 'com.hazelcast.jet:hazelcast-jet-core:4.0:tests'
+compile 'com.hazelcast:hazelcast:4.0:tests'
+```
+
 <!--Maven-->
 
 ```xml
@@ -32,13 +40,6 @@ project:
   <version>4.0</version>
   <classifier>tests</classifier>
 </dependency>
-```
-
-<!--Gradle-->
-
-```bash
-compile 'com.hazelcast.jet:hazelcast-jet-core:4.0:tests'
-compile 'com.hazelcast:hazelcast:4.0:tests'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->

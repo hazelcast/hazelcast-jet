@@ -13,6 +13,13 @@ Create a new project targeting your build tool of preference, Maven or
 Gradle, and add the Jet JAR to your build:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+compile 'com.hazelcast.jet:hazelcast-jet:4.0'
+```
+
 <!--Maven-->
 
 ```xml
@@ -21,12 +28,6 @@ Gradle, and add the Jet JAR to your build:
   <artifactId>hazelcast-jet</artifactId>
   <version>4.0</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```bash
-compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->

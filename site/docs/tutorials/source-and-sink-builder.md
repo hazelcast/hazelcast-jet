@@ -23,6 +23,13 @@ One thing we'll need is code for obtaining CPU usage. We can use
 following imports in our project:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.danielflower.apprunner:javasysmon:0.3.5.1'
+```
+
 <!--Maven-->
 
 ```xml
@@ -31,12 +38,6 @@ following imports in our project:
   <artifactId>javasysmon</artifactId>
   <version>0.3.5.1</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```groovy
-compile 'com.danielflower.apprunner:javasysmon:0.3.5.1'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->

@@ -230,6 +230,13 @@ To run the above sample code blocks you will need Hazelcast Jet Kafka
 module.
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.0'
+```
+
 <!--Maven-->
 
 ```xml
@@ -238,12 +245,6 @@ module.
     <artifactId>hazelcast-jet-kafka</artifactId>
     <version>4.0</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```bash
-compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.0'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->

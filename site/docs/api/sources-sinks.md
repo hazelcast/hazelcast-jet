@@ -91,6 +91,13 @@ module from the `opt` folder to the `lib` folder and add the following
 dependency to your application:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-avro:$jet.version'
+```
+
 <!--Maven-->
 
 ```xml
@@ -99,12 +106,6 @@ dependency to your application:
   <artifactId>hazelcast-jet-avro</artifactId>
   <version>$jet.version</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-avro:$jet.version'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -197,6 +198,13 @@ module from the `opt` folder to the `lib` folder and add the following
 dependency to your application:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-hadoop:$jet.version'
+```
+
 <!--Maven-->
 
 ```xml
@@ -205,12 +213,6 @@ dependency to your application:
   <artifactId>hazelcast-jet-hadoop</artifactId>
   <version>$jet.version</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-hadoop:$jet.version'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -273,6 +275,13 @@ module to the `lib` folder and the following dependency to your
 application:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+compile 'com.hazelcast.jet:hazelcast-jet-s3:$jet.version'
+```
+
 <!--Maven-->
 
 ```xml
@@ -281,12 +290,6 @@ application:
   <artifactId>hazelcast-jet-s3</artifactId>
   <version>$jet.version</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```groovy
-compile 'com.hazelcast.jet:hazelcast-jet-s3:$jet.version'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -345,6 +348,14 @@ module from the `opt` folder to the `lib` folder and add the following
 dependency to your application:
 
 <!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```groovy
+
+compile 'com.hazelcast.jet:hazelcast-jet-kafka:$jet.version'
+```
+
 <!--Maven-->
 
 ```xml
@@ -353,13 +364,6 @@ dependency to your application:
   <artifactId>hazelcast-jet-kafka</artifactId>
   <version>$jet.version</version>
 </dependency>
-```
-
-<!--Gradle-->
-
-```groovy
-
-compile 'com.hazelcast.jet:hazelcast-jet-kafka:$jet.version'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
