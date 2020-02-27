@@ -18,23 +18,45 @@ body {
     height: 85%;
 }
 
-
 a.button {
     font-weight: bold;
+}
+
+.promoRow a.button {
+    color: #ff5f00;
+    border-color: #ff5f00;
+}
+
+.promoRow a.button:hover {
+    background-color: #ff5f00;
 }
 
 .navigationSlider .slidingNav ul li a {
     color: #707482;
     font-weight: 600;
-    /* letter-spacing: 0.45px; */
+    letter-spacing: 0.35px;
+    font-size: 16px;
 }
 
+.navigationSlider .slidingNav ul li.siteNavGroupActive,
+.navigationSlider .slidingNav ul li.siteNavItemActive,
+.navigationSlider .slidingNav ul li:focus,
+.navigationSlider .slidingNav ul li:hover {
+    border-style: solid;
+    border-color: #17e2fc;
+    border-bottom-width: 2px;
+}
 .navigationSlider .slidingNav ul li.siteNavGroupActive a,
 .navigationSlider .slidingNav ul li.siteNavItemActive a,
 .navigationSlider .slidingNav ul li a:focus,
 .navigationSlider .slidingNav ul li a:hover {
-    /* background: #ff5f00; */
-    color: #fdf6e3;
+    /* background: #17e2fc; */
+    color: #707482 !important;
+    /* color: #f7f7f7; */
+   
+    /* border-bottom: 2px; */
+    background: none;
+
 }
 
 .imageAlignTop .blockImage {
