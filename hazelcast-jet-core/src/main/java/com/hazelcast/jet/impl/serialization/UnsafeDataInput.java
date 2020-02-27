@@ -17,7 +17,7 @@
 package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 
 import static com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry.MEM;
 import static com.hazelcast.internal.memory.HeapMemoryAccessor.ARRAY_BYTE_BASE_OFFSET;
@@ -65,15 +65,7 @@ public class UnsafeDataInput implements DataInput {
     }
 
     @Override
-    public int position() {
-        return position;
-    }
-
-    @Override
-    public BufferObjectDataInput toObjectInput(AbstractSerializationService serializationService) {
-        byte[] bytes = new byte[buffer.length - position];
-        System.arraycopy(buffer, position, bytes, 0, bytes.length);
-        position = buffer.length;
-        return serializationService.createObjectDataInput(bytes);
+    public BufferObjectDataInput toObjectInput(InternalSerializationService serializationService) {
+        return serializationService.createObjectDataInput(buffer, position);
     }
 }

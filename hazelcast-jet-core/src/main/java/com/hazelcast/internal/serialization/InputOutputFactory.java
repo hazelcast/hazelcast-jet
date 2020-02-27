@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.impl.serialization;
+package com.hazelcast.internal.serialization;
 
 import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.nio.BufferObjectDataOutput;
 
-public interface DataInput {
+import java.nio.ByteOrder;
 
-    int readInt();
+public interface InputOutputFactory {
 
-    long readLong();
+    BufferObjectDataInput createInput(Data data, InternalSerializationService service);
 
-    BufferObjectDataInput toObjectInput(InternalSerializationService serializationService);
+    BufferObjectDataInput createInput(byte[] buffer, InternalSerializationService service);
+
+    BufferObjectDataInput createInput(byte[] buffer, int offset, InternalSerializationService service);
+
+    BufferObjectDataOutput createOutput(int size, InternalSerializationService service);
+
+    ByteOrder getByteOrder();
 }

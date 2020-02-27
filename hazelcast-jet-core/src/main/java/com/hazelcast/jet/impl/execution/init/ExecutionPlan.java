@@ -18,7 +18,7 @@ package com.hazelcast.jet.impl.execution.init;
 
 import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.partition.IPartitionService;
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.StringUtil;
 import com.hazelcast.internal.util.concurrent.ConcurrentConveyor;
 import com.hazelcast.internal.util.concurrent.OneToOneConcurrentArrayQueue;
@@ -195,7 +195,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 // createOutboundEdgeStreams() populates localConveyorMap and edgeSenderConveyorMap.
                 // Also populates instance fields: senderMap, receiverMap, tasklets.
                 List<OutboundEdgeStream> outboundStreams = createOutboundEdgeStreams(
-                        vertex, localProcessorIdx, (AbstractSerializationService) nodeEngine.getSerializationService()
+                        vertex, localProcessorIdx, (InternalSerializationService) nodeEngine.getSerializationService()
                 );
                 List<InboundEdgeStream> inboundStreams = createInboundEdgeStreams(
                         vertex, localProcessorIdx, globalProcessorIndex
@@ -353,7 +353,7 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
      * Populates {@link #senderMap} and {@link #tasklets} fields.
      */
     private List<OutboundEdgeStream> createOutboundEdgeStreams(VertexDef srcVertex, int processorIdx,
-                                                               AbstractSerializationService serializationService) {
+                                                               InternalSerializationService serializationService) {
         final List<OutboundEdgeStream> outboundStreams = new ArrayList<>();
         for (EdgeDef edge : srcVertex.outboundEdges()) {
             Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap = null;
@@ -409,9 +409,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return concurrentConveyors;
     }
 
-    private OutboundEdgeStream createOutboundEdgeStream(EdgeDef edge, int processorIndex,
+    private OutboundEdgeStream createOutboundEdgeStream(EdgeDef edge,
+                                                        int processorIndex,
                                                         Map<Address, ConcurrentConveyor<Object>> senderConveyorMap,
-                                                        AbstractSerializationService serializationService) {
+                                                        InternalSerializationService serializationService) {
         final int totalPtionCount = nodeEngine.getPartitionService().getPartitionCount();
         OutboundCollector[] outboundCollectors = createOutboundCollectors(
                 edge, processorIndex, senderConveyorMap, serializationService
@@ -420,9 +421,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         return new OutboundEdgeStream(edge.sourceOrdinal(), compositeCollector);
     }
 
-    private OutboundCollector[] createOutboundCollectors(EdgeDef edge, int processorIndex,
+    private OutboundCollector[] createOutboundCollectors(EdgeDef edge,
+                                                         int processorIndex,
                                                          Map<Address, ConcurrentConveyor<Object>> senderConveyorMap,
-                                                         AbstractSerializationService serializationService) {
+                                                         InternalSerializationService serializationService) {
         final int upstreamParallelism = edge.sourceVertex().localParallelism();
         final int downstreamParallelism = edge.destVertex().localParallelism();
         final int numRemoteMembers = ptionArrgmt.remotePartitionAssignment.get().size();
@@ -495,8 +497,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
                 : new int[downstreamParallelism][];
     }
 
-    private void createIfAbsentReceiverTasklet(EdgeDef edge, int[][] ptionsPerProcessor, int totalPtionCount,
-                                               AbstractSerializationService serializationService) {
+    private void createIfAbsentReceiverTasklet(EdgeDef edge,
+                                               int[][] ptionsPerProcessor,
+                                               int totalPtionCount,
+                                               InternalSerializationService serializationService) {
         final ConcurrentConveyor<Object>[] localConveyors = localConveyorMap.get(edge.edgeId());
 
         receiverMap.computeIfAbsent(edge.destVertex().vertexId(), x -> new HashMap<>())

@@ -22,7 +22,7 @@ import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.metrics.ProbeUnit;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.concurrent.MPSCQueue;
 import com.hazelcast.internal.util.counters.Counter;
 import com.hazelcast.internal.util.counters.SwCounter;
@@ -90,11 +90,11 @@ public class ReceiverTasklet implements Tasklet {
     private final String ordinalString;
     private final String destinationVertexName;
 
-    private final Queue<DataInput> incoming = new MPSCQueue<>(null);
+    private final Queue<BufferObjectDataInput> incoming = new MPSCQueue<>(null);
     private final ProgressTracker tracker = new ProgressTracker();
     private final ArrayDeque<ObjWithPtionIdAndSize> inbox = new ArrayDeque<>();
     private final OutboundCollector collector;
-    private final AbstractSerializationService serializationService;
+    private final InternalSerializationService serializationService;
 
     private boolean receptionDone;
 
@@ -119,7 +119,7 @@ public class ReceiverTasklet implements Tasklet {
     //                 END FLOW-CONTROL STATE
 
     public ReceiverTasklet(
-            OutboundCollector collector, AbstractSerializationService serializationService,
+            OutboundCollector collector, InternalSerializationService serializationService,
             int rwinMultiplier, int flowControlPeriodMs, LoggingService loggingService,
             Address sourceAddress, int ordinal, String destinationVertexName
     ) {
@@ -168,7 +168,7 @@ public class ReceiverTasklet implements Tasklet {
     }
 
     void receiveStreamPacket(DataInput input) {
-        incoming.add(input);
+        incoming.add(input.toObjectInput(serializationService));
     }
 
     /**
@@ -181,9 +181,8 @@ public class ReceiverTasklet implements Tasklet {
 
     /**
      * Calculates the upper limit for the compressed value of {@link
-     * SenderTasklet#setSendSeqLimitCompressed}, which constrains how much more
-     * data the remote sender tasklet can send to this tasklet. Steps to
-     * calculate the limit:
+     * SenderTasklet#sentSeq}, which constrains how much more data the remote
+     * sender tasklet can send to this tasklet. Steps to calculate the limit:
      * <ol><li>
      *     Calculate the following:
      *     <ol type="a"><li>
@@ -280,18 +279,17 @@ public class ReceiverTasklet implements Tasklet {
         try {
             long totalBytes = 0;
             long totalItems = 0;
-            for (DataInput received; (received = incoming.poll()) != null; ) {
-                final BufferObjectDataInput input = received.toObjectInput(serializationService);
-                final int itemCount = input.readInt();
+            for (BufferObjectDataInput received; (received = incoming.poll()) != null; ) {
+                final int itemCount = received.readInt();
                 for (int i = 0; i < itemCount; i++) {
-                    final int mark = input.position();
-                    final Object item = input.readObject();
-                    final int itemSize = input.position() - mark;
-                    inbox.add(new ObjWithPtionIdAndSize(item, input.readInt(), itemSize));
+                    final int mark = received.position();
+                    final Object item = received.readObject();
+                    final int itemSize = received.position() - mark;
+                    inbox.add(new ObjWithPtionIdAndSize(item, received.readInt(), itemSize));
                 }
                 totalItems += itemCount;
                 totalBytes += received.position();
-                input.close();
+                received.close();
                 tracker.madeProgress();
             }
             bytesInCounter.inc(totalBytes);
