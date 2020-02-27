@@ -114,7 +114,7 @@ The tasks are connected into a cascade, forming the following DAG
 (`flatMap` and `filter` steps get automatically fused into a single
 task):
 
-![Word Count DAG](assets/dag.png)
+![Word Count DAG](assets/dag.svg)
 
 With the computation in this shape, Jet can now easily parallelize it by
 starting more than one parallel task for a given step. It can also
@@ -141,19 +141,19 @@ separation is _data partitioning_: Jet uses a function that maps any
 user ID to an integer from a predefined range and then assigns the
 integers to tasks:
 
-![Data Partitioning](assets/dag-partitioning.png)
+![Data Partitioning](assets/dag-partitioning.svg)
 
 This brings us to the following picture of the DAG instantiated on two
 cluster members:
 
-![Word Count DAG &mdash; exploded view](assets/dag-exploded.png)
+![Word Count DAG &mdash; exploded view](assets/dag-exploded.svg)
 
 Note that the data can flow mostly within the same machine, except when
 it reaches the partitioned edge. Jet additionally optimizes for
 throughput by splitting the `aggregate` vertex into two, called
 `accumulate` and `combine`:
 
-![Two-Stage Aggregation](assets/dag-twostage-aggregation.png)
+![Two-Stage Aggregation](assets/dag-twostage-aggregation.svg)
 
 Here the edge coming into `accumulate` is also partitioned, but only
 locally: every cluster member has all the partitions, but the
