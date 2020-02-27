@@ -1,12 +1,12 @@
 body {
     font-family: Ubuntu, sans-serif;
     /* font-weight: lighter; */
-    /* background-color: #002b36; */
+    background-color: #fffcf5;
     color: #073642;
 }
 
 .fixedHeaderContainer {
-    background-color: #fdf6e3;
+    background-color: #fff6e0;
 }
 
 .projectTitle {
