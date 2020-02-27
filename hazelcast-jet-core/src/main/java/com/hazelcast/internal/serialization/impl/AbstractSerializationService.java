@@ -72,8 +72,8 @@ public abstract class AbstractSerializationService implements InternalSerializat
     protected SerializerAdapter javaSerializerAdapter;
     protected SerializerAdapter javaExternalizableAdapter;
 
-    private final IdentityHashMap<Class, SerializerAdapter> constantTypesMap =
-            new IdentityHashMap<Class, SerializerAdapter>(CONSTANT_SERIALIZERS_LENGTH);
+    private final IdentityHashMap<Class, SerializerAdapter> constantTypesMap = new IdentityHashMap<Class, SerializerAdapter>(
+            CONSTANT_SERIALIZERS_LENGTH);
     private final SerializerAdapter[] constantTypeIds = new SerializerAdapter[CONSTANT_SERIALIZERS_LENGTH];
     private final ConcurrentMap<Class, SerializerAdapter> typeMap = new ConcurrentHashMap<Class, SerializerAdapter>();
     private final ConcurrentMap<Integer, SerializerAdapter> idMap = new ConcurrentHashMap<Integer, SerializerAdapter>();
@@ -385,8 +385,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
             global.compareAndSet(adapter, null);
             this.overrideJavaSerialization = false;
             throw new IllegalStateException(
-                    "Serializer [" + current.getImpl() + "] has been already registered for type ID: " +
-                            serializer.getTypeId());
+                    "Serializer [" + current.getImpl() + "] has been already registered for type ID: " + serializer.getTypeId());
         }
     }
 
@@ -419,8 +418,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
         current = idMap.putIfAbsent(serializer.getTypeId(), serializer);
         if (current != null && current.getImpl().getClass() != serializer.getImpl().getClass()) {
             throw new IllegalStateException(
-                    "Serializer [" + current.getImpl() + "] has been already registered for type ID: " +
-                            serializer.getTypeId());
+                    "Serializer [" + current.getImpl() + "] has been already registered for type ID: " + serializer.getTypeId());
         }
         return current == null;
     }
@@ -460,8 +458,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
             1-NULL serializer
             2-Default serializers, like primitives, arrays, String and some Java types
             3-Custom registered types by user
-            4-JDK serialization ( Serializable and Externalizable ) if a global serializer with Java serialization not
-              registered
+            4-JDK serialization ( Serializable and Externalizable ) if a global serializer with Java serialization not registered
             5-Global serializer if registered by user
          */
 
@@ -471,8 +468,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
         }
         Class type = object.getClass();
 
-        // 2-Default serializers, Dataserializable, Portable, primitives, arrays, String and some helper
-        // Java types(BigInteger etc)
+        //2-Default serializers, Dataserializable, Portable, primitives, arrays, String and some helper Java types(BigInteger etc)
         SerializerAdapter serializer = lookupDefaultSerializer(type);
 
         //3-Custom registered types by user
@@ -553,8 +549,7 @@ public abstract class AbstractSerializationService implements InternalSerializat
     private SerializerAdapter lookupJavaSerializer(Class type) {
         if (Externalizable.class.isAssignableFrom(type)) {
             if (safeRegister(type, javaExternalizableAdapter) && !Throwable.class.isAssignableFrom(type)) {
-                logger.info("Performance Hint: Serialization service will use java.io.Externalizable for: " +
-                        type.getName()
+                logger.info("Performance Hint: Serialization service will use java.io.Externalizable for: " + type.getName()
                         + ". Please consider using a faster serialization option such as DataSerializable.");
             }
             return javaExternalizableAdapter;

@@ -66,4 +66,6 @@
     <suppress checks="UnusedImports|LineLength|VisibilityModifier|AvoidStarImport|RegexpSingleline|ParameterNumber"
     files="src[\\/]main[\\/]java[\\/]com[\\/]hazelcast[\\/]jet[\\/]impl[\\/]client[\\/]protocol[\\/]codec[\\/]"/>
 
+    <!-- Suppress all the checks for IMDG copied classes - remove when they are gone -->
+    <suppress checks=".*" files="com[\\/]hazelcast[\\/]internal[\\/]serialization[\\/]"/>
 </suppressions>

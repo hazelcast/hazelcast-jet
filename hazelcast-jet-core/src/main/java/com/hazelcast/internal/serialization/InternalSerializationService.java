@@ -49,8 +49,8 @@ public interface InternalSerializationService extends SerializationService, Disp
      * The padded bytes are not zero'd out since they will be written by the caller. Zero'ing them out would be waste of
      * time.
      * <p>
-     * If you want to convert an object to a Data (or its byte representation) then you want to have the partition hash,
-     * because that is part of the Data-definition.
+     * If you want to convert an object to a Data (or its byte representation) then you want to have the partition hash, because
+     * that is part of the Data-definition.
      *
      * But if you want to serialize an object to a byte-array and don't care for the Data partition-hash, the hash can be
      * disabled.
@@ -60,8 +60,7 @@ public interface InternalSerializationService extends SerializationService, Disp
      *
      * @param obj                       object to write to byte array
      * @param leftPadding               offset from beginning of byte array to start writing the object's bytes
-     * @param insertPartitionHash       {@code true} to include the partition hash in the byte array, otherwise
-     *                                  {@code false}
+     * @param insertPartitionHash       {@code true} to include the partition hash in the byte array, otherwise {@code false}
      */
     byte[] toBytes(Object obj, int leftPadding, boolean insertPartitionHash);
 
