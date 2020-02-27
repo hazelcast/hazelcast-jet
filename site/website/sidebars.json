@@ -19,6 +19,7 @@
       "api/sources-sinks",
       "api/data-structures",
       "api/serialization",
+      "api/classloading",
       "api/testing",
       "api/javadoc"
     ],
