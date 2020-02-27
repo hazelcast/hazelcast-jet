@@ -17,13 +17,15 @@
 package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.nio.Bits;
+import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 
 public class ByteArrayDataInput implements DataInput {
 
     private byte[] buffer;
     private int position;
 
-    public ByteArrayDataInput(byte[] buffer) {
+    ByteArrayDataInput(byte[] buffer) {
         this.buffer = buffer;
         this.position = 0;
     }
@@ -56,9 +58,10 @@ public class ByteArrayDataInput implements DataInput {
     }
 
     @Override
-    public byte[] remaining() {
+    public BufferObjectDataInput toObjectInput(AbstractSerializationService serializationService) {
         byte[] bytes = new byte[buffer.length - position];
         System.arraycopy(buffer, position, bytes, 0, bytes.length);
-        return bytes;
+        position = buffer.length;
+        return serializationService.createObjectDataInput(bytes);
     }
 }

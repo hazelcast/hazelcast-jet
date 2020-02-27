@@ -18,9 +18,6 @@ package com.hazelcast.jet.impl.serialization;
 
 import com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry;
 
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static java.nio.ByteOrder.nativeOrder;
-
 public final class DataInputFactory {
 
     private DataInputFactory() {
@@ -28,7 +25,7 @@ public final class DataInputFactory {
 
     public static DataInput from(byte[] bytes) {
         if (GlobalMemoryAccessorRegistry.MEM_AVAILABLE) {
-            return new UnsafeDataInput(nativeOrder() != LITTLE_ENDIAN, bytes);
+            return new UnsafeDataInput(bytes);
         } else {
             return new ByteArrayDataInput(bytes);
         }

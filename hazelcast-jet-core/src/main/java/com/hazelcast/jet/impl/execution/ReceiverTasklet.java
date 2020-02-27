@@ -21,7 +21,7 @@ import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.Probe;
 import com.hazelcast.internal.metrics.ProbeUnit;
-import com.hazelcast.internal.serialization.SerializationService;
+import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
 import com.hazelcast.internal.util.concurrent.MPSCQueue;
 import com.hazelcast.internal.util.counters.Counter;
@@ -94,7 +94,7 @@ public class ReceiverTasklet implements Tasklet {
     private final ProgressTracker tracker = new ProgressTracker();
     private final ArrayDeque<ObjWithPtionIdAndSize> inbox = new ArrayDeque<>();
     private final OutboundCollector collector;
-    private final SerializationService serializationService;
+    private final AbstractSerializationService serializationService;
 
     private boolean receptionDone;
 
@@ -119,7 +119,7 @@ public class ReceiverTasklet implements Tasklet {
     //                 END FLOW-CONTROL STATE
 
     public ReceiverTasklet(
-            OutboundCollector collector, SerializationService serializationService,
+            OutboundCollector collector, AbstractSerializationService serializationService,
             int rwinMultiplier, int flowControlPeriodMs, LoggingService loggingService,
             Address sourceAddress, int ordinal, String destinationVertexName
     ) {
@@ -281,19 +281,17 @@ public class ReceiverTasklet implements Tasklet {
             long totalBytes = 0;
             long totalItems = 0;
             for (DataInput received; (received = incoming.poll()) != null; ) {
-                final int itemCount = received.readInt();
+                final BufferObjectDataInput input = received.toObjectInput(serializationService);
+                final int itemCount = input.readInt();
                 for (int i = 0; i < itemCount; i++) {
-                    final int mark = received.position();
-
-                    // TODO:
-                    final Object item = ((AbstractSerializationService) serializationService)
-                            .createObjectDataInput(received.remaining()).readObject();
-
-                    final int itemSize = received.position() - mark;
-                    inbox.add(new ObjWithPtionIdAndSize(item, received.readInt(), itemSize));
+                    final int mark = input.position();
+                    final Object item = input.readObject();
+                    final int itemSize = input.position() - mark;
+                    inbox.add(new ObjWithPtionIdAndSize(item, input.readInt(), itemSize));
                 }
                 totalItems += itemCount;
                 totalBytes += received.position();
+                input.close();
                 tracker.madeProgress();
             }
             bytesInCounter.inc(totalBytes);

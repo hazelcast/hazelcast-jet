@@ -16,8 +16,13 @@
 
 package com.hazelcast.jet.impl.serialization;
 
+import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+
 import static com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry.MEM;
 import static com.hazelcast.internal.memory.HeapMemoryAccessor.ARRAY_BYTE_BASE_OFFSET;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.nio.ByteOrder.nativeOrder;
 
 public class UnsafeDataInput implements DataInput {
 
@@ -26,7 +31,11 @@ public class UnsafeDataInput implements DataInput {
     private final byte[] buffer;
     private int position;
 
-    public UnsafeDataInput(boolean reverse, byte[] buffer) {
+    UnsafeDataInput(byte[] buffer) {
+        this(nativeOrder() != LITTLE_ENDIAN, buffer);
+    }
+
+    UnsafeDataInput(boolean reverse, byte[] buffer) {
         this.reverse = reverse;
 
         this.buffer = buffer;
@@ -61,9 +70,10 @@ public class UnsafeDataInput implements DataInput {
     }
 
     @Override
-    public byte[] remaining() {
+    public BufferObjectDataInput toObjectInput(AbstractSerializationService serializationService) {
         byte[] bytes = new byte[buffer.length - position];
         System.arraycopy(buffer, position, bytes, 0, bytes.length);
-        return bytes;
+        position = buffer.length;
+        return serializationService.createObjectDataInput(bytes);
     }
 }

@@ -16,6 +16,9 @@
 
 package com.hazelcast.jet.impl.serialization;
 
+import com.hazelcast.internal.nio.BufferObjectDataInput;
+import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+
 public interface DataInput {
 
     int readInt();
@@ -24,5 +27,5 @@ public interface DataInput {
 
     int position();
 
-    byte[] remaining();
+    BufferObjectDataInput toObjectInput(AbstractSerializationService serializationService);
 }

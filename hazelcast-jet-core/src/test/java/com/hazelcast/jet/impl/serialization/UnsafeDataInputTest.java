@@ -29,7 +29,7 @@ public class UnsafeDataInputTest {
     @Test
     public void whenNotEnoughBytesToRead_thenThrowsException() {
         // Given
-        DataInput input = new UnsafeDataInput(nativeOrder() != LITTLE_ENDIAN, new byte[]{});
+        DataInput input = new UnsafeDataInput(new byte[]{});
 
         // When
         // Then
@@ -40,7 +40,7 @@ public class UnsafeDataInputTest {
     @Test
     public void whenEnoughBytes_thenReadsCorrectValues() {
         // Given
-        DataInput input = new UnsafeDataInput(nativeOrder() != LITTLE_ENDIAN, new byte[]{
+        DataInput input = new UnsafeDataInput(new byte[]{
                 1, 0, 0, 0,
                 2, 0, 0, 0, 0, 0, 0, 0
         });

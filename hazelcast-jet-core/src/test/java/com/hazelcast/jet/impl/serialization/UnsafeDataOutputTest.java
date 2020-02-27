@@ -28,7 +28,7 @@ public class UnsafeDataOutputTest {
     @Test
     public void whenBufferIsTooSmall_thenExtendsIt() {
         // Given
-        DataOutput output = new UnsafeDataOutput(nativeOrder() != LITTLE_ENDIAN, 0);
+        DataOutput output = new UnsafeDataOutput(0);
 
         // When
         output.writeInt(1);
@@ -47,7 +47,7 @@ public class UnsafeDataOutputTest {
     @Test
     public void whenBufferIsNotExhausted_thenReturnsOnlyWrittenBytes() {
         // Given
-        DataOutput output = new UnsafeDataOutput(nativeOrder() != LITTLE_ENDIAN, 32);
+        DataOutput output = new UnsafeDataOutput(32);
 
         // When
         output.writeInt(1);

@@ -18,6 +18,8 @@ package com.hazelcast.jet.impl.serialization;
 
 import static com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry.MEM;
 import static com.hazelcast.internal.memory.HeapMemoryAccessor.ARRAY_BYTE_BASE_OFFSET;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.nio.ByteOrder.nativeOrder;
 
 public class UnsafeDataOutput implements DataOutput {
 
@@ -25,6 +27,10 @@ public class UnsafeDataOutput implements DataOutput {
 
     private byte[] buffer;
     private int position;
+
+    UnsafeDataOutput(int size) {
+        this(nativeOrder() != LITTLE_ENDIAN, size);
+    }
 
     UnsafeDataOutput(boolean reverse, int size) {
         this.reverse = reverse;
