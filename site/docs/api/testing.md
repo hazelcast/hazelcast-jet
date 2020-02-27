@@ -13,7 +13,7 @@ your pipelines. Those support classes and the test sources are published
  to the Maven central repository for each version with the `tests`
 classifier.
 
-To start using them, please add following dependency to your
+To start using them, please add following dependencies to your
 project:
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -27,6 +27,12 @@ project:
     <version>4.0</version>
     <classifier>tests</classifier>
   </dependency>
+  <dependency>
+    <groupId>com.hazelcast</groupId>
+    <artifactId>hazelcast</artifactId>
+    <version>4.0</version>
+    <classifier>tests</classifier>
+  </dependency>
 </dependencies>
 ```
 
@@ -34,12 +40,13 @@ project:
 
 ```bash
 compile 'com.hazelcast.jet:hazelcast-jet-core:4.0:tests'
+compile 'com.hazelcast:hazelcast:4.0:tests'
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-After adding the dependency to your project, the test classes should be
-available to your project.
+After adding the dependencies to your project, the test classes should
+be available to your project.
 
 ## Creating Hazelcast Jet instances with Mock Network
 
