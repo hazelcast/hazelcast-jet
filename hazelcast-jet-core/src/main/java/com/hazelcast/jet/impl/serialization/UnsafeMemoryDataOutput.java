@@ -16,14 +16,25 @@
 
 package com.hazelcast.jet.impl.serialization;
 
-import com.hazelcast.internal.nio.Bits;
+import static com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry.MEM;
+import static com.hazelcast.internal.memory.HeapMemoryAccessor.ARRAY_BYTE_BASE_OFFSET;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.nio.ByteOrder.nativeOrder;
 
-public class ByteArrayDataOutput implements DataOutput {
+public class UnsafeMemoryDataOutput implements MemoryDataOutput {
+
+    private final boolean reverse;
 
     private byte[] buffer;
     private int position;
 
-    ByteArrayDataOutput(int size) {
+    UnsafeMemoryDataOutput(int size) {
+        this(nativeOrder() != LITTLE_ENDIAN, size);
+    }
+
+    UnsafeMemoryDataOutput(boolean reverse, int size) {
+        this.reverse = reverse;
+
         this.buffer = new byte[size];
         this.position = 0;
     }
@@ -31,14 +42,14 @@ public class ByteArrayDataOutput implements DataOutput {
     @Override
     public void writeInt(int v) {
         ensureAvailable(Integer.BYTES);
-        Bits.writeInt(buffer, position, v, false);
+        MEM.putInt(buffer, ARRAY_BYTE_BASE_OFFSET + position, reverse ? Integer.reverseBytes(v) : v);
         position += Integer.BYTES;
     }
 
     @Override
     public void writeLong(long v) {
         ensureAvailable(Long.BYTES);
-        Bits.writeLong(buffer, position, v, false);
+        MEM.putLong(buffer, ARRAY_BYTE_BASE_OFFSET + position, reverse ? Long.reverseBytes(v) : v);
         position += Long.BYTES;
     }
 

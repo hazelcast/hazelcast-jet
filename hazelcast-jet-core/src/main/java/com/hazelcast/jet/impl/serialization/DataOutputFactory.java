@@ -23,11 +23,11 @@ public final class DataOutputFactory {
     private DataOutputFactory() {
     }
 
-    public static DataOutput create(int size) {
+    public static MemoryDataOutput create(int size) {
         if (GlobalMemoryAccessorRegistry.MEM_AVAILABLE) {
-            return new UnsafeDataOutput(size);
+            return new UnsafeMemoryDataOutput(size);
         } else {
-            return new ByteArrayDataOutput(size);
+            return new ByteArrayMemoryDataOutput(size);
         }
     }
 }

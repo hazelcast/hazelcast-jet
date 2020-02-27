@@ -29,7 +29,7 @@ import com.hazelcast.internal.util.counters.SwCounter;
 import com.hazelcast.jet.config.InstanceConfig;
 import com.hazelcast.jet.core.metrics.MetricNames;
 import com.hazelcast.jet.core.metrics.MetricTags;
-import com.hazelcast.jet.impl.serialization.DataInput;
+import com.hazelcast.jet.impl.serialization.MemoryDataInput;
 import com.hazelcast.jet.impl.util.ObjectWithPartitionId;
 import com.hazelcast.jet.impl.util.ProgressState;
 import com.hazelcast.jet.impl.util.ProgressTracker;
@@ -167,7 +167,7 @@ public class ReceiverTasklet implements Tasklet {
         return tracker.toProgressState();
     }
 
-    void receiveStreamPacket(DataInput input) {
+    void receiveStreamPacket(MemoryDataInput input) {
         incoming.add(input.toObjectInput(serializationService));
     }
 

@@ -21,9 +21,9 @@ import com.hazelcast.internal.nio.Connection;
 import com.hazelcast.internal.nio.Packet;
 import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
-import com.hazelcast.jet.impl.serialization.DataInput;
+import com.hazelcast.jet.impl.serialization.MemoryDataInput;
 import com.hazelcast.jet.impl.serialization.DataInputFactory;
-import com.hazelcast.jet.impl.serialization.DataOutput;
+import com.hazelcast.jet.impl.serialization.MemoryDataOutput;
 import com.hazelcast.jet.impl.serialization.DataOutputFactory;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
@@ -74,7 +74,7 @@ public class Networking {
     }
 
     private void handleStreamPacket(Packet packet) {
-        DataInput input = DataInputFactory.from(packet.toByteArray());
+        MemoryDataInput input = DataInputFactory.from(packet.toByteArray());
         long executionId = input.readLong();
         int vertexId = input.readInt();
         int ordinal = input.readInt();
@@ -83,7 +83,7 @@ public class Networking {
     }
 
     public static byte[] createStreamPacketHeader(long executionId, int destinationVertexId, int ordinal) {
-        DataOutput output = DataOutputFactory.create(PACKET_HEADER_SIZE);
+        MemoryDataOutput output = DataOutputFactory.create(PACKET_HEADER_SIZE);
         output.writeLong(executionId);
         output.writeInt(destinationVertexId);
         output.writeInt(ordinal);
@@ -110,7 +110,7 @@ public class Networking {
     }
 
     private byte[] createFlowControlPacket(Address member) {
-        DataOutput output = DataOutputFactory.create(FLOW_PACKET_INITIAL_SIZE);
+        MemoryDataOutput output = DataOutputFactory.create(FLOW_PACKET_INITIAL_SIZE);
         final boolean[] hasData = {false};
         Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
         output.writeInt(executionContexts.size());
@@ -129,7 +129,7 @@ public class Networking {
     }
 
     private void handleFlowControlPacket(Address fromAddr, byte[] packet) {
-        DataInput input = DataInputFactory.from(packet);
+        MemoryDataInput input = DataInputFactory.from(packet);
         final int executionCtxCount = input.readInt();
         for (int j = 0; j < executionCtxCount; j++) {
             final long executionId = input.readLong();

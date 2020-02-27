@@ -23,11 +23,11 @@ public final class DataInputFactory {
     private DataInputFactory() {
     }
 
-    public static DataInput from(byte[] bytes) {
+    public static MemoryDataInput from(byte[] bytes) {
         if (GlobalMemoryAccessorRegistry.MEM_AVAILABLE) {
-            return new UnsafeDataInput(bytes);
+            return new UnsafeMemoryDataInput(bytes);
         } else {
-            return new ByteArrayDataInput(bytes);
+            return new ByteArrayMemoryDataInput(bytes);
         }
     }
 }

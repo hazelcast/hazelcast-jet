@@ -24,18 +24,18 @@ import static com.hazelcast.internal.memory.HeapMemoryAccessor.ARRAY_BYTE_BASE_O
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.ByteOrder.nativeOrder;
 
-public class UnsafeDataInput implements DataInput {
+public class UnsafeMemoryDataInput implements MemoryDataInput {
 
     private final boolean reverse;
 
     private final byte[] buffer;
     private int position;
 
-    UnsafeDataInput(byte[] buffer) {
+    UnsafeMemoryDataInput(byte[] buffer) {
         this(nativeOrder() != LITTLE_ENDIAN, buffer);
     }
 
-    UnsafeDataInput(boolean reverse, byte[] buffer) {
+    UnsafeMemoryDataInput(boolean reverse, byte[] buffer) {
         this.reverse = reverse;
 
         this.buffer = buffer;
@@ -60,7 +60,7 @@ public class UnsafeDataInput implements DataInput {
 
     private void checkAvailable(int length) {
         if (position + length > buffer.length) {
-            throw new RuntimeException("Cannot read " + length + " bytes!");
+            throw new RuntimeException("Cannot read " + length + " bytes");
         }
     }
 

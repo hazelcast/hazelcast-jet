@@ -20,12 +20,12 @@ import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 
-public class ByteArrayDataInput implements DataInput {
+public class ByteArrayMemoryDataInput implements MemoryDataInput {
 
     private byte[] buffer;
     private int position;
 
-    ByteArrayDataInput(byte[] buffer) {
+    ByteArrayMemoryDataInput(byte[] buffer) {
         this.buffer = buffer;
         this.position = 0;
     }
@@ -48,7 +48,7 @@ public class ByteArrayDataInput implements DataInput {
 
     private void checkAvailable(int length) {
         if (position + length > buffer.length) {
-            throw new RuntimeException("Cannot read " + length + " bytes!");
+            throw new RuntimeException("Cannot read " + length + " bytes");
         }
     }
 

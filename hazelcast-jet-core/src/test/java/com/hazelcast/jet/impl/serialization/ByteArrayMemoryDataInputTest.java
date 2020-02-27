@@ -21,12 +21,12 @@ import org.junit.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ByteArrayDataInputTest {
+public class ByteArrayMemoryDataInputTest {
 
     @Test
-    public void whenNotEnoughBytesToRead_thenThrowsException() {
+    public void when_NotEnoughBytesToRead_then_ThrowsException() {
         // Given
-        DataInput input = new ByteArrayDataInput(new byte[]{});
+        MemoryDataInput input = new ByteArrayMemoryDataInput(new byte[]{});
 
         // When
         // Then
@@ -35,9 +35,9 @@ public class ByteArrayDataInputTest {
     }
 
     @Test
-    public void whenEnoughBytes_thenReadsCorrectValues() {
+    public void when_EnoughBytes_then_ReadsCorrectValues() {
         // Given
-        DataInput input = new ByteArrayDataInput(new byte[]{
+        MemoryDataInput input = new ByteArrayMemoryDataInput(new byte[]{
                 1, 0, 0, 0,
                 2, 0, 0, 0, 0, 0, 0, 0
         });

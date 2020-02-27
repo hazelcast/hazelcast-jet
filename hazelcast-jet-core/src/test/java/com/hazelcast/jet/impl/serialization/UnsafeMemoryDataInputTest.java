@@ -24,12 +24,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assume.assumeTrue;
 
-public class UnsafeDataInputTest {
+public class UnsafeMemoryDataInputTest {
 
     @Test
-    public void whenNotEnoughBytesToRead_thenThrowsException() {
+    public void when_NotEnoughBytesToRead_then_ThrowsException() {
         // Given
-        DataInput input = new UnsafeDataInput(new byte[]{});
+        MemoryDataInput input = new UnsafeMemoryDataInput(new byte[]{});
 
         // When
         // Then
@@ -38,9 +38,9 @@ public class UnsafeDataInputTest {
     }
 
     @Test
-    public void whenEnoughBytes_thenReadsCorrectValues() {
+    public void when_EnoughBytes_then_ReadsCorrectValues() {
         // Given
-        DataInput input = new UnsafeDataInput(new byte[]{
+        MemoryDataInput input = new UnsafeMemoryDataInput(new byte[]{
                 1, 0, 0, 0,
                 2, 0, 0, 0, 0, 0, 0, 0
         });
@@ -52,11 +52,11 @@ public class UnsafeDataInputTest {
     }
 
     @Test
-    public void whenReverseIsSet_thenBytesAreReadInReverseOrder() {
+    public void when_ReverseIsSet_then_BytesAreReadInReverseOrder() {
         assumeTrue(nativeOrder() == LITTLE_ENDIAN);
 
         // Given
-        DataInput input = new UnsafeDataInput(true, new byte[]{
+        MemoryDataInput input = new UnsafeMemoryDataInput(true, new byte[]{
                 0, 0, 0, 1,
                 0, 0, 0, 0, 0, 0, 0, 2
         });

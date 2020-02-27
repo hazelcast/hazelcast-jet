@@ -18,17 +18,14 @@ package com.hazelcast.jet.impl.serialization;
 
 import org.junit.Test;
 
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static java.nio.ByteOrder.nativeOrder;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assume.assumeTrue;
 
-public class UnsafeDataOutputTest {
+public class ByteArrayMemoryDataOutputTest {
 
     @Test
-    public void whenBufferIsTooSmall_thenExtendsIt() {
+    public void when_BufferIsTooSmall_then_ExtendsIt() {
         // Given
-        DataOutput output = new UnsafeDataOutput(0);
+        MemoryDataOutput output = new ByteArrayMemoryDataOutput(0);
 
         // When
         output.writeInt(1);
@@ -45,9 +42,9 @@ public class UnsafeDataOutputTest {
     }
 
     @Test
-    public void whenBufferIsNotExhausted_thenReturnsOnlyWrittenBytes() {
+    public void when_BufferIsNotExhausted_then_ReturnsOnlyWrittenBytes() {
         // Given
-        DataOutput output = new UnsafeDataOutput(32);
+        MemoryDataOutput output = new ByteArrayMemoryDataOutput(32);
 
         // When
         output.writeInt(1);
@@ -59,27 +56,6 @@ public class UnsafeDataOutputTest {
                 new byte[]{
                         1, 0, 0, 0,
                         2, 0, 0, 0, 0, 0, 0, 0
-                }
-        );
-    }
-
-    @Test
-    public void whenReverseIsSet_thenBytesAreWrittenInReverseOrder() {
-        assumeTrue(nativeOrder() == LITTLE_ENDIAN);
-
-        // Given
-        DataOutput output = new UnsafeDataOutput(true, 0);
-
-        // When
-        output.writeInt(1);
-        output.writeLong(2);
-
-        // Then
-        assertArrayEquals(
-                output.toByteArray(),
-                new byte[]{
-                        0, 0, 0, 1,
-                        0, 0, 0, 0, 0, 0, 0, 2
                 }
         );
     }
