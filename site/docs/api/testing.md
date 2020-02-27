@@ -237,6 +237,61 @@ has been finished to reclaim resources and not to leave a room for
 interference with the next test execution due to distributed
 nature of the product.
 
+## Test Sources and Sinks
+
+Hazelcast Jet comes with batch and streaming test sources along with a
+assertion sinks where you can write tests to assert the output of a
+pipeline without having to write boilerplate code.
+
+Test sources allow you to generate events for your pipeline.
+
+### Batch Source
+
+These sources create a fixed amount of data. These sources are
+non-distributed.
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.items(1, 2, 3, 4))
+ .writeTo(Sinks.logger());
+```
+
+This will yield an output like below:
+
+```log
+10:25:50,198  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 1
+10:25:50,199  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 2
+10:25:50,200  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 3
+10:25:50,200  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 4
+```
+
+### Streaming Source
+
+Streaming sources create an infinite stream of data. The generated
+events have timestamps and like the batch source, this source is also
+non-distributed.
+
+```java
+int itemsPerSecond = 2;
+pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
+        .withNativeTimestamp(0)
+        .writeTo();
+```
+
+The source above will emit data as follows:
+
+```log
+10:28:27,654  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:27.500, sequence=0)
+10:28:28,146  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:28.000, sequence=1)
+10:28:28,647  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:28.500, sequence=2)
+10:28:29,145  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:29.000, sequence=3)
+10:28:29,648  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:29.500, sequence=4)
+10:28:30,147  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:30.000, sequence=5)
+```
+
+For more detailed information regarding test sources and sinks
+please see the [design document](api/unit-testing-support.md).
+
 ## Assertions
 
 `com.hazelcast.jet.core.JetTestSupport` contains a lot of assertion
@@ -325,10 +380,6 @@ Finished Running Test: test in 0.009 seconds.
 
 > Note: `@Repeat` annotation only works with Hazelcast Class runners.
 
-## Testing Hazelcast Jet Pipelines
-
-TODO
-
 ## Waiting for job to be in desired state
 
 On some use cases, one needs to make the job is submitted and running
@@ -361,58 +412,3 @@ public class DesiredStateTest extends JetTestSupport {
 In the example above `assertJobStatusEventually(Job, JobStatus)`
 utility method has been used to validate the job is in the desired
 state from the `com.hazelcast.jet.core.JetTestSupport` class.
-
-## Test Sources and Sinks
-
-Hazelcast Jet comes with batch and streaming test sources along with a
-assertion sinks where you can write tests to assert the output of a
-pipeline without having to write boilerplate code.
-
-Test sources allow you to generate events for your pipeline.
-
-### Batch Source
-
-These sources create a fixed amount of data. These sources are
-non-distributed.
-
-```java
-Pipeline p = Pipeline.create();
-p.readFrom(TestSources.items(1, 2, 3, 4))
- .writeTo(Sinks.logger());
-```
-
-This will yield an output like below:
-
-```log
-10:25:50,198  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 1
-10:25:50,199  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 2
-10:25:50,200  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 3
-10:25:50,200  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 4
-```
-
-### Streaming Source
-
-Streaming sources create an infinite stream of data. The generated
-events have timestamps and like the batch source, this source is also
-non-distributed.
-
-```java
-int itemsPerSecond = 2;
-pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
-        .withNativeTimestamp(0)
-        .writeTo();
-```
-
-The source above will emit data as follows:
-
-```log
-10:28:27,654  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:27.500, sequence=0)
-10:28:28,146  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:28.000, sequence=1)
-10:28:28,647  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:28.500, sequence=2)
-10:28:29,145  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:29.000, sequence=3)
-10:28:29,648  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:29.500, sequence=4)
-10:28:30,147  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:30.000, sequence=5)
-```
-
-For more detailed information regarding test sources and sinks
-please see the [design document](api/unit-testing-support.md).
