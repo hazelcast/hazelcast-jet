@@ -82,7 +82,7 @@ the log output for a line like this:
 
 ```text
 Members {size:1, ver:1} [
- Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
+    Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff this
 ]
 ```
 

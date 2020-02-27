@@ -71,8 +71,8 @@ Members {size:2, ver:2} [
 
 ```text
 Members {size:2, ver:2} [
- Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff
- Member [172.17.0.3]:5701 - 7d07aad7-4a22-4086-a5a1-db64cf664e7d this
+    Member [172.17.0.2]:5701 - 4bc3691d-2575-452d-b9d9-335f177f6aff
+    Member [172.17.0.3]:5701 - 7d07aad7-4a22-4086-a5a1-db64cf664e7d this
 ]
 ```
 
