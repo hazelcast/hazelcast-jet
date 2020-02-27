@@ -1,12 +1,12 @@
 body {
     font-family: Source Sans Pro, Ubuntu, sans-serif;
     /* font-weight: lighter; */
-    /* background-color: #fffcf5; */
+    background-color: #fffdfa;
     color: #073642;
 }
 
 .fixedHeaderContainer {
-    background-color: #f7f7f7;
+    background-color: #f0f0f0;
 }
 
 .projectTitle {
@@ -29,6 +29,7 @@ a.button {
 
 .promoRow a.button:hover {
     background-color: #ff5f00;
+    color: #fffdfa;
 }
 
 .navigationSlider .slidingNav ul li a {
