@@ -12,13 +12,13 @@ trickier aspects of writing our own sources and sinks.
 
 Let's write a sink that functions a bit like a **file logger**. You
 set it up with a filename and it will write one line for each
-input it gets into said text file. The lines will be made up by a
+input it gets into that file. The lines will be composed of a
 **timestamp**, a floating point number providing us with the machine's
 **CPU usage** at the time of writing and then the **`toString()`** form
 of whatever input object produced the line.
 
 One thing we'll need is code for obtaining CPU usage. We can use
-[JavaSysMon](https://github.com/jezhumble/javasysmon), will need
+[JavaSysMon](https://github.com/jezhumble/javasysmon), we'll need the
 following imports in our project:
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -71,7 +71,7 @@ class CpuMonitor {
 ```
 
 We will also need a **context** object to hold the entities we need in
-our sink. A `CpuMonitor` and a file based `PrintWriter`:
+our sink, the `CpuMonitor` and the file-based `PrintWriter`:
 
 ```java
 class Context {
@@ -103,8 +103,7 @@ class Context {
 }
 ```
 
-Now that we have all this helper code out of the way we can write our
-actual sink:
+Now that we have all the helper code ready we can write our actual sink:
 
 ```java
 Sink<Object> cpuSink = sinkBuilder(
@@ -118,7 +117,7 @@ That's it! All we did was to specify:
 
 * how to set up our context object (the `createFn`)
 * how to write out received object (the `receiveFn`)
-* how to tear-down the resources used once we are done (the `destroyFn`)
+* how to tear down the used resources once we are done (the `destroyFn`)
 
 We can then run it in a dummy pipeline and use its output to
 test the sources we are going to write in the following sections:
@@ -148,7 +147,8 @@ private static class Context {
     //...
 
     void write(Object item) {
-        String line = String.format("%d,%f,%s", System.currentTimeMillis(), cpuMonitor.getCpuUsage(), item.toString());
+        String line = String.format("%d,%f,%s", System.currentTimeMillis(),
+                cpuMonitor.getCpuUsage(), item.toString());
         printWriter.println(line);
     }
 
@@ -171,7 +171,7 @@ Sink<Object> cpuSink = sinkBuilder(
 
 ### Parallelism
 
-Jet builds sink to be distributed by default: each member of the Jet
+Jet builds the sink to be distributed by default: each member of the Jet
 cluster has a processor running it. You can configure how many parallel
 processors there are on each member (the local parallelism) by calling
 `SinkBuilder.preferredLocalParallelism()`. By default there will be one
@@ -204,10 +204,14 @@ Sink<Object> cpuSink = sinkBuilder(
 Sinks built via `SinkBuilder` don’t participate in the fault tolerance
 protocol. You can’t preserve any internal state if a job fails and gets
 restarted. In a job with snapshotting enabled your sink will still
-receive every item at least once. If the system you’re storing the data
-into is idempotent (writing the same thing multiple times has the exact
-same effect as writing in a single time - obviously not the case with
-our example), this will have the effect of the exactly-once guarantee.
+receive every item at least once. If you ensure that after the `flushFn`
+is called all the previous items are persistently stored, your sink
+provides an at-least-once guarantee. If you don't (like our first
+example without the flushFn), your sink can also miss items. If the
+system you’re storing the data into is idempotent (i.e. writing the same
+thing multiple times has the exact same effect as writing it a single
+time - obviously not the case with our example), then your sink will
+have an exactly-once guarantee.
 
 ## Source
 
@@ -236,7 +240,7 @@ We basically specified:
   basically just a `BufferedReader`
 * how to retrieve data to be emitted (the `fillBufferFn`), which will be
   called by Jet whenever it needs more data
-* how to tear-down the resources we have used, once we are done (the
+* how to tear down the resources we have used once we are done (the
   `destroyFn`)
 
 We can run it in a dummy pipeline, to see that it works and that it
@@ -254,9 +258,9 @@ jet.newJob(p).join();
 ### Batching
 
 Our source works, but it's not efficient, because it always just
-retrieves one line at once. Optimally the `fillBufferFn` should fill
+retrieves one line at a time. Optimally the `fillBufferFn` should fill
 the buffer with all the items it can acquire without blocking. As a
-rule of thumb 100 items at a time is enough to eliminate any per-call
+rule of thumb 100 items at a time is enough to dwarf any per-call
 overheads within Jet.
 
 The function may block as well, if need be, but taking longer than a
@@ -280,20 +284,20 @@ To make it more efficient we could change our `fillBufferFn` like this:
 
 ### Unbounded
 
-Custom sources don't need to batching one. They can also provide
+Custom sources don't need to batching ones. They can also provide
 *unbounded* data. Let's see an example of such a `StreamSource`, one
-that reads line from the network:
+that reads lines from the network:
 
 ```java
 StreamSource<String> socketSource = SourceBuilder
     .stream("http-source", ctx -> {
         int port = 11000;
         ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println(String.format("Waiting for connection on port %d ...", port));
+        ctx.logger().info(String.format("Waiting for connection on port %d ...", port));
         Socket socket = serverSocket.accept();
         BufferedReader reader = new BufferedReader(
             new InputStreamReader(socket.getInputStream()));
-        System.out.println(String.format("Data source connected on port %d!", port));
+        ctx.logger().info(String.format("Data source connected on port %d.", port));
         return reader;
     })
     .<String>fillBufferFn((reader, buf) -> {
@@ -315,7 +319,7 @@ StreamSource<String> socketSource = SourceBuilder
 
 ### Timestamps
 
-We could make use of our stream source via following pipeline:
+We could make use of our stream source via the following pipeline:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -324,17 +328,17 @@ p.readFrom(socketSource)
  .writeTo(Sinks.logger());
 
 JetInstance jet = Jet.bootstrappedInstance();
-jet.newJob(p).join();
+jet.newJob(p);
 ```
 
-One thing to notice here is that there is an extra line
-(`withoutTimestamps`), which is needed because for stream sources Jet
-has to what kind of event timestamps they will provide (if any). Now
+One thing to note here is that there is an extra line
+(`withoutTimestamps`) which is needed because for stream sources Jet
+has to know what kind of event timestamps they will provide (if any). Now
 we are using it without timestamps, but this unfortunately means that
 we aren't allowed to use [Windowed Aggregation](windowing.md) in
 our pipeline.
 
-There are multiple way to fix this (we can add timestamps in the
+There are multiple ways to fix this (we can add timestamps in the
 pipeline after the source), but the most convenient one is to provide
 the timestamps right in the source.
 
@@ -348,10 +352,10 @@ StreamSource<String> socketSource = SourceBuilder
     .timestampedStream("http-source", ctx -> {
         int port = 11000;
         ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println(String.format("Waiting for connection on port %d ...", port));
+        ctx.logger().info(String.format("Waiting for connection on port %d ...", port));
         Socket socket = serverSocket.accept();
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        System.out.println(String.format("Data source connected on port %d!", port));
+        ctx.logger().info(String.format("Data source connected on port %d.", port));
         return reader;
     })
     .<String>fillBufferFn((reader, buf) -> {
@@ -366,14 +370,14 @@ StreamSource<String> socketSource = SourceBuilder
                 return;
             }
 
-            buf.add(line, Long.parseLong(line.substring(0, 13)));
+            buf.add(line, Long.parseLong(line.substring(0, line.indexOf(','))));
         }
     })
     .destroyFn(reader -> reader.close())
     .build();
 ```
 
-The pipeline changes also:
+The pipeline changes too:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -409,11 +413,11 @@ StreamSource<String> socketSource = SourceBuilder
     .build();
 ```
 
-Notice that we have added an extra call to specify the local paralellism
-of the source. This means that each Jet cluster member will now create
-two such sources.
+Notice that we have added an extra call to specify the local parallelism
+of the source (the `distributed()` method). This means that each Jet
+cluster member will now create two such sources.
 
-If we now start a cluster with two members we will be listening to four
+If we now start a cluster with two members, we will be listening to four
 different sockets:
 
 ```java
@@ -463,7 +467,7 @@ When Jet resumes a job, it will:
 
 You’ll find that `restoreSnapshotFn`, somewhat unexpectedly, accepts not
 one but a list of snapshot objects. If you’re building a simple,
-non-distributed source, this list will have just one member. However,
+non-distributed source, this list will have just one element. However,
 the same logic must work for distributed sources as well, and a
 distributed source runs on many parallel processors at the same time.
 Each of them will produce its own snapshot object. After a restart the
@@ -489,4 +493,5 @@ StreamSource<Integer> faultTolerantSource = SourceBuilder
 
 The snapshotting function returns the current number to emit, the
 restoring function sets the number from the snapshot to the current
-state.
+state. This source is non-distributed, so we can safely do
+`saved.get(0)`.
