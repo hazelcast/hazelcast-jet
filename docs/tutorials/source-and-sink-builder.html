@@ -70,12 +70,12 @@ trickier aspects of writing our own sources and sinks.</p>
 <h2><a class="anchor" aria-hidden="true" id="sink"></a><a href="#sink" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sink</h2>
 <p>Let's write a sink that functions a bit like a <strong>file logger</strong>. You
 set it up with a filename and it will write one line for each
-input it gets into said text file. The lines will be made up by a
+input it gets into that file. The lines will be composed of a
 <strong>timestamp</strong>, a floating point number providing us with the machine's
 <strong>CPU usage</strong> at the time of writing and then the <strong><code>toString()</code></strong> form
 of whatever input object produced the line.</p>
 <p>One thing we'll need is code for obtaining CPU usage. We can use
-<a href="https://github.com/jezhumble/javasysmon">JavaSysMon</a>, will need
+<a href="https://github.com/jezhumble/javasysmon">JavaSysMon</a>, we'll need the
 following imports in our project:</p>
 <div class="tabs"><div class="nav-tabs"><div id="tab-group-50-tab-51" class="nav-link active" data-group="group_50" data-tab="tab-group-50-content-51">Gradle</div><div id="tab-group-50-tab-52" class="nav-link" data-group="group_50" data-tab="tab-group-50-content-52">Maven</div></div><div class="tab-content"><div id="tab-group-50-content-51" class="tab-pane active" data-group="group_50" tabindex="-1"><div><span><pre><code class="hljs css language-groovy">compile <span class="hljs-string">'com.danielflower.apprunner:javasysmon:0.3.5.1'</span><br /></code></pre>
 </span></div></div><div id="tab-group-50-content-52" class="tab-pane" data-group="group_50" tabindex="-1"><div><span><pre><code class="hljs css language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>com.danielflower.apprunner<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>javasysmon<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span><br />  <span class="hljs-tag">&lt;<span class="hljs-name">version</span>&gt;</span>0.3.5.1<span class="hljs-tag">&lt;/<span class="hljs-name">version</span>&gt;</span><br /><span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span><br /></code></pre>
@@ -107,7 +107,7 @@ following imports in our project:</p>
 
 </code></pre>
 <p>We will also need a <strong>context</strong> object to hold the entities we need in
-our sink. A <code>CpuMonitor</code> and a file based <code>PrintWriter</code>:</p>
+our sink, the <code>CpuMonitor</code> and the file-based <code>PrintWriter</code>:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">class</span> <span class="token class-name">Context</span> <span class="token punctuation">{</span>
 
     <span class="token keyword">private</span> <span class="token class-name">PrintWriter</span> printWriter<span class="token punctuation">;</span>
@@ -136,8 +136,7 @@ our sink. A <code>CpuMonitor</code> and a file based <code>PrintWriter</code>:</
     <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>Now that we have all this helper code out of the way we can write our
-actual sink:</p>
+<p>Now that we have all the helper code ready we can write our actual sink:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Sink</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> cpuSink <span class="token operator">=</span> <span class="token function">sinkBuilder</span><span class="token punctuation">(</span>
     <span class="token string">"cpu-sink"</span><span class="token punctuation">,</span> x <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">Context</span><span class="token punctuation">(</span><span class="token string">"data.csv"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">receiveFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> ctx<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">)</span>
@@ -148,7 +147,7 @@ actual sink:</p>
 <ul>
 <li>how to set up our context object (the <code>createFn</code>)</li>
 <li>how to write out received object (the <code>receiveFn</code>)</li>
-<li>how to tear-down the resources used once we are done (the <code>destroyFn</code>)</li>
+<li>how to tear down the used resources once we are done (the <code>destroyFn</code>)</li>
 </ul>
 <p>We can then run it in a dummy pipeline and use its output to
 test the sources we are going to write in the following sections:</p>
@@ -171,7 +170,8 @@ which it will call at regular intervals.</p>
     <span class="token comment">//...</span>
 
     <span class="token keyword">void</span> <span class="token function">write</span><span class="token punctuation">(</span><span class="token class-name">Object</span> item<span class="token punctuation">)</span> <span class="token punctuation">{</span>
-        <span class="token class-name">String</span> line <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"%d,%f,%s"</span><span class="token punctuation">,</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cpuMonitor<span class="token punctuation">.</span><span class="token function">getCpuUsage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> item<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> line <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"%d,%f,%s"</span><span class="token punctuation">,</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                cpuMonitor<span class="token punctuation">.</span><span class="token function">getCpuUsage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> item<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         printWriter<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">;</span>
     <span class="token punctuation">}</span>
 
@@ -192,7 +192,7 @@ which it will call at regular intervals.</p>
 
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="parallelism"></a><a href="#parallelism" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Parallelism</h3>
-<p>Jet builds sink to be distributed by default: each member of the Jet
+<p>Jet builds the sink to be distributed by default: each member of the Jet
 cluster has a processor running it. You can configure how many parallel
 processors there are on each member (the local parallelism) by calling
 <code>SinkBuilder.preferredLocalParallelism()</code>. By default there will be one
@@ -221,10 +221,14 @@ file).</p>
 <p>Sinks built via <code>SinkBuilder</code> don’t participate in the fault tolerance
 protocol. You can’t preserve any internal state if a job fails and gets
 restarted. In a job with snapshotting enabled your sink will still
-receive every item at least once. If the system you’re storing the data
-into is idempotent (writing the same thing multiple times has the exact
-same effect as writing in a single time - obviously not the case with
-our example), this will have the effect of the exactly-once guarantee.</p>
+receive every item at least once. If you ensure that after the <code>flushFn</code>
+is called all the previous items are persistently stored, your sink
+provides an at-least-once guarantee. If you don't (like our first
+example without the flushFn), your sink can also miss items. If the
+system you’re storing the data into is idempotent (i.e. writing the same
+thing multiple times has the exact same effect as writing it a single
+time - obviously not the case with our example), then your sink will
+have an exactly-once guarantee.</p>
 <h2><a class="anchor" aria-hidden="true" id="source"></a><a href="#source" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Source</h2>
 <p>Let's write a source which is capable of reading the data that has been
 output by our <a href="#sink">example sink</a>. We will start with a simple, batch
@@ -248,7 +252,7 @@ version:</p>
 basically just a <code>BufferedReader</code></li>
 <li>how to retrieve data to be emitted (the <code>fillBufferFn</code>), which will be
 called by Jet whenever it needs more data</li>
-<li>how to tear-down the resources we have used, once we are done (the
+<li>how to tear down the resources we have used once we are done (the
 <code>destroyFn</code>)</li>
 </ul>
 <p>We can run it in a dummy pipeline, to see that it works and that it
@@ -262,9 +266,9 @@ jet<span class="token punctuation">.</span><span class="token function">newJob</
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="batching-1"></a><a href="#batching-1" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Batching</h3>
 <p>Our source works, but it's not efficient, because it always just
-retrieves one line at once. Optimally the <code>fillBufferFn</code> should fill
+retrieves one line at a time. Optimally the <code>fillBufferFn</code> should fill
 the buffer with all the items it can acquire without blocking. As a
-rule of thumb 100 items at a time is enough to eliminate any per-call
+rule of thumb 100 items at a time is enough to dwarf any per-call
 overheads within Jet.</p>
 <p>The function may block as well, if need be, but taking longer than a
 second to complete can have negative effects on the overall performance
@@ -282,18 +286,18 @@ of the processing pipeline.</p>
 <span class="token punctuation">}</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="unbounded"></a><a href="#unbounded" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Unbounded</h3>
-<p>Custom sources don't need to batching one. They can also provide
+<p>Custom sources don't need to batching ones. They can also provide
 <em>unbounded</em> data. Let's see an example of such a <code>StreamSource</code>, one
-that reads line from the network:</p>
+that reads lines from the network:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">StreamSource</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> socketSource <span class="token operator">=</span> <span class="token class-name">SourceBuilder</span>
     <span class="token punctuation">.</span><span class="token function">stream</span><span class="token punctuation">(</span><span class="token string">"http-source"</span><span class="token punctuation">,</span> ctx <span class="token operator">-></span> <span class="token punctuation">{</span>
         <span class="token keyword">int</span> port <span class="token operator">=</span> <span class="token number">11000</span><span class="token punctuation">;</span>
         <span class="token class-name">ServerSocket</span> serverSocket <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ServerSocket</span><span class="token punctuation">(</span>port<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Waiting for connection on port %d ..."</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ctx<span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Waiting for connection on port %d ..."</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">Socket</span> socket <span class="token operator">=</span> serverSocket<span class="token punctuation">.</span><span class="token function">accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">BufferedReader</span> reader <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BufferedReader</span><span class="token punctuation">(</span>
             <span class="token keyword">new</span> <span class="token class-name">InputStreamReader</span><span class="token punctuation">(</span>socket<span class="token punctuation">.</span><span class="token function">getInputStream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Data source connected on port %d!"</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ctx<span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Data source connected on port %d."</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token keyword">return</span> reader<span class="token punctuation">;</span>
     <span class="token punctuation">}</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token function">fillBufferFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>reader<span class="token punctuation">,</span> buf<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
@@ -313,22 +317,22 @@ that reads line from the network:</p>
     <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="timestamps"></a><a href="#timestamps" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Timestamps</h3>
-<p>We could make use of our stream source via following pipeline:</p>
+<p>We could make use of our stream source via the following pipeline:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>socketSource<span class="token punctuation">)</span>
  <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
  <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
 <span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">bootstrappedInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-jet<span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">join</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+jet<span class="token punctuation">.</span><span class="token function">newJob</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>One thing to notice here is that there is an extra line
-(<code>withoutTimestamps</code>), which is needed because for stream sources Jet
-has to what kind of event timestamps they will provide (if any). Now
+<p>One thing to note here is that there is an extra line
+(<code>withoutTimestamps</code>) which is needed because for stream sources Jet
+has to know what kind of event timestamps they will provide (if any). Now
 we are using it without timestamps, but this unfortunately means that
 we aren't allowed to use <a href="/docs/tutorials/windowing">Windowed Aggregation</a> in
 our pipeline.</p>
-<p>There are multiple way to fix this (we can add timestamps in the
+<p>There are multiple ways to fix this (we can add timestamps in the
 pipeline after the source), but the most convenient one is to provide
 the timestamps right in the source.</p>
 <p>Let's assume the data that will come in over the network is in the same
@@ -339,10 +343,10 @@ source like this:</p>
     <span class="token punctuation">.</span><span class="token function">timestampedStream</span><span class="token punctuation">(</span><span class="token string">"http-source"</span><span class="token punctuation">,</span> ctx <span class="token operator">-></span> <span class="token punctuation">{</span>
         <span class="token keyword">int</span> port <span class="token operator">=</span> <span class="token number">11000</span><span class="token punctuation">;</span>
         <span class="token class-name">ServerSocket</span> serverSocket <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ServerSocket</span><span class="token punctuation">(</span>port<span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Waiting for connection on port %d ..."</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ctx<span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Waiting for connection on port %d ..."</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">Socket</span> socket <span class="token operator">=</span> serverSocket<span class="token punctuation">.</span><span class="token function">accept</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token class-name">BufferedReader</span> reader <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BufferedReader</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">InputStreamReader</span><span class="token punctuation">(</span>socket<span class="token punctuation">.</span><span class="token function">getInputStream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Data source connected on port %d!"</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ctx<span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"Data source connected on port %d."</span><span class="token punctuation">,</span> port<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token keyword">return</span> reader<span class="token punctuation">;</span>
     <span class="token punctuation">}</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token function">fillBufferFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>reader<span class="token punctuation">,</span> buf<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">{</span>
@@ -357,13 +361,13 @@ source like this:</p>
                 <span class="token keyword">return</span><span class="token punctuation">;</span>
             <span class="token punctuation">}</span>
 
-            buf<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>line<span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token function">parseLong</span><span class="token punctuation">(</span>line<span class="token punctuation">.</span><span class="token function">substring</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">13</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            buf<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>line<span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token function">parseLong</span><span class="token punctuation">(</span>line<span class="token punctuation">.</span><span class="token function">substring</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> line<span class="token punctuation">.</span><span class="token function">indexOf</span><span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
         <span class="token punctuation">}</span>
     <span class="token punctuation">}</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">destroyFn</span><span class="token punctuation">(</span>reader <span class="token operator">-></span> reader<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>The pipeline changes also:</p>
+<p>The pipeline changes too:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>socketSource<span class="token punctuation">)</span>
  <span class="token punctuation">.</span><span class="token function">withNativeTimestamps</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
@@ -390,10 +394,10 @@ available in the <code>Processor.Context</code> object we get handed there:</p>
     <span class="token punctuation">.</span><span class="token function">distributed</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>Notice that we have added an extra call to specify the local paralellism
-of the source. This means that each Jet cluster member will now create
-two such sources.</p>
-<p>If we now start a cluster with two members we will be listening to four
+<p>Notice that we have added an extra call to specify the local parallelism
+of the source (the <code>distributed()</code> method). This means that each Jet
+cluster member will now create two such sources.</p>
+<p>If we now start a cluster with two members, we will be listening to four
 different sockets:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span>socketSource<span class="token punctuation">)</span>
@@ -434,7 +438,7 @@ item it was about to emit when createSnapshotFn was called.</li>
 </ul>
 <p>You’ll find that <code>restoreSnapshotFn</code>, somewhat unexpectedly, accepts not
 one but a list of snapshot objects. If you’re building a simple,
-non-distributed source, this list will have just one member. However,
+non-distributed source, this list will have just one element. However,
 the same logic must work for distributed sources as well, and a
 distributed source runs on many parallel processors at the same time.
 Each of them will produce its own snapshot object. After a restart the
@@ -456,7 +460,8 @@ generates a sequence of integers:</p>
 </code></pre>
 <p>The snapshotting function returns the current number to emit, the
 restoring function sets the number from the snapshot to the current
-state.</p>
+state. This source is non-distributed, so we can safely do
+<code>saved.get(0)</code>.</p>
 </span></div></article></div><div class="docs-prevnext"><a class="docs-prev button" href="/docs/tutorials/cdc"><span class="arrow-prev">← </span><span>Change Data Capture</span></a><a class="docs-next button" href="/docs/tutorials/stream-imap"><span>Stream Changes from IMap</span><span class="arrow-next"> →</span></a></div></div></div><nav class="onPageNav"><ul class="toc-headings"><li><a href="#sink">Sink</a><ul class="toc-headings"><li><a href="#batching">Batching</a></li><li><a href="#parallelism">Parallelism</a></li><li><a href="#fault-tolerance">Fault Tolerance</a></li></ul></li><li><a href="#source">Source</a><ul class="toc-headings"><li><a href="#batching-1">Batching</a></li><li><a href="#unbounded">Unbounded</a></li><li><a href="#timestamps">Timestamps</a></li><li><a href="#parallelism-1">Parallelism</a></li><li><a href="#fault-tolerance-1">Fault Tolerance</a></li></ul></li></ul></nav></div><footer class="nav-footer" id="footer"><section class="sitemap"><a href="/" class="nav-home"><img src="/img/logo-light.svg" alt="Hazelcast Jet" width="200" height="40"/></a><div><h5>Docs</h5><a href="/docs/get-started/intro">Get Started</a><a href="/docs/concepts/dag">Concepts and Architecture</a><a href="/docs/tutorials/kafka">Tutorials</a><a href="/docs/operations/configuration">Operations Guide</a></div><div><h5>Community</h5><a href="https://groups.google.com/forum/#!forum/hazelcast-jet" target="_blank" rel="noreferrer noopener">Google Groups</a><a href="http://stackoverflow.com/questions/tagged/hazelcast-jet" target="_blank" rel="noreferrer noopener">Stack Overflow</a><a href="https://gitter.im/hazelcast/hazelcast-jet">Gitter Chat</a></div><div><h5>Latest From the Blog</h5><a href="/blog/2020/02/20/transactional-processors">Transactional connectors in Hazelcast Jet</a><a href="/blog/2020/01/28/new-website">Announcing New Documentation Website</a><a href="/blog/2019/11/12/stream-deduplication">Stream Deduplication with Hazelcast Jet</a></div><div><h5>More</h5><a href="https://github.com/hazelcast/hazelcast-jet">GitHub Project</a><a href="https://github.com/hazelcast/hazelcast-jet/issues">Issue Tracker</a><a href="http://hazelcast.com/company/careers/">Work at Hazelcast</a><a class="github-button" href="https://github.com/hazelcast/hazelcast-jet" data-icon="octicon-star" data-count-href="/facebook/docusaurus/stargazers" data-show-count="true" data-count-aria-label="# stargazers on GitHub" aria-label="Star this project on GitHub">Star</a></div></section><section class="copyright">Copyright © 2020 Hazelcast Inc.</section></footer></div><script type="text/javascript" src="https://cdn.jsdelivr.net/docsearch.js/1/docsearch.min.js"></script><script>
                 document.addEventListener('keyup', function(e) {
                   if (e.target !== document.body) {
