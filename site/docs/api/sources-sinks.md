@@ -398,6 +398,22 @@ in the case of a failure some records could be duplicated. You
 can also have the job in exactly-once mode and decrease the guarantee
 just for a particular Kafka sink.
 
+#### Schema Registry
+
+Kafka is often used together with [Confluent Schema Registry](https://docs.confluent.io/current/schema-registry/index.html)
+as a repository of types. The use of the schema registry is done through
+adding it to the `Properties` object and using the `KafkaAvroSerializer/Deserializer`
+if Avro is being used:
+
+```java
+properties.setProperty("schema.registry.url", "http://<schema-registry-hostname>:8081");
+properties.setProperty("value.deserializer", KafkaAvroDeserializer.class.getCanonicalName());
+```
+
+Keep in mind that once the record deserialized, Jet still needs to know
+how to serialize/deserialize the record internally. Please refer to the
+[Serialization](serialization) section for details.
+
 #### Version Compatibility
 
 The Kafka sink and source are based on version 2.2.0, this means Kafka
