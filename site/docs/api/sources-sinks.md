@@ -406,8 +406,9 @@ adding it to the `Properties` object and using the `KafkaAvroSerializer/Deserial
 if Avro is being used:
 
 ```java
-properties.setProperty("schema.registry.url", "http://<schema-registry-hostname>:8081");
-properties.setProperty("value.deserializer", KafkaAvroDeserializer.class.getCanonicalName());
+properties.put("value.deserializer", KafkaAvroDeserializer.class);
+properties.put("specific.avro.reader", true);
+properties.put("schema.registry.url", schemaRegistryUrl);
 ```
 
 Keep in mind that once the record deserialized, Jet still needs to know
