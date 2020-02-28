@@ -20,7 +20,7 @@ import com.hazelcast.cluster.Address;
 import com.hazelcast.internal.nio.BufferObjectDataOutput;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
-import com.hazelcast.jet.impl.serialization.DataInputFactory;
+import com.hazelcast.jet.impl.serialization.MemoryDataInput;
 import com.hazelcast.logging.LoggingService;
 import com.hazelcast.test.HazelcastSerialClassRunner;
 import org.junit.Before;
@@ -61,6 +61,6 @@ public class ReceiverTaskletTest {
             out.writeObject(obj);
             out.writeInt(Math.abs(obj.hashCode())); // partition id
         }
-        t.receiveStreamPacket(DataInputFactory.from(out.toByteArray()));
+        t.receiveStreamPacket(new MemoryDataInput(out.toByteArray()));
     }
 }

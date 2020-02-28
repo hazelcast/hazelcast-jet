@@ -16,18 +16,17 @@
 
 package com.hazelcast.jet.impl.serialization;
 
-import com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry;
+import com.hazelcast.internal.nio.Bits;
 
-public final class DataOutputFactory {
+public class PlainMemoryWriter implements MemoryWriter {
 
-    private DataOutputFactory() {
+    @Override
+    public void writeInt(byte[] bytes, int offset, int value) {
+        Bits.writeIntL(bytes, offset, value);
     }
 
-    public static MemoryDataOutput create(int size) {
-        if (GlobalMemoryAccessorRegistry.MEM_AVAILABLE) {
-            return new UnsafeMemoryDataOutput(size);
-        } else {
-            return new ByteArrayMemoryDataOutput(size);
-        }
+    @Override
+    public void writeLong(byte[] bytes, int offset, long value) {
+        Bits.writeLongL(bytes, offset, value);
     }
 }

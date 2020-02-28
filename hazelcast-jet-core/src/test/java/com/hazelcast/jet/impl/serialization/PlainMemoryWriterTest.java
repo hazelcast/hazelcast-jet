@@ -19,32 +19,23 @@ package com.hazelcast.jet.impl.serialization;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ByteArrayMemoryDataInputTest {
+public class PlainMemoryWriterTest {
 
     @Test
-    public void when_NotEnoughBytesToRead_then_ThrowsException() {
+    public void when_Writes_then_BytesAreCorrectlyStored() {
         // Given
-        MemoryDataInput input = new ByteArrayMemoryDataInput(new byte[]{});
+        MemoryWriter writer = new PlainMemoryWriter();
+        byte[] bytes = new byte[Integer.BYTES + Long.BYTES];
 
         // When
-        // Then
-        assertThatThrownBy(input::readInt).isInstanceOf(RuntimeException.class);
-        assertThatThrownBy(input::readLong).isInstanceOf(RuntimeException.class);
-    }
+        writer.writeInt(bytes, 0, 1);
+        writer.writeLong(bytes, Integer.BYTES, 2);
 
-    @Test
-    public void when_EnoughBytes_then_ReadsCorrectValues() {
-        // Given
-        MemoryDataInput input = new ByteArrayMemoryDataInput(new byte[]{
+        // Then
+        assertThat(bytes).isEqualTo(new byte[]{
                 1, 0, 0, 0,
                 2, 0, 0, 0, 0, 0, 0, 0
         });
-
-        // When
-        // Then
-        assertThat(input.readInt()).isEqualTo(1);
-        assertThat(input.readLong()).isEqualTo(2);
     }
 }

@@ -19,77 +19,108 @@ package com.hazelcast.jet.impl.serialization;
 import javax.annotation.Nonnull;
 import java.io.DataOutput;
 
-public interface MemoryDataOutput extends DataOutput {
+public class MemoryDataOutput implements DataOutput {
+
+    private static final MemoryWriter WRITER = MemoryWriter.create();
+
+    private byte[] buffer;
+    private int position;
+
+    public MemoryDataOutput(int size) {
+        this.buffer = new byte[size];
+        this.position = 0;
+    }
 
     @Override
-    default void write(int b) {
+    public void write(int b) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void write(@Nonnull byte[] b) {
+    public void write(@Nonnull byte[] b) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void write(@Nonnull byte[] b, int off, int len) {
+    public void write(@Nonnull byte[] b, int off, int len) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeBoolean(boolean v) {
+    public void writeBoolean(boolean v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeByte(int v) {
+    public void writeByte(int v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeShort(int v) {
+    public void writeShort(int v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeChar(int v) {
+    public void writeChar(int v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeInt(int v) {
+    public void writeInt(int v) {
+        ensureAvailable(Integer.BYTES);
+        WRITER.writeInt(buffer, position, v);
+        position += Integer.BYTES;
+    }
+
+    @Override
+    public void writeLong(long v) {
+        ensureAvailable(Long.BYTES);
+        WRITER.writeLong(buffer, position, v);
+        position += Long.BYTES;
+    }
+
+    @Override
+    public void writeFloat(float v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeLong(long v) {
+    public void writeDouble(double v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeFloat(float v) {
+    public void writeBytes(@Nonnull String s) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeDouble(double v) {
+    public void writeChars(@Nonnull String s) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void writeBytes(@Nonnull String s) {
+    public void writeUTF(@Nonnull String s) {
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    default void writeChars(@Nonnull String s) {
-        throw new UnsupportedOperationException();
+    private int available() {
+        return buffer.length - position;
     }
 
-    @Override
-    default void writeUTF(@Nonnull String s) {
-        throw new UnsupportedOperationException();
+    private void ensureAvailable(int length) {
+        if (length > available()) {
+            int capacity = Math.max(buffer.length << 1, buffer.length + length);
+            byte[] buffer = new byte[capacity];
+            System.arraycopy(this.buffer, 0, buffer, 0, position);
+            this.buffer = buffer;
+        }
     }
 
-    byte[] toByteArray();
+    public byte[] toByteArray() {
+        byte[] buffer = new byte[position];
+        System.arraycopy(this.buffer, 0, buffer, 0, position);
+        return buffer;
+    }
 }
