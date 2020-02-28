@@ -1,6 +1,5 @@
 ---
 title: Kafka Connect Source
-id: kafka-connect
 ---
 
 ## Background

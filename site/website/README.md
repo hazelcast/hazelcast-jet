@@ -71,7 +71,6 @@ Edit docs by navigating to `docs/` and editing the corresponding document:
 
 ```markdown
 ---
-id: page-needs-edit
 title: This Doc Needs To Be Edited
 ---
 
@@ -88,7 +87,6 @@ Edit blog posts by navigating to `website/blog` and editing the corresponding po
 
 ```markdown
 ---
-id: post-needs-edit
 title: This Blog Post Needs To Be Edited
 ---
 
@@ -105,7 +103,6 @@ For more information about blog posts, click [here](https://docusaurus.io/docs/e
 
 ```md
 ---
-id: newly-created-doc
 title: This Doc Needs To Be Edited
 ---
 

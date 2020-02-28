@@ -52,7 +52,7 @@
       "architecture/execution-engine",
       "architecture/fault-tolerance",
       "architecture/in-memory-storage",
-	  "architecture/event-time"
+	    "architecture/event-time-processing"
     ],
     "Design Documents": [
       "design-docs/unit-testing",

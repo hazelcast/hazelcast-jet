@@ -1,6 +1,5 @@
 ---
 title: Spring Integration
-id: spring
 ---
 
 You can configure and start a Hazelcast Jet instance (or a Hazelcast Jet

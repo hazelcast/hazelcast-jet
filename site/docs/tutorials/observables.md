@@ -1,6 +1,5 @@
 ---
 title: Reactive Streams
-id: observables
 ---
 
 Usually Jet jobs make use of distributed data Sinks to output results,

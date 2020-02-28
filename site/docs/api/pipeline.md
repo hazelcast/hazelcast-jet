@@ -1,6 +1,5 @@
 ---
 title: Building Pipelines
-id: pipeline
 ---
 
 The general shape of any data processing pipeline is `readFromSource ->

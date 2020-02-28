@@ -1,6 +1,5 @@
 ---
 title: Stream Changes from IMap
-id: stream-imap
 ---
 
 [IMap](https://docs.hazelcast.org/docs/latest-dev/javadoc/com/hazelcast/map/IMap.html)
@@ -78,7 +77,7 @@ each key of an `IMap` has been updated in the past second.
 
 Besides the job monitoring the map for changes (let's call it "the
 consumer"), we will also run a second job actually doing the changes
-to the map (let's call it "the producer").  
+to the map (let's call it "the producer").
 
 ```java
 Pipeline producerPipeline = Pipeline.create();

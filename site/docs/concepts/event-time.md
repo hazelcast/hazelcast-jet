@@ -1,6 +1,5 @@
 ---
 title: Streaming and Event Time
-id: event-time
 ---
 
 In an unbounded stream of events, the dimension of time is always there.

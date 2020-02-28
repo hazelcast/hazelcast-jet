@@ -1,6 +1,5 @@
 ---
 title: Fault Tolerance
-id: fault-tolerance
 ---
 
 Jet keeps processing data without loss even if a node fails, so it’s

@@ -1,6 +1,5 @@
 ---
 title: Directed Acylic Graph (DAG)
-id: dag
 ---
 
 Hazelcast Jet models computation as a network of tasks connected with

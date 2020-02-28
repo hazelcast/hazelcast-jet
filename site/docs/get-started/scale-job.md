@@ -1,6 +1,5 @@
 ---
 title: Scale Your Job
-id: scale-job
 ---
 
 Now that we have a running job on the cluster, we can see some

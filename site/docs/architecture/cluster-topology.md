@@ -1,6 +1,5 @@
 ---
 title: Cluster Topology
-id: cluster-topology
 ---
 
 Hazelcast Jet is a distributed system, where each Hazelcast Jet node is

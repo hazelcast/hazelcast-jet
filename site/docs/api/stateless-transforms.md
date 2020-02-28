@@ -1,6 +1,5 @@
 ---
 title: Stateless Transforms
-id: stateless-transforms
 ---
 
 Stateless transforms could be considered the bread and butter of a data

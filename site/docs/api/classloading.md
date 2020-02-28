@@ -1,6 +1,5 @@
 ---
 title: Class and Resource Deployment
-id: classloading
 ---
 
 Intro: explain why it's necessary to add classes to a job when sending it

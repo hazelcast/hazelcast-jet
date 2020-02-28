@@ -1,6 +1,5 @@
 ---
 title: Distributed Execution
-id: distributed-computing
 ---
 
 Jet models the computations as a [Directed Acyclic Graphs

@@ -1,6 +1,5 @@
 ---
 title: Jet on Kubernetes
-id: kubernetes
 ---
 
 ## Hazelcast Discovery Plugin for Kubernetes

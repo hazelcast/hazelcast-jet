@@ -1,6 +1,5 @@
 ---
 title: Stateful Transforms
-id: stateful-transforms
 ---
 
 Stateful transforms refer to those computations which typically

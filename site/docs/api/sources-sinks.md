@@ -1,6 +1,5 @@
 ---
-title: Sources and Sinks 
-id: sources-sinks
+title: Sources and Sinks
 ---
 
 Hazelcast Jet comes out of the box with many different sources and sinks

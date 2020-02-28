@@ -1,6 +1,5 @@
 ---
 title: Your First Jet Program
-id: first-job
 ---
 
 Let's write some data processing code and have Jet run it for us.

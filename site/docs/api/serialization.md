@@ -1,6 +1,5 @@
 ---
 title: Serialization
-id: serialization
 ---
 
 To be able to send object state over a network or store it in a file

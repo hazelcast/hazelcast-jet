@@ -1,6 +1,5 @@
 ---
 title: Cooperative Threading
-id: execution-engine
 ---
 
 Job execution is done on a user-configurable number of threads. Each

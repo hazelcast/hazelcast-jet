@@ -1,6 +1,5 @@
 ---
 title: Configuration
-id: configuration
 ---
 
 Hazelcast Jet offers different ways to configure it depending on which

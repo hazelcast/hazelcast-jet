@@ -1,6 +1,5 @@
 ---
 title: Submit a Job to the Cluster
-id: submit-job
 ---
 
 At this point you saw how to create a simple Jet program (a *job*) that

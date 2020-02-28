@@ -1,6 +1,5 @@
 ---
 title: Cluster Sizing
-id: cluster-sizing
 ---
 
 Jet cluster performance depends on multiple factors including the

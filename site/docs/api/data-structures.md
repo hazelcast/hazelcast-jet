@@ -1,6 +1,5 @@
 ---
 title: Distributed Data Structures
-id: data-structures
 ---
 
 Jet is built on top of

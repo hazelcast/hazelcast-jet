@@ -1,6 +1,5 @@
 ---
 title: Monitoring and Metrics
-id: monitoring
 ---
 
 TODO

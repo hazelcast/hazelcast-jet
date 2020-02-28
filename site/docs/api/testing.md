@@ -1,6 +1,5 @@
 ---
 title: Testing
-id: testing
 ---
 
 Hazelcast Jet project uses JUnit testing framework to test

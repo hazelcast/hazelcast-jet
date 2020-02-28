@@ -1,5 +1,5 @@
 ---
-title: Work with Apache Kafka id: kafka
+title: Work with Apache Kafka
 ---
 
 Apache Kafka is a messaging system which internally stores all the

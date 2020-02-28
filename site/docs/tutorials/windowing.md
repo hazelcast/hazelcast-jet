@@ -1,6 +1,5 @@
 ---
 title: Windowed Aggregation
-id: windowing
 ---
 
 As we've seen in the guide for

@@ -1,6 +1,5 @@
 ---
 title: Javadoc
-id: javadoc
 ---
 
 Jet also contains extensive Javadoc about each public API and should be

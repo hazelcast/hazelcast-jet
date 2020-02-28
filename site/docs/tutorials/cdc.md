@@ -1,6 +1,5 @@
 ---
 title: Change Data Capture
-id: cdc
 ---
 
 **Change data capture** refers to the process of **observing changes

@@ -1,6 +1,5 @@
 ---
 title: Processing Guarantees for Stateful Computation
-id: processing-guarantees
 ---
 
 With unbounded stream processing comes the challenge of forever

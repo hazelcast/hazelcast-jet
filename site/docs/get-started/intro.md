@@ -1,6 +1,5 @@
 ---
 title: Introduction
-id: intro
 ---
 
 Welcome to Hazelcast Jet!

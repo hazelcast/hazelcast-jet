@@ -1,6 +1,5 @@
 ---
 title: Custom Sources and Sinks
-id: source-and-sink-builder
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)
@@ -484,7 +483,7 @@ StreamSource<Integer> faultTolerantSource = SourceBuilder
         buffer.add(numToEmit[0]++))
     .createSnapshotFn(numToEmit -> numToEmit[0])
     .restoreSnapshotFn(
-        (numToEmit, saved) -> numToEmit[0] = saved.get(0))  
+        (numToEmit, saved) -> numToEmit[0] = saved.get(0))
     .build();
 ```
 

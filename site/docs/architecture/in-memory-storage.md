@@ -1,6 +1,5 @@
 ---
 title: In-Memory Storage
-id: in-memory-storage
 ---
 
 Hazelcast Jet builds on a tight integration with Hazelcast IMDG – the
