@@ -34,6 +34,8 @@ into account that a Jet processing task doesn't receive a single data
 stream, but many streams from many parallel upstream tasks. We
 illustrated this fact in the [DAG](/docs/concepts/dag) page.
 
+## Coalescing the Distributed Watermark
+
 Every such substream has its own watermark and we must find a way to
 combine (*coalesce*) all of them into a unified watermark value observed
 by the task. The invariant we want to protect is that an event that
@@ -45,7 +47,15 @@ of any substream:
 
 The overall result is that there is no upper bound anymore on how much
 the watermark can lag behind an event in the stream. The substream with
-the highest latency holds back all others. This becomes especially
-problematic when the substreams come from a partitioned source, and
-some partition gets very sparse data. While on other partitions there
-are millions of items, on one there is nothing for minutes.
+the highest latency holds back all others, but not just that: since the
+watermark is purely data-driven, even a substream with no latency can
+cause unbounded watermark lag simply by having low activity &mdash; a
+lot of time passing between consecutive events. This can occur when
+substreams come from a partitioned source. Since partitioning is based
+on some key like user ID, it may happen that there are no users active
+on a partition. While on others there are millions of events, on one
+there is nothing for minutes.
+
+Hazelcast Jet mitigates this problem by tracking the watermark on each
+partition of a partitioned source, detecting when a partition has gone
+idle, and starting to advance the watermark even in the absence of data.
