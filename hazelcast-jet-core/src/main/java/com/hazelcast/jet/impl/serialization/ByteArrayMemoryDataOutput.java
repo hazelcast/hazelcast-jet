@@ -31,14 +31,14 @@ public class ByteArrayMemoryDataOutput implements MemoryDataOutput {
     @Override
     public void writeInt(int v) {
         ensureAvailable(Integer.BYTES);
-        Bits.writeInt(buffer, position, v, false);
+        Bits.writeIntL(buffer, position, v);
         position += Integer.BYTES;
     }
 
     @Override
     public void writeLong(long v) {
         ensureAvailable(Long.BYTES);
-        Bits.writeLong(buffer, position, v, false);
+        Bits.writeLongL(buffer, position, v);
         position += Long.BYTES;
     }
 

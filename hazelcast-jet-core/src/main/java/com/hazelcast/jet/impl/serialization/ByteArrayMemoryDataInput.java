@@ -33,7 +33,7 @@ public class ByteArrayMemoryDataInput implements MemoryDataInput {
     @Override
     public int readInt() {
         checkAvailable(Integer.BYTES);
-        int value = Bits.readInt(buffer, position, false);
+        int value = Bits.readIntL(buffer, position);
         position += Integer.BYTES;
         return value;
     }
@@ -41,7 +41,7 @@ public class ByteArrayMemoryDataInput implements MemoryDataInput {
     @Override
     public long readLong() {
         checkAvailable(Long.BYTES);
-        long value = Bits.readLong(buffer, position, false);
+        long value = Bits.readIntL(buffer, position);
         position += Long.BYTES;
         return value;
     }
