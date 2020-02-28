@@ -55,7 +55,7 @@
 	    "architecture/event-time-processing"
     ],
     "Design Documents": [
-      "design-docs/unit-testing",
+      "design-docs/unit-testing-support",
       "design-docs/kafka-connect"
     ],
     "Roadmap": [
