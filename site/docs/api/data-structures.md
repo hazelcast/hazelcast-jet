@@ -9,17 +9,20 @@ source in-memory data grid. Hazelcast provides a wide variety of
 distributed data structures and concurrency primitives, including:
 
 * A distributed, partitioned and queryable in-memory key-value store
-  implementation
-* Additional data structures and simple messaging constructs  such as
+  implementation, called `IMap`
+* Additional data structures and simple messaging constructs such as
   `Set`, `MultiMap`, `Queue`, `Topic`
-* A cluster-wide unique ID generator, `FlakeIdGenerator`
-* A distributed, CRDT-based counter `PNCounter`
-* A cardinality estimated based on `HyperLogLog`
+* A cluster-wide unique ID generator, called `FlakeIdGenerator`
+* A distributed,
+  [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)
+  based counter, called `PNCounter`
+* A cardinality estimator based on [`HyperLogLog`](https://en.wikipedia.org/wiki/HyperLogLog)
 
-Additionally, Hazelcast includes a full Raft implementation which allows
-implementation of _linearizable_ constructs such as:
+Additionally, Hazelcast includes a full [Raft](https://en.wikipedia.org/wiki/Raft_(computer_science))
+implementation which allows implementation of _linearizable_ constructs
+such as:
 
-* A distributed and reentrant lock implementation, `FencedLock`
+* A distributed and reentrant lock implementation, called `FencedLock`
 * Distributed implementations of `AtomicLong`, `AtomicReference` `CountDownLatch`
 
 Hazelcast data-structures are in-memory, highly optimized and offer very
@@ -45,8 +48,8 @@ IMap<String, User> userCache = jet.getMap("users");
 ```
 
 Jet is integrated with these data structures and also internally makes
-use them as part of the job execution engine. For example, to store job
-state and metadata among other things.
+use of them as part of the job execution engine. For example, to store
+job state and metadata, among other things.
 
 ## IMap
 
@@ -54,15 +57,15 @@ state and metadata among other things.
 of the java `ConcurrentMap` interface, with support for additional
 operations. It's distributed and partitioned across the whole cluster.
 `IMap` supports many different operations, but the two canonical
-operations are the `put` and `get`:
+ones are `put` and `get`:
 
 ```java
 IMap<String, User> userCache = jet.getMap("users");
 userCache.put(user.getId(), user);
 ```
 
-And then, at a later point, even from a different application, you may
-retrieve the same object by:
+Then, at a later point in time, even from a different application, you
+may retrieve the same object by:
 
 ```java
 IMap<String, User> userCache = jet.getMap("users");
@@ -72,7 +75,7 @@ User user = userCache.get("user-id-to-retrieve");
 ### Partitioning
 
 The default partition count in Hazelcast is `271`. This means that there
-are 271 buckets (_partitions_) for keys and each key is distributed to a
+are 271 buckets (_partitions_) for keys and each key is assigned to a
 partition, based on the _hash code_ of its binary representation
 (_serialization_).
 
@@ -81,7 +84,7 @@ repeatedly put the same key into a map, it would always end up in the
 same partition.
 
 Each partition has one or more backups in other nodes so that if one of
-the nodes was to go down, the backup partition would take over and
+the nodes were to go down, the backup partition would take over and
 become the primary. This ensures that no data is lost in face of node
 failures. By default, each partition is configured to have one backup.
 
@@ -95,13 +98,13 @@ backups.
 
 Having more backups than the default of `1` means that you can tolerate
 more than `1` node failing at a time, however they incur a memory cost:
-each backup occupies same space as a primary partition, meaning that over
-the whole cluster you will be consuming _n_ times the memory where _n_
-is the number of backups.
+each backup occupies the same amount of space as a primary partition,
+meaning that over the whole cluster you will be consuming _n_ times the
+memory, where _n_ is the number of backups.
 
 Hazelcast also supports _asynchronous_ backups, for which there will be
 no wait when returning a response. This means that the caller may not be
-sure that the data has replicated.
+sure that the data has been replicated.
 
 ### Scaling
 
@@ -159,7 +162,7 @@ userCache.executeOnEntry("user-id", new IncrementEntryProcessor());
 Hazelcast Maps also support indexing and querying, with the use of
 `Predicate`s.
 
-Querying is a powerful feature which allows you to almost treat the map
+Querying is a powerful feature which allows you to treat the map almost
 like a database:
 
 ```java
@@ -175,9 +178,10 @@ List<User> user = userCache.values(Predicates.greaterThan(35));
 * Eviction - expiring items automatically after a _time-to-live_ (TTL)
   period, or based on other heuristics (such as number of items or total
   memory usage)
-* `MapStore` and `MapLoder`, for implementing _read-through_ and
+* `MapStore` and `MapLoader`, for implementing _read-through_,
   _write-through_ and _write-behind_ caching patterns.
-* `MapListener` for observing updates to map from a client application
+* `MapListener` for observing updates to the map from a client
+  application
 * JSON support through `HazelcastJsonValue` which allows fast indexing
   and querying of JSON values.
 
