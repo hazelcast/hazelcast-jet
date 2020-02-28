@@ -18,7 +18,12 @@ package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.jet.sql.imap.IMapSqlConnector;
+import com.hazelcast.jet.sql.schema.JetSchema;
+import com.hazelcast.sql.impl.type.DataType;
 import org.junit.Test;
+
+import static com.hazelcast.jet.core.TestUtil.createMap;
 
 public class SqlTest extends JetTestSupport {
     @Test
@@ -26,6 +31,10 @@ public class SqlTest extends JetTestSupport {
         JetInstance jet = createJetMember();
 
         JetSqlService sqlService = new JetSqlService(jet);
+        sqlService.getSchema().createTable("my_map", JetSchema.IMAP_LOCAL_SERVER,
+                createMap(IMapSqlConnector.TO_MAP_NAME, "my_map"),
+                createMap("id", DataType.INT, "name", DataType.VARCHAR));
+
         sqlService.parse("SELECT field FROM my_map");
     }
 }

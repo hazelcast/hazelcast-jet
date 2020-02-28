@@ -61,12 +61,18 @@ public class IMapSqlConnector implements SqlConnector {
     public JetTable createTable(
             @Nonnull String tableName,
             @Nonnull Map<String, String> serverOptions,
+            @Nonnull Map<String, String> tableOptions
+    ) {
+        throw new UnsupportedOperationException("TODO column examination");
+    }
+
+    @Nullable @Override
+    public JetTable createTable(
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> serverOptions,
             @Nonnull Map<String, String> tableOptions,
             @Nonnull Map<String, DataType> columns
     ) {
-        if (!serverOptions.isEmpty()) {
-            throw new UnsupportedOperationException("Only local cluster is supported now"); // TODO
-        }
         String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
         List<HazelcastTableIndex> indexes = Collections.emptyList(); // TODO
         return new IMapTable(mapName, indexes, columns);
@@ -128,9 +134,6 @@ public class IMapSqlConnector implements SqlConnector {
             @Nonnull List<String> projection
     ) {
         String mapName = tableOptions.get(TO_MAP_NAME);
-        if (!serverOptions.isEmpty()) {
-            throw new JetException("Only local maps are supported for now");
-        }
         Vertex v = dag.newVertex("enrich", Processors.mapUsingServiceAsyncP(
                 ServiceFactories.iMapService(mapName),
                 1024,

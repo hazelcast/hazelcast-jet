@@ -39,8 +39,8 @@ import java.util.Properties;
 public class JetSqlService {
 
     private final JetInstance instance;
-    private SqlValidator validator = createValidator();
-    private JetSchema rootSchema = new JetSchema();
+    private final JetSchema schema = new JetSchema();
+    private final SqlValidator validator = createValidator();
 
     public JetSqlService(JetInstance instance) {
         this.instance = instance;
@@ -73,12 +73,16 @@ public class JetSqlService {
         return validator.validate(node);
     }
 
+    public JetSchema getSchema() {
+        return schema;
+    }
+
     private SqlValidator createValidator() {
         SqlOperatorTable opTab = SqlStdOperatorTable.instance();
 
         HazelcastTypeFactory typeFactory = new HazelcastTypeFactory();
         CalciteConnectionConfig connectionConfig = createConnectionConfig();
-        Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, rootSchema);
+        Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, schema);
 
         return new HazelcastSqlValidator(
                 opTab,

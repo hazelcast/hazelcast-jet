@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -94,8 +95,27 @@ public final class TestUtil {
     /**
      * Create {@code HashSet} from a list of items.
      */
+    @Nonnull
     public static <T> Set<T> set(T ... foo) {
         return new HashSet<>(asList(foo));
+    }
+
+    /**
+     * Create a {@code HashMap} from a list of keys and values. The sequence
+     * must have even length and be of the form {@code key1, value1, key2,
+     * value2, ...}
+     *
+     * @throws ArrayIndexOutOfBoundsException if odd number of parameters is
+     *      passed
+     */
+    @SuppressWarnings("unchecked")
+    @Nonnull
+    public static <K, V> HashMap<K, V> createMap(Object... keysAndValues) {
+        HashMap<K, V> res = new HashMap<>();
+        for (int i = 0; i < keysAndValues.length; ) {
+            res.put((K) keysAndValues[i++], (V) keysAndValues[i++]);
+        }
+        return res;
     }
 
     private static class DirectExecutorService implements ExecutorService {

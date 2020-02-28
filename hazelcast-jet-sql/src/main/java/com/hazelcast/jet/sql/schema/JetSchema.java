@@ -17,14 +17,20 @@
 package com.hazelcast.jet.sql.schema;
 
 import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.imap.IMapSqlConnector;
+import com.hazelcast.sql.impl.type.DataType;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import static java.util.Collections.emptyMap;
 
 /**
  * Schema operating on registered sources/sinks
@@ -33,12 +39,12 @@ public class JetSchema extends AbstractSchema {
 
     /**
      * The name under which the IMap connector is registered. Use as an
-     * argument to {@link #putServer} when connecting to remote cluster.
+     * argument to {@link #createServer} when connecting to remote cluster.
      */
     public static final String IMAP_CONNECTOR_NAME = "imap";
 
-    /** The server name under which the local hazelcast cluster is registered. */
-    public static final String LOCAL_HAZELCAST_CLUSTER = "local_hz";
+    /** The server name under which the local hazelcast IMap connector registered. */
+    public static final String IMAP_LOCAL_SERVER = "local_imap";
 
     private static final String OPTION_CONNECTOR_NAME = JetSchema.class + ".connectorName";
     private static final String OPTION_SERVER_NAME = JetSchema.class + ".serverName";
@@ -50,6 +56,9 @@ public class JetSchema extends AbstractSchema {
     private final Map<String, Table> unmodifiableTableMap = Collections.unmodifiableMap(tableMap);
 
     public JetSchema() {
+        // insert the IMap connector and local cluster server by default
+        createConnector(IMAP_CONNECTOR_NAME, new IMapSqlConnector());
+        createServer(IMAP_LOCAL_SERVER, IMAP_CONNECTOR_NAME, emptyMap());
     }
 
     @Override
@@ -57,25 +66,45 @@ public class JetSchema extends AbstractSchema {
         return unmodifiableTableMap;
     }
 
-    public void putConnector(String connectorName, SqlConnector connector) {
+    public void createConnector(String connectorName, SqlConnector connector) {
         connectorMap.put(connectorName, connector);
     }
 
-    public void putServer(String serverName, String connectorName, Map<String, String> options) {
+    public void createServer(String serverName, String connectorName, Map<String, String> serverOptions) {
+        serverOptions = new HashMap<>(serverOptions); // convert to a HashMap so that we can mutate it
         if (!connectorMap.containsKey(connectorName)) {
             throw new IllegalArgumentException("Unknown connector: " + connectorName);
         }
-        if (options.put(OPTION_CONNECTOR_NAME, connectorName) != null) {
+        if (serverOptions.put(OPTION_CONNECTOR_NAME, connectorName) != null) {
             throw new IllegalArgumentException("Private option used");
         }
-        serverMap.put(serverName, options);
+        serverMap.put(serverName, serverOptions);
     }
 
-    public void putTable(
+    public void createTable(
             @Nonnull String tableName,
             @Nonnull String serverName,
             @Nonnull Map<String, String> tableOptions
     ) {
+        createTableInt(tableName, serverName, tableOptions, null);
+    }
+
+    public void createTable(
+            @Nonnull String tableName,
+            @Nonnull String serverName,
+            @Nonnull Map<String, String> tableOptions,
+            @Nonnull Map<String, DataType> columns
+    ) {
+        createTableInt(tableName, serverName, tableOptions, columns);
+    }
+
+    public void createTableInt(
+            @Nonnull String tableName,
+            @Nonnull String serverName,
+            @Nonnull Map<String, String> tableOptions,
+            @Nullable Map<String, DataType> columns
+    ) {
+        tableOptions = new HashMap<>(tableOptions); // convert to a HashMap so that we can mutate it
         Map<String, String> serverOptions = serverMap.get(serverName);
         if (serverOptions == null) {
             throw new IllegalArgumentException("Unknown server: " + serverName);
@@ -89,7 +118,15 @@ public class JetSchema extends AbstractSchema {
             throw new IllegalArgumentException("Private option used");
         }
 
-        JetTable table = connector.createTable(tableName, serverOptions, tableOptions);
-        tableMap.put(serverName, table);
+        JetTable table;
+        if (columns == null) {
+            table = connector.createTable(tableName, serverOptions, tableOptions);
+        } else {
+            if (columns.isEmpty()) {
+                throw new IllegalArgumentException("zero columns");
+            }
+            table = connector.createTable(tableName, serverOptions, tableOptions, columns);
+        }
+        tableMap.put(tableName, table);
     }
 }
