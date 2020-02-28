@@ -42,3 +42,10 @@ This means that the coalesced watermark should be the lowest watermark
 of any substream:
 
 ![Distributed Watermark](assets/arch-eventtime-wm-dist.svg)
+
+The overall result is that there is no upper bound anymore on how much
+the watermark can lag behind an event in the stream. The substream with
+the highest latency holds back all others. This becomes especially
+problematic when the substreams come from a partitioned source, and
+some partition gets very sparse data. While on other partitions there
+are millions of items, on one there is nothing for minutes.
