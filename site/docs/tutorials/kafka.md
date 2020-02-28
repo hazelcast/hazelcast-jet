@@ -46,7 +46,7 @@ case of node failures and keep running without losing any messages.
 
 It's also possible to pre-process the data by for example looking up
 some static values using the
-[`mapUsingIMap`](../api/stateful-stateless-transforms#mapUsingIMap)
+[`mapUsingIMap`](../api/stateless-transforms#mapusingiMap)
 operator.
 
 ## Fault Tolerance
