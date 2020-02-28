@@ -199,7 +199,7 @@ generally offers strong consistency guarantees (the writes will be seen
 by other processes in same order), but this is not always guaranteed and
 is done in a best-effort basis. For an in-depth discussion regarding
 this please see the [In-Memory
-Architecture](../architecture/in-memory-storage)
+Architecture](../architecture/in-memory-storage) section.
 
 ## ReplicatedMap
 
