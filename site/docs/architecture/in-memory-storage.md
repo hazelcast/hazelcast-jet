@@ -1,6 +1,9 @@
 ---
 title: In-Memory Storage
+description: How Jet makes use of Hazelcast's in-memory storage options.
 ---
+
+>Under construction!
 
 Hazelcast Jet builds on a tight integration with Hazelcast IMDG – the
 robust, distributed in-memory storage with querying and event-driven

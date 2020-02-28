@@ -1,10 +1,11 @@
 ---
 title: Cooperative Threading
+description: Jet's efficient threading model.
 ---
 
 Job execution is done on a user-configurable number of threads. Each
 worker thread has a list of processors of which it is in charge. As the
-processors complete at different rates, the unutilized processors back
+processors complete at different rates, the un-utilized processors back
 off and stay idle, allowing busy workers to catch up to keep the load
 balanced.
 

@@ -1,5 +1,6 @@
 ---
 title: Processing Guarantees for Stateful Computation
+description: How Jet reacts to failures and the processing guaranties it can offer.
 ---
 
 With unbounded stream processing comes the challenge of forever

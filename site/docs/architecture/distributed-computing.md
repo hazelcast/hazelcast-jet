@@ -1,5 +1,6 @@
 ---
 title: Distributed Execution
+description: How distributed execution is orchestrated by Jet.
 ---
 
 Jet models the computations as a [Directed Acyclic Graphs

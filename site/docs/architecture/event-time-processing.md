@@ -1,5 +1,6 @@
 ---
 title: Event Time-Based Processing
+description: Event-time related concepts in Jet (event disorder, watermarks and the likes).
 ---
 
 In [Concepts](/docs/concepts/event-time) we introduced event time and,

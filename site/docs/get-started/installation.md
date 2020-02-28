@@ -1,5 +1,6 @@
 ---
 title: Set Up a Jet Cluster
+description: How to set up a standalone Jet cluster.
 ---
 
 In this step we'll show you how to create a standalone Jet cluster.

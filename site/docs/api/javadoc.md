@@ -1,5 +1,6 @@
 ---
 title: Javadoc
+description: Links to various versions of Jet's extensive Javadoc.
 ---
 
 Jet also contains extensive Javadoc about each public API and should be

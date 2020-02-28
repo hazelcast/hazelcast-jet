@@ -1,5 +1,6 @@
 ---
 title: Directed Acylic Graph (DAG)
+description: How streaming computation is modelled as a Direct Acyclic Graph (DAG) in Jet.
 ---
 
 Hazelcast Jet models computation as a network of tasks connected with

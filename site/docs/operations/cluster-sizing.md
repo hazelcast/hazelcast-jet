@@ -1,5 +1,6 @@
 ---
 title: Cluster Sizing
+description: Practical guide for setting up Jet clusters.
 ---
 
 Jet cluster performance depends on multiple factors including the

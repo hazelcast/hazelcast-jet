@@ -1,5 +1,6 @@
 ---
 title: Submit a Job to the Cluster
+description: How to submit a Jet job to a standalone cluster.
 ---
 
 At this point you saw how to create a simple Jet program (a *job*) that

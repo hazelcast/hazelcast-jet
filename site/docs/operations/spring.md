@@ -1,5 +1,6 @@
 ---
 title: Spring Integration
+description: Using Spring for working with Jet.
 ---
 
 You can configure and start a Hazelcast Jet instance (or a Hazelcast Jet

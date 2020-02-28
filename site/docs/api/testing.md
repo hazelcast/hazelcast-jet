@@ -1,5 +1,6 @@
 ---
 title: Testing
+description: Test support offered by Jet for testing the correctness of your processing pipelines.
 ---
 
 Hazelcast Jet project uses JUnit testing framework to test

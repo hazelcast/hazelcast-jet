@@ -1,5 +1,6 @@
 ---
 title: Building Pipelines
+description: How to build processing pipelines in Jet.
 ---
 
 The general shape of any data processing pipeline is `readFromSource ->

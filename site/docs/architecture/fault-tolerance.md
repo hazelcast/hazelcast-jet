@@ -1,10 +1,11 @@
 ---
 title: Fault Tolerance
+description: Fault tolerance guarantees and options provided by Jet.
 ---
 
 Jet keeps processing data without loss even if a node fails, so it’s
 easy to build fault-tolerant data processing pipelines. It uses a
-combination of several approaches to increse the resilience.
+combination of several approaches to increase the resilience.
 
 ## Consistency
 

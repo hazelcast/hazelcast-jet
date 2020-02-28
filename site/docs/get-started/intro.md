@@ -1,5 +1,6 @@
 ---
 title: Introduction
+description: Welcome to Hazelcast Jet!
 ---
 
 Welcome to Hazelcast Jet!

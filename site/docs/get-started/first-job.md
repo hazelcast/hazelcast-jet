@@ -1,5 +1,6 @@
 ---
 title: Your First Jet Program
+description: How to write simple data processing code with Jet.
 ---
 
 Let's write some data processing code and have Jet run it for us.

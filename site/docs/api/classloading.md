@@ -1,6 +1,9 @@
 ---
 title: Class and Resource Deployment
+description: How to make sure that a processing job has all the resources it needs, when it's submitted to a Jet cluster.
 ---
+
+>Under construction!
 
 Intro: explain why it's necessary to add classes to a job when sending it
 to a cluster, and how it works.

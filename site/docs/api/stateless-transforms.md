@@ -1,5 +1,6 @@
 ---
 title: Stateless Transforms
+description: Purely functional data transformations available in Jet.
 ---
 
 Stateless transforms could be considered the bread and butter of a data

@@ -1,5 +1,6 @@
 ---
 title: Stateful Transforms
+description: Data transformation available in Jet, which maintain internal state.
 ---
 
 Stateful transforms refer to those computations which typically

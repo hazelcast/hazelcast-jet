@@ -1,5 +1,6 @@
 ---
 title: Streaming and Event Time
+description: How event timestamps are being used in stream processing and in Jet in particular.
 ---
 
 In an unbounded stream of events, the dimension of time is always there.

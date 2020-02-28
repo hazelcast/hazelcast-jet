@@ -1,5 +1,6 @@
 ---
 title: Distributed Data Structures
+description: Distributed data structures inherited from Hazelcast and how Jet makes use of them.
 ---
 
 Jet is built on top of

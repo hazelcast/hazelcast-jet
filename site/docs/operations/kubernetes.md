@@ -1,5 +1,6 @@
 ---
 title: Jet on Kubernetes
+description: Using Kubernetes for orchestrating Jet clusters. 
 ---
 
 ## Hazelcast Discovery Plugin for Kubernetes

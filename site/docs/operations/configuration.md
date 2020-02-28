@@ -1,5 +1,6 @@
 ---
 title: Configuration
+description: How to configure Jet for various use cases.
 ---
 
 Hazelcast Jet offers different ways to configure it depending on which

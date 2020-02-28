@@ -1,5 +1,6 @@
 ---
 title: Kafka Connect Source
+description: Using anything with a Kafka Connect interface as a data source in Jet.
 ---
 
 ## Background

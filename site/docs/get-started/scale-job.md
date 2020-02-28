@@ -1,5 +1,6 @@
 ---
 title: Scale Your Job
+description: How do Jet clusters deal with nodes failing or being added and removed intentionally. 
 ---
 
 Now that we have a running job on the cluster, we can see some

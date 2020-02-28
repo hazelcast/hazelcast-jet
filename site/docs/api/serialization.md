@@ -1,5 +1,6 @@
 ---
 title: Serialization
+description: Options available for (de)serialization when using Jet.
 ---
 
 To be able to send object state over a network or store it in a file
