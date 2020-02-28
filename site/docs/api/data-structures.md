@@ -184,15 +184,49 @@ List<User> user = userCache.values(Predicates.greaterThan(35));
   application
 * JSON support through `HazelcastJsonValue` which allows fast indexing
   and querying of JSON values.
+* `NearCache` allows clients to provide an additional, smaller layer of
+  2nd level caching thus even avoiding the cost of a network round-trip.
 
 For more information about the advanced features of `IMap`, the best
 source of information is Javadoc and the [Hazelcast Reference
 Manual](https://hazelcast.org/documentation/).
 
+### Consistency Guarantees
+
+`IMap` is heavily optimized for high-throughput and low-latency and is an
+[AP](https://en.wikipedia.org/wiki/CAP_theorem) data structure, and
+generally offers strong consistency guarantees (the writes will be seen
+by other processes in same order), but this is not always guaranteed and
+is done in a best-effort basis. For an in-depth discussion regarding
+this please see the [In-Memory
+Architecture](../architecture/in-memory-storage)
+
 ## ReplicatedMap
 
-TODO
+`ReplicatedMap` has a similar API to `IMap`, with some important
+distinctions: Instead of being partitioned, values are replicated to all
+the nodes. As a result, each entry will consume more memory in the
+cluster, but each member will have access to the whole entry set.
 
-## IList
+The API usage is same as IMap:
 
-TODO
+```java
+ReplicatedMap<String, User> userCache = jet.getReplicatedMap("users");
+User user = userCache.get("user-id");
+```
+
+When used within Jet within the context of a [`mapUsingReplicatedMap`](../api/stateless-transforms#mapusingreplicatedmap)
+transform this enables faster lookups, as the lookup is always data-local.
+
+Unlike `IMap`, `ReplicatedMap` offers weak consistency guarantees as updates
+are always done locally and then replicated, so that writes may be
+observed by different processes in different order.
+
+## IList, ISet and IQueue
+
+`IList`, `ISet` and `IQueue` are relatively simple data structures that
+offer the Java equivalent APIs such as `List`, `Set` and `Queue`, but
+are not partitioned, so they're constrained to a single partition.
+
+They're only recommended to be used for smaller data sets or simple
+coordination tasks.
