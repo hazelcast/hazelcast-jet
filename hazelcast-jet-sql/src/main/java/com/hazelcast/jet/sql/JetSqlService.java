@@ -17,7 +17,8 @@
 package com.hazelcast.jet.sql;
 
 import com.hazelcast.jet.JetException;
-import com.hazelcast.jet.sql.impl.calcite.schema.JetSchema;
+import com.hazelcast.jet.JetInstance;
+import com.hazelcast.jet.sql.schema.JetSchema;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -35,9 +36,15 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import java.util.Collections;
 import java.util.Properties;
 
-public class JetSql {
+public class JetSqlService {
 
+    private final JetInstance instance;
     private SqlValidator validator = createValidator();
+    private JetSchema rootSchema = new JetSchema();
+
+    public JetSqlService(JetInstance instance) {
+        this.instance = instance;
+    }
 
     /**
      * Parse SQL statement.
@@ -71,7 +78,6 @@ public class JetSql {
 
         HazelcastTypeFactory typeFactory = new HazelcastTypeFactory();
         CalciteConnectionConfig connectionConfig = createConnectionConfig();
-        JetSchema rootSchema = new JetSchema();
         Prepare.CatalogReader catalogReader = createCatalogReader(typeFactory, connectionConfig, rootSchema);
 
         return new HazelcastSqlValidator(

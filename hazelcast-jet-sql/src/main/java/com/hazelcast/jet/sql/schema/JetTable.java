@@ -14,25 +14,11 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql;
+package com.hazelcast.jet.sql.schema;
 
-import com.hazelcast.jet.sql.impl.calcite.schema.HazelcastTableFields;
-import com.hazelcast.jet.sql.impl.calcite.schema.HazelcastTableRelDataType;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.impl.AbstractTable;
 
-public class JetTable extends AbstractTable {
+public abstract class JetTable extends AbstractTable {
 
-    private HazelcastTableFields fields;
-
-    public enum TYPE {
-        BATCH,
-        STREAM
-    }
-
-    @Override
-    public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-        return new HazelcastTableRelDataType(typeFactory, fields);
-    }
+    public abstract boolean isStream();
 }

@@ -19,6 +19,8 @@ package com.hazelcast.jet.sql;
 import com.hazelcast.jet.core.DAG;
 import com.hazelcast.jet.core.Vertex;
 import com.hazelcast.jet.datamodel.Tuple2;
+import com.hazelcast.jet.sql.schema.JetTable;
+import com.hazelcast.sql.impl.type.DataType;
 import org.apache.calcite.rex.RexNode;
 
 import javax.annotation.Nonnull;
@@ -29,6 +31,23 @@ import java.util.Map;
 public interface SqlConnector {
 
     boolean isStream();
+
+    @Nullable
+    default JetTable createTable(
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> serverOptions,
+            @Nonnull Map<String, String> tableOptions
+    ) {
+        throw new UnsupportedOperationException("Column examination not supported for " + getClass().getName());
+    }
+
+    @Nullable
+    JetTable createTable(
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> serverOptions,
+            @Nonnull Map<String, String> tableOptions,
+            @Nonnull Map<String, DataType> columns
+    );
 
     /**
      * Returns a supplier for a source vertex reading the input according to

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hazelcast.jet.sql;
+package com.hazelcast.jet.sql.imap;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.DAG;
@@ -24,24 +24,29 @@ import com.hazelcast.jet.core.processor.SinkProcessors;
 import com.hazelcast.jet.core.processor.SourceProcessors;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.pipeline.ServiceFactories;
+import com.hazelcast.jet.sql.SqlConnector;
+import com.hazelcast.jet.sql.schema.JetTable;
 import com.hazelcast.projection.Projection;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
+import com.hazelcast.sql.impl.type.DataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.commons.beanutils.BeanUtilsBean;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import static com.hazelcast.jet.Util.entry;
 import static com.hazelcast.jet.datamodel.Tuple2.tuple2;
+import static com.hazelcast.jet.sql.Util.getRequiredTableOption;
 import static com.hazelcast.query.QueryConstants.KEY_ATTRIBUTE_NAME;
 
-public class SqlIMapConnector implements SqlConnector {
+public class IMapSqlConnector implements SqlConnector {
 
     public static final String TO_MAP_NAME = "com.hazelcast.map.name";
     public static final String TO_KEY_CLASS = "com.hazelcast.map.keyClass";
@@ -52,8 +57,22 @@ public class SqlIMapConnector implements SqlConnector {
         return false;
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
+    public JetTable createTable(
+            @Nonnull String tableName,
+            @Nonnull Map<String, String> serverOptions,
+            @Nonnull Map<String, String> tableOptions,
+            @Nonnull Map<String, DataType> columns
+    ) {
+        if (!serverOptions.isEmpty()) {
+            throw new UnsupportedOperationException("Only local cluster is supported now"); // TODO
+        }
+        String mapName = getRequiredTableOption(tableOptions, TO_MAP_NAME);
+        List<HazelcastTableIndex> indexes = Collections.emptyList(); // TODO
+        return new IMapTable(mapName, indexes, columns);
+    }
+
+    @Nullable @Override
     public Tuple2<Vertex, Vertex> fullScanReader(
             @Nonnull DAG dag,
             @Nonnull Map<String, String> serverOptions,
@@ -100,8 +119,7 @@ public class SqlIMapConnector implements SqlConnector {
         return tuple2(v, v);
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public Tuple2<Vertex, Vertex> nestedLoopReader(
             @Nonnull DAG dag,
             @Nonnull Map<String, String> serverOptions,
@@ -128,8 +146,7 @@ public class SqlIMapConnector implements SqlConnector {
         return tuple2(v, v);
     }
 
-    @Nullable
-    @Override
+    @Nullable @Override
     public Tuple2<Vertex, Vertex> sink(
             @Nonnull DAG dag,
             @Nonnull Map<String, String> serverOptions,
@@ -139,6 +156,10 @@ public class SqlIMapConnector implements SqlConnector {
         String mapName = tableOptions.get(TO_MAP_NAME);
         String keyClassName = tableOptions.get(TO_KEY_CLASS);
         String valueClassName = tableOptions.get(TO_VALUE_CLASS);
+        if (keyClassName == null || valueClassName == null) {
+            throw new JetException("If writing to IMap, you need to specify " + TO_KEY_CLASS + " and "
+                    + TO_VALUE_CLASS + " in table options");
+        }
         if (!serverOptions.isEmpty()) {
             throw new JetException("Only local maps are supported for now");
         }

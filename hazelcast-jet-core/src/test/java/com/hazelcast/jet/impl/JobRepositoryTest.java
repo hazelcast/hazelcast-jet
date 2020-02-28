@@ -216,7 +216,7 @@ public class JobRepositoryTest extends JetTestSupport {
     }
 
     private Data createDAGData() {
-        return getNodeEngineImpl(instance.getHazelcastInstance()).toData(new DAG());
+        return getNodeEngineImpl(instance).toData(new DAG());
     }
 
     private JobRecord createJobRecord(long jobId, Data dag) {

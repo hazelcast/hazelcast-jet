@@ -50,7 +50,7 @@ public class DetermineLocalParallelismTest extends JetTestSupport {
         JetConfig cfg = new JetConfig();
         cfg.getInstanceConfig().setCooperativeThreadCount(DEFAULT_PARALLELISM);
         JetInstance jet = createJetMember(cfg);
-        nodeEngine = getNode(jet.getHazelcastInstance()).getNodeEngine();
+        nodeEngine = getNode(jet).getNodeEngine();
     }
 
     @Test

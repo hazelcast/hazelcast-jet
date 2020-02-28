@@ -16,16 +16,17 @@
 
 package com.hazelcast.jet.sql;
 
-import com.hazelcast.jet.JetInstance;
-import com.hazelcast.jet.core.JetTestSupport;
-import org.junit.Test;
+import java.util.Map;
 
-public class SqlTest extends JetTestSupport {
-    @Test
-    public void test() {
-        JetInstance jet = createJetMember();
+import static java.util.Objects.requireNonNull;
 
-        JetSqlService sqlService = new JetSqlService(jet);
-        sqlService.parse("SELECT field FROM my_map");
+public class Util {
+
+    public static String getRequiredTableOption(Map<String, String> options, String optionName) {
+        return requireNonNull(options.get(optionName), "Missing required table option: " + optionName);
+    }
+
+    public static String getRequiredServerOption(Map<String, String> options, String optionName) {
+        return requireNonNull(options.get(optionName), "Missing required server option: " + optionName);
     }
 }
