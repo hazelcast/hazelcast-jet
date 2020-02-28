@@ -173,7 +173,8 @@ List<User> user = userCache.values(Predicates.greaterThan(35));
 `IMap` provides many additional features such as:
 
 * Eviction - expiring items automatically after a _time-to-live_ (TTL)
-  period, or based on other heuristics (such as number of items)
+  period, or based on other heuristics (such as number of items or total
+  memory usage)
 * `MapStore` and `MapLoder`, for implementing _read-through_ and
   _write-through_ and _write-behind_ caching patterns.
 * `MapListener` for observing updates to map from a client application

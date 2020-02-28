@@ -50,7 +50,7 @@ See
 [Hazelcast Discovery Plugin for Kubernetes](https://github.com/hazelcast/hazelcast-kubernetes)
 for more information about the plugin.
 
-## Install Hazelcast Jet using Helm
+## Install using Helm
 
 The easiest way to install Hazelcast Jet on Kubernetes is using Helm
 charts, Hazelcast Jet provides stable Helm charts for open-source and
@@ -115,7 +115,7 @@ See
 [stable charts repository](https://github.com/helm/charts/tree/master/stable/hazelcast-jet)
 for more information and configuration options.
 
-## Install Hazelcast Jet without Helm
+## Install without Helm
 
 ### Role Based Access Control
 
