@@ -13,7 +13,7 @@ streaming job.
 
 ## Materialize Events from Apache Kafka
 
-Using Jet's Kafka connector and a few lines of code, you can consume a
+Using Jet's Kafka connector and a few lines of code, you can consume
 one or more Kafka topics, materialize and index it inside an in-memory
 key-value based storage. For example, let's say you have a topic with
 JSON values and want to cache it inside an `IMap`:
