@@ -1,5 +1,6 @@
 ---
 title: Custom Sources and Sinks
+description: Tutorial on how to define custom sources and sinks.
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)

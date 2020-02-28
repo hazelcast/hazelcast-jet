@@ -1,6 +1,6 @@
 ---
 title: Sources and Sinks 
-description: Tutorial on how to define custom sources and sinks.
+description: Birds-eye view of all pre-defined sources available in Jet.
 ---
 
 Hazelcast Jet comes out of the box with many different sources and sinks
