@@ -68,17 +68,20 @@ source in-memory data grid. Hazelcast provides a wide variety of
 distributed data structures and concurrency primitives, including:</p>
 <ul>
 <li>A distributed, partitioned and queryable in-memory key-value store
-implementation</li>
-<li>Additional data structures and simple messaging constructs  such as
+implementation, called <code>IMap</code></li>
+<li>Additional data structures and simple messaging constructs such as
 <code>Set</code>, <code>MultiMap</code>, <code>Queue</code>, <code>Topic</code></li>
-<li>A cluster-wide unique ID generator, <code>FlakeIdGenerator</code></li>
-<li>A distributed, CRDT-based counter <code>PNCounter</code></li>
-<li>A cardinality estimated based on <code>HyperLogLog</code></li>
+<li>A cluster-wide unique ID generator, called <code>FlakeIdGenerator</code></li>
+<li>A distributed,
+<a href="https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type">CRDT</a>
+based counter, called <code>PNCounter</code></li>
+<li>A cardinality estimator based on <a href="https://en.wikipedia.org/wiki/HyperLogLog"><code>HyperLogLog</code></a></li>
 </ul>
-<p>Additionally, Hazelcast includes a full Raft implementation which allows
-implementation of <em>linearizable</em> constructs such as:</p>
+<p>Additionally, Hazelcast includes a full <a href="https://en.wikipedia.org/wiki/Raft_(computer_science)">Raft</a>
+implementation which allows implementation of <em>linearizable</em> constructs
+such as:</p>
 <ul>
-<li>A distributed and reentrant lock implementation, <code>FencedLock</code></li>
+<li>A distributed and reentrant lock implementation, called <code>FencedLock</code></li>
 <li>Distributed implementations of <code>AtomicLong</code>, <code>AtomicReference</code> <code>CountDownLatch</code></li>
 </ul>
 <p>Hazelcast data-structures are in-memory, highly optimized and offer very
@@ -97,32 +100,32 @@ for example:</p>
 <span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">User</span><span class="token punctuation">></span></span> userCache <span class="token operator">=</span> jet<span class="token punctuation">.</span><span class="token function">getMap</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>Jet is integrated with these data structures and also internally makes
-use them as part of the job execution engine. For example, to store job
-state and metadata among other things.</p>
+use of them as part of the job execution engine. For example, to store
+job state and metadata, among other things.</p>
 <h2><a class="anchor" aria-hidden="true" id="imap"></a><a href="#imap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>IMap</h2>
 <p><code>IMap</code> is the main data structure in Hazelcast and is an implementation
 of the java <code>ConcurrentMap</code> interface, with support for additional
 operations. It's distributed and partitioned across the whole cluster.
 <code>IMap</code> supports many different operations, but the two canonical
-operations are the <code>put</code> and <code>get</code>:</p>
+ones are <code>put</code> and <code>get</code>:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">User</span><span class="token punctuation">></span></span> userCache <span class="token operator">=</span> jet<span class="token punctuation">.</span><span class="token function">getMap</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 userCache<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>user<span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
-<p>And then, at a later point, even from a different application, you may
-retrieve the same object by:</p>
+<p>Then, at a later point in time, even from a different application, you
+may retrieve the same object by:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">User</span><span class="token punctuation">></span></span> userCache <span class="token operator">=</span> jet<span class="token punctuation">.</span><span class="token function">getMap</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 <span class="token class-name">User</span> user <span class="token operator">=</span> userCache<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"user-id-to-retrieve"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <h3><a class="anchor" aria-hidden="true" id="partitioning"></a><a href="#partitioning" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Partitioning</h3>
 <p>The default partition count in Hazelcast is <code>271</code>. This means that there
-are 271 buckets (<em>partitions</em>) for keys and each key is distributed to a
+are 271 buckets (<em>partitions</em>) for keys and each key is assigned to a
 partition, based on the <em>hash code</em> of its binary representation
 (<em>serialization</em>).</p>
 <p>The partition for each key is deterministic, for example, if you
 repeatedly put the same key into a map, it would always end up in the
 same partition.</p>
 <p>Each partition has one or more backups in other nodes so that if one of
-the nodes was to go down, the backup partition would take over and
+the nodes were to go down, the backup partition would take over and
 become the primary. This ensures that no data is lost in face of node
 failures. By default, each partition is configured to have one backup.</p>
 <h3><a class="anchor" aria-hidden="true" id="replication"></a><a href="#replication" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Replication</h3>
@@ -133,12 +136,12 @@ receive a response until the operation has been replicated to the
 backups.</p>
 <p>Having more backups than the default of <code>1</code> means that you can tolerate
 more than <code>1</code> node failing at a time, however they incur a memory cost:
-each backup occupies same space as a primary partition, meaning that over
-the whole cluster you will be consuming <em>n</em> times the memory where <em>n</em>
-is the number of backups.</p>
+each backup occupies the same amount of space as a primary partition,
+meaning that over the whole cluster you will be consuming <em>n</em> times the
+memory, where <em>n</em> is the number of backups.</p>
 <p>Hazelcast also supports <em>asynchronous</em> backups, for which there will be
 no wait when returning a response. This means that the caller may not be
-sure that the data has replicated.</p>
+sure that the data has been replicated.</p>
 <h3><a class="anchor" aria-hidden="true" id="scaling"></a><a href="#scaling" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Scaling</h3>
 <p>When a new members joins the cluster, some of the partitions will
 automatically be migrated to it. In this way Hazelcast is able to fully
@@ -185,7 +188,7 @@ for more details.</p>
 <h3><a class="anchor" aria-hidden="true" id="querying"></a><a href="#querying" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Querying</h3>
 <p>Hazelcast Maps also support indexing and querying, with the use of
 <code>Predicate</code>s.</p>
-<p>Querying is a powerful feature which allows you to almost treat the map
+<p>Querying is a powerful feature which allows you to treat the map almost
 like a database:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">IMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">User</span><span class="token punctuation">></span></span> userCache <span class="token operator">=</span> jet<span class="token punctuation">.</span><span class="token function">getMap</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 userCache<span class="token punctuation">.</span><span class="token function">addIndex</span><span class="token punctuation">(</span><span class="token class-name">IndexType</span><span class="token punctuation">.</span>SORTED<span class="token punctuation">,</span> <span class="token string">"age"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -197,9 +200,10 @@ userCache<span class="token punctuation">.</span><span class="token function">ad
 <li>Eviction - expiring items automatically after a <em>time-to-live</em> (TTL)
 period, or based on other heuristics (such as number of items or total
 memory usage)</li>
-<li><code>MapStore</code> and <code>MapLoder</code>, for implementing <em>read-through</em> and
+<li><code>MapStore</code> and <code>MapLoader</code>, for implementing <em>read-through</em>,
 <em>write-through</em> and <em>write-behind</em> caching patterns.</li>
-<li><code>MapListener</code> for observing updates to map from a client application</li>
+<li><code>MapListener</code> for observing updates to the map from a client
+application</li>
 <li>JSON support through <code>HazelcastJsonValue</code> which allows fast indexing
 and querying of JSON values.</li>
 </ul>
