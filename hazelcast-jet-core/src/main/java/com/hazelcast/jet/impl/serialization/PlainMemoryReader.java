@@ -16,18 +16,17 @@
 
 package com.hazelcast.jet.impl.serialization;
 
-import com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry;
+import com.hazelcast.internal.nio.Bits;
 
-public final class DataInputFactory {
+public class PlainMemoryReader implements MemoryReader {
 
-    private DataInputFactory() {
+    @Override
+    public int readInt(byte[] bytes, int offset) {
+        return Bits.readIntL(bytes, offset);
     }
 
-    public static MemoryDataInput from(byte[] bytes) {
-        if (GlobalMemoryAccessorRegistry.MEM_AVAILABLE) {
-            return new UnsafeMemoryDataInput(bytes);
-        } else {
-            return new ByteArrayMemoryDataInput(bytes);
-        }
+    @Override
+    public long readLong(byte[] bytes, int offset) {
+        return Bits.readLongL(bytes, offset);
     }
 }

@@ -21,49 +21,43 @@ import org.junit.Test;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.ByteOrder.nativeOrder;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assume.assumeTrue;
 
-public class UnsafeMemoryDataInputTest {
+public class UnsafeMemoryWriterTest {
 
     @Test
-    public void when_NotEnoughBytesToRead_then_ThrowsException() {
+    public void when_Writes_then_BytesAreCorrectlyStored() {
         // Given
-        MemoryDataInput input = new UnsafeMemoryDataInput(new byte[]{});
+        MemoryWriter writer = new UnsafeMemoryWriter();
+        byte[] bytes = new byte[Integer.BYTES + Long.BYTES];
 
         // When
-        // Then
-        assertThatThrownBy(input::readInt).isInstanceOf(RuntimeException.class);
-        assertThatThrownBy(input::readLong).isInstanceOf(RuntimeException.class);
-    }
+        writer.writeInt(bytes, 0, 1);
+        writer.writeLong(bytes, Integer.BYTES, 2);
 
-    @Test
-    public void when_EnoughBytes_then_ReadsCorrectValues() {
-        // Given
-        MemoryDataInput input = new UnsafeMemoryDataInput(new byte[]{
+        // Then
+        assertThat(bytes).isEqualTo(new byte[]{
                 1, 0, 0, 0,
                 2, 0, 0, 0, 0, 0, 0, 0
         });
-
-        // When
-        // Then
-        assertThat(input.readInt()).isEqualTo(1);
-        assertThat(input.readLong()).isEqualTo(2);
     }
 
     @Test
-    public void when_ReverseIsSet_then_BytesAreReadInReverseOrder() {
+    public void when_ReverseIsSet_then_BytesAreWrittenInReverseOrder() {
         assumeTrue(nativeOrder() == LITTLE_ENDIAN);
 
         // Given
-        MemoryDataInput input = new UnsafeMemoryDataInput(true, new byte[]{
+        MemoryWriter writer = new UnsafeMemoryWriter(true);
+        byte[] bytes = new byte[Integer.BYTES + Long.BYTES];
+
+        // When
+        writer.writeInt(bytes, 0, 1);
+        writer.writeLong(bytes, Integer.BYTES, 2);
+
+        // Then
+        assertThat(bytes).isEqualTo(new byte[]{
                 0, 0, 0, 1,
                 0, 0, 0, 0, 0, 0, 0, 2
         });
-
-        // When
-        // Then
-        assertThat(input.readInt()).isEqualTo(1);
-        assertThat(input.readLong()).isEqualTo(2);
     }
 }

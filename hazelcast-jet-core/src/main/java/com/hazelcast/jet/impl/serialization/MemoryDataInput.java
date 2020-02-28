@@ -22,83 +22,107 @@ import com.hazelcast.internal.serialization.impl.CustomInputOutputFactory;
 import javax.annotation.Nonnull;
 import java.io.DataInput;
 
-public interface MemoryDataInput extends DataInput {
+public class MemoryDataInput implements DataInput {
+
+    private static final MemoryReader READER = MemoryReader.create();
+
+    private final byte[] buffer;
+    private int position;
+
+    public MemoryDataInput(byte[] buffer) {
+        this.buffer = buffer;
+        this.position = 0;
+    }
 
     @Override
-    default void readFully(@Nonnull byte[] b) {
+    public void readFully(@Nonnull byte[] b) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default void readFully(@Nonnull byte[] b, int off, int len) {
+    public void readFully(@Nonnull byte[] b, int off, int len) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default int skipBytes(int n) {
+    public int skipBytes(int n) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default boolean readBoolean() {
+    public boolean readBoolean() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default byte readByte() {
+    public byte readByte() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default int readUnsignedByte() {
+    public int readUnsignedByte() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default short readShort() {
+    public short readShort() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default int readUnsignedShort() {
+    public int readUnsignedShort() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default char readChar() {
+    public char readChar() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default int readInt() {
+    public int readInt() {
+        checkAvailable(Integer.BYTES);
+        int value = READER.readInt(buffer, position);
+        position += Integer.BYTES;
+        return value;
+    }
+
+    @Override
+    public long readLong() {
+        checkAvailable(Long.BYTES);
+        long value = READER.readLong(buffer, position);
+        position += Long.BYTES;
+        return value;
+    }
+
+    @Override
+    public float readFloat() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default long readLong() {
+    public double readDouble() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    default float readFloat() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default double readDouble() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    default String readLine() {
+    public String readLine() {
         throw new UnsupportedOperationException();
     }
 
     @Nonnull
     @Override
-    default String readUTF() {
+    public String readUTF() {
         throw new UnsupportedOperationException();
     }
 
-    BufferObjectDataInput toObjectInput(CustomInputOutputFactory factory);
+    private void checkAvailable(int length) {
+        if (position + length > buffer.length) {
+            throw new RuntimeException("Cannot read " + length + " bytes");
+        }
+    }
+
+    public BufferObjectDataInput toObjectInput(CustomInputOutputFactory factory) {
+        return factory.createInput(buffer, position);
+    }
 }

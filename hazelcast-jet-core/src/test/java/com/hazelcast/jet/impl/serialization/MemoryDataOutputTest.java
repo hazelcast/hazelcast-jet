@@ -18,45 +18,39 @@ package com.hazelcast.jet.impl.serialization;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class ByteArrayMemoryDataOutputTest {
+public class MemoryDataOutputTest {
 
     @Test
     public void when_BufferIsTooSmall_then_ExtendsIt() {
         // Given
-        MemoryDataOutput output = new ByteArrayMemoryDataOutput(0);
+        MemoryDataOutput output = new MemoryDataOutput(0);
 
         // When
         output.writeInt(1);
         output.writeLong(2);
 
         // Then
-        assertArrayEquals(
-                output.toByteArray(),
-                new byte[]{
-                        1, 0, 0, 0,
-                        2, 0, 0, 0, 0, 0, 0, 0
-                }
-        );
+        assertThat(output.toByteArray()).isEqualTo(new byte[]{
+                1, 0, 0, 0,
+                2, 0, 0, 0, 0, 0, 0, 0
+        });
     }
 
     @Test
     public void when_BufferIsNotExhausted_then_ReturnsOnlyWrittenBytes() {
         // Given
-        MemoryDataOutput output = new ByteArrayMemoryDataOutput(32);
+        MemoryDataOutput output = new MemoryDataOutput(32);
 
         // When
         output.writeInt(1);
         output.writeLong(2);
 
         // Then
-        assertArrayEquals(
-                output.toByteArray(),
-                new byte[]{
-                        1, 0, 0, 0,
-                        2, 0, 0, 0, 0, 0, 0, 0
-                }
-        );
+        assertThat(output.toByteArray()).isEqualTo(new byte[]{
+                1, 0, 0, 0,
+                2, 0, 0, 0, 0, 0, 0, 0
+        });
     }
 }

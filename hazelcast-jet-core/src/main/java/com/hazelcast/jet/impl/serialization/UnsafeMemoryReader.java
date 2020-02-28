@@ -16,56 +16,35 @@
 
 package com.hazelcast.jet.impl.serialization;
 
-import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.impl.CustomInputOutputFactory;
-
 import static com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry.MEM;
+import static com.hazelcast.internal.memory.GlobalMemoryAccessorRegistry.MEM_AVAILABLE;
 import static com.hazelcast.internal.memory.HeapMemoryAccessor.ARRAY_BYTE_BASE_OFFSET;
+import static com.hazelcast.internal.util.Preconditions.checkState;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.ByteOrder.nativeOrder;
 
-public class UnsafeMemoryDataInput implements MemoryDataInput {
+public class UnsafeMemoryReader implements MemoryReader {
 
     private final boolean reverse;
 
-    private final byte[] buffer;
-    private int position;
-
-    UnsafeMemoryDataInput(byte[] buffer) {
-        this(nativeOrder() != LITTLE_ENDIAN, buffer);
+    UnsafeMemoryReader() {
+        this(nativeOrder() != LITTLE_ENDIAN);
     }
 
-    UnsafeMemoryDataInput(boolean reverse, byte[] buffer) {
+    UnsafeMemoryReader(boolean reverse) {
+        checkState(MEM_AVAILABLE, "unsafe memory access is not available");
         this.reverse = reverse;
-
-        this.buffer = buffer;
-        this.position = 0;
     }
 
     @Override
-    public int readInt() {
-        checkAvailable(Integer.BYTES);
-        int value = MEM.getInt(buffer, ARRAY_BYTE_BASE_OFFSET + position);
-        position += Integer.BYTES;
+    public int readInt(byte[] bytes, int offset) {
+        int value = MEM.getInt(bytes, ARRAY_BYTE_BASE_OFFSET + offset);
         return reverse ? Integer.reverseBytes(value) : value;
     }
 
     @Override
-    public long readLong() {
-        checkAvailable(Long.BYTES);
-        long value = MEM.getLong(buffer, ARRAY_BYTE_BASE_OFFSET + position);
-        position += Long.BYTES;
+    public long readLong(byte[] bytes, int offset) {
+        long value = MEM.getLong(bytes, ARRAY_BYTE_BASE_OFFSET + offset);
         return reverse ? Long.reverseBytes(value) : value;
-    }
-
-    private void checkAvailable(int length) {
-        if (position + length > buffer.length) {
-            throw new RuntimeException("Cannot read " + length + " bytes");
-        }
-    }
-
-    @Override
-    public BufferObjectDataInput toObjectInput(CustomInputOutputFactory factory) {
-        return factory.createInput(buffer, position);
     }
 }
