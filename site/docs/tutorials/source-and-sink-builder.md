@@ -174,17 +174,23 @@ Sink<Object> cpuSink = sinkBuilder(
 
 Jet builds the sink to be distributed by default: each member of the Jet
 cluster has a processor running it. You can configure how many parallel
-processors there are on each member (the local parallelism) by calling
-`SinkBuilder.preferredLocalParallelism()`. By default there will be one
-processor per member.
+processors there are on each member (the **local parallelism**) by
+calling `SinkBuilder.preferredLocalParallelism()`. By default there will
+be one processor per member.
 
-Our sink, as presented here, will create the file `data.csv` on each
-member, so the overall job output consists of the contents of all these
-files put together.
+Our example sink will create the file `data.csv` for each processor, on
+each member. The overall job output consists of the contents of all
+these files put together. But one practical problem that shows up is
+that local processors will write to the same local file, which might
+have unexpected consequences. To fix this we will make sure that each
+processor has its **own file**, by putting the global and unique
+processor index into the file name. The above mentioned index is readily
+available in the `Processor.Context` object we get handed into our
+`createFn`.
 
 ```java
 Sink<Object> cpuSink = sinkBuilder(
-    "file-sink", x -> new Context("data.csv"))
+    "file-sink", x -> new Context("data." + x.globalProcessorIndex() + ".csv"))
     .receiveFn((ctx, item) -> ctx.write(item))
     .flushFn(ctx -> ctx.flush())
     .destroyFn(ctx -> ctx.destroy())
@@ -193,12 +199,15 @@ Sink<Object> cpuSink = sinkBuilder(
 ```
 
 >Note: if you run this sink with the dummy pipeline mentioned above you
-> will NOT be able to observe these effects in action (you will not
-> have multiple output files), because the `TestSource` used always
-> has only a single instance and there will not be any partitioned
-> edges in the DAG you end up with, so regardless how many sinks you
-> set up, only one of them will get any data (and create an output
-> file).
+> will notice that all the data is in the files written by the
+> processors of a single Jet member. The other members don't get any
+> data, because on one hand our pipeline doesn't contain any operation
+> that would generate remote edges (ones that carry data from one
+> member to another) and on the other hand the test source we have used
+> only creates one instance of itself, regardless of the number of
+> members we have in the cluster. The member containing the test source
+> instance will process all the data in this case. Real sources don't
+> usually have this limitation.
 
 ### Fault Tolerance
 
