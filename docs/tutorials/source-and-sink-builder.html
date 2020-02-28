@@ -138,7 +138,7 @@ our sink, the <code>CpuMonitor</code> and the file-based <code>PrintWriter</code
 </code></pre>
 <p>Now that we have all the helper code ready we can write our actual sink:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Sink</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> cpuSink <span class="token operator">=</span> <span class="token function">sinkBuilder</span><span class="token punctuation">(</span>
-    <span class="token string">"cpu-sink"</span><span class="token punctuation">,</span> x <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">Context</span><span class="token punctuation">(</span><span class="token string">"data.csv"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token string">"cpu-sink"</span><span class="token punctuation">,</span> x <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">Context</span><span class="token punctuation">(</span><span class="token string">"data."</span> <span class="token operator">+</span> pctx<span class="token punctuation">.</span><span class="token function">globalProcessorIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">".csv"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">receiveFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> ctx<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">destroyFn</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> ctx<span class="token punctuation">.</span><span class="token function">destroy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -149,6 +149,18 @@ our sink, the <code>CpuMonitor</code> and the file-based <code>PrintWriter</code
 <li>how to write out received object (the <code>receiveFn</code>)</li>
 <li>how to tear down the used resources once we are done (the <code>destroyFn</code>)</li>
 </ul>
+<blockquote>
+<p>Note: you might wonder why we don't just use a constant file name in
+the sink definition. The thing is that there might be multiple
+instances of these sinks running at the same time. For example you
+might use a Jet cluster with multiple members. And these multiple
+members might actually write to the same location (for example to a
+Network File System). We don't know, but we want to be safe, so it's
+better to have a unique name for each instance.</p>
+<p>We solve the problem by making use of the unique global processor
+index available in the <code>Processor.Context</code> object we get handed into
+our <code>createFn</code>.</p>
+</blockquote>
 <p>We can then run it in a dummy pipeline and use its output to
 test the sources we are going to write in the following sections:</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Pipeline</span> p <span class="token operator">=</span> <span class="token class-name">Pipeline</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
@@ -197,17 +209,10 @@ cluster has a processor running it. You can configure how many parallel
 processors there are on each member (the <strong>local parallelism</strong>) by
 calling <code>SinkBuilder.preferredLocalParallelism()</code>. By default there will
 be one processor per member.</p>
-<p>Our example sink will create the file <code>data.csv</code> for each processor, on
-each member. The overall job output consists of the contents of all
-these files put together. But one practical problem that shows up is
-that local processors will write to the same local file, which might
-have unexpected consequences. To fix this we will make sure that each
-processor has its <strong>own file</strong>, by putting the global and unique
-processor index into the file name. The above mentioned index is readily
-available in the <code>Processor.Context</code> object we get handed into our
-<code>createFn</code>.</p>
+<p>The overall job output consists of the contents of all the files
+written by all processor instances put together.</p>
 <pre><code class="hljs css language-java"><span class="token class-name">Sink</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> cpuSink <span class="token operator">=</span> <span class="token function">sinkBuilder</span><span class="token punctuation">(</span>
-    <span class="token string">"file-sink"</span><span class="token punctuation">,</span> x <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">Context</span><span class="token punctuation">(</span><span class="token string">"data."</span> <span class="token operator">+</span> x<span class="token punctuation">.</span><span class="token function">globalProcessorIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">".csv"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token string">"file-sink"</span><span class="token punctuation">,</span> pctx <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">Context</span><span class="token punctuation">(</span><span class="token string">"data."</span> <span class="token operator">+</span> pctx<span class="token punctuation">.</span><span class="token function">globalProcessorIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">".csv"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">receiveFn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ctx<span class="token punctuation">,</span> item<span class="token punctuation">)</span> <span class="token operator">-></span> ctx<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">flushFn</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> ctx<span class="token punctuation">.</span><span class="token function">flush</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
     <span class="token punctuation">.</span><span class="token function">destroyFn</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> ctx<span class="token punctuation">.</span><span class="token function">destroy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
@@ -219,9 +224,9 @@ available in the <code>Processor.Context</code> object we get handed into our
 will notice that all the data is in the files written by the
 processors of a single Jet member. The other members don't get any
 data, because on one hand our pipeline doesn't contain any operation
-that would generate remote edges (ones that carry data from one
+that would generate distributed edges (ones that carry data from one
 member to another) and on the other hand the test source we have used
-only creates one instance of itself, regardless of the number of
+only creates one instance globally, regardless of the number of
 members we have in the cluster. The member containing the test source
 instance will process all the data in this case. Real sources don't
 usually have this limitation.</p>
