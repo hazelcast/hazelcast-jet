@@ -108,7 +108,7 @@ Now that we have all the helper code ready we can write our actual sink:
 
 ```java
 Sink<Object> cpuSink = sinkBuilder(
-    "cpu-sink", x -> new Context("data.csv"))
+    "cpu-sink", x -> new Context("data." + pctx.globalProcessorIndex() + ".csv"))
     .receiveFn((ctx, item) -> ctx.write(item))
     .destroyFn(ctx -> ctx.destroy())
     .build();
@@ -119,6 +119,18 @@ That's it! All we did was to specify:
 * how to set up our context object (the `createFn`)
 * how to write out received object (the `receiveFn`)
 * how to tear down the used resources once we are done (the `destroyFn`)
+
+> Note: you might wonder why we don't just use a constant file name in
+> the sink definition. The thing is that there might be multiple
+> instances of these sinks running at the same time. For example you
+> might use a Jet cluster with multiple members. And these multiple
+> members might actually write to the same location (for example to a
+> Network File System). We don't know, but we want to be safe, so it's
+> better to have a unique name for each instance.
+>
+> We solve the problem by making use of the unique global processor
+> index available in the `Processor.Context` object we get handed into
+> our `createFn`.
 
 We can then run it in a dummy pipeline and use its output to
 test the sources we are going to write in the following sections:
@@ -178,19 +190,12 @@ processors there are on each member (the **local parallelism**) by
 calling `SinkBuilder.preferredLocalParallelism()`. By default there will
 be one processor per member.
 
-Our example sink will create the file `data.csv` for each processor, on
-each member. The overall job output consists of the contents of all
-these files put together. But one practical problem that shows up is
-that local processors will write to the same local file, which might
-have unexpected consequences. To fix this we will make sure that each
-processor has its **own file**, by putting the global and unique
-processor index into the file name. The above mentioned index is readily
-available in the `Processor.Context` object we get handed into our
-`createFn`.
+The overall job output consists of the contents of all the files
+written by all processor instances put together.
 
 ```java
 Sink<Object> cpuSink = sinkBuilder(
-    "file-sink", x -> new Context("data." + x.globalProcessorIndex() + ".csv"))
+    "file-sink", pctx -> new Context("data." + pctx.globalProcessorIndex() + ".csv"))
     .receiveFn((ctx, item) -> ctx.write(item))
     .flushFn(ctx -> ctx.flush())
     .destroyFn(ctx -> ctx.destroy())
@@ -198,13 +203,13 @@ Sink<Object> cpuSink = sinkBuilder(
     .build();
 ```
 
->Note: if you run this sink with the dummy pipeline mentioned above you
+> Note: if you run this sink with the dummy pipeline mentioned above you
 > will notice that all the data is in the files written by the
 > processors of a single Jet member. The other members don't get any
 > data, because on one hand our pipeline doesn't contain any operation
-> that would generate remote edges (ones that carry data from one
+> that would generate distributed edges (ones that carry data from one
 > member to another) and on the other hand the test source we have used
-> only creates one instance of itself, regardless of the number of
+> only creates one instance globally, regardless of the number of
 > members we have in the cluster. The member containing the test source
 > instance will process all the data in this case. Real sources don't
 > usually have this limitation.
