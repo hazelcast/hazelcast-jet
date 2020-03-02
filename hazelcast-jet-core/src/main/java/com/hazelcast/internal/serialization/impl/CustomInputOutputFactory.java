@@ -22,6 +22,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import java.nio.ByteOrder;
 
 // remove when `InternalSerializationService.createObjectDataInput(byte[] data, int offset)` is there...
+// https://github.com/hazelcast/hazelcast/pull/16701
 @Deprecated
 public interface CustomInputOutputFactory {
 
