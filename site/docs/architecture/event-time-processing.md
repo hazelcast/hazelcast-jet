@@ -1,7 +1,6 @@
 ---
 title: Event Time-Based Processing
-description: How Jet deals with event-time disorder with techniques such
-as watermarks.
+description: How Jet deals with event-time disorder with techniques such as watermarks.
 ---
 
 In [Concepts](/docs/concepts/event-time) we introduced event time and,

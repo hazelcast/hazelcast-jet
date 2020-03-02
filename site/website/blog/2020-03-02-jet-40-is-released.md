@@ -6,36 +6,48 @@ authorImageURL: https://pbs.twimg.com/profile_images/1187734846749196288/elqWdrP
 ---
 
 We're happy to introduce the release of Jet 4.0 which brings several new
-features. This release was a big effort and a total of 230 PRs were
-merged, making it one of our biggest in terms of new features.
+features. This release was a big effort and a total of [230
+PRs](https://github.com/hazelcast/hazelcast-jet/pulls?q=is%3Aopen+is%3Apr+milestone%3A4.0)
+were merged, making it one of our biggest in terms of new features.
 
-## Distributed Transaction supports
+## Distributed Transactions
 
 Jet previously had first-class support for fault tolerance through an
-implementation of the Chandy-Lamport distributed snapshotting algorithm.
-However, this requires participation from the whole pipeline, including
-sources and sinks. Previously, the exactly-once processing guarantee was
-only limited to replayable sources such as Kafka. Jet 4.0 comes with a
-full two-phase-commit (2PC) implementation which makes it possible to
-have end to end exactly processing with acknowledgement based sources
-such as JMS. Jet is also now able to work with transactional sinks to
-avoid duplicate writes, including a transactional file sink
-implementation and Kafka.
+implementation of the [Chandy-Lamport distributed snapshotting](https://dl.acm.org/doi/10.1145/214451.214456)
+algorithm which requires participation from the whole pipeline,
+including sources and sinks. Previously, the at-least-once and
+exactly-once processing guarantees were only limited to replayable
+sources such as Kafka. Jet 4.0 comes with a full two-phase-commit (2PC)
+implementation which makes it possible to have end to end exactly
+processing with acknowledgement based sources such as JMS. Jet is also
+now able to work with transactional sinks to avoid duplicate writes, and
+this version adds transactional file and Kafka sinks, with transactional
+JMS and JDBC sinks utilizing XA transactions coming in the next release.
 
-We will have additional posts about this topic in the future.
+We will have additional posts about this topic in the future detailing
+the mechanism and also results of our tests done with 2PC for various
+message brokers and databases.
 
-## Python User Defined Function Support
+## Python User Defined Functions
 
-Python is a popular language with a very large variety of libraries, and
-is especially popular with data scientists. Jet offers a data processing
-framework for both streams and batches of data, but the API for defining
-the pipeline itself is currently limited to Java. To bridge this gap, in
-this version we have added a native way to execute Python code within a
-Jet pipeline, by internally making use of a gRPC bridge. The user is now
-able to add a mapping stage which takes an input item, and transforms it
-using a supplied Python function. The Python function can also work with
-dependencies such as scikit and many others to apply Machine Learning
-inference, for example:
+Python is a popular language with a very large ecosystem of libraries,
+and has especially become popular in the domain of data processing and
+machine learning. Jet itself is a data processing framework for both
+streams and batches of data, but the API for defining the pipeline
+itself has been previously limited to Java and Java functions only.
+
+In this version we have added a native way to execute Python code within
+a Jet pipeline. Jet can now spawn separate Python processes on
+each node which communicate back using
+[gRPC](https://github.com/hazelcast/hazelcast-jet-demos/tree/master/debezium-cdc-without-kafka).
+The processes are fully managed by Jet and can make use of techniques
+such as smart batching of events.
+
+The user defines a mapping stage which takes an input item, and
+transforms it using a supplied Python function. The function can make
+use of libraries such as scikit, numpy and many others. This makes it
+possible to use Jet for deploying ML models into production. For
+example, given this pipeline:
 
 ```java
 Pipeline p = Pipeline.create();
@@ -65,6 +77,10 @@ def transform_list(input_list):
     return [str(it) for it in sqrt_list]
 ```
 
+For a more in-depth discussion on this topic, I recommend Jet Core
+Engineer Marko Topolnik's presentation,
+[deploying ML models at scale](https://www.youtube.com/watch?v=q1vBbqxnJIQ).
+
 ## Observables
 
 When you submit a Jet pipeline, typically it reads the data from a
@@ -74,7 +90,8 @@ the pipeline, which is not always very convenient.
 
 In Jet 4.0, a new sink type called `Observable` is added which can be
 used to publish messages directly to the caller. It utilizes a Hazelcast
-Ringbuffer as the underlying data store.
+Ringbuffer as the underlying data store which allows the decoupling of
+the producer and consumer.
 
 ```java
 Observable<SimpleEvent> o = jet.newObservable();
@@ -88,7 +105,7 @@ jet.newJob(o).join();
 The `Observable` can also be used to be notified of a job's completion
 and any errors that may occur during processing.
 
-## Support for Custom Metrics
+## Custom Metrics
 
 Over the last few releases we've been improving the metrics support in
 Jet, such as being able to get metrics directly from running or
@@ -112,13 +129,24 @@ These custom metrics will then be available as part of
 
 ## Debezium, Kafka Connect and Twitter Connectors
 
-As part of Jet 4.0, we're release three new connectors:
+As part of Jet 4.0, we're releasing three new connectors:
 
 ### Debezium
 
-Thew new Debezium connector integrates natively with Jet without
-requiring Kafka and allows you to to stream changes from the likes of
-MySQL, PostgreSQL and many others supported by the Debezium Project.
+Debezium is a Change Data Capture (CDC) platform and the new
+[Debezium](https://debezium.io/) connector for Jet allows you to stream
+changes directly from databases such as MySQL and PostgreSQL without
+requiring any other dependencies.
+
+Although Debezium typically requires use of Kafka and Kafka Connect, the
+native Jet integration means you can directly stream changes without
+having to use Kafka. The integration also supports fault-tolerance so
+that when a Jet job is scaled up or down, old changes do not need to
+replayed.
+
+This makes it suitable to build an end-to-end solution where for example
+an in-memory cache supported by `IMap` is always kept up to date with the
+latest changes in the database.
 
 ```java
 Configuration configuration = Configuration
@@ -143,18 +171,25 @@ p.readFrom(DebeziumSources.cdc(configuration))
  .writeTo(Sinks.logger());
 ```
 
+The Debezium connector is currently available in the
+[hazelcast-jet-contrib repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/debezium),
+along with a [demo application](https://github.com/hazelcast/hazelcast-jet-demos/tree/master/debezium-cdc-without-kafka).
+
 ### Kafka Connect
 
-The Kafka Connect connectors allows you to use any existing Kafka
-Connect source and use it natively with Jet, without requiring presence
-of a Kafka Cluster. The records will be streamed as Jet events instead,
-which can be processed further and it has full support for
-fault-tolerance and replaying.
+The [Kafka Connect source](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/kafka-connect)
+allows you to use any existing Kafka Connect source and use it natively
+with Jet, without requiring presence of a Kafka Cluster. The records
+will be streamed as Jet events instead, which can be processed further
+and it has full support for fault-tolerance and replaying. A full list
+of connectors can be viewed through the [Confluent
+Hub](https://www.confluent.io/hub/).
 
 ### Twitter
 
-We've also released a simple source that uses the Twitter client, which
-can be used to processing on a stream of Tweets.
+We've also released a simple [Twitter source](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/twitter)
+that uses the Twitter client, which can be used to processing on a
+stream of Tweets.
 
 ```java
 Properties credentials = new Properties();
@@ -173,6 +208,9 @@ p.readFrom(streamSource)
  .writeTo(Sinks.logger());
 ```
 
+These connectors are currently under incubation, and will be part of a
+main release in the future.
+
 ## Improved Jet Installation
 
 We've also made many improvements to the Jet installation package. It
@@ -189,13 +227,13 @@ has been cleaned up to reduce the size, and now supports the following:
 
 ## Hazelcast 4.0
 
-Undoubtedly one of the biggest changes in this release is that Jet is
-now based on Hazelcast 4.0 - which in itself was a major release and
-brought many new features and technical improvements such as improved
-performance and Intel Optane DC Support and encryption at rest.
+Another major change that's worth noting is that Jet is now based on
+Hazelcast 4.0 - which in itself was a major release and brought many new
+features and technical improvements such as improved performance and
+Intel Optane DC Support and encryption at rest.
 
 Going forward, we intend to make shorter, more frequent releases to
-bring new features to our users quicker.
+bring new features to users quicker.
 
 ## Breaking Changes and Migration Guide
 
