@@ -1,5 +1,5 @@
 ---
-title: Jet 4.0 is released
+title: Jet 4.0 is Released
 author: Can Gencer
 authorURL: http://twitter.com/cgencer
 authorImageURL: https://pbs.twimg.com/profile_images/1187734846749196288/elqWdrPj_400x400.jpg
@@ -217,8 +217,8 @@ has been cleaned up to reduce the size, and now supports the following:
 
 * Default config format is now YAML and many of the common options are
   in the default configuration.
-* A rolling file sink is now the default, which writes to the `log`
-  folder
+* A rolling file logger which writes to the log folder is now the
+  default logger
 * Support for daemon mode through `jet-start -d` switch.
 * Improved readme and a new "hello world" application which can be
   submitted right after installation.
