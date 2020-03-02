@@ -46,22 +46,11 @@ that tolerates the failure of a single member at a time. You can tweak
 this setting when starting Jet, for example increase the backup count to
 two:
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--Programmatic Configuration-->
-
-```java
-JetConfig config = new JetConfig();
-config.getInstanceConfig().setBackupCount(2);
-JetInstance instance = Jet.newJetInstance(config);
-```
-
-<!--Declarative Configuration-->
-
 ```yaml
-todo
+hazelcast-jet:
+  instance:
+    backup-count: 2
 ```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
 
 Note: if multiple members are lost simultaneously, some data from the
 backing IMaps can be lost. This is not currently checked and the job
