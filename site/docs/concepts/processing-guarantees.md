@@ -53,7 +53,9 @@ processing pipeline:
 These techniques mean that it is impossible to reconstruct the state as
 it was exactly at the time of a failure. Every stage is at a different
 point in the processing of the stream, so the first challenge is just
-making the backups represent a consistent point in the stream.
+making the backups represent a consistent point in the stream. You can
+read more about Jet's techniques that deal with this in the
+[Architecture](/docs/architecture/fault-tolerance) section.
 
 When a job restarts, the state is restored from `IMap` backups which
 happened at an earlier time, and then all the data that came after that
