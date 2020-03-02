@@ -50,7 +50,7 @@ a.button {
 .navigationSlider .slidingNav ul li a:focus,
 .navigationSlider .slidingNav ul li a:hover {
     color: #707482 !important;
-    border-bottom: 3px solid #17e2fc;
+    border-bottom: 3px solid #2d7de4;
     background: none;
 }
 
