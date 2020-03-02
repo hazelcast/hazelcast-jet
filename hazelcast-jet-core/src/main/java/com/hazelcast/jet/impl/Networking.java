@@ -43,7 +43,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class Networking {
 
     private static final int PACKET_HEADER_SIZE = 16;
-    private static final int FLOW_PACKET_INITIAL_SIZE = 128; // TODO:
+    private static final int FLOW_PACKET_INITIAL_SIZE = 128;
     private static final MemoryReader MEMORY_READER = MemoryReader.create();
 
     private static final byte[] EMPTY_BYTES = new byte[0];
@@ -53,12 +53,15 @@ public class Networking {
     private final JobExecutionService jobExecutionService;
     private final ScheduledFuture<?> flowControlSender;
 
+    private int lastFlowPacketSize;
+
     Networking(NodeEngine nodeEngine, JobExecutionService jobExecutionService, int flowControlPeriodMs) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.logger = nodeEngine.getLogger(getClass());
         this.jobExecutionService = jobExecutionService;
         this.flowControlSender = nodeEngine.getExecutionService().scheduleWithRepetition(
                 this::broadcastFlowControlPacket, 0, flowControlPeriodMs, MILLISECONDS);
+        this.lastFlowPacketSize = FLOW_PACKET_INITIAL_SIZE;
     }
 
     void shutdown() {
@@ -116,7 +119,7 @@ public class Networking {
     }
 
     private byte[] createFlowControlPacket(Address member) {
-        MemoryDataOutput output = new MemoryDataOutput(FLOW_PACKET_INITIAL_SIZE);
+        MemoryDataOutput output = new MemoryDataOutput(lastFlowPacketSize);
         final boolean[] hasData = {false};
         Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
         output.writeInt(executionContexts.size());
@@ -131,7 +134,13 @@ public class Networking {
                         hasData[0] = true;
                     })));
         }));
-        return hasData[0] ? output.toByteArray() : EMPTY_BYTES;
+        if (hasData[0]) {
+            byte[] payload = output.toByteArray();
+            lastFlowPacketSize = payload.length;
+            return payload;
+        } else {
+            return EMPTY_BYTES;
+        }
     }
 
     private void handleFlowControlPacket(Address fromAddr, byte[] packet) {
