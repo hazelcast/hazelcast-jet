@@ -182,14 +182,13 @@ allows you to use any existing Kafka Connect source and use it natively
 with Jet, without requiring presence of a Kafka Cluster. The records
 will be streamed as Jet events instead, which can be processed further
 and it has full support for fault-tolerance and replaying. A full list
-of connectors can be viewed through the [Confluent
-Hub](https://www.confluent.io/hub/).
+of connectors can be viewed through [Confluent Hub](https://www.confluent.io/hub/).
 
 ### Twitter
 
 We've also released a simple [Twitter source](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/twitter)
-that uses the Twitter client, which can be used to processing on a
-stream of Tweets.
+that uses the Twitter client, which can be used to process a stream of
+Tweets.
 
 ```java
 Properties credentials = new Properties();
@@ -197,7 +196,7 @@ properties.setProperty("consumerKey", "???"); // OAuth1 Consumer Key
 properties.setProperty("consumerSecret", "???"); // OAuth1 Consumer Secret
 properties.setProperty("token", "???"); // OAuth1 Token
 properties.setProperty("tokenSecret", "???"); // OAuth1 Token Secret
-List<String> terms = new ArrayList<>(Arrays.asList("term1", "term2"));
+List<String> terms = Arrays.asList("term1", "term2");
 StreamSource<String> streamSource =
              TwitterSources.stream(credentials,
                      () -> new StatusesFilterEndpoint().trackTerms(terms)
@@ -232,9 +231,6 @@ Hazelcast 4.0 - which in itself was a major release and brought many new
 features and technical improvements such as improved performance and
 Intel Optane DC Support and encryption at rest.
 
-Going forward, we intend to make shorter, more frequent releases to
-bring new features to users quicker.
-
 ## Breaking Changes and Migration Guide
 
 As part of 4.0, we've also done some house cleaning and as a result some
@@ -245,3 +241,11 @@ manual](https://docs.hazelcast.org/docs/jet/latest-dev/manual/#migration-guides)
 We are committed to backwards compatibility going forward and any
 interfaces or classes which are subject to change will be marked as
 `@Beta` or `@EvolvingApi` going forwards.
+
+## Wrapping Up
+
+This is a big release for Hazelcast Jet, and we have many more exciting
+features in the pipeline (pun intended), including SQL support, extended
+support for 2PC, improved Serialization support, even more connectors,
+Kubernetes Operators and many more. We will also be aiming to make
+shorter, more frequent releases to bring new features to users quicker.

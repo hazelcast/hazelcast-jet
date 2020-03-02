@@ -600,6 +600,13 @@ to listen for all events by adding additional parameters to the source.
 The event journal is fault tolerant and supports exactly-once
 processing.
 
+The capacity of the event journal is also an important consideration, as
+having too little capacity will cause events to be dropped. Consider
+also the capacity is for all the partition and not shared per partition.
+For example, if there's many updates to just one key, with the default
+partition count of `271` and journal size of `100,000` the journal only
+has space for `370` events per partitions.
+
 For a full example, please see the [Stream Changes From IMap tutorial.](../tutorials/stream-imap)
 
 #### Map Sink

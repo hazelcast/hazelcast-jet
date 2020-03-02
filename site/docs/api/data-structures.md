@@ -47,9 +47,12 @@ JetInstance jet = Jet.bootstrappedInstance();
 IMap<String, User> userCache = jet.getMap("users");
 ```
 
-Jet is integrated with these data structures and also internally makes
-use of them as part of the job execution engine. For example, to store
-job state and metadata, among other things.
+Jet integrates with these data structures typically as a source or sink,
+for an example have a look at the [IMap source and sink](sources-sinks#imap)
+or as part of a [join](stateless-transforms#mapUsingIMap). Jet also
+internally makes use of them as part of the job execution engine, for
+example, to store job state and metadata, or to generate a unique ID per
+job.
 
 ## IMap
 
@@ -201,6 +204,13 @@ is done in a best-effort basis. For an in-depth discussion regarding
 this please see the [In-Memory
 Architecture](../architecture/in-memory-storage) section.
 
+### Event Journal
+
+`IMap` also offers a way to record changes to it in the form of a _event
+journal_. This can then be used for using the stream of change records
+as a data source for further processing. For reference, please see the
+[Event Journal](sources-sink#event-journal) section.
+
 ## ReplicatedMap
 
 `ReplicatedMap` has a similar API to `IMap`, with some important
@@ -230,3 +240,30 @@ are not partitioned, so they're constrained to a single partition.
 
 They're only recommended to be used for smaller data sets or simple
 coordination tasks.
+
+## ICache
+
+`ICache` a fully compliant
+[JCache](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#jcache-overview)
+implementation. The features offered are mostly similar to `IMap`, but
+are limited to what's offered by the `JCache` specification, so many of
+`IMap`s features such as `EntryProcessor` and querying aren't available
+on `ICache`.
+
+## CP Subsystem
+
+[CP subsystem](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#cp-subsystem)
+builds a strongly consistent layer inside Hazelcast Jet which can be
+used for distributed coordination use cases such as distributed locking
+and synchronization. The CP subsystem is based on a full RAFT
+implementation and requires a minimum of 3 nodes to run (though it can
+be run with a single node in _unsafe_ mode).
+
+The currently supported primitives are:
+
+* `FencedLock` is a distributed and re-enrant lock implementation of
+  `java.util.concurrent.Lock`
+* `ISemaphore` is the distributed implementation of Java `Semaphore`
+* `CountdownLatch` implement Java equivalent in a distributed fashion
+* `IAtomicLong` and `IAtomicReference` implement the Java equivalents
+  with strong consistency.
