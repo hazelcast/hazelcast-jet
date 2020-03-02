@@ -17,10 +17,10 @@ implementation of the [Chandy-Lamport distributed snapshotting](https://dl.acm.o
 algorithm which requires participation from the whole pipeline,
 including sources and sinks. Previously, the at-least-once and
 exactly-once processing guarantees were only limited to replayable
-sources such as Kafka. Jet 4.0 comes with a full two-phase-commit (2PC)
-implementation which makes it possible to have end to end exactly
-processing with acknowledgement based sources such as JMS. Jet is also
-now able to work with transactional sinks to avoid duplicate writes, and
+sources such as Kafka. Jet 4.0 comes with a full two-phase commit (2PC)
+implementation which makes it possible to have end-to-end exactly-once
+processing with acknowledgement-based sources such as JMS. Jet is now
+also able to work with transactional sinks to avoid duplicate writes, and
 this version adds transactional file and Kafka sinks, with transactional
 JMS and JDBC sinks utilizing XA transactions coming in the next release.
 
@@ -28,7 +28,7 @@ We will have additional posts about this topic in the future detailing
 the mechanism and also results of our tests done with 2PC for various
 message brokers and databases.
 
-## Python User Defined Functions
+## Python User-Defined Functions
 
 Python is a popular language with a very large ecosystem of libraries,
 and has especially become popular in the domain of data processing and
@@ -79,7 +79,7 @@ def transform_list(input_list):
 
 For a more in-depth discussion on this topic, I recommend Jet Core
 Engineer Marko Topolnik's presentation,
-[deploying ML models at scale](https://www.youtube.com/watch?v=q1vBbqxnJIQ).
+[Deploying ML models at scale](https://www.youtube.com/watch?v=q1vBbqxnJIQ).
 
 ## Observables
 
