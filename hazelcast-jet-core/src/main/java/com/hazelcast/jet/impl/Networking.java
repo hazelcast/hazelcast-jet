@@ -23,6 +23,7 @@ import com.hazelcast.jet.impl.execution.ExecutionContext;
 import com.hazelcast.jet.impl.execution.SenderTasklet;
 import com.hazelcast.jet.impl.serialization.MemoryDataInput;
 import com.hazelcast.jet.impl.serialization.MemoryDataOutput;
+import com.hazelcast.jet.impl.serialization.MemoryReader;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.spi.impl.NodeEngine;
 import com.hazelcast.spi.impl.NodeEngineImpl;
@@ -43,6 +44,7 @@ public class Networking {
 
     private static final int PACKET_HEADER_SIZE = 16;
     private static final int FLOW_PACKET_INITIAL_SIZE = 128; // TODO:
+    private static final MemoryReader MEMORY_READER = MemoryReader.create();
 
     private static final byte[] EMPTY_BYTES = new byte[0];
 
@@ -72,12 +74,18 @@ public class Networking {
     }
 
     private void handleStreamPacket(Packet packet) {
-        MemoryDataInput input = new MemoryDataInput(packet.toByteArray());
-        long executionId = input.readLong();
-        int vertexId = input.readInt();
-        int ordinal = input.readInt();
+        byte[] payload = packet.toByteArray();
+        int offset = 0;
+
+        long executionId = MEMORY_READER.readLong(payload, offset);
+        offset += Long.BYTES;
+        int vertexId = MEMORY_READER.readInt(payload, offset);
+        offset += Integer.BYTES;
+        int ordinal = MEMORY_READER.readInt(payload, offset);
+        offset += Integer.BYTES;
+
         ExecutionContext executionContext = jobExecutionService.getExecutionContext(executionId);
-        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), input);
+        executionContext.handlePacket(vertexId, ordinal, packet.getConn().getEndPoint(), payload, offset);
     }
 
     public static byte[] createStreamPacketHeader(long executionId, int destinationVertexId, int ordinal) {

@@ -16,9 +16,6 @@
 
 package com.hazelcast.jet.impl.serialization;
 
-import com.hazelcast.internal.nio.BufferObjectDataInput;
-import com.hazelcast.internal.serialization.impl.CustomInputOutputFactory;
-
 import javax.annotation.Nonnull;
 import java.io.DataInput;
 
@@ -120,9 +117,5 @@ public class MemoryDataInput implements DataInput {
         if (position + length > buffer.length) {
             throw new RuntimeException("Cannot read " + length + " bytes");
         }
-    }
-
-    public BufferObjectDataInput toObjectInput(CustomInputOutputFactory factory) {
-        return factory.createInput(buffer, position);
     }
 }
