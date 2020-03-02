@@ -18,7 +18,7 @@ In order to use an `IMap` as a change event stream source the first
 thing that needs to be done is enabling its "event journal".
 
 This is a matter of configuration (see also
-[full guide](https://jet-start.sh/docs/operations/configuration) on
+[full guide](../operations/configuration.md) on
 configuration), add following to your Jet member config, in your
  distribution
 (`config/hazelcast.yaml` by default):
