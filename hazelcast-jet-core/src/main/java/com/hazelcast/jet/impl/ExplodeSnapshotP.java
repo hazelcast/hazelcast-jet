@@ -16,7 +16,6 @@
 
 package com.hazelcast.jet.impl;
 
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
@@ -50,8 +49,7 @@ public class ExplodeSnapshotP extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        serializationService =
-                ((HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance()).getSerializationService();
+        serializationService = context.serializationService();
     }
 
     private Traverser<Object> traverser(byte[] data) {

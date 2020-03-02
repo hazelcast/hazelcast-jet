@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.core.test;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.ProcessorSupplier;
@@ -38,6 +39,7 @@ public class TestProcessorSupplierContext
 
     private int memberIndex;
     private final Map<String, File> attached = new HashMap<>();
+    private InternalSerializationService serializationService;
 
     @Nonnull @Override
     public TestProcessorSupplierContext setLogger(@Nonnull ILogger logger) {
@@ -90,10 +92,17 @@ public class TestProcessorSupplierContext
         return file;
     }
 
+    @Nonnull
+    @Override
+    public InternalSerializationService serializationService() {
+        return serializationService;
+    }
+
     /**
      * Add an attached file or folder. The test context doesn't distinguish
      * between files and folders;
      */
+    @Nonnull
     public TestProcessorSupplierContext addFile(@Nonnull String id, @Nonnull File file) {
         attached.put(id, file);
         return this;
@@ -105,6 +114,12 @@ public class TestProcessorSupplierContext
     @Nonnull
     public TestProcessorSupplierContext setMemberIndex(int memberIndex) {
         this.memberIndex = memberIndex;
+        return this;
+    }
+
+    @Nonnull
+    public TestProcessorSupplierContext setSerializationService(InternalSerializationService serializationService) {
+        this.serializationService = serializationService;
         return this;
     }
 

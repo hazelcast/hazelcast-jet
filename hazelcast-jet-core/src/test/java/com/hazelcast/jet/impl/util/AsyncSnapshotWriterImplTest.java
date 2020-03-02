@@ -23,6 +23,7 @@ import com.hazelcast.internal.nio.Bits;
 import com.hazelcast.internal.nio.BufferObjectDataInput;
 import com.hazelcast.internal.partition.InternalPartitionService;
 import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.internal.serialization.impl.HeapData;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.JetConfig;
@@ -97,7 +98,8 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
         snapshotContext = mock(SnapshotContext.class);
         when(snapshotContext.currentMapName()).thenReturn("map1");
         when(snapshotContext.currentSnapshotId()).thenReturn(0L);
-        writer = new AsyncSnapshotWriterImpl(128, nodeEngine, snapshotContext, "vertex", 0, 1);
+        writer = new AsyncSnapshotWriterImpl(128, nodeEngine, snapshotContext, "vertex", 0, 1,
+                new DefaultSerializationServiceBuilder().build());
         when(snapshotContext.currentSnapshotId()).thenReturn(1L); // simulates starting new snapshot
         map = instance.getHazelcastInstance().getMap("map1");
         assertTrue(writer.usableChunkCapacity > 0);
@@ -114,7 +116,8 @@ public class AsyncSnapshotWriterImplTest extends JetTestSupport {
     public void test_flushingAtEdgeCases() {
         for (int i = 64; i < 196; i++) {
             when(snapshotContext.currentMapName()).thenReturn(randomMapName());
-            writer = new AsyncSnapshotWriterImpl(128, nodeEngine, snapshotContext, "vertex", 0, 1);
+            writer = new AsyncSnapshotWriterImpl(128, nodeEngine, snapshotContext, "vertex", 0, 1,
+                    new DefaultSerializationServiceBuilder().build());
             try {
                 assertTrue(writer.offer(entry(serialize("k"), serialize(String.join("", nCopies(i, "a"))))));
                 assertTrue(writer.flushAndResetMap());

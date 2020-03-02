@@ -17,6 +17,8 @@
 package com.hazelcast.jet.core;
 
 import com.hazelcast.function.SupplierEx;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.logging.ILogger;
 
@@ -131,5 +133,12 @@ public interface ProcessorSupplier extends Serializable {
          */
         @Nonnull
         File attachedFile(@Nonnull String id);
+
+        /**
+         * Returns the serialization service associated with this job.
+         */
+        @Nonnull
+        @EvolvingApi
+        InternalSerializationService serializationService();
     }
 }

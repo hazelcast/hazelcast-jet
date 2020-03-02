@@ -19,7 +19,6 @@ package com.hazelcast.jet.hadoop.impl;
 import com.hazelcast.cluster.Address;
 import com.hazelcast.cluster.Member;
 import com.hazelcast.function.BiFunctionEx;
-import com.hazelcast.instance.impl.HazelcastInstanceImpl;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.Traverser;
 import com.hazelcast.jet.core.AbstractProcessor;
@@ -87,8 +86,7 @@ public final class ReadHadoopNewApiP<K, V, R> extends AbstractProcessor {
 
     @Override
     protected void init(@Nonnull Context context) {
-        HazelcastInstanceImpl instance = (HazelcastInstanceImpl) context.jetInstance().getHazelcastInstance();
-        serializationService = instance.getSerializationService();
+        serializationService = context.serializationService();
         // we clone the projection of key/value if configured so because some of the
         // record-readers return the same object for `reader.getCurrentKey()`
         // and `reader.getCurrentValue()` which is mutated for each `reader.nextKeyValue()`.
