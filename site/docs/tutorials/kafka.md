@@ -73,53 +73,18 @@ dependencies {
 If you don't have it already, install and run Kafka using [these
 instructions](https://www.tutorialkart.com/apache-kafka/install-apache-kafka-on-mac).
 
+From now on we assume Kafka is running on your machine.
+
 ## 3. Publish an Event Stream to Kafka
 
-We'll use this `Tweet` class:
+This code publishes "tweets" (just some simple strings) to a Kafka topic
+`tweets`, with varying intensity:
 
 ```java
 package org.example;
 
-public class Tweet {
-    private final long id;
-    private final String text;
-
-    public Tweet(long id, String text) {
-        this.id = id;
-        this.text = text;
-    }
-
-    public static Tweet parse(String tweetString) {
-        return new Tweet(
-                Long.parseLong(tweetString.substring(0, 7)),
-                tweetString.substring(8));
-    }
-
-    public long id() {
-        return id;
-    }
-
-    public String name() {
-        return text;
-    }
-
-    @Override
-    public String toString() {
-        return String.format("%06d %s", id, text);
-    }
-}
-```
-
-This code publishes tweets a Kafka topic `tweets`, with varying
-intensity:
-
-```java
-package org.example;
-
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.LongSerializer;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.*;
 
 import java.util.Properties;
 
@@ -129,8 +94,8 @@ public class TweetPublisher {
         Properties props = kafkaProps();
         try (KafkaProducer<Long, String> producer = new KafkaProducer<>(props)) {
             for (long eventCount = 0; ; eventCount++) {
-                Tweet tweet = new Tweet(eventCount, String.format("tweet-%0,4d", eventCount));
-                producer.send(new ProducerRecord<>(topicName, tweet.id(), tweet.toString()));
+                String tweet = String.format("tweet-%0,4d", eventCount);
+                producer.send(new ProducerRecord<>(topicName, eventCount, tweet));
                 System.out.format("Published '%s' to Kafka topic '%s'%n", tweet, topicName);
                 Thread.sleep(20 * (eventCount % 20));
             }
@@ -150,9 +115,9 @@ public class TweetPublisher {
 When you run it, you should see this in the output:
 
 ```text
-Published '000001 tweet-0001' to Kafka topic 'tweets'
-Published '000002 tweet-0002' to Kafka topic 'tweets'
-Published '000003 tweet-0003' to Kafka topic 'tweets'
+Published 'tweet-0001' to Kafka topic 'tweets'
+Published 'tweet-0002' to Kafka topic 'tweets'
+Published 'tweet-0003' to Kafka topic 'tweets'
 ...
 ```
 
