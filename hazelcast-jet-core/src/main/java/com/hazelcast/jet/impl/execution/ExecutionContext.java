@@ -35,7 +35,6 @@ import com.hazelcast.jet.impl.exception.TerminatedWithSnapshotException;
 import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
-import com.hazelcast.jet.impl.serialization.MemoryDataInput;
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
@@ -265,11 +264,11 @@ public class ExecutionContext implements DynamicMetricsProvider {
         }
     }
 
-    public void handlePacket(int vertexId, int ordinal, Address sender, MemoryDataInput input) {
+    public void handlePacket(int vertexId, int ordinal, Address sender, byte[] payload, int offset) {
         receiverMap.get(vertexId)
                    .get(ordinal)
                    .get(sender)
-                   .receiveStreamPacket(input);
+                   .receiveStreamPacket(payload, offset);
     }
 
     public boolean hasParticipant(Address member) {

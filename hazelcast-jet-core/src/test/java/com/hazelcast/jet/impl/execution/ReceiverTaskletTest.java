@@ -61,6 +61,6 @@ public class ReceiverTaskletTest {
             out.writeObject(obj);
             out.writeInt(Math.abs(obj.hashCode())); // partition id
         }
-        t.receiveStreamPacket(new MemoryDataInput(out.toByteArray()));
+        t.receiveStreamPacket(out.toByteArray(), 0);
     }
 }
