@@ -72,16 +72,16 @@ implementation of the <a href="https://dl.acm.org/doi/10.1145/214451.214456">Cha
 algorithm which requires participation from the whole pipeline,
 including sources and sinks. Previously, the at-least-once and
 exactly-once processing guarantees were only limited to replayable
-sources such as Kafka. Jet 4.0 comes with a full two-phase-commit (2PC)
-implementation which makes it possible to have end to end exactly
-processing with acknowledgement based sources such as JMS. Jet is also
-now able to work with transactional sinks to avoid duplicate writes, and
+sources such as Kafka. Jet 4.0 comes with a full two-phase commit (2PC)
+implementation which makes it possible to have end-to-end exactly-once
+processing with acknowledgement-based sources such as JMS. Jet is now
+also able to work with transactional sinks to avoid duplicate writes, and
 this version adds transactional file and Kafka sinks, with transactional
 JMS and JDBC sinks utilizing XA transactions coming in the next release.</p>
 <p>We will have additional posts about this topic in the future detailing
 the mechanism and also results of our tests done with 2PC for various
 message brokers and databases.</p>
-<h2><a class="anchor" aria-hidden="true" id="python-user-defined-functions"></a><a href="#python-user-defined-functions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Python User Defined Functions</h2>
+<h2><a class="anchor" aria-hidden="true" id="python-user-defined-functions"></a><a href="#python-user-defined-functions" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Python User-Defined Functions</h2>
 <p>Python is a popular language with a very large ecosystem of libraries,
 and has especially become popular in the domain of data processing and
 machine learning. Jet itself is a data processing framework for both
@@ -123,7 +123,7 @@ p<span class="token punctuation">.</span><span class="token function">readFrom</
 </code></pre>
 <p>For a more in-depth discussion on this topic, I recommend Jet Core
 Engineer Marko Topolnik's presentation,
-<a href="https://www.youtube.com/watch?v=q1vBbqxnJIQ">deploying ML models at scale</a>.</p>
+<a href="https://www.youtube.com/watch?v=q1vBbqxnJIQ">Deploying ML models at scale</a>.</p>
 <h2><a class="anchor" aria-hidden="true" id="observables"></a><a href="#observables" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Observables</h2>
 <p>When you submit a Jet pipeline, typically it reads the data from a
 source and writes to a sink (such as a <code>IMap</code>). When the submitter of
