@@ -29,8 +29,7 @@ public interface CustomInputOutputFactory {
     BufferObjectDataInput createInput(byte[] bytes, int offset);
 
     static CustomInputOutputFactory from(InternalSerializationService serializationService) {
-        if (((AbstractSerializationService) serializationService).inputOutputFactory instanceof
-                com.hazelcast.internal.serialization.impl.ByteArrayInputOutputFactory) {
+        if (((JetSerializationService) serializationService).isSafe()) {
             return new ByteArrayInputOutputFactory(serializationService);
         } else {
             return new UnsafeInputOutputFactory(serializationService);

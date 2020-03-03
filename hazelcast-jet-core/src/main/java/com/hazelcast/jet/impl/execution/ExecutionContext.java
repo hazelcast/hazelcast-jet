@@ -22,7 +22,11 @@ import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
+import com.hazelcast.internal.nio.ClassLoaderUtil;
 import com.hazelcast.internal.nio.IOUtil;
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
+import com.hazelcast.internal.serialization.impl.JetSerializationService;
 import com.hazelcast.internal.util.counters.Counter;
 import com.hazelcast.internal.util.counters.MwCounter;
 import com.hazelcast.jet.config.JobConfig;
@@ -38,6 +42,7 @@ import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Re
 import com.hazelcast.jet.impl.util.LoggingUtil;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.spi.impl.NodeEngine;
 
 import javax.annotation.Nullable;
@@ -52,10 +57,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.hazelcast.jet.Util.idToString;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_COMPLETION_TIME;
 import static com.hazelcast.jet.core.metrics.MetricNames.EXECUTION_START_TIME;
+import static java.lang.Thread.currentThread;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * Data pertaining to single job execution on all cluster members. There's one
@@ -101,6 +108,8 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
+    private InternalSerializationService serializationService;
+
     private boolean metricsEnabled;
 
     private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
@@ -129,13 +138,19 @@ public class ExecutionContext implements DynamicMetricsProvider {
         snapshotContext = new SnapshotContext(nodeEngine.getLogger(SnapshotContext.class), jobNameAndExecutionId(),
                 plan.lastSnapshotId(), jobConfig.getProcessingGuarantee());
 
+        serializationService = new JetSerializationService(
+                instantiateSerializers(currentThread().getContextClassLoader(), jobConfig.getSerializerConfigs()),
+                (AbstractSerializationService) nodeEngine.getSerializationService()
+        );
+
         metricsEnabled = jobConfig.isMetricsEnabled() && nodeEngine.getConfig().getMetricsConfig().isEnabled();
-        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories);
+        plan.initialize(nodeEngine, jobId, executionId, snapshotContext, tempDirectories, serializationService);
         snapshotContext.initTaskletCount(plan.getProcessorTaskletCount(), plan.getStoreSnapshotTaskletCount(),
                 plan.getHigherPriorityVertexCount());
         receiverMap = unmodifiableMap(plan.getReceiverMap());
         senderMap = unmodifiableMap(plan.getSenderMap());
         tasklets = plan.getTasklets();
+
         return this;
     }
 
@@ -207,6 +222,10 @@ public class ExecutionContext implements DynamicMetricsProvider {
                 logger.warning("Failed to delete temporary directory " + dir);
             }
         });
+
+        if (serializationService != null) {
+            serializationService.dispose();
+        }
     }
 
     /**
@@ -330,5 +349,23 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
     public void setCompletionTime() {
         completionTime.set(System.currentTimeMillis());
+    }
+
+    private static Map<Class<?>, StreamSerializer<?>> instantiateSerializers(ClassLoader classLoader,
+                                                                             Map<String, String> configs) {
+        return configs.entrySet().stream()
+                      .collect(toMap(entry -> {
+                          try {
+                              return ClassLoaderUtil.loadClass(classLoader, entry.getKey());
+                          } catch (ClassNotFoundException e) {
+                              throw new RuntimeException(e);
+                          }
+                      }, entry -> {
+                          try {
+                              return ClassLoaderUtil.newInstance(classLoader, entry.getValue());
+                          } catch (Exception e) {
+                              throw new RuntimeException(e);
+                          }
+                      }));
     }
 }

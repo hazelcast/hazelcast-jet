@@ -141,12 +141,10 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
 
     public void initialize(
             NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext,
-            ConcurrentHashMap<String, File> tempDirectories
+            ConcurrentHashMap<String, File> tempDirectories, InternalSerializationService serializationService
     ) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
-        InternalSerializationService serializationService =
-                (InternalSerializationService) nodeEngine.getSerializationService();
         initProcSuppliers(jobId, executionId, tempDirectories, serializationService);
         initDag();
 
@@ -380,7 +378,8 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
      * Populates the {@link #senderMap} and {@link #tasklets} fields.
      */
     private Map<Address, ConcurrentConveyor<Object>> memberToSenderConveyorMap(
-            Map<String, Map<Address, ConcurrentConveyor<Object>>> edgeSenderConveyorMap, EdgeDef edge,
+            Map<String, Map<Address, ConcurrentConveyor<Object>>> edgeSenderConveyorMap,
+            EdgeDef edge,
             InternalSerializationService serializationService
     ) {
         assert edge.isDistributed() : "Edge is not distributed";

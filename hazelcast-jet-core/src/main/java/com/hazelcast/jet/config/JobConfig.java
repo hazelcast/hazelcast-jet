@@ -29,6 +29,7 @@ import com.hazelcast.map.IMap;
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.spi.annotation.PrivateApi;
 
 import javax.annotation.Nonnull;
@@ -65,6 +66,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     private boolean storeMetricsAfterJobCompletion;
 
     private Map<String, ResourceConfig> resourceConfigs = new LinkedHashMap<>();
+    private Map<String, String> serializerConfigs = new LinkedHashMap<>();
     private JobClassLoaderFactory classLoaderFactory;
     private String initialSnapshotName;
 
@@ -241,10 +243,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     @Nonnull
     @SuppressWarnings("rawtypes")
     public JobConfig addClass(@Nonnull Class... classes) {
-        ReflectionUtils.nestedClassesOf(classes).forEach(clazz -> {
-            ResourceConfig cfg = new ResourceConfig(clazz);
-            resourceConfigs.put(cfg.getId(), cfg);
-        });
+        ReflectionUtils.nestedClassesOf(classes).forEach(this::addClass);
         return this;
     }
 
@@ -269,10 +268,7 @@ public class JobConfig implements IdentifiedDataSerializable {
     public JobConfig addPackage(@Nonnull String... packages) {
         checkNotNull(packages, "Packages cannot be null");
         Resources resources = ReflectionUtils.resourcesOf(packages);
-        resources.classes().forEach(clazz -> {
-            ResourceConfig cfg = new ResourceConfig(clazz);
-            resourceConfigs.put(cfg.getId(), cfg);
-        });
+        resources.classes().forEach(this::addClass);
         resources.nonClasses().forEach(this::addClasspathResource);
         return this;
     }
@@ -927,6 +923,44 @@ public class JobConfig implements IdentifiedDataSerializable {
         return resourceConfigs;
     }
 
+    /**
+     * Registers given serializer for a given class for the scope of the job.
+     * Both will be accessible to all the code attached to the underlying
+     * pipeline or DAG, but not to any other code. (An important example is
+     * the {@code IMap} data source, which can instantiate only the classes
+     * from the Jet instance's classpath.)
+     *
+     * Serializer must have no-arg constructor.
+     *
+     * @implNote Backing storage for this method is an {@link IMap} with a
+     * default backup count of 1. When adding big files as a resource, size
+     * the cluster accordingly in terms of memory, since each file will have 2
+     * copies inside the cluster(primary + backup replica).
+     *
+     * @return {@code this} instance for fluent API
+     */
+    @Nonnull
+    public <T, S extends StreamSerializer<?>> JobConfig addSerializer(Class<T> clazz, Class<S> serializerClass) {
+        addClass(clazz);
+        addClass(serializerClass);
+        serializerConfigs.put(clazz.getName(), serializerClass.getName());
+        return this;
+    }
+
+    /**
+     * Returns all the registered serializer configurations.
+     */
+    @Nonnull
+    @PrivateApi
+    public Map<String, String> getSerializerConfigs() {
+        return serializerConfigs;
+    }
+
+    private void addClass(Class<?> clazz) {
+        ResourceConfig cfg = new ResourceConfig(clazz);
+        resourceConfigs.put(cfg.getId(), cfg);
+    }
+
     private JobConfig add(@Nonnull URL url, @Nonnull String id, @Nonnull ResourceType resourceType) {
         Preconditions.checkHasText(id, "Resource ID is blank");
         ResourceConfig cfg = new ResourceConfig(url, id, resourceType);
@@ -1064,6 +1098,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         out.writeBoolean(autoScaling);
         out.writeBoolean(splitBrainProtectionEnabled);
         out.writeObject(resourceConfigs);
+        out.writeObject(serializerConfigs);
         out.writeObject(classLoaderFactory);
         out.writeUTF(initialSnapshotName);
         out.writeBoolean(enableMetrics);
@@ -1078,6 +1113,7 @@ public class JobConfig implements IdentifiedDataSerializable {
         autoScaling = in.readBoolean();
         splitBrainProtectionEnabled = in.readBoolean();
         resourceConfigs = in.readObject();
+        serializerConfigs = in.readObject();
         classLoaderFactory = in.readObject();
         initialSnapshotName = in.readUTF();
         enableMetrics = in.readBoolean();
