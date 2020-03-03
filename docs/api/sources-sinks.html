@@ -830,6 +830,10 @@ information and examples, please visit the <a href="https://github.com/hazelcast
 </blockquote>
 <h2><a class="anchor" aria-hidden="true" id="summary"></a><a href="#summary" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Summary</h2>
 <h3><a class="anchor" aria-hidden="true" id="sources"></a><a href="#sources" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sources</h3>
+<p>Below is a summary of various sources and where to find them. Some
+sources are batch and some are stream oriented. The processing guarantee
+is only relevant for streaming sources, as batch jobs should just be
+restarted in face of an intermittent failure.</p>
 <table>
 <thead>
 <tr><th style="text-align:left">source</th><th style="text-align:left">module</th><th style="text-align:left">batch/stream</th><th style="text-align:left">guarantee</th></tr>
@@ -854,6 +858,13 @@ information and examples, please visit the <a href="https://github.com/hazelcast
 </tbody>
 </table>
 <h3><a class="anchor" aria-hidden="true" id="sinks"></a><a href="#sinks" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Sinks</h3>
+<p>Below is a summary of various sinks and where to find them. All sources
+may operate in batch mode, but only some of them are suitable for
+streaming jobs, this is indicated below. As with sources, the processing
+guarantee is only relevant for streaming jobs. All streaming sinks by
+default support at-least-once guarantee, but only some of them support
+exactly-once. If using idempotent updates, you can ensure exactly-once
+processing even with at-least-once sinks.</p>
 <table>
 <thead>
 <tr><th style="text-align:left">sink</th><th style="text-align:left">module</th><th style="text-align:left">streaming support</th><th style="text-align:left">guarantee</th></tr>
