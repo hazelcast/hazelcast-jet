@@ -206,9 +206,9 @@ Architecture](../architecture/in-memory-storage) section.
 
 ### Event Journal
 
-`IMap` also offers a way to record changes to it in the form of a _event
-journal_. This can then be used for using the stream of change records
-as a data source for further processing. For reference, please see the
+`IMap` also offers a way to record changes to it in the form of an
+_event journal_. This enables using the stream of change records as a
+data source for further processing. For reference, please see the
 [Event Journal](sources-sink#event-journal) section.
 
 ## ReplicatedMap
@@ -243,7 +243,7 @@ coordination tasks.
 
 ## ICache
 
-`ICache` a fully compliant
+`ICache` is a fully compliant
 [JCache](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#jcache-overview)
 implementation. The features offered are mostly similar to `IMap`, but
 are limited to what's offered by the `JCache` specification, so many of
@@ -254,7 +254,7 @@ on `ICache`.
 
 [CP subsystem](https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#cp-subsystem)
 builds a strongly consistent layer inside Hazelcast Jet which can be
-used for distributed coordination use cases such as distributed locking
+used for distributed coordination use cases, such as distributed locking
 and synchronization. The CP subsystem is based on a full RAFT
 implementation and requires a minimum of 3 nodes to run (though it can
 be run with a single node in _unsafe_ mode).
@@ -264,6 +264,7 @@ The currently supported primitives are:
 * `FencedLock` is a distributed and re-enrant lock implementation of
   `java.util.concurrent.Lock`
 * `ISemaphore` is the distributed implementation of Java `Semaphore`
-* `CountdownLatch` implement Java equivalent in a distributed fashion
+* `CountdownLatch` implements the Java equivalent in a distributed
+  fashion
 * `IAtomicLong` and `IAtomicReference` implement the Java equivalents
   with strong consistency.
