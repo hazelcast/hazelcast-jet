@@ -22,7 +22,14 @@ def transform_list(input_list):
 ```
 
 Save this code to `take_sqrt.py` in a folder of your choosing, we'll
-call it `<python_src>`.
+call it `<python_src>`. Since our code uses `numpy`, we need a
+requirements file that names it:
+
+```text
+numpy
+```
+
+Save this as `requirements.txt` in the `<python_src>` folder.
 
 ## 2. Install Python 3
 
@@ -154,8 +161,7 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ## 5. Apply the Python Function to a Jet Pipeline
 
 This code generates a stream of numbers and lets Python take their
-square roots. Make sure to set the right path in the `setHandlerFile`
-line:
+square roots. Make sure to set the right path in the `.setBaseDir` line:
 
 ```java
 package org.example;
@@ -174,7 +180,8 @@ public class JetJob {
         p.readFrom(TestSources.itemStream(10, (ts, seq) -> String.valueOf(seq)))
          .withoutTimestamps()
          .apply(mapUsingPython(new PythonServiceConfig()
-                 .setHandlerFile("<python_src>/take_sqrt.py")))
+                 .setBaseDir("<python_src>")
+                 .setHandlerModule("take_sqrt")))
          .setLocalParallelism(1)
          .writeTo(Sinks.logger());
 
