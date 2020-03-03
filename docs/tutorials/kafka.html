@@ -196,8 +196,8 @@ were published to the Kafka topic at a given time:</p>
 </code></pre>
 <p>Don't run the above code from the IDE, instead use the command line to
 submit it to the Jet instance you have running:</p>
-<div class="tabs"><div class="nav-tabs"><div id="tab-group-47-tab-48" class="nav-link active" data-group="group_47" data-tab="tab-group-47-content-48">Gradle</div><div id="tab-group-47-tab-49" class="nav-link" data-group="group_47" data-tab="tab-group-47-content-49">Maven</div></div><div class="tab-content"><div id="tab-group-47-content-48" class="tab-pane active" data-group="group_47" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br />&lt;path_to_jet&gt;/bin/jet submit -c org.example.JetJob build/libs/kafka-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
-</span></div></div><div id="tab-group-47-content-49" class="tab-pane" data-group="group_47" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br />&lt;path_to_jet&gt;/bin/jet submit -c org.example.JetJob target/kafka-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+<div class="tabs"><div class="nav-tabs"><div id="tab-group-47-tab-48" class="nav-link active" data-group="group_47" data-tab="tab-group-47-content-48">Gradle</div><div id="tab-group-47-tab-49" class="nav-link" data-group="group_47" data-tab="tab-group-47-content-49">Maven</div></div><div class="tab-content"><div id="tab-group-47-content-48" class="tab-pane active" data-group="group_47" tabindex="-1"><div><span><pre><code class="hljs css language-bash">gradle build<br />&lt;path_to_jet&gt;/bin/jet submit build/libs/kafka-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
+</span></div></div><div id="tab-group-47-content-49" class="tab-pane" data-group="group_47" tabindex="-1"><div><span><pre><code class="hljs css language-bash">mvn package<br />&lt;path_to_jet&gt;/bin/jet submit target/kafka-tutorial-1.0-SNAPSHOT.jar<br /></code></pre>
 </span></div></div></div></div>
 <p>If <code>TweetPublisher</code> was running while you were following these steps,
 you'll now get a report on the whole history. If you restart this
