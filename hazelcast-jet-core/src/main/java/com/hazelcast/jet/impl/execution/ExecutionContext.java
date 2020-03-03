@@ -22,7 +22,6 @@ import com.hazelcast.internal.metrics.MetricDescriptor;
 import com.hazelcast.internal.metrics.MetricsCollectionContext;
 import com.hazelcast.internal.metrics.ProbeLevel;
 import com.hazelcast.internal.metrics.ProbeUnit;
-import com.hazelcast.internal.nio.ClassLoaderUtil;
 import com.hazelcast.internal.nio.IOUtil;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.AbstractSerializationService;
@@ -40,6 +39,7 @@ import com.hazelcast.jet.impl.execution.init.ExecutionPlan;
 import com.hazelcast.jet.impl.metrics.RawJobMetrics;
 import com.hazelcast.jet.impl.operation.SnapshotPhase1Operation.SnapshotPhase1Result;
 import com.hazelcast.jet.impl.util.LoggingUtil;
+import com.hazelcast.jet.impl.util.ReflectionUtils;
 import com.hazelcast.jet.impl.util.Util;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.nio.serialization.StreamSerializer;
@@ -108,11 +108,10 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private SnapshotContext snapshotContext;
     private JobConfig jobConfig;
 
-    private InternalSerializationService serializationService;
-
     private boolean metricsEnabled;
-
     private volatile RawJobMetrics jobMetrics = RawJobMetrics.empty();
+
+    private InternalSerializationService serializationService;
 
     public ExecutionContext(NodeEngine nodeEngine, TaskletExecutionService taskletExecService,
                             long jobId, long executionId, Address coordinator, Set<Address> participants) {
@@ -125,7 +124,7 @@ public class ExecutionContext implements DynamicMetricsProvider {
 
         this.jobName = idToString(jobId);
 
-        logger = nodeEngine.getLogger(getClass());
+        this.logger = nodeEngine.getLogger(getClass());
     }
 
     public ExecutionContext initialize(ExecutionPlan plan) {
@@ -354,18 +353,9 @@ public class ExecutionContext implements DynamicMetricsProvider {
     private static Map<Class<?>, StreamSerializer<?>> instantiateSerializers(ClassLoader classLoader,
                                                                              Map<String, String> configs) {
         return configs.entrySet().stream()
-                      .collect(toMap(entry -> {
-                          try {
-                              return ClassLoaderUtil.loadClass(classLoader, entry.getKey());
-                          } catch (ClassNotFoundException e) {
-                              throw new RuntimeException(e);
-                          }
-                      }, entry -> {
-                          try {
-                              return ClassLoaderUtil.newInstance(classLoader, entry.getValue());
-                          } catch (Exception e) {
-                              throw new RuntimeException(e);
-                          }
-                      }));
+                      .collect(toMap(
+                              entry -> ReflectionUtils.loadClass(classLoader, entry.getKey()),
+                              entry -> ReflectionUtils.newInstance(classLoader, entry.getValue())
+                      ));
     }
 }
