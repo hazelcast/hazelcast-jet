@@ -85,32 +85,30 @@ the moment you are introducing new members to the cluster. If that
 happens, both sub-clusters may grow to more than half of the previous
 size. This will defuse the split-brain protection mechanism.
 
-<!--  $$$ enterprise features $$$
+<!-- ### Disk Snapshot Storage -->
 
-### Disk Snapshot Storage
+<!-- In-memory Snapshot Storage doesn’t cover the case when the entire
+cluster must shut down. -->
 
-In-memory Snapshot Storage doesn’t cover the case when the entire
-cluster must shut down.
-
-The Lossless Cluster Restart allows you to gracefully shut down the
+<!-- The Lossless Cluster Restart allows you to gracefully shut down the
 cluster at any time and have the snapshot data of all the jobs
 preserved. After you restart the cluster, Jet automatically restores the
-data and resumes the jobs.
+data and resumes the jobs. -->
 
-Since the Hot Restart data is saved locally on each member, all the
+<!-- Since the Hot Restart data is saved locally on each member, all the
 members must be present after the restart for Jet to be able to reload
 the data. Beyond that, there’s no special action to take: as soon as the
 cluster re-forms, it will automatically reload the persisted snapshots
-and resume the jobs.
+and resume the jobs. -->
 
-## Exported Snapshots
+<!-- ## Exported Snapshots -->
 
-In addition to regular snapshots, you can create exported snapshots. The
-lifecycle of the exported snapshot is controlled by the user: it's
-created upon user request and is stored in the cluster until the user
-decides do remove it.
+<!-- In addition to regular snapshots, you can create exported 
+snapshots. The lifecycle of the exported snapshot is controlled by 
+the user: it's created upon user request and is stored in the cluster 
+until the user decides do remove it. -->
 
+<!-- 
 Exported snapshots are mainly used to upgrade the job: job is cancelled
 with a snapshot and a new job is submitted that will use the saved
-snapshot for initial state.
--->
+snapshot for initial state.  -->
