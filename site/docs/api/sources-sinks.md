@@ -961,7 +961,7 @@ Printed from client: SimpleEvent(timestamp=12:36:55.000, sequence=36)
 
 You can see that the printed output is actually on the client, and not
 on the server. Jet internally uses Hazelcast's `Ringbuffer` to create a
-temporary buffer to write the results to and these are then fetched by
+temporary buffer to write the results into and these are then fetched by
 the client:
 
 >It's worth noting that `Ringbuffer` may lose events, if they
@@ -977,7 +977,7 @@ get notified of job completion and errors.
 `Observable` also support a conversion to a future to collect the
 results.
 
-For example, to collect the job results to a list, you can use the
+For example, to collect the job results into a list, you can use the
 following pattern:
 
 ```java
