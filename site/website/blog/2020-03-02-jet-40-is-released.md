@@ -7,13 +7,13 @@ authorImageURL: https://pbs.twimg.com/profile_images/1187734846749196288/elqWdrP
 
 We're happy to introduce the release of Jet 4.0 which brings several new
 features. This release was a big effort and a total of [230
-PRs](https://github.com/hazelcast/hazelcast-jet/pulls?q=is%3Aopen+is%3Apr+milestone%3A4.0)
+PRs](https://github.com/hazelcast/hazelcast-jet/pulls?q=is%3Apr+milestone%3A4.0)
 were merged, making it one of our biggest in terms of new features.
 
 ## Distributed Transactions
 
 Jet previously had first-class support for fault tolerance through an
-implementation of the [Chandy-Lamport distributed snapshotting](https://dl.acm.org/doi/10.1145/214451.214456)
+implementation of the [Chandy-Lamport distributed snapshotting](https://lamport.azurewebsites.net/pubs/chandy.pdf)
 algorithm which requires participation from the whole pipeline,
 including sources and sinks. Previously, the at-least-once and
 exactly-once processing guarantees were only limited to replayable
