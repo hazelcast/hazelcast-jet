@@ -25,6 +25,8 @@ take any special measures to make stateless transforms work in a
 fault-tolerant data pipeline because they are pure functions and always
 give the same output for the same input.
 
+## Exactly-Once and At-Least-Once Guarantees
+
 The challenges come with stateful computation, and most real-world
 pipelines contain at least one such transform. For example, if you have
 a `counting` [windowed aggregation](../tutorials/windowing.md) step, for
