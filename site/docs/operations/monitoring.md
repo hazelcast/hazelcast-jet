@@ -401,14 +401,21 @@ long totalCount = measurements.stream().mapToLong(Measurement::value).sum();
 ### Configuration
 
 The metrics collection is enabled by default. You can configure it using
-the hazelcast-jet.yml file (see also
-[full guide](../operations/configuration.md) on
-configuration):
+the hazelcast.yml file (these are not strictly Jet, but Hazelcast
+node properties). See also [full guide](../operations/configuration.md)
+on configuration.
 
 ```yaml
-metrics:
-  enabled: true
-  collection-frequency-seconds: 5
-  jmx:
+hazelcast:
+
+  metrics:
+    # weather metrics collection should be enabled
     enabled: true
+  
+    # metrics collection interval in seconds
+    collection-frequency-seconds: 5
+  
+    jmx:
+      # weather metrics should be exposed over JMX
+      enabled: true
 ```
