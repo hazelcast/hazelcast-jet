@@ -29,6 +29,7 @@ import com.hazelcast.jet.pipeline.ServiceFactories;
 import com.hazelcast.jet.pipeline.ServiceFactory;
 import com.hazelcast.jet.pipeline.Sinks;
 import com.hazelcast.jet.pipeline.test.TestSources;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
@@ -45,6 +46,8 @@ import java.util.List;
 
 import static com.hazelcast.jet.core.JobStatus.RUNNING;
 import static com.hazelcast.jet.core.TestUtil.executeAndPeel;
+import static com.hazelcast.jet.impl.deployment.JobLevelSerializerIsAvailable.SERIALIZER_CLASS_NAME;
+import static com.hazelcast.jet.impl.deployment.JobLevelSerializerIsAvailable.VALUE_CLASS_NAME;
 import static com.hazelcast.jet.pipeline.test.Assertions.assertCollected;
 import static java.util.Collections.emptyEnumeration;
 import static java.util.Collections.enumeration;
@@ -55,6 +58,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport {
+
+    public static final String CLASS_LOADER_PREFIX = "/cp1/";
 
     protected abstract JetInstance getJetInstance();
 
@@ -76,7 +81,7 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
         dag.newVertex("create and print person", () -> new LoadClassesIsolated(true));
 
         JobConfig jobConfig = new JobConfig();
-        URL classUrl = this.getClass().getResource("/cp1/");
+        URL classUrl = this.getClass().getResource(CLASS_LOADER_PREFIX);
         URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, null);
         Class<?> appearance = urlClassLoader.loadClass("com.sample.pojo.person.Person$Appereance");
         jobConfig.addClass(appearance);
@@ -91,7 +96,7 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
         dag.newVertex("v", () -> new LoadClassesIsolated(false));
 
         JobConfig jobConfig = new JobConfig();
-        URL classUrl = this.getClass().getResource("/cp1/");
+        URL classUrl = this.getClass().getResource(CLASS_LOADER_PREFIX);
         URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, null);
         Class<?> appearanceClz = urlClassLoader.loadClass("com.sample.pojo.person.Person$Appereance");
         jobConfig.addClass(appearanceClz);
@@ -319,6 +324,22 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
 
         JobConfig jobConfig = new JobConfig();
         jobConfig.addClasspathResource(this.getClass().getResource("/deployment/resource.txt"), "customId");
+
+        executeAndPeel(getJetInstance().newJob(dag, jobConfig));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testDeployment_whenAddSerializer_thenAvailableOnJobContext() throws Throwable {
+        URL classUrl = this.getClass().getResource(CLASS_LOADER_PREFIX);
+        URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, getClass().getClassLoader());
+        Class<?> valueClass = urlClassLoader.loadClass(VALUE_CLASS_NAME);
+        Class<StreamSerializer<?>> serializerClass = (Class<StreamSerializer<?>>) urlClassLoader.loadClass(SERIALIZER_CLASS_NAME);
+
+        DAG dag = new DAG();
+        dag.newVertex("calls job level serializer", JobLevelSerializerIsAvailable::new);
+
+        JobConfig jobConfig = new JobConfig().addSerializer(valueClass, serializerClass);
 
         executeAndPeel(getJetInstance().newJob(dag, jobConfig));
     }
