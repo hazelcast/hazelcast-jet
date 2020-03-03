@@ -1057,6 +1057,11 @@ so this source is mostly aimed for simple IPC or testing.
 
 ### Sources
 
+Below is a summary of various sources and where to find them. Some
+sources are batch and some are stream oriented. The processing guarantee
+is only relevant for streaming sources, as batch jobs should just be
+restarted in face of an intermittent failure.
+
 |source|module|batch/stream|guarantee|
 |:-----|:---- |:-----------|:--------|
 |`AvroSources.files`|`hazelcast-jet-avro`|batch|N/A|
@@ -1077,6 +1082,14 @@ so this source is mostly aimed for simple IPC or testing.
 |`TestSources.itemStream`|`hazelcast-jet`|stream|none|
 
 ### Sinks
+
+Below is a summary of various sinks and where to find them. All sources
+may operate in batch mode, but only some of them are suitable for
+streaming jobs, this is indicated below. As with sources, the processing
+guarantee is only relevant for streaming jobs. All streaming sinks by
+default support at-least-once guarantee, but only some of them support
+exactly-once. If using idempotent updates, you can ensure exactly-once
+processing even with at-least-once sinks.
 
 |sink|module|streaming support|guarantee|
 |:---|:-----|:--------------|:-------------------|
