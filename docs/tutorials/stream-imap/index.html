@@ -98,20 +98,6 @@ should take care to adjust this value to match your use case.)</p>
 the oldest ones start to be overwritten). A non-zero TTL means that
 events will be evicted after that amount of seconds, even if there is
 still available capacity for tracking them.</p>
-<p><details>
-<summary>There is also a simpler solution for embedded mode!</summary></p>
-<p>When using Jet in the embedded mode the same effect can be achieved
-more simply, via programmatic configuration:</p>
-<pre><code class="hljs css language-java"><span class="token class-name">JetConfig</span> cfg <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JetConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
-cfg<span class="token punctuation">.</span><span class="token function">getHazelcastConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-   <span class="token punctuation">.</span><span class="token function">getMapConfig</span><span class="token punctuation">(</span><span class="token string">"name_of_map"</span><span class="token punctuation">)</span>
-   <span class="token punctuation">.</span><span class="token function">getEventJournalConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-   <span class="token punctuation">.</span><span class="token function">setEnabled</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span>
-   <span class="token punctuation">.</span><span class="token function">setCapacity</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span>         <span class="token comment">// how many events to keep before evicting</span>
-   <span class="token punctuation">.</span><span class="token function">setTimeToLiveSeconds</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// evict events older than this</span>
-<span class="token class-name">JetInstance</span> jet <span class="token operator">=</span> <span class="token class-name">Jet</span><span class="token punctuation">.</span><span class="token function">newJetInstance</span><span class="token punctuation">(</span>cfg<span class="token punctuation">)</span><span class="token punctuation">;</span>
-</code></pre>
-<p></details></p>
 <h2><a class="anchor" aria-hidden="true" id="example"></a><a href="#example" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Example</h2>
 <p>Once the event journal has been configured setting up a source becomes
 very simple. Let's see an example. A jet job which prints how many times
