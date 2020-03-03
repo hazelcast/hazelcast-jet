@@ -224,9 +224,9 @@ is done in a best-effort basis. For an in-depth discussion regarding
 this please see the <a href="../architecture/in-memory-storage">In-Memory
 Architecture</a> section.</p>
 <h3><a class="anchor" aria-hidden="true" id="event-journal"></a><a href="#event-journal" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Event Journal</h3>
-<p><code>IMap</code> also offers a way to record changes to it in the form of a <em>event
-journal</em>. This can then be used for using the stream of change records
-as a data source for further processing. For reference, please see the
+<p><code>IMap</code> also offers a way to record changes to it in the form of an
+<em>event journal</em>. This enables using the stream of change records as a
+data source for further processing. For reference, please see the
 <a href="sources-sink#event-journal">Event Journal</a> section.</p>
 <h2><a class="anchor" aria-hidden="true" id="replicatedmap"></a><a href="#replicatedmap" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>ReplicatedMap</h2>
 <p><code>ReplicatedMap</code> has a similar API to <code>IMap</code>, with some important
@@ -249,7 +249,7 @@ are not partitioned, so they're constrained to a single partition.</p>
 <p>They're only recommended to be used for smaller data sets or simple
 coordination tasks.</p>
 <h2><a class="anchor" aria-hidden="true" id="icache"></a><a href="#icache" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>ICache</h2>
-<p><code>ICache</code> a fully compliant
+<p><code>ICache</code> is a fully compliant
 <a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#jcache-overview">JCache</a>
 implementation. The features offered are mostly similar to <code>IMap</code>, but
 are limited to what's offered by the <code>JCache</code> specification, so many of
@@ -258,7 +258,7 @@ on <code>ICache</code>.</p>
 <h2><a class="anchor" aria-hidden="true" id="cp-subsystem"></a><a href="#cp-subsystem" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>CP Subsystem</h2>
 <p><a href="https://docs.hazelcast.org/docs/4.0/manual/html-single/index.html#cp-subsystem">CP subsystem</a>
 builds a strongly consistent layer inside Hazelcast Jet which can be
-used for distributed coordination use cases such as distributed locking
+used for distributed coordination use cases, such as distributed locking
 and synchronization. The CP subsystem is based on a full RAFT
 implementation and requires a minimum of 3 nodes to run (though it can
 be run with a single node in <em>unsafe</em> mode).</p>
@@ -267,7 +267,8 @@ be run with a single node in <em>unsafe</em> mode).</p>
 <li><code>FencedLock</code> is a distributed and re-enrant lock implementation of
 <code>java.util.concurrent.Lock</code></li>
 <li><code>ISemaphore</code> is the distributed implementation of Java <code>Semaphore</code></li>
-<li><code>CountdownLatch</code> implement Java equivalent in a distributed fashion</li>
+<li><code>CountdownLatch</code> implements the Java equivalent in a distributed
+fashion</li>
 <li><code>IAtomicLong</code> and <code>IAtomicReference</code> implement the Java equivalents
 with strong consistency.</li>
 </ul>
