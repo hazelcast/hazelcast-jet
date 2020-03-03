@@ -5,10 +5,56 @@ title: Process Data from Apache Kafka
 Apache Kafka is a distributed, replayable messaging system. It is a
 great fit for building a fault-tolerant data pipeline with Jet.
 
-Here we'll build a Jet data pipeline that receives an event stream from
+Let's build a Jet data pipeline that receives an event stream from
 Kafka and computes its traffic intensity (events per second).
 
-## 1. Create a New Java Project
+## 1. Start Apache Kafka
+
+If you don't have it already, install and run Kafka. You can use [this
+website](https://www.tutorialkart.com/apache-kafka/install-apache-kafka-on-ubuntu/)
+for instructions.
+
+From now on we assume Kafka is running on your machine.
+
+## 2. Start Hazelcast Jet
+
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
+  Hazelcast Jet
+
+2. Unzip it:
+
+```bash
+cd <where_you_downloaded_it>
+unzip hazelcast-jet-4.0.zip
+cd hazelcast-jet-4.0
+```
+
+3. Activate the Apache Kafka Connector plugin:
+
+```bash
+mv opt/hazelcast-jet-kafka-4.0.jar lib/
+```
+
+4. Start Jet:
+
+```bash
+bin/jet-start
+```
+
+5. When you see output like this, Hazelcast Jet is up:
+
+```text
+Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
+```
+
+From now on we assume Hazelcast Jet is running on your machine.
+
+## 3. Create a New Java Project
+
+We'll assume you're using an IDE. After creating a blank Java project,
+copy the Gradle or Maven file into it:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -22,16 +68,14 @@ plugins {
 group 'org.example'
 version '1.0-SNAPSHOT'
 
-sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
+repositories.mavenCentral()
 
 dependencies {
     compile 'com.hazelcast.jet:hazelcast-jet:4.0'
     compile 'com.hazelcast.jet:hazelcast-jet-kafka:4.0'
 }
+
+jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ```
 
 <!--Maven-->
@@ -63,19 +107,28 @@ dependencies {
             <version>4.0</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>org.example.JetJob</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-## 2. Start Kafka
-
-If you don't have it already, install and run Kafka using [these
-instructions](https://www.tutorialkart.com/apache-kafka/install-apache-kafka-on-mac).
-
-From now on we assume Kafka is running on your machine.
-
-## 3. Publish an Event Stream to Kafka
+## 4. Publish an Event Stream to Kafka
 
 This code publishes "tweets" (just some simple strings) to a Kafka topic
 `tweets`, with varying intensity:
@@ -112,7 +165,7 @@ public class TweetPublisher {
 }
 ```
 
-When you run it, you should see this in the output:
+Run it from your IDE. You should see this in the output:
 
 ```text
 Published 'tweet-0001' to Kafka topic 'tweets'
@@ -123,7 +176,7 @@ Published 'tweet-0003' to Kafka topic 'tweets'
 
 Let it run in the background while we go on to creating the next class.
 
-## 4. Use Hazelcast Jet to Analyze the Event Stream
+## 5. Use Hazelcast Jet to Analyze the Event Stream
 
 This code lets Jet connect to Kafka and show how many events per second
 were published to the Kafka topic at a given time:
@@ -132,16 +185,15 @@ were published to the Kafka topic at a given time:
 package org.example;
 
 import com.hazelcast.jet.*;
-import com.hazelcast.jet.pipeline.Pipeline;
+import com.hazelcast.jet.kafka.KafkaSources;
+import com.hazelcast.jet.pipeline.*;
 import org.apache.kafka.common.serialization.*;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 
-import static com.hazelcast.jet.kafka.KafkaSources.kafka;
 import static com.hazelcast.jet.aggregate.AggregateOperations.counting;
-import static com.hazelcast.jet.pipeline.Sinks.logger;
 import static com.hazelcast.jet.pipeline.WindowDefinition.sliding;
 
 public class JetJob {
@@ -149,14 +201,12 @@ public class JetJob {
             DateTimeFormatter.ofPattern("HH:mm:ss:SSS");
 
     public static void main(String[] args) {
-        String topicName = "tweets";
-
         Pipeline p = Pipeline.create();
-        p.readFrom(kafka(kafkaProps(), topicName))
+        p.readFrom(KafkaSources.kafka(kafkaProps(), "tweets"))
          .withNativeTimestamps(0)
          .window(sliding(1_000, 500))
          .aggregate(counting())
-         .writeTo(logger(wr -> String.format(
+         .writeTo(Sinks.logger(wr -> String.format(
                  "At %s Kafka got %,d tweets per second",
                  TIME_FORMATTER.format(LocalDateTime.ofInstant(
                          Instant.ofEpochMilli(wr.end()), ZoneId.systemDefault())),
@@ -164,12 +214,8 @@ public class JetJob {
 
         JetInstance jet = Jet.bootstrappedInstance();
         Job job = jet.newJob(p);
-        try {
-            job.join();
-        } finally {
-            job.cancel();
-            Jet.shutdownAll();
-        }
+        Runtime.getRuntime().addShutdownHook(new Thread(job::cancel));
+        job.join();
     }
 
     private static Properties kafkaProps() {
@@ -183,10 +229,31 @@ public class JetJob {
 }
 ```
 
-If you let `TweetPublisher` run while creating this class, you'll get
-all the Kafka topic's history in the output. If you restart this program,
-you'll get all the history again. This shows what it means for a source
-to be replayable.
+Don't run the above code from the IDE, instead use the command line to
+submit it to the Jet instance you have running:
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+gradle build
+<path_to_jet>/bin/jet submit -c org.example.JetJob build/libs/kafka-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--Maven-->
+
+```bash
+mvn package
+<path_to_jet>/bin/jet submit -c org.example.JetJob target/kafka-tutorial-1.0-SNAPSHOT.jar
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+If `TweetPublisher` was running while you were following these steps,
+you'll now get a report on the whole history. If you restart this
+program, you'll get all the history again. That's how a replayable data
+source behaves.
 
 Sample output:
 
