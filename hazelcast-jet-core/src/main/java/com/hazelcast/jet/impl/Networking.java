@@ -46,6 +46,8 @@ public class Networking {
     private static final int FLOW_PACKET_INITIAL_SIZE = 128;
     private static final MemoryReader MEMORY_READER = MemoryReader.create();
 
+    private static final byte[] EMPTY_BYTES = new byte[0];
+
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
     private final JobExecutionService jobExecutionService;
@@ -118,6 +120,7 @@ public class Networking {
 
     private byte[] createFlowControlPacket(Address member) {
         MemoryDataOutput output = new MemoryDataOutput(lastFlowPacketSize);
+        final boolean[] hasData = {false};
         Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
         output.writeInt(executionContexts.size());
         executionContexts.forEach((execId, exeCtx) -> uncheckRun(() -> {
@@ -128,11 +131,16 @@ public class Networking {
                         output.writeInt(vertexId);
                         output.writeInt(ordinal);
                         output.writeInt(senderToTasklet.get(member).updateAndGetSendSeqLimitCompressed());
+                        hasData[0] = true;
                     })));
         }));
-        byte[] payload = output.toByteArray();
-        lastFlowPacketSize = payload.length;
-        return payload;
+        if (hasData[0]) {
+            byte[] payload = output.toByteArray();
+            lastFlowPacketSize = payload.length;
+            return payload;
+        } else {
+            return EMPTY_BYTES;
+        }
     }
 
     private void handleFlowControlPacket(Address fromAddr, byte[] packet) {
