@@ -76,61 +76,70 @@ There is a wide range of metrics and statistics provided by Hazelcast:
 
 ### Cluster-wide Metrics
 
-<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;border-color:#93a1a1;}
-.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;
-border-style:solid;border-width:1px;overflow:hidden;word-break:normal;
-border-color:#93a1a1;color:#002b36;background-color:#fdf6e3;}
-.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;
-padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;
-word-break:normal;border-color:#93a1a1;color:#fdf6e3;
-background-color:#657b83;}
-.tg .tg-2iel{border-color:#333333;text-align:left;vertical-align:top;
-position:sticky;position:-webkit-sticky;top:-1px;will-change:transform}
-.tg .tg-de2y{border-color:#333333;text-align:left;vertical-align:top}
-</style>
 <table class="tg">
   <tr>
-    <th class="tg-2iel">Names</th>
-    <th class="tg-2iel">Extra tags</th>
+    <th>Names</th>
+    <th>Description</th>
+    <th>Tags</th>
   </tr>
   <tr>
-    <td class="tg-de2y" width="70%">
-    <b>blockingWorkerCount</b>: Number of non-cooperative workers
-       employed.<br>
-    <br>
-    <b>jobs.submitted</b>: Number of computational jobs submitted.<br>
-    <b>jobs.completedSuccessfully</b>: Number of computational jobs
-       successfully completed.<br>
-    <b>jobs.completedWithFailure</b>: Number of computational jobs
-       that have failed.<br>
-    <b>jobs.executionStarted</b>: Number of computational job
-       executions started. Each job can execute multiple times, for
-       example when it’s restarted or suspended and then resumed.<br>
-    <b>jobs.executionTerminated</b>: Number of computational job
-       executions finished. Each job can execute multiple times, for
-       example when it’s restarted or suspended and then resumed.<br>
-    </td>
-    <td class="tg-de2y">
-    <b>none</b><br>
-    Each Jet cluster member will have one instance of this metric.
+    <td><b>blockingWorkerCount</b></td>
+    <td>Number of non-cooperative workers employed.</td>
+    <td rowspan="6">
+        <i>none</i><br>
+        <br>
+        Each Jet member will have one instance of this metric.
     </td>
   </tr>
   <tr>
-    <td class="tg-de2y">
-    <b>iterationCount</b>: The total number of iterations the driver of
-       tasklets in cooperative thread N made. It should increase by at
-       least 250 iterations/s. Lower value means some of the cooperative
-       processors blocks for too long. Somewhat lower value is normal if
-       there are many tasklets assigned to the processor. Lower value
-       affects the latency.<br>
-    <b>taskletCount</b>: The number of assigned tasklets to cooperative
-       thread N.
+    <td><b>jobs.submitted</b></td>
+    <td>Number of computational jobs submitted.</td>
+  </tr>
+  <tr>
+    <td><b>jobs.completedSuccessfully</b></td>
+    <td>Number of computational jobs successfully completed.</td>
+  </tr>
+  <tr>
+    <td><b>jobs.completedWithFailure</b></td>
+    <td>Number of computational jobs that have failed.</td>
+  </tr>
+  <tr>
+    <td><b>jobs.executionStarted</b></td>
+    <td>
+        Number of computational job executions started. Each job can
+        execute multiple times, for example when it’s restarted or
+        suspended and then resumed.
     </td>
-    <td class="tg-de2y">
-    <b>cooperativeWorker=&lt;N&gt;</b><br>
-    N is the number of the cooperative thread.
+  </tr>
+  <tr>
+    <td><b>jobs.executionTerminated</b></td>
+    <td>
+        Number of computational job executions finished. Each job can
+        execute multiple times, for example when it’s restarted or
+        suspended and then resumed.
     </td>
+  </tr>
+  <tr><td colspan="3" class="divider"></td></tr>
+  <tr>
+    <td><b>iterationCount</b></td>
+    <td>
+        The total number of iterations the driver of tasklets in
+        cooperative thread N made. It should increase by at least 250
+        iterations/s. Lower value means some of the cooperative
+        processors blocks for too long. Somewhat lower value is normal
+        if there are many tasklets assigned to the processor. Lower
+        value affects the latency.
+    </td>
+    <td rowspan="2">
+        <b>cooperativeWorker</b><br>
+        <br>
+        Each Jet member will have one of this metric for each of its
+        cooperative worker threads.
+    </td>
+  </tr>
+  <tr>
+    <td><b>taskletCount</b></td>
+    <td>The number of assigned tasklets to cooperative thread N.</td>
   </tr>
 </table>
 
@@ -145,165 +154,248 @@ vertex of each current job execution.
 Additionally, if the vertex sourcing them is a data source or data sink,
 then the `source` or `sink` tags will also be set to true.
 
-<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;border-color:#93a1a1;}
-.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;
-border-style:solid;border-width:1px;overflow:hidden;word-break:normal;
-border-color:#93a1a1;color:#002b36;background-color:#fdf6e3;}
-.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;
-padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;
-word-break:normal;border-color:#93a1a1;color:#fdf6e3;
-background-color:#657b83;}
-.tg .tg-2iel{border-color:#333333;text-align:left;vertical-align:top;
-position:sticky;position:-webkit-sticky;top:-1px;will-change:transform}
-.tg .tg-de2y{border-color:#333333;text-align:left;vertical-align:top}
-</style>
-<table class="tg">
+<table>
   <tr>
-    <th class="tg-2iel">Names</th>
-    <th class="tg-2iel">Extra tags</th>
+    <th>Names</th>
+    <th>Description</th>
+    <th>Tags</th>
   </tr>
+  
   <tr>
-    <td class="tg-de2y" width="60%">
-    <b>executionStartTime</b>: Start time of the current execution of
-       the job.<br>
-    <b>executionCompletionTime</b>: Completion time of the current
-       execution of the job.<br>
-    <br>
-    Both contain epoch time in milliseconds.
+    <td><b>executionStartTime</b></td>
+    <td>
+        Start time of the current execution of the job (epoch time in
+        milliseconds).
     </td>
-    <td class="tg-de2y">
-    <b>no extra tags, they are even missing <i>vertex</i></b><br>
-    There will be a single instance of these metrics for each job execution.
+    <td rowspan="2" width="30%">
+        <b>job, exec</b><br>
+        <br>
+        There will be a single instance of these metrics for each job
+        execution.
     </td>
   </tr>
+  
   <tr>
-    <td class="tg-de2y">
-    <b>snapshotBytes</b>: Total number of bytes written out in the last
-       snapshot.<br>
-    <b>snapshotKeys</b>: Total number of keys written out in the last
-       snapshot.
-    </td>
-    <td class="tg-de2y">
-    <b>no extra tags</b><br>
-    There will be a single instance of these metrics for each vertex.
+    <td><b>executionCompletionTime</b></td>
+    <td>
+        Completion time of the current execution of the job(epoch time
+        in milliseconds).
     </td>
   </tr>
+  
+  <tr><td colspan="3" class="divider"></td></tr>
+  
   <tr>
-    <td class="tg-de2y">
-    <b>distributedBytesIn</b>: Total number of bytes received from
-       remote members.<br>
-    <b>distributedBytesOut</b>: Total number of bytes sent to remote
-       members.<br>
-    <b>distributedItemsIn</b>: Total number of items received from
-       remote members.<br>
-    <b>distributedItemsOut</b>: Total number of items sent to
-     remote
-       members.<br>
-    <br>
-    These values are only present for distributed edges, they only
-    account for data actually transmitted over the network between
-    members. This numbers include watermarks, snapshot barriers etc.
-    </td>
-    <td class="tg-de2y">
-    <b>ordinal=&lt;N&gt;</b><br>
-    Each Jet member will have an instance of these metrics for each
-    ordinal of each vertex of each job execution.
+    <td><b>snapshotBytes</b></td>
+    <td>Total number of bytes written out in the last snapshot.</td>
+    <td rowspan="2">
+        <b>job, exec, vertex</b><br>
+        <br>
+        There will be a single instance of these metrics for each
+        vertex.
     </td>
   </tr>
+  
   <tr>
-    <td class="tg-de2y">
-    <b>topObservedWm</b>: This value is equal to the highest coalescedWm
-       on any input edge of this processor.<br>
-    <b>coalescedWm</b>: The highest watermark received from all inputs
-       that was sent to the processor to handle.<br>
-    <b>lastForwardedWm</b>: Last watermark emitted by the processor to
-       output.<br>
-    <b>lastForwardedWmLatency</b>: The difference between
-       <i>lastForwardedWn</i> and the system time at the moment when
-       metrics were collected.<br>
-    <br>
-    <b>queuesCapacity</b>: The total capacity of input queues.<br>
-    <b>queuesSize</b>: The total number of items waiting in input
-       queues.<br>
-    <br>
-    All input queues for all edges to the processor are summed in the
-    above two metrics. If size is close to capacity, backpressure is
-    applied and this processor is a bottleneck. Only input edges with
-    equal priority are summed. If the processor has input edges with
-    different priority, only edges with the highest priority will be
-    reflected, after those are exhausted edges with the next lower
-    priority will be reflected and so on.
-    </td>
-    <td class="tg-de2y">
-    <b>proc=&lt;N&gt;, ordinal=&lt;not specified&gt;</b><br>
-    Each Jet member will have one instances of these metrics for each
-    processor instance N, the N denotes the global processor index.
-    Processor is the parallel worker doing the work of the vertex.
+    <td><b>snapshotKeys</b></td>
+    <td>Total number of keys written out in the last snapshot.</td>
+  </tr>
+  
+  <tr><td colspan="3" class="divider"></td></tr>
+  
+  <tr>
+    <td><b>distributedBytesIn</b></td>
+    <td>Total number of bytes received from remote members.</td>
+    <td rowspan="4">
+        <b>job, exec, vertex, ordinal</b><br>
+        <br>
+        Each Jet member will have an instance of these metrics for each
+        ordinal of each vertex of each job execution.<br>
+        <br>
+        NOTE: These metrics are only present for distributed edges (ie.
+        edges producing network traffic).
     </td>
   </tr>
+  
   <tr>
-    <td class="tg-de2y">
-    <b>topObservedWm</b>: The highest received watermark from any
-       input on edge N.<br>
-    <b>coalescedWm</b>: The highest watermark received from all upstream
-       processors on edge N.<br>
-    <br>
-    <b>emittedCount</b>: The number of emitted items. This number
-    includes watermarks, snapshot barriers etc. Unlike
-    <i>distributedItemsOut</i>, it includes items emitted items to local
-    processors.<br>
-    <b>receivedCount</b>: The number of received items. This number does
-    not include watermarks, snapshot barriers etc. It’s the number of
-    items the Processor.process method will receive.<br>
-    <b>receivedBatches</b>: The number of received batches.
-    <code>Processor.process</code> receives a batch of items at a time,
-    this is the number of such batches. By dividing <i>receivedCount</i>
-    by <i>receivedBatches</i>, you get the average batch size. It will
-    be 1 under low load.
+    <td><b>distributedBytesOut</b></td>
+    <td>Total number of bytes sent to remote members.</td>
+  </tr>
+  
+  <tr>
+    <td><b>distributedItemsIn</b></td>
+    <td>Total number of items received from remote members.</td>
+  </tr>
+  
+  <tr>
+    <td><b>distributedItemsOut</b></td>
+    <td>Total number of items sent to remote members.</td>
+  </tr>
+  
+  <tr><td colspan="3" class="divider"></td></tr>
+  
+  <tr>
+    <td><b>topObservedWm</b></td>
+    <td>
+        This value is equal to the highest coalescedWm on any input edge
+        of this processor.
     </td>
-    <td class="tg-de2y">
-    <b>proc=&lt;N&gt;, ordinal=&lt;M&gt;</b><br>
-    Each Jet member will have one instance of these metrics for each
-    edge M (input or output) of each processor N. N is the global
-    processor index and M is either the ordinal of the edge or has the
-    value snapshot for output items written to state snapshot.
+    <td rowspan="7">
+        <b>job, exec, vertex, proc</b><br>
+        <br>
+        Each Jet member will have one instances of these metrics for
+        each processor instance N, the N denotes the global processor
+        index. Processor is the parallel worker doing the work of the
+        vertex.
     </td>
   </tr>
+  
   <tr>
-    <td class="tg-de2y">
-    <b>numInFlightOps</b>: The number of pending (in flight) operations
-       when using asynchronous mapping processors. See
-       <a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/core/processor/Processors.html#mapUsingServiceAsyncP-com.hazelcast.jet.pipeline.ServiceFactory-int-boolean-com.hazelcast.function.FunctionEx-com.hazelcast.function.BiFunctionEx-">
-       Processors.mapUsingServiceAsyncP
-       </a>.<br>
-    <br>
-    <b>totalKeys</b>: The number of active keys being tracked by a
-       session window processor.<br>
-    <b>totalWindows</b>: The number of active windows being tracked by a
-       session window processor. See
-       <a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/core/processor/Processors.html#aggregateToSessionWindowP-long-long-java.util.List-java.util.List-com.hazelcast.jet.aggregate.AggregateOperation-com.hazelcast.jet.core.function.KeyedWindowResultFunction-">
-       Processors.aggregateToSessionWindowP</a>.<br>
-    <br>
-    <b>totalFrames</b>: The number of active frames being tracked by a
-       sliding window processor.<br>
-    <b>totalKeysInFrames</b>: The number of grouping keys associated
-       with the current active frames of a sliding window processor.
-       See
-       <a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/core/processor/Processors.html#aggregateToSlidingWindowP-java.util.List-java.util.List-com.hazelcast.jet.core.TimestampKind-com.hazelcast.jet.core.SlidingWindowPolicy-long-com.hazelcast.jet.aggregate.AggregateOperation-com.hazelcast.jet.core.function.KeyedWindowResultFunction-">
-       Processors.aggregateToSlidingWindowP</a>.<br>
-    <br>
-    <b>lateEventsDropped</b>: The number of late events dropped by
-       various processor, due to the watermark already having passed
-       their windows.<br>
+    <td><b>coalescedWm</b></td>
+    <td>
+        The highest watermark received from all inputs that was sent to
+        the processor to handle.
     </td>
-    <td class="tg-de2y">
-    <b>proc=&lt;N&gt;, procType=&lt;set&gt;</b><br>
-    Processor specific metrics, only certain types of processors have
-    them. The <i>procType</i> tag can be used to identify the exact type
-    of processor sourcing them. Like all processor metrics, each Jet
-    member will have one instances of these metrics for each processor
-    instance N, the N denotes the global processor index.
+  </tr>
+  
+  <tr>
+    <td><b>lastForwardedWm</b></td>
+    <td>Last watermark emitted by the processor to output.</td>
+  </tr>
+  
+  <tr>
+    <td><b>lastForwardedWmLatency</b></td>
+    <td>
+        The difference between <i>lastForwardedWn</i> and the system
+        time at the moment when metrics were collected.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>queuesCapacity</b></td>
+    <td>The total capacity of input queues.</td>
+  </tr>
+  
+  <tr>
+    <td><b>queuesSize</b></td>
+    <td>The total number of items waiting in input queues.</td>
+  </tr>
+  
+  <tr><td colspan="3" class="divider"></td></tr>
+  
+  <tr>
+    <td><b>topObservedWm</b></td>
+    <td>The highest received watermark from any input on edge N.</td>
+    <td rowspan="6">
+        <b>job, exec, vertex, proc, ordinal</b><br>
+        <br>
+        Each Jet member will have one instance of these metrics for each
+        edge M (input or output) of each processor N. N is the global
+        processor index and M is either the ordinal of the edge or has
+        the value snapshot for output items written to state snapshot.
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>coalescedWm</b></td>
+    <td>
+        The highest watermark received from all upstream processors on
+        edge N.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>emittedCount</b></td>
+    <td>
+        The number of emitted items. This number includes watermarks,
+        snapshot barriers etc. Unlike <i>distributedItemsOut</i>, it
+        includes items emitted items to local processors.
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>receivedCount</b></td>
+    <td>
+        The number of received items. This number does not include
+        watermarks, snapshot barriers etc. It’s the number of items the
+        Processor.process method will receive.
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>receivedBatches</b></td>
+    <td>
+        The number of received batches. <code>Processor.process</code>
+        receives a batch of items at a time, this is the number of such
+        batches. By dividing <i>receivedCount</i> by
+        <i>receivedBatches</i>, you get the average batch size. It will
+        be 1 under low load.
+    </td>
+  </tr>
+
+  <tr><td colspan="3" class="divider"></td></tr>
+
+  <tr>
+    <td><b>numInFlightOps</b></td>
+    <td>
+        The number of pending (in flight) operations when using
+        asynchronous mapping processors. See
+        <a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/core/processor/Processors.html#mapUsingServiceAsyncP-com.hazelcast.jet.pipeline.ServiceFactory-int-boolean-com.hazelcast.function.FunctionEx-com.hazelcast.function.BiFunctionEx-">
+        Processors.mapUsingServiceAsyncP</a>.
+    </td>
+    <td rowspan="9">
+        <b>job, exec, vertex, proc, procType</b><br>
+        <br>
+        Processor specific metrics, only certain types of processors
+        have them. The <i>procType</i> tag can be used to identify the
+        exact type of processor sourcing them. Like all processor
+        metrics, each Jet member will have one instances of these
+        metrics for each processor instance N, the N denotes the global
+        processor index.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>totalKeys</b></td>
+    <td>
+        The number of active keys being tracked by a session window
+        processor.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>totalWindows</b></td>
+    <td>
+        The number of active windows being tracked by a session window
+        processor. See
+        <a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/core/processor/Processors.html#aggregateToSessionWindowP-long-long-java.util.List-java.util.List-com.hazelcast.jet.aggregate.AggregateOperation-com.hazelcast.jet.core.function.KeyedWindowResultFunction-">
+        Processors.aggregateToSessionWindowP</a>.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>totalFrames</b></td>
+    <td>
+        The number of active frames being tracked by a sliding window
+        processor.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>totalKeysInFrames</b></td>
+    <td>
+        The number of grouping keys associated with the current active
+        frames of a sliding window processor. See
+        <a href="https://docs.hazelcast.org/docs/jet/latest-dev/javadoc/com/hazelcast/jet/core/processor/Processors.html#aggregateToSlidingWindowP-java.util.List-java.util.List-com.hazelcast.jet.core.TimestampKind-com.hazelcast.jet.core.SlidingWindowPolicy-long-com.hazelcast.jet.aggregate.AggregateOperation-com.hazelcast.jet.core.function.KeyedWindowResultFunction-">
+        Processors.aggregateToSlidingWindowP</a>.
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>lateEventsDropped</b></td>
+    <td>
+        The number of late events dropped by various processor, due to
+        the watermark already having passed their windows.
     </td>
   </tr>
 </table>
