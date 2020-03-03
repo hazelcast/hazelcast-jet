@@ -10,9 +10,9 @@ Kafka and computes its traffic intensity (events per second).
 
 ## 1. Start Apache Kafka
 
-If you don't have it already, install and run Kafka. You can use [this
-website](https://www.tutorialkart.com/apache-kafka/install-apache-kafka-on-ubuntu/)
-for instructions.
+If you don't have it already, install and run Kafka. You can use [these
+instructions](https://kafka.apache.org/quickstart) (you need just steps
+1 and 2).
 
 From now on we assume Kafka is running on your machine.
 
