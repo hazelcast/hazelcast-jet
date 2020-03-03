@@ -238,14 +238,14 @@ submit it to the Jet instance you have running:
 
 ```bash
 gradle build
-<path_to_jet>/bin/jet submit -c org.example.JetJob build/libs/kafka-tutorial-1.0-SNAPSHOT.jar
+<path_to_jet>/bin/jet submit build/libs/kafka-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
 
 ```bash
 mvn package
-<path_to_jet>/bin/jet submit -c org.example.JetJob target/kafka-tutorial-1.0-SNAPSHOT.jar
+<path_to_jet>/bin/jet submit target/kafka-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
