@@ -18,13 +18,38 @@ From now on we assume Kafka is running on your machine.
 
 ## 2. Start Hazelcast Jet
 
-If you haven't yet installed Hazelcast Jet, follow the instructions in
-[Get Started](/docs/get-started/installation). Before starting Jet,
-make sure to activate the Apache Kafka Connector plugin:
+1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
+  Hazelcast Jet
+
+2. Unzip it:
 
 ```bash
-cd <jet_home>
+cd <where_you_downloaded_it>
+unzip hazelcast-jet-4.0.zip
+cd hazelcast-jet-4.0
+```
+
+If you already have Jet and you skipped the above steps, make sure to
+follow from here on.
+
+3. Activate the Apache Kafka Connector plugin:
+
+```bash
 mv opt/hazelcast-jet-kafka-4.0.jar lib/
+```
+
+4. Start Jet:
+
+```bash
+bin/jet-start
+```
+
+5. When you see output like this, Hazelcast Jet is up:
+
+```text
+Members {size:1, ver:1} [
+    Member [192.168.1.5]:5701 - e7c26f7c-df9e-4994-a41d-203a1c63480e this
+]
 ```
 
 From now on we assume Hazelcast Jet is running on your machine.
