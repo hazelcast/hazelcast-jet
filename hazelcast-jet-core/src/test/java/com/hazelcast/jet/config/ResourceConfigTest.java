@@ -18,6 +18,9 @@ package com.hazelcast.jet.config;
 
 import com.hazelcast.jet.JetException;
 import com.hazelcast.jet.core.JetTestSupport;
+import com.hazelcast.nio.ObjectDataInput;
+import com.hazelcast.nio.ObjectDataOutput;
+import com.hazelcast.nio.serialization.StreamSerializer;
 import com.hazelcast.test.HazelcastParallelClassRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -33,7 +36,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(HazelcastParallelClassRunner.class)
@@ -1062,6 +1068,48 @@ public class ResourceConfigTest extends JetTestSupport {
         assertEquals(dirId, dirConfig.getId());
         assertEquals(ResourceType.DIRECTORY, dirConfig.getResourceType());
         assertEquals(dir.toURI().toURL(), dirConfig.getUrl());
+    }
+
+    @Test
+    public void when_addSerializer() {
+        // When
+        Object object = new Object() {
+        };
+
+        StreamSerializer<Object> serializer = new StreamSerializer<Object>() {
+
+            @Override
+            public int getTypeId() {
+                return 0;
+            }
+
+            @Override
+            public void write(ObjectDataOutput out, Object object) {
+            }
+
+            @Override
+            public Object read(ObjectDataInput in) {
+                return null;
+            }
+
+            @Override
+            public void destroy() {
+            }
+        };
+        config.addSerializer(object.getClass(), serializer.getClass());
+
+        // Then
+        Collection<ResourceConfig> resourceConfigs = config.getResourceConfigs().values();
+        assertThat(resourceConfigs, hasSize(2));
+        assertThat(resourceConfigs, contains(
+                new ResourceConfig(object.getClass()),
+                new ResourceConfig(serializer.getClass())
+        ));
+
+        Map<String, String> serializerConfigs = config.getSerializerConfigs();
+        assertThat(serializerConfigs.entrySet(), hasSize(1));
+        assertThat(serializerConfigs.keySet(), contains(object.getClass().getName()));
+        assertThat(serializerConfigs.values(), contains(serializer.getClass().getName()));
     }
 
     private File createFile(String path) throws IOException {

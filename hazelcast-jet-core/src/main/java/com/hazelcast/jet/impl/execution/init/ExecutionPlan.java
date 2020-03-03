@@ -139,10 +139,12 @@ public class ExecutionPlan implements IdentifiedDataSerializable {
         this.memberCount = memberCount;
     }
 
-    public void initialize(
-            NodeEngine nodeEngine, long jobId, long executionId, SnapshotContext snapshotContext,
-            ConcurrentHashMap<String, File> tempDirectories, InternalSerializationService serializationService
-    ) {
+    public void initialize(NodeEngine nodeEngine,
+                           long jobId,
+                           long executionId,
+                           SnapshotContext snapshotContext,
+                           ConcurrentHashMap<String, File> tempDirectories,
+                           InternalSerializationService serializationService) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
         this.executionId = executionId;
         initProcSuppliers(jobId, executionId, tempDirectories, serializationService);
