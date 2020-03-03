@@ -230,8 +230,9 @@ public class JetJob {
 }
 ```
 
-Don't run the above code from the IDE, instead use the command line to
-submit it to the Jet instance you have running:
+You may run this code from your IDE and it will work, but it will create
+its own Jet instance. To run it on the Jet instance you already started,
+use the command line like this:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -271,5 +272,5 @@ Sample output:
 Once you're done with it, cancel the job:
 
 ```bash
-<path_to_jet>/bin/cancel kafka-traffic-monitor
+<path_to_jet>/bin/jet cancel kafka-traffic-monitor
 ```

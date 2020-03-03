@@ -154,7 +154,8 @@ jar.manifest.attributes 'Main-Class': 'org.example.JetJob'
 ## 5. Apply the Python Function to a Jet Pipeline
 
 This code generates a stream of numbers and lets Python take their
-square roots:
+square roots. Make sure to set the right path in the `setHandlerFile`
+line:
 
 ```java
 package org.example;
@@ -183,8 +184,9 @@ public class JetJob {
 }
 ```
 
-Don't run the above code from the IDE, instead use the command line to
-submit it to the Jet instance you have running:
+You may run this code from your IDE and it will work, but it will create
+its own Jet instance. To run it on the Jet instance you already started,
+use the command line like this:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -221,5 +223,5 @@ the output from the pipeline, like this:
 Once you're done with it, cancel the job:
 
 ```bash
-<path_to_jet>/bin/cancel python-function
+<path_to_jet>/bin/jet cancel python-function
 ```
