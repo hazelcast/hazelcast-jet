@@ -77,7 +77,11 @@ transformed list of strings.</p>
     <span class="hljs-keyword">return</span> [<span class="hljs-string">"sqrt(%d) = %.2f"</span> % (x, y) <span class="hljs-keyword">for</span> (x, y) <span class="hljs-keyword">in</span> zip(num_list, sqrt_list)]
 </code></pre>
 <p>Save this code to <code>take_sqrt.py</code> in a folder of your choosing, we'll
-call it <code>&lt;python_src&gt;</code>.</p>
+call it <code>&lt;python_src&gt;</code>. Since our code uses <code>numpy</code>, we need a
+requirements file that names it:</p>
+<pre><code class="hljs css language-text">numpy
+</code></pre>
+<p>Save this as <code>requirements.txt</code> in the <code>&lt;python_src&gt;</code> folder.</p>
 <h2><a class="anchor" aria-hidden="true" id="2-install-python-3"></a><a href="#2-install-python-3" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>2. Install Python 3</h2>
 <p>Hazelcast Jet works with Python 3.5-3.7. Check whether you have it:</p>
 <pre><code class="hljs css language-bash">$ python3 --version
@@ -123,8 +127,7 @@ follow from here on.</p>
 </span></div></div></div></div>
 <h2><a class="anchor" aria-hidden="true" id="5-apply-the-python-function-to-a-jet-pipeline"></a><a href="#5-apply-the-python-function-to-a-jet-pipeline" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>5. Apply the Python Function to a Jet Pipeline</h2>
 <p>This code generates a stream of numbers and lets Python take their
-square roots. Make sure to set the right path in the <code>setHandlerFile</code>
-line:</p>
+square roots. Make sure to set the right path in the <code>.setBaseDir</code> line:</p>
 <pre><code class="hljs css language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>example</span><span class="token punctuation">;</span>
 
 <span class="token keyword">import</span> <span class="token namespace">com<span class="token punctuation">.</span>hazelcast<span class="token punctuation">.</span>jet</span><span class="token punctuation">.</span><span class="token class-name">Jet</span><span class="token punctuation">;</span>
@@ -141,7 +144,8 @@ line:</p>
         p<span class="token punctuation">.</span><span class="token function">readFrom</span><span class="token punctuation">(</span><span class="token class-name">TestSources</span><span class="token punctuation">.</span><span class="token function">itemStream</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>ts<span class="token punctuation">,</span> seq<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span>seq<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
          <span class="token punctuation">.</span><span class="token function">withoutTimestamps</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
          <span class="token punctuation">.</span><span class="token function">apply</span><span class="token punctuation">(</span><span class="token function">mapUsingPython</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">PythonServiceConfig</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-                 <span class="token punctuation">.</span><span class="token function">setHandlerFile</span><span class="token punctuation">(</span><span class="token string">"&lt;python_src>/take_sqrt.py"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                 <span class="token punctuation">.</span><span class="token function">setBaseDir</span><span class="token punctuation">(</span><span class="token string">"&lt;python_src>"</span><span class="token punctuation">)</span>
+                 <span class="token punctuation">.</span><span class="token function">setHandlerModule</span><span class="token punctuation">(</span><span class="token string">"take_sqrt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
          <span class="token punctuation">.</span><span class="token function">setLocalParallelism</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
          <span class="token punctuation">.</span><span class="token function">writeTo</span><span class="token punctuation">(</span><span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">logger</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 
