@@ -43,15 +43,15 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class Networking {
 
     private static final int PACKET_HEADER_SIZE = 16;
-    private static final int FLOW_PACKET_INITIAL_SIZE = 128; // TODO:
+    private static final int FLOW_PACKET_INITIAL_SIZE = 128;
     private static final MemoryReader MEMORY_READER = MemoryReader.create();
-
-    private static final byte[] EMPTY_BYTES = new byte[0];
 
     private final NodeEngineImpl nodeEngine;
     private final ILogger logger;
     private final JobExecutionService jobExecutionService;
     private final ScheduledFuture<?> flowControlSender;
+
+    private int lastFlowPacketSize;
 
     Networking(NodeEngine nodeEngine, JobExecutionService jobExecutionService, int flowControlPeriodMs) {
         this.nodeEngine = (NodeEngineImpl) nodeEngine;
@@ -59,6 +59,7 @@ public class Networking {
         this.jobExecutionService = jobExecutionService;
         this.flowControlSender = nodeEngine.getExecutionService().scheduleWithRepetition(
                 this::broadcastFlowControlPacket, 0, flowControlPeriodMs, MILLISECONDS);
+        this.lastFlowPacketSize = FLOW_PACKET_INITIAL_SIZE;
     }
 
     void shutdown() {
@@ -116,8 +117,7 @@ public class Networking {
     }
 
     private byte[] createFlowControlPacket(Address member) {
-        MemoryDataOutput output = new MemoryDataOutput(FLOW_PACKET_INITIAL_SIZE);
-        final boolean[] hasData = {false};
+        MemoryDataOutput output = new MemoryDataOutput(lastFlowPacketSize);
         Map<Long, ExecutionContext> executionContexts = jobExecutionService.getExecutionContextsFor(member);
         output.writeInt(executionContexts.size());
         executionContexts.forEach((execId, exeCtx) -> uncheckRun(() -> {
@@ -128,10 +128,11 @@ public class Networking {
                         output.writeInt(vertexId);
                         output.writeInt(ordinal);
                         output.writeInt(senderToTasklet.get(member).updateAndGetSendSeqLimitCompressed());
-                        hasData[0] = true;
                     })));
         }));
-        return hasData[0] ? output.toByteArray() : EMPTY_BYTES;
+        byte[] payload = output.toByteArray();
+        lastFlowPacketSize = payload.length;
+        return payload;
     }
 
     private void handleFlowControlPacket(Address fromAddr, byte[] packet) {
