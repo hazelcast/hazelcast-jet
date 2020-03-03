@@ -412,20 +412,3 @@ metrics:
   jmx:
     enabled: true
 ```
-
-<details>
-  <summary>There is also a simpler solution for embedded mode!</summary>
-
-  When using Jet in the embedded mode the same effect can be achieved
-  more simply, via programmatic configuration:
-
-  ```java
-  JetConfig jetConfig = new JetConfig();
-  MetricsConfig metricsConfig = jetConfig.getHazelcastConfig().getMetricsConfig();
-  metricsConfig.setEnabled(true)
-               .setCollectionFrequencySeconds(5);
-  metricsConfig.getJmxConfig().setEnabled(true);
-  JetInstance jet = Jet.newJetInstance(cfg);
-  ```
-
-</details>

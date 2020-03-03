@@ -50,25 +50,6 @@ the oldest ones start to be overwritten). A non-zero TTL means that
 events will be evicted after that amount of seconds, even if there is
 still available capacity for tracking them.
 
-<details>
-  <summary>There is also a simpler solution for embedded mode!</summary>
-
-  When using Jet in the embedded mode the same effect can be achieved
-  more simply, via programmatic configuration:
-
-  ```java
-  JetConfig cfg = new JetConfig();
-  cfg.getHazelcastConfig()
-     .getMapConfig("name_of_map")
-     .getEventJournalConfig()
-     .setEnabled(true)
-     .setCapacity(1000)         // how many events to keep before evicting
-     .setTimeToLiveSeconds(10); // evict events older than this
-  JetInstance jet = Jet.newJetInstance(cfg);
-  ```
-
-</details>
-
 ## Example
 
 Once the event journal has been configured setting up a source becomes
