@@ -56,8 +56,8 @@ From now on we assume Hazelcast Jet is running on your machine.
 
 ## 3. Create a New Java Project
 
-We'll assume you're using an IDE. After creating a blank Java project,
-copy the Gradle or Maven file into it:
+We'll assume you're using an IDE. Create a blank Java project named
+`kafka-tutorial` and copy the Gradle or Maven file into it:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -147,8 +147,7 @@ import java.util.Properties;
 public class TweetPublisher {
     public static void main(String[] args) throws Exception {
         String topicName = "tweets";
-        Properties props = kafkaProps();
-        try (KafkaProducer<Long, String> producer = new KafkaProducer<>(props)) {
+        try (KafkaProducer<Long, String> producer = new KafkaProducer<>(kafkaProps())) {
             for (long eventCount = 0; ; eventCount++) {
                 String tweet = String.format("tweet-%0,4d", eventCount);
                 producer.send(new ProducerRecord<>(topicName, eventCount, tweet));
@@ -188,6 +187,7 @@ were published to the Kafka topic at a given time:
 package org.example;
 
 import com.hazelcast.jet.*;
+import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
 import org.apache.kafka.common.serialization.*;
@@ -215,10 +215,8 @@ public class JetJob {
                          Instant.ofEpochMilli(wr.end()), ZoneId.systemDefault())),
                  wr.result())));
 
-        JetInstance jet = Jet.bootstrappedInstance();
-        Job job = jet.newJob(p);
-        Runtime.getRuntime().addShutdownHook(new Thread(job::cancel));
-        job.join();
+        JobConfig cfg = new JobConfig().setName("kafka-traffic-monitor");
+        Jet.bootstrappedInstance().newJob(p, cfg);
     }
 
     private static Properties kafkaProps() {
@@ -253,10 +251,14 @@ mvn package
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+Now go to the window where you started Jet. Its log output will contain
+the output from the pipeline.
+
 If `TweetPublisher` was running while you were following these steps,
-you'll now get a report on the whole history. If you restart this
-program, you'll get all the history again. That's how a replayable data
-source behaves.
+you'll now get a report on the whole history and then a steady stream of
+real-time updates. If you restart this program, you'll get all the
+history again. That's how Hazelcast Jet behaves when working with a
+replayable source.
 
 Sample output:
 
@@ -264,4 +266,10 @@ Sample output:
 16:11:35.033 ... At 16:11:27:500 Kafka got 3 tweets per second
 16:11:35.034 ... At 16:11:28:000 Kafka got 2 tweets per second
 16:11:35.034 ... At 16:11:28:500 Kafka got 8 tweets per second
+```
+
+Once you're done with it, cancel the job:
+
+```bash
+<path_to_jet>/bin/cancel kafka-traffic-monitor
 ```
