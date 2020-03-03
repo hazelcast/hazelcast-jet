@@ -839,7 +839,7 @@ connectivity issues and is suitable for use in streaming jobs. If you
 want to avoid duplicate writes to the database, then a suitable
 _insert-or-update_ statement should be used instead of `INSERT`.
 
-### MongoDB
+### MongoDB
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/mongodb).
@@ -849,12 +849,12 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/influxdb).
 
-### Elasticsearch
+### Elasticsearch
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/elasticsearch).
 
-### Debezium
+### Debezium
 
 >This connector is currently under incubation. For more
 >information and examples, please visit the [GitHub repository](https://github.com/hazelcast/hazelcast-jet-contrib/tree/master/debezium).
@@ -866,11 +866,187 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 
 ## Miscellaneous
 
-### Test Sources
+### Test Sources
+
+Test sources make it convenient to get started with Jet without having
+to use an actual data source. They can also be used for unit testing
+different pipelines where you can expect a more deterministic import.
+
+#### Batch
+
+The `items` source offers a simple batch source where the supplied list
+of items are output:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.items(1, 2, 3, 4))
+ .writeTo(Sinks.logger());
+```
+
+This pipeline will emit the following items, and then the job will terminate:
+
+```text
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 1
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 2
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 3
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 4
+```
+
+#### Streaming
+
+The test streaming source emits an infinite stream of `SimpleEvent`s at
+the requested rate (in this case, 10 items per second):
+
+```java
+p.readFrom(TestSources.itemStream(10))
+ .withNativeTimestamp(0)
+ .writeTo();
+```
+
+After submitting this job, you can expect infinite output like:
+
+```text
+12:33:36.774 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:36.700, sequence=0)
+12:33:36.877 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:36.800, sequence=1)
+12:33:36.976 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:36.900, sequence=2)
+12:33:37.074 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.000, sequence=3)
+12:33:37.175 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.100, sequence=4)
+12:33:37.274 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.200, sequence=5)
+```
+
+Each `SimpleEvent` has a sequence which is monotonically increased and
+also a timestamp which is derived from `System.currentTimeMillis()`.
+For more information using these sources in a testing environment, refer
+to the [Testing](testing) section.
 
 ### Observables
 
+A Jet pipeline always expects to write the results somewhere. Sometimes
+the job submitter is different than the one reading or processing the
+results of a pipeline, but sometimes it can be the same, for example if the
+job is a simple ad-hoc query. In this case Jet offers a special type of
+construct called an `Observable`, which can be used as a sink.
+
+For example, imagine the following pipeline:
+
+```java
+JetInstance jet = Jet.bootstrappedInstance();
+Observable<SimpleEvent> observable = jet.newObservable();
+observable.addObserver(e -> System.out.println("Printed from client: " + e));
+
+Pipeline pipeline = p.create();
+p.readFrom(TestSources.itemStream(5))
+ .withIngestionTimestamps()
+ .writeTo(Sinks.observable(observable));
+try {
+  jet.newJob(pipeline).join();
+} finally {
+  observable.destroy();
+}
+```
+
+When you run this pipeline, you'll see the following output:
+
+```text
+Printed from client: SimpleEvent(timestamp=12:36:53.400, sequence=28)
+Printed from client: SimpleEvent(timestamp=12:36:53.600, sequence=29)
+Printed from client: SimpleEvent(timestamp=12:36:53.800, sequence=30)
+Printed from client: SimpleEvent(timestamp=12:36:54.000, sequence=31)
+Printed from client: SimpleEvent(timestamp=12:36:54.200, sequence=32)
+Printed from client: SimpleEvent(timestamp=12:36:54.400, sequence=33)
+Printed from client: SimpleEvent(timestamp=12:36:54.600, sequence=34)
+Printed from client: SimpleEvent(timestamp=12:36:54.800, sequence=35)
+Printed from client: SimpleEvent(timestamp=12:36:55.000, sequence=36)
+```
+
+You can see that the printed output is actually on the client, and not
+on the server. Jet internally uses Hazelcast's `Ringbuffer` to create a
+temporary buffer to write the results to and these are then fetched by
+the client:
+
+>It's worth noting that `Ringbuffer` may lose events, if they
+>are being produced at a higher-rate than the clients can consume it. There
+>will be a warning logged in such cases. You can also configure the
+>capacity using the `setCapacity()` method on the `Observable`.
+
+`Observable` can also implement `onError` and `onComplete` methods to
+get notified of job completion and errors.
+
+#### Futures
+
+`Observable` also support a conversion to a future to collect the
+results.
+
+For example, to collect the job results to a list, you can use the
+following pattern:
+
+```java
+JetInstance jet = Jet.bootstrappedInstance();
+Observable<String> observable = jet.newObservable();
+
+Pipeline p = Pipeline.create();
+p.readFrom(TestSources.items("a", "b", "c", "d"))
+ .writeTo(Sinks.observable(observable));
+
+Future<List<String>> future = observable.toFuture(s -> s.collect(Collectors.toList()));
+
+jet.newJob(p);
+
+try {
+  List<String> results = future.get();
+  for (String result : results) {
+    System.out.println(result);
+  }
+} finally {
+  observable.destroy();
+}
+```
+
+#### Clean-up
+
+As `Observable`s are backed by `Ringbuffer`s stored in the cluster which
+should be cleaned up by the client, once they are no longer necessary
+using the `destroy()` method. If the Observable isn’t destroyed, the
+memory used by it will be not be recovered by the cluster. It's possible
+to get a list of all observables using the
+`JetInstance.getObservables()` method.
+
 ### Socket
+
+The socket sources and sinks opens a TCP socket to the supplied address
+and either read from or write to the socket. The sockets are text-based
+and may only read or write text data.
+
+A simple example of the source is below:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.socket("localhost", 8080, StandardCharsets.UTF_8))
+ .withoutTimestamps()
+ .map(line -> /* parse line */)
+ .writeTo(Sinks.logger());
+```
+
+This will connect to a socket on port 8080 and wait to receive some
+lines of text, which will be sent as an item for the next step in the
+pipeline to process.
+
+Please note that Jet itself will not create any server sockets, this
+should be handled outside of the Jet process itself.
+
+When used as a sink, it will send a line of text for each input item,
+similar to how the source works:
+
+```java
+Pipeline p = Pipeline.create();
+p.readFrom(Sources.itemStream(10))
+ .withoutTimestamps()
+ .map(e -> e.toString())
+ .writeTo(Sinks.socket("localhost", 8080));
+```
+
+Any disconnections for both source and sink will cause the job to fail,
+so this source is mostly aimed for simple IPC or testing.
 
 ### Twitter
 
@@ -896,6 +1072,9 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 |`Sources.list`|`hazelcast-jet`|batch|N/A|
 |`Sources.map`|`hazelcast-jet`|batch|N/A|
 |`Sources.mapJournal`|`hazelcast-jet`|stream|exactly-once|
+|`Sources.socket`|`hazelcast-jet`|stream|none|
+|`TestSources.items`|`hazelcast-jet`|batch|N/A|
+|`TestSources.itemStream`|`hazelcast-jet`|stream|none|
 
 ### Sinks
 
@@ -911,7 +1090,9 @@ _insert-or-update_ statement should be used instead of `INSERT`.
 |`Sinks.jmsQueue`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.list`|`hazelcast-jet`|no|N/A|
 |`Sinks.map`|`hazelcast-jet`|yes|at-least-once|
+|`Sinks.observable`|`hazelcast-jet`|yes|at-least-once|
 |`Sinks.reliableTopic`|`hazelcast-jet`|yes|at-least-once|
+|`Sinks.socket`|`hazelcast-jet`|yes|at-least-once|
 
 ## Custom Sources and Sinks
 

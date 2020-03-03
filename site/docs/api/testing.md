@@ -259,11 +259,11 @@ p.readFrom(TestSources.items(1, 2, 3, 4))
 
 This will yield an output like below:
 
-```log
-10:25:50,198  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 1
-10:25:50,199  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 2
-10:25:50,200  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 3
-10:25:50,200  INFO |batchSource| - [loggerSink#0] hz.cocky_lichterman.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] 4
+```text
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 1
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 2
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 3
+12:33:01.780 [ INFO] [c.h.j.i.c.W.loggerSink#0] 4
 ```
 
 ### Streaming Source
@@ -273,7 +273,7 @@ events have timestamps and like the batch source, this source is also
 non-distributed.
 
 ```java
-int itemsPerSecond = 2;
+int itemsPerSecond = 10;
 pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
         .withNativeTimestamp(0)
         .writeTo();
@@ -281,13 +281,13 @@ pipeline.readFrom(TestSources.itemStream(itemsPerSecond))
 
 The source above will emit data as follows:
 
-```log
-10:28:27,654  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:27.500, sequence=0)
-10:28:28,146  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:28.000, sequence=1)
-10:28:28,647  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:28.500, sequence=2)
-10:28:29,145  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:29.000, sequence=3)
-10:28:29,648  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:29.500, sequence=4)
-10:28:30,147  INFO |streamingSource| - [loggerSink#0] hz.competent_margulis.jet.blocking.thread-1 - [127.0.0.1]:5701 [jet] [4.0-SNAPSHOT] (timestamp=10:28:30.000, sequence=5)
+```text
+12:33:36.774 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:36.700, sequence=0)
+12:33:36.877 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:36.800, sequence=1)
+12:33:36.976 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:36.900, sequence=2)
+12:33:37.074 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.000, sequence=3)
+12:33:37.175 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.100, sequence=4)
+12:33:37.274 [ INFO] [c.h.j.i.c.W.loggerSink#0] SimpleEvent(timestamp=12:33:37.200, sequence=5)
 ```
 
 For more detailed information regarding test sources and sinks
