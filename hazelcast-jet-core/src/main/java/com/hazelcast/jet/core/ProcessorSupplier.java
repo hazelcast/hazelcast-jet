@@ -16,8 +16,8 @@
 
 package com.hazelcast.jet.core;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.function.SupplierEx;
-import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.logging.ILogger;
 
@@ -134,9 +134,9 @@ public interface ProcessorSupplier extends Serializable {
         File attachedFile(@Nonnull String id);
 
         /**
-         * Returns serialization service associated with this job.
+         * Returns {@link ManagedContext} associated with this job.
          */
         @Nonnull
-        InternalSerializationService serializationService();
+        ManagedContext managedContext();
     }
 }

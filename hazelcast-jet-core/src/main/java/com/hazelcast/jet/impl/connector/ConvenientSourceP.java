@@ -105,7 +105,7 @@ public class ConvenientSourceP<C, T, S> extends AbstractProcessor {
     @Override
     protected void init(@Nonnull Context context) {
         // createFn is allowed to return null, we'll call `destroyFn` even for null `ctx`
-        ManagedContext managedContext = context.serializationService().getManagedContext();
+        ManagedContext managedContext = context.managedContext();
         ctx = (C) managedContext.initialize(createFn.apply(context));
         snapshotKey = broadcastKey(context.globalProcessorIndex());
         initialized = true;

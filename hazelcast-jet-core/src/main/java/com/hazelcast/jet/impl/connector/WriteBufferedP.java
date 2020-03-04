@@ -61,7 +61,7 @@ public final class WriteBufferedP<B, T> implements Processor {
         if (localBuff == null) {
             throw new JetException("Null buffer created");
         }
-        ManagedContext managedContext = context.serializationService().getManagedContext();
+        ManagedContext managedContext = context.managedContext();
         buffer = (B) managedContext.initialize(localBuff);
     }
 

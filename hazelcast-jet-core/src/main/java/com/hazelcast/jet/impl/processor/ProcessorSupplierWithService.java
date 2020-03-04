@@ -50,8 +50,8 @@ public final class ProcessorSupplierWithService<C, S> implements ProcessorSuppli
     }
 
     @Override
-    public void init(@Nonnull ProcessorSupplier.Context context) {
-        ManagedContext managedContext = context.serializationService().getManagedContext();
+    public void init(@Nonnull Context context) {
+        ManagedContext managedContext = context.managedContext();
         serviceContext = serviceFactory.createContextFn().apply(context);
         serviceContext = (C) managedContext.initialize(serviceContext);
     }
@@ -59,8 +59,8 @@ public final class ProcessorSupplierWithService<C, S> implements ProcessorSuppli
     @Nonnull @Override
     public Collection<? extends Processor> get(int count) {
         return Stream.generate(() -> createProcessorFn.apply(serviceFactory, serviceContext))
-                     .limit(count)
-                     .collect(toList());
+                .limit(count)
+                .collect(toList());
     }
 
     @Override

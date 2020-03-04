@@ -16,6 +16,7 @@
 
 package com.hazelcast.jet.impl.execution.init;
 
+import com.hazelcast.core.ManagedContext;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.Preconditions;
 import com.hazelcast.jet.JetException;
@@ -27,6 +28,7 @@ import com.hazelcast.jet.core.Processor;
 import com.hazelcast.jet.core.ProcessorMetaSupplier;
 import com.hazelcast.jet.core.ProcessorSupplier;
 import com.hazelcast.jet.impl.deployment.IMapInputStream;
+import com.hazelcast.jet.impl.serialization.SerializationAware;
 import com.hazelcast.jet.impl.util.ExceptionUtil;
 import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.IMap;
@@ -141,7 +143,7 @@ public final class Contexts {
         }
     }
 
-    static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context {
+    static class ProcSupplierCtx extends MetaSupplierCtx implements ProcessorSupplier.Context, SerializationAware {
 
         private final int memberIndex;
         private final ConcurrentHashMap<String, File> tempDirectories;
@@ -184,7 +186,7 @@ public final class Contexts {
             }
             if (resourceConfig.getResourceType() != DIRECTORY) {
                 throw new JetException(String.format(
-                    "The resource with ID '%s' is not a directory, its type is %s", id, resourceConfig.getResourceType()
+                   "The resource with ID '%s' is not a directory, its type is %s", id, resourceConfig.getResourceType()
                 ));
             }
             return tempDirectories.computeIfAbsent(id, x -> extractFileToDisk(id));
@@ -199,7 +201,7 @@ public final class Contexts {
             }
             if (resourceConfig.getResourceType() != FILE) {
                 throw new JetException(String.format(
-                    "The resource with ID '%s' is not a file, its type is %s", id, resourceConfig.getResourceType()
+                   "The resource with ID '%s' is not a file, its type is %s", id, resourceConfig.getResourceType()
                 ));
             }
             Path fnamePath = Paths.get(resourceConfig.getUrl().getPath()).getFileName();
@@ -228,6 +230,11 @@ public final class Contexts {
             return "jet-" + jetInstanceName
                     + "-" + jobId
                     + "-" + resourceId.substring(0, min(32, resourceId.length())).replaceAll("[^\\w.\\-$]", "_");
+        }
+
+        @Nonnull @Override
+        public ManagedContext managedContext() {
+            return serializationService.getManagedContext();
         }
 
         @Nonnull @Override

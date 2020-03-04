@@ -16,6 +16,8 @@
 
 package com.hazelcast.jet.core.test;
 
+import com.hazelcast.internal.serialization.InternalSerializationService;
+import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
 import com.hazelcast.jet.JetInstance;
 import com.hazelcast.jet.config.ProcessingGuarantee;
 import com.hazelcast.jet.core.Processor;
@@ -37,6 +39,11 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
      * Constructor with default values.
      */
     public TestProcessorContext() {
+        this(new DefaultSerializationServiceBuilder().setManagedContext(object -> object).build());
+    }
+
+    TestProcessorContext(InternalSerializationService serializationService) {
+        super(serializationService);
         localProcessorIndex = 0;
         globalProcessorIndex = 0;
     }
@@ -71,32 +78,38 @@ public class TestProcessorContext extends TestProcessorSupplierContext implement
         return this;
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public TestProcessorContext setLogger(@Nonnull ILogger logger) {
         return (TestProcessorContext) super.setLogger(logger);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public TestProcessorContext setJetInstance(@Nonnull JetInstance jetInstance) {
         return (TestProcessorContext) super.setJetInstance(jetInstance);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public TestProcessorContext setTotalParallelism(int totalParallelism) {
         return (TestProcessorContext) super.setTotalParallelism(totalParallelism);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public TestProcessorContext setLocalParallelism(int localParallelism) {
         return (TestProcessorContext) super.setLocalParallelism(localParallelism);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public TestProcessorContext setVertexName(@Nonnull String vertexName) {
         return (TestProcessorContext) super.setVertexName(vertexName);
     }
 
-    @Nonnull @Override
+    @Nonnull
+    @Override
     public TestProcessorContext setProcessingGuarantee(ProcessingGuarantee processingGuarantee) {
         return (TestProcessorContext) super.setProcessingGuarantee(processingGuarantee);
     }
