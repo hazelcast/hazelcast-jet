@@ -102,8 +102,7 @@ public class SenderTasklet implements Tasklet {
         bufPosPastHeader = outputBuffer.position();
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public ProgressState call() {
         progTracker.reset();
         tryFillInbox();
