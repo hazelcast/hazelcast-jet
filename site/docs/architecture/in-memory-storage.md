@@ -1,45 +1,59 @@
 ---
-title: In-Memory Storage
-description: How Jet makes use of Hazelcast's in-memory storage options.
+title: In-Memory Storage and Correctness
+description: How Jet makes use of Hazelcast's in-memory storage
 ---
 
->Under construction!
+A distinctive feature of Hazelcast Jet is that it has no dependency on
+disk storage, it keeps all of its operational state in the RAM of the
+cluster. It also doesn't delegate its fault tolerance concerns to an
+outside system like ZooKeeper. This comes from the fact that it's built
+on top of Hazelcast IMDG.
 
-Hazelcast Jet builds on a tight integration with Hazelcast IMDG – the
-robust, distributed in-memory storage with querying and event-driven
-programming support. The services of Hazelcast IMDG are available in the
-Jet cluster to be used in conjunction with the Jet Pipelines.
+## Level of Safety
 
-## IMap
+Jet backs up the state to its own `IMap` objects. `IMap` is a replicated
+in-memory data structure, storing each key-value pair on a configurable
+number of cluster members. By default it makes a single backup copy,
+resulting in a system that tolerates the failure of a single member at a
+time. The cluster recovers its safety level by re-establishing all the
+missing backups, and when this is done, another node can fail without
+data loss. You can tweak the backup count in the configuration, for
+example:
 
-TODO
+```java
+JetConfig config = new JetConfig();
+config.getInstanceConfig().setBackupCount(2);
+JetInstance instance = Jet.newJetInstance(config);
+```
 
-IMap is a distributed key-value store.
+If multiple members fail simultaneously, some data from the backing
+`IMap`s can be lost. Jet detects this by counting the entries in the
+snapshot `IMap`, so it won't run a job  with missing data.
 
-Use it  distriuted key-value store to cache the reference data and
-enrich the event stream with it. See the [code
-sample](https://github.com/hazelcast/hazelcast-jet/blob/master/examples/enrichment/src/main/java/com/hazelcast/jet/examples/enrichment/Enrichment.java)
+## Split-Brain Protection
 
-Cache the results of the Jet computation. The cache can be queryied
-using indexes and supports event-listeners to push updates to subscribed
-clients. See the [code
-sample](https://github.com/hazelcast/hazelcast-jet/tree/master/examples/imdg-connectors/src/main/java/com/hazelcast/jet/examples/imdg)
+There is a special kind of cluster failure, popularly called the "Split
+Brain". It occurs due to a complex network failure (a network
+_partition_) where the graph of live connections among cluster nodes
+falls apart into two islands. In each island it seems like all the other
+nodes failed, so the remaining cluster should self-heal and continue
+working. Now you have two Jet clusters working in parallel, each running
+all the jobs on all the data.
 
-Load the input data from disk-based storages (S3, HDFS, files,
-databases) to the cluster cache for faster processing with Jet. See the
-[code
-sample](https://github.com/hazelcast/big-data-benchmark/tree/master/word-count/hdfs-to-map)
+Hazelcast Jet offers a mechanism to mitigate this risk: split-brain
+protection. It works by ensuring that a job can be restarted only in a
+cluster whose size is more than half of what it was before the job was
+suspended. Enable split-brain protection like this:
 
-## IMap Journal
+```java
+jobConfig.setSplitBrainProtection(true);
+```
 
-TODO
+If there’s an even number of members in your cluster, this may mean the
+job will not be able to restart at all if the cluster splits into two
+equally-sized parts. We recommend having an odd number of members.
 
-## Coordination
-
-TODO
-
-Coordinate your application using a linear and distributed
-implementation of the Java concurrency primitives backed by the Raft
-consensus algorithm such as locks, atomics, semaphores, and latches. See
-the [code
-sample](https://github.com/hazelcast/hazelcast-code-samples/tree/master/cp-subsystem)
+Note also that you should ensure there is no split-brain condition at
+the moment you are introducing new members to the cluster. If that
+happens, both sub-clusters may grow to more than half of the previous
+size, circumventing split-brain protection.
