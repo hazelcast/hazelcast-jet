@@ -230,8 +230,7 @@ public final class Contexts {
                     + "-" + resourceId.substring(0, min(32, resourceId.length())).replaceAll("[^\\w.\\-$]", "_");
         }
 
-        @Nonnull
-        @Override
+        @Nonnull @Override
         public InternalSerializationService serializationService() {
             return serializationService;
         }

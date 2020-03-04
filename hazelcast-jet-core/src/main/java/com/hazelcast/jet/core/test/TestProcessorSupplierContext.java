@@ -92,8 +92,7 @@ public class TestProcessorSupplierContext
         return file;
     }
 
-    @Nonnull
-    @Override
+    @Nonnull @Override
     public InternalSerializationService serializationService() {
         return serializationService;
     }

@@ -135,10 +135,9 @@ public interface ProcessorSupplier extends Serializable {
         File attachedFile(@Nonnull String id);
 
         /**
-         * Returns the serialization service associated with this job.
+         * Returns serialization service associated with this job.
          */
         @Nonnull
-        @EvolvingApi
         InternalSerializationService serializationService();
     }
 }
