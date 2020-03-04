@@ -209,7 +209,7 @@ Architecture](../architecture/in-memory-storage) section.
 `IMap` also offers a way to record changes to it in the form of an
 _event journal_. This enables using the stream of change records as a
 data source for further processing. For reference, please see the
-[Event Journal](sources-sink#event-journal) section.
+[Event Journal](sources-sinks#event-journal) section.
 
 ## ReplicatedMap
 
