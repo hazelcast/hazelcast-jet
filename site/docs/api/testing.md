@@ -295,9 +295,152 @@ please see the [design document](design-docs/unit-testing-support.md).
 
 ## Assertions
 
-`com.hazelcast.jet.core.JetTestSupport` contains a lot of assertion
-methods which can be used to verify whether the job/member/cluster is
-in desired state.
+Hazelcast Jet contains several sinks to support asserting directly in
+the pipeline. Furthermore, there's additional convenience to have the
+assertions done inline with the sink without having to terminate the
+pipeline, using the `apply()` operator.
+
+### Batch Assertions
+
+Batch assertions collect all incoming items, and perform assertions on
+the collected list after all the items are received. If the assertion
+passes, then no exception is thrown. If the assertion fails, then the
+job will fail with an AssertionError.
+
+#### Ordered Assertion
+
+This asserts that items have been received in a certain order and no
+other items have been received. Only applicable to batch jobs.
+
+```java
+pipeline.readFrom(TestSources.items(1, 2, 3, 4))
+        .apply(Assertions.assertOrdered("unexpected values", Arrays.asList(1, 2, 3, 4)))
+        .writeTo(Sinks.logger())
+```
+
+#### Unordered Assertion
+
+Asserts that items have been received in any order and no other items
+have been received. Only applicable to batch stages.
+
+```java
+pipeline.readFrom(TestSources.items(4, 3, 2, 1)
+        .apply(Assertions.assertAnyOrder("unexpected values", Arrays.asList(1, 2, 3, 4)))
+        .writeTo(Sinks.logger())
+```
+
+#### Contains Assertions
+
+Assert that the given items have been received in any order; receiving
+other, unrelated items does not affect this assertion. Only applicable
+to batch stages.
+
+```java
+pipeline.readFrom(TestSources.items(4, 3, 2, 1))
+        .apply(Assertions.assertContains(Arrays.asList(1, 3)))
+        .writeTo(Sinks.logger())
+```
+
+#### Collected Assertion
+
+This is a more flexible assertion which is only responsible for
+collecting the received items, and passes the asserting responsibility
+to the user. It is a building block for the other assertions. Only
+applicable to batch stages.
+
+```java
+pipeline.readFrom(TestSources.items(1, 2, 3, 4))
+        .apply(Assertions.assertCollected(items -> assertTrue("expected minimum of 4 items", items.size >= 4)))
+        .writeTo(Sinks.logger())
+```
+
+### Streaming Assertions
+
+For streaming assertions, it's not possible to assert after all items
+have been received, as the stream never terminates. Instead, we
+periodically assert and throw if the assertion is not valid after a
+given period of time. However even if the assertion passes, we don't
+want to the job to continue running forever. Instead a special
+exception `AssertionCompletedException` is thrown to signal the
+assertion has passed successfully.
+
+#### Collected Eventually Assertion
+
+This assertion collects incoming items and runs the given assertion
+function repeatedly on the received item set. If the assertion passes at
+any point, the job will be completed with an
+`AssertionCompletedException`. If the assertion fails after the given
+timeout period, the job will fail with an `AssertionError`.
+
+```java
+pipeline.readFrom(TestSources.itemStream(10))
+        .withoutTimestamps()
+        .apply(assertCollectedEventually(5, c -> assertTrue("did not receive at least 20 items", c.size() > 20)))
+```
+
+The pipeline above with fail with an `AssertionError` if 20 items are
+not received after 5 seconds. The job will complete with an `AssertionCompletedException`
+ as soon as 20 items or more are received.
+
+### Assertion Sink Builder
+
+Both the batch and streaming assertions use an assertion sink builder
+for building the assertions. Although a lower-level API, this is also
+public and can be used to build other, more complex assertions if
+desired:
+
+```java
+/**
+ * Returns a builder object that offers a step-by-step fluent API to build
+ * an assertion {@link Sink} for the Pipeline API. An assertion sink is
+ * typically used for testing of pipelines where you can want to run
+ * an assertion either on each item as they arrive, or when all items have been
+ * received.
+ * <p>
+ * These are the callback functions you can provide to implement the sink's
+ * behavior:
+ * <ol><li>
+ *     {@code createFn} creates the state which can be used to hold incoming
+ *     items.
+ * </li><li>
+ *     {@code receiveFn} gets notified of each item the sink receives
+ *     and can either assert the item directly or add it to the state
+ *     object.
+ * </li><li>
+ *     {@code timerFn} is run periodically even when there are no items
+ *     received. This can be used to assert that certain assertions have
+ *     been reached within a specific period in streaming pipelines.
+ * </li><li>
+ *     {@code completeFn} is run after all the items have been received.
+ *     This typically only applies only for batch jobs, in a streaming
+ *     job this method may never be called.
+ * </li></ol>
+ * The returned sink will have a global parallelism of 1: all items will be
+ * sent to the same instance of the sink.
+ *
+ * It doesn't participate in the fault-tolerance protocol,
+ * which means you can't remember across a job restart which items you
+ * already received. The sink will still receive each item at least once,
+ * thus complying with the <em>at-least-once</em> processing guarantee. If
+ * the sink is idempotent (suppresses duplicate items), it will also be
+ * compatible with the <em>exactly-once</em> guarantee.
+ *
+ * @param <A> type of the state object
+ *
+ * @since 3.2
+ */
+@Nonnull
+public static <A> AssertionSinkBuilder<A, Void> assertionSink(
+        @Nonnull String name,
+        @Nonnull SupplierEx<? extends A> createFn
+) {
+  ..
+}
+```
+
+In addition to the assertions mentioned above, `com.hazelcast.jet.core.JetTestSupport`
+contains a lot of assertion methods which can be used to verify whether
+the job/member/cluster is in desired state.
 
 ## Class Runners
 
