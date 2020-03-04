@@ -46,6 +46,8 @@ import static com.hazelcast.internal.util.Preconditions.checkNotNull;
 import static com.hazelcast.internal.util.Preconditions.checkTrue;
 import static java.nio.ByteOrder.BIG_ENDIAN;
 
+// refactor after https://github.com/hazelcast/hazelcast/pull/16722 is released
+@Deprecated
 public class JetSerializationService implements InternalSerializationService {
 
     private static final int DEFAULT_OUTPUT_BUFFER_SIZE = 4096;
@@ -361,3 +363,5 @@ public class JetSerializationService implements InternalSerializationService {
                 + "or between clients and members.");
     }
 }
+
+

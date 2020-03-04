@@ -334,7 +334,8 @@ public abstract class AbstractDeploymentTest extends SimpleTestInClusterSupport 
         URL classUrl = this.getClass().getResource(CLASS_LOADER_PREFIX);
         URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{classUrl}, getClass().getClassLoader());
         Class<?> valueClass = urlClassLoader.loadClass(VALUE_CLASS_NAME);
-        Class<StreamSerializer<?>> serializerClass = (Class<StreamSerializer<?>>) urlClassLoader.loadClass(SERIALIZER_CLASS_NAME);
+        Class<StreamSerializer<?>> serializerClass =
+                (Class<StreamSerializer<?>>) urlClassLoader.loadClass(SERIALIZER_CLASS_NAME);
 
         DAG dag = new DAG();
         dag.newVertex("calls job level serializer", JobLevelSerializerIsAvailable::new);
