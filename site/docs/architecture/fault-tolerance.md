@@ -60,17 +60,18 @@ address this in future releases.
 
 ## Split-Brain Protection
 
-A specific kind of failure is a so-called "split brain". It happens when
-a network fails and a member or members think the other members left the
-cluster, but in fact they still run, but don’t see each other over the
-network. Now we have two or more fully functioning Jet clusters where
-there was supposed to be one. Each one will recover and restart the same
-Jet job, causing it to run multiple times.
+There is a special kind of cluster failure, popularly called the "Split
+Brain". It occurs due to a complex network failure (a network
+_partition_) where the graph of live connections among cluster nodes
+falls apart into two islands. In each island it seems like all the other
+nodes failed, so the remaining cluster should self-heal and continue
+working. Now you have two Jet clusters working in parallel, each running
+all the jobs on all the data.
 
-Hazelcast Jet offers a mechanism to reduce this hazard: split-brain
-protection. It works by ensuring that a job can be started only in a
-cluster whose size is more than half of what it ever was. Enable
-split-brain protection like this:
+Hazelcast Jet offers a mechanism to mitigate this risk: split-brain
+protection. It works by ensuring that a job can be restarted only in a
+cluster whose size is more than half of what it was before the job was
+suspended. Enable split-brain protection like this:
 
 ```java
 jobConfig.setSplitBrainProtection(true);
@@ -83,7 +84,7 @@ equally-sized parts. We recommend having an odd number of members.
 Note also that you should ensure there is no split-brain condition at
 the moment you are introducing new members to the cluster. If that
 happens, both sub-clusters may grow to more than half of the previous
-size. This will defuse the split-brain protection mechanism.
+size, circumventing split-brain protection.
 
 <!-- ### Disk Snapshot Storage -->
 
@@ -103,12 +104,12 @@ and resume the jobs. -->
 
 <!-- ## Exported Snapshots -->
 
-<!-- In addition to regular snapshots, you can create exported 
-snapshots. The lifecycle of the exported snapshot is controlled by 
-the user: it's created upon user request and is stored in the cluster 
+<!-- In addition to regular snapshots, you can create exported
+snapshots. The lifecycle of the exported snapshot is controlled by
+the user: it's created upon user request and is stored in the cluster
 until the user decides do remove it. -->
 
-<!-- 
+<!--
 Exported snapshots are mainly used to upgrade the job: job is cancelled
 with a snapshot and a new job is submitted that will use the saved
 snapshot for initial state.  -->
