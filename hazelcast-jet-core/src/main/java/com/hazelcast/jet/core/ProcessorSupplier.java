@@ -18,7 +18,6 @@ package com.hazelcast.jet.core;
 
 import com.hazelcast.function.SupplierEx;
 import com.hazelcast.internal.serialization.InternalSerializationService;
-import com.hazelcast.jet.annotation.EvolvingApi;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.logging.ILogger;
 
