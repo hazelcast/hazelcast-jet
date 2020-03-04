@@ -48,16 +48,16 @@ and your screen as the sink:
 public static void main(String[] args) {
   Pipeline p = Pipeline.create();
   p.readFrom(TestSources.itemStream(10))
-   .withIngestionTimestamps()
+   .withoutTimestamps()
    .filter(event -> event.sequence() % 2 == 0)
    .setName("filter out odd numbers")
    .writeTo(Sinks.logger());
 }
 ```
 
-`itemStream()` emits `SimpleEvent`s that have a *sequence* and a
-*timestamp*. The pipeline we wrote will discard every other event and
-keep those with an even sequence number.
+`itemStream()` emits `SimpleEvent`s that have an increasing *sequence*
+number. The pipeline we wrote will discard every other event and keep
+those with an even sequence number.
 
 ### Start Embedded Jet and Run the Pipeline
 
