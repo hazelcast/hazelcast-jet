@@ -106,16 +106,17 @@ will restart with some state data from the snapshot missing, or it might
 fail if classpath resources were added and are missing. We plan to
 address this in future releases.</p>
 <h2><a class="anchor" aria-hidden="true" id="split-brain-protection"></a><a href="#split-brain-protection" aria-hidden="true" class="hash-link"><svg class="hash-link-icon" aria-hidden="true" height="16" version="1.1" viewBox="0 0 16 16" width="16"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Split-Brain Protection</h2>
-<p>A specific kind of failure is a so-called &quot;split brain&quot;. It happens when
-a network fails and a member or members think the other members left the
-cluster, but in fact they still run, but don’t see each other over the
-network. Now we have two or more fully functioning Jet clusters where
-there was supposed to be one. Each one will recover and restart the same
-Jet job, causing it to run multiple times.</p>
-<p>Hazelcast Jet offers a mechanism to reduce this hazard: split-brain
-protection. It works by ensuring that a job can be started only in a
-cluster whose size is more than half of what it ever was. Enable
-split-brain protection like this:</p>
+<p>There is a special kind of cluster failure, popularly called the &quot;Split
+Brain&quot;. It occurs due to a complex network failure (a network
+<em>partition</em>) where the graph of live connections among cluster nodes
+falls apart into two islands. In each island it seems like all the other
+nodes failed, so the remaining cluster should self-heal and continue
+working. Now you have two Jet clusters working in parallel, each running
+all the jobs on all the data.</p>
+<p>Hazelcast Jet offers a mechanism to mitigate this risk: split-brain
+protection. It works by ensuring that a job can be restarted only in a
+cluster whose size is more than half of what it was before the job was
+suspended. Enable split-brain protection like this:</p>
 <pre><code class="hljs css language-java">jobConfig<span class="token punctuation">.</span><span class="token function">setSplitBrainProtection</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
 </code></pre>
 <p>If there’s an even number of members in your cluster, this may mean the
@@ -124,7 +125,7 @@ equally-sized parts. We recommend having an odd number of members.</p>
 <p>Note also that you should ensure there is no split-brain condition at
 the moment you are introducing new members to the cluster. If that
 happens, both sub-clusters may grow to more than half of the previous
-size. This will defuse the split-brain protection mechanism.</p>
+size, circumventing split-brain protection.</p>
 <!-- ### Disk Snapshot Storage -->
 <!-- In-memory Snapshot Storage doesn’t cover the case when the entire
 cluster must shut down. -->
@@ -138,11 +139,11 @@ the data. Beyond that, there’s no special action to take: as soon as the
 cluster re-forms, it will automatically reload the persisted snapshots
 and resume the jobs. -->
 <!-- ## Exported Snapshots -->
-<!-- In addition to regular snapshots, you can create exported 
-snapshots. The lifecycle of the exported snapshot is controlled by 
-the user: it's created upon user request and is stored in the cluster 
+<!-- In addition to regular snapshots, you can create exported
+snapshots. The lifecycle of the exported snapshot is controlled by
+the user: it's created upon user request and is stored in the cluster
 until the user decides do remove it. -->
-<!-- 
+<!--
 Exported snapshots are mainly used to upgrade the job: job is cancelled
 with a snapshot and a new job is submitted that will use the saved
 snapshot for initial state.  -->
