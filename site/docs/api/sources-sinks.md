@@ -1153,8 +1153,7 @@ BatchSource<String> fileSource = SourceBuilder
 For a more involved example (which reads data in _batches_ for
 efficiency, deals with _unbounded_ data, emits _timestamps_, is
 _distributed_ and _fault tolerant_ see the
-[Custom Sources](../tutorials/source-and-sink-builder.md#source)
-tutorial).
+[Custom Sources](../tutorials/custom-source.md) tutorial).
 
 ### SinkBuilder
 
@@ -1178,5 +1177,4 @@ Sink<Object> sink = sinkBuilder(
 
 For a more involved example, covering issues like _batching_,
 _distributiveness_ and _fault tolerance_, see the
-[Custom Sinks](../tutorials/source-and-sink-builder.md#sink)
-tutorial).
+[Custom Sinks](../tutorials/custom-sink.md) tutorial).

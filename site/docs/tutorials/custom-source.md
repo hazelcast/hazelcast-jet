@@ -1,17 +1,15 @@
 ---
-title: Custom Sources and Sinks
-description: Tutorial on how to define custom sources and sinks.
+title: Custom Sources
+description: Tutorial on how to define custom sources.
 ---
 
 In the [Custom Sources and Sinks](../api/sources-sinks.md#custom-sources-and-sinks)
 section of our [Sources and Sinks](../api/sources-sinks.md) programming
 guide we have seen some basic examples of user-defined sources and
 sinks. Let us now examine more examples which cover some of the
-trickier aspects of writing our own sources and sinks.
+trickier aspects of writing our own sources.
 
-## Setup
-
-### 1. Start Hazelcast Jet
+## 1. Start Hazelcast Jet
 
 1. [Download](https://github.com/hazelcast/hazelcast-jet/releases/download/v4.0/hazelcast-jet-4.0.zip)
   Hazelcast Jet
@@ -43,10 +41,10 @@ Members {size:1, ver:1} [
 
 From now on we assume Hazelcast Jet is running on your machine.
 
-### 2. Create a New Java Project
+## 2. Create a New Java Project
 
 We'll assume you're using an IDE. Create a blank Java project named
-`source-and-sink-builder-tutorial` and copy the Gradle or Maven file
+`custom-source-tutorial` and copy the Gradle or Maven file
 into it:
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -64,14 +62,7 @@ version '1.0-SNAPSHOT'
 repositories.mavenCentral()
 
 dependencies {
-    compileOnly 'com.hazelcast.jet:hazelcast-jet:4.0'
-    compile 'com.danielflower.apprunner:javasysmon:0.3.5.1'
-}
-
-jar {
-    from {
-        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-    }
+    compile 'com.hazelcast.jet:hazelcast-jet:4.0'
 }
 ```
 
@@ -84,7 +75,7 @@ jar {
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>source-and-sink-builder-tutorial</artifactId>
+    <artifactId>custom-source-tutorial</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -97,446 +88,17 @@ jar {
             <groupId>com.hazelcast.jet</groupId>
             <artifactId>hazelcast-jet</artifactId>
             <version>4.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.danielflower.apprunner</groupId>
-            <artifactId>javasysmon</artifactId>
-            <version>0.3.5.1</version>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>distro-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptorRefs>
-                                <descriptorRef>jar-with-dependencies</descriptorRef>
-                            </descriptorRefs>
-                            <tarLongFileMode>posix</tarLongFileMode>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
 </project>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-## Sink
+## 3. Define Source
 
-Let's write a sink that functions a bit like a **file logger**. You
-set it up with a filename and it will write one line for each
-input it gets into that file. The lines will be composed of a
-**timestamp**, a floating point number providing us with the machine's
-**CPU usage** at the time of writing and then the **`toString()`** form
-of whatever input object produced the line.
-
-### 3. Define Helper Classes
-
-One thing we'll need is code for obtaining CPU usage. We will use
-[JavaSysMon](https://github.com/jezhumble/javasysmon), that's why we
-have included it as a dependency [in our project](#2-create-a-new-java-project).
-
-Let's add following class to our project:
-
-```java
-package org.example;
-
-import com.jezhumble.javasysmon.CpuTimes;
-import com.jezhumble.javasysmon.JavaSysMon;
-
-import java.util.concurrent.TimeUnit;
-
-class CpuMonitor {
-
-    public static final long REFERENCE_REFRESH_PERIOD = TimeUnit.SECONDS.toMillis(1);
-
-    private JavaSysMon sysMon = new JavaSysMon();
-    private long prevTimeOrigin = System.currentTimeMillis();
-    private CpuTimes prevTimes = sysMon.cpuTimes();
-
-    float getCpuUsage() {
-        CpuTimes cpuTimes = sysMon.cpuTimes();
-        float usage = cpuTimes.getCpuUsage(prevTimes);
-        updatePrevTimes(cpuTimes);
-        return usage;
-    }
-
-    private void updatePrevTimes(CpuTimes cpuTimes) {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime > prevTimeOrigin + REFERENCE_REFRESH_PERIOD) {
-            prevTimeOrigin = currentTime;
-            prevTimes = cpuTimes;
-        }
-    }
-}
-```
-
-We will also need a **context** object to hold the entities we need in
-our sink, the `CpuMonitor` and the file-based `PrintWriter`:
-
-```java
-package org.example;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-class Context {
-
-    private PrintWriter printWriter;
-    private CpuMonitor cpuMonitor = new CpuMonitor();
-
-    public Context(String fileName) {
-        try {
-            this.printWriter = new PrintWriter(new FileWriter(fileName));
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
-    void write(Object item) {
-        String line = String.format("%d,%f,%s",
-                System.currentTimeMillis(), cpuMonitor.getCpuUsage(), item.toString());
-        printWriter.println(line);
-        printWriter.flush();
-    }
-
-    void destroy() {
-        printWriter.close();
-        printWriter = null;
-
-        cpuMonitor = null;
-    }
-}
-```
-
-### 4. Define Sink
-
-Now that we have all the helper code ready we can write our actual sink:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.SinkBuilder;
-
-class Sinks {
-
-    static Sink<Object> buildCpuLogSink() {
-        return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new Context(
-                                "data." + pctx.globalProcessorIndex() + ".csv"))
-                .receiveFn((ctx, item) -> ctx.write(item))
-                .destroyFn(ctx -> ctx.destroy())
-                .build();
-    }
-
-}
-```
-
-That's it! All we did was to specify:
-
-* how to set up our context object (the `createFn`)
-* how to write out received object (the `receiveFn`)
-* how to tear down the used resources once we are done (the `destroyFn`)
-
-> Note: you might wonder why we don't just use a constant file name in
-> the sink definition. The thing is that there might be multiple
-> instances of these sinks running at the same time. For example you
-> might use a Jet cluster with multiple members. And these multiple
-> members might actually write to the same location (for example to a
-> Network File System). We don't know, but we want to be safe, so it's
-> better to have a unique name for each instance.
->
-> We solve the problem by making use of the unique global processor
-> index available in the `Processor.Context` object we get handed into
-> our `createFn`.
-
-### 5. Define Jet Job
-
-The next thing we need to do is to write the Jet code that creates a
-pipeline and the job to be submitted for execution:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.Jet;
-import com.hazelcast.jet.config.JobConfig;
-import com.hazelcast.jet.pipeline.Pipeline;
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.test.TestSources;
-
-public class CpuLogProducer {
-
-    public static void main(String[] args) {
-        Sink<Object> cpuSink = Sinks.buildCpuLogSink();
-
-        Pipeline p = Pipeline.create();
-        p.readFrom(TestSources.itemStream(10))
-                .withoutTimestamps()
-                .writeTo(cpuSink);
-
-        JobConfig cfg = new JobConfig().setName("cpu-log-producer");
-        Jet.bootstrappedInstance().newJob(p, cfg);
-    }
-
-}
-```
-
-### 6. Package
-
-Now that we have all the pieces, we need to submit it to Jet for
-execution. Since Jet runs on our machine as a standalone cluster in a
-standalone process we need to give it all the code that we have written
-and used.
-
-For this reason we create a fat jar containing everything we need. All
-we need to do is to run the build command:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-gradle build
-```
-
-This will produce a jar file called `sources-and-sinks-builder-1.0-SNAPSHOT.jar`
-in the `build/libs` folder of our project.
-
-<!--Maven-->
-
-```bash
-mvn package
-```
-
-This will produce a jar file called `source-and-sink-builder-tutorial-1.0-SNAPSHOT-jar-with-dependencies.jar`
-in the `target` folder or our project.
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-We should check that it contains:
-
-* the `org.example` classes we have written
-* the `com.jezhumble.javasysmon` classes we have as a dependency
-
-### 7. Submit for Execution
-
-Assuming our cluster is [still running](#1-start-hazelcast-jet) all we
-need to issue is following command:
-
-<!--DOCUSAURUS_CODE_TABS-->
-
-<!--Gradle-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.CpuLogProducer \
-    build/libs/sources-and-sinks-builder-1.0-SNAPSHOT.jar
-```
-
-<!--Maven-->
-
-```bash
-<path_to_jet>/bin/jet submit \
-    --class org.example.CpuLogProducer \
-    target/source-and-sink-builder-tutorial-1.0-SNAPSHOT-jar-with-dependencies.jar
-```
-
-<!--END_DOCUSAURUS_CODE_TABS-->
-
-In the log of the Jet member we should see a message like this:
-
-```text
-...
-Start executing job 'cpu-log-producer', execution 03fd-63b4-4700-0001, execution graph in DOT format:
-digraph DAG {
-    "itemStream" [localParallelism=1];
-    "cpu-sink" [localParallelism=1];
-    "itemStream" -> "cpu-sink" [queueSize=1024];
-}
-...
-```
-
-In the folder where the Jet member was started a new file should show
-up, called `data.0.csv`, containing lines like (at getting more and
-more each second):
-
-```text
-...
-1583309377078,0.502024,SimpleEvent(timestamp=10:09:37.000, sequence=2900)
-1583309377177,0.502024,SimpleEvent(timestamp=10:09:37.100, sequence=2901)
-1583309377277,0.502024,SimpleEvent(timestamp=10:09:37.200, sequence=2902)
-1583309377376,0.502024,SimpleEvent(timestamp=10:09:37.300, sequence=2903)
-...
-```
-
-Our sink works! Now let's make it better.
-
-### 8. Add Batching
-
-Our sink uses a `PrintWriter` which has internal buffering we could use
-to make it more efficient. Jet allows us to make buffering a first-class
-concern and deal with it explicitly by taking an optional `flushFn`
-which it will call at regular intervals.
-
-To apply this to our example we need to update our `Context` class (
-`printWriter.flush()` moves into a separate method):
-
-```java
-package org.example;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-class Context {
-
-    private PrintWriter printWriter;
-    private CpuMonitor cpuMonitor = new CpuMonitor();
-
-    public Context(String fileName) {
-        try {
-            this.printWriter = new PrintWriter(new FileWriter(fileName));
-        } catch (IOException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
-    void write(Object item) {
-        String line = String.format("%d,%f,%s", System.currentTimeMillis(),
-                cpuMonitor.getCpuUsage(), item.toString());
-        printWriter.println(line);
-    }
-
-    void flush() {
-        printWriter.flush();
-    }
-
-    void destroy() {
-        printWriter.close();
-        printWriter = null;
-
-        cpuMonitor = null;
-    }
-}
-```
-
-Our sink definition also needs to change, we need to specify that the
-newly added method should be used as the `flushFn` of the sink:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.SinkBuilder;
-
-class Sinks {
-
-    static Sink<Object> buildCpuLogSink() {
-        return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new Context("data." + pctx.globalProcessorIndex() + ".csv"))
-                .receiveFn((ctx, item) -> ctx.write(item))
-                .flushFn(ctx -> ctx.flush())
-                .destroyFn(ctx -> ctx.destroy())
-                .build();
-    }
-
-}
-```
-
-These changes will not produce visible effects in the behaviour of our
-sink, but they will make it much more efficient. Benchmarking that
-however is a bit beyond the scope of this tutorial.
-
-### 9. Increase Parallelism
-
-Jet builds the sink to be distributed by default: each member of the Jet
-cluster has a processor running it. You can configure how many parallel
-processors there are on each member (the **local parallelism**) by
-calling `SinkBuilder.preferredLocalParallelism()`. By default there will
-be one processor per member.
-
-The overall job output consists of the contents of all the files
-written by all processor instances put together.
-
-Let's increase the local parallelism from the default value of 1 to 2:
-
-```java
-package org.example;
-
-import com.hazelcast.jet.pipeline.Sink;
-import com.hazelcast.jet.pipeline.SinkBuilder;
-
-class Sinks {
-
-    static Sink<Object> buildCpuLogSink() {
-        return SinkBuilder.sinkBuilder(
-                "cpu-sink", pctx -> new Context("data." + pctx.globalProcessorIndex() + ".csv"))
-                .receiveFn((ctx, item) -> ctx.write(item))
-                .flushFn(ctx -> ctx.flush())
-                .destroyFn(ctx -> ctx.destroy())
-                .preferredLocalParallelism(2)
-                .build();
-    }
-
-}
-```
-
-Now let's [repackage](#6-package) our updated code and
-[submit it for execution](#7-submit-for-execution) just as before.
-
-The behavioral change we can notice now is that there will be two output
-files, `data.0.csv` and `data.1.csv`, each containing half of the output
-data.
-
-> Note: we could add a second member to the Jet cluster now. At that
-> point we would have two members, both with local parallelism of 2.
-> There would be 4 output files. You would notice however that all
-> the data is in the files written by the processors of a single Jet
-> member.
->
-> The other members don't get any data, because on one hand our pipeline
-> doesn't contain any operation that would generate distributed edges
-> (ones that carry data from one member to another) and on the other
-> hand the test source we have used only creates one instance globally,
-> regardless of the number of members we have in the cluster. The member
-> containing the test source instance will process all the data in this
-> case. Real sources don't usually have this limitation.
-
-### 10. Make it Fault Tolerant
-
-Sinks built via `SinkBuilder` don’t participate in the fault tolerance
-protocol. You can’t preserve any internal state if a job fails and gets
-restarted. In a job with snapshotting enabled your sink will still
-receive every item at least once. If you ensure that after the `flushFn`
-is called all the previous items are persistently stored, your sink
-provides an at-least-once guarantee. If you don't (like our first
-example without the flushFn), your sink can also miss items. If the
-system you’re storing the data into is idempotent (i.e. writing the same
-thing multiple times has the exact same effect as writing it a single
-time - obviously not the case with our example), then your sink will
-have an exactly-once guarantee.
-
-## Source
-
-### 11. Define Source
-
-Let's now write a source which is capable of reading the data that is
-being output by our [example sink](#sink). We will start with a simple,
-batch version:
+Let's write a source which is capable of reading lines of text from
+a file. We will start with a simple, batch version:
 
 ```java
 package org.example;
@@ -547,12 +109,12 @@ import com.hazelcast.jet.pipeline.SourceBuilder;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
-@SuppressWarnings("Convert2MethodRef")
 public class Sources {
 
-    static BatchSource<String> buildCpuLogSource() {
+    static BatchSource<String> buildLinesSource() {
         return SourceBuilder
-                .batch("cpu-source", x -> new BufferedReader(new FileReader("data.0.csv")))
+                .batch("cpu-source", x -> new BufferedReader(
+                                                new FileReader("lines.txt")))
                 .<String>fillBufferFn((in, buf) -> {
                     String line = in.readLine();
                     if (line != null) {
@@ -568,19 +130,10 @@ public class Sources {
 }
 ```
 
-We basically specified:
+## 4. Define Jet Job
 
-* how to set up the resources we need (the `createFn`), which is
-  basically just a `BufferedReader`
-* how to retrieve data to be emitted (the `fillBufferFn`), which will be
-  called by Jet whenever it needs more data
-* how to tear down the resources we have used once we are done (the
-  `destroyFn`)
-
-### 12. Define Jet Job
-
-We write the Jet code that creates the pipeline and the job to be
-submitted for execution:
+The next thing we need to do is to write the Jet code that creates a
+pipeline and the job to be submitted for execution:
 
 ```java
 package org.example;
@@ -590,32 +143,60 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.pipeline.BatchSource;
 import com.hazelcast.jet.pipeline.Pipeline;
 
-public class CpuLogConsumer {
+public class LinesConsumer {
 
     public static void main(String[] args) {
-        BatchSource<String> cpuSource = Sources.buildCpuLogSource();
+        BatchSource<String> cpuSource = Sources.buildLinesSource();
 
         Pipeline p = Pipeline.create();
         p.readFrom(cpuSource)
                 .writeTo(com.hazelcast.jet.pipeline.Sinks.logger());
 
-        JobConfig cfg = new JobConfig().setName("cpu-log-consumer");
+        JobConfig cfg = new JobConfig().setName("lines-consumer");
         Jet.bootstrappedInstance().newJob(p, cfg);
     }
 
 }
 ```
 
-### 13. Package
+## 5. Package
 
-Packaging is the same for our entire project, so the steps are exactly
-the [same as for the sink](#6-package).
+Now that we have all the pieces, we need to submit it to Jet for
+execution. Since Jet runs on our machine as a standalone cluster in a
+standalone process we need to give it all the code that we have written.
 
-### 14. Submit for Execution
+For this reason we create a jar containing everything we need. All we
+need to do is to run the build command:
 
-Submitting for execution is very [similar to the sink](#7-submit-for-execution),
-the only thing that differs is that now we have to specify a different
-main class:
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--Gradle-->
+
+```bash
+gradle build
+```
+
+This will produce a jar file called `custom-source-tutorial-1.0-SNAPSHOT.jar`
+in the `build/libs` folder of our project.
+
+<!--Maven-->
+
+```bash
+mvn package
+```
+
+This will produce a jar file called `custom-source-tutorial-1.0-SNAPSHOT.jar`
+in the `target` folder or our project.
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+We should check that it contains the `org.example` classes we have
+written.
+
+## 6. Submit for Execution
+
+Assuming our cluster is [still running](#1-start-hazelcast-jet) all we
+need to issue is following command:
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -623,25 +204,39 @@ main class:
 
 ```bash
 <path_to_jet>/bin/jet submit \
-    --class org.example.CpuLogConsumer \
-    build/libs/sources-and-sinks-builder-1.0-SNAPSHOT.jar
+    --class org.example.LinesConsumer \
+    build/libs/custom-source-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--Maven-->
 
 ```bash
 <path_to_jet>/bin/jet submit \
-    --class org.example.CpuLogConsumer \
-    target/source-and-sink-builder-tutorial-1.0-SNAPSHOT-jar-with-dependencies.jar
+    --class org.example.LinesConsumer \
+    target/custom-source-tutorial-1.0-SNAPSHOT.jar
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-> Note: we are assuming that we have already submitted the sink
-> previously and have a `data.0.csv` file with data in it present in the
-> Jet members working directory.
+In the log of the Jet member we should see a message like this:
 
-The output you get should contain lines like this:
+```text
+...
+Start executing job 'lines-consumer', execution 03fd-a4ec-bd40-0001, execution graph in DOT format:
+digraph DAG {
+    "cpu-source" [localParallelism=1];
+    "loggerSink" [localParallelism=1];
+    "cpu-source" -> "loggerSink" [queueSize=1024];
+}
+...
+```
+
+> Note: we are assuming that we have a text file called `lines.txt` with
+> lines in it present in the Jet members working directory.
+
+The output you get should contain logged versions of the lines from
+your `lines.txt` file. We had this (output produced by the custom sink
+we have defined in [another tutorial](custom-sink.md)):
 
 ```text
 ... 1583315484503,0.073239,SimpleEvent(timestamp=11:51:24.500, sequence=52134)
@@ -649,7 +244,7 @@ The output you get should contain lines like this:
 ... 1583315484903,0.088542,SimpleEvent(timestamp=11:51:24.900, sequence=52138)
 ```
 
-### 15. Add Batching
+## 7. Add Batching
 
 Our source works, but it's not efficient, because it always just
 retrieves one line at a time. Optimally the `fillBufferFn` should fill
@@ -672,12 +267,12 @@ import com.hazelcast.jet.pipeline.SourceBuilder;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
-@SuppressWarnings("Convert2MethodRef")
 public class Sources {
 
-    static BatchSource<String> buildCpuLogSource() {
+    static BatchSource<String> buildLinesSource() {
         return SourceBuilder
-                .batch("cpu-source", x -> new BufferedReader(new FileReader("data.0.csv")))
+                .batch("cpu-source", x -> new BufferedReader(
+                                                        new FileReader("lines.txt")))
                 .<String>fillBufferFn((in, buf) -> {
                     for (int i = 0; i < 128; i++) {
                         String line = in.readLine();
@@ -699,7 +294,7 @@ Like with the sink, these changes will not produce visible effects in
 the behaviour of our source, but they will make it much more efficient.
 Benchmarking that however is a bit beyond the scope of this tutorial.
 
-### 16. Make it Unbounded
+## 8. Make it Unbounded
 
 Custom sources don't need to batching ones. They can also provide
 *unbounded* data. Let's see an example of such a `StreamSource`, one
@@ -782,7 +377,7 @@ public class NetworkConsumer {
 ```
 
 Besides that, working with it happens just like with our previous
-source: [package](#13-package) and [submit](#14-submit-for-execution),
+source: [package](#5-package) and [submit](#6-submit-for-execution),
 just don't forget to use `NetworkConsumer` as the main class.
 
 When it starts it should print following and wait for an incoming
@@ -792,11 +387,10 @@ network connection:
 [jet] [4.1-SNAPSHOT] Waiting for connection on port 11000 ...
 ```
 
-You can then just go ahead and send it some data we have previously
-produced with our sink:
+You can then just go ahead and send it some lines:
 
 ```bash
-cat data.0.csv | nc 127.0.0.1 11000
+cat linex.txt | nc 127.0.0.1 11000
 ```
 
 The output should look the same way as before:
@@ -807,7 +401,7 @@ The output should look the same way as before:
 ... Output to ordinal 0: 1583310272813,0.052980,SimpleEvent(timestamp=10:24:32.800, sequence=18)
 ```
 
-### 17. Add Timestamps
+## 9. Add Timestamps
 
 In the Jet code we wrote for this network source we can notice that
 there is an extra line, which wasn't there when we used a batch source
@@ -822,7 +416,7 @@ pipeline after the source), but the most convenient one is to provide
 the timestamps right in the source.
 
 Let's assume the data that will come in over the network is always in
-the same format as our sink's output. In that case we know that each
+the same as we've used so far. In that case we know that each
 line starts with a timestamp, so we could modify our source like this:
 
 ```java
@@ -913,7 +507,7 @@ have timestamps:
          timestamp=10:24:32.800, sequence=18) (eventTime=10:24:32.813)
 ```
 
-### 18. Increase Parallelism
+## 10. Increase Parallelism
 
 In the examples we showed so far the source was non-distributed: Jet
 will create just a single processor in the whole cluster to serve all
@@ -988,7 +582,7 @@ If we submit this now for execution, we will see following lines:
 [jet] [4.1-SNAPSHOT] Waiting for connection on port 11001 ...
 ```
 
-### 19. Add Fault Tolerance
+## 11. Add Fault Tolerance
 
 If you want your source to behave correctly within a streaming Jet job
 that has a processing guarantee configured (**at-least-once** or

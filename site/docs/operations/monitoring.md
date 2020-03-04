@@ -439,8 +439,8 @@ custom code can be added. This means (just to name the most important
 ones): filtering, mapping and flat-mapping functions, various
 constituent functions of aggregations (accumulate, create, combine,
 deduct, export & finish), key extraction function when grouping, in
-[custom sources, sinks](../tutorials/source-and-sink-builder.md) and
-processors and so on.
+[custom sources](../tutorials/custom-source.md),
+[custom sinks](../tutorials/custom-sink.md), processors and so on.
 
 ### Exposing Metrics
 
