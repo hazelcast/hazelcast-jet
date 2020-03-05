@@ -17,9 +17,9 @@
       "api/stateless-transforms",
       "api/stateful-transforms",
       "api/sources-sinks",
+      "api/submitting-jobs",
       "api/data-structures",
       "api/serialization",
-      "api/classloading",
       "api/testing",
       "api/javadoc"
     ],
